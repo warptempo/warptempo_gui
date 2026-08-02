@@ -849,6 +849,7 @@ std::string cap_marker_label(std::string text) {
 struct FlagFace {
     GuiColor fill;
     GuiColor edge;
+    GuiColor border;
     GuiColor label;
     GuiColor stem;
     bool     has_stem;
@@ -913,6 +914,22 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         }
         f.fill  = mix_color(base_fill, kRedesignTabGround, kMarkerDisabledMix);
         f.edge  = mix_color(base_edge, kRedesignTabGround, kMarkerDisabledMix);
+        // THE BORDER DIMS WITH THE REST (architect 2026-08-02, overturning the
+        // structural-edge reading it shipped with the same day): same mix owner,
+        // same kMarkerDisabledMix fraction, same base — the marker lane's own
+        // ground — so it is the identical operation the two lines above take,
+        // applied to the one border colour. It has NO per-class variant to pick,
+        // which is the whole difference from fill and edge: the ladder above
+        // chooses WHICH pair to damp, and there is only ever one border to damp.
+        //
+        // "DIMS" HERE MEANS DAMPED TOWARD THE GROUND, NOT DARKENED. The border
+        // is DARKER than the lane ground (#131516 against #202326), so 25% of
+        // itself over that ground moves it UP to ~#1d1f22 — it loses contrast
+        // with the lane exactly as the fill loses contrast with it, which is the
+        // property the disabled face is after. A reader expecting "dimmer =
+        // darker" would mis-read the direction and try to fix it.
+        f.border = mix_color(kMarkerFlagBorder, kRedesignTabGround,
+                             kMarkerDisabledMix);
         f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
         f.stem  = f.fill;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
@@ -921,6 +938,13 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     if (red) {
         f.fill  = kMarkerFlagFillRed;
         f.edge  = kMarkerFlagEdgeRed;
+        // FULL-STRENGTH BORDER on every LIVE class, red and selected included,
+        // and that is the precise mirror of what fill and edge do rather than a
+        // second rule: the live arms damp nothing, so the border they take is
+        // its own colour. Only the disabled arm blends, on all three surfaces at
+        // once. The border is still class-INVARIANT across the live ladder — it
+        // varies on the disabled axis alone.
+        f.border = kMarkerFlagBorder;
         f.label = kRedesignLabel;
         f.stem  = kMarkerStemRed;
         f.has_stem = true;
@@ -928,6 +952,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     }
     f.fill  = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
     f.edge  = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
+    f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kRedesignLabel;
     // The stem reads the CLASS ALONE, never the selection bit: a selected
     // default marker keeps the calm #9b59b6 stem (the architect's explicit
@@ -1050,10 +1075,12 @@ void render_flag_boxes_impl(
                 // column each.
                 //
                 // THE BORDER IS OUTSIDE THE FILL, one column LEFT of the frame
-                // column, in the class-invariant kMarkerFlagBorder (the
-                // geometry clause and the clip-at-the-left-edge answer are at
-                // marker_flag_border_px, render.h). It is drawn first only for
-                // reading order: the two rectangles are disjoint.
+                // column (the geometry clause and the clip-at-the-left-edge
+                // answer are at marker_flag_border_px, render.h). Its colour
+                // comes off the resolved FACE like the fill's and the edge's —
+                // kMarkerFlagBorder on every live class, damped by the one
+                // disabled blend when the marker is disabled. It is drawn first
+                // only for reading order: the two rectangles are disjoint.
                 //
                 // OVERLAP READS ONE COLUMN EARLIER NOW. A later marker's box
                 // covers an earlier one's tail from its BORDER, so two flags a
@@ -1063,8 +1090,8 @@ void render_flag_boxes_impl(
                 // occlusion model.
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgb(cr, kMarkerFlagBorder.r,
-                                     kMarkerFlagBorder.g, kMarkerFlagBorder.b);
+                cairo_set_source_rgb(cr, face.border.r, face.border.g,
+                                     face.border.b);
                 cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
                 cairo_fill(cr);
                 cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
@@ -1362,6 +1389,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (ed.red) {
         face.fill  = kMarkerFlagFillRed;
         face.edge  = kMarkerFlagEdgeRed;
+        // THE FLASH TAKES THE UNDAMPED BORDER TOO, and for the same reason it
+        // takes the undamped fill: the override replaces the resolved face
+        // WHOLE with the live red class's, because a failed commit must read as
+        // a state of this box rather than as the marker's own class. Leaving
+        // the border blended while the fill went full-strength would be the one
+        // half-applied surface — a DISABLED marker's editor (reachable:
+        // enter_top_flag_edit gates on the store index alone) would flash a
+        // bright red box behind a dimmed border.
+        face.border = kMarkerFlagBorder;
         face.label = kRedesignLabel;
     }
 
@@ -1382,11 +1418,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // The border sits OUTSIDE the fill like the flag's, so nothing the clamp,
     // the text viewport or the view offset computed above moves: box_w, view_x0
     // and view_x1 are all fill-relative, and at the left clamp this column
-    // simply falls off the surface exactly as a flag's does.
+    // simply falls off the surface exactly as a flag's does. Its COLOUR comes
+    // off the resolved face, so a DISABLED marker's open editor carries the
+    // damped border its idle flag carries — the editor opens on any store index
+    // (enter_top_flag_edit), disabled included, so this is a live path and not a
+    // defensive one.
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                         kMarkerFlagBorder.b);
+    cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
     cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
     cairo_fill(cr);
     cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);

@@ -423,16 +423,26 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
-// THE BOX'S 1px LEFT BORDER (architect 2026-08-02) — and the one colour in this
-// lane that is NOT a face. COLUMN 0 of all three marker crops is #131516 for
-// the crop's whole height: identical in the unselected, the selected and the
-// 17-row red shot, and the composite row_5_full.png shows the same column
-// standing at x=22 for exactly the box's rows 37..56 with the fill starting at
-// 23. Class-invariant and selection-invariant by measurement, so it is ONE
-// sampled constant rather than a fourth member of the class ladder — and by the
-// same reading the DISABLED blend does not touch it: that blend mutes the
-// marker's own hues toward the lane ground, and this colour is not one of them.
-// It is the box's structural edge, the same on every flag.
+// THE BOX'S 1px LEFT BORDER (architect 2026-08-02). COLUMN 0 of all three
+// marker crops is #131516 for the crop's whole height: identical in the
+// unselected, the selected and the 17-row red shot, and the composite
+// row_5_full.png shows the same column standing at x=22 for exactly the box's
+// rows 37..56 with the fill starting at 23. CLASS-INVARIANT AND
+// SELECTION-INVARIANT ACROSS EVERYTHING THE CROPS SHOW, which is why it is ONE
+// sampled constant rather than a fourth fill/edge-style pair per class: red,
+// selected and default all border in this exact value.
+//
+// BUT IT IS PART OF THE FACE ON THE DISABLED AXIS (architect 2026-08-02, second
+// pass — he overturned this constant's first reading, which called it a purely
+// structural edge that the disabled blend had no hue of its own to mute): "not
+// literally with alpha, but via color mix — I would expect the border to be
+// mixed with the row 5 lane 3 background color in the same way the fill was
+// done". So a disabled marker's border goes through the SAME mix_color owner,
+// at the SAME kMarkerDisabledMix fraction, toward the SAME marker-lane ground
+// the fill and the top edge take, and the resolved value rides FlagFace like
+// they do (resolve_flag_face, render.cpp). The crops are not contradicted: none
+// of them shows a disabled flag, so what they pin down is the LIVE ladder, and
+// that half of the reading stands exactly as measured.
 //
 // THIS SUPERSEDES THE BLOCK'S ORIGINAL READING of that column as a CROP-EDGE
 // ARTIFACT (row 5, 2026-08-01). A stray edge pixel would not be uniform, full
@@ -1749,11 +1759,12 @@ struct MarkerStem {
 // the nine-glyph truncation live at kMarkerFlagPadXPx above.
 //
 // PLUS A 1px LEFT BORDER OUTSIDE THAT FILL (architect 2026-08-02),
-// class-invariant kMarkerFlagBorder, full box height, standing one column LEFT
-// of the frame column so THE STEM KEEPS THE FILL'S LEFTMOST COLUMN. The
-// published hit rect is the whole box, border included; the geometry, the
-// left-edge clip and the colour's provenance are at marker_flag_border_px and
-// kMarkerFlagBorder.
+// kMarkerFlagBorder, full box height, standing one column LEFT of the frame
+// column so THE STEM KEEPS THE FILL'S LEFTMOST COLUMN. It is one value across
+// every LIVE class and takes the disabled blend with the rest of the face (the
+// ladder below). The published hit rect is the whole box, border included; the
+// geometry, the left-edge clip and the colour's provenance are at
+// marker_flag_border_px and kMarkerFlagBorder.
 //
 // OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
 // MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
@@ -1764,8 +1775,11 @@ struct MarkerStem {
 // COLOR CLASSES, resolved in priority order. DISABLED WINS, then red, then the
 // default/selected pair:
 //   Disabled:  every surface of the flag BLENDED 25% over the lane ground
-//              (kMarkerDisabledMix, through mix_color) — fill, top edge and
-//              label alike — and NO STEM. It blends the marker's OWN class, so
+//              (kMarkerDisabledMix, through mix_color) — fill, top edge, LEFT
+//              BORDER (architect 2026-08-02) and label alike — and NO STEM.
+//              The border has no per-class variant to choose, so the blend is
+//              simply applied to the one border colour; everything else about
+//              it is the fill's own operation. It blends the marker's OWN class, so
 //              a disabled red marker stays red; disabled decides the blend and
 //              the missing stem, not the hue. (The old ladder's disabled was a
 //              separate opaque PAIR, which is why red used to test `!dis`.)
@@ -1775,7 +1789,8 @@ struct MarkerStem {
 //              selection gives — the disabled rendition of the selected face.
 //              RED STILL REFUSES THE LIFT, exactly as the live red class does
 //              (no selected pair by ruling, the normalization cue unmasked).
-//   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed.
+//   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed;
+//              border kMarkerFlagBorder undamped, like every live class.
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge, swapping to the bright
 //              kMarkerFlagFillSel / kMarkerFlagEdgeSel pair when selected —
 //              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the

@@ -250,7 +250,9 @@ static void render_bottom_strip_editor(cairo_t* cr,
     //    should look like a marker flag in terms of dimensions"). The box is
     //    built from THE MARKER FLAG'S OWN constants — called, never copied, so a
     //    flag retune moves this surface with it — in the flag's own paint order:
-    //    the 1px left border (kMarkerFlagBorder, class-invariant), the fill and
+    //    the 1px left border (kMarkerFlagBorder at full strength — the flag's
+    //    border takes the disabled blend on a disabled MARKER, and a bottom
+    //    editor has no marker and no disabled state to inherit), the fill and
     //    its 1px top edge in the marker lane's OWN red pair
     //    (kMarkerFlagFillRed / kMarkerFlagEdgeRed — the exact pair the flag
     //    editor flashes, so there is ONE invalid red in the product and no
