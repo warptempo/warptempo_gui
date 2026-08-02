@@ -536,11 +536,14 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 //   REST           — the bar background itself, flat, no frame. The crop's rest
 //                    button is INVISIBLE because it IS the div showing through,
 //                    which is why the painter draws no fill for it.
-//   HOVER          — a 1px kRedesignAccent frame. Focused, the interior stays
-//                    flat; UNFOCUSED it also takes the selected lift. That
-//                    asymmetry is the crops' (row_right_hover keeps #1e5774,
-//                    row_right_disabled_hover lifts to #44464a) and is recorded
-//                    rather than smoothed away.
+//   HOVER          — a 1px kRedesignAccent frame, and NOTHING ELSE, on both
+//                    grounds: hover moves the OUTLINE only (architect
+//                    2026-08-02, from the live test). THIS SUPERSEDES A CROP —
+//                    row_right_disabled_hover lifts its interior to #44464a
+//                    where row_right_hover keeps the flat #1e5774, and that
+//                    asymmetry was reproduced faithfully until he ruled the
+//                    simpler rule. The lift below is the SELECTED fact alone
+//                    now; everything else on this surface is still the crops'.
 //   CLICK          — the interior at kRedesignClickMix toward the accent, the
 //                    same 30% row 2 and row 4 paint, over the bar background.
 //   SELECTED       — the bar background lifted an eighth toward #fcfcfc, under

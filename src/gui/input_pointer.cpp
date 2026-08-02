@@ -2522,20 +2522,33 @@ void GuiInputHandler::toggle_settings_popup() {
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE LANE'S BOTTOM, the same expression paint_settings_popup
-    // places the box at (row 1's 1px margin-bottom belongs to row 1, so the popup
-    // hangs below all of it). Both read top_menu_row_area, so the damaged band
-    // and the painted box start on the same row of pixels.
+    // THE TOP EDGE IS THE BUTTON'S BOTTOM, the same expression
+    // paint_settings_popup places the box at — the dropdown hangs off the thing
+    // that opened it (architect 2026-08-02), which since row 1 gained its 1px
+    // margin-bottom is one pixel above the lane's own bottom. Both sites read
+    // the SAME stashed rect, so the damaged band and the painted box start on
+    // the same row of pixels; a band anchored a pixel lower would leave the
+    // popup's own top border unpainted.
     {
-        const GuiRect lane = top_menu_row_area(app);
+        const GuiRect& btn =
+            app.redesign_buttons[redesign_button_index(RedesignButton::Settings)]
+                .rect;
         viewport.invalidate_rect(
-            GuiRect{0, lane.y + lane.h, app.width, settings_popup_h_px()});
+            GuiRect{0, btn.y + btn.h, app.width, settings_popup_h_px()});
     }
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
-    // (redesign_button_hoverable refuses every button while it is up), and no
-    // motion event follows a press — so without this the Settings button would
-    // keep its lit pill under its own dropdown. Clearing hover also disarms any
-    // pending tooltip, which is the other half of "these two never coexist".
+    // (redesign_button_hoverable refuses every button while it is up) and no
+    // motion event follows a press, so the faces would otherwise stay lit under
+    // a surface that has taken the pointer from them. Clearing hover also
+    // disarms any pending tooltip, which is the other half of "these two never
+    // coexist".
+    //
+    // IT NO LONGER DECIDES THE SETTINGS PILL, and the inversion is worth stating
+    // because this line used to be what darkened it: since 2026-08-02 the pill
+    // paints on `settings_popup.open` as well as on hover (kdenlive's behaviour,
+    // argued at the paint site), so the button stays blue for exactly as long as
+    // its menu is up. This clear now serves the OTHER roster buttons and the
+    // tooltip; the Settings face is the paint condition's business.
     clear_redesign_button_hover();
     viewport.invalidate_top_strip();
 }

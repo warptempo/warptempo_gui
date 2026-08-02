@@ -465,12 +465,18 @@ struct ViewBarFace {
 ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
                           bool selected, bool pressed) {
     ViewBarFace f{};
-    // THE HOVER LIFTS ONLY WHILE UNFOCUSED. The focused hover crop keeps the
-    // flat #1e5774 interior and lets the accent frame carry the whole cue; the
-    // unfocused one lifts to #44464a under the same frame. It is an asymmetry,
-    // it is what the two crops say, and it is honored rather than smoothed —
-    // the darker bar needs the extra separation the blue one does not.
-    const bool lift_fill  = selected || (hovered && !focused);
+    // HOVER ONLY EVER MOVES THE OUTLINE, in BOTH focus states (architect
+    // 2026-08-02, from the live test) — so the interior is the selected fact
+    // alone and `hovered` never reaches this term.
+    //
+    // THIS SUPERSEDES A CROP. row_right_disabled_hover (the UNFOCUSED hover)
+    // shows the interior lifted to #44464a where row_right_hover (the FOCUSED
+    // one) keeps the flat #1e5774, and that asymmetry was reproduced faithfully
+    // before the ruling. The architect ruled the simpler rule instead: hover is
+    // the frame's job on both grounds. The crops still govern everything else
+    // here — the SELECTED lifts are unchanged in both focus states, which is why
+    // the two fractions below survive the ruling intact.
+    const bool lift_fill  = selected;
     // THE PRESSED INTERIOR IS THE FOCUSED FACE'S ALONE, because there is no
     // unfocused click crop and there is no gesture that would need one: labwc is
     // click-to-focus, so the press that would show it ACTIVATES THE WINDOW
@@ -962,7 +968,27 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         face.enabled = redesign_button_enabled(app, audio.total_frames(),
                                                def.id);
 
-        if (face.hovered) {
+        // THE SETTINGS BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
+        // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
+        // is the one that is open", so it paints on the popup's flag as well as
+        // on hover. It is also what keeps the button from going dark the instant
+        // the menu appears — the open edge deliberately UNHOVERS the whole roster
+        // (the pointer belongs to the popup while it is up), so hover alone would
+        // drop the pill on exactly the frame the dropdown arrives.
+        //
+        // A PAINT CONDITION, NOT A `selected` BIT. Two reasons, both structural:
+        // redesign_button_selected is defined as the live fact a button's CHORD
+        // flips, and Settings has no chord at all (it is the roster's one
+        // non-chord action) — a dropdown is not a resting mode. And the tick
+        // comparator that watches the selected bits would be pure duplication
+        // here: the popup's two writers, toggle_settings_popup and the one close
+        // owner close_settings_popup, ALREADY invalidate the top strip on both
+        // edges, so the comparator could only ever re-notice a change that was
+        // damaged at its source.
+        const bool pill = face.hovered ||
+                          (def.id == RedesignButton::Settings &&
+                           app.settings_popup.open);
+        if (pill) {
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
             redesign_rounded_rect_path(cr, x, row.y,
@@ -1920,15 +1946,15 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     // be one expression.
     const int h = settings_popup_h_px();
 
-    // FLUSH UNDER THE LANE, NOT THE BUTTON (2026-08-02, when row 1 gained its
-    // 1px margin-bottom and the two became different rows of pixels). "The menu
-    // row's bottom edge" is the LANE's — the margin belongs to row 1 and the
-    // popup hangs below all of it, so no sliver of ground shows between the box
-    // and the row it drops from. The x anchor is still the BUTTON's left edge,
-    // which is what the crop aligns.
-    const GuiRect lane = top_menu_row_area(app);
+    // FLUSH WITH THE BUTTON IT EMITS FROM, on BOTH axes (architect 2026-08-02).
+    // When row 1 gained its 1px margin-bottom the button's bottom edge and the
+    // lane's stopped being the same row of pixels, and the anchor briefly moved
+    // to the LANE on the reading that "the menu row's bottom edge" meant the
+    // whole lane. He ruled the button: the dropdown hangs off the thing that
+    // opened it. So the box's top edge lands on row 1's MARGIN STRIP and covers
+    // it for as long as the menu is up — that is the ruled look, not a leak.
     int x = btn.x;
-    int y = lane.y + lane.h;             // flush: zero margin under the lane
+    int y = btn.y + btn.h;               // flush: zero margin under the button
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
     app.settings_popup.rect = GuiRect{x, y, w, h};
