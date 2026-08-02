@@ -345,11 +345,15 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // "BPM" is CAPITALIZED ALWAYS (architect 2026-08-02 — the acronym caps in
     // both surfaces, which deliberately released the 2026-08-01 GUI/stderr
     // byte-identity hold for that one token), while "render iterations" stays
-    // lowercase because it is sentence-initial in NEITHER surface — it sits
-    // inside this parenthetical and after the "warptempo_gui: " prefix in the
-    // summary — and the ruling capitalizes "iterations" only where it leads a
-    // sentence. A future label that DOES lead one capitalizes at its
-    // definition, not here.
+    // lowercase because it is a shared ROUTING/CATEGORY LABEL rather than
+    // sentence-initial prose in either surface: in the GUI it sits inside this
+    // parenthetical, and in the summary it fills the tag slot ahead of the
+    // message proper, whose own first word takes the capital
+    // ("warptempo_gui: render iterations: Rendered 3 of 8 entries"). Its
+    // position after the "warptempo_gui: " prefix is NOT the reason — the
+    // 2026-08-02 terminal pass looks past the program-name prefix when it
+    // locates that first prose word. A future label that DOES lead a sentence
+    // capitalizes at its definition, not here.
     char buf[128];
     std::snprintf(buf, sizeof(buf),
                   "Rendering %d of %d (%s)...",
@@ -499,7 +503,9 @@ bool GuiInputHandler::render_bpm_sweep() {
     // FILENAME TOKEN, therefore DATA and lowercase: it names the on-disk
     // batch folder `<N>_bpm/`, which the `l` listen and `'` commit routes
     // reach by name. The display label below is the separate, capitalized
-    // "BPM" — the case ruling reaches display strings only.
+    // "BPM" — the case ruling reaches every PROSE surface, the terminal
+    // included since the 2026-08-02 pass, so the split here is prose versus
+    // DATA rather than display versus stderr.
     const std::string command_tag = "bpm";
     const std::filesystem::path batch_folder =
         queue_root /

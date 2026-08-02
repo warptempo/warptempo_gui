@@ -797,11 +797,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         // The batch's DISPLAY label — the progress parenthetical and the
-        // stderr summary. It stays LOWERCASE: the case ruling capitalizes
-        // "iterations" only where it leads a sentence, and this label leads
-        // neither surface (it sits inside "Rendering N of M (...)..." and
-        // after the "warptempo_gui: " prefix in the summary). Contrast the
-        // BPM batch's label, which capitalizes as an acronym everywhere.
+        // stderr summary. It stays LOWERCASE because it is a shared
+        // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
+        // surface: it sits inside "Rendering N of M (...)..." in the GUI, and
+        // in the summary it fills the tag slot ahead of the message proper,
+        // whose own first word takes the capital ("warptempo_gui: render
+        // iterations: Rendered 3 of 8 entries"). Its position after the
+        // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02
+        // terminal pass looks past the program-name prefix when it locates
+        // that first prose word. Contrast the BPM batch's label, which
+        // capitalizes as an acronym everywhere.
         if (async_renderer.is_busy()) {
             // A render dispatch kills the running render. Park the fully
             // built batch for the worker-idle pump.

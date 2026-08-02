@@ -470,9 +470,12 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //
 // EVERY GUI-FACING STRING CARRIES PROPER CAPITALIZATION (architect 2026-08-01,
 // generalizing the row-by-row carve-out that started here): labels are proper
-// nouns/labels, messages and prose are sentence case. What STAYS lowercase is
-// stderr — swept in its own later round — plus user-authored data (marker
-// labels, titles, filenames) and literal settings KEY names shown as keys.
+// nouns/labels, messages and prose are sentence case. THE CASE SPLIT IS OVER
+// (2026-08-02): the terminal round landed, so stderr/stdout prose follows the
+// same rule and there is ONE rule for both surfaces. What STAYS lowercase is
+// user-authored data (marker labels, titles, filenames), literal settings KEY
+// names shown as keys, and the routing/filename tokens that are data rather
+// than prose.
 struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
