@@ -173,7 +173,7 @@ The engineering background — why the guarantee is shaped this way, and the per
 
 ## Color configuration
 
-The interface's colors are fixed — they come from its design reference and are hard-coded. A legacy configuration file, `~/.config/warptempo_gui/colors.conf`, is still read once at startup with its full strict grammar, but nearly all of its keys no longer reach any painted surface; the handful that still do (the moving playback line, the editors' invalid-commit flash, and the base window ground) are listed with the grammar, the recovery behavior, and the copyable canonical block in `docs/engineering/color-configuration.md`. A missing file is normal and keeps the compiled values.
+The interface's colors are fixed — they come from its design reference and are hard-coded. There is no color configuration: the legacy `~/.config/warptempo_gui/colors.conf` file is no longer read at all, so one left on disk has no effect.
 
 ## Hotkey reference
 
