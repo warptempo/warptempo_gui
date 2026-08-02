@@ -565,9 +565,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // click scrub region to preview"). The region arm that stood here — a
         // left-bound launch through scrub_launch_at whenever a span rested — is
         // DELETED with the SPAN FORM: the region is trim scratch, not a launch
-        // point, and the lower-half SCRUB press is the gesture for previewing it
-        // (click anywhere inside the span and it auditions from there, the span
-        // resting untouched). Space now touches no region at all, in either
+        // point, and the SCRUB press is the gesture for previewing it — either
+        // entry, the waveform lower-half plain left press or the bare right
+        // press anywhere in the waveform area (one shared body): click inside
+        // the span and it auditions from there, the span resting untouched.
+        // Space now touches no region at all, in either
         // direction: it neither reads one nor clears one.
         playback_lifecycle.toggle_playback(launch_offset);
         return;

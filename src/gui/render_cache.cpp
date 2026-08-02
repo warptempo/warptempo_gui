@@ -161,19 +161,34 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
 //
-// THE TRIM-AWARE PHASE-RESET COMPONENT DID NOT BUMP THIS VERSION
-// (2026-08-01), the trim_window_is_full precedent: the version exists to
-// invalidate keys whose ENGINE INPUT meaning changed, and this change moves no
-// engine input at all — it stops the key from carrying information that
-// provably cannot reach the engine. A sub-window state now shares a key with
-// its out-of-window-reset twin, which is exactly the safe direction: same
-// engine input, same bytes. The one-directional consequence is that some
-// PRE-FIX entries keyed on the raw reset set are now unreachable garbage,
-// aged out by the LRU budget — never a wrong-bytes hit, because the new key
-// is derived from strictly LESS information only where that information
-// cannot reach the engine, and the strictly-more direction (a key that would
-// now collide with a genuinely different render) does not exist.
-constexpr uint32_t kFingerprintVersion = 18;
+// THE TRIM-AWARE PHASE-RESET COMPONENT BUMPED THIS VERSION 18 -> 19
+// (2026-08-01), and the bump is FORCED — the field it changed is not a
+// dropped field but a RE-DOMAINED one. Pre-fix a TRIMMED render serialized
+// every full-map reset query in SOURCE-side deliverable frames; post-fix it
+// serializes each SURVIVING reset's TRANSLATED query, the same value minus
+// plan_trim's cut_begin. Same field, same spelling, different domain — so a
+// post-fix key whose translated query is P byte-matches a PRE-FIX artifact
+// whose UNSHIFTED query was P (pick a late positive cut_begin: that old reset
+// sat before the window and never reached its engine at all), with the version
+// byte, the trimmed flag and both bounds identical on either side. The
+// persistent .fingerprint compare (fingerprint_sidecar_matches, below) and
+// both reuse rungs — the target-view cache/artifact rungs and do_render's
+// up-to-date rung — would then serve that old audio for a genuinely DIFFERENT
+// reset schedule. That is the one unsafe direction, and a fresh namespace is
+// exactly what the version byte is for.
+// WHY THE trim_window_is_full PRECEDENT DOES NOT REACH HERE: that one keeps
+// the OLD BYTES for an UNCHANGED meaning, so its reuse is byte-identical by
+// construction. The same-spelling-different-domain hazard above is the
+// opposite arrangement, and the first reading of this change missed it by
+// reasoning only over NEW keys ("the key drops information only where that
+// information cannot reach the engine, so a sub-window state merely joins its
+// out-of-window-reset twin") — true of two new keys, silent about old
+// sidecars written under the other domain.
+// ACCEPTED COST: every pre-bump cache entry and .fingerprint sidecar goes
+// unreachable, full-window ones included — a one-time cold cache, aged out by
+// the LRU budget on the cache side, warning-only on the sidecar side (single
+// user, renders/ transient).
+constexpr uint32_t kFingerprintVersion = 19;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

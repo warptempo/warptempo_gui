@@ -188,10 +188,14 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     on the repeat side. The selection is the honest subject for all
             //     three eligible kinds (the nudges act on its focus, the tempo step
             //     on its members) and the tab is what the entry is filed under.
-            const long long elapsed_ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - last_gesture_time_).count();
-            merge = elapsed_ms <= kTapCoalesceMs
+            // The comparison runs on the clock's OWN duration, never on a
+            // whole-millisecond count: duration_cast truncates toward zero, so
+            // counting first would have admitted every real interval in
+            // [500ms, 501ms) as "500". Compared directly, the boundary is
+            // exactly kTapCoalesceMs.
+            const std::chrono::steady_clock::duration elapsed =
+                std::chrono::steady_clock::now() - last_gesture_time_;
+            merge = elapsed <= std::chrono::milliseconds{kTapCoalesceMs}
                  && last_gesture_tab_ == app.active_tab_view
                  && last_gesture_selection_ == app.selected_markers;
         }

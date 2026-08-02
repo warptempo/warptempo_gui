@@ -38,8 +38,11 @@ constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
 // One named block resolved from a warp-marker walk. `label` is the
 // owning marker's label name (empty markers don't produce entries);
-// `start` and `end` are absolute source frames from the marker and its
-// immediate successor.
+// `start` is the owning marker's own absolute source frame and `end` is its
+// section's extent under the EFFECTIVE-PARTICIPATION rule stated at
+// section_end_frame below — the next marker that participates in the render,
+// else the song end. A disabled marker sitting in between is not a boundary
+// and does not close the block.
 struct DestBlock {
     std::string label;
     int64_t     start;
@@ -218,8 +221,10 @@ void PhaseResetPropagate::copy_from_selection() {
         // block's own extent (a clipboard block captured at song end may later
         // paste onto a non-final destination and vice versa; each side's window
         // follows its own extent). Detected by extent-end == song_end_frame,
-        // exact and unique: interior blocks end at the next marker's time,
-        // which walls at total-1 < total = song_end_frame.
+        // exact and unique: an interior block ends at the next EFFECTIVELY-
+        // ENABLED marker's time (section_end_frame's rule), and that is still
+        // some marker's authored time, which walls at total-1 < total =
+        // song_end_frame.
         const double lo = b.start - guard;
         const double hi = (b.end == song_end_frame)
                               ? static_cast<double>(b.end)

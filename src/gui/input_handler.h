@@ -207,9 +207,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     swallows the key first, so Esc clears a rested span but cancels no gesture.
 //     The full Esc enumeration lives at its dispatch point in on_key
 //     (input_handler.cpp).
-// DELIBERATELY NOT CLEARED, the whole list: the LOWER-HALF SCRUB PRESS (the
-// region's PREVIEW gesture — click inside a span to audition it, the span
-// resting untouched), SPACE (which touches no region at all and always toggles
+// DELIBERATELY NOT CLEARED, the whole list (the scrub membership re-derived by
+// grepping scrub_press_at, 2026-08-01): BOTH SCRUB ENTRIES — the waveform
+// LOWER-HALF PLAIN LEFT press and the BARE RIGHT press anywhere in the waveform
+// area, full height — which run one shared body and are together the region's
+// PREVIEW gesture (click inside a span to audition it, the span resting
+// untouched), SPACE (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
 // pans, and the bare `0` overview toggle). The remaining pre-existing clear sites (file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the

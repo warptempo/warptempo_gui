@@ -1847,8 +1847,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (y >= area.y + area.h / 2) {
                 // The scrub press body (scrub_press_at): gutter no-op, clamped
                 // frame from the column, one scrub act (stop a live session,
-                // else launch), nothing armed. This is its only caller — the
-                // scrub is the waveform lower half and nothing else.
+                // else launch), nothing armed. This is the LEFT button's entry
+                // — the waveform lower half; the bare right press over the full
+                // waveform height is the body's other caller (its own comment
+                // is above, in this same handler).
                 scrub_press_at(click_rel_x);
                 return;
             }
