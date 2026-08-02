@@ -116,11 +116,13 @@ struct TrimRange {
 // kdenlive screenshots overrode all prior color work: every redesigned surface
 // paints HARD-CODED constexpr constants sampled from its own crop — not keys,
 // not tunable, not in the config grammar (the redesign blocks at the end of
-// this palette). Of the 23 keys below, exactly FOUR still reach a paint site:
+// this palette). Of the 23 keys below, exactly TWO still reach a paint site:
 //   kBackground     — the base chrome erase (render_background);
-//   kAccent + kAccentOutline — the bottom editors' invalid-flash box
-//                     (render_bottom_strip_editor, paint_handler.cpp);
 //   kPlayheadScanner — the moving playback line (paint_scanner).
+// It was FOUR until 2026-08-02, when the bottom editors' invalid flash became a
+// marker-flag box in the marker lane's own hard-coded red and kAccent +
+// kAccentOutline lost the last paint site either had (their record is at their
+// declaration below).
 // EVERY OTHER KEY IS INERT: declared, loaded, still validated by the whole-file
 // grammar, and read by nothing — each declaration below carries its own
 // retirement record. No key is deleted (a removal is a grammar change, and the
@@ -242,7 +244,7 @@ inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 // cannot be re-derived from that file; take it from the icon art or from
 // BreezeClassic, not by hunting BreezeDark for a role that does not exist.
 inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
-// LIVE — one of the four keys still painting (the header's completed-shrink
+// LIVE — one of the TWO keys still painting (the header's completed-shrink
 // record): the moving playback line, drawn by paint_scanner while the
 // scanner runs (its own pass since 2026-08-01 — it paints over the marker
 // stems, where the cursor still paints under them). It reads WHITE against the
@@ -255,8 +257,9 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // flags paint the hard-coded kMarkerFlag* constants (fill/edge per class,
 // selection a color swap, disabled the kMarkerDisabledMix blend, the red stem
 // kMarkerStemRed), so kMarker/kMarkerOutline and the kMarkerDisabled pair reach
-// no paint site. The kAccent pair alone stays LIVE, on a NON-marker site (its
-// own record below). What follows is the pairs' provenance and their pre-row-5
+// no paint site. The kAccent pair outlived them on a NON-marker site and is
+// inert too since 2026-08-02 (its own record below), so NOTHING in this marker
+// block reaches a pixel. What follows is the pairs' provenance and their pre-row-5
 // behavior: a DARK DESATURATED FILL under a brighter 1px RING — the live
 // classes carried a genuinely bright ring, the disabled one a ring that only
 // just lifted off its fill, which is exactly how it read as switched off; the
@@ -350,14 +353,20 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 inline GuiColor kMarkerDisabled        = hex(0x164160);
 inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
-// RED — LIVE, one pair of the four still-painting keys (the header's
-// completed-shrink record), and its one surviving site is the BOTTOM EDITORS'
-// INVALID-COMMIT FLASH: a parse failure fills the editable run's band in
-// kAccent under a 1px kAccentOutline ring (render_bottom_strip_editor,
-// paint_handler.cpp — kept tunable deliberately, no crop shows that state).
+// RED — NOW INERT, and it was the LAST tunable pair on any painted surface
+// (architect 2026-08-02). Its final site was the BOTTOM EDITORS' INVALID-COMMIT
+// FLASH — a parse failure filling the editable run's band in kAccent under a 1px
+// kAccentOutline ring — and that flash is now a MARKER-FLAG BOX in the marker
+// lane's own hard-coded red (kMarkerFlagFillRed / kMarkerFlagEdgeRed under
+// kMarkerFlagBorder, at the flag's pads and height; render_bottom_strip_editor,
+// paint_handler.cpp), which is the pair the flag editor already flashed. So the
+// product has ONE invalid red across all four editors instead of two that could
+// drift, and the tunable-domain shrink the palette header tracks is down to two
+// keys. Declared and unread now, like kCanvas and its siblings; the ruling that
+// keeps it in the grammar is the same one that keeps them.
 // Its ORIGINAL role — the marker normalization cue, a marker whose render falls
-// back to the 1.00 tempo — retired with row 5: red flags paint the hard-coded
-// kMarkerFlagFillRed/kMarkerFlagEdgeRed pair and stem kMarkerStemRed now.
+// back to the 1.00 tempo — retired earlier, with row 5: red flags paint the
+// hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed pair and stem kMarkerStemRed.
 // THE VALUES: the RING is the shipped Breeze ForegroundNegative #da4453; the
 // FILL is mix(kWaveform, that same negative, 0.35), a deliberate blend rather
 // than a sample — it put the red flag in the same dark-fill/bright-ring system
@@ -691,9 +700,10 @@ inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
 inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
-// selected,red}.png (56x20 crops whose FIRST column is a #131516 crop-edge
-// artifact — the flag box is the remaining 55). Each class is a FILL plus a
-// 1px TOP-EDGE color; there is no side or bottom outline in any crop.
+// selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
+// 1px TOP-EDGE color, and the box carries a 1px LEFT BORDER outside that fill
+// (kMarkerFlagBorder, below, where its provenance is recorded); there is no
+// right and no bottom outline in any crop.
 //
 // SELECTION IS A COLOR SWAP AND NOTHING ELSE (row 5): a selected marker paints
 // the bright pair, an unselected one the calm pair, and the geometry, the stem
@@ -719,6 +729,28 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // CALM stem — also his explicit rule, which is why the stem color is resolved
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
+
+// THE BOX'S 1px LEFT BORDER (architect 2026-08-02) — and the one colour in this
+// lane that is NOT a face. COLUMN 0 of all three marker crops is #131516 for
+// the crop's whole height: identical in the unselected, the selected and the
+// 17-row red shot, and the composite row_5_full.png shows the same column
+// standing at x=22 for exactly the box's rows 37..56 with the fill starting at
+// 23. Class-invariant and selection-invariant by measurement, so it is ONE
+// sampled constant rather than a fourth member of the class ladder — and by the
+// same reading the DISABLED blend does not touch it: that blend mutes the
+// marker's own hues toward the lane ground, and this colour is not one of them.
+// It is the box's structural edge, the same on every flag.
+//
+// THIS SUPERSEDES THE BLOCK'S ORIGINAL READING of that column as a CROP-EDGE
+// ARTIFACT (row 5, 2026-08-01). A stray edge pixel would not be uniform, full
+// height and identical across three separately taken crops at two different
+// heights, nor would it reappear mid-composite at x=22. The kdenlive flag is a
+// css-style box — border OUTSIDE fill — so the 56px crop is 1 border + a 55px
+// box, not 1 stray + 55.
+//
+// (The value coincides with kTrimGroundBevelLo's #131516 one lane up. Two
+// samples that agree, not one fact referenced twice — the hard-coded rule.)
+inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 
 // THE DISABLED FACE OF A MARKER IS A BLEND, NEVER AN ALPHA (architect): 25% of
 // the class color over the lane ground (kRedesignTabGround #202326), per
@@ -751,8 +783,9 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // re-derived onto kWaveformRegionCanvas (kRegionCanvas inert), the phase-reset
 // overlay ring reads kMarkerFlagFill (kOverlayOutline inert), the marker
 // classes paint the row-5 kMarkerFlag* constants, and the trim lane paints its
-// own sampled surfaces. The four keys still live are enumerated at the palette
-// header's completed-shrink record.
+// own sampled surfaces. The keys still live — two, since the editors' invalid
+// flash left kAccent in 2026-08-02 — are enumerated at the palette header's
+// completed-shrink record.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
@@ -1231,9 +1264,10 @@ inline double redesign_font_size_px() {
 }
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
-// (56x20, first column a crop-edge artifact -> a 55x20 box) and confirmed
-// against row_5_full.png, where the same box occupies rows 37..56 with its stem
-// running on at column 23 = the box's OWN LEFT EDGE.
+// (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is
+// at kMarkerFlagBorder) and confirmed against row_5_full.png, where the same
+// box occupies rows 37..56 with the border at column 22 and the FILL — and the
+// stem running on below it — at column 23.
 //
 // LEFT-ANCHORED, NOT CENTERED. The composite settles it: the 1px stem stands on
 // the box's leftmost column, so a marker's box opens AT its frame and runs
@@ -1266,12 +1300,36 @@ inline int marker_flag_pad_right_px() {
         static_cast<double>(kMarkerFlagPadRightPx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
 }
-// The 1px TOP EDGE — the box's whole outline. The crops show no side and no
-// bottom edge, which is why this is a single band and not a ring.
+// The 1px TOP EDGE, in the class's edge colour. The crops show no RIGHT and no
+// bottom edge, which is why this is a band and not a ring; the LEFT side is the
+// separate border below, in a colour of its own.
 inline constexpr int kMarkerFlagEdgePx = 1;
 inline int marker_flag_edge_h_px() {
     const int v = static_cast<int>(std::nearbyint(
         static_cast<double>(kMarkerFlagEdgePx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+// THE 1px LEFT BORDER (architect 2026-08-02), full box height, in
+// kMarkerFlagBorder. The geometry clause that makes it a BORDER and not a wider
+// box is his and it is explicit: THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN,
+// so the border sits one column to the LEFT of the marker's own frame column
+// and never over it. Nothing inside moved — the fill's origin is still the
+// frame column, its interior width is still pad + shaped + pad, and the label's
+// pen is still measured from the fill's origin. What widened is THE BOX, and
+// only leftward: the painter draws this column and the published hit rect
+// starts on it, so a press on the border is a press on the flag.
+//
+// AT THE VIEWPORT'S FIRST COLUMN THE BORDER IS SIMPLY CLIPPED AWAY. Both the
+// marker lane rect and the waveform area begin at window x = 0, so a flag there
+// paints its fill at 0 and its border at -1, off the surface, where cairo drops
+// it. That is the honest answer rather than a defect: pushing the fill right to
+// make room would move the flag off the frame column it names and off its own
+// stem, and the column alignment is the authored fact where the border is
+// decoration. The right side needs no such rule — the box has no right border.
+inline constexpr int kMarkerFlagBorderPx = 1;
+inline int marker_flag_border_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerFlagBorderPx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
 }
 // The label BASELINE, measured from the box's top edge. The crop's cap ink runs
@@ -1308,6 +1366,11 @@ inline constexpr size_t kMarkerLabelGlyphBudget = 9;
 // ASCII glyph in a sans face advances more than one em, so budget * em + the
 // two pads bounds every box the truncation can produce. A bound, not a size:
 // nothing is laid out against it.
+//
+// THE LEFT BORDER IS DELIBERATELY NOT IN IT. This bound answers "how far RIGHT
+// of its frame column can a box reach", and the border grows the box the other
+// way — leftward, away from the viewport — so adding it would only over-admit
+// culled markers by one column and never save a visible one.
 inline double marker_flag_max_width_px() {
     return static_cast<double>(kMarkerLabelGlyphBudget) *
                redesign_font_size_px() +
@@ -1501,7 +1564,10 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
 
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
-// Emitted in the same order flags appear left-to-right.
+// Emitted in the same order flags appear left-to-right. It is the WHOLE PAINTED
+// BOX — the 1px left border included, so its x sits one column left of the
+// marker's frame column (marker_flag_border_px) — because this stash has always
+// been the painted extent and a click on the border is a click on the flag.
 struct FlagHitRect {
     int    marker_index;
     double x;
@@ -1981,11 +2047,18 @@ struct MarkerStem {
 
 // Draws the marker lane's flags in `top_strip_area` above visible markers, in
 // THE KDENLIVE TEXT-ON-FLAG FORM (row 5, 2026-08-01): each flag is a filled box
-// whose LEFT EDGE stands on its marker's pixel column, spanning the whole marker
-// lane vertically, carrying a 1px top edge in its class's edge color and the
-// marker's own composed label in the redesign's sans face. The width is DERIVED
-// from the shaped label (pad + shaped + pad); the anatomy, the pad and the
-// nine-glyph truncation live at kMarkerFlagPadXPx above.
+// whose FILL's LEFT EDGE stands on its marker's pixel column, spanning the whole
+// marker lane vertically, carrying a 1px top edge in its class's edge color and
+// the marker's own composed label in the redesign's sans face. The width is
+// DERIVED from the shaped label (pad + shaped + pad); the anatomy, the pad and
+// the nine-glyph truncation live at kMarkerFlagPadXPx above.
+//
+// PLUS A 1px LEFT BORDER OUTSIDE THAT FILL (architect 2026-08-02),
+// class-invariant kMarkerFlagBorder, full box height, standing one column LEFT
+// of the frame column so THE STEM KEEPS THE FILL'S LEFTMOST COLUMN. The
+// published hit rect is the whole box, border included; the geometry, the
+// left-edge clip and the colour's provenance are at marker_flag_border_px and
+// kMarkerFlagBorder.
 //
 // OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
 // MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
@@ -2062,7 +2135,9 @@ void render_flags(cairo_t* cr,
 //
 //   `box`           the painted box in window coordinates — the marker's flag,
 //                   unrolled to hold the FULL untruncated pending plus caret
-//                   room, and CLAMPED fully on-window.
+//                   room, and CLAMPED fully on-window. It spans the 1px LEFT
+//                   BORDER too (the flag's, which this box also wears), so its
+//                   x is one column left of the fill and its w one wider.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -2092,13 +2167,15 @@ struct FlagEditorBox {
 // which is also how this product's own editor read before the marker-text lane
 // took the payload away.
 //
-// THE BOX WEARS THE MARKER'S OWN FACE: the class fill and top edge
-// render_flags would have given it (disabled blend, red, selected swap, all
-// through the one ladder), so opening an editor changes the flag's SIZE and
-// nothing else about how it reads. An invalid commit flashes the marker lane's
-// OWN red pair — kMarkerFlagFillRed / kMarkerFlagEdgeRed, not the pre-redesign
-// kAccent the bottom-strip editors still flash: this surface is hard-coded
-// row-5 colour now and a chip pair here would be a face nobody ruled.
+// THE BOX WEARS THE MARKER'S OWN FACE: the class fill, the top edge and the 1px
+// left border render_flags would have given it (disabled blend, red, selected
+// swap, all through the one ladder; the border class-invariant), so opening an
+// editor changes the flag's SIZE and nothing else about how it reads. An
+// invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
+// kMarkerFlagEdgeRed. Since 2026-08-02 the BOTTOM-STRIP editors flash that same
+// pair in this same box anatomy (render_bottom_strip_editor), so there is one
+// invalid red and one editor box in the product; the pre-redesign kAccent pair
+// they used to flash has no paint site anywhere now.
 //
 // THE TEXT IS THE REDESIGN'S SANS, matching the labels it replaces — the
 // monospace face dies at this surface with the lane placement owner

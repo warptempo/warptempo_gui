@@ -982,6 +982,7 @@ void render_flag_boxes_impl(
     const int    pad_l    = marker_flag_pad_left_px();
     const int    pad_r    = marker_flag_pad_right_px();
     const int    edge_h   = marker_flag_edge_h_px();
+    const int    border_w = marker_flag_border_px();
     const double baseline = static_cast<double>(lane.y) +
                             static_cast<double>(marker_flag_baseline_px());
 
@@ -1028,6 +1029,12 @@ void render_flag_boxes_impl(
             // always correct (the whole strip repaints on every keystroke) and
             // the stale ink was this pass's, one z-layer down.
             //
+            // WHAT IS SKIPPED IS THE WHOLE BOX, ITS LEFT BORDER INCLUDED: the
+            // editor paints the flag entire (border, fill, top edge), so
+            // leaving this pass's border standing would put a dark column
+            // beside — or, at the editor's left clamp, inside — a box that
+            // already draws its own.
+            //
             // Suppressing the BOX ONLY is deliberate. The stem below still
             // publishes and still paints: it anchors at the flag's left column
             // and the editor unrolls from that same column, so the marker keeps
@@ -1037,10 +1044,28 @@ void render_flag_boxes_impl(
             // (active_editor_text, input_pointer.cpp), so the entry is
             // unreachable while the editor is up rather than wrong.
             if (i != suppress_box_index) {
-                // Box then top edge, both AA-off so the 1px band is exactly one
-                // row and the box's sides are exactly one column.
+                // Border, then box, then top edge — all AA-off so the 1px band
+                // is exactly one row and the box's columns are exactly one
+                // column each.
+                //
+                // THE BORDER IS OUTSIDE THE FILL, one column LEFT of the frame
+                // column, in the class-invariant kMarkerFlagBorder (the
+                // geometry clause and the clip-at-the-left-edge answer are at
+                // marker_flag_border_px, render.h). It is drawn first only for
+                // reading order: the two rectangles are disjoint.
+                //
+                // OVERLAP READS ONE COLUMN EARLIER NOW. A later marker's box
+                // covers an earlier one's tail from its BORDER, so two flags a
+                // box-width apart butt up as border-against-fill instead of
+                // fill-against-fill — which is the whole point of a border in
+                // this lane and is why later-over-earlier stays the entire
+                // occlusion model.
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, kMarkerFlagBorder.r,
+                                     kMarkerFlagBorder.g, kMarkerFlagBorder.b);
+                cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
+                cairo_fill(cr);
                 cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
                 cairo_rectangle(cr, bx, lane.y, bw, lane.h);
                 cairo_fill(cr);
@@ -1058,15 +1083,23 @@ void render_flag_boxes_impl(
             }
 
             if (out_hit_rects) {
+                // THE RECT IS THE WHOLE BOX, BORDER INCLUDED — a click on the
+                // border is a click on the flag. It is the painted extent, as
+                // this stash always was; the border merely made the extent one
+                // column wider than the fill.
                 FlagHitRect r;
                 r.marker_index = i;
-                r.x = static_cast<double>(bx);
+                r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
-                r.w = static_cast<double>(bw);
+                r.w = static_cast<double>(bw + border_w);
                 r.h = static_cast<double>(lane.h);
                 out_hit_rects->push_back(r);
             }
             if (out_stems && face.has_stem) {
+                // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
+                // marker's own frame column, unchanged by the border standing
+                // to its left (the architect's explicit clause, spelled at
+                // marker_flag_border_px).
                 out_stems->push_back(
                     MarkerStem{i, static_cast<double>(bx), face.stem});
             }
@@ -1243,9 +1276,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     std::vector<double> byte_x =
         text_shape::byte_offsets_px(run, ed.pending.size());
 
-    const int pad_l  = marker_flag_pad_left_px();
-    const int pad_r  = marker_flag_pad_right_px();
-    const int edge_h = marker_flag_edge_h_px();
+    const int pad_l    = marker_flag_pad_left_px();
+    const int pad_r    = marker_flag_pad_right_px();
+    const int edge_h   = marker_flag_edge_h_px();
+    const int border_w = marker_flag_border_px();
     // CARET ROOM. The caret at end-of-text stands one column past the last
     // glyph, so the box must own a column the run does not; without it the
     // caret would sit on the right pad or, at the clamp, off the box entirely.
@@ -1330,9 +1364,30 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         face.label = kRedesignLabel;
     }
 
-    // 1. The box: fill, then the 1px top edge — AA off, exactly as a flag.
+    // 1. The box: the 1px left border, the fill, then the 1px top edge — AA
+    //    off, exactly as a flag.
+    //
+    // THE EDITOR CARRIES THE BORDER TOO, and the argument is the one this whole
+    // surface rests on: the open editor IS the marker's flag, unrolled, and
+    // "opening an editor changes the flag's SIZE and nothing else about how it
+    // reads" (the declaration's own contract). A border the idle flag draws and
+    // the editor dropped would break exactly that promise at the moment the two
+    // are most directly compared — the flag is suppressed underneath and this
+    // box stands in its place, on its column, one column of which would go
+    // missing on open and come back on commit. It is also the form the BOTTOM
+    // editors take now (render_bottom_strip_editor's invalid flash, 2026-08-02),
+    // so the product's two editor painters draw one box anatomy between them.
+    //
+    // The border sits OUTSIDE the fill like the flag's, so nothing the clamp,
+    // the text viewport or the view offset computed above moves: box_w, view_x0
+    // and view_x1 are all fill-relative, and at the left clamp this column
+    // simply falls off the surface exactly as a flag's does.
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                         kMarkerFlagBorder.b);
+    cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
+    cairo_fill(cr);
     cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
     cairo_rectangle(cr, bx, lane.y, box_w, lane.h);
     cairo_fill(cr);
@@ -1415,7 +1470,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_restore(cr);   // the font state
 
     out.valid         = true;
-    out.box           = GuiRect{bx, lane.y, box_w, lane.h};
+    // THE PUBLISHED BOX IS THE PAINTED BOX, BORDER INCLUDED — the same rule the
+    // flags' hit rects take: a press on the border is a press on this editor,
+    // and it maps to byte 0 through the nearest-boundary search exactly as a
+    // press on the left pad does (the box-is-the-claim clause at FlagEditorBox).
+    out.box           = GuiRect{bx - border_w, lane.y, box_w + border_w, lane.h};
     out.text_origin_x = text_origin_x;
     out.byte_x        = std::move(byte_x);
 }

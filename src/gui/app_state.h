@@ -1310,8 +1310,9 @@ struct AppState {
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
     // Memoized red-flag sets — the marker-store indices whose render resolves
-    // to the 1.00 normalization fallback, painted kAccent in their flags unless
-    // selected (see warp_frame_map_view.h). Mutable: refreshed from the const
+    // to the 1.00 normalization fallback, painted in the marker lane's red class
+    // whether or not they are selected (see warp_frame_map_view.h). Mutable:
+    // refreshed from the const
     // flag-cache build. Keyed on the respective store generation, so the
     // classification runs once per change, not per tick, and freezes through a
     // marker drag (the store mutates only at commit).
@@ -2563,7 +2564,10 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // (AppState::flag_hit_rects — the contract, including why a derived width has
 // no second owner, is at the field) and tests plain rects: the fused tip-down
 // triangle and its taper test died with the triangle lane in row 5, and so did
-// the live rect rebuild. Boxes OVERLAP freely (later over earlier in store
+// the live rect rebuild. THE BOX INCLUDES ITS 1px LEFT BORDER (2026-08-02): the
+// stash carries the painted extent, so the flag's reach grew one column to the
+// LEFT of its frame column and a press on the border resolves the marker.
+// Boxes OVERLAP freely (later over earlier in store
 // order, the whole occlusion model), and the walk runs BACKWARDS so the topmost
 // = last-painted box wins — WYSIWYG for every consumer (selection clicks, the
 // drag grab, the double-click editor). Selection does not lift a box: it is a

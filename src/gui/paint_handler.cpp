@@ -174,6 +174,14 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
 // the pending half through that run's own byte boundaries, which it publishes
 // for the pointer path (AppState::BottomEditorText).
 //
+// ALL THREE INHERIT THE INVALID FLASH'S MARKER-FLAG BOX TOGETHER (2026-08-02,
+// step 1 below) — they are the complete set of surfaces painting through here,
+// and every one of them fits it: each is a prefix plus one editable run on one
+// line, which is the exact shape the box wraps, and none carries a second field,
+// a multi-line payload or a box of its own for it to fight. Their prefixes
+// differ in width and nothing else, and the box is measured off the RUN, not off
+// a prefix.
+//
 // NO VIEW OFFSET, deliberately: unlike the flag editor's unrolled box these
 // editors do not scroll. That was the monospace path's intent too and it is
 // kept — the settings and commit strings that reach the boundary are
@@ -219,40 +227,93 @@ static void render_bottom_strip_editor(cairo_t* cr,
     out.byte_x.reserve(ed.pending.size() + 1);
     for (size_t i = p0; i < bx.size(); ++i) out.byte_x.push_back(bx[i] - bx[p0]);
 
-    // THE GLYPH INK BAND — the caret's, the selection highlight's and the red
-    // flash's shared vertical extent, the face's own ascent-to-descent about the
-    // baseline. The retired monospace box derived the same band by inverting a
-    // chip formula; here the extents ARE the band, with no box to invert.
+    // THE GLYPH INK BAND — the caret's and the selection highlight's shared
+    // vertical extent, the face's own ascent-to-descent about the baseline. The
+    // retired monospace box derived the same band by inverting a chip formula;
+    // here the extents ARE the band, with no box to invert.
+    //
+    // THE INVALID FLASH LEFT THIS BAND in 2026-08-02: it is a marker-flag box
+    // now and takes the flag's height and baseline offset instead. The caret and
+    // the highlight KEEP the ink band deliberately — they are the editor's
+    // resting furniture, present on every frame whether or not a box is, and the
+    // two extents agree to within a pixel anyway (a 19-row flag interior against
+    // this face's 19-row ascent+descent at gui_scale 100), so the flash contains
+    // them exactly as the flag editor's box contains its own.
     const double sel_x0 = origin_x + bx[p0];
     const double sel_x1 = origin_x + run.width_px;
 
-    // 1. THE RED FLASH, and it is the box's whole remaining visual. At rest the
-    //    editors paint no box at all: the old one filled and ringed itself in
-    //    the row ground, i.e. invisibly. A parse failure fills the editable
-    //    run's band in kAccent under a 1px kAccentOutline ring — a parse-fail
-    //    chip's exact colors, kept TUNABLE deliberately (no crop shows this
-    //    state; kdenlive has no comparable surface) while everything else on the
-    //    row is hard-coded.
+    // 1. THE INVALID FLASH, and it is the box's whole remaining visual.
+    //
+    //    IT IS A MARKER FLAG NOW (architect 2026-08-02: "the settings editor
+    //    still uses the old kaccent color — make it like the flag editor when
+    //    user enters invalid submission. same padding and size — basically it
+    //    should look like a marker flag in terms of dimensions"). The box is
+    //    built from THE MARKER FLAG'S OWN constants — called, never copied, so a
+    //    flag retune moves this surface with it — in the flag's own paint order:
+    //    the 1px left border (kMarkerFlagBorder, class-invariant), the fill and
+    //    its 1px top edge in the marker lane's OWN red pair
+    //    (kMarkerFlagFillRed / kMarkerFlagEdgeRed — the exact pair the flag
+    //    editor flashes, so there is ONE invalid red in the product and no
+    //    drift), the flag's two pads around the run, the marker lane's height,
+    //    and the flag's baseline offset, which is what seats the box on the text
+    //    the way a flag sits on its label instead of merely being lane-tall
+    //    somewhere on the row. The pre-redesign kAccent / kAccentOutline chip
+    //    pair leaves with it, and takes the last paint site either key had.
+    //
+    //    THE SUBJECT IS UNCHANGED — the EDITABLE RUN, not the prefix. The prefix
+    //    names the field; what failed to parse is what the user typed, and the
+    //    box marks that. So the left pad reaches a pixel or two back over the
+    //    prefix's trailing space (its glyphs repaint over the box in step 3
+    //    regardless), exactly as a flag's left pad sits between its border and
+    //    its first glyph.
+    //
+    //    THE NORMAL FACE IS DELIBERATELY UNCHANGED: at rest these editors paint
+    //    NO box, and the flag editor's marker-coloured ground is not borrowed
+    //    here. The architect's sentence is about the INVALID submission and the
+    //    DIMENSIONS, and the reason it stops there is structural — the flag
+    //    editor's fill is the edited MARKER'S OWN CLASS COLOUR, it is that
+    //    marker's flag unrolled; a settings, commit or BPM editor edits no
+    //    marker and has no class, so kMarkerFlagFill here would be a purple that
+    //    names nothing, on a row whose ground is its own sampled surface. Red is
+    //    different in kind: it is a STATE, not an identity, and every editor in
+    //    the product can enter it. The one box these editors have therefore
+    //    takes the flag's anatomy; the resting row stays the row.
+    //
+    //    NO DEGENERATE CASE IS LEFT. An EMPTY invalid run needed a forced 1px
+    //    width and a negative-inset guard while the box was a RING made by
+    //    insetting a fill; this box is pad + run + pad under a top BAND, so an
+    //    empty run is an ordinary pads-wide box and every rectangle here is
+    //    positive by construction. VERTICAL OVERFLOW needs no guard either: the
+    //    box is 20px at gui_scale 100 against a 31px content band and scales
+    //    with it, and section C's clip (paint_bottom_strip) bounds this painter
+    //    to that band the way it bounds the glyphs.
     if (ed.red) {
-        const int rx0 = static_cast<int>(std::nearbyint(sel_x0));
-        const int rx1 = static_cast<int>(std::nearbyint(sel_x1));
-        const int rw  = (rx1 > rx0) ? (rx1 - rx0) : 1;
+        const int pad_l    = marker_flag_pad_left_px();
+        const int pad_r    = marker_flag_pad_right_px();
+        const int edge_h   = marker_flag_edge_h_px();
+        const int border_w = marker_flag_border_px();
+        const int rx0   = static_cast<int>(std::nearbyint(sel_x0));
+        const int rx1   = static_cast<int>(std::nearbyint(sel_x1));
+        const int run_w = (rx1 > rx0) ? (rx1 - rx0) : 0;
+        const int fx = rx0 - pad_l;
+        const int fw = pad_l + run_w + pad_r;
+        const int fy = static_cast<int>(std::nearbyint(baseline_y)) -
+                       marker_flag_baseline_px();
+        const int fh = marker_lane_h_px();
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kAccentOutline.r, kAccentOutline.g,
-                             kAccentOutline.b);
-        cairo_rectangle(cr, rx0, band_y, rw, band_h);
+        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                             kMarkerFlagBorder.b);
+        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
         cairo_fill(cr);
-        // Interior only when the 1px inset leaves positive dimensions: an
-        // EMPTY invalid run is forced to rw == 1 above, and a negative-width
-        // rectangle is not a no-op in cairo — it normalizes back over the
-        // outline's own span, so the accent fill would overwrite the outline's
-        // vertical sides. When the inset vanishes, the outline IS the box.
-        if (rw - 2 > 0 && band_h - 2 > 0) {
-            cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
-            cairo_rectangle(cr, rx0 + 1, band_y + 1, rw - 2, band_h - 2);
-            cairo_fill(cr);
-        }
+        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
+                             kMarkerFlagFillRed.b);
+        cairo_rectangle(cr, fx, fy, fw, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
+                             kMarkerFlagEdgeRed.b);
+        cairo_rectangle(cr, fx, fy, fw, edge_h);
+        cairo_fill(cr);
         cairo_restore(cr);
     }
 
@@ -279,7 +340,11 @@ static void render_bottom_strip_editor(cairo_t* cr,
 
     // 4. The selected substring repainted in the ground colour for contrast, the
     //    WHOLE run re-shown under a clip — shaping the substring on its own
-    //    could kern its first glyph differently and shift the ink.
+    //    could kern its first glyph differently and shift the ink. It stays the
+    //    ROW GROUND rather than following the flash box's fill the way the flag
+    //    editor's does: the flag editor always has a box to knock its glyphs out
+    //    of, this one has a box only while invalid, and dark-on-white stays the
+    //    legible pair in both states.
     if (has_sel) {
         cairo_save(cr);
         cairo_rectangle(cr, origin_x + bx[s0], static_cast<double>(band_y),
