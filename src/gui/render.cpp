@@ -1330,9 +1330,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN FACE, through the one class ladder — so the open editor
     // is visibly the same flag, only wider. The red flash overrides the whole
-    // pair (this lane's red, not the bottom strip's chip red — see the
-    // declaration), because a failed commit must read as a state of THIS box
-    // and not as a marker that suddenly normalized.
+    // pair with this lane's own kMarkerFlagFillRed / kMarkerFlagEdgeRed, which
+    // is the ONE invalid red in the product: since 2026-08-02 the bottom-strip
+    // editors flash this same pair in this same box anatomy, so there is no
+    // second red to contrast against (see the declaration). It overrides the
+    // whole pair because a failed commit must read as a state of THIS box and
+    // not as a marker that suddenly normalized.
     const bool dis = effective_disabled(mv, idx);
     const bool red_class =
         warp_red_flag_set_cached(
