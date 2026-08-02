@@ -601,7 +601,8 @@ void GuiFlagEditor::wipe_bpm_state() {
 // current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the bottom-strip paint branch supplies
-// the visible "bpm: " prefix, so the editor's locked_prefix stays "".
+// the visible "BPM: " prefix (kBpmEditorPrefix, paint_handler.h), so the
+// editor's locked_prefix stays "".
 void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
     if (!app.bpm_mode_enabled) return;

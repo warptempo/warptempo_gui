@@ -913,16 +913,18 @@ enum class DialogTrigger {
 // activates the rightmost response) do anything; everything else is
 // swallowed. `response_keys` holds lowercase letters and the match is
 // CASE-SENSITIVE on the codepoint (the rule is at the prompt dispatch,
-// input_handler.cpp) — which is why a response LABEL keeps its accelerator
-// letter lowercase where the word would otherwise capitalize: "[s]ave" names
-// the exact keystroke, and "[S]ave" would advertise one that does not answer.
+// input_handler.cpp). THE LABEL CAPITALIZES ITS ACCELERATOR LETTER ANYWAY
+// (architect 2026-08-02): "[S]ave" reads as the word does, on pacman's Y/n
+// convention — the capital marks WHICH letter answers, not that shift is
+// required, and the user reads "[S]" as `s`. The match is deliberately
+// unchanged: a typed capital still does not answer, which is accepted.
 // The two non-letter responses match on the GuiKey instead, carry no case, and
 // therefore wear their proper key names: "[Delete]", "[Esc]".
 struct PromptState {
     bool                     active = false;
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // e.g. "[s]ave"
+    std::vector<std::string> response_labels;   // e.g. "[S]ave"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 

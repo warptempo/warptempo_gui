@@ -31,14 +31,16 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
     // machinery remains a vector<char> match.
     //
-    // [s]ave always writes a loadable file: the marker serializer writes
+    // [S]ave always writes a loadable file: the marker serializer writes
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. [s]ave / [delete]
-    // (discard-and-proceed) / [esc] (cancel).
+    // the GUI never writes a LOAD-invalid state. [S]ave / [Delete]
+    // (discard-and-proceed) / [Esc] (cancel). The accelerator letter
+    // capitalizes in the label while the match stays lowercase-exact —
+    // PromptState's declaration owns that rule.
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"[s]ave", "[Delete]", "[Esc]"};
+    app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
     app.prompt.trigger         = t;
     viewport.invalidate_all();
 }
@@ -76,7 +78,7 @@ void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
                                  changed_list +
                                  "). New renders may not match old ones.";
     app.prompt.response_keys   = {'o'};
-    app.prompt.response_labels = {"[o]k"};
+    app.prompt.response_labels = {"[O]k"};
     app.prompt.trigger         = DialogTrigger::ENV_HASH_MISMATCH;
     viewport.invalidate_all();
 }
@@ -143,7 +145,7 @@ void GuiPrompt::activate_response(char k) {
                 app.prompt.text            = "Save failed.";
                 app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
                 app.prompt.response_labels =
-                    {"[r]etry", "[Delete]", "[Esc]"};
+                    {"[R]etry", "[Delete]", "[Esc]"};
                 viewport.invalidate_all();
                 return;
             }

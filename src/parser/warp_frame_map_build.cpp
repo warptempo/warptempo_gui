@@ -797,6 +797,22 @@ std::string compute_hover_popup_text(
             descriptor += "*";
             descriptor += format_value_double(*src_eff.scale, 4);
         }
+        // A prior that DEFINES a label names it, in the authored sidecar
+        // spelling: "1.28:a.01", matching the label-ref arm's own provenance
+        // form below (architect approval 2026-08-02 — "should include label
+        // def ie 1.28:a.01 not just 1.28 @ ..."). The def side is independent
+        // of the tempo side in the grammar, so this fires for an owning def
+        // ("1.28:a.01") AND for an inheriting one ("pass:a.01"), where the
+        // resolved value stands in for the `pass` token exactly as it does
+        // without a label. label_def and label_ref are mutually exclusive per
+        // marker, and a visible prior is never an enabled ref anyway, so the
+        // two provenance forms can never collide. The copy payload was fixed
+        // above, before any provenance text — it is the value substring alone
+        // and this suffix cannot reach it.
+        if (!src.label_def.empty()) {
+            descriptor += ":";
+            descriptor += src.label_def;
+        }
         out += " (from ";
         out += descriptor;
         out += " @ ";
@@ -857,13 +873,25 @@ std::string compute_hover_popup_text(
     return "";
 }
 
+// THIS BUILDER'S SIX REFUSAL STRINGS ARE GUI-FACING, so they carry
+// SENTENCE-INITIAL CAPITALS (architect approval 2026-08-02, the frozen
+// capitalization grant: "capitalize for correct english... but change nothing
+// else"). They are the ONLY frozen-tree strings the GUI ever PAINTS: the
+// target-view entry gate hands a refusal straight to the error-notice prompt
+// (GuiInputHandler::validate_target_view_entry -> prompt.open_error_notice,
+// input_handler.cpp), which shows the owner's string verbatim on the bottom
+// strip. Every other frozen refusal reaching the GUI ends at stderr or at an
+// editor's red flash, so those keep the terminal round's lowercase. The CLI
+// prints these same strings and its bytes move with them — accepted under the
+// grant, since one string cannot serve two cases. Wording, punctuation and
+// vocabulary are otherwise untouched.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames) {
     std::vector<WarpFrameMapSegment> out;
 
     if (sample_rate <= 0 || total_frames <= 0) {
-        return std::unexpected("invalid source audio metadata");
+        return std::unexpected("Invalid source audio metadata");
     }
 
     // Pass 1: accumulate per-label deltas so forward-declared references
@@ -886,7 +914,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         // store, where the gesture walls clamp to total-1 and a past-EOF
         // sidecar is adversarial load-fatal.
         if (src_frame > static_cast<double>(total_frames)) {
-            return std::unexpected("marker time exceeds source length at marker "
+            return std::unexpected("Marker time exceeds source length at marker "
                                    + std::to_string(i));
         }
         // Sub-frame segments are unreachable from the resolver: its
@@ -897,7 +925,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         // wrong bytes; the guard is the loud refusal for hand-assembled marker
         // lists that reach the build directly.
         if (src_frame - src_f_prev < 1.0) {
-            return std::unexpected("marker segment < 1 frame at marker "
+            return std::unexpected("Marker segment < 1 frame at marker "
                                    + std::to_string(i));
         }
 
@@ -919,7 +947,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // Neither downstream refusal could NAME the tempo; this site is
             // kept for that message vocabulary on the async sweep path.
             if (tempo_val <= 0.0) {
-                return std::unexpected("tempo " +
+                return std::unexpected("Tempo " +
                                        format_value_double(tempo_val, 2)
                                        + " <= 0 at marker " + std::to_string(i));
             }
@@ -965,7 +993,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // a found entry is the one definition.
             const auto lbl_it = label_cache.find(m.label_ref);
             if (lbl_it == label_cache.end()) {
-                return std::unexpected("label ref has no matching label def: '"
+                return std::unexpected("Label ref has no matching label def: '"
                                        + m.label_ref + "' at marker "
                                        + std::to_string(i));
             }
@@ -1002,7 +1030,7 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
         // settings-scale bracket.
         if (!std::isfinite(target_frame)) {
             return std::unexpected(
-                "warp frame map target anchor is not finite at "
+                "Warp frame map target anchor is not finite at "
                 + format_timestamp(src_frame / static_cast<double>(sample_rate)));
         }
 

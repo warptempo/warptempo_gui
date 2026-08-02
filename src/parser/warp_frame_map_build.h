@@ -80,8 +80,10 @@ struct MarkerEffective {
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
-// the first violated condition (a concise lowercase reason; callers add their
-// own context prefix). Does not log. Failure conditions, in check order:
+// the first violated condition (a concise sentence-capitalized reason —
+// these six strings are GUI-PAINTED through the target-view entry gate's
+// error notice, the rationale at the definition; callers add their own
+// context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames (the past-EOF wall — column-symmetric with
 // build_phase_reset_source_frames by ruling, and a loud breach backstop for
@@ -328,7 +330,9 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
 // immediate prior marker's own resolved displayed tempo — matching what that
 // marker's own popup or flag shows, not its raw stored fields, which are
-// inert for a pass or a label_ref — TIME its time_frame). If SOURCE's own
+// inert for a pass or a label_ref — followed by ":LABEL" when that prior
+// DEFINES a label, giving the authored "1.28:a.01" spelling and the same
+// provenance form the label_ref arm below uses; TIME its time_frame). If SOURCE's own
 // resolution is unresolvable (base 0.0), or the value's visible source is a
 // synthetic projection marker (source_idx -1), the suffix is dropped
 // entirely and the popup shows just the resolved tempo. A pass whose

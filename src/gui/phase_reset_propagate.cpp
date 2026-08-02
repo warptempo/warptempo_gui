@@ -261,7 +261,7 @@ void PhaseResetPropagate::open_paste_confirmation() {
         "Paste phase resets into matching blocks? "
         "Existing phase resets in matched ranges will be cleared.";
     app.prompt.response_keys   = {'y', '\x1b'};
-    app.prompt.response_labels = {"[y]es", "[Esc]"};
+    app.prompt.response_labels = {"[Y]es", "[Esc]"};
     app.prompt.trigger         = DialogTrigger::PASTE_CONFIRM;
     viewport.invalidate_all();
 }

@@ -338,14 +338,18 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         return;
     }
 
-    // THE BATCH LABEL MOVED INTO A PARENTHETICAL (2026-08-01, at the
-    // proper-capitalization sweep) and the sentence now leads: the label is a
-    // lowercase data token SHARED WITH THE STDERR SUMMARY above, and the
-    // terminal pass is a later, separate round — so capitalizing it here would
-    // have changed a stderr line, and leaving it in front would have started a
-    // GUI sentence in lowercase. Trailing it keeps both true, with zero stderr
-    // bytes moved. (If the terminal round ever capitalizes the labels, this can
-    // go back to leading with one.)
+    // THE BATCH LABEL RIDES IN A TRAILING PARENTHETICAL so the GUI sentence
+    // leads with a capital of its own ("Rendering 1 of 5 (BPM)...") whatever
+    // the label's case is. The label is one string shared with the stderr
+    // summary above, and the two labels take the case rule differently:
+    // "BPM" is CAPITALIZED ALWAYS (architect 2026-08-02 — the acronym caps in
+    // both surfaces, which deliberately released the 2026-08-01 GUI/stderr
+    // byte-identity hold for that one token), while "render iterations" stays
+    // lowercase because it is sentence-initial in NEITHER surface — it sits
+    // inside this parenthetical and after the "warptempo_gui: " prefix in the
+    // summary — and the ruling capitalizes "iterations" only where it leads a
+    // sentence. A future label that DOES lead one capitalizes at its
+    // definition, not here.
     char buf[128];
     std::snprintf(buf, sizeof(buf),
                   "Rendering %d of %d (%s)...",
@@ -383,6 +387,10 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // seconds (frame / sample_rate, converted by the caller), formatted via the shared
 // mm:ss.mmm formatter. Stored verbatim in the cell's per-entry .settings
 // bpm= field and promoted into the source .settings on commit.
+// DATA, NOT DISPLAY: no paint site reads this string — it is a sidecar value
+// that also feeds the render fingerprint (render_cache.cpp's EngineField::Bpm
+// arm), so its " bpm " stays lowercase where the display label capitalizes.
+// Capitalizing it would move sidecar bytes and mint fresh cache keys.
 static std::string format_bpm_descriptor(int beats, double bpm,
                                          double start_seconds,
                                          double end_seconds) {
@@ -488,6 +496,10 @@ bool GuiInputHandler::render_bpm_sweep() {
     std::error_code ec;
     const int next_index = max_renders_batch_index(queue_root).max_index + 1;
 
+    // FILENAME TOKEN, therefore DATA and lowercase: it names the on-disk
+    // batch folder `<N>_bpm/`, which the `l` listen and `'` commit routes
+    // reach by name. The display label below is the separate, capitalized
+    // "BPM" — the case ruling reaches display strings only.
     const std::string command_tag = "bpm";
     const std::filesystem::path batch_folder =
         queue_root /
@@ -598,15 +610,19 @@ bool GuiInputHandler::render_bpm_sweep() {
         return false;
     }
 
+    // The batch's DISPLAY label — the progress parenthetical and the stderr
+    // summary, both fed from this one string. "BPM" is capitalized always
+    // (architect 2026-08-02): it is an acronym, not a sentence position, so
+    // both surfaces carry the caps. It is NOT the folder token above.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully built
         // batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
-        cmd.batch_label = "bpm";
+        cmd.batch_label = "BPM";
         kill_running_render_and_park(std::move(cmd));
     } else {
-        start_render_batch(std::move(reqs), "bpm");
+        start_render_batch(std::move(reqs), "BPM");
     }
     // Batch fully built and committed to run (dispatched, or parked behind
     // the killed render's drain): every request carries its own moved
