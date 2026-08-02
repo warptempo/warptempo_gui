@@ -409,6 +409,90 @@ constexpr MenuButtonDef kMenuButtons[] = {
     {RedesignButton::Settings, "Settings"},
 };
 
+// ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
+// workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
+// Color" bar, the one row the redesign had left out) reborn as the three
+// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3.
+//
+// THE CSS FLOAT VOCABULARY, and this is its first RIGHT float — recorded here
+// because the model has only ever walked left-to-right before. The div's right
+// edge is flush with the WINDOW's right edge (no margin stated, so none exists)
+// and it spans the row's full CONTENT height; the layout walk inside it runs
+// left to right from the div's own left edge, exactly like every other row's.
+// Only the div's ORIGIN is new, and it needs all three widths before it can be
+// placed, which is why the labels are shaped up front rather than in the walk.
+//
+// MARGINS DO NOT COLLAPSE HERE (a stated fact, like every margin in this
+// redesign): each button carries 1px on all four sides, so two adjacent buttons
+// sit 2px apart and the div is 1 + w + 2 + w + 2 + w + 1 wide. The vertical pair
+// is what sets the row's content height — 34 = 1 + 32 + 1 exactly.
+//
+// A BUTTON'S OWN BOX is kdenlive's, read straight off the 82px "Logging" crop's
+// scanline: [frame 1][fill 12][text][fill 12][frame 1], so the width is the
+// shaped label plus 2*(border + padding) = label + 26, and the frame is drawn
+// INSIDE the box (the row-3 side-border precedent — a face, never a size
+// change).
+constexpr double kViewBarBtnMarginPx = 1.0;    // all four sides, no collapse
+constexpr double kViewBarBtnBorderPx = 1.0;    // drawn inside the box
+constexpr double kViewBarBtnPadPx    = 12.0;   // per side, inside the border
+constexpr double kViewBarRadiusPx    = 5.0;    // the redesign's one radius
+
+struct ViewBarButtonDef {
+    RedesignButton id;
+    const char*    label;
+};
+constexpr ViewBarButtonDef kViewBarButtons[] = {
+    {RedesignButton::ViewSW, "S+W"},
+    {RedesignButton::ViewTP, "T+P"},
+    {RedesignButton::ViewTW, "T+W"},
+};
+constexpr int kViewBarButtonCount =
+    static_cast<int>(std::size(kViewBarButtons));
+
+// ONE FACE PAINTER FOR THE WHOLE BAR, parameterized on the BAR BACKGROUND —
+// the redesign_row_ground pattern, for its reason: every fill and every frame
+// in the nine crops is either the background flat, the accent, or a FIXED LIFT
+// OF THAT BACKGROUND, so the focused and unfocused bars are one rule applied to
+// two grounds rather than two hand-spelled state tables that could drift.
+// Provenance, the two fractions and their per-channel fits are at
+// kRedesignViewBarBg (render.h).
+struct ViewBarFace {
+    GuiColor fill;
+    GuiColor frame;
+    bool     filled;   // false = the bar background already shows the rest face
+    bool     framed;
+};
+ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
+                          bool selected, bool pressed) {
+    ViewBarFace f{};
+    // THE HOVER LIFTS ONLY WHILE UNFOCUSED. The focused hover crop keeps the
+    // flat #1e5774 interior and lets the accent frame carry the whole cue; the
+    // unfocused one lifts to #44464a under the same frame. It is an asymmetry,
+    // it is what the two crops say, and it is honored rather than smoothed —
+    // the darker bar needs the extra separation the blue one does not.
+    const bool lift_fill  = selected || (hovered && !focused);
+    // THE PRESSED INTERIOR IS THE FOCUSED FACE'S ALONE, because there is no
+    // unfocused click crop and there is no gesture that would need one: labwc is
+    // click-to-focus, so the press that would show it ACTIVATES THE WINDOW
+    // first and the button is already focused by the time it paints. If a press
+    // ever does land unfocused, this falls through to the hover/selected face
+    // rather than inventing a shade the crops never showed.
+    const bool click_fill = pressed && focused;
+    f.filled = click_fill || lift_fill;
+    f.fill   = click_fill
+                   ? mix_color(kRedesignAccent, bg, kRedesignClickMix)
+                   : mix_color(kRedesignViewBarLiftBase, bg,
+                               kRedesignViewBarSelectedMix);
+    f.framed = hovered || pressed || selected;
+    // The pointer's frame is the accent; a resting selected button's is the
+    // calmer lift — row 4's rule, on this bar's own pair of colors.
+    f.frame  = (hovered || pressed)
+                   ? kRedesignAccent
+                   : mix_color(kRedesignViewBarLiftBase, bg,
+                               kRedesignViewBarFrameMix);
+    return f;
+}
+
 // ROW 2 — THE TOOLBAR, measured at 100% off row_2_button_{rest,hover}.png
 // (81x32), row_2_separator.png (1x34) and row_2_border_bottom.png. The lane
 // metrics (44 content + 1 border) live in render.h with row 1's, for the same
@@ -798,28 +882,43 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO buttons — "Quit", whose action is Ctrl+Q's exact
-    // route, and "Settings", whose action is the dropdown toggle. No ring; the
+    // ground carrying TWO FLOATS — the LEFT one, "Quit" and "Settings", and the
+    // RIGHT one, the view bar's S+W / T+P / T+W (2026-08-02). No ring; the
     // kdenlive bar is flat.
     //
-    // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three, for BOTH
-    // buttons: at rest the label paints bare on the row ground; hovered, a
-    // filled blue pill sits under it, FLUSH with the row (the css float model —
-    // a flat button fills its whole row, architect 2026-07-31). A PRESS PAINTS
-    // NOTHING NEW — a click keeps the hover face and only pointer-out rests it.
-    // The click and disabled faces belong to rows 2 and 4 and do not reach here,
-    // so this row has no press-state machinery at all.
+    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not
+    // three, for BOTH buttons: at rest the label paints bare on the row ground;
+    // hovered, a filled blue pill sits under it, FLUSH with the row's CONTENT
+    // height (the css float model — a flat button fills its whole row, architect
+    // 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
+    // only pointer-out rests it. The click and disabled faces belong to rows 2
+    // and 4, so these two have no press-state machinery at all.
     //
-    // THE TWO ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
+    // THEIR TWO ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
     // through the shared chord table like every other redesigned button), while
     // SETTINGS TOGGLES THE DROPDOWN — the roster's one non-chord action, since
     // no keyboard chord opens or closes a popup. The bare `;` key still opens
     // the settings editor directly and is untouched by the dropdown.
+    //
+    // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
+    // div, five faces from its own crops, and three chord buttons that are bare
+    // 1/2/3. Its layout, its box model and its face rule are at kViewBarButtons
+    // and view_bar_face above; its colors at kRedesignViewBarBg (render.h).
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
+    // THE LANE IS CONTENT + MARGIN-BOTTOM (render.h's menu_row_* trio). Both
+    // floats fill the CONTENT band; the margin strip below it is left to the row
+    // ground, which is exactly what a css margin shows. Under the left buttons
+    // that is indistinguishable from the ground above; under the RIGHT float it
+    // is the whole point, holding the bar's blue off row 2.
+    const int content_h = row.h - menu_row_margin_h_px();
+    if (content_h <= 0) return;
+
     cairo_save(cr);
 
+    // The ground covers the WHOLE LANE, margin included — one fill, and the
+    // margin needs no second source.
     const GuiColor ground = redesign_row_ground(app);
     cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
@@ -855,7 +954,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // or window change lands in it on the frame that displays it.
         AppState::RedesignButtonFace& face =
             app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect = GuiRect{x, row.y, btn_w, row.h};
+        face.rect = GuiRect{x, row.y, btn_w, content_h};
         // Neither menu button has a disabled face — both are live during a load
         // and on a blank state, which is the whole reason this row paints
         // outside the audio branches. The stash is written anyway so the tick
@@ -868,7 +967,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                                  kRedesignAccent.b);
             redesign_rounded_rect_path(cr, x, row.y,
                                        static_cast<double>(btn_w),
-                                       static_cast<double>(row.h), rad);
+                                       static_cast<double>(content_h), rad);
             cairo_fill(cr);
         }
 
@@ -879,9 +978,125 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(row.h)));
+                              static_cast<double>(content_h)));
 
         x += btn_w;
+    }
+
+    // -- THE RIGHT FLOAT: the view bar ---------------------------------------
+    //
+    // The div is placed from its RIGHT edge, so all three widths are needed
+    // before the first button can be drawn: the labels are shaped once here and
+    // both measured and painted from those runs (the shaping chokepoint's rule —
+    // one run is the single width truth), and the walk below re-uses them.
+    {
+        const int mar  = std::max(1, scaled_px(kViewBarBtnMarginPx));
+        const int bord = std::max(1, scaled_px(kViewBarBtnBorderPx));
+        const int bpad = scaled_px(kViewBarBtnPadPx);
+        const int btn_y = row.y + mar;
+        const int btn_h = content_h - 2 * mar;
+
+        text_shape::ShapedRun runs[kViewBarButtonCount];
+        int widths[kViewBarButtonCount];
+        int div_w = 0;
+        for (int i = 0; i < kViewBarButtonCount; ++i) {
+            runs[i] = text_shape::shape_text_run(font, kViewBarButtons[i].label);
+            widths[i] = 2 * (bord + bpad) +
+                        static_cast<int>(std::nearbyint(runs[i].width_px));
+            // Each button's own left and right margin — they do not collapse, so
+            // the pair between two neighbours sums to 2px and the div's outer
+            // pair is its 1px inset on each side. One term, applied per button,
+            // spells the whole width.
+            div_w += widths[i] + 2 * mar;
+        }
+
+        // FLUSH AT THE WINDOW'S RIGHT EDGE (no margin stated, so none exists).
+        //
+        // THE TWO FLOATS CANNOT MEET, so there is no collision rule — an overlap
+        // would be a layout the architect has not specified, not a case to invent
+        // behaviour for. Measured, not assumed: at 100% the left float is 127px
+        // (Quit 29 + Settings 58, each plus its two 10px pads) and the div is
+        // 183, which is 310 of the 640px window floor; at 200% they are 255 and
+        // 366, which is 621 of the same floor, since the floor does NOT scale.
+        // 19px of clearance at the schema's ceiling is thin, and it is recorded
+        // as thin — the real window is 1920 wide, and a longer future label on
+        // either float is what would close the gap first.
+        // Defensive only, and it takes the whole float: a lane so short that the
+        // two margins eat the button leaves nothing to paint and nothing to
+        // click, which is the same early-out the row's own content_h guard above
+        // makes. Unreachable at any schema-legal gui_scale (content_h floors at
+        // 5 and the margins at 1 each).
+        if (div_w <= 0 || btn_h <= 0) { cairo_restore(cr); return; }
+
+        const int div_x = row.x + row.w - div_w;
+        const GuiColor bar_bg = app.window_activated
+                                    ? kRedesignViewBarBg
+                                    : kRedesignViewBarBgUnfocused;
+        cairo_set_source_rgb(cr, bar_bg.r, bar_bg.g, bar_bg.b);
+        cairo_rectangle(cr, div_x, row.y, div_w, content_h);
+        cairo_fill(cr);
+
+        const double bar_rad = std::nearbyint(kViewBarRadiusPx *
+                                              gui_scale_factor());
+        int vx = div_x;
+        for (int i = 0; i < kViewBarButtonCount; ++i) {
+            vx += mar;
+            const int btn_w = widths[i];
+
+            AppState::RedesignButtonFace& face =
+                app.redesign_buttons[
+                    redesign_button_index(kViewBarButtons[i].id)];
+            face.rect     = GuiRect{vx, btn_y, btn_w, btn_h};
+            face.enabled  = redesign_button_enabled(app, audio.total_frames(),
+                                                    kViewBarButtons[i].id);
+            face.selected = redesign_button_selected(app,
+                                                     kViewBarButtons[i].id);
+
+            const bool pressed =
+                app.redesign_pressed ==
+                redesign_button_index(kViewBarButtons[i].id);
+            const ViewBarFace f =
+                view_bar_face(bar_bg, app.window_activated, face.hovered,
+                              face.selected, pressed);
+
+            if (f.filled || f.framed) {
+                // ONE PATH, FILLED AND STROKED — row 4's construction, and the
+                // frame insets by HALF ITS OWN WIDTH so the band lands on the
+                // box's outermost pixel ring with no straight edge antialiased
+                // (both stroke parities from the one expression). The REST face
+                // paints no fill at all: its color IS the div's background,
+                // already under it, which is why the crop's resting button is
+                // invisible.
+                const double half = static_cast<double>(bord) * 0.5;
+                redesign_rounded_rect_path(cr,
+                                           vx + half, btn_y + half,
+                                           static_cast<double>(btn_w - bord),
+                                           static_cast<double>(btn_h - bord),
+                                           bar_rad - half);
+                if (f.filled) {
+                    cairo_set_source_rgb(cr, f.fill.r, f.fill.g, f.fill.b);
+                    if (f.framed) cairo_fill_preserve(cr);
+                    else          cairo_fill(cr);
+                }
+                if (f.framed) {
+                    cairo_set_source_rgb(cr, f.frame.r, f.frame.g, f.frame.b);
+                    cairo_set_line_width(cr, static_cast<double>(bord));
+                    cairo_stroke(cr);
+                }
+            }
+
+            // The label is kRedesignLabel in EVERY state, focused and unfocused
+            // — the nine crops agree — and sits at the box's own padding origin,
+            // which is the same place the width was measured from.
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(
+                cr, runs[i], static_cast<double>(vx + bord + bpad),
+                redesign_baseline(font, static_cast<double>(btn_y),
+                                  static_cast<double>(btn_h)));
+
+            vx += btn_w + mar;
+        }
     }
 
     cairo_restore(cr);
@@ -1705,8 +1920,15 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     // be one expression.
     const int h = settings_popup_h_px();
 
+    // FLUSH UNDER THE LANE, NOT THE BUTTON (2026-08-02, when row 1 gained its
+    // 1px margin-bottom and the two became different rows of pixels). "The menu
+    // row's bottom edge" is the LANE's — the margin belongs to row 1 and the
+    // popup hangs below all of it, so no sliver of ground shows between the box
+    // and the row it drops from. The x anchor is still the BUTTON's left edge,
+    // which is what the crop aligns.
+    const GuiRect lane = top_menu_row_area(app);
     int x = btn.x;
-    int y = btn.y + btn.h;               // flush: zero margin under the row
+    int y = lane.y + lane.h;             // flush: zero margin under the lane
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
     app.settings_popup.rect = GuiRect{x, y, w, h};

@@ -753,8 +753,10 @@ struct ChipRowPressSeed {
 // serialized, so inserting a button mid-roster (as Settings was) renumbers the
 // stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row.
-    Quit, Settings,
+    // Row 1, the menu row: the two LEFT-FLOATING buttons, then the three of the
+    // RIGHT-FLOATING view bar (2026-08-02) in their painted order — the absolute
+    // view selectors S+W / T+P / T+W, which are bare 1/2/3.
+    Quit, Settings, ViewSW, ViewTP, ViewTW,
     // Row 2, the toolbar.
     Save, Undo, Redo, Render,
     // Row 3, the tabs.
@@ -768,7 +770,7 @@ enum class RedesignButton {
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconCommit
 };
-inline constexpr int kRedesignButtonCount = 21;
+inline constexpr int kRedesignButtonCount = 24;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2312,13 +2314,23 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE AT ALL — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their two-face scope. Their presses always dispatch and the
+        // 1 and 3 by their face scope. Their presses always dispatch and the
         // CHORDS' OWN refusals answer: the read-only gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
         // guards. Inherited through on_key, never mirrored here — which is why
         // these are a plain `return true` and not a second copy of those gates.
+        //
+        // THE VIEW BAR'S "DISABLED" CROPS ARE THE UNFOCUSED WINDOW (architect
+        // 2026-08-02), not a disabled button: they are the row-1/2 ground swap's
+        // sibling on app.window_activated, a PAINT-ONLY variant of the whole
+        // bar, and never this bit. So the row-1 claim above stays true in its own
+        // terms — no button on this row has a disabled face — and the three join
+        // the same arm.
         case RedesignButton::Quit:
         case RedesignButton::Settings:
+        case RedesignButton::ViewSW:
+        case RedesignButton::ViewTP:
+        case RedesignButton::ViewTW:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
         case RedesignButton::IconS:
@@ -2358,12 +2370,13 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     return true;
 }
 
-// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 3's tabs and row 4's four
-// radio/two toggle buttons, each reading THE SAME live fact its chord flips, so
-// a lit button and the state it reports can never drift. Three readers: the
-// painter (which stashes what it painted), the press claim's RADIO refusal (a
-// radio button already selected is a consumed nothing — there is nothing to
-// switch to), and main.cpp's staleness comparator.
+// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
+// buttons, row 3's tabs and row 4's four radio/two toggle buttons, each reading
+// THE SAME live fact its chord flips, so a lit button and the state it reports
+// can never drift. Three readers: the painter (which stashes what it painted),
+// the press claim's RADIO refusal (a radio button already selected is a consumed
+// nothing — the two reasons that can make it so are at the flag's declaration,
+// input_pointer.cpp), and main.cpp's staleness comparator.
 //
 // MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen, Commit —
 // each is an action that completes, with no state to stay lit for — and BPM,
@@ -2372,6 +2385,19 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
 // it would advertise a mode this product does not have.
 inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     switch (b) {
+        // THE VIEW BAR READS THE LIVE COMBINATION — both axes at once, which is
+        // what an ABSOLUTE selector reports — so a button lights however the
+        // state was reached: `t`, `p`, a digit, or one of these three. AT MOST
+        // ONE IS EVER LIT, and S+P lights NONE: that fourth combination is
+        // deliberately keyless, so the bar has no button to give it and all
+        // three read false there. That is the honest face, not a gap — an unlit
+        // bar says "you are in the combination none of these selects".
+        case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
+                                                a.active_markers_view == 'W';
+        case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
+                                                a.active_markers_view == 'P';
+        case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
+                                                a.active_markers_view == 'W';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
         case RedesignButton::IconS:      return a.active_audio_view   == 'S';
@@ -2439,9 +2465,14 @@ struct RedesignTooltipText {
 };
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
-        // Row 1 — the menu row: no tooltips, per the rule above.
+        // Row 1 — the menu row: no tooltips, per the rule above. The view bar's
+        // three joined the exclusion with the row (2026-08-02): their labels are
+        // the combinations themselves, so a hint could only restate them.
         case RedesignButton::Quit:
-        case RedesignButton::Settings:   return {nullptr, nullptr};
+        case RedesignButton::Settings:
+        case RedesignButton::ViewSW:
+        case RedesignButton::ViewTP:
+        case RedesignButton::ViewTW:     return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
@@ -2495,12 +2526,12 @@ static_assert(
 // never sets hovered" and "the selected tab never sets hovered" are one line
 // each at one site rather than a condition smeared over the painter.
 //
-// ROW 4'S SELECTED BUTTONS DO HOVER, and that asymmetry with the tabs is the
-// crops': row 4 ships a selected-hover state (the accent outline over the
-// selected fill) and row 3 does not. So the carve-out below names the tabs
-// alone; the icon row's radios are hoverable in both states, and their
-// already-selected press is refused in the ACTION (the chord table's `radio`
-// flag), not in their hoverability.
+// ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and that asymmetry with
+// the tabs is the crops': both ship a selected-hover state (the accent outline
+// over the selected fill) and row 3 does not. So the carve-out below names the
+// tabs alone; the icon row's radios and the view bar's three are hoverable in
+// both states, and their already-selected press is refused in the ACTION (the
+// chord table's `radio` flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
     // THE OPEN DROPDOWN OWNS THE POINTER: while it is up, no roster button

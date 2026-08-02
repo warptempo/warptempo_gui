@@ -81,9 +81,19 @@ struct ToolbarChord {
     // user just clicked). The tab pair and the two view pairs are radios; the
     // follow and iteration buttons are TOGGLES and press through in both
     // directions, which is why this is a flag and not `selected` alone.
+    //
+    // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
+    // because the toggle argument does not transfer: their chords are the
+    // ABSOLUTE selectors 1/2/3, which are IDEMPOTENT — on_key's own handler
+    // already makes a press on the current combination a no-op, so dispatching
+    // would be harmless rather than wrong. The flag is set anyway, and for the
+    // FACE: the crops give a selected face and a click face and nothing that is
+    // both, so consuming at the claim keeps the pressed interior from ever
+    // painting over a lit button. One rule, two justifications.
     bool           radio;
-    // CLICK_FACE: row 2 and row 4 show a pressed interior; rows 1 and 3 have two
-    // faces by scope and show nothing new on a press.
+    // CLICK_FACE: rows 2 and 4 and the view bar show a pressed interior; row 1's
+    // two left-floating buttons and row 3 have two faces by scope and show
+    // nothing new on a press.
     bool           click_face;
 };
 
@@ -107,6 +117,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // dispatch is behaviourally identical to the hand-spelled pair in every
     // state, and the pair is gone.
     {RedesignButton::Quit,       GuiKeys::Q,   true,  false, false, false, true},   // Ctrl+Q
+    // Row 1's RIGHT FLOAT — the view bar (2026-08-02). Bare 1/2/3, the ABSOLUTE
+    // view selectors: S+W, T+P, T+W. Everything the digits own arrives by
+    // construction through on_key's own handler — the audio-first-then-markers
+    // order, the refused-target-entry abort of the whole press, the coincidence
+    // auto-select, the read-only admission (they are navigation), the modal
+    // swallow. There is no second route to keep in step.
+    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
+    {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     // Row 2 — the toolbar.
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true},   // Ctrl+Z
@@ -2502,12 +2521,15 @@ void GuiInputHandler::toggle_settings_popup() {
     // damage is exact vertically. The WIDTH is not (it needs the widest shaped
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
+    //
+    // THE TOP EDGE IS THE LANE'S BOTTOM, the same expression paint_settings_popup
+    // places the box at (row 1's 1px margin-bottom belongs to row 1, so the popup
+    // hangs below all of it). Both read top_menu_row_area, so the damaged band
+    // and the painted box start on the same row of pixels.
     {
-        const GuiRect& btn =
-            app.redesign_buttons[redesign_button_index(RedesignButton::Settings)]
-                .rect;
+        const GuiRect lane = top_menu_row_area(app);
         viewport.invalidate_rect(
-            GuiRect{0, btn.y + btn.h, app.width, settings_popup_h_px()});
+            GuiRect{0, lane.y + lane.h, app.width, settings_popup_h_px()});
     }
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
     // (redesign_button_hoverable refuses every button while it is up), and no

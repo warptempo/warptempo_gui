@@ -506,6 +506,72 @@ inline constexpr double kRedesignClickMix = 0.30;
 // composites — the factor resolves to a solid color before it reaches cairo.
 inline constexpr double kRedesignDisabledMix = 0.322;
 
+// -- Row 1's RIGHT-FLOATING VIEW BAR (HARD-CODED, kdenlive-sampled) ---------
+//
+// kdenlive's workspace switcher — the blue bar at the far right of its menu row
+// ("Logging | Editing | Audio | Effects | Color") — reborn here as the three
+// absolute view selectors. Sampled off the nine 82x32 row_right_*.png crops,
+// each one whole "Logging" button.
+//
+// TWO BAR BACKGROUNDS, ONE PER WINDOW-FOCUS STATE: the bar swaps on
+// app.window_activated exactly as rows 1 and 2 swap their ground, and the swap
+// is the same kind of thing — a PAINT-ONLY variant of the whole surface. The
+// crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button: these
+// three are never disabled (redesign_button_enabled returns true for them, with
+// rows 1, 3 and 4), so there is no dimmed face here at all.
+//
+// kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
+// #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is
+// the UNFOCUSED BAR, sampled from kdenlive's own unfocused crop. Two facts that
+// happen to agree, like kRedesignTabGround and kBackground — a retune of one
+// must not follow the other.
+inline constexpr GuiColor kRedesignViewBarBg          = hex(0x1E5774);
+inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
+
+// EVERY FACE IS A RELATIONSHIP TO THE BAR BACKGROUND, never a frozen literal —
+// the kRedesignClickMix arrangement, adopted for the same reason it exists
+// there: this surface has TWO backgrounds, and a hex sampled against one of
+// them would read wrong over the other.
+//
+//   REST           — the bar background itself, flat, no frame. The crop's rest
+//                    button is INVISIBLE because it IS the div showing through,
+//                    which is why the painter draws no fill for it.
+//   HOVER          — a 1px kRedesignAccent frame. Focused, the interior stays
+//                    flat; UNFOCUSED it also takes the selected lift. That
+//                    asymmetry is the crops' (row_right_hover keeps #1e5774,
+//                    row_right_disabled_hover lifts to #44464a) and is recorded
+//                    rather than smoothed away.
+//   CLICK          — the interior at kRedesignClickMix toward the accent, the
+//                    same 30% row 2 and row 4 paint, over the bar background.
+//   SELECTED       — the bar background lifted an eighth toward #fcfcfc, under
+//                    a frame lifted a fifth.
+//   SELECTED+HOVER — the selected fill under the accent frame.
+//
+// THE TWO LIFTS FIT THE CROPS PER CHANNEL. Focused bg (30, 87, 116) toward
+// (252, 252, 252):
+//   fill  1/8 : r 31.5 + 26.25  = 57.75  -> 58  (0x3a)
+//               g 31.5 + 76.125 = 107.63 -> 108 (0x6c)
+//               b 31.5 + 101.5  = 133.0  -> 133 (0x85)   = #3a6c85, exact
+//   frame 1/5 : r 50.4 + 24.0   = 74.4   -> 74  (0x4a)
+//               g 50.4 + 69.6   = 120.0  -> 120 (0x78)
+//               b 50.4 + 92.8   = 143.2  -> 143 (0x8f)   = #4a788f, exact
+// Unfocused bg (41, 44, 48), same two fractions:
+//   fill  1/8 : 67.375 -> 67, 70.0 -> 70, 73.5 -> 74     = #43464a
+//               vs the crop's #44464a — ONE UNIT LOW ON RED, identical on the
+//               other two channels.
+//   frame 1/5 : 83.2 -> 83, 85.6 -> 86, 88.8 -> 89       = #535659, exact
+// Five of the six channel triples land bit-for-bit and the sixth is off by a
+// single LSB, so the FRACTIONS ship — one relationship over both backgrounds —
+// rather than four literals that would have to be kept in step by hand. That
+// LSB is the whole cost of the derivation and it is not visible.
+//
+// FRACTION AND BASE ARE BOTH KNOBS, the kWaveformChannelSplit arrangement: the
+// base is what the bar lifts TOWARD, spelled out here rather than borrowed from
+// kRedesignLabel because it is a sampled coincidence and not a reference.
+inline constexpr GuiColor kRedesignViewBarLiftBase     = hex(0xFCFCFC);
+inline constexpr double   kRedesignViewBarSelectedMix  = 0.125;
+inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
+
 // -- Row 3, the TAB ROW (HARD-CODED, kdenlive/Breeze-sampled) ---------------
 //
 // Sampled off tmp/screenshots/kdenlive/redesign/row_3_tab_{rest,hover,selected}
@@ -932,19 +998,41 @@ constexpr int kMinWindowHeightPx = 480;
 // caller — the retirement note is at render_playhead's draw_triangle branch.
 inline constexpr int kPlayheadUnitPx = 8;
 
-// Authored pixel height of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 30 at 100%
-// gui_scale, measured off the row_1_button crops.
+// Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
+// window edge (the kdenlive menu bar, row 1 of the redesign). 34 CONTENT at
+// 100% gui_scale plus a 1px MARGIN-BOTTOM, so the LANE is 35.
 //
-// It sizes on gui_scale_factor() like every other lane in the tree (the font
-// axis the pre-redesign lanes used to ride is deleted — see the gui_scale block
-// above). Rounded with std::nearbyint and floored like every other lane
-// metric; the floor is defensive only, since gui_scale never goes below 100.
-inline constexpr int kMenuRowHeightPx = 30;
-inline int menu_row_h_px() {
+// THE SAME CSS BOX MODEL rows 2, 3 and 4 take (a stated dimension is CONTENT
+// and what sits outside it is its own term, with the LANE the sum — the lane
+// must physically own every pixel it paints), with ONE TERM DIFFERENT IN KIND:
+// what sits outside row 1's content is a MARGIN, not a border. It paints the
+// ROW GROUND rather than a line, and it exists to hold the RIGHT-FLOATING VIEW
+// BAR's own blue background off row 2's ground. Under the left-floating
+// buttons it is indistinguishable from the ground above it, which is correct —
+// a margin shows what is behind the box, and behind row 1 is row 1's ground.
+//
+// 30 -> 34 (architect 2026-08-02, with the view bar): 34 = 1 + 32 + 1 exactly,
+// the bar's 32px buttons inside their own 1px margins. Everything below moves
+// down 5px, automatically, through main.cpp's lane table.
+//
+// All three size on gui_scale_factor() like every other lane in the tree (the
+// font axis the pre-redesign lanes used to ride is deleted — see the gui_scale
+// block above). Rounded with std::nearbyint and floored like every other lane
+// metric; the floors are defensive only, since gui_scale never goes below 100.
+inline constexpr int kMenuRowHeightPx = 34;
+inline constexpr int kMenuRowMarginPx = 1;
+inline int menu_row_margin_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMenuRowMarginPx) * gui_scale_factor()));
+    return h < 1 ? 1 : h;
+}
+inline int menu_row_content_h_px() {
     const int h = static_cast<int>(std::nearbyint(
         static_cast<double>(kMenuRowHeightPx) * gui_scale_factor()));
     return h < 5 ? 5 : h;
+}
+inline int menu_row_h_px() {
+    return menu_row_content_h_px() + menu_row_margin_h_px();
 }
 
 // Authored pixel geometry of the TOOLBAR ROW — the top strip's lane 1, under

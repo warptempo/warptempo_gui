@@ -330,9 +330,10 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
-// Lane 0 is the MENU row (the kdenlive menu bar: a flat ground carrying the Quit
-// button, at the window edge); lane 1 is the TOOLBAR row (the flat ground
-// carrying the Save / Undo / Redo / Render buttons, its separators and its
+// Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
+// ground carrying the left float's Quit/Settings and the right float's view
+// bar, plus its own 1px margin-bottom); lane 1 is the TOOLBAR row (the flat
+// ground carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
 // its border-bottom); lane 3 is the ICON row (the thirteen view/mode/action
 // buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
