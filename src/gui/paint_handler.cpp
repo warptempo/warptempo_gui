@@ -3982,8 +3982,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     cairo_restore(cr);
 
-    // Force any pending Cairo ops out to the X server. The subsequent flush
-    // in GuiPlatform::dispatch_event is then a cheap no-op.
+    // The target here IS the memory the compositor will read: each buffer's
+    // surface is a cairo IMAGE surface created over the mmap'd wl_shm pool
+    // (GuiPlatform::recreate_shm_pool), and the pool pages are shared with the
+    // compositor. Flushing is cairo's handshake before anything outside cairo
+    // reads that memory — it lands whatever the backend is still holding in
+    // internal state, so the backing bytes are complete. This is the last point
+    // where that can happen: nothing between here and the publish flushes the
+    // surface again (destroying the context ends the drawing, not the surface,
+    // which outlives every frame with the pool), and the very next thing
+    // GuiPlatform::paint_one_frame does after the paint loop is
+    // wl_surface_attach + wl_surface_commit.
     cairo_surface_flush(cairo_get_target(cr));
 }
 

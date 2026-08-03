@@ -1245,11 +1245,12 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
-    // in_redraw_ guards the paint loop below: on_redraw may re-enter
-    // invalidate_region (the displayed-map promotion's hover recompute), and
-    // appending to buf->pending — the vector this loop iterates — mid-loop would
-    // invalidate the range-for. invalidate_region holds such rects in
-    // deferred_damage_ while the flag is set; they are replayed after the loop.
+    // in_redraw_ guards the paint loop below: a re-entrant invalidate_region
+    // from inside on_redraw would append to buf->pending — the vector this loop
+    // iterates — and invalidate the range-for. invalidate_region holds such
+    // rects in deferred_damage_ while the flag is set; they are replayed after
+    // the loop. No live caller produces one today; the guard's full record is at
+    // the flag's declaration in platform_wayland.h.
     in_redraw_ = true;
     cairo_t* cr = cairo_create(buf->surface);
     for (const DamageRect& d : buf->pending) {
@@ -1290,11 +1291,13 @@ void GuiPlatform::paint_one_frame() {
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
 
-    // Re-entered from inside the on_redraw paint loop (the displayed-map
-    // promotion's hover recompute): hold the rect instead of appending to the
-    // buffer pending lists the loop is iterating. paint_one_frame replays
-    // deferred_damage_ after the loop, so the repaint lands on the next frame
-    // (the in-place hover state the promoting frame paints is already updated).
+    // Re-entered from inside the on_redraw paint loop: hold the rect instead of
+    // appending to the buffer pending lists that loop is iterating.
+    // paint_one_frame replays deferred_damage_ after the loop, so the repaint
+    // lands on the NEXT frame rather than the one being composed — the pass
+    // already walking cannot honour it, and the replay is what keeps it from
+    // being dropped. Nothing on the paint path invalidates today; the record of
+    // that is at in_redraw_'s declaration in platform_wayland.h.
     if (in_redraw_) {
         append_coalesced_rect(deferred_damage_, DamageRect{x, y, w, h});
         return;
