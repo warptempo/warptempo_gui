@@ -125,8 +125,11 @@ namespace {
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
 // own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps), the RULER lane
-// (ruler_lane_h_px(), timestamps + the zoom strip + the playhead head) and the
-// MARKER lane (marker_lane_h_px(), the flags), whose bottom edge is the
+// (ruler_lane_h_px(), timestamps + tick tops + the zoom strip's drag band) and
+// the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
+// HEAD on the lane's bottom rows — the head moved down out of the ruler at the
+// row-5 live test, though the ruler painter still draws it, needing the tick
+// columns), whose bottom edge is the
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is ONE lane since row 7
 // (2026-08-01) — the status row and the editor/modal row COLLAPSED INTO ONE
@@ -148,8 +151,8 @@ namespace {
 // FUSED GLYPH — rectangle plus tip-down triangle under a single continuous
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
-// inside ONE lane, and the playhead's triangle became the ruler lane's aliased
-// head. No seam is exempt any more — every seam (menu|toolbar, toolbar|tab,
+// inside ONE lane, and the playhead's triangle became the aliased head on the
+// MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|toolbar, toolbar|tab,
 // tab|icon, icon|trim, trim|ruler, ruler|marker, and both outer
 // kFlagBottomLiftPx gaps) is honored structurally by the loop below and by every
 // consumer, with no asset spanning any of them. ONE shared
@@ -193,8 +196,9 @@ int top_lane_height(int lane) {
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
         case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / zoom strip / playhead head
-        case 6: return marker_lane_h_px();       // marker flags (bottom edge = waveform top)
+        case 5: return ruler_lane_h_px();        // timestamps / ticks / zoom strip
+        // Flags, stems and the playhead head; bottom edge = waveform top.
+        case 6: return marker_lane_h_px();
         default: return 0;
     }
 }
@@ -321,8 +325,9 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
 // double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
-// zoom strip, and the playhead's aliased head); lane 6 is the MARKER lane (the
-// flags), whose bottom edge is flush with the waveform area top.
+// zoom strip); lane 6 is the MARKER lane (the flags, their stems, and the
+// playhead's aliased head on the lane's bottom rows), whose bottom edge is
+// flush with the waveform area top.
 GuiRect top_menu_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
@@ -619,7 +624,7 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
 // to own — render.h states its authored value, its provenance, and the recorded
-// mismatch against the wider ruler head.
+// mismatch against the wider marker-lane head.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());

@@ -1210,7 +1210,7 @@ double gui_scale_factor()  {
 // (THE TIP-DOWN TRIANGLE MASK IS GONE — 2026-08-02. build_triangle_mask,
 // playhead_triangle_mask and their two file-scope cache globals built an
 // antialiased A8 silhouette (2H-1 by H) that render_playhead's draw_triangle
-// branch stamped; row 5 retired the cursor triangle for the ruler lane's
+// branch stamped; row 5 retired the cursor triangle for the MARKER lane's
 // aliased head and left every caller passing false, so the whole cluster was
 // unreachable. The geometry it anchored survives at its exact values in
 // render.h — waveform_inset_px() and playhead_half_px(), each spelling its own

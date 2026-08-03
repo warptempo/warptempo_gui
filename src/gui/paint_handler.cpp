@@ -2400,12 +2400,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // half-width scales with it, which enlarges the pixel steps rather than
     // smoothing them: the shape stays the drawing it was transcribed from.
     //
-    // TIP-DOWN AT THE MARKER LANE'S TOP, centered on the playhead column — the
-    // same column the stem below runs on, so head and stem are one object.
+    // TIP-DOWN ON THE MARKER LANE'S BOTTOM ROWS, its tip ON the waveform
+    // boundary, centered on the playhead column — the same column the stem below
+    // runs on, so head and stem are one object.
     //
     // THE HEAD MOVED OUT OF THE RULER LANE (architect 2026-08-01, at the row-5
     // live test). It sat on the ruler's bottom rows; it now occupies the MARKER
-    // lane's TOP rows, and the ruler lane is labels + tick-tops only. The point
+    // lane's BOTTOM rows (the relocation's first shape put it at that lane's TOP
+    // and the architect amended it the same day, for the stem parity the band
+    // block below states), and the ruler lane is labels + tick-tops only. The point
     // of the move is OCCLUSION: the flag blit follows this pass, so a marker
     // sharing the cursor's column now covers part of the head — the accepted
     // look, and the hidden-by-marker model reaching the head itself rather than
@@ -3296,9 +3299,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
     // ROW 5 RETIRED THE TRIANGLE and this pass draws NOTHING in a strip lane
     // any more: the tip-down triangle died with its lane, its successor is the
-    // ruler lane's aliased head, and paint_ruler_row owns that head (it needs
-    // the tick columns for the pre-blended crossing) along with the stem's
-    // marker-lane segment. So this pass is the WAVEFORM segment of the cursor's
+    // aliased head on the MARKER lane's bottom rows, and paint_ruler_row owns it
+    // despite the lane (it needs the tick columns for the pre-blended crossing)
+    // along with the stem's marker-lane segment. So this pass is the WAVEFORM segment of the cursor's
     // stem, nothing else — and since 2026-08-02 render_playhead draws a line and
     // only a line: the dead triangle branch is deleted, and with it the lane
     // rect this call used to thread through to it.
@@ -3341,9 +3344,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // The region ground still paints under the plate (paint_region_ground); the
     // cursor line crosses it exactly as it crosses waveform ink.
     // THE TRIANGLE IS OFF EVERYWHERE (row 5): the cursor's tip-down triangle
-    // retired with the triangle lane, and its successor — the ruler lane's
-    // aliased head — is painted by the ruler pass, which owns the tick columns
-    // the head's pre-blended crossing needs. So this call is the stem's WAVEFORM
+    // retired with the triangle lane, and its successor — the aliased head on
+    // the MARKER lane's bottom rows — is painted by the ruler pass anyway, that pass
+    // owning the tick columns the head's pre-blended crossing needs. So this call is the stem's WAVEFORM
     // segment; the ruler pass draws the head and the marker-lane segment above
     // it, and the three make one unbroken line.
     // THE STEM IS kPlayheadStem NOW (#fcfcfc), superseding the old cursor line's

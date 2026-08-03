@@ -1473,6 +1473,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // return: a locked tab arms no drag but still frames.
                 app.trim_bar_press = TrimBarPressSeed{
                     .active = true, .press_x = x, .press_y = y};
+                // THIS RETURN IS THE SOLE READ-ONLY DEFENSE FOR THE WHOLE
+                // TRIM-BAR BAND, recorded here per the routing-gate rule
+                // (docs/engineering/validation_topology.md): the band is
+                // consumed either way, so a locked tab arms no drag and writes
+                // no bound, and route_trim_bar_press below deliberately carries
+                // NO read-only check of its own — it has exactly one caller,
+                // this one, so a second check there would be unreachable
+                // (deleted 2026-08-02, the handle_trim_x precedent). Anything
+                // that ever calls that router from a second site inherits this
+                // gate's job and must state where it discharges it. The ctrl /
+                // ctrl+shift bound-set press is NOT such a site: it never routes
+                // through here, and set_trim_bound_at_click owns its own refusal.
                 if (active_view_state(app).read_only) return;
                 route_trim_bar_press(x, y);
                 return;

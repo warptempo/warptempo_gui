@@ -1221,8 +1221,8 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // directly rather than the inset: the two are equal by inheritance, not by
 // requirement, and neither owns the other.
 //
-// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
-// ruler is 19px wide (kPlayheadHeadHalf[0] = 9 either side), so this +/-7 reach
+// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD in the
+// marker lane is 19px wide (kPlayheadHeadHalf[0] = 9 either side), so this +/-7 reach
 // is NARROWER than the head that stands on the same column. It is harmless as
 // the damage rule stands — narrow damage is reserved for the two per-frame
 // SCANNER sites, and the scanner is waveform-only and draws no head, while
@@ -1420,9 +1420,9 @@ void render_waveform(cairo_surface_t* dest,
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
 // `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
 // indicator stamped from a cached mask above the stem: row 5 replaced the
-// cursor's tip-down triangle with the RULER lane's aliased head — which
-// paint_ruler_row draws, because the head's pre-blended tick crossing needs the
-// tick columns — and every caller had passed `false` ever since. The branch,
+// cursor's tip-down triangle with the MARKER lane's aliased head — which
+// paint_ruler_row draws despite the lane, because the head's pre-blended tick
+// crossing needs the tick columns — and every caller had passed `false` ever since. The branch,
 // the mask and the lane rect are all deleted; both callers were already
 // line-only, so no painted pixel moves. (The complementary triangle-only form
 // was retired with the selected-marker focus triangle when the singleton's

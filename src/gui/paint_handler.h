@@ -366,7 +366,8 @@ struct GuiPaintHandler {
     // viewport. This is the ONE authoritative enumeration of the
     // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
     // callers, 2026-08-02): the region ground, the phase-reset ring (through
-    // phase_reset_overlay_band), the ruler row's playhead head, the cursor
+    // phase_reset_overlay_band), the playhead head (painted in the ruler pass,
+    // but living in the MARKER lane since the row-5 live test), the cursor
     // playhead, the scanner — plus its two per-frame narrow damage sites in
     // main.cpp — and the strip-drag anchor. Other sites state only their own
     // class plus a pointer here. The MARKER STEMS are deliberately not among

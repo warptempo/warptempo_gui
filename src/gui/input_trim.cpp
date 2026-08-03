@@ -850,10 +850,17 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // pair-required gate is gone and the press is claimed purely on GEOMETRY.
 // Returns true iff the press landed on trim
 // geometry (an endcap-rect single-bound hit, or the bar's inter-cap bridge
-// span) — armed or read-only-refused — so the caller CLAIMS the press (no
-// fallback); false lets the caller fall through. Trim bounds are transparent to
-// every OTHER chord (the caller gates this to the plain, unmodified press).
-// Read-only claims WITHOUT arming (a silent return, no fallback). The two arms:
+// span), so the caller CLAIMS the press (no fallback); false lets the caller
+// fall through. Trim bounds are transparent to every OTHER chord (the caller
+// gates this to the plain, unmodified press).
+//
+// THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one: its ONE caller
+// returns on a read-only active tab BEFORE calling here (the plain trim-bar press,
+// input_pointer.cpp), which is the whole band's sole read-only defense and says so
+// at the gate. A read-only tab therefore still CONSUMES every trim-bar press and
+// arms nothing — the band-level behavior is unchanged; it is simply decided one
+// level up, one owner per routing decision (docs/engineering/validation_topology.md).
+// The two arms:
 //   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
 //     bar lane) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the trim lane band —
@@ -909,8 +916,6 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
     const TrimHit single = hit_test_trim_endcap(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
-        // Read-only claims the press but never arms (no fallback).
-        if (active_view_state(app).read_only) return true;
         arm_pending_trim_drag(single == TrimHit::Begin, /*both=*/false,
                               mouse_x, mouse_y);
         return true;
@@ -968,8 +973,6 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
         // arms, so paint == hit exactly there.
         if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
             click_rel_x >= gap.lo && click_rel_x < gap.hi) {
-            // Read-only claims the bridge region but never arms (no fallback).
-            if (active_view_state(app).read_only) return true;
             arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
                                   mouse_x, mouse_y);
             return true;
