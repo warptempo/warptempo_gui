@@ -86,10 +86,32 @@ struct SettingsTrim {
 // THE FULL-WINDOW PREDICATE — the ONE owner, deliberately here rather than in
 // the GUI for exactly the reason kMinZoom/kMaxZoom live here: the recognition
 // must be IDENTICAL in warptempo_gui and warptempo_cli, which share no other
-// header (the render orchestrators, the two playback/navigation range owners
-// and the fingerprint all ask this one question).
+// header. BOTH PRODUCTS ASK IT, and that is the entire reason the predicate
+// sits in a shared header at all — the two must never disagree about what
+// "untrimmed" means.
 // (architect approval 2026-07-30 — the same grant that retired the `-1`
 // grammar above.)
+//
+// WHO ASKS, AND HOW — BY KIND, NOT BY MEMBERSHIP LIST (architect approval
+// 2026-08-03 for this comment-only correction). What stood here named three
+// kinds and silently under-counted the consumers, which is what a hand-kept list
+// in a shared header does as the callers grow. THE INVARIANT that does hold, and
+// the one worth stating: every consumer CALLS this predicate — no site spells
+// the compare a second time — and inside the GUI most of them ask through the
+// single TrimState forwarder (trim_is_full_window, app_state.h). The kinds:
+//   - the RENDER ORCHESTRATORS, in both products: a full window builds NO trim
+//     plan, so plan_trim and its vocabulary see proper SUB-WINDOWS only;
+//   - the PLAYBACK / NAVIGATION range owners: a full source pair becomes the
+//     whole live domain rather than a mapped inclusive end, in both views;
+//   - the RENDER FINGERPRINT: a full window hashes as the old unset bytes, which
+//     is what keeps pre-arc untrimmed renders reusable;
+//   - the CROSSED-PAIR NORMALIZATIONS (the load reset, the shared trim commit
+//     tail, the settings editor's inactive band), where THE ORDER IS THE RULE —
+//     the recognition runs AHEAD of the crossed compare, so a one-frame source's
+//     canonical [0, 0] is never classified as a crossed pair;
+//   - the GESTURE IDENTITY questions, which ask only whether there is anything
+//     to do: an already-full maximize and a nothing-to-frame span framing.
+// A NEW CONSUMER JOINS A KIND — it does not need this comment edited.
 //
 // The FULL window [0, total-1] IS SEMANTICALLY THE OLD UNSET STATE: it renders
 // untrimmed (no trim plan at all), plays to the natural end, hashes like unset,
