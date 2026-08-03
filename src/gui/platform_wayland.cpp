@@ -1045,10 +1045,23 @@ int cursor_kind_index(GuiCursorKind kind) {
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
 // cursor art: seven standard freedesktop names, all present in Breeze and in
-// Adwaita. The images and their hotspots are the THEME's — we never centre a
-// hotspot ourselves, because these files declare real ones and the theme has
-// already centred the ones that want centring (Breeze's grab is 16,16 in a 32
-// canvas, its zoom-in 15.5,15.5).
+// Adwaita.
+//
+// THE HOTSPOT IS THE FILE'S, NEVER A CENTRE WE COMPUTE, and the installed theme
+// is what settles it. What load_theme_cursor reads is wl_cursor_image's INTEGER
+// xhot/yhot, from the XCursor binary, at whatever the theme load resolved
+// (cursor_theme_size above: XCURSOR_SIZE, else 24) — and Breeze_Light serves
+// that default request from its 32x32 images, whose declared hotspots are:
+//
+//     left_ptr 4,4   crosshair 17,17   grab 16,16   zoom-in 15,15
+//     ew-resize 16,15   left_side 4,15   right_side 27,15
+//
+// The POINTER-ISH shapes are centred (grab exactly, crosshair and zoom-in within
+// a pixel of it) while left_side and right_side sit hard against their OWN edge
+// — 4,15 and 27,15, which is the whole point of an edge cue — and left_ptr sits
+// at its tip. No single rule we could compute produces all three, which is
+// exactly why the file's declaration is taken verbatim. The numbers scale with
+// the resolved size, so they are the default load's, not constants.
 //
 // ARROW IS FIRST, and its position matters: it is the fallback every other kind
 // degrades to, and the only one whose absence is reported as a broken theme.
@@ -1675,6 +1688,45 @@ void GuiPlatform::on_frame_done(struct wl_callback* cb) {
 // Keyboard event handlers
 // ---------------------------------------------------------------------------
 
+// THE ONE TEARDOWN FOR "the keyboard's modeled state is gone", called from both
+// edges that mean it: wl_keyboard.leave and keyboard-capability loss. Each site
+// keeps only the justification that is ITS OWN; everything the two share is
+// here.
+//
+// SUPER IS RESET WITH THE OTHER THREE, and that one is load-bearing rather than
+// tidy: deliver_key GATES on mod_super_ and no modifiers event need follow the
+// edge, so a latched bit would deaden the keyboard for the rest of the session.
+//
+// THE WHEEL REMAINDER GOES UNCONDITIONALLY. scroll_accum_ is sub-detent travel
+// bound to the chord it was accumulated under, and this edge ends every chord
+// there was without a scroll frame to re-probe; there is no state left to
+// compare it against, so it is simply dropped.
+//
+// THE CURSOR EDGE FIRES FROM HERE, which is the reason this is a function and
+// not two parallel tails. Modifiers SELECT between cursor kinds over the
+// waveform, so clearing the bits without telling the cursor leaves the old cue
+// up under a resting pointer — a Zoom promise the platform has already stopped
+// believing in, and one the capture's remembered-kind restore would hand back
+// after a release. The fire uses the SAME test wl_keyboard.modifiers does: the
+// MODELED TRIO only, since a Super-only change moves no cursor kind. It goes
+// LAST, after the synthesized-left teardown, because ending a held button can
+// end a gesture and a live gesture is one of the things the cursor kind is
+// derived from — firing first would answer against a state one line from
+// changing.
+void GuiPlatform::forget_keyboard_state() {
+    const bool trio_changed = mod_ctrl_ || mod_shift_ || mod_alt_;
+
+    mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
+    repeat_key_   = 0;
+    scroll_accum_ = 0.0;
+
+    // A held synthesized-left button can never see its keycode-matched release
+    // once the key stream has ended, so end it here.
+    end_left_hold_source(/*physical=*/false);
+
+    if (trio_changed) modifiers_changed_hook_(current_mods());
+}
+
 void GuiPlatform::on_seat_capabilities(uint32_t caps) {
     const bool has_kb      = (caps & WL_SEAT_CAPABILITY_KEYBOARD) != 0;
     const bool has_pointer = (caps & WL_SEAT_CAPABILITY_POINTER)  != 0;
@@ -1685,23 +1737,13 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
     } else if (!has_kb && wl_keyboard_) {
         wl_keyboard_release(wl_keyboard_);
         wl_keyboard_ = nullptr;
-        // Capability loss need not be preceded by keyboard.leave. Drop both
-        // repeat and the cached modifier projection here so pointer input
-        // delivered while no keyboard exists cannot inherit a phantom chord
-        // from the last keyboard event (for example the Alt+wheel pan).
-        repeat_key_ = 0;
-        // Capability loss resets the modifier bits, matching the keyboard.leave
-        // tail — Super included, for the same reason it is reset there (a latched
-        // one would gate every later key delivery off).
-        mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
-        // The modifier state changed (all chords released) without a scroll
-        // frame, so drop the wheel sub-detent remainder — it was bound to the
-        // old chord.
-        scroll_accum_ = 0.0;
-
-        // Losing the keyboard is the hard end of the key stream: a held
-        // synthesized-left button will never see its release. End it here.
-        end_left_hold_source(/*physical=*/false);
+        // CAPABILITY LOSS NEED NOT BE PRECEDED BY keyboard.leave, which is why
+        // this edge tears the keyboard's modeled state down itself rather than
+        // trusting the leave to have done it: pointer input delivered while no
+        // keyboard exists must not inherit a phantom chord from the last
+        // keyboard event (for example the Alt+wheel pan). The teardown is
+        // forget_keyboard_state's, in full.
+        forget_keyboard_state();
     }
 
     if (has_pointer && !wl_pointer_) {
@@ -1803,19 +1845,12 @@ void GuiPlatform::on_keyboard_enter(uint32_t /*serial*/,
 
 void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
                                     struct wl_surface* /*surface*/) {
-    // Focus loss resets the modifier bits — SUPER INCLUDED, and load-bearing for
-    // that one: focus commonly leaves on a Super chord labwc grabbed, and a latched
-    // mod_super_ would deaden the keyboard for the rest of the session (deliver_key
-    // gates on it, and no modifiers event need follow).
-    mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
-    repeat_key_ = 0;
-    // The modifier state changed (all chords released) without a scroll frame,
-    // so drop the wheel sub-detent remainder — it was bound to the old chord.
-    scroll_accum_ = 0.0;
-
-    // A held synthesized-left button can never see its keycode-matched release
-    // once keyboard focus is gone, so end it here.
-    end_left_hold_source(/*physical=*/false);
+    // FOCUS LOSS IS THE COMMON CASE FOR THE SUPER RESET forget_keyboard_state
+    // performs: focus commonly leaves on a Super chord labwc grabbed, and that
+    // is exactly the departure that would otherwise latch mod_super_ and deaden
+    // the keyboard for the rest of the session. The teardown is
+    // forget_keyboard_state's, in full.
+    forget_keyboard_state();
 }
 
 void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
@@ -2005,7 +2040,10 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
     // THE MODIFIER EDGE, and both of its consumers. This event fires when the
     // modifier state CHANGES and not on ordinary key presses, so the test below
     // is only about the three modifiers the application models (a Super edge
-    // moves neither consumer).
+    // moves neither consumer). The OTHER place the modeled state moves is
+    // forget_keyboard_state, where it vanishes with no event to announce it; it
+    // applies this same trio test to the cursor consumer and drops the wheel
+    // remainder outright, for the reasons recorded there.
     if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
         mod_alt_ != prev_alt) {
         // (1) It ends any continuous wheel chord session, so the sub-detent

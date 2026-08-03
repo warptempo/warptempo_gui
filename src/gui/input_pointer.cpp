@@ -2740,21 +2740,19 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
         viewport.invalidate_rect(
             GuiRect{0, btn.y + btn.h, app.width, dropdown_h_px(menu)});
     }
-    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup over
-    // every row the box covers (redesign_button_hoverable refuses rows 2, 3 and
-    // 4 while it is up) and no motion event follows a press, so those faces
+    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
+    // redesign_button_hoverable refuses the WHOLE roster while a dropdown is up.
+    // No motion event follows a press, so a face lit at the moment of the open
     // would otherwise stay lit under a surface that has taken the pointer from
-    // them. Clearing hover also disarms any pending tooltip, which is the other
+    // it. Clearing hover also disarms any pending tooltip, which is the other
     // half of "these two never coexist".
     //
-    // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up (the hover
-    // predicate refuses the whole roster then); it re-resolves at the next motion
-    // or the next tick (main.cpp runs the same recompute per frame, gesture-gated
-    // only) once the popup is down. That costs nothing visible: the only row-1
-    // button the pointer can be on
-    // at an open
-    // edge is the one just pressed, and that is the popup's ANCHOR, whose pill
-    // the paint condition below keeps regardless of the hover bit.
+    // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up; it
+    // re-resolves at the next motion or the next tick (main.cpp runs the same
+    // recompute per frame, gesture-gated only) once the popup is down. That
+    // costs nothing visible: the only row-1 button the pointer can be on at an
+    // open edge is the one just pressed, and that is the popup's ANCHOR, whose
+    // pill the paint condition below keeps regardless of the hover bit.
     //
     // IT NO LONGER DECIDES THE MENU BUTTON'S PILL, and the inversion is worth
     // stating because this line used to be what darkened it: since 2026-08-02

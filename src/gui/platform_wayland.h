@@ -193,11 +193,15 @@ public:
     // other event to carry its repaint). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
 
-    // Fired at each CHANGE of the ctrl / shift / alt state, from
-    // wl_keyboard.modifiers — which the compositor sends when that state moves
-    // and NOT on an ordinary key press, so this is the modifier edge itself and
-    // nothing needs to filter it further. It carries the same GuiInputState the
-    // pointer callbacks build, so a consumer sees one modifier truth.
+    // Fired at each CHANGE of the ctrl / shift / alt state, from the TWO places
+    // that state can move: wl_keyboard.modifiers — which the compositor sends
+    // when the state moves and NOT on an ordinary key press, so it needs no
+    // filtering beyond the changed test — and forget_keyboard_state, the
+    // teardown wl_keyboard.leave and keyboard-capability loss share, which
+    // clears the bits with no event to announce it. Both apply the same test, so
+    // the hook is the modeled trio's edge wherever it happens. It carries the
+    // same GuiInputState the pointer callbacks build, so a consumer sees one
+    // modifier truth.
     //
     // IT EXISTS FOR THE CURSOR. Modifiers SELECT between cursor kinds over the
     // waveform, so without this edge a Ctrl going down under a resting pointer
@@ -650,9 +654,10 @@ private:
     std::function<void()> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
-    // Fired at each ctrl/shift/alt EDGE (see set_modifiers_changed_hook).
-    // SEEDED with a no-op, like the input handler's capture hooks, so the fire
-    // site needs no null test.
+    // Fired at each ctrl/shift/alt EDGE, from wl_keyboard.modifiers and from
+    // forget_keyboard_state (see set_modifiers_changed_hook). SEEDED with a
+    // no-op, like the input handler's capture hooks, so neither fire site needs
+    // a null test.
     std::function<void(GuiInputState)> modifiers_changed_hook_ =
         [](GuiInputState) {};
     TickCallback         on_tick_;
@@ -723,6 +728,14 @@ private:
                                uint32_t latched, uint32_t locked,
                                uint32_t group);
     void on_keyboard_repeat_info(int32_t rate, int32_t delay);
+    // THE KEYBOARD'S MODELED STATE GOING AWAY, and the one place that spells it.
+    // Two edges reach it — wl_keyboard.leave and keyboard-capability loss — and
+    // both mean the same thing: no further key event can arrive on the state
+    // built so far, so the modifier bits, the repeat arm, the wheel sub-detent
+    // remainder and a held synthesized-left button are all dropped together.
+    // Hoisted so a third such edge cannot land with one of the four forgotten —
+    // in particular the cursor edge, which fires from inside here.
+    void forget_keyboard_state();
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
     GuiInputState current_mods() const;
