@@ -13,6 +13,8 @@
 #include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
+#include <fcntl.h>
+#include <strings.h>
 #include <unistd.h>
 #include <poll.h>
 #include <time.h>
@@ -35,8 +37,12 @@
 // current refresh half-period (2x vblank oversample), falling back to 60 Hz
 // while no output mode is known. The poll wakes on whichever fd becomes
 // readable first. Compositor events drive surface configure, input delivery,
-// and frame callbacks (no clipboard or drag-and-drop path exists); renderer
-// eventfds deliver async results.
+// frame callbacks, and clipboard selection bookkeeping; renderer eventfds
+// deliver async results. The clipboard's actual byte transfers are NOT poll-set
+// members: both directions are short synchronous pipe operations made from
+// inside their own handlers (the read is deadline-bounded, the write services a
+// consumer that asked for it), which is what a keyboard-triggered copy or paste
+// of a short string can afford. No drag-and-drop path exists.
 // Timer wakeups drive the periodic model/validation callback and sample the
 // monotonic key-repeat deadline.
 //
@@ -134,6 +140,26 @@ int open_shm_fd(size_t size) {
         return -1;
     }
     return fd;
+}
+
+// THE ACCEPTED CLIPBOARD TEXT MIMES, ranked. text/plain;charset=utf-8 is the
+// preferred token and bare text/plain the fallback; anything else is not text
+// we will read. The comparison is case-insensitive because the media type and
+// the charset parameter both are (RFC 2045), and real applications disagree on
+// the spelling — GTK offers `;charset=utf-8`, several Qt and Java toolkits
+// offer `;charset=UTF-8`, and a paste must not miss on the difference. Zero
+// means "not an acceptable text mime", which the empty mime slot also scores.
+int text_mime_rank(const char* mime) {
+    if (strcasecmp(mime, "text/plain;charset=utf-8") == 0) return 2;
+    if (strcasecmp(mime, "text/plain") == 0)               return 1;
+    return 0;
+}
+
+// Latch `mime` into an offer's remembered text mime when it outranks whatever
+// is already there. The EXACT offered spelling is what gets stored, because
+// that is the token wl_data_offer.receive must be handed back.
+void note_offer_text_mime(std::string& slot, const char* mime) {
+    if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
 } // namespace
@@ -335,6 +361,55 @@ struct WaylandListeners {
                                         struct zwp_locked_pointer_v1*) {
         static_cast<GuiPlatform*>(data)->on_locked_pointer_unlocked();
     }
+
+    // wl_data_device. Only data_offer and selection do anything: the four
+    // drag-and-drop slots are INERT and stay that way — DnD was retired with
+    // the in-session file load and is not coming back. They exist because a
+    // listener struct with a NULL slot is a latent abort, not because a drag is
+    // being tracked. A DnD offer therefore parks unclaimed in the pending slot
+    // and the next announcement destroys it.
+    static void data_device_data_offer(void* data, struct wl_data_device*,
+                                       struct wl_data_offer* offer) {
+        static_cast<GuiPlatform*>(data)->on_data_offer(offer);
+    }
+    static void data_device_enter(void*, struct wl_data_device*, uint32_t,
+                                  struct wl_surface*, wl_fixed_t, wl_fixed_t,
+                                  struct wl_data_offer*) {}
+    static void data_device_leave(void*, struct wl_data_device*) {}
+    static void data_device_motion(void*, struct wl_data_device*, uint32_t,
+                                   wl_fixed_t, wl_fixed_t) {}
+    static void data_device_drop(void*, struct wl_data_device*) {}
+    // The offer argument is the NEW clipboard selection offer, or NULL when the
+    // selection was cleared.
+    static void data_device_selection(void* data, struct wl_data_device*,
+                                      struct wl_data_offer* offer) {
+        static_cast<GuiPlatform*>(data)->on_selection(offer);
+    }
+
+    // wl_data_offer. source_actions and action are v3 slots belonging to the
+    // drag-and-drop actions API, which the clipboard never uses.
+    static void data_offer_offer(void* data, struct wl_data_offer* offer,
+                                 const char* mime_type) {
+        static_cast<GuiPlatform*>(data)->on_data_offer_mime_type(offer, mime_type);
+    }
+    static void data_offer_source_actions(void*, struct wl_data_offer*,
+                                          uint32_t) {}
+    static void data_offer_action(void*, struct wl_data_offer*, uint32_t) {}
+
+    // wl_data_source (the clipboard payload we own). Only send (a consumer is
+    // reading our payload) and cancelled (another client took the selection)
+    // do anything; target and the three dnd_* slots are drag-and-drop.
+    static void data_source_target(void*, struct wl_data_source*, const char*) {}
+    static void data_source_send(void* data, struct wl_data_source* src,
+                                 const char* mime, int32_t fd) {
+        static_cast<GuiPlatform*>(data)->on_data_source_send(src, mime, fd);
+    }
+    static void data_source_cancelled(void* data, struct wl_data_source* src) {
+        static_cast<GuiPlatform*>(data)->on_data_source_cancelled(src);
+    }
+    static void data_source_dnd_drop_performed(void*, struct wl_data_source*) {}
+    static void data_source_dnd_finished(void*, struct wl_data_source*) {}
+    static void data_source_action(void*, struct wl_data_source*, uint32_t) {}
 };
 
 namespace {
@@ -430,6 +505,30 @@ const struct zwp_locked_pointer_v1_listener s_locked_pointer_listener = {
     WaylandListeners::locked_pointer_unlocked,
 };
 
+const struct wl_data_device_listener s_data_device_listener = {
+    WaylandListeners::data_device_data_offer,
+    WaylandListeners::data_device_enter,
+    WaylandListeners::data_device_leave,
+    WaylandListeners::data_device_motion,
+    WaylandListeners::data_device_drop,
+    WaylandListeners::data_device_selection,
+};
+
+const struct wl_data_offer_listener s_data_offer_listener = {
+    WaylandListeners::data_offer_offer,
+    WaylandListeners::data_offer_source_actions,
+    WaylandListeners::data_offer_action,
+};
+
+const struct wl_data_source_listener s_data_source_listener = {
+    WaylandListeners::data_source_target,
+    WaylandListeners::data_source_send,
+    WaylandListeners::data_source_cancelled,
+    WaylandListeners::data_source_dnd_drop_performed,
+    WaylandListeners::data_source_dnd_finished,
+    WaylandListeners::data_source_action,
+};
+
 #pragma GCC diagnostic pop
 
 } // namespace
@@ -471,21 +570,25 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     wl_display_roundtrip(wl_display_);
 
     // THE REQUIRED GLOBALS. zxdg_decoration_manager_v1 JOINED THEM 2026-07-30
-    // (architect): it was the one protocol treated as a third optional, though
-    // the ruled OPTIONAL list names exactly two (pointer-constraints and
+    // and wl_data_device_manager 2026-08-02 (architect, both times), leaving the
+    // ruled OPTIONAL list at exactly two (pointer-constraints and
     // relative-pointer, whose absence has a defined degraded behavior — see the
     // pointer-capture warning below). labwc always advertises the decoration
-    // manager, so its absence is a broken environment, not a degraded one, and
-    // the program's answer to a broken environment is to fail at startup rather
-    // than run undecorated.
+    // manager, and the data device manager is CORE protocol — the same
+    // wayland.xml as wl_seat, so a compositor without it is not a compositor —
+    // which makes either absence a broken environment rather than a degraded
+    // one, and the program's answer to a broken environment is to fail at
+    // startup rather than run undecorated or with a dead clipboard.
     if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_ ||
-        !xdg_decoration_manager_) {
+        !xdg_decoration_manager_ || !wl_data_device_manager_) {
         std::fprintf(stderr,
                      "warptempo_gui: Required wayland globals missing "
                      "(wl_compositor=%p wl_shm=%p xdg_wm_base=%p "
-                     "zxdg_decoration_manager_v1=%p)\n",
+                     "zxdg_decoration_manager_v1=%p "
+                     "wl_data_device_manager=%p)\n",
                      (void*)wl_compositor_, (void*)wl_shm_, (void*)xdg_wm_base_,
-                     (void*)xdg_decoration_manager_);
+                     (void*)xdg_decoration_manager_,
+                     (void*)wl_data_device_manager_);
         return false;
     }
     if (!wl_output_) {
@@ -633,6 +736,15 @@ void GuiPlatform::destroy_wayland_state() {
     if (timerfd_ >= 0) {
         close(timerfd_);
         timerfd_ = -1;
+    }
+
+    // The clipboard's device, offers and source go before the wl_seat and
+    // wl_keyboard they were created against. The manager is not seat-bound, so
+    // it is destroyed here rather than inside the shared teardown.
+    destroy_data_device_state();
+    if (wl_data_device_manager_) {
+        wl_data_device_manager_destroy(wl_data_device_manager_);
+        wl_data_device_manager_ = nullptr;
     }
 
     if (wl_keyboard_) {
@@ -1186,6 +1298,23 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
     } else if (std::strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
         xdg_decoration_manager_ = static_cast<struct zxdg_decoration_manager_v1*>(
             wl_registry_bind(r, name, &zxdg_decoration_manager_v1_interface, 1));
+    } else if (std::strcmp(interface, wl_data_device_manager_interface.name) == 0) {
+        // Core protocol (the same wayland.xml as wl_seat), REQUIRED since
+        // 2026-08-02: it is the system clipboard. v2 is the FLOOR — that is
+        // where wl_data_device.release arrived, and both teardown paths call
+        // it. v3 is the cap, the highest the protocol defines and the highest
+        // the listener slots above cover. An older advertisement leaves the
+        // manager unbound, which the required-globals gate in init() refuses.
+        if (version >= 2) {
+            const uint32_t v = std::min<uint32_t>(version, 3);
+            wl_data_device_manager_ = static_cast<struct wl_data_device_manager*>(
+                wl_registry_bind(r, name, &wl_data_device_manager_interface, v));
+            ensure_data_device();
+        } else {
+            std::fprintf(stderr,
+                         "warptempo_gui: wl_data_device_manager v%u advertised; "
+                         "v2 or newer is required\n", version);
+        }
     } else if (std::strcmp(interface, zwp_pointer_constraints_v1_interface.name) == 0) {
         // Both pointer-capture managers are v1 and OPTIONAL: absence degrades
         // strip drags to clamped absolute motion (see begin_pointer_capture).
@@ -1220,6 +1349,10 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             wl_registry_bind(r, name, &wl_seat_interface, v));
         seat_global_name_ = name;
         wl_seat_add_listener(wl_seat_, &s_seat_listener, this);
+        // The data device is created against the seat; this arm and the data
+        // device manager's arm both call it, so whichever global is advertised
+        // second creates it (and a replacement seat gets a fresh device).
+        ensure_data_device();
     }
 }
 
@@ -1244,6 +1377,11 @@ void GuiPlatform::on_registry_global_remove(uint32_t name) {
     // keyboard/pointer teardown first so held gestures get their release tail
     // and no modifier/scroll state crosses into a replacement seat.
     on_seat_capabilities(0);
+
+    // The wl_data_device was created from this seat, so it dies with it (along
+    // with every offer and source hanging off it, and the input serial their
+    // set_selection needed). A replacement seat's bind arm creates a new one.
+    destroy_data_device_state();
 
     wl_seat_destroy(wl_seat_);
     wl_seat_ = nullptr;
@@ -1504,8 +1642,17 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     end_left_hold_source(/*physical=*/false);
 }
 
-void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
+void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
+    // Cache the serial for wl_data_device.set_selection. Every copy is a Ctrl+C
+    // or Ctrl+X key event, so the serial stored here IS the triggering event's
+    // own by the time clipboard_set_text runs. Cached BEFORE the xkb and
+    // release gates below so a release, a key with no keymap, and a key held
+    // under Super all keep it current — the compositor validates the serial
+    // against its input history, not against what this program did with the
+    // key.
+    last_input_serial_ = serial;
+
     if (!xkb_state_) return;
 
     // Wayland delivers raw evdev keycodes (offset by 8 for X11
@@ -2296,6 +2443,243 @@ void GuiPlatform::on_locked_pointer_unlocked() {
     // lost-button paths, where end_pointer_capture is a harmless idempotent
     // no-op.
     release_pointer_lock(/*apply_restore_hint=*/false);
+}
+
+// ---------------------------------------------------------------------------
+// The system clipboard (the CLIPBOARD selection)
+//
+// THE OBJECT LIFETIMES, stated once here because every bug this area ever had
+// was a lifetime bug and the two 2026-07-12 fixes existed for exactly that:
+//
+//   * AN ANNOUNCEMENT IS NOT A CLAIM. wl_data_device.data_offer creates an
+//     object whose ROLE is unknown until the selection event that follows it.
+//     It parks in pending_data_offer_, and only an announcement supersedes an
+//     announcement — clipboard_offer_ is a separate slot and is never freed by
+//     the announcement path. Aliasing those two slots is what used to
+//     double-free on the second external clipboard change and on a null-clear.
+//   * ONE TEARDOWN, TWO EXITS. destroy_data_device_state is the whole story
+//     for the seat-bound objects, and both shutdown and seat registry removal
+//     call it. Two hand-written teardowns disagreeing about which slots existed
+//     is the other half of the original defect.
+//   * NULL IS A REAL SELECTION EVENT. selection(NULL) means the clipboard was
+//     cleared (or is ours); it destroys the superseded offer and leaves the
+//     slot empty, and a paste then finds nothing and does nothing.
+//   * OWNERSHIP IS A BIT, NOT AN OBJECT. clipboard_we_own_ spans a successful
+//     set_selection to the cancelled event, and its ONLY job is the self-paste
+//     short circuit — reading our own selection through the pipe would deadlock
+//     this single-threaded loop against itself.
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::ensure_data_device() {
+    if (wl_data_device_ || !wl_data_device_manager_ || !wl_seat_) return;
+    wl_data_device_ = wl_data_device_manager_get_data_device(
+        wl_data_device_manager_, wl_seat_);
+    if (wl_data_device_) {
+        wl_data_device_add_listener(wl_data_device_,
+                                    &s_data_device_listener, this);
+    } else {
+        std::fprintf(stderr,
+                     "warptempo_gui: wl_data_device_manager_get_data_device "
+                     "failed; the system clipboard is unavailable\n");
+    }
+}
+
+void GuiPlatform::destroy_pending_offer() {
+    if (pending_data_offer_) {
+        wl_data_offer_destroy(pending_data_offer_);
+        pending_data_offer_ = nullptr;
+    }
+    pending_offer_text_mime_.clear();
+}
+
+void GuiPlatform::destroy_data_device_state() {
+    destroy_pending_offer();
+    if (clipboard_offer_) {
+        // The pending and clipboard slots are disjoint by construction, so the
+        // destroy above cannot have freed this object.
+        wl_data_offer_destroy(clipboard_offer_);
+        clipboard_offer_ = nullptr;
+    }
+    clipboard_offer_text_mime_.clear();
+    if (clipboard_source_) {
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_ = nullptr;
+    }
+    clipboard_we_own_ = false;
+    if (wl_data_device_) {
+        wl_data_device_release(wl_data_device_);  // v2+; the bind floor
+        wl_data_device_ = nullptr;
+    }
+    last_input_serial_ = 0;
+    // clipboard_send_text_ is deliberately NOT cleared: it is the app's own
+    // last copied payload, not a protocol object.
+}
+
+void GuiPlatform::on_data_offer(struct wl_data_offer* offer) {
+    destroy_pending_offer();
+    pending_data_offer_ = offer;
+    wl_data_offer_add_listener(offer, &s_data_offer_listener, this);
+}
+
+void GuiPlatform::on_data_offer_mime_type(struct wl_data_offer* offer,
+                                          const char* mime) {
+    if (!mime) return;
+    if (offer == pending_data_offer_) {
+        note_offer_text_mime(pending_offer_text_mime_, mime);
+    } else if (offer == clipboard_offer_) {
+        // The protocol sends every mime before the selection event claims the
+        // offer, but keep the claimed slot truthful if one arrives late.
+        note_offer_text_mime(clipboard_offer_text_mime_, mime);
+    }
+}
+
+void GuiPlatform::on_selection(struct wl_data_offer* offer) {
+    if (offer == clipboard_offer_) return;
+    if (clipboard_offer_) wl_data_offer_destroy(clipboard_offer_);
+    clipboard_offer_ = offer;              // null when the selection was cleared
+    clipboard_offer_text_mime_.clear();
+    if (offer && offer == pending_data_offer_) {
+        // Claim the announcement: the mimes it collected become the clipboard
+        // slot's, and the pending slot empties WITHOUT destroying the object it
+        // just handed over.
+        clipboard_offer_text_mime_ = pending_offer_text_mime_;
+        pending_data_offer_ = nullptr;
+        pending_offer_text_mime_.clear();
+    }
+}
+
+void GuiPlatform::clipboard_set_text(const std::string& text) {
+    // The payload is mirrored first and unconditionally, so it is current for
+    // the `send` below and for a self-paste even if the claim itself fails.
+    clipboard_send_text_ = text;
+    if (!wl_data_device_manager_ || !wl_data_device_) return;
+    if (clipboard_source_) {
+        // Replacing our own source. Destroying it first means the compositor's
+        // answering `cancelled` can never be routed at the source that replaces
+        // it — a destroyed proxy delivers no more events.
+        wl_data_source_destroy(clipboard_source_);
+        clipboard_source_ = nullptr;
+    }
+    clipboard_source_ = wl_data_device_manager_create_data_source(
+        wl_data_device_manager_);
+    if (!clipboard_source_) {
+        clipboard_we_own_ = false;
+        return;
+    }
+    wl_data_source_add_listener(clipboard_source_,
+                                &s_data_source_listener, this);
+    wl_data_source_offer(clipboard_source_, "text/plain;charset=utf-8");
+    wl_data_source_offer(clipboard_source_, "text/plain");
+    wl_data_device_set_selection(wl_data_device_, clipboard_source_,
+                                 last_input_serial_);
+    clipboard_we_own_ = true;
+}
+
+void GuiPlatform::on_data_source_send(struct wl_data_source* /*src*/,
+                                      const char* /*mime*/, int fd) {
+    // Both offered mimes name the same bytes, so the requested one does not
+    // change what is written. This runs only for an EXTERNAL consumer (a
+    // self-paste never reaches the pipe), and the payloads are one-line values
+    // far below a pipe buffer, so the blocking write cannot stall the loop.
+    const char* p = clipboard_send_text_.data();
+    size_t      left = clipboard_send_text_.size();
+    while (left > 0) {
+        const ssize_t n = ::write(fd, p, left);
+        if (n <= 0) break;            // the receiver went away (EPIPE etc.)
+        p    += n;
+        left -= static_cast<size_t>(n);
+    }
+    ::close(fd);
+}
+
+void GuiPlatform::on_data_source_cancelled(struct wl_data_source* src) {
+    // Another client claimed the selection. The source is dead; the payload is
+    // not — clipboard_send_text_ survives as what we last copied.
+    if (src != clipboard_source_) return;
+    wl_data_source_destroy(clipboard_source_);
+    clipboard_source_ = nullptr;
+    clipboard_we_own_ = false;
+}
+
+std::string GuiPlatform::clipboard_get_text() {
+    if (clipboard_we_own_) return clipboard_send_text_;
+    if (!clipboard_offer_ || clipboard_offer_text_mime_.empty()) {
+        return std::string();
+    }
+    int fds[2];
+    if (pipe2(fds, O_CLOEXEC) != 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: pipe2 for the clipboard read failed: %s\n",
+                     std::strerror(errno));
+        return std::string();
+    }
+    wl_data_offer_receive(clipboard_offer_,
+                          clipboard_offer_text_mime_.c_str(), fds[1]);
+    ::close(fds[1]);
+    // Flush so the receive request actually reaches the offering client before
+    // the read starts; without it the source never sees the request and the
+    // read burns its whole deadline for nothing.
+    wl_display_flush(wl_display_);
+    const std::string out = read_clipboard_data(fds[0]);
+    ::close(fds[0]);
+    return out;
+}
+
+std::string GuiPlatform::read_clipboard_data(int read_fd) {
+    // Bounded and non-blocking. The offering client gets one full second for
+    // its whole payload — a per-poll cutoff would turn ordinary scheduler delay
+    // into a silently truncated paste — and kMaxBytes bounds a source that
+    // streams without end, hostile or merely broken. EVERY failure returns the
+    // empty string rather than what arrived so far: a partial paste is worse
+    // than no paste, and the caller reads empty as nothing to paste.
+    std::string out;
+    fcntl(read_fd, F_SETFL, O_NONBLOCK);
+    constexpr size_t kMaxBytes = 1024u * 1024u;
+    const uint64_t deadline_us = monotonic_us() + 1'000'000;
+    bool failed = false;
+    char buf[4096];
+    for (;;) {
+        const uint64_t now_us = monotonic_us();
+        if (now_us >= deadline_us) {
+            std::fprintf(stderr, "warptempo_gui: Clipboard read timed out\n");
+            failed = true;
+            break;
+        }
+        const int remaining_ms =
+            static_cast<int>((deadline_us - now_us + 999) / 1000);
+        struct pollfd pfd { read_fd, POLLIN, 0 };
+        const int pr = poll(&pfd, 1, remaining_ms);
+        if (pr == 0) {
+            std::fprintf(stderr, "warptempo_gui: Clipboard read timed out\n");
+            failed = true;
+            break;
+        }
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            std::fprintf(stderr, "warptempo_gui: Clipboard read failed: %s\n",
+                         std::strerror(errno));
+            failed = true;
+            break;
+        }
+        const ssize_t n = ::read(read_fd, buf, sizeof buf);
+        if (n < 0) {
+            if (errno == EINTR || errno == EAGAIN) continue;
+            std::fprintf(stderr, "warptempo_gui: Clipboard read failed: %s\n",
+                         std::strerror(errno));
+            failed = true;
+            break;
+        }
+        if (n == 0) break;                       // EOF
+        out.append(buf, static_cast<size_t>(n));
+        if (out.size() > kMaxBytes) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Clipboard payload exceeded %zu bytes; "
+                         "paste abandoned\n", kMaxBytes);
+            failed = true;
+            break;
+        }
+    }
+    return failed ? std::string() : out;
 }
 
 // ---------------------------------------------------------------------------

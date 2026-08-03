@@ -236,10 +236,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
-    // pasteable "base" / "base*scale" form the flag editor accepts — into the
-    // internal text clipboard (AppState::text_clipboard, the same session-only
-    // clipboard the flag and settings editors use), for pasting the implied
-    // value of a pass or label ref into a neighbour's flag editor.
+    // pasteable "base" / "base*scale" form the flag editor accepts — onto the
+    // SYSTEM clipboard, so the implied value of a pass or label ref pastes into
+    // a neighbour's flag editor and equally into any other application. The
+    // clipboard has ONE representation, the platform's; this composes the
+    // string and hands it straight over, holding no copy of its own.
     //
     // THE SELECTION TRANSLATION of the old hover copy (row 5, 2026-08-01). The
     // payload used to be cached in hover_popup at each rect-entry and this
@@ -264,7 +265,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 slice_to_warp_markers(app.warpmarkers.markers()),
                 app.last_selected_marker, audio.sample_rate(),
                 audio.total_frames(), &payload);
-            if (!payload.empty()) app.text_clipboard = std::move(payload);
+            if (!payload.empty()) gui.clipboard_set_text(payload);
         }
         return;
     }
@@ -1315,15 +1316,32 @@ bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
         case text_editor::KeyAction::CopyRequested:
-            app.text_clipboard = text_editor::selected_text(s);
+            gui.clipboard_set_text(text_editor::selected_text(s));
             return true;
         case text_editor::KeyAction::CutRequested:
-            app.text_clipboard = text_editor::selected_text(s);
+            gui.clipboard_set_text(text_editor::selected_text(s));
             text_editor::replace_selection(s, std::string());
             return true;
-        case text_editor::KeyAction::PasteRequested:
-            text_editor::replace_selection(s, app.text_clipboard);
+        case text_editor::KeyAction::PasteRequested: {
+            // The bytes come from the SYSTEM clipboard, so a URL copied in a
+            // browser pastes straight into a settings field. GuiPlatform
+            // short-circuits to our own last-published payload while we still
+            // hold the selection, so a copy-then-paste inside this process
+            // never touches the pipe.
+            //
+            // AN EMPTY ANSWER IS A CONSUMED NO-OP: no offer, no text mime on
+            // the offer, or a failed read all mean there is nothing to paste,
+            // and pasting nothing must not delete the selection instead.
+            //
+            // NO FILTER HERE. replace_selection is the product's one incoming
+            // text filter (printable ASCII plus well-formed UTF-8, controls and
+            // malformed bytes dropped a byte at a time), and an external
+            // clipboard is precisely the boundary it was written for.
+            std::string text = gui.clipboard_get_text();
+            if (text.empty()) return true;
+            text_editor::replace_selection(s, text);
             return true;
+        }
         default:
             return false;
     }

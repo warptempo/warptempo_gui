@@ -222,10 +222,12 @@ void replace_selection(State& s, const std::string& raw) {
     //
     // Recovery on a malformed byte is the standard one: drop that ONE byte and
     // re-scan from the next, so a single bad byte never eats the good text after
-    // it. The malformed arm has no producer today — xkb emits only well-formed
-    // UTF-8 and the session clipboard only ever holds what this filter already
-    // passed — and is kept because this is the boundary an external clipboard
-    // would arrive through.
+    // it. THE MALFORMED ARM HAS A LIVE PRODUCER since the system clipboard
+    // landed (2026-08-02): a Ctrl+V pastes another application's bytes in here
+    // unexamined — the platform reads the pipe and hands the payload over
+    // whole, deliberately, because this is the one boundary that judges
+    // incoming text. The typed path still produces nothing malformed (xkb emits
+    // only well-formed UTF-8), and neither does our own copy.
     std::string  clean;
     clean.reserve(raw.size());
     const size_t n = raw.size();
@@ -435,8 +437,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // keymap (returning a handled action), so they never fall through to the
     // global dispatch; Ctrl+C/X/V are unbound globally, so no conflict. Copy
     // and cut are a no-op (plain Consumed) without a selection; paste always
-    // requests — the input handler applies the action against the internal
-    // session clipboard.
+    // requests — the input handler applies the action against the SYSTEM
+    // clipboard, and answers a request with nothing on it by doing nothing.
     if (ctrl && key == GuiKeys::C) {
         return has_selection(s) ? KeyAction::CopyRequested
                                 : KeyAction::Consumed;

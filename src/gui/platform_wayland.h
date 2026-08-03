@@ -80,6 +80,37 @@ public:
     void drain_events();
     void paint_now();
 
+    // THE SYSTEM CLIPBOARD (the CLIPBOARD selection). PRIMARY is deliberately
+    // absent — middle-click paste is out of scope and zwp_primary_selection is
+    // not bound — and so is drag-and-drop, retired with the in-session file
+    // load and not coming back; the wl_data_device listener's DnD slots are
+    // inert stubs.
+    //
+    // THIS IS THE PAYLOAD'S ONE REPRESENTATION. The bytes handed to
+    // clipboard_set_text are stored here (clipboard_send_text_) and nowhere
+    // else: the store is not an optimization but a requirement, since the
+    // compositor's `send` event arrives later and must be serviced without
+    // reaching back into the GUI, and it is what the self-paste short circuit
+    // answers with. AppState carried a second copy until 2026-08-02; it was
+    // deleted as duplication with drift risk, so a copy site composes its
+    // string, hands it over, and keeps nothing.
+    //
+    // clipboard_set_text claims the selection with `text` as the payload,
+    // offered as text/plain;charset=utf-8 and text/plain.
+    //
+    // clipboard_get_text answers with that stored payload while WE hold
+    // the selection (the self-paste short circuit — a same-thread
+    // send-then-read over the pipe would deadlock), and otherwise performs a
+    // bounded synchronous pipe read from the offering client. It returns the
+    // EMPTY STRING when nothing text-shaped is on the clipboard and on every
+    // failure (no acceptable mime, pipe error, timeout, runaway payload); a
+    // partial read is never published. Callers treat empty as "nothing to
+    // paste" — the bytes are not filtered here, because the editor's own
+    // incoming filter (text_editor::replace_selection) is the boundary that
+    // validates UTF-8 well-formedness and drops control bytes.
+    void        clipboard_set_text(const std::string& text);
+    std::string clipboard_get_text();
+
     int width()  const;
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
@@ -195,20 +226,23 @@ private:
     bool        title_dirty_ = false;
 
     // -- Wayland globals (bound during init()) --
-    // THE PROTOCOL CLASSES, stated here once (init() enforces them): the four
-    // below through xdg_decoration_manager_ are REQUIRED — a missing one is a
+    // THE PROTOCOL CLASSES, stated here once (init() enforces them): the five
+    // below through wl_data_device_manager_ are REQUIRED — a missing one is a
     // startup failure. zxdg_decoration_manager_v1 joined that class 2026-07-30
-    // (architect): labwc always advertises it, so its absence is a broken
-    // environment rather than a degraded one, and running undecorated was not a
-    // behavior anybody wanted. wl_output_ is best-effort (absence falls back to a
-    // 60 Hz tick). The ruled OPTIONAL list is exactly TWO, and both live in the
-    // pointer-capture block below.
+    // and wl_data_device_manager (core protocol, the system clipboard)
+    // 2026-08-02, both on the same reasoning (architect): labwc always
+    // advertises them, so an absence is a broken environment rather than a
+    // degraded one — running undecorated, or with copy and paste silently dead
+    // in every text editor, is not a behavior anybody wanted. wl_output_ is
+    // best-effort (absence falls back to a 60 Hz tick). The ruled OPTIONAL list
+    // is exactly TWO, and both live in the pointer-capture block below.
     struct wl_display*    wl_display_     = nullptr;
     struct wl_registry*   wl_registry_    = nullptr;
     struct wl_compositor* wl_compositor_  = nullptr;
     struct wl_shm*        wl_shm_         = nullptr;
     struct xdg_wm_base*   xdg_wm_base_    = nullptr;
     struct zxdg_decoration_manager_v1* xdg_decoration_manager_ = nullptr;
+    struct wl_data_device_manager*     wl_data_device_manager_ = nullptr;
     struct wl_output*     wl_output_      = nullptr;
     uint32_t              output_global_name_ = 0;
 
@@ -301,6 +335,52 @@ private:
     // async-renderer fd above. -1 when no waveform worker is registered.
     int  waveform_worker_completion_fd_ = -1;
     std::function<void()> on_waveform_worker_completion_;
+
+    // -- The system clipboard (the CLIPBOARD selection) --
+    // The device is created against the seat, so it is recreated when a seat
+    // appears and torn down when one is removed; the manager above it is a
+    // plain registry global with no seat dependency.
+    struct wl_data_device* wl_data_device_ = nullptr;
+
+    // A data_offer announcement is UNCLASSIFIED until the selection event that
+    // follows it claims the object. It parks here meanwhile, in a slot distinct
+    // from clipboard_offer_ so that an announcement can never destroy the live
+    // clipboard offer out from under a paste. A drag-and-drop announcement
+    // lands here too and is simply never claimed (the DnD listener slots are
+    // inert): the next announcement supersedes and destroys it.
+    // pending_offer_text_mime_ accumulates the best text mime the offer named.
+    struct wl_data_offer* pending_data_offer_ = nullptr;
+    std::string           pending_offer_text_mime_;
+
+    // clipboard_offer_ is the current EXTERNAL selection offer (one we do not
+    // own); null when the selection is empty or ours. clipboard_offer_text_mime_
+    // is the EXACT token to hand back to wl_data_offer.receive — the offered
+    // spelling, not a canonical one — preferring text/plain;charset=utf-8 (in
+    // either charset casing) over bare text/plain, and empty when the offer
+    // named no text mime at all, which is what makes a paste a silent no-op.
+    struct wl_data_offer* clipboard_offer_ = nullptr;
+    std::string           clipboard_offer_text_mime_;
+
+    // clipboard_source_ is the wl_data_source we own while we hold the
+    // selection; clipboard_send_text_ IS THE PAYLOAD, the program's one and
+    // only copy of what it last put on the clipboard (no GUI-side twin — see
+    // the public declaration). It is both the on-the-wire bytes written at each
+    // `send` event, current as of the last clipboard_set_text, and the local
+    // answer a self-paste reads, so a copy-then-paste inside this one process
+    // never touches the pipe and cannot self-deadlock.
+    // clipboard_we_own_ is true between a successful set_selection and the
+    // `cancelled` event another client's claim produces. The payload SURVIVES
+    // that cancellation deliberately: losing the selection does not erase what
+    // we last copied.
+    struct wl_data_source* clipboard_source_ = nullptr;
+    std::string            clipboard_send_text_;
+    bool                   clipboard_we_own_ = false;
+
+    // Most recent serial from a keyboard event, required by
+    // wl_data_device.set_selection. Cached in on_keyboard_key: every copy is a
+    // Ctrl+C or Ctrl+X key event, so this is the triggering event's own serial
+    // at set time. Cleared when the seat goes away.
+    uint32_t               last_input_serial_ = 0;
 
     // -- Keyboard --
     struct wl_seat*     wl_seat_     = nullptr;
@@ -495,6 +575,25 @@ private:
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
 
+    // -- Clipboard helpers --
+    // Create the wl_data_device once both the manager and the seat exist. Both
+    // registry bind arms call it, so whichever is advertised second wins the
+    // race; a seat that reappears after a registry removal recreates the
+    // device. Idempotent.
+    void ensure_data_device();
+    void destroy_pending_offer();
+    // THE ONE TEARDOWN for everything the seat-bound device owns — pending
+    // offer, clipboard offer and its mime, our source and the ownership bit,
+    // the device itself, the cached serial. Both exits call it (shutdown and
+    // seat registry removal) so neither can grow its own partial copy: the
+    // lifetime bugs this area had were exactly two teardown paths disagreeing
+    // about which slots existed. Idempotent; leaves the manager alone, which
+    // is not seat-bound.
+    void destroy_data_device_state();
+    // Bounded non-blocking read of a receive pipe to EOF. Empty on any
+    // failure — see clipboard_get_text's contract.
+    std::string read_clipboard_data(int read_fd);
+
     // -- Event handlers (called from file-static dispatchers) --
     void on_registry_global(struct wl_registry* r, uint32_t name,
                             const char* interface, uint32_t version);
@@ -569,4 +668,12 @@ private:
     void on_relative_pointer_motion(double dx, double dy);
     void on_locked_pointer_locked();
     void on_locked_pointer_unlocked();
+
+    // -- Clipboard handlers --
+    void on_data_offer(struct wl_data_offer* offer);
+    void on_data_offer_mime_type(struct wl_data_offer* offer, const char* mime);
+    void on_selection(struct wl_data_offer* offer);
+    void on_data_source_send(struct wl_data_source* src,
+                             const char* mime, int fd);
+    void on_data_source_cancelled(struct wl_data_source* src);
 };

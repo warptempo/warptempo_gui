@@ -277,7 +277,7 @@ KeyClass classify_key(GuiKey key, GuiInputState mods);
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 
 // Clipboard primitives, used by the input handler to bridge the editor's
-// selection model to the session clipboard. selected_text returns the
+// selection model to the SYSTEM clipboard. selected_text returns the
 // highlighted substring (empty if no selection — and always a whole number of
 // codepoints, since both endpoints are boundaries).
 //

@@ -1985,12 +1985,15 @@ struct AppState {
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
 
-    // Internal text clipboard (session-only, lost on app close). The GUI has
-    // no outside-world clipboard: the Ctrl+C resolved-value copy (the FOCUSED
-    // marker's, since row 5 — it was the hovered marker's) and the bottom-strip
-    // editors' copy/cut/paste all round-trip through this one string, so a
-    // resolved value pastes into a flag/settings text box.
-    std::string        text_clipboard;
+    // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
+    // `text_clipboard` string is DELETED with the system clipboard's arrival:
+    // the payload has ONE representation now, GuiPlatform's, which has to exist
+    // anyway to serve the compositor's `send` event and which owns the
+    // self-paste short circuit. A second copy in AppState was pure duplication
+    // with drift risk — every reader it ever had was a pass-through handing it
+    // straight back to clipboard_set_text. The three copy sites compose their
+    // string and hand it over directly. The PHASE-RESET clipboard above is a
+    // different concept and stays.)
 
     // Iteration mode. Toggled by plain `i` in warp's home (W marker view +
     // source audio view; no-op elsewhere). Session-only (off at load, lost on

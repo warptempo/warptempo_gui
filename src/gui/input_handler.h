@@ -768,12 +768,19 @@ private:
     // flag is cleared regardless.
     void finalize_editor_text_drag();
 
-    // Clipboard: handle a Copy/Cut/Paste editor action against editor `s`
-    // using the internal session clipboard (AppState::text_clipboard; there is
-    // no Wayland clipboard), and report whether it handled one. Copy and cut
-    // push the selection to the session clipboard (cut then deletes it); paste
-    // pulls the clipboard text into the selection. Returns false for any other
-    // action so the caller can fall through to its remaining branches.
+    // Clipboard: handle a Copy/Cut/Paste editor action against editor `s` and
+    // report whether it handled one. THE CLIPBOARD IS THE SYSTEM ONE (the
+    // Wayland CLIPBOARD selection, GuiPlatform::clipboard_set_text /
+    // clipboard_get_text), and the PLATFORM HOLDS THE ONLY COPY of the payload:
+    // copy and cut hand the selected text straight to the compositor and keep
+    // nothing here (cut then deletes the text); paste takes whatever the system
+    // clipboard holds — our own payload while we still own the selection,
+    // another application's otherwise — and inserts it, doing NOTHING at all
+    // when there is nothing to paste. Returns false for any other action so the
+    // caller can fall through to its remaining branches.
+    //
+    // This and the readout's Ctrl+C (handle_key, input_handler.cpp) are the
+    // whole of the GUI's clipboard reach; no other site copies or pastes.
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
