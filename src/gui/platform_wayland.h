@@ -23,21 +23,33 @@
 // and its own declared hotspot are what the compositor gets.
 //
 // Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
-// also the FALLBACK: a theme missing one of the other four names degrades that
+// also the FALLBACK: a theme missing one of the other six names degrades that
 // KIND to the arrow with one stderr line, which costs the cue and nothing else.
-// The four beside it each mark a zone whose gesture the arrow cannot promise —
+// The six beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.
+//
+// THE TRIM BAR SPENDS THREE OF THEM, and the split is the act rather than the
+// surface (architect 2026-08-03): TrimBoundBegin and TrimBoundEnd are the
+// window-edge shapes a window manager shows on a left / right border, and they
+// mark EXTENDING ONE BOUNDARY — the trim window's begin cap and end cap, and the
+// ctrl / ctrl+shift clicks that write those same two bounds — while TrimResize
+// stays with the BRIDGE, which moves both bounds together. A begin/end pair
+// rather than a left/right one because the bound is what the gesture names; the
+// two happen to coincide because the begin bound is always the window's left
+// edge.
 enum class GuiCursorKind {
     Arrow,
     Scrub,
     Pan,
     Zoom,
     TrimResize,
+    TrimBoundBegin,
+    TrimBoundEnd,
 };
 // Roster size, for the platform's per-kind cursor array. Keep it equal to the
 // enumerator count above.
-inline constexpr int kGuiCursorKindCount = 5;
+inline constexpr int kGuiCursorKindCount = 7;
 
 class GuiPlatform {
 public:

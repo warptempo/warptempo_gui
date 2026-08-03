@@ -1180,13 +1180,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // edges, so the comparator could only ever re-notice a change that was
         // damaged at its source.
         //
-        // THE TWO TERMS ARE BOTH TRUE ON THE OPEN MENU'S ANCHOR whenever the
-        // pointer rests on it, since row 1 keeps hovering under an open dropdown
-        // (architect 2026-08-03) — and NEITHER "wins", which is the deliberate
-        // answer rather than an accident of the operator: row 1 has exactly two
-        // faces, so both terms ask for the SAME pill and the disjunction is
-        // idempotent. There is no third face for an anchor-that-is-also-hovered
-        // to fall into, and adding one would be a look change.
+        // THE TWO TERMS ARE NEVER BOTH TRUE, and that is the hover predicate's
+        // doing rather than this expression's: no roster button hovers while a
+        // dropdown is open (redesign_button_hoverable), so the anchor term is the
+        // ONLY thing lighting the open menu's button, and the hover term is what
+        // lights every row-1 button the rest of the time — including the anchor
+        // itself once its menu is down. They are written as a disjunction because
+        // row 1 has exactly two faces and both ask for the SAME pill: were they to
+        // coincide, nothing would need to win.
         const bool pill = face.hovered ||
                           (app.dropdown.open() &&
                            def.id == dropdown_anchor_button(app.dropdown.menu));

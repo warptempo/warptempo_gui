@@ -718,6 +718,12 @@ void GuiInputHandler::commit_trim_drag() {
     app.trim_drag = TrimDragState{};
 }
 
+// -- THE BOUND-SET CLICK: ONE ACT IN TWO FUNCTIONS ------------------------
+// This block is the contract for both — trim_bound_click_frame, which DECIDES
+// (every refusal, and the frame a click would write), and set_trim_bound_at_click,
+// which ACTS (the stop, the write, the commit tail, the deselect). They were one
+// function until the pointer cursor needed the verdict without the act.
+//
 // Set ONE trim bound (begin or end) at the clicked column — REINSTATED architect
 // 2026-08-01 with a NEW strict refusal, after a one-day retirement (the form is
 // 853c2c4's, restored onto the redesigned TRIM BAR rather than the chip row it
@@ -765,12 +771,23 @@ void GuiInputHandler::commit_trim_drag() {
 // refusal above suppresses the drag with no second spelling of the guard ladder.
 // is_begin picks the bound: the ctrl trim-bar click sets begin, ctrl+shift sets
 // end.
-bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
-    if (active_view_state(app).read_only) return false;   // trim authoring
-    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return false;
-    if (current_samples_per_pixel(app, audio) <= 0.0) return false;
+
+// THE DECISION HALF, hoisted whole (architect 2026-08-03) so the pointer CURSOR
+// can ask what this click would do without a second copy of the derivation: the
+// cue over the trim bar with ctrl held names the BEGIN bound only where the click
+// would actually set it, and falls to the Arrow on every refusal below — a
+// read-only tab, a degenerate audio/geometry state, and above all the
+// strictly-inside guard, whose whole purpose is that a click landing on or past
+// its partner does nothing. Returns the frame the click WOULD write, or nullopt.
+// Nothing here mutates: the caller below owns the stop, the write and the tail.
+std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
+    bool is_begin, int mouse_x) const {
+    if (active_view_state(app).read_only) return std::nullopt; // trim authoring
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0)
+        return std::nullopt;
+    if (current_samples_per_pixel(app, audio) <= 0.0) return std::nullopt;
     const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return false;
+    if (area.w <= 0) return std::nullopt;
     int col = mouse_x - area.x;
     if (col < 0)         col = 0;
     if (col >= area.w)   col = area.w - 1;
@@ -785,8 +802,20 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // already live in — no mapping, no tolerance. On a one-frame source (canonical
     // full window [0, 0]) both arms refuse every click, correctly: there is no
     // strictly-inside value to author there.
-    if (is_begin) { if (frame >= app.trim.end_frame)   return false; }
-    else          { if (frame <= app.trim.begin_frame) return false; }
+    if (is_begin) { if (frame >= app.trim.end_frame)   return std::nullopt; }
+    else          { if (frame <= app.trim.begin_frame) return std::nullopt; }
+    return frame;
+}
+
+bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
+    // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click_frame above) — read-only,
+    // the degenerate audio/geometry states and the strictly-inside guard — so
+    // this function is exactly the act, and the cursor cue that asks the same
+    // question cannot answer it differently.
+    const std::optional<int64_t> decided = trim_bound_click_frame(is_begin,
+                                                                 mouse_x);
+    if (!decided) return false;
+    const int64_t frame = *decided;
     // The act commits from here on, so THIS is where it stops a live audition
     // (architect 2026-07-27): the trim window is about to change under it, and
     // every refusal above — read-only, a degenerate audio/geometry state, a
@@ -863,36 +892,35 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // The two arms:
 //   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
 //     bar lane) arms that bound's single drag.
-//   BRIDGE: else, a press whose y lies in the trim lane band —
-//     top_trim_row_area, the band the bar and its endcaps paint in — and whose
-//     column falls inside the shared trim_bridge_gap interval (render.h) arms
-//     the pair drag. The interval is the bar's stretch BETWEEN the two endcaps
-//     (the painter draws the bar under them and the caps over it, so the
-//     endcap-covered ends belong to the CAP HIT above — and this arm needs no
-//     reliance on that, the cap rects sitting outside the gap either way), plus
-//     a [0, area_w) click gate so
-//     the inert non-multiple-of-16 gutter cannot arm past the painted surface.
-//     The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
+//   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
+//     app_state.h — the shared owner, which carries the trim-lane y-gate, the
+//     trim_bridge_gap interval and the painter's [0, area_w) clip) arms the pair
+//     drag. The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
 //     strip height: a top-strip press below that lane — the ruler, then the
 //     marker lane — is not claimed and falls through to the caller's ruler /
 //     flag handling. Both bounds are
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
+// BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE, which is what lets the
+// pointer CURSOR promise exactly what this router claims: the zone map calls the
+// same two predicates (pointer_cursor_kind, input_pointer.cpp), so a point that
+// arms nothing shows the Arrow by construction rather than by proximity.
 // The drags DESELECT and STOP a live audition at
 // their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
 // press-time stop went with the highlight-only publish it accompanied); the
 // PLAYHEAD is what they never
 // touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
-// The bridge-region bound columns come from the displayed MAP
+// BOTH ARMS DECIDE ON THE DISPLAYED BASIS — the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
-// (item_viewport_basis) — the EXACT basis and owner chain the live trim
+// (item_viewport_basis), the EXACT basis and owner chain the live trim
 // pass (GuiPaintHandler::paint_trim) paints the bar and its endcaps from every frame
 // (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
 // on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
 // the same basis (the
-// event-sync ruling at that selector). The remaining seams are all
+// event-sync ruling at that selector). Each predicate carries that basis itself,
+// which is why nothing is derived here. The remaining seams are all
 // ACCEPTED:
 // commit-to-scanout plus human reaction (irreducible — input responds to the
 // previously presented frame), the COLD-STATE fallback (first paint, a view
@@ -901,18 +929,6 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // far subtler seam).
 bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
-    // Event-synchronized hit geometry, the VIEWPORT half (the ruling at the
-    // header): the endcap AND bridge pixels are painted live (paint_trim) on the
-    // DISPLAYED basis, so both the
-    // single-endcap hit (hit_test_trim_endcap, which takes its own displayed basis)
-    // and the bridge column math below ride the SAME basis, never the live
-    // viewport — else a press on the visible bridge during an async publish window
-    // could fall through unclaimed (or a blank point falsely arm the pair drag).
-    // Cold falls back to the live basis (see the accessor), matching the
-    // painter's cold fallback.
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.spp <= 0.0) return false;
-
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
     const TrimHit single = hit_test_trim_endcap(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
@@ -920,63 +936,13 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
                               mouse_x, mouse_y);
         return true;
     }
-
-    // Bridge (pair) drag: the TRIM BAR LANE ONLY — a press whose y lies in that
-    // lane's band (top_trim_row_area, the exact band
-    // hit_test_trim_endcap y-gates on and the band the bar and its endcaps paint
-    // in) and whose column falls inside the painted bar's
-    // gap between the two endcaps (both bounds always set, structurally). A
-    // top-strip press BELOW that band — the ruler lane, then the marker lane —
-    // is not the bridge handle: it falls through to the caller's ruler / flag
-    // handling. The pair has no
-    // grabbed-bound notion — both bounds are the subject, so it always arms as
-    // Begin structurally (there is no nearer-bound pick, and the gesture never
-    // moves the playhead). The gap interval uses the forward-map + column math on
-    // the painted items' own map AND displayed viewport (the event-sync ruling
-    // above), computed only on this path.
-    const GuiRect row = top_trim_row_area(app);
-    if (mouse_y >= row.y && mouse_y < row.y + row.h) {
-        const GuiRect area = waveform_area(app);
-        // click_rel_x is waveform-relative from the layout origin area.x (a
-        // stable layout constant, not viewport-driven); the gap interval below is
-        // 0-based columns in the SAME committed-width column space, so the
-        // in-gap test compares like against like.
-        const int click_rel_x = mouse_x - area.x;
-        const std::vector<WarpFrameMapSegment>& dmap =
-            displayed_or_live_target_map(app, audio);
-        const std::vector<WarpFrameMapSegment>* map =
-            dmap.empty() ? nullptr : &dmap;
-        // Bridge hit interval = the painted bar BETWEEN THE ENDCAPS exactly,
-        // via the shared owner trim_bridge_gap (render.h) — the same owner
-        // render_trim_flags' midpoint mark fits itself against — over the two
-        // bounds' TrimBoundColumns on the DISPLAYED basis
-        // (vp_start_frame/vp_end_frame/area_w — the same triple the live trim
-        // pass paints with), so the columns are exactly where the
-        // bar is painted. The owner already handles the
-        // offscreen-flush edges (no endcap-width inset for an unpainted bound),
-        // so this needs no min/max and no reliance on the cap single-hit
-        // consuming the cap pixels first (the cap rects sit OUTSIDE the gap
-        // either way).
-        auto bound_column = [&](int64_t frame) -> TrimBoundColumn {
-            const double ms = displayed_trim_ms(frame, map);
-            return trim_bound_column(ms, basis.vp_start_frame,
-                                     basis.vp_end_frame, basis.area_w);
-        };
-        const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
-        const TrimBoundColumn ec = bound_column(app.trim.end_frame);
-        const TrimBridgeGap gap =
-            trim_bridge_gap(bc, ec, trim_endcap_w_px(), basis.area_w);
-        // The [0, area_w) click gate — the SAME effective-width clip the
-        // PAINTER applies (render_trim_flags clips the whole lane to
-        // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly
-        // exposed width over an older committed basis) NEITHER paints the bar NOR
-        // arms, so paint == hit exactly there.
-        if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
-            click_rel_x >= gap.lo && click_rel_x < gap.hi) {
-            arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
-                                  mouse_x, mouse_y);
-            return true;
-        }
+    // Bridge (pair) drag. The pair has no grabbed-bound notion — both bounds are
+    // the subject, so it always arms as Begin structurally (there is no
+    // nearer-bound pick, and the gesture never moves the playhead).
+    if (point_in_trim_bridge_span(app, audio, mouse_x, mouse_y)) {
+        arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
+                              mouse_x, mouse_y);
+        return true;
     }
     return false;
 }

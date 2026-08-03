@@ -806,9 +806,14 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // its head; this says ROW rather than "index < 6" anyway, because the row is
 // the fact and the contiguity is an accident of how the roster is written.
 //
-// ITS ONE CONSUMER IS THE HOVER PREDICATE (redesign_button_hoverable below),
-// which lets row 1 keep hovering under an open dropdown while the rows the
-// popup can cover do not.
+// ITS ONE CONSUMER IS THE DROPDOWN CLOSE RULE (on_motion's open-dropdown branch,
+// input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
+// not a dropdown anchor CLOSES it, because only one button in that row is lit at
+// a time. It was briefly the hover predicate's too — an exemption letting row 1
+// hover under an open popup — and that exemption is retired: with the close rule
+// in front of it, a non-anchor row-1 button can no longer be hovered while a menu
+// is up (the motion that reaches it closes the menu first), and an ANCHOR's pill
+// comes from the painter's own open condition rather than the hover bit.
 //
 // EXHAUSTIVE, NO `default` ARM — redesign_button_enabled's rule for the same
 // reason: a new button fails to compile here until its row is stated, instead
@@ -2748,23 +2753,20 @@ static_assert(
 // chord table's `radio` flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
-    // THE OPEN DROPDOWN OWNS THE POINTER OVER THE ROWS IT COVERS — rows 2, 3
-    // and 4, which refuse the hover face for as long as it is up: a lit button
-    // under a popup would advertise a click the popup is about to swallow. The
-    // next motion after the close re-resolves them normally.
+    // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT.
+    // A lit button beside an open menu would advertise a click the popup is about
+    // to swallow (rows 2, 3 and 4, which it floats over) or a second lit button in
+    // a row that shows one at a time (row 1).
     //
-    // ROW 1 IS EXEMPT (architect 2026-08-03, naming Quit), and the reason is
-    // structural rather than a taste call: the popup box hangs from its anchor
-    // button's BOTTOM edge, so it BEGINS below row 1 and cannot occlude any part
-    // of it — the buttons it floats over are the lower rows' — and row 1 carries
-    // no tooltips at all (redesign_button_tooltip owns that membership), so
-    // lighting it arms nothing that could paint over the menu. A menu bar whose
-    // buttons keep answering the pointer while a menu is up is also what the
-    // pointer-side switch behaviour already assumes.
-    // (The menu's OWN button keeps its lit pill through the paint condition at
-    // the menu-row painter, which is not this bit — and the two agree by
-    // construction, both asking for the one pill face.)
-    if (a.dropdown.open() && !redesign_button_in_menu_row(b)) return false;
+    // ROW 1 HELD A BRIEF EXEMPTION and it is retired (architect 2026-08-03): the
+    // row-1 close rule (on_motion, input_pointer.cpp) means a pointer can no
+    // longer BE over a non-anchor row-1 button while a menu is up — the motion
+    // that arrives there closes the menu first, and this predicate then answers
+    // for a closed popup on that same frame — while an ANCHOR's pill is the
+    // painter's own open condition (paint_menu_row), not this bit. So the
+    // exemption named no case the close rule does not already own, and one
+    // mechanism per behaviour is the shape to keep.
+    if (a.dropdown.open()) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
     if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
     if (b == RedesignButton::TabB) return a.active_tab_view != 'B';
@@ -2868,6 +2870,33 @@ enum class TrimHit { None, Begin, End };
 // handles (the waveform stem grab retired).
 TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
+
+// point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP
+// BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
+// handle? The endcap test's twin, and it is a shared owner for the same reason:
+// TWO consumers ask this question and they must not answer it differently — the
+// plain trim-bar press router (route_trim_bar_press, which arms the pair drag on
+// a true) and the pointer cursor's zone map (pointer_cursor_kind, which shows the
+// bridge's TrimResize cue on a true). It was the router's own inline body until
+// the cursor needed the same verdict; hoisting it whole was the alternative to a
+// second copy of the column math.
+//
+// The y-gate is top_trim_row_area, the same lane band hit_test_trim_endcap
+// gates on. The interval is trim_bridge_gap (render.h — the one owner the
+// painter's midpoint mark also fits against) over the two bounds'
+// TrimBoundColumns on the DISPLAYED basis (item_viewport_basis +
+// displayed_trim_ms through displayed_or_live_target_map), which is the exact
+// owner chain the live trim pass paints the bar with, so the grabbable bridge is
+// the drawn one. The [0, area_w) click gate is the PAINTER's own effective-width
+// clip: the inert non-multiple-of-16 right gutter neither paints the bar nor
+// answers true here.
+//
+// THE ENDCAPS ARE NOT IN IT: trim_bridge_gap insets each end by a painted cap's
+// width, so the cap rects sit outside the interval and this needs no reliance on
+// a caller testing the caps first. Both bounds are always set (the trim window
+// always rests), so there is no pair gate.
+bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
+                               int mouse_x, int mouse_y);
 
 // displayed_or_live_target_map: the warp_frame_map the item hit tests decide
 // against — the map the aimed-at item pixels (flags from the committed cache;

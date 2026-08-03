@@ -234,6 +234,49 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
     return TrimHit::None;
 }
 
+bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
+                               int mouse_x, int mouse_y) {
+    if (audio.total_frames() <= 0) return false;
+    // The TRIM BAR LANE ONLY — the band the bar and its endcaps paint in, and
+    // the exact band hit_test_trim_endcap gates on. A top-strip point BELOW it
+    // (the ruler, then the marker lane) is not the bridge handle.
+    const GuiRect row = top_trim_row_area(app);
+    if (mouse_y < row.y || mouse_y >= row.y + row.h) return false;
+
+    // Event-synchronized geometry, the VIEWPORT half: the bar's pixels are
+    // painted live (paint_trim) on the DISPLAYED basis, so the columns resolve on
+    // that same basis and never on the live viewport — else during an async
+    // publish window a point on the visible bridge could answer false (or a blank
+    // point true). Cold falls back to the live basis, matching the painter's.
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return false;
+
+    // click_rel_x is waveform-relative from the layout origin area.x (a stable
+    // layout constant, not viewport-driven); the gap interval is 0-based columns
+    // in the SAME committed-width column space, so the test compares like against
+    // like.
+    const GuiRect area = waveform_area(app);
+    const int click_rel_x = mouse_x - area.x;
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    const std::vector<WarpFrameMapSegment>* map = dmap.empty() ? nullptr : &dmap;
+    auto bound_column = [&](int64_t frame) -> TrimBoundColumn {
+        const double ms = displayed_trim_ms(frame, map);
+        return trim_bound_column(ms, basis.vp_start_frame, basis.vp_end_frame,
+                                 basis.area_w);
+    };
+    const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
+    const TrimBoundColumn ec = bound_column(app.trim.end_frame);
+    // The owner already handles the offscreen-flush edges (no endcap-width inset
+    // for an unpainted bound), so this needs no min/max of its own.
+    const TrimBridgeGap gap =
+        trim_bridge_gap(bc, ec, trim_endcap_w_px(), basis.area_w);
+    // The [0, area_w) gate — the SAME effective-width clip the PAINTER applies,
+    // so paint and hit agree exactly in the inert right gutter.
+    return click_rel_x >= 0 && click_rel_x < basis.area_w &&
+           click_rel_x >= gap.lo && click_rel_x < gap.hi;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;

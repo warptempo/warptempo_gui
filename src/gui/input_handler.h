@@ -1083,6 +1083,20 @@ private:
     // The full derivation lives at the definition, input_trim.cpp.
     bool set_trim_bound_at_click(bool is_begin, int mouse_x);
 
+    // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
+    // decision half of set_trim_bound_at_click above (its read-only and
+    // degenerate-geometry gates, the column clamp, the map + authored_frame_at_column
+    // derivation, the absolute walls, and the STRICTLY-INSIDE guard), leaving that
+    // function nothing but the write and its tail. It is a shared owner for the
+    // same reason the two trim-bar hit predicates are: the pointer CURSOR asks
+    // whether the ctrl / ctrl+shift click at this column would set a bound
+    // (pointer_cursor_kind), and a cue that promised a consumed no-op is exactly
+    // what the strictly-inside guard exists to prevent. Const, because deciding is
+    // not acting: the answer is a pure function of the store, the audio and the
+    // painted geometry.
+    std::optional<int64_t> trim_bound_click_frame(bool is_begin,
+                                                  int mouse_x) const;
+
     // The ctrl / ctrl+shift trim-bar bound-set press: sets the bound at the
     // clicked column (set_trim_bound_at_click, above) AND arms the EXISTING
     // single-bound trim drag on it through arm_pending_trim_drag — the same
@@ -1155,20 +1169,39 @@ private:
     //   and the RULER band, plain — the SAME gesture through the same hoisted
     //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
     //   share a cursor.
-    // - TrimResize: the TRIM BAR band, plain — the endcap / bridge drags.
+    // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which
+    //   moves BOTH bounds together, and the only trim gesture that does.
+    // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the two routes
+    //   that do it — the trim bar's BEGIN / END endcap on a plain hover (the
+    //   single-bound drags), and the bound-set clicks that write the same two
+    //   bounds, ctrl for begin and ctrl+shift for end. Both of those arm a
+    //   single-bound drag as well, so the cue is one shape for one act.
     // - Arrow: everything else, the marker lane and the four button rows
     //   included.
+    // THE TRIM BAR'S THREE ZONES READ THE ROUTER'S OWN OWNERS and re-derive
+    // nothing: hit_test_trim_endcap and point_in_trim_bridge_span for the plain
+    // hover (exactly what route_trim_bar_press calls, in its order), and
+    // trim_bound_click_frame for the two ctrl clicks (exactly what
+    // set_trim_bound_at_click decides on). So a point on the band that would arm
+    // NOTHING — the bar's outside on a trimmed-in window, or a ctrl click the
+    // STRICTLY-INSIDE guard would consume — shows the Arrow, and the cue cannot
+    // drift from the gesture because there is no second copy to drift.
     // THE MODIFIER ARMS OUTRANK THE PLAIN ZONES ON THE WAVEFORM, exactly as the
     // press path ranks them: alt or ctrl held means the pan or the zoom drag, not
-    // the scrub. SHIFT IS NOT IN THE MAP — it forms a region, which has no themed
-    // cursor worth borrowing, so it takes the Arrow like everything unnamed and
-    // still refuses the Scrub cue as it always did.
+    // the scrub. SHIFT IS NOT IN THE MAP over the waveform — it forms a region,
+    // which has no themed cursor worth borrowing, so it takes the Arrow like
+    // everything unnamed and still refuses the Scrub cue as it always did; the
+    // one place a shift combination IS named is ctrl+shift on the trim bar, which
+    // is a real bound-set claim rather than an unbound stray.
     //
     // READ-ONLY IS PER-ZONE, each following its own gesture's answer: the strip
     // drag and the pan are navigation and do not refuse there, an audition is not
     // a mutation so the scrub does not either — but the TRIM drags DO refuse in a
     // read-only tab (the band-level gate at the plain trim-bar press), so the
-    // TrimResize cue refuses with them.
+    // TrimResize and endcap cues refuse with them. THE CTRL CLICKS TAKE THE SAME
+    // ANSWER through their own route: trim_bound_click_frame's first gate is that
+    // tab's read_only bit, so those two cues go Arrow in a locked tab without this
+    // map testing anything itself.
     //
     // WHAT IT IS BLIND TO, deliberately and by ruling:
     // - The BARE RIGHT press scrubs the waveform's FULL HEIGHT, and this marks
@@ -1184,8 +1217,8 @@ private:
     // THE CUES ARE HOVER-ONLY: the live-gesture refusal is uniform across every
     // kind, so no cursor changes during any drag, captured or not. ONE KNOWN
     // CONSEQUENCE, recorded rather than special-cased: a live TRIM drag shows the
-    // Arrow rather than keeping TrimResize, because that refusal does not except
-    // the gesture whose own cue it is.
+    // Arrow rather than keeping the endcap or bridge cue it started under,
+    // because that refusal does not except the gesture whose own cue it is.
     //
     // ACCEPTED STALENESS, narrowed rather than deleted: the cursor is re-derived
     // on MOTION and on a MODIFIER EDGE, so what remains stale is a state change

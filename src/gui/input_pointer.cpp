@@ -612,6 +612,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top = rect_contains(top, x, y);
+    // THE TRIM BAR BAND, spelled from the ONE geometry owner the press sites read
+    // (top_trim_row_area) and derived once because THREE modifier arms below need
+    // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
+    // bound-set clicks). The presses gate on the top strip first and so does this.
+    const GuiRect trim_bar_row = top_trim_row_area(app);
+    const bool in_trim_bar = inside_top &&
+                             y >= trim_bar_row.y &&
+                             y < trim_bar_row.y + trim_bar_row.h;
 
     // ALT-EXACT: the captured grab-pan, whose press arms on `inside_waveform`
     // alone — either half, no band split. Alt claims nothing at all in the top
@@ -619,12 +627,28 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // the waveform's edge.
     if (mods.alt && !mods.ctrl && !mods.shift)
         return inside_waveform ? GuiCursorKind::Pan : GuiCursorKind::Arrow;
-    // CTRL-EXACT: the dual-axis strip drag, the ctrl branch's waveform arm — also
-    // `inside_waveform` alone. Ctrl in the top strip is the marker membership
-    // toggle and the trim BEGIN bound set, neither of which is a drag with a
-    // cursor of its own, so those fall to the Arrow.
-    if (mods.ctrl && !mods.alt && !mods.shift)
+    // CTRL-EXACT: two claims, and the press path's own order between them. Over
+    // the TRIM BAR ctrl sets the BEGIN bound and arms a single-bound drag on it
+    // (set_trim_bound_at_click_then_arm_drag) — boundary extension by another
+    // route, so it takes the BEGIN cap's own cue rather than the Arrow; over the
+    // waveform it is the dual-axis strip drag, `inside_waveform` alone. Ctrl's
+    // other top-strip claim is the marker membership toggle, which is not a drag
+    // and has no cue.
+    if (mods.ctrl && !mods.alt && !mods.shift) {
+        if (in_trim_bar)
+            return trim_bound_click_frame(/*is_begin=*/true, x)
+                       ? GuiCursorKind::TrimBoundBegin : GuiCursorKind::Arrow;
         return inside_waveform ? GuiCursorKind::Zoom : GuiCursorKind::Arrow;
+    }
+    // CTRL+SHIFT-EXACT: the TRIM BAR is its ONE claim in the whole product — the
+    // END bound set, the begin set's mirror — so it takes the END cap's cue there
+    // and the Arrow everywhere else.
+    if (mods.ctrl && mods.shift && !mods.alt) {
+        if (in_trim_bar)
+            return trim_bound_click_frame(/*is_begin=*/false, x)
+                       ? GuiCursorKind::TrimBoundEnd : GuiCursorKind::Arrow;
+        return GuiCursorKind::Arrow;
+    }
     // Every other combination — shift, and every mixed pair the press path
     // discards at its strict-modifier gate — is unnamed. Shift's region former
     // is the deliberate one: a real gesture with no themed cursor worth
@@ -641,16 +665,36 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // press reads.
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) return GuiCursorKind::Zoom;
-        // THE TRIM BAR BAND: the endcap and bridge drags. READ-ONLY REFUSES —
-        // the plain trim-bar press's read-only return arms no drag and writes no
-        // bound (the band's sole read-only defense, input_pointer.cpp), so the
-        // cue must not promise a resize a locked tab will not run. The band's
-        // span-framing double-click DOES survive read-only, but it is not what
-        // this cursor names.
-        const GuiRect trim_bar = top_trim_row_area(app);
-        if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h)
-            return active_view_state(app).read_only ? GuiCursorKind::Arrow
-                                                    : GuiCursorKind::TrimResize;
+        // THE TRIM BAR BAND, RESOLVED THROUGH THE ROUTER'S OWN TWO OWNERS
+        // (architect 2026-08-03, closing the band-wide cue this used to paint):
+        // the plain press arms only on an ENDCAP or inside the inter-cap BRIDGE,
+        // so the cue asks exactly hit_test_trim_endcap and
+        // point_in_trim_bridge_span — the same predicates route_trim_bar_press
+        // calls, in the same order — and a point on the band that arms nothing
+        // (outside a trimmed-in window, either side of the bar) shows the Arrow.
+        // Cue and gesture therefore agree BY CONSTRUCTION rather than by
+        // proximity, which is the whole rule this map is written to.
+        //
+        // AN ENDCAP IS NOT THE BRIDGE: a cap moves ONE bound and the bridge moves
+        // BOTH, so the caps take the boundary-extension shapes (begin left_side,
+        // end right_side) and the bridge keeps ew-resize, the move.
+        //
+        // READ-ONLY REFUSES — the plain trim-bar press's read-only return arms no
+        // drag and writes no bound (the band's sole read-only defense,
+        // input_pointer.cpp), so the cue must not promise a resize a locked tab
+        // will not run. The band's span-framing double-click DOES survive
+        // read-only, but it is not what this cursor names.
+        if (in_trim_bar) {
+            if (active_view_state(app).read_only) return GuiCursorKind::Arrow;
+            switch (hit_test_trim_endcap(app, audio, x, y)) {
+                case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
+                case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
+                case TrimHit::None:  break;
+            }
+            if (point_in_trim_bridge_span(app, audio, x, y))
+                return GuiCursorKind::TrimResize;
+            return GuiCursorKind::Arrow;
+        }
         return GuiCursorKind::Arrow;
     }
     // THE WAVEFORM'S LOWER HALF: the audition scrub, through the press's own half
@@ -2703,14 +2747,14 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // them. Clearing hover also disarms any pending tooltip, which is the other
     // half of "these two never coexist".
     //
-    // ROW 1 IS CLEARED HERE TOO AND RE-RESOLVES AT THE NEXT MOTION OR THE NEXT
-    // TICK (main.cpp runs the same recompute per frame, gesture-gated only),
-    // which costs nothing visible: the only row-1 button the pointer can be on
+    // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up (the hover
+    // predicate refuses the whole roster then); it re-resolves at the next motion
+    // or the next tick (main.cpp runs the same recompute per frame, gesture-gated
+    // only) once the popup is down. That costs nothing visible: the only row-1
+    // button the pointer can be on
     // at an open
     // edge is the one just pressed, and that is the popup's ANCHOR, whose pill
-    // the paint condition below keeps regardless of the hover bit. A blanket
-    // clear also stays the honest shape for the pointer-leave and switch edges,
-    // which arrive through the same call.
+    // the paint condition below keeps regardless of the hover bit.
     //
     // IT NO LONGER DECIDES THE MENU BUTTON'S PILL, and the inversion is worth
     // stating because this line used to be what darkened it: since 2026-08-02
@@ -2805,27 +2849,55 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // pointer resting ON the button at the close keeps its lit pill, and that is
     // hover, not staleness.
     //
-    // THE OPEN DROPDOWN IS NOT ONE OF THOSE SURFACES EITHER and its branch below
-    // recomputes the roster too (architect 2026-08-03): row 1 HOVERS while a
-    // popup is up — the box hangs below that row and cannot cover it — so the
-    // walk resolves the six real answers there, while rows 2, 3 and 4 still
-    // answer false through the one predicate (redesign_button_hoverable,
-    // app_state.h) because those are the buttons the popup floats over. The
-    // recompute runs BEFORE the menu-switch walk, so a frame that switches menus
-    // has already lit the button it switched onto. Row 1 carries no tooltips, so
-    // the recompute's dwell half finds nothing to arm here.
-    // The ANCHOR of the open menu lights through the paint condition as well
-    // (paint_menu_row) — that is what keeps its pill through the open edge's
-    // clear and what makes the switch visible on the frame it happens.
+    // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hoverable,
+    // app_state.h), so its branch below recomputes for one reason only: the frame
+    // on which a row-1 button CLOSES the menu must also light that button, and
+    // running the recompute after the close is what makes it one frame rather than
+    // two. While the menu stays up the walk re-derives all-false, which costs a
+    // pass of rect compares and no damage.
+    // The ANCHOR of the open menu lights through the paint condition
+    // (paint_menu_row) rather than through the hover bit — that is what keeps its
+    // pill through the open edge's clear and what makes a switch visible on the
+    // frame it happens.
     //
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so no gesture can be live under it (its own press consumed everything).
     if (app.dropdown.open()) {
-        // ROW 1 KEEPS ANSWERING THE POINTER (the rationale is at the modal-hover
-        // block above, the membership at redesign_button_hoverable): this one
-        // call resolves the six row-1 faces and re-derives false for every
-        // button the popup can cover. It runs BEFORE the switch walk, so on a
-        // frame that changes menus the button switched onto is already lit.
+        // A NON-MENU ROW-1 BUTTON CLOSES THE OPEN MENU (architect 2026-08-03,
+        // from kdenlive: only ONE button in that row is lit at a time, so sliding
+        // from Navigation onto Quit must put Navigation's menu away rather than
+        // leave it hanging under a second lit button). This REVERSES the earlier
+        // "a menu bar keeps its menu up while the pointer crosses the rest of the
+        // bar" reading — the bar's other buttons are not menu titles here, they
+        // are commands, and a command button lighting beside an open menu is the
+        // state the row does not have.
+        //
+        // THE MEMBERSHIP IS redesign_button_in_menu_row (app_state.h), walked
+        // rather than named, so Quit and the view bar's three are covered by the
+        // fact "row 1" and a new row-1 button inherits the rule by existing. An
+        // ANCHOR is skipped: the OPEN menu's own does nothing at all (no re-open,
+        // no close) and the OTHER one SWITCHES through the walk below, both
+        // unchanged. The close goes through close_dropdown, the one close owner,
+        // which carries the popup's damage.
+        //
+        // IT RUNS BEFORE THE ROSTER RECOMPUTE so the frame that closes the menu is
+        // the frame the button lights on: with the popup already gone,
+        // redesign_button_hoverable's dropdown refusal no longer applies and the
+        // button under the pointer resolves to hovered in the very same call.
+        for (int i = 0; i < kRedesignButtonCount; ++i) {
+            const RedesignButton id = static_cast<RedesignButton>(i);
+            if (!redesign_button_in_menu_row(id)) continue;
+            if (id == dropdown_anchor_button(DropdownMenu::Settings) ||
+                id == dropdown_anchor_button(DropdownMenu::Navigation)) continue;
+            if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
+            close_dropdown();
+            break;
+        }
+        // The roster's own faces. While a popup is up this re-derives false for
+        // the WHOLE roster (redesign_button_hoverable refuses every button then —
+        // the pointer belongs to the popup), and after the close above it resolves
+        // the row-1 button the pointer landed on normally, which is the one case
+        // that needs it here.
         recompute_redesign_button_hover();
         // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
         // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
@@ -2834,15 +2906,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // CLICK uses, so the close-then-open, the anchor expression and the open
         // edge's damage are one route with nothing restated here; a menu that is
         // not the open one makes that toggle's same-menu test false, which is
-        // exactly the switch.
+        // exactly the switch. The button it switches ONTO lights through the
+        // painter's own anchor condition (paint_menu_row), not through the hover
+        // bit, which is why the order of these two blocks is set by the CLOSE rule
+        // above and not by the switch.
         //
         // The walk covers every menu that HAS an anchor instead of naming the
         // pair, so the anchor owner stays the one place that knows which button
         // emits which menu. Hovering the OPEN menu's own anchor is skipped
-        // outright — no re-open, no close, no damage — and hovering a row-1
-        // button that owns no dropdown (Quit, the view bar's three) does nothing
-        // to the popup either: a menu bar keeps its menu up while the pointer
-        // crosses the rest of the bar.
+        // outright — no re-open, no close, no damage. A row-1 button owning no
+        // dropdown never reaches here at all: the close rule above consumed it
+        // and the menu is already down.
         for (const DropdownMenu m : {DropdownMenu::Settings,
                                      DropdownMenu::Navigation}) {
             if (m == app.dropdown.menu) continue;

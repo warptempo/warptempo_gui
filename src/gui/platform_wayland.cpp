@@ -1044,7 +1044,7 @@ int cursor_kind_index(GuiCursorKind kind) {
 }
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
-// cursor art: five standard freedesktop names, all present in Breeze and in
+// cursor art: seven standard freedesktop names, all present in Breeze and in
 // Adwaita. The images and their hotspots are the THEME's — we never centre a
 // hotspot ourselves, because these files declare real ones and the theme has
 // already centred the ones that want centring (Breeze's grab is 16,16 in a 32
@@ -1064,12 +1064,20 @@ struct CursorKindName {
     GuiCursorKind kind;
     const char*   name;
 };
+//
+// left_side / right_side ARE THE BOUNDARY-EXTENSION SHAPES — the arrow-with-a-bar
+// a window manager shows on a window's left or right edge — and they are what
+// distinguishes moving ONE trim bound from the bridge's ew-resize, which moves
+// both. Each is the cue for its own bound, so the begin cap (and the ctrl click
+// that sets begin) takes left_side and the end cap (and ctrl+shift) right_side.
 constexpr CursorKindName kCursorKindNames[] = {
-    {GuiCursorKind::Arrow,      "left_ptr"},
-    {GuiCursorKind::Scrub,      "crosshair"},
-    {GuiCursorKind::Pan,        "grab"},
-    {GuiCursorKind::Zoom,       "zoom-in"},
-    {GuiCursorKind::TrimResize, "ew-resize"},
+    {GuiCursorKind::Arrow,          "left_ptr"},
+    {GuiCursorKind::Scrub,          "crosshair"},
+    {GuiCursorKind::Pan,            "grab"},
+    {GuiCursorKind::Zoom,           "zoom-in"},
+    {GuiCursorKind::TrimResize,     "ew-resize"},
+    {GuiCursorKind::TrimBoundBegin, "left_side"},
+    {GuiCursorKind::TrimBoundEnd,   "right_side"},
 };
 static_assert(static_cast<int>(std::size(kCursorKindNames)) ==
                   kGuiCursorKindCount,
