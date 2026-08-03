@@ -22,7 +22,7 @@ Dependencies, build options, the conceptual model, the file formats, and the com
 
 ## Examples
 
-The `examples/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer's 2024 remaster for Decca Eloquence), warped toward the metronome marks Hummel published. The Symphony No. 40 first movement (`examples/550 - 1/`) is the reference project — it exercises every form and syntax the project uses, including the label cascade, phase-reset markers, and two-decimal tempos fine-tuned with the full-precision scale.
+The `projects/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer's 2024 remaster for Decca Eloquence), warped toward the metronome marks Hummel published. The Symphony No. 40 first movement (`projects/550 - 1/`) is the reference project — it exercises every form and syntax the project uses, including the label cascade, phase-reset markers, and two-decimal tempos fine-tuned with the full-precision scale.
 
 Example output, in lossy audio format:
 
