@@ -510,10 +510,12 @@ private:
     void paint_icon_row(cairo_t* cr);
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
-    // overlap the rows they hang over. They cannot coexist: the dropdown opens
-    // on a PRESS and any press hides the tooltip, and NO roster button hovers
-    // while the dropdown is open (redesign_button_hoverable), so nothing can
-    // stamp a dwell under it. Both PUBLISH the rect
+    // overlap the rows they hang over. They cannot coexist, and the claim rests
+    // on the OPEN EDGE rather than on which gestures can reach it: toggle_
+    // dropdown's open path hides the tooltip outright (a press opens a menu, and
+    // so does an armed row-1 hover), and while the popup stands NO roster button
+    // hovers (redesign_button_hoverable), so nothing can stamp a fresh dwell
+    // under it. Both PUBLISH the rect
     // they painted (AppState::redesign_tooltip.rect,
     // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
     // tests, the tooltip's only so the hide edge can damage it — and both write

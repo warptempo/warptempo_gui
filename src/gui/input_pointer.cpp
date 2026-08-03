@@ -862,6 +862,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Placed here rather than at the release because the hint's job ends the
     // moment the user acts on it, not when they let go.
     hide_shift_tooltip();
+    // ANY PRESS ENDS THE MENU ROW'S MODE, beside it and for a related reason: the
+    // ruling ends the mode on every ordinary dismissal, and with no popup open a
+    // press is the only pointer act there is — the press on the anchor, the press
+    // on a view-bar button, the press on the waveform underneath. THIS NEEDS NO
+    // EXCEPTION LIST because the one press that must KEEP the mode re-arms
+    // immediately through toggle_dropdown's open path a few lines below, which is
+    // the mode's one producer; so "any press ends it" costs exactly nothing and
+    // cannot be forgotten by a press route added later.
+    // It is gated inside disarm_menu_row: with a popup OPEN this is inert, and
+    // the press then belongs to the popup, whose own routes decide the mode.
+    disarm_menu_row();
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
@@ -2516,8 +2527,27 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // of them hides and re-stamps, so a fresh dwell begins on each arrival. The run
     // loop's tick compares the stamp against kTooltipDelayMs and flips
     // `visible` — no timer is created and nothing here decides visibility.
+    //
+    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
+    // is what makes "a tooltip never floats over a modal" hold rather than merely
+    // start out true. The HOVER PILL deliberately stays live under those surfaces
+    // (the standing ruling: button hover is a pointer fact, and a lit pill
+    // advertising a swallowed press is an accepted cost) — and both of the
+    // branches that keep it live call this function, so without this line every
+    // motion under a prompt or an editor would stamp a fresh dwell and the tick
+    // would raise a FLOATING hint over the modal 700ms later. A hint is not a
+    // face: it is a second surface, it hangs past the strip, and the chord it
+    // names is exactly what the modal gate is swallowing. Forcing "no owner" here
+    // rather than gating the tick keeps the stamp and the hide in one place — the
+    // walk below then also hides whatever was already up, so the modal's OPEN
+    // edge needs nothing beyond its own hide (on_key's, for the case where no
+    // motion and no tick follow).
+    // THE DROPDOWN NEEDS NO TERM HERE: redesign_button_hoverable refuses the
+    // whole roster while a popup is up, so the walk finds no owner by itself.
+    const bool modal_owns_the_keyboard =
+        app.prompt.active || keyboard_modal_editor_active();
     int hovered_tip = -1;
-    for (int i = 0; i < kRedesignButtonCount; ++i) {
+    for (int i = 0; i < kRedesignButtonCount && !modal_owns_the_keyboard; ++i) {
         const RedesignButton id = static_cast<RedesignButton>(i);
         if (redesign_button_tooltip(app, id).line1 != nullptr &&
             app.redesign_buttons[i].hovered) {
@@ -2699,18 +2729,25 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // rect from the last paint is exactly the region to erase, which is why the
 // close reads it BEFORE zeroing the state.
 //
-// EVERY CLOSE THROUGH HERE ALSO DISARMS THE MENU ROW, because the whole-struct
-// reset takes the mode's bit with it (AppState::Dropdown::menu_row_armed): bare
-// Esc, an item activating, the anchor click that closes its own menu, a press
-// anywhere else, the wheel, Ctrl+Q and a resize all end the mode by default.
-// That is the point of putting the bit inside the state — a dismissal the user
-// MEANT must end the mode, or Esc would put away a menu that the next pointer
-// twitch reopens, and a dismissal route added later cannot forget.
+// EVERY CLOSE THROUGH HERE ALSO DISARMS THE MENU ROW
+// (AppState::Dropdown::menu_row_armed): bare Esc, an item activating, the anchor
+// click that closes its own menu, a press anywhere else, the wheel, Ctrl+Q, the
+// WM close and a resize all end the mode through this one owner, because a
+// dismissal the user MEANT must end the mode — or Esc would put away a menu that
+// the next pointer twitch reopens.
+// THE CLEAR SITS ABOVE THE "NOTHING IS OPEN" RETURN, and that placement is the
+// whole point rather than a detail: the mode's defining state is menu CLOSED and
+// row ARMED (what a row-1 hover close leaves behind), so a dismissal arriving in
+// it finds nothing to close and must still go cold. Riding the whole-struct
+// reset alone would have made every one of those routes a no-op in exactly the
+// state the mode exists for. Below the return the reset re-clears the bit, which
+// costs nothing and keeps the struct one initializer.
 // THE ONE CLOSE THAT KEEPS THE MODE is the row-1 hover close in on_motion —
 // sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
 // and it re-arms on the line after its call to this. It is the only site in the
 // tree that writes that bit true outside toggle_dropdown's open.
 void GuiInputHandler::close_dropdown() {
+    app.dropdown.menu_row_armed = false;
     if (!app.dropdown.open()) return;
     const GuiRect painted = app.dropdown.rect;
     app.dropdown = AppState::Dropdown{};
@@ -2803,12 +2840,25 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
         viewport.invalidate_rect(
             GuiRect{0, btn.y + btn.h, app.width, dropdown_h_px(menu)});
     }
+    // THE TOOLTIP GOES DOWN ON THE OPEN EDGE — the two floating surfaces cannot
+    // coexist (paint_handler.h states the pair), and this is the one line that
+    // makes that structural rather than a reachability argument about which
+    // routes reach an open. It is NOT the roster clear's doing:
+    // clear_redesign_button_hover writes the faces' `hovered` bits and nothing
+    // else, the tooltip's dwell and visibility living in their own state
+    // (AppState::redesign_tooltip) with hide_shift_tooltip as their one hide
+    // owner. The hover recompute would reach the same answer on the NEXT motion
+    // (no roster button hovers under a popup, so the dwell walk finds no owner
+    // and hides), but "next motion" is not a property — an open reached with the
+    // pointer standing still has no next motion.
+    hide_shift_tooltip();
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
     // redesign_button_hoverable refuses the WHOLE roster while a dropdown is up.
     // No motion event follows a press, so a face lit at the moment of the open
     // would otherwise stay lit under a surface that has taken the pointer from
-    // it. Clearing hover also disarms any pending tooltip, which is the other
-    // half of "these two never coexist".
+    // it. It is also what keeps the tooltip DOWN for as long as the popup is up:
+    // with no button hoverable, the dwell writer (recompute_redesign_button_
+    // hover) can never stamp a new one.
     //
     // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up; it
     // re-resolves at the next motion or the next tick (main.cpp runs the same
@@ -2828,7 +2878,33 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     viewport.invalidate_top_strip();
 }
 
-// THE MENU ROW'S MODE, motion half (architect 2026-08-03): once a menu has been
+// THE MENU ROW'S MODE, EXIT HALF — "the pointer left row 1, go cold", which is
+// what keeps the mode from outliving the visit: wander down to the waveform and
+// Settings needs a click again. The band is top_menu_row_area, the press claim's
+// own rect, so "on the row" means one thing to both.
+//
+// IT RUNS WHEREVER MOTION IS SEEN — on_motion's very top, above every branch —
+// and that is the half's whole design. The OPEN half below has a guard list (it
+// must not spring a menu open under a modal or mid-gesture); this half has none,
+// because a modal owning the pointer is a reason not to OPEN a menu and no
+// reason at all to forget that the pointer left the row. Sitting in the
+// no-gesture tail with the open half is exactly what it must not do: a prompt,
+// an editor, an editor text drag or any live gesture returns above that tail, so
+// the pointer could leave row 1 unnoticed and carry an invisible armed mode out
+// of the visit.
+// RUNNING IT DURING A GESTURE COSTS NOTHING AND IS NOT A CHANGE OF RULE: a press
+// already ended the mode (on_button_press's top), so a live gesture's motion
+// finds the bit false and this is a compare. What it buys is the modal branches.
+// WITH A MENU OPEN IT MUST NOT FIRE — the popup hangs below the row, so the
+// pointer leaves the band the moment it moves into it — and it cannot:
+// disarm_menu_row carries that gate for all of its callers.
+void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
+    if (!app.dropdown.menu_row_armed) return;
+    if (rect_contains(top_menu_row_area(app), mouse_x, mouse_y)) return;
+    disarm_menu_row();
+}
+
+// THE MENU ROW'S MODE, OPEN HALF (architect 2026-08-03): once a menu has been
 // opened from row 1, the two anchors open on the POINTER ALONE — the menu-bar
 // behaviour every desktop has, and the completion of the row-1 hover close,
 // which puts a menu away and now leaves the row able to bring one back. The bit
@@ -2844,19 +2920,11 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
 // states in which a click opens one. (The pointer-transparent FLAG editor gates
 // neither route, by its own ruling — see the press claim; the open it leads to
 // ENDS that edit, which is toggle_dropdown's business and not restated here.)
-void GuiInputHandler::update_menu_row_arming(int mouse_x, int mouse_y) {
+// IT TESTS NO BAND. Every anchor rect lies inside row 1 by construction, so a
+// hit IS "on the row"; the exit half above owns the band question, at the one
+// placement that can answer it for every branch.
+void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
     if (!app.dropdown.menu_row_armed) return;
-    // LEAVING THE ROW GOES COLD, which is what keeps the mode from outliving the
-    // visit: wander down to the waveform and Settings needs a click again. The
-    // band is top_menu_row_area, the press claim's own rect, so "on the row"
-    // means one thing to both. With a menu OPEN this must NOT fire — the popup
-    // hangs below the row and the pointer leaves the band the moment it moves
-    // into it — and it cannot: this function only runs with the menu down, and
-    // disarm_menu_row carries the gate for its other caller besides.
-    if (!rect_contains(top_menu_row_area(app), mouse_x, mouse_y)) {
-        disarm_menu_row();
-        return;
-    }
     // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the
     // CLICK uses, so the anchor expression, the open edge's damage and the roster
     // clear are one route with nothing restated. The walk covers every menu that
@@ -2873,32 +2941,32 @@ void GuiInputHandler::update_menu_row_arming(int mouse_x, int mouse_y) {
     }
 }
 
-// THE MODE'S END at the two edges that mean "the pointer left": row 1's band
-// (above) and the window itself (main.cpp's pointer-leave hook, beside the row's
-// other face clears — no motion event follows that edge, so nothing else would
-// notice). It damages nothing: the mode is invisible, painting no face of its
-// own; what it changes is what the NEXT motion does.
+// THE MODE'S END, the one gated writer every route that is not close_dropdown
+// goes through. Its callers, re-derived by grep: the band exit above, the
+// pointer-leave hook (main.cpp, beside the row's other face clears — no motion
+// event follows that edge), ANY pointer press (on_button_press's top) and ANY
+// key press (on_key's top). It damages nothing: the mode is invisible, painting
+// no face of its own; what it changes is what the NEXT motion does.
 //
-// THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than two
+// THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than four
 // inline writes. Leaving the window is NOT a dismissal — the popup stays up, as
 // clear_dropdown_press beside it states — and a menu still standing is still the
 // mode, so re-entering over the other anchor must SWITCH rather than find a cold
 // row (and the row-1 hover close, which re-arms, must not be resurrecting a mode
-// something else meant to end). The band caller cannot see a menu open at all;
-// the leave hook can, and that is the case this gate answers.
+// something else meant to end). The same answer serves the two press callers for
+// a second reason: while a popup is up, a press or a chord belongs to the POPUP,
+// whose own routes (close_dropdown, the toggle) decide the mode — so these
+// blanket disarms cannot get in front of them. A dismissal with a menu open
+// therefore always ends the mode through close_dropdown, and a dismissal with
+// none open ends it here.
 void GuiInputHandler::disarm_menu_row() {
     if (app.dropdown.open()) return;
     app.dropdown.menu_row_armed = false;
 }
 
-// THE HOVER TOOLTIP'S HIDE, called from every edge that ends a hover or takes
-// the pointer away — the hover recompute, a press, a wheel. Damages the strip
-// AND the box's last painted rect, for the overhang reason above. Showing is
-// the tick's job (the dwell); this is only the hide, plus the stamp reset that
-// makes the next hover start its dwell from zero.
-// The armed item dies with a pointer that leaves the window: no release will
-// follow, so the face would otherwise stay lit under a pointer that is gone.
-// The menu itself STAYS OPEN — leaving the window is not a dismissal.
+// THE ARMED ITEM'S DROP, with no release to follow (the pointer-leave edge): no
+// release will arrive, so the face would otherwise stay lit under a pointer that
+// is gone. The menu itself STAYS OPEN — leaving the window is not a dismissal.
 void GuiInputHandler::clear_dropdown_press() {
     if (app.dropdown.pressed_item < 0) return;
     app.dropdown.pressed_item = -1;
@@ -2906,6 +2974,12 @@ void GuiInputHandler::clear_dropdown_press() {
     viewport.invalidate_rect(app.dropdown.rect);
 }
 
+// THE HOVER TOOLTIP'S HIDE, called from every edge that ends a hover or takes
+// the pointer away — the hover recompute, ANY pointer press, ANY key press, any
+// wheel, and the dropdown's open edge. Damages the strip AND the box's last
+// painted rect, for the overhang reason above. Showing is the tick's job (the
+// dwell); this is only the hide, plus the stamp reset that makes the next hover
+// start its dwell from zero.
 void GuiInputHandler::hide_shift_tooltip() {
     app.redesign_tooltip.hover_ms = 0;
     app.redesign_tooltip.owner    = -1;
@@ -2944,6 +3018,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
+    // THE MENU ROW'S MODE ENDS WHEN THE POINTER LEAVES ROW 1, and that half is
+    // resolved HERE, above every branch, because it is the only placement that
+    // sees every motion: the modal branches and every live gesture return before
+    // the no-gesture tail where the mode's OPEN half lives, and a mode that could
+    // not notice the pointer leaving under a prompt or an editor would be carried
+    // invisibly out of the visit. A modal owning the pointer is a reason not to
+    // OPEN a menu, not a reason to forget where the pointer went. The two halves
+    // and their asymmetric guard lists are at their definitions
+    // (update_menu_row_exit / open_menu_row_anchor_on_hover).
+    update_menu_row_exit(mouse_x, mouse_y);
     // THE POINTER CURSOR, resolved ONCE and ABOVE every gesture branch —
     // including the modal ones, which all return before the no-gesture tail.
     // Placed here so that every early return below still leaves the pointer
@@ -2959,12 +3043,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // tail, here and at the bottom-strip editors below, because a modal freezing
     // it leaves a lit pill under a pointer that has moved away — visible as a
     // button still coloured after Esc/Enter closes the editor, clearing only at
-    // the next motion. MODALITY IS CHORDS ONLY (the standing ruling): the
-    // editors are pointer- and wheel-transparent, so their hover has no reason
-    // to freeze, and the prompt takes the same answer for the same reason — it
-    // suppresses no other pointer affordance either (the marker hover POPUP's
-    // suppression right here is the one ruled exception, and it is a different
-    // fact: a resolved marker readout, not "the pointer is over this rect").
+    // the next motion. THE ARGUMENT IS THAT HOVER IS A SEPARATELY MAINTAINED
+    // POINTER FACT — "the pointer is over this rect" is true or false regardless
+    // of who owns the keyboard — and NOT that these surfaces let pointer input
+    // through: only the top-strip FlagPayload editor is pointer- and
+    // wheel-transparent, while the settings editor, the render-commit editor and
+    // the BpmBracket kind (modal_bottom_strip_editor_active, which is also the
+    // wheel swallow) take every press outside their own text row and drop it. The
+    // prompt takes the same answer for the same reason: it suppresses no other
+    // pointer affordance either (the marker hover POPUP's suppression right here
+    // is the one ruled exception, and it is a different fact: a resolved marker
+    // readout, not "the pointer is over this rect"). What the recompute must NOT
+    // do under those surfaces is start a TOOLTIP dwell — a floating hint is not a
+    // face, and that refusal lives in the recompute itself.
     // What DOES still freeze the hover is an active pointer GESTURE — the
     // branches below all return without this call, exactly as before.
     //
@@ -3422,16 +3513,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // popup and its whole recompute machinery died with the marker-text lane
         // (row 5), so the no-gesture tail has nothing else to resolve.
         //
-        // THE MENU ROW'S MODE resolves here beside it, and for the same reason:
-        // it is a pointer fact about that row, and an active gesture freezes it
-        // exactly as it freezes the faces (the branches above all returned). With
-        // the row ARMED, this opens an anchor's menu on the pointer alone; off
-        // the row it goes cold. It runs BEFORE the recompute so an open it
+        // THE MENU ROW'S MODE, OPEN HALF, resolves here beside the faces and for
+        // the same reason: opening a menu at a pointer is a thing only a
+        // gesture-free, modal-free pointer may do, and every branch that must
+        // forbid it has returned above. With the row ARMED, this opens an
+        // anchor's menu on the pointer alone. Its EXIT half is deliberately not
+        // here — it runs at the top of this function, where every branch is still
+        // ahead of it. This call runs BEFORE the recompute so an open it
         // performs is already standing when the faces resolve — toggle_dropdown
         // clears them, and the recompute then re-derives the whole roster false
         // under the new popup, which is the correct answer for a pointer the
         // popup has taken.
-        update_menu_row_arming(mouse_x, mouse_y);
+        open_menu_row_anchor_on_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }

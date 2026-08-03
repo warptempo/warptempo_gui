@@ -944,6 +944,22 @@ int main(int argc, char** argv) {
         // nothing to revert), so there is no motion-free interval where it would
         // swallow keys until a later pointer motion noticed the lost button.
         input_handler.finalize_active_drags();
+        // THE POPUP GOES DOWN BEFORE THE PROMPT GOES UP — including its armed
+        // item and the menu row's mode, all three being the one close owner's
+        // job. Without this the two would stand together and ownership would
+        // SPLIT: the prompt takes keys and presses (its gates are tested first),
+        // but motion reaches the DROPDOWN branch, which sits above the prompt's,
+        // and a left RELEASE reaches finish_dropdown_release, which sits above
+        // the prompt gate in on_button_release — so an item pressed and still
+        // HELD when the compositor close arrived would fire on release and raise
+        // the settings editor UNDERNEATH the prompt. Closing here makes "the
+        // prompt outranks the dropdown" structural in all four input channels
+        // instead of an ordering accident in two of them.
+        // THE RESIZE PATH DOES THE EQUIVALENT for the same class of reason (a
+        // popup that cannot stay coherent through what follows), and Ctrl+Q needs
+        // no line of its own: it reaches the popup's own keyboard gate first,
+        // which closes the menu and only then lets the close route run.
+        input_handler.close_dropdown();
         prompt.request_close();
     });
 

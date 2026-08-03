@@ -1605,9 +1605,15 @@ struct AppState {
     // finalizer, and on file load.
     PendingTrimDrag pending_trim_drag;
 
-    // The resting region-select span (session-only). Cleared on file load, the
-    // A/B tab switch, and the S/T audio-view switch (Esc no longer clears it —
-    // the ladder is deleted).
+    // The resting region-select span (session-only). BARE ESC CLEARS IT — the
+    // one route that clears a span and nothing else, and one of the six bare-Esc
+    // bindings — along with every playhead-moving and selection-changing route,
+    // all of them through clear_region_highlight (input_handler.h), whose
+    // declaration owns the authoritative clear-site inventory and the equally
+    // authoritative list of what deliberately does NOT clear. The three clears
+    // that stay IN PLACE rather than going through it are file load, the A/B tab
+    // switch and the S/T audio-view switch, each pairing the reset with a domain
+    // flip or a full repaint rather than that exact damage shape.
     RegionState region;
 
     // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button
@@ -1814,22 +1820,44 @@ struct AppState {
     // means something while the popup is CLOSED: once a menu has been opened
     // from the row, the row answers the pointer alone — entering either anchor's
     // rect opens that anchor's menu with no click (on_motion's no-gesture tail,
-    // update_menu_row_arming), which is what every desktop's menu bar does. COLD,
+    // open_menu_row_anchor_on_hover), which is what every desktop's menu bar
+    // does; the "pointer left the row" half is a separate entry with the
+    // opposite guard list (update_menu_row_exit, at the top of on_motion). COLD,
     // an anchor answers a CLICK and nothing else, and that is the whole reason
     // the bit exists: a row that sprang a menu open at a pointer merely crossing
     // it, with no click ever given, would be a misfeature rather than this one.
-    // IT LIVES IN THIS STRUCT so that close_dropdown's whole-struct reset
-    // DISARMS BY DEFAULT — every dismissal the user meant (Esc, an item, the
-    // anchor click that closes its own menu, a press anywhere else, the wheel, a
-    // resize) ends the mode without a line of its own, so Esc can never put away
-    // a menu that the next pointer twitch reopens. The ONE close that keeps the
-    // mode is the row-1 hover close, a step ACROSS the bar rather than a
-    // dismissal, and it re-arms explicitly at its own site.
     // ARMED BY toggle_dropdown's OPEN path, the single route that opens either
     // menu (the click and the armed hover both go through it, and no keyboard
     // chord opens a dropdown at all), so "a menu is open" implies "the row is
-    // armed" by construction. Cleared by disarm_menu_row: the pointer leaving
-    // row 1's band with no menu up, or leaving the window.
+    // armed" by construction.
+    // WHAT ENDS THE MODE — the authoritative list, and it is deliberately short
+    // because each entry is a blanket rule rather than a route:
+    //   (1) close_dropdown, which clears the bit ABOVE its own "nothing is open"
+    //       return: bare Esc and Ctrl+Q through the popup's keyboard gate, an
+    //       item activating, the anchor click that closes its own menu, a press
+    //       anywhere else, the wheel, a resize, and the WM close. A dismissal
+    //       must end the mode WHETHER OR NOT a menu happens to be open — menu
+    //       closed and row armed is the state this feature exists for — or Esc
+    //       would put away a menu that the next pointer twitch reopens;
+    //   (2) ANY pointer press (on_button_press's top) and ANY key press
+    //       (on_key's top), both through disarm_menu_row. Neither needs an
+    //       exception list: the one press that must keep the mode is the anchor
+    //       press, which re-arms through the open path a few lines later, and no
+    //       chord opens a dropdown at all;
+    //   (3) the pointer LEAVING ROW 1's band with no menu up (on_motion's exit
+    //       half, resolved above every branch so a modal cannot hide it), which
+    //       keeps the mode from outliving the visit — wander down to the
+    //       waveform and Settings needs a click again;
+    //   (4) the pointer leaving the WINDOW (the platform's pointer-leave hook).
+    // Entries (2)-(4) share one gated writer, disarm_menu_row, which is inert
+    // while a menu is open — there the popup's own routes decide, and (1) is
+    // what they call. The ONE close that KEEPS the mode is the row-1 hover
+    // close, a step ACROSS the bar rather than a dismissal, and it re-arms
+    // explicitly at its own site.
+    // IT LIVES IN THIS STRUCT because the popup and its mode are one surface's
+    // state, and because the reset then carries the bit for free on the ordinary
+    // path; the unconditional clear above the early return is what makes the
+    // rule hold in the closed-and-armed state the reset never reaches.
     struct Dropdown {
         DropdownMenu menu           = DropdownMenu::None;
         int          hovered_item   = -1;
@@ -2007,8 +2035,16 @@ struct AppState {
     // feedback while no other UI is updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status —
-    // render the timestamp normally." Mutually exclusive with prompt.active in
-    // practice (these updates can't fire while a prompt is up).
+    // render the timestamp normally."
+    // IT COEXISTS WITH prompt.active, and PAINT PRECEDENCE is what keeps that
+    // invisible rather than any exclusion: an archival render runs on, so
+    // dirtying the project and pressing Ctrl+Q raises the close prompt over a
+    // live run (the prompt cancels nothing), and the run's own completion can
+    // then rewrite or clear this string while the prompt stands. The two share
+    // ONE bottom-strip slot and the prompt is its FIRST tier (paint_handler's
+    // chain tests prompt.active before this), so a prompt is what the user sees
+    // for as long as it is up and this string is simply whatever the run left
+    // behind when it goes.
     std::string queue_progress_text;
 
     // Transient one-line status message shown in the bottom row's modal/status

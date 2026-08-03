@@ -39,6 +39,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
     // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
+    // ANY KEY PRESS HIDES THE HOVER TOOLTIP, the keyboard half of the rule the
+    // pointer press and the wheel already carry: the hint says what the button
+    // under the pointer would do, and once the user has acted — by any means — it
+    // is stale advice left floating. It is what keeps a hint from standing over a
+    // MODAL the key just opened, advertising a chord that modal's gate now
+    // swallows, and it covers the reverse timing too by resetting the dwell, so a
+    // dwell still counting when `;` opened the settings editor never comes due.
+    // (The tooltip cannot come BACK under that modal: the dwell writer refuses to
+    // run one while a prompt or a keyboard-modal editor is up — the rule is at
+    // recompute_redesign_button_hover.) The HOVER PILL is deliberately untouched:
+    // a lit face under a modal is the standing accepted cost, a floating second
+    // surface is not.
+    hide_shift_tooltip();
+    // ANY KEY PRESS ALSO ENDS THE MENU ROW'S MODE, the keyboard half of the same
+    // blanket rule at the top of on_button_press. It needs no exception list for
+    // the reason stated there and one more: no keyboard chord opens a dropdown at
+    // all, so nothing here has to survive. The bare Esc and Ctrl+Q the ruling
+    // names as dismissals are covered by this without being enumerated, and so is
+    // every key that opens a modal. Gated inside disarm_menu_row: with a popup
+    // OPEN this is inert and the popup's own keyboard gate below decides.
+    disarm_menu_row();
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;

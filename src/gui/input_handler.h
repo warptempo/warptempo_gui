@@ -482,27 +482,39 @@ struct GuiInputHandler {
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. recompute_ resolves the item hover on motion
     // while it is open. They are also the mode's two writers: toggle_'s open
-    // ARMS the menu row and close_'s reset DISARMS it (the mode's entries are
-    // below, and the one close that re-arms is named at close_'s definition).
+    // ARMS the menu row and close_ DISARMS it — unconditionally, ABOVE its own
+    // "nothing is open" return, since the mode outlives the popup and a
+    // dismissal must reach it in that state too (the one close that re-arms is
+    // named at close_'s definition).
     void toggle_dropdown(DropdownMenu menu);
     void close_dropdown();
     void recompute_dropdown_hover();
 
-    // THE MENU ROW'S MODE — the two entries that maintain the armed bit outside
-    // toggle_ (which sets it) and close_ (whose whole-struct reset clears it);
-    // the contract is at the field, AppState::Dropdown::menu_row_armed.
-    // update_ is the COLD ROW'S motion answer, called from on_motion's
-    // no-gesture tail and nowhere else: armed and over an anchor OPENS that
-    // menu through toggle_dropdown, armed and off row 1's band goes cold. It
-    // PRESUMES NO MENU IS OPEN, which that placement guarantees — the
-    // open-dropdown branch returns far above the tail, and so do the prompt, the
-    // bottom-strip editors and every live gesture, which is exactly the
-    // reachability the anchors' own PRESS claim has.
-    // disarm_ is the mode's end, called from there and from the pointer-leave
-    // hook (main.cpp, beside the row's other face clears — no motion event
-    // follows that edge). It carries the "no menu open" gate, because leaving
-    // the WINDOW is not a dismissal and a menu left standing is still the mode.
-    void update_menu_row_arming(int mouse_x, int mouse_y);
+    // THE MENU ROW'S MODE — the three entries that maintain the armed bit outside
+    // toggle_ (which sets it) and close_ (which clears it on every dismissal);
+    // the contract, and the authoritative list of what ends the mode, are at the
+    // field, AppState::Dropdown::menu_row_armed.
+    // THE TWO MOTION HALVES ARE SPLIT BECAUSE THEIR GUARD LISTS DIFFER, and that
+    // is the whole reason there are two functions rather than one:
+    //   * open_menu_row_anchor_on_hover is the COLD ROW'S motion answer, called
+    //     from on_motion's no-gesture tail and nowhere else: armed and over an
+    //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
+    //     OPEN and no modal or gesture owns the pointer, which that placement
+    //     guarantees — the open-dropdown branch returns far above the tail, and
+    //     so do the prompt, the bottom-strip editors and every live gesture,
+    //     which is exactly the reachability the anchors' own PRESS claim has;
+    //   * update_menu_row_exit is "the pointer left row 1, go cold", called from
+    //     the TOP of on_motion so that it runs under every one of those branches
+    //     too. A modal owning the pointer is a reason not to open a menu, and no
+    //     reason to forget that the pointer left the row.
+    // disarm_ is the mode's end, called from both of those, from the
+    // pointer-leave hook (main.cpp, beside the row's other face clears — no
+    // motion event follows that edge), and from the top of on_button_press and
+    // on_key (any press, any chord). It carries the "no menu open" gate, because
+    // leaving the WINDOW is not a dismissal, a menu left standing is still the
+    // mode, and while one is up the POPUP's own routes own the mode.
+    void open_menu_row_anchor_on_hover(int mouse_x, int mouse_y);
+    void update_menu_row_exit(int mouse_x, int mouse_y);
     void disarm_menu_row();
     // Which item is at (x, y), or -1 — the painter's published boxes.
     int  dropdown_item_at(int x, int y) const;
@@ -518,9 +530,16 @@ struct GuiInputHandler {
     void clear_dropdown_press();
 
     // THE HOVER TOOLTIP's hide, called from the hover recompute (hover ended),
-    // every press and every wheel. Showing is NOT here: the run loop's tick
-    // owns the dwell, comparing AppState::redesign_tooltip.hover_ms against the
-    // delay. Damages the strip and the box's last painted rect.
+    // every pointer press, every KEY press, every wheel, and the dropdown's open
+    // edge — the hint's job ends the moment the user acts, by whatever means, and
+    // the two floating surfaces never coexist. Showing is NOT here: the run loop's
+    // tick owns the dwell, comparing AppState::redesign_tooltip.hover_ms against
+    // the delay. Damages the strip and the box's last painted rect.
+    // A MODAL SURFACE NEEDS NO HIDE OF ITS OWN beyond the key press that opened
+    // it: recompute_redesign_button_hover refuses to run a dwell at all while a
+    // prompt or a keyboard-modal editor is up (the rule is stated there), so a
+    // tooltip cannot come back under one, which the per-tick recompute and the
+    // hover that stays live under modals would otherwise let it do.
     void hide_shift_tooltip();
 
     // THE ONE CHORD-DISPATCH BODY shared by every redesigned band claim (rows 1
