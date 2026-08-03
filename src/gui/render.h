@@ -1203,8 +1203,8 @@ inline int popup_item_margin_y_px() {
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
 // waveform_inset_px()] so the waveform is symmetric about its area center and
-// the marker/trim stems have a clean stem-only band at the top before the
-// samples begin. The symmetric margin is the whole of the purpose.
+// the marker and playhead stems have a clean stem-only band at the top before
+// the samples begin. The symmetric margin is the whole of the purpose.
 //
 // PROVENANCE (2026-08-02): this used to BE the tip-down triangle's mask height,
 // returned through playhead_triangle_h_px(), which is deleted with the
@@ -1294,8 +1294,8 @@ struct FlagHitRect {
 // row 6 replaces the grey ground the area used to take. on_redraw calls the
 // first over the whole exposed rect, then
 // the second over the exposed part of the waveform area, so the canvas wins
-// exactly the pixels the plate, playheads, ground recolors, and trim stems paint
-// on — cold frames (no plate yet) included.
+// exactly the pixels the plate, the ground recolors, the playheads and the
+// marker stems paint on — cold frames (no plate yet) included.
 //
 // render_canvas ALSO owns the waveform area's BORDER: after the ground fill it
 // paints the area's topmost and bottommost rows in kWaveformBorder, 2px each
@@ -1317,7 +1317,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // horizontals now ride the borders' OUTERMOST rows deliberately (the ruling is
 // at paint_phase_reset_overlay_ring), so it reads the full area. 1px VERTICALS
 // deliberately
-// do not: the playheads, the marker/trim stems, and the strip-drag anchor stem
+// do not: the playheads, the marker stems, and the strip-drag anchor stem
 // run the full area height and cross the border, which is correct for a position
 // line and is not special-cased anywhere — row 6 KEEPS that (the stems' recorded
 // z-intent is to run over the borders, and both borders are painted by
@@ -1486,8 +1486,9 @@ void render_strip_anchor_stem(cairo_t* cr,
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
 // are retired: marker stems are a live overlay,
 // GuiPaintHandler::paint_marker_stems — EVERY enabled marker's column, painted
-// from the flag painter's stash. The trim stems below are live too —
-// GuiPaintHandler::paint_trim, below the playheads; no stem is cached anywhere.)
+// from the flag painter's stash. Trim below is live too — its bar, endcaps and
+// midpoint mark in GuiPaintHandler::paint_trim, ahead of the playheads; trim has
+// had no stem since render_trim_stems died, and no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner. Every consumer of a
 // trim bound's pixel column funnels here: the ONE paint site (render_trim_flags'

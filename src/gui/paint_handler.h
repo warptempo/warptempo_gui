@@ -547,11 +547,13 @@ private:
     // trim bar lane whole (its ground, the window's bar, the two endcaps and
     // the midpoint mark; the strip-crossing and waveform stem segments are
     // deleted) — in ONE pass, in the old trim-stem-cache slot: after
-    // paint_phase_reset_overlay_ring, before paint_marker_stems and hence before
-    // every playhead element, while the flag blit still follows the playheads.
-    // "Markers over trim" and "playhead over trim" are therefore STRUCTURAL
-    // pass order (trim < marker stems < playheads < flags), not an intra-cache
-    // paint convention. Invoked whenever the exposed rect intersects the top
+    // paint_phase_reset_overlay_ring and ahead of every playhead element and
+    // every marker stem, with the flag blit later still. "Markers over trim"
+    // and "playhead over trim" are therefore STRUCTURAL pass order, not an
+    // intra-cache paint convention — and with no trim pixel left outside the
+    // trim lane, order is all they are. THE AUTHORITATIVE SEQUENCE IS THE
+    // PAINT-ORDER BLOCK IN on_redraw; this states only this pass's own place in
+    // it. Invoked whenever the exposed rect intersects the top
     // strip OR the waveform area — render_background erases every exposed
     // top-strip pixel, so a strip-only damage (hover text, a flag change) must
     // repaint the live trim bar/endcaps too; the outer Cairo damage

@@ -3454,7 +3454,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // gesture, and a per-column reseek would re-cue the audio on every pixel.
         // The column-change short-circuit above keeps this to ONE write per
         // CHANGED column. The waveform invalidate below repaints the cursor's
-        // line and triangle with the ground; the TIMESTAMP invalidate is owed
+        // HEAD AND STEM with the ground — its rect runs from the window top
+        // down through the waveform, so the marker-lane head is inside it (the
+        // triangle this used to name retired with its lane in row 5); the
+        // TIMESTAMP invalidate is owed
         // separately because the bottom-strip readout shows this cursor whenever
         // no scanner is active, and it lives outside the waveform area.
         // A SLIVER RELEASE LEAVES THE PLAYHEAD WHERE THE DRAG PUT IT: the
