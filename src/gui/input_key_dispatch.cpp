@@ -37,9 +37,14 @@ namespace {
 // bare binary name (e.g. `audacious`) works and an absolute path works too.
 // Fire-and-forget: the GUI neither tracks nor waits on the child (SIGCHLD is
 // SIG_IGN from startup, so it auto-reaps). The child, however, is spawned with
-// SIGCHLD RESET TO DEFAULT (SETSIGDEF): the parent's SIG_IGN would otherwise
-// survive exec and give a player that waitpid()s its own helper/decoder an
-// ECHILD, breaking its sequencing. posix_spawnp wants a NULL-terminated
+// SIGCHLD AND SIGPIPE RESET TO DEFAULT (SETSIGDEF), because an ignored
+// disposition is the one signal state that SURVIVES exec: the parent's
+// SIG_IGN on SIGCHLD would give a player that waitpid()s its own
+// helper/decoder an ECHILD, breaking its sequencing, and the parent's SIG_IGN
+// on SIGPIPE (added for the clipboard write, see main.cpp) would leave the
+// player's own pipelines returning EPIPE where the ordinary tool contract is
+// death by SIGPIPE. Both are the GUI's private arrangements and neither is
+// the child's business. posix_spawnp wants a NULL-terminated
 // char* const argv[]; the backing std::strings (player and the wavs vector)
 // stay alive across the call, so const_cast'ing their c_str() pointers is safe
 // — POSIX does not modify them. Returns true iff the spawn started.
@@ -58,6 +63,7 @@ bool spawn_audio_player(const std::string& player,
     sigset_t def;
     sigemptyset(&def);
     sigaddset(&def, SIGCHLD);
+    sigaddset(&def, SIGPIPE);
     posix_spawnattr_setsigdefault(&attr, &def);
     posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF);
 

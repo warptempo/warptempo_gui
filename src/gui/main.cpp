@@ -666,6 +666,21 @@ int main(int argc, char** argv) {
     // default disposition.
     std::signal(SIGCHLD, SIG_IGN);
 
+    // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
+    // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
+    // clipboard data-source `send` callback (platform_wayland.cpp): it writes
+    // the payload into a pipe fd the CONSUMER owns, and a consumer that closes
+    // its read end before or during the transfer would otherwise terminate the
+    // GUI outright, the write loop's EPIPE arm never reached. With the signal
+    // ignored that loop sees the short/failed write it is already written for
+    // (abandon the transfer, close the fd, no state to unwind). libjack's
+    // server socket is the same shape and inherits the same protection — it has
+    // no SIGPIPE-dependent behaviour of its own. The spawned external player
+    // does NOT inherit this: the `l` launch resets SIGPIPE to default alongside
+    // SIGCHLD (spawn_audio_player, input_key_dispatch.cpp), since an ignored
+    // disposition survives exec and would change the child's own semantics.
+    std::signal(SIGPIPE, SIG_IGN);
+
     // A source is loaded only from the command line: the GUI has no
     // in-session file open or drag-and-drop (open the next source by
     // relaunching). The audio path is therefore mandatory — there is no

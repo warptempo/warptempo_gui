@@ -671,9 +671,75 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     return true;
 }
 
+namespace {
+
+// THE TITLE'S UTF-8 BOUNDARY. xdg_toplevel.set_title's argument type is
+// `string`, which the Wayland protocol DEFINES as UTF-8 — sending bytes that
+// are not well-formed is a protocol violation, and a compositor is entitled to
+// disconnect the client over one. The composed title carries a FILESYSTEM
+// basename (a folder name is an arbitrary byte string on Linux, NUL and '/'
+// excluded), so the malformed case has a real producer: a directory spelled in
+// Latin-1, or in any other non-UTF-8 encoding, would reach this call.
+//
+// The acceptance shape is the product's ONE incoming-text vocabulary, whose
+// rules and rationale are owned by `text_editor::replace_selection`
+// (text_editor.cpp): printable ASCII and well-formed multi-byte UTF-8 pass
+// verbatim; ASCII control bytes and DEL drop, and so does every malformed
+// sequence — a lone continuation byte, an 0xf8..0xff byte, a truncated tail, an
+// overlong form, a surrogate or an out-of-range value. Recovery is the same
+// too: drop that ONE byte and re-scan from the next, so a single bad byte never
+// eats the good text after it. This is a SECOND SPELLING of those rules rather
+// than a call into that owner, deliberately: platform_wayland.cpp sits below
+// the GUI model and includes none of it, and a protocol boundary that cannot
+// send its bytes is not the editors' business. It judges nothing else — the
+// stored project name stays the folder's verbatim bytes everywhere else.
+std::string title_bytes_to_utf8(const std::string& raw) {
+    std::string  clean;
+    clean.reserve(raw.size());
+    const size_t n = raw.size();
+    size_t       i = 0;
+    while (i < n) {
+        const unsigned char b0 = static_cast<unsigned char>(raw[i]);
+        if (b0 < 0x80) {                       // ASCII: printable only
+            if (b0 >= 0x20 && b0 != 0x7f) clean.push_back(static_cast<char>(b0));
+            ++i;
+            continue;
+        }
+        size_t   len = 0;
+        unsigned cp  = 0;
+        if      ((b0 & 0xe0) == 0xc0) { len = 2; cp = b0 & 0x1fu; }
+        else if ((b0 & 0xf0) == 0xe0) { len = 3; cp = b0 & 0x0fu; }
+        else if ((b0 & 0xf8) == 0xf0) { len = 4; cp = b0 & 0x07u; }
+        else                          { ++i; continue; }
+        if (i + len > n) { ++i; continue; }    // truncated at the string's end
+        bool ok = true;
+        for (size_t k = 1; k < len; ++k) {
+            const unsigned char bk = static_cast<unsigned char>(raw[i + k]);
+            if ((bk & 0xc0) != 0x80) { ok = false; break; }
+            cp = (cp << 6) | (bk & 0x3fu);
+        }
+        if (!ok) { ++i; continue; }
+        static constexpr unsigned kShortest[5] = {0, 0, 0x80, 0x800, 0x10000};
+        if (cp < kShortest[len] || cp > 0x10ffffu ||
+            (cp >= 0xd800u && cp <= 0xdfffu)) {
+            ++i;
+            continue;
+        }
+        clean.append(raw, i, len);
+        i += len;
+    }
+    return clean;
+}
+
+}  // namespace
+
 void GuiPlatform::set_title(const std::string& title) {
     if (!xdg_toplevel_) return;
-    xdg_toplevel_set_title(xdg_toplevel_, title.c_str());
+    // Every title the product sends passes the UTF-8 boundary above — this is
+    // the one xdg_toplevel.set_title call in the tree, so sanitizing here
+    // covers the composed title and init()'s bare-name seed alike.
+    const std::string safe = title_bytes_to_utf8(title);
+    xdg_toplevel_set_title(xdg_toplevel_, safe.c_str());
 }
 
 // THE TITLE'S ONE COMPOSITION SITE (architect 2026-08-01, second pass): the
@@ -684,14 +750,16 @@ void GuiPlatform::set_title(const std::string& title) {
 // every editor uses, and it is plain ASCII). The mark lives here and nowhere
 // else; the bottom strip's old dirty cell is gone.
 //
-// The whole string is handed straight to xdg_toplevel.set_title, which is
-// defined as UTF-8, and the project name inside it is a FILESYSTEM folder name
-// taken verbatim — so it carries whatever bytes that folder is spelled with.
-// That is safe here and nowhere else's business: labwc shapes the titlebar with
-// its own font stack, so this string never touches text_shape and the product's
-// one-face rule does not apply to it. Only the fixed parts this site composes —
-// the separator, the binary name, the asterisk — are the product's own, and
-// those are ASCII.
+// The project name inside the string is a FILESYSTEM folder name taken
+// verbatim, so it carries whatever bytes that folder is spelled with; only the
+// fixed parts this site composes — the separator, the binary name, the asterisk
+// — are the product's own, and those are ASCII. Composition keeps those bytes
+// whole; set_title above is where they meet the protocol's UTF-8 requirement
+// and drops anything malformed (the rules are at title_bytes_to_utf8). A
+// well-formed name therefore reaches the compositor verbatim, which is the
+// ordinary case. What the titlebar then LOOKS like is not ours either way:
+// labwc shapes it with its own font stack, so this string never touches
+// text_shape and the product's one-face rule does not apply to it.
 //
 // project_title_ is empty until the load derives it, so the pre-load frames
 // (and the loading line) keep the bare binary name init() seeded: with no
@@ -2581,6 +2649,14 @@ void GuiPlatform::on_data_source_send(struct wl_data_source* /*src*/,
     // change what is written. This runs only for an EXTERNAL consumer (a
     // self-paste never reaches the pipe), and the payloads are one-line values
     // far below a pipe buffer, so the blocking write cannot stall the loop.
+    //
+    // THE FD IS THE CONSUMER'S, so it can vanish under us: a consumer that
+    // closes its read end mid-transfer makes the write fail. That is a
+    // survivable outcome only because SIGPIPE IS IGNORED PROCESS-WIDE (set at
+    // startup in main.cpp, where the rationale lives) — with the default
+    // disposition the signal would kill the GUI before the loop below ever saw
+    // the error. Abandoning is the whole recovery: the payload is still ours,
+    // the selection claim is untouched, and nothing here holds state to unwind.
     const char* p = clipboard_send_text_.data();
     size_t      left = clipboard_send_text_.size();
     while (left > 0) {
