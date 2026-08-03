@@ -481,10 +481,29 @@ struct GuiInputHandler {
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. recompute_ resolves the item hover on motion
-    // while it is open.
+    // while it is open. They are also the mode's two writers: toggle_'s open
+    // ARMS the menu row and close_'s reset DISARMS it (the mode's entries are
+    // below, and the one close that re-arms is named at close_'s definition).
     void toggle_dropdown(DropdownMenu menu);
     void close_dropdown();
     void recompute_dropdown_hover();
+
+    // THE MENU ROW'S MODE — the two entries that maintain the armed bit outside
+    // toggle_ (which sets it) and close_ (whose whole-struct reset clears it);
+    // the contract is at the field, AppState::Dropdown::menu_row_armed.
+    // update_ is the COLD ROW'S motion answer, called from on_motion's
+    // no-gesture tail and nowhere else: armed and over an anchor OPENS that
+    // menu through toggle_dropdown, armed and off row 1's band goes cold. It
+    // PRESUMES NO MENU IS OPEN, which that placement guarantees — the
+    // open-dropdown branch returns far above the tail, and so do the prompt, the
+    // bottom-strip editors and every live gesture, which is exactly the
+    // reachability the anchors' own PRESS claim has.
+    // disarm_ is the mode's end, called from there and from the pointer-leave
+    // hook (main.cpp, beside the row's other face clears — no motion event
+    // follows that edge). It carries the "no menu open" gate, because leaving
+    // the WINDOW is not a dismissal and a menu left standing is still the mode.
+    void update_menu_row_arming(int mouse_x, int mouse_y);
+    void disarm_menu_row();
     // Which item is at (x, y), or -1 — the painter's published boxes.
     int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.

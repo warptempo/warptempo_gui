@@ -1810,10 +1810,31 @@ struct AppState {
     // button fires on press, a menu triggers on release by universal
     // convention — which is also the only reason a pressed face is visible long
     // enough to be worth painting.
+    // `menu_row_armed` is the MENU ROW'S MODE, and it is the one field here that
+    // means something while the popup is CLOSED: once a menu has been opened
+    // from the row, the row answers the pointer alone — entering either anchor's
+    // rect opens that anchor's menu with no click (on_motion's no-gesture tail,
+    // update_menu_row_arming), which is what every desktop's menu bar does. COLD,
+    // an anchor answers a CLICK and nothing else, and that is the whole reason
+    // the bit exists: a row that sprang a menu open at a pointer merely crossing
+    // it, with no click ever given, would be a misfeature rather than this one.
+    // IT LIVES IN THIS STRUCT so that close_dropdown's whole-struct reset
+    // DISARMS BY DEFAULT — every dismissal the user meant (Esc, an item, the
+    // anchor click that closes its own menu, a press anywhere else, the wheel, a
+    // resize) ends the mode without a line of its own, so Esc can never put away
+    // a menu that the next pointer twitch reopens. The ONE close that keeps the
+    // mode is the row-1 hover close, a step ACROSS the bar rather than a
+    // dismissal, and it re-arms explicitly at its own site.
+    // ARMED BY toggle_dropdown's OPEN path, the single route that opens either
+    // menu (the click and the armed hover both go through it, and no keyboard
+    // chord opens a dropdown at all), so "a menu is open" implies "the row is
+    // armed" by construction. Cleared by disarm_menu_row: the pointer leaving
+    // row 1's band with no menu up, or leaving the window.
     struct Dropdown {
-        DropdownMenu menu         = DropdownMenu::None;
-        int          hovered_item = -1;
-        int          pressed_item = -1;
+        DropdownMenu menu           = DropdownMenu::None;
+        int          hovered_item   = -1;
+        int          pressed_item   = -1;
+        bool         menu_row_armed = false;
         GuiRect      rect{0, 0, 0, 0};
         std::array<GuiRect, kDropdownMaxItemCount> item_rects{};
 

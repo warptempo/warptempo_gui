@@ -996,11 +996,19 @@ int main(int argc, char** argv) {
     // BUTTON-LOST edge (no release event follows it either), and a stranded
     // pressed interior would outlive the hold that justified it. Both are
     // transition-gated.
+    // THE MENU ROW'S MODE ENDS HERE TOO (the armed bit, AppState::Dropdown::
+    // menu_row_armed): once a menu has been opened from row 1 the anchors open on
+    // hover alone, and a pointer that has left the window has left the visit, so
+    // coming back must take a click again — the same rule the band-exit disarm
+    // states, at the coarser edge. It is a no-op while a menu is OPEN (the gate is
+    // inside disarm_menu_row): leaving the window is not a dismissal, and the
+    // popup that stays up stays the mode.
     gui.set_pointer_left_hook([&] {
         app.pointer_in_window = false;
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
         input_handler.clear_dropdown_press();
+        input_handler.disarm_menu_row();
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook

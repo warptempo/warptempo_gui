@@ -2694,6 +2694,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // schedules the frame that paints it and publishes the rect; on the CLOSE the
 // rect from the last paint is exactly the region to erase, which is why the
 // close reads it BEFORE zeroing the state.
+//
+// EVERY CLOSE THROUGH HERE ALSO DISARMS THE MENU ROW, because the whole-struct
+// reset takes the mode's bit with it (AppState::Dropdown::menu_row_armed): bare
+// Esc, an item activating, the anchor click that closes its own menu, a press
+// anywhere else, the wheel, Ctrl+Q and a resize all end the mode by default.
+// That is the point of putting the bit inside the state — a dismissal the user
+// MEANT must end the mode, or Esc would put away a menu that the next pointer
+// twitch reopens, and a dismissal route added later cannot forget.
+// THE ONE CLOSE THAT KEEPS THE MODE is the row-1 hover close in on_motion —
+// sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
+// and it re-arms on the line after its call to this. It is the only site in the
+// tree that writes that bit true outside toggle_dropdown's open.
 void GuiInputHandler::close_dropdown() {
     if (!app.dropdown.open()) return;
     const GuiRect painted = app.dropdown.rect;
@@ -2713,6 +2725,14 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     if (same) return;
     app.dropdown.menu         = menu;
     app.dropdown.hovered_item = -1;
+    // OPENING A MENU ARMS THE ROW — the mode's ONE producer, and it sits here
+    // because this is the ONE route that opens either menu: the anchor click, the
+    // hover switch, and the armed hover re-open all arrive through it, and no
+    // keyboard chord opens a dropdown at all. So "a menu is open" implies "the
+    // row is armed" by construction, with no second producer to keep in step.
+    // The bit's contract — what the mode does and what ends it — is at the field
+    // (AppState::Dropdown::menu_row_armed).
+    app.dropdown.menu_row_armed = true;
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
@@ -2763,6 +2783,68 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // business.
     clear_redesign_button_hover();
     viewport.invalidate_top_strip();
+}
+
+// THE MENU ROW'S MODE, motion half (architect 2026-08-03): once a menu has been
+// opened from row 1, the two anchors open on the POINTER ALONE — the menu-bar
+// behaviour every desktop has, and the completion of the row-1 hover close,
+// which puts a menu away and now leaves the row able to bring one back. The bit
+// and its whole contract are at AppState::Dropdown::menu_row_armed.
+//
+// ITS PLACEMENT IS ITS GUARD LIST. It is called from on_motion's no-gesture
+// tail and nowhere else, so the conditions the re-open must not fire under are
+// the branches that already return above it — an open dropdown (which owns the
+// motion outright), the prompt, the editor text drag, the two bottom-strip
+// keyboard-modal editors, and every live gesture and pending. No condition is
+// restated here, and none is worth adding: that tail is exactly the reachability
+// the anchors' own PRESS claim has, so the hover opens a menu in precisely the
+// states in which a click opens one. (The pointer-transparent FLAG editor gates
+// neither route, by its own ruling — see the press claim.)
+void GuiInputHandler::update_menu_row_arming(int mouse_x, int mouse_y) {
+    if (!app.dropdown.menu_row_armed) return;
+    // LEAVING THE ROW GOES COLD, which is what keeps the mode from outliving the
+    // visit: wander down to the waveform and Settings needs a click again. The
+    // band is top_menu_row_area, the press claim's own rect, so "on the row"
+    // means one thing to both. With a menu OPEN this must NOT fire — the popup
+    // hangs below the row and the pointer leaves the band the moment it moves
+    // into it — and it cannot: this function only runs with the menu down, and
+    // disarm_menu_row carries the gate for its other caller besides.
+    if (!rect_contains(top_menu_row_area(app), mouse_x, mouse_y)) {
+        disarm_menu_row();
+        return;
+    }
+    // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the
+    // CLICK uses, so the anchor expression, the open edge's damage and the roster
+    // clear are one route with nothing restated. The walk covers every menu that
+    // HAS an anchor rather than naming the pair, so dropdown_anchor_button stays
+    // the one place that knows which button emits which menu. Anywhere ELSE on
+    // the row — Quit, the view bar, the ground between them — is simply not an
+    // anchor: the row stays armed and nothing opens.
+    for (const DropdownMenu m : {DropdownMenu::Settings,
+                                 DropdownMenu::Navigation}) {
+        if (!redesign_button_hit(app, dropdown_anchor_button(m),
+                                 mouse_x, mouse_y)) continue;
+        toggle_dropdown(m);
+        break;
+    }
+}
+
+// THE MODE'S END at the two edges that mean "the pointer left": row 1's band
+// (above) and the window itself (main.cpp's pointer-leave hook, beside the row's
+// other face clears — no motion event follows that edge, so nothing else would
+// notice). It damages nothing: the mode is invisible, painting no face of its
+// own; what it changes is what the NEXT motion does.
+//
+// THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than two
+// inline writes. Leaving the window is NOT a dismissal — the popup stays up, as
+// clear_dropdown_press beside it states — and a menu still standing is still the
+// mode, so re-entering over the other anchor must SWITCH rather than find a cold
+// row (and the row-1 hover close, which re-arms, must not be resurrecting a mode
+// something else meant to end). The band caller cannot see a menu open at all;
+// the leave hook can, and that is the case this gate answers.
+void GuiInputHandler::disarm_menu_row() {
+    if (app.dropdown.open()) return;
+    app.dropdown.menu_row_armed = false;
 }
 
 // THE HOVER TOOLTIP'S HIDE, called from every edge that ends a hover or takes
@@ -2889,6 +2971,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 id == dropdown_anchor_button(DropdownMenu::Navigation)) continue;
             if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
             close_dropdown();
+            // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the other
+            // half of the same behaviour): sliding onto Quit puts the menu away
+            // but leaves the row ARMED, so sliding BACK onto Settings or
+            // Navigation opens that menu again with no click. This is a step
+            // across the bar, not a dismissal, and close_dropdown disarms by
+            // default — so the exception is spelled here, at the only site that
+            // needs it.
+            app.dropdown.menu_row_armed = true;
             break;
         }
         // The roster's own faces. While a popup is up this re-derives false for
@@ -3287,6 +3377,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // The redesigned rows' hover is the ONLY hover left: the marker hover
         // popup and its whole recompute machinery died with the marker-text lane
         // (row 5), so the no-gesture tail has nothing else to resolve.
+        //
+        // THE MENU ROW'S MODE resolves here beside it, and for the same reason:
+        // it is a pointer fact about that row, and an active gesture freezes it
+        // exactly as it freezes the faces (the branches above all returned). With
+        // the row ARMED, this opens an anchor's menu on the pointer alone; off
+        // the row it goes cold. It runs BEFORE the recompute so an open it
+        // performs is already standing when the faces resolve — toggle_dropdown
+        // clears them, and the recompute then re-derives the whole roster false
+        // under the new popup, which is the correct answer for a pointer the
+        // popup has taken.
+        update_menu_row_arming(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }
