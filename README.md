@@ -20,7 +20,7 @@ The GUI targets Linux with a Wayland compositor and JACK audio. A headless rende
 
 Dependencies, build options, the conceptual model, the file formats, and the complete hotkey reference are all in [`docs/HELP.md`](docs/HELP.md) — the guided tour, and the only guide you need.
 
-## Examples
+## Projects
 
 The `projects/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer's 2024 remaster for Decca Eloquence), warped toward the metronome marks Hummel published. The Symphony No. 40 first movement (`projects/550 - 1/`) is the reference project — it exercises every form and syntax the project uses, including the label cascade, phase-reset markers, and two-decimal tempos fine-tuned with the full-precision scale.
 
@@ -31,3 +31,13 @@ Example output, in lossy audio format:
 ## License
 
 GPL v3. See `LICENSE`.
+
+## Third-party work and design credits
+
+**Icons — KDE Breeze, LGPL-3.0-or-later.** The thirteen glyphs the toolbar, tab and icon rows draw come from the KDE [Breeze icon theme](https://invent.kde.org/frameworks/breeze-icons). Their source SVGs are committed verbatim under `assets/icons/breeze/`, and `src/gui/icons.cpp` carries each file's path data transcribed byte-for-byte (the project interprets the paths directly rather than linking an SVG library, so a diff between the table and the file is a transcription bug and nothing else). Breeze is licensed LGPL-3.0-or-later; LGPLv3 grants permission to convey a covered work under the plain GNU GPL, and that is how the glyphs are conveyed here — under this project's GPL v3, whose text is `LICENSE`. The upstream license text is at <https://www.gnu.org/licenses/lgpl-3.0.txt>.
+
+**Cursors — not distributed.** The pointer shapes the GUI uses (`left_ptr`, `crosshair`, `grab`, `zoom-in`, `ew-resize`) are looked up **by name** in whatever XCursor theme the user has installed, and their pixels are supplied at runtime by that theme. No cursor artwork is included in this repository or in the binary, and nothing is redistributed. A theme missing one of those names simply keeps the arrow for that cue.
+
+**Interface design — kdenlive, with thanks.** The kdenlive-style interface (the button rows, the tabs, the dropdown menus, the Breeze Dark palette, the trim bar and ruler) was reproduced from observation of [kdenlive](https://kdenlive.org) — colors sampled and metrics measured from screenshots — because it is a good design and this project wanted to stop inventing its own. No kdenlive code or artwork is included, and the reference screenshots are not distributed. kdenlive is a KDE project, licensed GPL-2.0-or-later; the credit here is courtesy rather than obligation, and it is meant sincerely.
+
+**Interaction ideas — Ableton Live.** Two behaviors were taken as ideas rather than as anything copied: auditioning by clicking the waveform's lower half, and the zoom-and-pan drag on the ruler. Nothing of Ableton's is included in any form.
