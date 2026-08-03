@@ -200,7 +200,7 @@ struct WaveformCache {
 //
 // (The former trim-stem cache is retired: EVERY trim pixel — the lane ground,
 // the window's bar, the two endcaps and the midpoint mark — paints live per
-// frame in GuiPaintHandler::paint_trim, below the playheads. This flag cache is
+// frame in GuiPaintHandler::paint_trim. This flag cache is
 // the one remaining item cache.)
 //
 // Synchronous main-thread rebuild; the fingerprint's full field list is the
@@ -542,22 +542,16 @@ private:
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
-    // The LIVE trim pass (architect 2026-07-25 — trim z-order below the
-    // playhead): paints EVERY trim pixel per frame — since row 5 that is the
-    // trim bar lane whole (its ground, the window's bar, the two endcaps and
-    // the midpoint mark; the strip-crossing and waveform stem segments are
-    // deleted) — in ONE pass, in the old trim-stem-cache slot: after
-    // paint_phase_reset_overlay_ring and ahead of every playhead element and
-    // every marker stem, with the flag blit later still. "Markers over trim"
-    // and "playhead over trim" are therefore STRUCTURAL pass order, not an
-    // intra-cache paint convention — and with no trim pixel left outside the
-    // trim lane, order is all they are. THE AUTHORITATIVE SEQUENCE IS THE
-    // PAINT-ORDER BLOCK IN on_redraw; this states only this pass's own place in
-    // it. Invoked whenever the exposed rect intersects the top
-    // strip OR the waveform area — render_background erases every exposed
-    // top-strip pixel, so a strip-only damage (hover text, a flag change) must
-    // repaint the live trim bar/endcaps too; the outer Cairo damage
-    // clip bounds the actual work. See the definition for the basis contract.
+    // The LIVE trim pass: paints EVERY trim pixel per frame — the trim bar
+    // lane whole (its ground, the window's bar, the two endcaps and the
+    // midpoint mark) — in ONE pass, entirely inside the trim lane. Its slot is
+    // step 5 of THE AUTHORITATIVE PAINT-ORDER BLOCK IN on_redraw; this states
+    // only this pass's own place in it. Invoked whenever the exposed rect
+    // intersects the top strip OR the waveform area — render_background erases
+    // every exposed top-strip pixel, so a strip-only damage (hover text, a
+    // flag change) must repaint the live trim bar/endcaps too; the outer Cairo
+    // damage clip bounds the actual work. See the definition for the basis
+    // contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
@@ -592,14 +586,14 @@ private:
     // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
     // reinstated under row 5's always-on-stem regime. True when a MARKER'S OWN
     // STEM is standing where the cursor playhead's stem would stand, in which
-    // case the playhead's stem does not paint at all (neither its waveform
-    // segment nor its marker-lane remnant) and the marker's stem IS the display.
+    // case the playhead's stem (its waveform segment, the cursor's only stem
+    // pixels) does not paint and the marker's stem IS the display.
     // The HEAD still paints — see the definition for the whole ruling, the two
     // ways a stem qualifies, and why this is a state compare and never a pixel
     // one.
     bool playhead_stem_suppressed() const;
-    // THE RESTING CURSOR's waveform stem (the head and the marker-lane segment
-    // belong to paint_ruler_row). Paints UNDER the marker stems and the flags —
+    // THE RESTING CURSOR's waveform stem (the head belongs to
+    // paint_ruler_row). Paints UNDER the marker stems and the flags —
     // the z-order flip — which is the hidden-by-marker model for a cursor
     // sitting ON a marker.
     void paint_playheads(cairo_t* cr, const GuiRect& area);

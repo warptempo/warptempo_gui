@@ -17,7 +17,7 @@
 // rebuilt; the incremental shift-and-strip pan was retired 2026-07-26) and the
 // flag-rect cache — are produced here, away from the on-screen paint
 // path in paint_handler.cpp. (Trim is a LIVE paint pass now —
-// GuiPaintHandler::paint_trim, below the playheads — so no trim pixel is
+// GuiPaintHandler::paint_trim — so no trim pixel is
 // cached; the former trim-stem cache is retired.) These are GuiPaintHandler
 // members defined
 // in a second translation unit; the class declaration and the on-screen

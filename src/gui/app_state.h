@@ -2208,7 +2208,7 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FOUR CONSUMERS, re-derived by grep 2026-08-01, each stating the same
+// FIVE CONSUMERS, re-derived by grep 2026-08-03, each stating the same
 // "nothing pops mid-gesture" boundary from its own side:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
 //     the platform's per-frame sub-detent accumulator probe both route through
@@ -2221,7 +2221,11 @@ inline int64_t snap_authored_frame(double frame) {
 //     active gesture FREEZES hover;
 //   * the BARE RIGHT-PRESS SCRUB gate (on_button_press, input_pointer.cpp,
 //     2026-08-01) — the right button is deliverable while the left one is held,
-//     so the one scrub act it runs must not fire into a live drag.
+//     so the one scrub act it runs must not fire into a live drag;
+//   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
+//     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
+//     the one gesture that keeps its own cursor (architect 2026-08-03; the
+//     contract is at pointer_cursor_kind's declaration, input_handler.h).
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||

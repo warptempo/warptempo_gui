@@ -1245,13 +1245,17 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
-    // in_redraw_ guards the paint loop below: a re-entrant invalidate_region
-    // from inside on_redraw would append to buf->pending — the vector this loop
-    // iterates — and invalidate the range-for. invalidate_region holds such
-    // rects in deferred_damage_ while the flag is set; they are replayed after
-    // the loop. No live caller produces one today; the guard's full record is at
-    // the flag's declaration in platform_wayland.h.
-    in_redraw_ = true;
+    // THE PAINT LOOP MUST NOT DECLARE DAMAGE. It range-fors over buf->pending
+    // — the same vector invalidate_region appends to — so an invalidate_region
+    // call from inside on_redraw (from any paint pass) would push_back into
+    // the vector being iterated and invalidate the loop. No paint pass does:
+    // painting is pure pixel production here, and nothing it could ask for
+    // mid-walk can be honoured by the pass already walking. Anything that
+    // needs to declare damage around a frame does it BEFORE this loop through
+    // the pre-paint hook (in_pre_paint_ above, the supported route — it runs
+    // before buffer acquisition precisely so it may add to damage_) or from
+    // ordinary event/tick code after the frame, never from inside a paint
+    // pass.
     cairo_t* cr = cairo_create(buf->surface);
     for (const DamageRect& d : buf->pending) {
         cairo_save(cr);
@@ -1261,7 +1265,6 @@ void GuiPlatform::paint_one_frame() {
         cairo_restore(cr);
     }
     cairo_destroy(cr);
-    in_redraw_ = false;
 
     for (const DamageRect& d : buf->pending) {
         wl_surface_damage_buffer(wl_surface_, d.x, d.y, d.w, d.h);
@@ -1274,34 +1277,14 @@ void GuiPlatform::paint_one_frame() {
     buf->pending.clear();
     damage_.clear();
 
-    // Replay any damage on_redraw declared re-entrantly. buf->pending and
-    // damage_ are cleared, so this re-runs invalidate_region cleanly (in_redraw_
-    // is now false) to queue the rects into every buffer's pending list and
-    // schedule the follow-up frame that paints them.
-    if (!deferred_damage_.empty()) {
-        std::vector<DamageRect> held;
-        held.swap(deferred_damage_);
-        for (const DamageRect& d : held)
-            invalidate_region(d.x, d.y, d.w, d.h);
-    }
-
     schedule_frame_callback();
 }
 
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
 
-    // Re-entered from inside the on_redraw paint loop: hold the rect instead of
-    // appending to the buffer pending lists that loop is iterating.
-    // paint_one_frame replays deferred_damage_ after the loop, so the repaint
-    // lands on the NEXT frame rather than the one being composed — the pass
-    // already walking cannot honour it, and the replay is what keeps it from
-    // being dropped. Nothing on the paint path invalidates today; the record of
-    // that is at in_redraw_'s declaration in platform_wayland.h.
-    if (in_redraw_) {
-        append_coalesced_rect(deferred_damage_, DamageRect{x, y, w, h});
-        return;
-    }
+    // Never called from inside the paint loop (the hazard and the supported
+    // pre-paint route are stated at that loop, paint_one_frame).
 
     // Each surviving rect costs one on_redraw call downstream, so the
     // global damage signal and every per-buffer pending list use the same

@@ -377,29 +377,6 @@ private:
     // additional damage without producing a spurious extra commit.
     bool in_pre_paint_ = false;
 
-    // True only while paint_one_frame is inside the on_redraw paint loop. That
-    // loop iterates the current buffer's pending list — the same list
-    // invalidate_region appends to — so a re-entrant call from inside on_redraw
-    // would push_back into the vector a range-for is walking and invalidate it.
-    // While this flag is set, invalidate_region holds the rect in
-    // deferred_damage_ instead; paint_one_frame replays the held rects after the
-    // loop, so the damage lands on the NEXT frame. DEFERRAL RATHER THAN A SECOND
-    // LIST drained in the same frame: a rect declared mid-paint cannot be
-    // honoured by the pass already walking, and a second pass over it could
-    // itself declare more, so there is no fixed point to drain to — the replay
-    // is instead an ordinary invalidate_region call with the flag clear, which
-    // queues into every buffer's pending list and schedules the frame that
-    // paints it, exactly as any other damage producer does.
-    //
-    // THE GUARD HAS NO LIVE PRODUCER TODAY: nothing on the paint path
-    // invalidates — not on_redraw itself, not any of its paint passes, not
-    // render_flag_editor_box. This flag is therefore the structural defense for
-    // the shape rather than a service to a caller (in_pre_paint_ above is the
-    // sibling flag that does have one). A future paint-path invalidation
-    // inherits the deferral by existing.
-    bool in_redraw_ = false;
-    std::vector<DamageRect> deferred_damage_;
-
     // The bound single wl_output's latest CURRENT mode, in millihertz.
     // Replaced on mode changes and cleared on output removal. Zero means no
     // output advertised a usable mode; detect_refresh_rate_ms() then falls

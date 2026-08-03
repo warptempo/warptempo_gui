@@ -1258,11 +1258,19 @@ private:
     //   that. The three BOTTOM-STRIP modal editors DO refuse, because they really
     //   do swallow the press (modal_bottom_strip_editor_active).
     //
-    // THE CUES ARE HOVER-ONLY: the live-gesture refusal is uniform across every
-    // kind, so no cursor changes during any drag, captured or not. ONE KNOWN
-    // CONSEQUENCE, recorded rather than special-cased: a live TRIM drag shows the
-    // Arrow rather than keeping the endcap or bridge cue it started under,
-    // because that refusal does not except the gesture whose own cue it is.
+    // THE CUES ARE HOVER-ONLY WITH ONE NAMED EXCEPTION (architect 2026-08-03):
+    // a LIVE TRIM GESTURE — pending or past the threshold; an endcap drag, the
+    // bridge drag, or a ctrl bound-set's armed drag — OWNS the cursor for as
+    // long as it lasts, wherever the pointer is: a begin-bound drag keeps
+    // TrimBoundBegin, an end-bound drag TrimBoundEnd, the bridge TrimResize.
+    // The kind is read from the drag's own record of what it grabbed, never
+    // re-derived from the pointer's position, so the cue neither flickers as
+    // the pointer leaves the band nor reverts to the Arrow mid-drag. Trim can
+    // be the one exception because on this gesture alone the thing being
+    // dragged is the thing the cursor names, so the cue stays true throughout.
+    // EVERY OTHER gesture keeps the uniform refusal — no cursor changes during
+    // the marker, region, strip or pan drags (the captured two hide the cursor
+    // anyway).
     //
     // ACCEPTED STALENESS, narrowed rather than deleted: the cursor is re-derived
     // on MOTION and on a MODIFIER EDGE, so what remains stale is a state change

@@ -571,12 +571,13 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 
 // THE POINTER CURSOR'S ZONE MAP. The full contract — the two callers, the zone
 // table with the press branch each is taken from, what it is deliberately blind
-// to, the hover-only rule and its one known consequence, and the accepted
-// staleness — is at the declaration in input_handler.h.
+// to, the hover-only rule and its one named exception (the live trim gesture),
+// and the accepted staleness — is at the declaration in input_handler.h.
 //
 // The refusals below are the press's OWN gates, in the press's order, each one
 // re-read out of on_button_press rather than remembered, and each applying to
-// EVERY kind (this is what makes the cues hover-only):
+// EVERY kind (this is what makes the cues hover-only — with the trim gesture's
+// one named exception, stated at its arm):
 //   1. the prompt swallow (the first line of the handler);
 //   2. the three BOTTOM-STRIP modal editors, which return without acting — the
 //      shared predicate is modal_bottom_strip_editor_active, whose second caller
@@ -591,13 +592,43 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      widened to any_pointer_gesture_active, the one authoritative "some
 //      pointer gesture is in flight" predicate. A gesture is not a swallow but
 //      it is a lie: mid-drag the button is already down and no new press can
-//      start anything.
+//      start anything. ONE gesture is excepted, ahead of the refusal: a live
+//      trim gesture owns the cursor (the arm below, architect 2026-08-03).
 GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
     if (app.prompt.active) return GuiCursorKind::Arrow;
     if (modal_bottom_strip_editor_active()) return GuiCursorKind::Arrow;
     if (app.dropdown.open()) return GuiCursorKind::Arrow;
     if (app.loading || audio.total_frames() <= 0) return GuiCursorKind::Arrow;
+
+    // A LIVE TRIM GESTURE OWNS THE CURSOR (architect 2026-08-03) — the ONE
+    // exception to the uniform live-gesture refusal below, and the reason it
+    // can be one: on this gesture alone the thing being dragged is the thing
+    // the cursor names, so the cue stays TRUE for the whole drag. The kind is
+    // read from the drag's own record of what it grabbed — the bridge (both)
+    // keeps the bar's TrimResize, a single-bound drag keeps its own bound's
+    // edge shape — never re-derived from the pointer's position: dragging a
+    // bound is exactly the act of taking the pointer off the band, and the cue
+    // must not flicker through the band map's answers on the way.
+    // THE PENDING ARM IS THE SAME ARM, not a second one deciding differently:
+    // sub-threshold the pointer still rests on the geometry it pressed (the
+    // endcap, the bridge, or the ctrl click's set bound), so the pending's
+    // record and the hover map name the same cue — reading the record here
+    // just keeps one owner across the whole press-to-release span. (The modal
+    // gates above are structurally inert mid-drag — no press or key opens a
+    // prompt, editor or dropdown while the button is held — so their rank
+    // costs nothing.)
+    if (app.trim_drag.active || app.pending_trim_drag.active) {
+        const bool both     = app.trim_drag.active
+                                  ? app.trim_drag.both
+                                  : app.pending_trim_drag.both;
+        const bool is_begin = app.trim_drag.active
+                                  ? app.trim_drag.is_begin
+                                  : app.pending_trim_drag.is_begin;
+        if (both) return GuiCursorKind::TrimResize;
+        return is_begin ? GuiCursorKind::TrimBoundBegin
+                        : GuiCursorKind::TrimBoundEnd;
+    }
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
 
     // The waveform BAND, spelled exactly as the press spells it: full window

@@ -708,7 +708,7 @@ int main(int argc, char** argv) {
     // synchronously from on_tick. Constructed alongside wf_cache so they share
     // the same lifetime; passed by reference into GuiPaintHandler. (Trim has no
     // cache — every trim pixel paints live per frame in
-    // GuiPaintHandler::paint_trim, below the playheads; marker stems are the
+    // GuiPaintHandler::paint_trim; marker stems are the
     // live overlay paint_marker_stems, off this cache's own published stash.)
     FlagCache     flag_cache;
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
