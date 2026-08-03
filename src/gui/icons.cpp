@@ -190,26 +190,6 @@ constexpr IconPath kUnlockPaths[] = {
      "9h10v6h-10v-6"},
 };
 
-// The two ZOOM actions — actions/22/zoom-{out,in}.svg, the plain variants. They
-// share every path byte but the last command (a bare minus bar, or that bar
-// plus its crossing stroke), which is the Breeze family resemblance and not a
-// transcription shortcut: each string is its own file, copied whole.
-constexpr IconPath kZoomOutPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 4.892578-1.693359l3.400391 "
-     "3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 0-1.414062l-3.40039-3.400391a8 8 0 "
-     "0 0 1.693359-4.892578 8 8 0 0 0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 "
-     "0 0 1-7-7 7 7 0 0 1 7-7zm-4 6v2h8v-2h-8z"},
-};
-
-constexpr IconPath kZoomInPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 4.892578-1.693359l3.400391 "
-     "3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 0-1.414062l-3.40039-3.400391a8 8 0 "
-     "0 0 1.693359-4.892578 8 8 0 0 0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 "
-     "0 0 1-7-7 7 7 0 0 1 7-7zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
-};
-
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -223,8 +203,6 @@ constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
 constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
-constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
-constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -240,8 +218,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;
-        case Icon::ZoomOut:             return kZoomOut;
-        case Icon::ZoomIn:              return kZoomIn;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

@@ -321,7 +321,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // bar, plus its own 1px margin-bottom); lane 1 is the TOOLBAR row (the flat
 // ground carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
-// its border-bottom); lane 3 is the ICON row (the thirteen view/mode/action
+// its border-bottom); lane 3 is the ICON row (the eleven view/mode/action
 // buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
 // double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
@@ -879,7 +879,7 @@ int main(int argc, char** argv) {
         // selection drag is finalized there too (collapsed to a caret,
         // selection-only, nothing to revert).
         input_handler.finalize_active_drags();
-        // ANY FULL RELAYOUT CLOSES THE SETTINGS DROPDOWN, and a resize is the
+        // ANY FULL RELAYOUT CLOSES THE OPEN DROPDOWN, and a resize is the
         // one relayout edge that can reach it: it moves the menu row and every
         // published rect with it, so a popup left open would hang from a button
         // no longer under it. The other relayout-class events cannot happen
@@ -887,7 +887,7 @@ int main(int argc, char** argv) {
         // gui_scale commit both need the keyboard, which the popup gate
         // swallows. Ordered with finalize_active_drags above and the layout
         // below, so the resize still lands on a gesture-free, popup-free state.
-        input_handler.close_settings_popup();
+        input_handler.close_dropdown();
         paint_handler.on_resize(w, h);
     });
 
@@ -985,7 +985,7 @@ int main(int argc, char** argv) {
         app.pointer_in_window = false;
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
-        input_handler.clear_settings_popup_press();
+        input_handler.clear_dropdown_press();
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook

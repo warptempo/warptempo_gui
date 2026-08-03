@@ -119,14 +119,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // It admits exactly two keys, and both DISMISS:
     //   - bare Esc CLOSES it, and that is THE SIXTH BARE-ESC BINDING (the
-    //     enumeration further down carries the full list and this rank);
+    //     enumeration further down carries the full list and this rank). ONE
+    //     BINDING FOR BOTH MENUS: the gate reads the shared popup state, so the
+    //     Navigation dropdown (2026-08-02) joined the existing binding rather
+    //     than adding a seventh — a dropdown is a dropdown;
     //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
     //     below, matching every other modal's Ctrl+Q hatch.
     // A popup and an editor CANNOT be open together (the popup opens only from a
     // press, and a press dies at the editor gates; `;` is swallowed here), so
     // this gate can never contend with route_modal_editor_key.
-    if (app.settings_popup.open) {
-        if (settings_popup_key_blocked(key, mods)) return;
+    if (app.dropdown.open()) {
+        if (dropdown_key_blocked(key, mods)) return;
     }
 
     // Blank / loading state: only the quit / close-gesture bindings run;
@@ -539,12 +542,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
-    //   (c2) THE SETTINGS DROPDOWN — Esc closes the popup (the popup gate,
-    //       directly under the prompt gate; architect 2026-07-31, the SIXTH
-    //       binding). It cannot collide with (a)/(b): a popup and an editor can
-    //       never be open together, the popup opening only from a press and a
-    //       press dying at the editor gates. It ranks BELOW the prompt because
-    //       Ctrl+Q from inside the popup can raise one;
+    //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
+    //       under the prompt gate; architect 2026-07-31, the SIXTH binding).
+    //       BOTH menus, Settings and Navigation, are this ONE binding: they
+    //       share one popup state and one gate, so the second dropdown
+    //       (2026-08-02) added no seventh place. It cannot collide with (a)/(b):
+    //       a popup and an editor can never be open together, the popup opening
+    //       only from a press and a press dying at the editor gates. It ranks
+    //       BELOW the prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
@@ -1241,7 +1246,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // predicate is const and the platform probes it speculatively — so on_wheel
     // owns the close and this owns only the swallow, which is also what keeps
     // the sub-detent accumulator from growing remainder under a popup.
-    if (app.settings_popup.open) return -1;
+    if (app.dropdown.open()) return -1;
     if (modal_bottom_strip_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
     if (any_pointer_gesture_active(app)) return -1;
@@ -1296,7 +1301,7 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // is consumed — wheel_context refuses it while open, so nothing scrolls
     // under it), and the tooltip hides. Both run before the context test so the
     // dismissal happens on the very frame the wheel arrives.
-    close_settings_popup();
+    close_dropdown();
     hide_shift_tooltip();
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;

@@ -204,22 +204,24 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q);
 }
 
-// The settings dropdown's keyboard gate. Returns true when the press is
-// SWALLOWED (the popup consumed it, or it was inert); false only for Ctrl+Q,
-// which closes the popup and then lets on_key run the close route.
+// THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is
+// one popup state and a dropdown is a dropdown (the Navigation menu joined
+// 2026-08-02 and needed nothing here: bare Esc stays the SIXTH bare-Esc binding
+// rather than becoming a seventh). Returns true when the press is SWALLOWED (the
+// popup consumed it, or it was inert); false only for Ctrl+Q, which closes the
+// popup and then lets on_key run the close route.
 //
 // Bare-exact and ctrl-exact respectively, like every other modal predicate here:
 // a modified Escape and a shifted Ctrl+Q carry no binding anywhere, so they fall
 // into the swallow with everything else rather than dismissing.
-bool GuiInputHandler::settings_popup_key_blocked(GuiKey key,
-                                                 GuiInputState mods) {
+bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
     if (key == GuiKeys::Escape && bare) {
-        close_settings_popup();
+        close_dropdown();
         return true;
     }
     if (key == GuiKeys::Q && mods.ctrl && !mods.shift && !mods.alt) {
-        close_settings_popup();
+        close_dropdown();
         return false;   // fall through to the close route
     }
     return true;        // every other chord is inert while the popup is up

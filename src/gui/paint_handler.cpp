@@ -477,8 +477,13 @@ struct MenuButtonDef {
     const char*    label;
 };
 constexpr MenuButtonDef kMenuButtons[] = {
-    {RedesignButton::Quit,     "Quit"},
-    {RedesignButton::Settings, "Settings"},
+    {RedesignButton::Quit,       "Quit"},
+    {RedesignButton::Settings,   "Settings"},
+    // THE SECOND DROPDOWN (architect 2026-08-02): a COMMAND MENU of the zoom and
+    // stepping commands, next in the left float with the row's usual no gap.
+    // Like Settings its action is a popup toggle rather than a chord, and the
+    // two share one popup state — see AppState::Dropdown.
+    {RedesignButton::Navigation, "Navigation"},
 };
 
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
@@ -862,12 +867,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconT,      IconRowLead::Gap,       "T", icons::Icon::EditCopy},
     {RedesignButton::IconW,      IconRowLead::Separator, "W", icons::Icon::EditCopy},
     {RedesignButton::IconP,      IconRowLead::Gap,       "P", icons::Icon::EditCopy},
-    // THE ZOOM PAIR (architect 2026-08-01), between separators of its own so it
-    // reads as its own group rather than as a tail of the view radios or a head
-    // of the clipboard set. Momentary like the clipboard buttons — zoom is an
-    // action, not a mode, so neither takes the selected face.
-    {RedesignButton::IconZoomOut, IconRowLead::Separator, nullptr, icons::Icon::ZoomOut},
-    {RedesignButton::IconZoomIn,  IconRowLead::Gap,       nullptr, icons::Icon::ZoomIn},
+    // (THE ZOOM PAIR SAT HERE, in its own separator-flanked group, from
+    // 2026-08-01 until 2026-08-02: the architect ruled out duplicate commands on
+    // the GUI when the Navigation dropdown gave `-` and `=` a home there, so the
+    // two buttons and their icons were deleted whole. The row is back to eleven
+    // buttons in four groups; the keys are untouched.)
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -881,7 +885,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
 };
 
-// -- THE FLOATING SURFACES: the hover tooltip and the settings dropdown -----
+// -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
 //
 // Measured off hover_shift.png (129x41, the two-line form we ship) and
 // hover_plain.png (112x26, the one-line reference we do not). Both share every
@@ -944,9 +948,12 @@ constexpr double kTooltipPadXPx      = 5.0;
 // 3px item inset per side, plus the two 1px borders. The architect pixel-tweaks
 // at 100% by moving these terms.
 // (The item height, its block margin, the separator's vertical margin and the
-// border live in render.h with settings_popup_h_px's other ingredients — the
+// border live in render.h with dropdown_h_px's other ingredients — the
 // popup's OPEN EDGE must size the box before it is painted. Only the HORIZONTAL
 // terms, which depend on the widest shaped label, are the painter's alone.)
+// (BOTH MENUS SHARE EVERY NUMBER IN THIS BLOCK — chrome, item height, insets,
+// separator, faces. The navigation menu's own terms are its accelerator
+// column's, below.)
 constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 
@@ -969,6 +976,39 @@ constexpr double kPopupLabelPadLeftPx = 12.0;
 // trailing, about ten times the left pad, which is the stated asymmetry. This is
 // the knob the architect tweaks at 100%.
 constexpr double kPopupItemMinWidthPx = 200.0;
+
+// THE NAVIGATION MENU'S OWN HORIZONTAL TERMS, measured off its own crop
+// (dropdown_full_hotkeys.png, 403x579, the popup box including its 1px borders)
+// and authored in POPUP-BOX coordinates, which is how the crop reads: the
+// settings menu's label pad is item-box-relative because that menu has one
+// column, and a two-column menu is easier to state — and to check against the
+// crop — from the box's own edges.
+//
+//  - THE LABEL INDENT is 57px from the popup's left edge to the label's pen
+//    origin (ink starts at 57 or 58 depending on the glyph — "Switch Monitor"
+//    and "Go To" at 57, "Focus Timecode" and "Monitor Config" at 58 — and the
+//    same 57 holds on the rows that carry an icon at 39, so the column is real
+//    and not a per-row accident). kdenlive reserves a CHECKBOX plus an ICON
+//    gutter in there; we have neither and reproduce the RESULTING INDENT as
+//    plain padding, by ruling. It is deliberately NOT the settings menu's 12px
+//    item pad — that menu sampled a crop with no checkbox column and the
+//    architect then tuned it by eye.
+//  - THE COLUMN GAP is the crop's GUARANTEED minimum separation: the widest
+//    label ink ends at x=239 ("Switch Monitor Fullscreen") and the leftmost
+//    accelerator ink starts at x=252 ("Ctrl+Shift+Space"), so 13px is what the
+//    design promises when both columns are at their widest. (Per-row gaps are
+//    all larger — 100px on the widest label's own row — because those two rows
+//    are different rows; 13 is the number the min-width rule is built on.)
+//  - THE RIGHT MARGIN is 30px from the popup's right edge to the accelerator's
+//    last ink column, uniform across every hotkey row (all end at x=372). In
+//    the source that margin also holds the submenu-arrow column (the arrows run
+//    out to 388); we have no submenus and keep the margin, which is what makes
+//    the accelerators sit off the edge rather than against it.
+// The three reproduce the crop's own width to a pixel: 57 + 183 (widest label
+// ink) + 13 + 121 (widest hotkey ink) + 30 = 404 against the measured 403.
+constexpr double kNavPopupLabelPadLeftPx   = 57.0;
+constexpr double kNavPopupHotkeyGapPx      = 13.0;
+constexpr double kNavPopupHotkeyPadRightPx = 30.0;
 
 // The selected tab's outline: a rectangle with ROUNDED TOP corners, and — this
 // is the load-bearing part — NO BOTTOM EDGE. It is an OPEN path running up the
@@ -1023,23 +1063,24 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "Quit" and "Settings", and the
-    // RIGHT one, the view bar's S+W / T+P / T+W (2026-08-02). No ring; the
-    // kdenlive bar is flat.
+    // ground carrying TWO FLOATS — the LEFT one, "Quit", "Settings" and
+    // "Navigation", and the RIGHT one, the view bar's S+W / T+P / T+W (both
+    // 2026-08-02). No ring; the kdenlive bar is flat.
     //
     // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not
-    // three, for BOTH buttons: at rest the label paints bare on the row ground;
+    // three, for ALL THREE buttons: at rest the label paints bare on the row ground;
     // hovered, a filled blue pill sits under it, FLUSH with the row's CONTENT
     // height (the css float model — a flat button fills its whole row, architect
     // 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
     // only pointer-out rests it. The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
-    // THEIR TWO ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
+    // THEIR ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
     // through the shared chord table like every other redesigned button), while
-    // SETTINGS TOGGLES THE DROPDOWN — the roster's one non-chord action, since
-    // no keyboard chord opens or closes a popup. The bare `;` key still opens
-    // the settings editor directly and is untouched by the dropdown.
+    // SETTINGS and NAVIGATION each TOGGLE A DROPDOWN — the roster's two
+    // non-chord actions, since no keyboard chord opens or closes a popup. Both
+    // menus lead only where the keyboard already goes: the bare `;` key still
+    // opens the settings editor directly, and every navigation item is a key.
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
     // div, five faces from its own crops, and three chord buttons that are bare
@@ -1102,26 +1143,28 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             app, audio.total_frames(), def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
-        // THE SETTINGS BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
+        // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
-        // is the one that is open", so it paints on the popup's flag as well as
-        // on hover. It is also what keeps the button from going dark the instant
-        // the menu appears — the open edge deliberately UNHOVERS the whole roster
-        // (the pointer belongs to the popup while it is up), so hover alone would
-        // drop the pill on exactly the frame the dropdown arrives.
+        // is the one that is open", so it paints on the popup's own anchor as
+        // well as on hover — Settings or Navigation, whichever emitted the open
+        // popup, through the one anchor owner. It is also what keeps the button
+        // from going dark the instant the menu appears — the open edge
+        // deliberately UNHOVERS the whole roster (the pointer belongs to the
+        // popup while it is up), so hover alone would drop the pill on exactly
+        // the frame the dropdown arrives.
         //
         // A PAINT CONDITION, NOT A `selected` BIT. Two reasons, both structural:
         // redesign_button_selected is defined as the live fact a button's CHORD
-        // flips, and Settings has no chord at all (it is the roster's one
-        // non-chord action) — a dropdown is not a resting mode. And the tick
-        // comparator that watches the selected bits would be pure duplication
-        // here: the popup's two writers, toggle_settings_popup and the one close
-        // owner close_settings_popup, ALREADY invalidate the top strip on both
+        // flips, and neither menu button has a chord at all (they are the
+        // roster's two non-chord actions) — a dropdown is not a resting mode. And
+        // the tick comparator that watches the selected bits would be pure
+        // duplication here: the popup's two writers, toggle_dropdown and the one
+        // close owner close_dropdown, ALREADY invalidate the top strip on both
         // edges, so the comparator could only ever re-notice a change that was
         // damaged at its source.
         const bool pill = face.hovered ||
-                          (def.id == RedesignButton::Settings &&
-                           app.settings_popup.open);
+                          (app.dropdown.open() &&
+                           def.id == dropdown_anchor_button(app.dropdown.menu));
         if (pill) {
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
@@ -1172,15 +1215,21 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 
         // FLUSH AT THE WINDOW'S RIGHT EDGE (no margin stated, so none exists).
         //
-        // THE TWO FLOATS CANNOT MEET, so there is no collision rule — an overlap
-        // would be a layout the architect has not specified, not a case to invent
-        // behaviour for. Measured, not assumed: at 100% the left float is 127px
-        // (Quit 29 + Settings 58, each plus its two 10px pads) and the div is
-        // 183, which is 310 of the 640px window floor; at 200% they are 255 and
-        // 366, which is 621 of the same floor, since the floor does NOT scale.
-        // 19px of clearance at the schema's ceiling is thin, and it is recorded
-        // as thin — the real window is 1920 wide, and a longer future label on
-        // either float is what would close the gap first.
+        // THERE IS STILL NO COLLISION RULE, and the measurement that used to
+        // justify one has changed — recorded rather than acted on, since an
+        // overlap layout is the architect's to specify. Re-measured with the
+        // NAVIGATION button (2026-08-02, shaped-run walk at both scales): the
+        // left float is 223px at 100% (Quit 29 + Settings 58 + Navigation 96,
+        // each plus its two 10px pads) and the div 183 — 406 of the 1920px
+        // deployment width, 1514px of slack, and 310 of the 640px floor as
+        // before. At 200% they are 446 and 366: still 1108px of slack at 1920,
+        // but 812 against a 640px floor THAT DOES NOT SCALE — so at that one
+        // corner (the schema's ceiling scale on the defensive minimum window)
+        // the floats now OVERLAP by 172px, where the pre-Navigation pair cleared
+        // it by 19. What happens there is what the painters already do: the div
+        // fills its background last and covers the tail of the left float's
+        // labels. Nothing else changes, nothing is clickable that was not, and
+        // the deployment geometry is nowhere near it.
         // Defensive only, and it takes the whole float: a lane so short that the
         // two margins eat the button leaves nothing to paint and nothing to
         // click, which is the same early-out the row's own content_h guard above
@@ -1680,10 +1729,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, four vertical separators, and thirteen 32x32 buttons in five
-    // groups — the S/T and W/P view radios, the zoom out/in pair, the
-    // phase-reset copy/paste pair with the bpm / iteration / follow modes, and
-    // the listen / commit render pair.
+    // width, three vertical separators, and eleven 32x32 buttons in four
+    // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
+    // the bpm / iteration / follow modes, and the listen / commit render pair.
+    // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
+    // the Navigation dropdown is those two commands' pointer home now.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade rows 1 and
     // 2 darken to, so there is nothing for it to change to (redesign_row_ground
@@ -1976,28 +2026,37 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
-    // THE SETTINGS DROPDOWN, hanging flush under the menu row's Settings button
-    // at ZERO margin — its top edge is the BUTTON's bottom edge (not the lane's:
-    // row 1's 1px margin-bottom puts those one pixel apart, and the architect
-    // ruled the button; the full argument is at the anchor arithmetic below),
-    // under the button's left edge. Publishes its own rect and every item rect, so the
-    // press claim hit-tests exactly what was painted and never re-shapes a
-    // label.
+void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
+    // THE MENU ROW'S DROPDOWN — ONE painter for BOTH menus, hanging flush under
+    // the button that emits it at ZERO margin: its top edge is the BUTTON's
+    // bottom edge (not the lane's: row 1's 1px margin-bottom puts those one pixel
+    // apart, and the architect ruled the button; the full argument is at the
+    // anchor arithmetic below), under that button's left edge. Publishes its own
+    // rect and every item rect, so the press claim hit-tests exactly what was
+    // painted and never re-shapes a label.
     //
     // ITS CHROME IS ITS OWN (kRedesignPopupGround under kRedesignTabLine), not
     // the tooltip's: kdenlive dresses menus darker than hints, and dropdown_full
     // is the authority for this surface.
     //
-    // NO ICONS, by ruling — the crop reserves an icon column and this product
-    // does not, exactly as the tabs dropped theirs. The space that column would
-    // have taken is what the labels' left pad is measured against.
-    app.settings_popup.rect = GuiRect{0, 0, 0, 0};
-    app.settings_popup.item_rects = {};
-    if (!app.settings_popup.open) return;
+    // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
+    // all three columns and this product has none of them, exactly as the tabs
+    // dropped theirs. What the columns' SPACE becomes is the labels' left pad
+    // (and, on the navigation menu, the accelerator's right margin).
+    //
+    // THE TWO MENUS DIFFER IN EXACTLY TWO PLACES, both below: the accelerator
+    // COLUMN (navigation has one, settings does not) and therefore the width
+    // rule. Everything else — chrome, item height, insets, separator, faces,
+    // baseline — is one set of numbers by construction.
+    app.dropdown.rect = GuiRect{0, 0, 0, 0};
+    app.dropdown.item_rects = {};
+    if (!app.dropdown.open()) return;
 
+    const DropdownMenu menu = app.dropdown.menu;
+    const int count = dropdown_item_count(menu);
     const GuiRect& btn =
-        app.redesign_buttons[redesign_button_index(RedesignButton::Settings)].rect;
+        app.redesign_buttons[redesign_button_index(
+            dropdown_anchor_button(menu))].rect;
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
@@ -2018,24 +2077,46 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     const double radius = std::nearbyint(kPopupCornerRadiusPx *
                                          gui_scale_factor());
 
-    // WIDTH FROM THE WIDEST SHAPED LABEL behind the authored minimum — the runs
-    // are shaped once here and reused for the paint below, so the box and the
+    // WIDTH FROM THE WIDEST SHAPED RUN(S) behind the authored minimum — every
+    // run is shaped once here and reused for the paint below, so the box and the
     // glyphs come from the same measurements (the displayed-basis doctrine).
-    text_shape::ShapedRun runs[kSettingsPopupItemCount];
-    double widest = 0.0;
-    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
-        runs[i] = text_shape::shape_text_run(font, kSettingsPopupItems[i].label);
+    text_shape::ShapedRun runs[kDropdownMaxItemCount];
+    text_shape::ShapedRun hot_runs[kDropdownMaxItemCount];
+    double widest = 0.0, widest_hot = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const DropdownRow row = dropdown_row(menu, i);
+        runs[i] = text_shape::shape_text_run(font, row.label);
         widest = std::max(widest, runs[i].width_px);
+        if (row.hotkey != nullptr) {
+            hot_runs[i] = text_shape::shape_text_run(font, row.hotkey);
+            widest_hot = std::max(widest_hot, hot_runs[i].width_px);
+        }
     }
-    const int item_w =
-        std::max(scaled_px(kPopupItemMinWidthPx),
-                 label_pad + static_cast<int>(std::nearbyint(widest)) +
-                     label_pad);
-    const int w = item_w + 2 * inset + 2 * border;
+    // TWO WIDTH RULES, one per menu, each the rule its own crop states:
+    //   SETTINGS  — one column: the label pad, the widest label, the label pad,
+    //     all inside the item box (unchanged since 2026-07-31, pixel for pixel).
+    //   NAVIGATION — two columns, authored on the POPUP box: the label indent,
+    //     the widest label, the guaranteed column gap, the widest accelerator,
+    //     the right margin (kNavPopup* above).
+    // The authored minimum applies to both — it is the item box's floor, the
+    // reason a menu of short labels still reads as a menu — and the navigation
+    // menu simply never reaches it.
+    const int nav_pad_l   = scaled_px(kNavPopupLabelPadLeftPx);
+    const int nav_gap     = scaled_px(kNavPopupHotkeyGapPx);
+    const int nav_pad_r   = scaled_px(kNavPopupHotkeyPadRightPx);
+    const int chrome_w    = 2 * inset + 2 * border;
+    const int content_w =
+        (menu == DropdownMenu::Navigation)
+            ? nav_pad_l + static_cast<int>(std::nearbyint(widest)) + nav_gap +
+                  static_cast<int>(std::nearbyint(widest_hot)) + nav_pad_r -
+                  chrome_w
+            : label_pad + static_cast<int>(std::nearbyint(widest)) + label_pad;
+    const int item_w = std::max(scaled_px(kPopupItemMinWidthPx), content_w);
+    const int w = item_w + chrome_w;
     // THE HEIGHT COMES FROM THE SHARED SUM, not a second walk here: the open
-    // edge damages settings_popup_h_px() before this ever runs, so the two must
-    // be one expression.
-    const int h = settings_popup_h_px();
+    // edge damages dropdown_h_px() before this ever runs, so the two must be one
+    // expression.
+    const int h = dropdown_h_px(menu);
 
     // FLUSH WITH THE BUTTON IT EMITS FROM, on BOTH axes (architect 2026-08-02).
     // When row 1 gained its 1px margin-bottom the button's bottom edge and the
@@ -2048,16 +2129,17 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     int y = btn.y + btn.h;               // flush: zero margin under the button
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
-    app.settings_popup.rect = GuiRect{x, y, w, h};
+    app.dropdown.rect = GuiRect{x, y, w, h};
 
-    paint_popup_chrome(cr, app.settings_popup.rect, kRedesignPopupGround,
+    paint_popup_chrome(cr, app.dropdown.rect, kRedesignPopupGround,
                        kRedesignTabLine);
 
     // The item block opens BELOW the border by its own margin, and closes with
     // the same margin above the bottom border — the crop's 3px, mirrored.
     int iy = y + border + block_mar;
-    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
-        if (kSettingsPopupItems[i].separator_before) {
+    for (int i = 0; i < count; ++i) {
+        const DropdownRow row = dropdown_row(menu, i);
+        if (row.separator_before) {
             // 1px line, inset horizontally, with its own vertical margin against
             // the item on each side. Pixel-bound fill, crisp by construction.
             cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
@@ -2071,10 +2153,10 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
         // one's box insets horizontally from the border. The published rect is
         // that box, so the clickable area is exactly the area that lights.
         const GuiRect item{x + inset, iy, item_w, item_h};
-        app.settings_popup.item_rects[static_cast<size_t>(i)] = item;
+        app.dropdown.item_rects[static_cast<size_t>(i)] = item;
 
-        const bool pressed = (app.settings_popup.pressed_item == i);
-        const bool hovered = (app.settings_popup.hovered_item == i);
+        const bool pressed = (app.dropdown.pressed_item == i);
+        const bool hovered = (app.dropdown.hovered_item == i);
         if (pressed || hovered) {
             // TWO FACES FROM THE ITEM CROPS, and they are built differently
             // because one has an outline and the other does not:
@@ -2111,15 +2193,36 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
             }
         }
 
-        // LEFT-ALIGNED at the pad, vertically centred by the shared solver. The
-        // right side carries the leftover, which the minimum width above is what
-        // guarantees.
+        // LEFT-ALIGNED at the pad, vertically centred by the shared solver. On
+        // the settings menu the right side carries the leftover, which the
+        // minimum width above is what guarantees; on the navigation menu the
+        // accelerator carries it.
+        const double base = redesign_baseline(font,
+                                              static_cast<double>(item.y),
+                                              static_cast<double>(item.h));
+        const bool nav = (menu == DropdownMenu::Navigation);
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
         text_shape::show_shaped_run(
-            cr, runs[i], static_cast<double>(item.x + label_pad),
-            redesign_baseline(font, static_cast<double>(item.y),
-                              static_cast<double>(item.h)));
+            cr, runs[i],
+            static_cast<double>(nav ? x + nav_pad_l : item.x + label_pad),
+            base);
+
+        // THE ACCELERATOR COLUMN is RIGHT-ALIGNED to the popup's own right
+        // margin, not to the item box's: the margin is a fact about the box the
+        // crop measured, and aligning to it keeps every hotkey's last ink column
+        // on one line whatever the item inset is. Its ink is the sampled dim
+        // (kRedesignPopupHotkey), in every face — the item's fill is the whole
+        // hover/press cue, as it is for the label.
+        if (row.hotkey != nullptr) {
+            const double hot_x =
+                static_cast<double>(x + w - nav_pad_r) -
+                std::nearbyint(hot_runs[i].width_px);
+            cairo_set_source_rgb(cr, kRedesignPopupHotkey.r,
+                                 kRedesignPopupHotkey.g,
+                                 kRedesignPopupHotkey.b);
+            text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
+        }
         iy += item_h;
     }
 
@@ -3884,7 +3987,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // for the same reason — that branch is where the publication would go
     // missing.
     render_flag_editor_box(cr, app, audio);
-    paint_settings_popup(cr);
+    paint_dropdown(cr);
     paint_shift_tooltip(cr);
 
     cairo_restore(cr);

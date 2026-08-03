@@ -488,7 +488,7 @@ private:
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom) and the
-    // ICON ROW (top lane 3, row 4: the thirteen view/mode/action buttons, their
+    // ICON ROW (top lane 3, row 4: the eleven view/mode/action buttons, their
     // separators and its border-bottom).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
@@ -514,11 +514,11 @@ private:
     // on a PRESS and any press hides the tooltip, and while the dropdown is open
     // no roster button hovers (redesign_button_hoverable), so no tooltip can
     // arm. Both PUBLISH the rect they painted (AppState::redesign_tooltip.rect,
-    // AppState::settings_popup.rect + item_rects) — the dropdown's for its hit
+    // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
     // tests, the tooltip's only so the hide edge can damage it — and both write
     // a zero rect when not shown, which is the correct empty answer.
     void paint_shift_tooltip(cairo_t* cr);
-    void paint_settings_popup(cairo_t* cr);
+    void paint_dropdown(cairo_t* cr);
     // The shared box shape both draw, dressed by the caller: the tooltip takes
     // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r,

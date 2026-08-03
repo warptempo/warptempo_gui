@@ -667,7 +667,7 @@ inline constexpr GuiColor kRedesignBottomLine = hex(0x17181A);
 // around a single ink), so the line ships uniformly dim.
 inline constexpr double kRedesignDimMix = 0.52;
 
-// -- The SETTINGS DROPDOWN's own chrome (its own crops) ---------------------
+// -- The DROPDOWNS' own chrome (their own crops) ----------------------------
 //
 // THE MENU IS NOT THE TOOLTIP. kdenlive dresses the two differently and the
 // dropdown_full crop is the authority for this one: ground #1c1f22 under a 1px
@@ -693,6 +693,28 @@ inline constexpr GuiColor kRedesignPopupGround = hex(0x1C1F22);
 // ground — (38, 74, 94) = the crop's #264a5e exactly — one more instance of the
 // same ratio the row-2 click face established, over a different ground.
 inline constexpr double kRedesignHoverLightenMix = 0.15;
+
+// THE NAVIGATION DROPDOWN'S ACCELERATOR COLUMN (2026-08-02, sampled off
+// dropdown_full_hotkeys.png): the hotkey text is dimmer than the label, and its
+// full-coverage pixels read #b8b9ba on every row of that crop — the bare keys
+// (T, =), the spelled chords (Ctrl+Shift+Space) and the function keys alike, one
+// flat ink.
+//
+// IT IS A SAMPLE, AND ITS DERIVATION IS RECORDED rather than shipped: the value
+// is EXACTLY kRedesignLabel composited over kRedesignPopupGround at Qt's own
+// 178/255 alpha — (252*178 + 28*77)/255 = 184.4, (252*178 + 31*77)/255 = 185.3,
+// (252*178 + 34*77)/255 = 186.2 — i.e. the source draws its accelerators at
+// ~70% opacity. The constant ships as the LITERAL because the palette is opaque
+// hard-coded constants by ruling and because the fraction is the source's
+// implementation detail, not a relationship this product maintains; it is NOT
+// kRedesignDimMix (0.52, the tooltip's hint line) and NOT the disabled mix
+// (0.322) — three different dims, three constants, checked before adding this
+// one.
+//
+// It is the item's ink in EVERY face: like the label above it, the hotkey does
+// not change color under the hover tint or the pressed accent fill (the fill IS
+// the whole cue, exactly as the settings menu's rows have always worked).
+inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 
 // (THE GUI FONT SIZE AXIS IS GONE — architect approval 2026-08-01.
 // kDefaultFontSizePt, set_gui_font_size_pt, gui_font_scale and the
@@ -879,7 +901,7 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the thirteen view/mode/action buttons). Measured
+// tabs (row 4 of the redesign: the eleven view/mode/action buttons). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
@@ -1173,14 +1195,14 @@ inline constexpr int64_t kTooltipDelayMs        = 700;  // kdenlive-ish; archite
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
-// THE SETTINGS DROPDOWN'S VERTICAL metrics, out here for the same reason the
-// tooltip's height is: the popup's OPEN EDGE must damage the box before the box
-// has ever been painted, and its HEIGHT is fully derivable without shaping a
-// single label (item count x item height, plus the separator blocks and the two
-// borders). Its WIDTH is not — that needs the widest shaped label — so the
-// horizontal terms stay with the painter and the open edge damages full-width
-// instead. settings_popup_h_px (app_state.h) does the sum, where the item table
-// is visible.
+// THE DROPDOWNS' VERTICAL metrics — one set for both menus, out here for the
+// same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
+// before the box has ever been painted, and its HEIGHT is fully derivable
+// without shaping a single label (item count x item height, plus the separator
+// blocks and the two borders). Its WIDTH is not — that needs the widest shaped
+// label — so the horizontal terms stay with the painter and the open edge
+// damages full-width instead. dropdown_h_px (app_state.h) does the sum, where
+// the item tables are visible.
 inline constexpr int kPopupItemHeightPx = 29;  // measured off dropdown_full
 inline constexpr int kPopupSepMarginYPx = 2;   // above and below the separator
 inline constexpr int kPopupBorderPx     = 1;

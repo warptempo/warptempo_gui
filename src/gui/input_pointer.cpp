@@ -98,11 +98,12 @@ struct ToolbarChord {
 // only axes the rows differ on, so they share one dispatch body
 // (dispatch_redesign_chord) instead of accumulating a special case per row.
 //
-// ROW 1'S SETTINGS IS THE ONE ABSENTEE, and it changed hands: Quit joined the
-// table when Ctrl+Q was recognised as its chord, and Settings left it when its
-// action became the DROPDOWN TOGGLE — a popup open/close is not a chord at all
-// (the bare `;` keyboard route still opens the editor directly, untouched). So
-// there is still exactly one non-chord button; it is just the other one.
+// ROW 1'S TWO MENU BUTTONS ARE THE ABSENTEES, and the membership changed hands
+// twice: Quit joined the table when Ctrl+Q was recognised as its chord, Settings
+// left it when its action became a DROPDOWN TOGGLE (a popup open/close is not a
+// chord at all — the bare `;` keyboard route still opens the editor directly,
+// untouched), and Navigation arrived a menu button 2026-08-02. Everything else
+// on rows 1 through 4 is here.
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1. QUIT IS A CHORD — Ctrl+Q — and joined the table when the architect
     // corrected the "two-call sequence" framing (2026-07-31): on_key's own
@@ -138,12 +139,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
     {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
-    // THE ZOOM PAIR: bare `-` and bare `=`, the spellings the keyboard actually
-    // has (GuiKeys::Minus / GuiKeys::Equal, both bare-exact at their arms in
-    // input_handler.cpp — grepped, not assumed). Navigation-class, so neither
-    // takes the read-only gate; the arms' own guards are the whole story.
-    {RedesignButton::IconZoomOut, GuiKeys::Minus, false, false, false, false, true}, // bare -
-    {RedesignButton::IconZoomIn,  GuiKeys::Equal, false, false, false, false, true}, // bare =
+    // (THE ZOOM PAIR — bare `-` and bare `=` — sat here from 2026-08-01 until
+    // 2026-08-02, when the architect ruled out duplicate commands on the GUI and
+    // the Navigation dropdown became those two commands' one pointer home. The
+    // keys are untouched; the buttons are deleted whole.)
     {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, true},   // Ctrl+P
     {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  false, true},   // Ctrl+Alt+P (+Shift)
     // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
@@ -796,16 +795,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
     // FLOATS over them: a press on one of its items runs that item, and a press
     // anywhere else closes it and is CONSUMED so nothing underneath acts. The
-    // one press it does not swallow is a second press on the Settings button
-    // itself, which falls through to the band claim below and toggles the popup
-    // shut — the same gesture that opened it, closing it.
+    // presses it does not swallow are those on the MENU BUTTONS themselves,
+    // which fall through to the band claim below: on this menu's own button the
+    // toggle closes it — the same gesture that opened it, closing it — and on the
+    // OTHER menu's button the toggle switches, closing this one as it opens that
+    // one (one popup state, so the switch is free).
     //
     // It sits BELOW the modal gates like every other pointer target, which is
     // also why a popup and an editor can never be open together: the popup opens
     // only from a press, and while an editor is up every press dies at those
     // gates. (The reverse is closed by the keyboard gate: while the popup is
     // open, `;` is swallowed, so the editor cannot open under it either.)
-    if (app.settings_popup.open) {
+    if (app.dropdown.open()) {
         // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one
         // (2026-08-01, with the right-click scrub below): only LEFT carries
         // claims inside the popup, so any other button is CONSUMED INERT here
@@ -815,11 +816,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // stays open (a non-Left press is not one of its two answers, item-arm
         // or dismiss) and nothing acts.
         if (button != GuiMouseButton::Left) return;
-        const AppState::SettingsPopup& pop = app.settings_popup;
-        const bool on_settings_button =
-            redesign_button_hit(app, RedesignButton::Settings, x, y);
-        if (!on_settings_button) {
-            const int hit = settings_popup_item_at(x, y);
+        const AppState::Dropdown& pop = app.dropdown;
+        const bool on_menu_button =
+            redesign_button_hit(app, RedesignButton::Settings, x, y) ||
+            redesign_button_hit(app, RedesignButton::Navigation, x, y);
+        if (!on_menu_button) {
+            const int hit = dropdown_item_at(x, y);
             // A MODIFIED press inside the popup closes it and does nothing else:
             // no item carries a modified binding, and leaving the popup open
             // under a press it refused would be the worse answer.
@@ -833,7 +835,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // accent fill for a single frame. The release body below decides
                 // whether the arm becomes an action.
                 if (pop.pressed_item != hit) {
-                    app.settings_popup.pressed_item = hit;
+                    app.dropdown.pressed_item = hit;
                     viewport.invalidate_top_strip();
                     viewport.invalidate_rect(pop.rect);
                 }
@@ -841,7 +843,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             // Anywhere else inside the popup, or a modified press: close and
             // consume, so nothing underneath acts.
-            close_settings_popup();
+            close_dropdown();
             return;
         }
     }
@@ -876,16 +878,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (rect_contains(menu_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
-                // SETTINGS IS THE ROSTER'S ONE NON-CHORD BUTTON, so it is
-                // spelled here rather than in the table: its action is a POPUP
-                // TOGGLE, which no keyboard chord performs (the bare `;` key
-                // opens the settings editor DIRECTLY and is untouched by this —
-                // the dropdown is a pointer affordance that leads to the same
-                // editor by another road). Shift-exact is refused like every
-                // other non-admitting button.
+                // SETTINGS AND NAVIGATION ARE THE ROSTER'S TWO NON-CHORD
+                // BUTTONS, so they are spelled here rather than in the table:
+                // each action is a POPUP TOGGLE, which no keyboard chord
+                // performs. Their menus lead to routes the keyboard already has
+                // — the bare `;` still opens the settings editor DIRECTLY, and
+                // every navigation item is a key you can press instead — so a
+                // dropdown is a pointer affordance for an existing road, never a
+                // second one. Shift-exact is refused like every other
+                // non-admitting button.
                 if (!mods.shift &&
                     redesign_button_hit(app, RedesignButton::Settings, x, y)) {
-                    toggle_settings_popup();
+                    toggle_dropdown(DropdownMenu::Settings);
+                } else if (!mods.shift &&
+                           redesign_button_hit(app, RedesignButton::Navigation,
+                                               x, y)) {
+                    toggle_dropdown(DropdownMenu::Navigation);
                 } else {
                     dispatch_redesign_chord(x, y, mods);
                 }
@@ -2054,8 +2062,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
     // pointer, and its items are the redesign's one act-on-release surface.
-    if (button == GuiMouseButton::Left && app.settings_popup.open) {
-        if (finish_settings_popup_release(x, y)) return;
+    if (button == GuiMouseButton::Left && app.dropdown.open()) {
+        if (finish_dropdown_release(x, y)) return;
     }
     // THE CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
     // prompt opened by the press (or any other early return) must not strand a
@@ -2283,8 +2291,8 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit and Settings, row 2's four, row 3's two tabs and row 4's
-// thirteen — the stash is
+// (row 1's Quit / Settings / Navigation and the view bar's three, row 2's
+// four, row 3's two tabs and row 4's eleven — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
@@ -2361,24 +2369,25 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // THE OPEN DROPDOWN'S OWN HOVER, the pointer's only hover while it is up. One
 // transition writer like the roster's, damaging the strip and the popup box on
 // a change; the rects are the painter's published item boxes, so a highlighted
-// item is exactly the box that lights and exactly the box a click hits.
-void GuiInputHandler::recompute_settings_popup_hover() {
-    if (!app.settings_popup.open) return;
+// item is exactly the box that lights and exactly the box a click hits. The
+// closed menu's rects are zero and contain no point, so the walk needs no
+// membership test beyond the open check.
+void GuiInputHandler::recompute_dropdown_hover() {
+    if (!app.dropdown.open()) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
     int hit = -1;
-    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
-        const GuiRect& r =
-            app.settings_popup.item_rects[static_cast<size_t>(i)];
+    for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
+        const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
         if (rect_contains(r, mx, my)) {
             hit = i;
             break;
         }
     }
-    if (app.settings_popup.hovered_item == hit) return;
-    app.settings_popup.hovered_item = hit;
+    if (app.dropdown.hovered_item == hit) return;
+    app.dropdown.hovered_item = hit;
     viewport.invalidate_top_strip();
-    viewport.invalidate_rect(app.settings_popup.rect);
+    viewport.invalidate_rect(app.dropdown.rect);
 }
 
 // THE ONE CHORD-DISPATCH BODY for every redesigned button whose action IS a
@@ -2449,10 +2458,9 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
 // WHICH ITEM IS AT (x, y), or -1. The rects are the painter's published item
 // boxes, so a hit is exactly the box that lights; a closed popup has zero rects
 // and therefore contains no point, which is the correct cold answer.
-int GuiInputHandler::settings_popup_item_at(int x, int y) const {
-    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
-        const GuiRect& r =
-            app.settings_popup.item_rects[static_cast<size_t>(i)];
+int GuiInputHandler::dropdown_item_at(int x, int y) const {
+    for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
+        const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
         if (rect_contains(r, x, y)) return i;
     }
     return -1;
@@ -2468,29 +2476,49 @@ int GuiInputHandler::settings_popup_item_at(int x, int y) const {
 // landed on the wrong row. The outside-press close is untouched by this: that is
 // a PRESS act and still closes and consumes, so the two rules do not overlap —
 // a press outside never arms anything, so no release can be owed.
-bool GuiInputHandler::finish_settings_popup_release(int x, int y) {
-    if (!app.settings_popup.open) return false;
-    const int armed = app.settings_popup.pressed_item;
+bool GuiInputHandler::finish_dropdown_release(int x, int y) {
+    if (!app.dropdown.open()) return false;
+    const int armed = app.dropdown.pressed_item;
     if (armed < 0) return true;   // a popup press that armed nothing; consumed
-    app.settings_popup.pressed_item = -1;
-    if (settings_popup_item_at(x, y) != armed) {
+    const DropdownMenu menu = app.dropdown.menu;
+    app.dropdown.pressed_item = -1;
+    if (dropdown_item_at(x, y) != armed) {
         // Slid off: drop the face, keep the menu up.
         viewport.invalidate_top_strip();
-        viewport.invalidate_rect(app.settings_popup.rect);
+        viewport.invalidate_rect(app.dropdown.rect);
         return true;
     }
-    // CLOSE FIRST, THEN OPEN THE EDITOR — the popup is gone before the modal
-    // takes the keyboard, so the two never overlap even for a frame. The
-    // editor's open is its own ordinary route, prefilled through the one recall
-    // serializer.
+    // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
+    // runs, so a modal it opens never overlaps the menu even for a frame, and a
+    // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
+    // The two menus' actions differ in kind and each stays with its own table.
+    if (menu == DropdownMenu::Navigation) {
+        // THE ITEM IS ITS KEY, dispatched through on_key exactly as a redesigned
+        // button dispatches its chord: every gate the keyboard route passes
+        // (loading/blank, the modal gates, the read-only allowlist, the arm's own
+        // refusals) applies identically, so an item whose command cannot act
+        // right now simply does nothing — the buttons-never-grey rule, one
+        // surface further out. No stop, no modal, nothing restated here.
+        const NavigationPopupItem& it =
+            kNavigationPopupItems[static_cast<size_t>(armed)];
+        close_dropdown();
+        GuiInputState chord{};
+        chord.ctrl  = it.ctrl;
+        chord.shift = it.shift;
+        chord.alt   = it.alt;
+        on_key(it.key, chord);
+        return true;
+    }
+    // SETTINGS: the editor's open is its own ordinary route, prefilled through
+    // the one recall serializer.
     const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
-    close_settings_popup();
+    close_dropdown();
     playback_lifecycle.stop_playback_for_modal_open();
     settings_editor.open_prefilled(key);
     return true;
 }
 
-// THE SETTINGS DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —
+// THE DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —
 // the top strip AND the popup's own published box — because the popup hangs
 // BELOW the strip and overlaps the rows and the waveform under it, so strip
 // damage alone would leave its overhang stale on the close. On the OPEN the box
@@ -2498,44 +2526,51 @@ bool GuiInputHandler::finish_settings_popup_release(int x, int y) {
 // schedules the frame that paints it and publishes the rect; on the CLOSE the
 // rect from the last paint is exactly the region to erase, which is why the
 // close reads it BEFORE zeroing the state.
-void GuiInputHandler::close_settings_popup() {
-    if (!app.settings_popup.open) return;
-    const GuiRect painted = app.settings_popup.rect;
-    app.settings_popup = AppState::SettingsPopup{};
+void GuiInputHandler::close_dropdown() {
+    if (!app.dropdown.open()) return;
+    const GuiRect painted = app.dropdown.rect;
+    app.dropdown = AppState::Dropdown{};
     viewport.invalidate_top_strip();
     viewport.invalidate_rect(painted);
 }
 
-void GuiInputHandler::toggle_settings_popup() {
-    if (app.settings_popup.open) { close_settings_popup(); return; }
-    app.settings_popup.open         = true;
-    app.settings_popup.hovered_item = -1;
+void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
+    // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
+    // (the gesture that opened it, closing it), and a press on the OTHER menu's
+    // button switches — the close below runs first, damaging the box that is
+    // leaving, and the open then proceeds. "Two dropdowns are never open
+    // together" needs no rule beyond this: the field holds one value.
+    const bool same = (app.dropdown.menu == menu);
+    close_dropdown();
+    if (same) return;
+    app.dropdown.menu         = menu;
+    app.dropdown.hovered_item = -1;
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
-    // published until paint_settings_popup runs, and a redraw is CLIPPED to the
+    // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip. At 100% it happens to fit (175px of popup
-    // inside a 217px strip); at 200% it overhangs by ~40px and the bottom band
-    // would never paint.
+    // popup hangs past the strip. At 100% the settings menu happens to fit
+    // (175px of popup inside a 217px strip); at 200% it overhangs by ~40px and
+    // the bottom band would never paint.
     //
-    // The HEIGHT is derivable without painting (settings_popup_h_px — item count
+    // The HEIGHT is derivable without painting (dropdown_h_px — item count
     // times item height, plus the separator blocks and the borders), so the
     // damage is exact vertically. The WIDTH is not (it needs the widest shaped
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE BUTTON'S BOTTOM, the same expression
-    // paint_settings_popup places the box at — the dropdown hangs off the thing
-    // that opened it (architect 2026-08-02), which since row 1 gained its 1px
-    // margin-bottom is one pixel above the lane's own bottom. Both sites read
-    // the SAME stashed rect, so the damaged band and the painted box start on
-    // the same row of pixels; a band anchored a pixel lower would leave the
-    // popup's own top border unpainted.
+    // THE TOP EDGE IS THE BUTTON'S BOTTOM, the same expression paint_dropdown
+    // places the box at — the dropdown hangs off the thing that opened it
+    // (architect 2026-08-02), which since row 1 gained its 1px margin-bottom is
+    // one pixel above the lane's own bottom. Both sites read the SAME stashed
+    // rect through the SAME anchor owner, so the damaged band and the painted
+    // box start on the same row of pixels; a band anchored a pixel lower would
+    // leave the popup's own top border unpainted.
     {
         const GuiRect& btn =
-            app.redesign_buttons[redesign_button_index(RedesignButton::Settings)]
-                .rect;
+            app.redesign_buttons[redesign_button_index(
+                dropdown_anchor_button(menu))].rect;
         viewport.invalidate_rect(
-            GuiRect{0, btn.y + btn.h, app.width, settings_popup_h_px()});
+            GuiRect{0, btn.y + btn.h, app.width, dropdown_h_px(menu)});
     }
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
     // (redesign_button_hoverable refuses every button while it is up) and no
@@ -2544,12 +2579,13 @@ void GuiInputHandler::toggle_settings_popup() {
     // disarms any pending tooltip, which is the other half of "these two never
     // coexist".
     //
-    // IT NO LONGER DECIDES THE SETTINGS PILL, and the inversion is worth stating
-    // because this line used to be what darkened it: since 2026-08-02 the pill
-    // paints on `settings_popup.open` as well as on hover (kdenlive's behaviour,
-    // argued at the paint site), so the button stays blue for exactly as long as
-    // its menu is up. This clear now serves the OTHER roster buttons and the
-    // tooltip; the Settings face is the paint condition's business.
+    // IT NO LONGER DECIDES THE MENU BUTTON'S PILL, and the inversion is worth
+    // stating because this line used to be what darkened it: since 2026-08-02
+    // the pill paints on the popup's own ANCHOR as well as on hover (kdenlive's
+    // behaviour, argued at the paint site), so the button whose menu is up stays
+    // blue for exactly as long as it is up. This clear now serves the OTHER
+    // roster buttons and the tooltip; the anchor's face is the paint condition's
+    // business.
     clear_redesign_button_hover();
     viewport.invalidate_top_strip();
 }
@@ -2562,11 +2598,11 @@ void GuiInputHandler::toggle_settings_popup() {
 // The armed item dies with a pointer that leaves the window: no release will
 // follow, so the face would otherwise stay lit under a pointer that is gone.
 // The menu itself STAYS OPEN — leaving the window is not a dismissal.
-void GuiInputHandler::clear_settings_popup_press() {
-    if (app.settings_popup.pressed_item < 0) return;
-    app.settings_popup.pressed_item = -1;
+void GuiInputHandler::clear_dropdown_press() {
+    if (app.dropdown.pressed_item < 0) return;
+    app.dropdown.pressed_item = -1;
     viewport.invalidate_top_strip();
-    viewport.invalidate_rect(app.settings_popup.rect);
+    viewport.invalidate_rect(app.dropdown.rect);
 }
 
 void GuiInputHandler::hide_shift_tooltip() {
@@ -2629,8 +2665,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so its item hover is the only hover to resolve and no gesture can be live
     // under it (its own press consumed everything).
-    if (app.settings_popup.open) {
-        recompute_settings_popup_hover();
+    if (app.dropdown.open()) {
+        recompute_dropdown_hover();
         return;
     }
     if (app.prompt.active) {

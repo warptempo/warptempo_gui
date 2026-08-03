@@ -32,9 +32,8 @@ enum class Icon {
     EditUndo,            // Undo
     EditRedo,            // Redo
     MediaRecord,         // Render
-    // Row 4, the icon row.
-    ZoomOut,             // Zoom out
-    ZoomIn,              // Zoom in
+    // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
+    // the icon row's zoom pair; both went with those buttons.)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
@@ -52,7 +51,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 15;
+inline constexpr int kIconCount = 13;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -246,7 +246,7 @@ struct Viewport {
     void invalidate_all();
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
-    // tooltip and the settings dropdown): both hang BELOW the top strip, so
+    // tooltip and the menu row's dropdown): both hang BELOW the top strip, so
     // invalidate_top_strip alone would leave their overhang stale. Show and hide
     // edges damage the strip AND the surface's own published rect — two cheap
     // calls the platform coalesces — rather than growing a union helper that

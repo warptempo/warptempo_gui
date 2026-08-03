@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "gui_input.h"
 #include "render_pipeline.h"
 #include "render.h"
 #include "settings_file.h"
@@ -728,9 +729,9 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's Quit and Settings,
-// row 2's toolbar four, row 3's two TABS, then row 4's thirteen view / mode /
-// action buttons. It exists ONCE, here, because it indexes
+// button the kdenlive rows carry, in painted order: row 1's Quit, Settings and
+// Navigation plus the view bar's three, row 2's toolbar four, row 3's two TABS,
+// then row 4's eleven view / mode / action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -744,10 +745,10 @@ struct TrimBarPressSeed {
 // on_key. What they do NOT take is the two row-2-only faces — no click face and
 // no disabled face — which is stated at each face's site rather than modelled
 // here (row 4 takes the click face but not the disabled one). Row 1's SETTINGS
-// is the roster's ONE non-chord entry: its press TOGGLES THE DROPDOWN, which no
-// keyboard chord does, and it is spelled at the menu claim rather than in the
-// chord table. Quit is not that entry — Ctrl+Q is its chord and it sits in the
-// table like the rest.
+// and NAVIGATION are the roster's TWO non-chord entries: each press TOGGLES ITS
+// OWN DROPDOWN, which no keyboard chord does, and both are spelled at the menu
+// claim rather than in the chord table. Quit is not one of them — Ctrl+Q is its
+// chord and it sits in the table like the rest.
 //
 // The enum ORDER is painted order, and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
@@ -755,24 +756,24 @@ struct TrimBarPressSeed {
 // serialized, so inserting a button mid-roster (as Settings was) renumbers the
 // stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row: the two LEFT-FLOATING buttons, then the three of the
-    // RIGHT-FLOATING view bar (2026-08-02) in their painted order — the absolute
-    // view selectors S+W / T+P / T+W, which are bare 1/2/3.
-    Quit, Settings, ViewSW, ViewTP, ViewTW,
+    // Row 1, the menu row: the three LEFT-FLOATING buttons, then the three of
+    // the RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
+    // absolute view selectors S+W / T+P / T+W, which are bare 1/2/3.
+    Quit, Settings, Navigation, ViewSW, ViewTP, ViewTW,
     // Row 2, the toolbar.
     Save, Undo, Redo, Render,
     // Row 3, the tabs.
     TabA, TabB,
-    // Row 4, the icon row, in painted order: the two view radio pairs, the ZOOM
-    // pair (joined 2026-08-01 — the architect's "more used than most as
-    // actions"), the phase-reset clipboard pair, the three mode/editor buttons,
-    // then the two render-entry buttons.
+    // Row 4, the icon row, in painted order: the two view radio pairs, the
+    // phase-reset clipboard pair, the three mode/editor buttons, then the two
+    // render-entry buttons. (THE ZOOM PAIR LEFT 2026-08-02 — the architect's
+    // no-duplicate-commands ruling, its two commands now living in the
+    // Navigation dropdown; the `-` / `=` KEYS are untouched.)
     IconS, IconT, IconW, IconP,
-    IconZoomOut, IconZoomIn,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconCommit
 };
-inline constexpr int kRedesignButtonCount = 24;
+inline constexpr int kRedesignButtonCount = 23;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -790,6 +791,22 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     // the current arithmetic coincidence.
     if (i < 0 || i >= kRedesignButtonCount) std::unreachable();
     return i;
+}
+
+// THE MENU ROW'S DROPDOWNS — WHICH ONE IS UP. There is ONE popup state in the
+// product (AppState::dropdown below), and this names its content; `None` IS the
+// closed state, which is what makes "two dropdowns are never open together"
+// structural rather than an invariant to maintain: opening one is writing this
+// field, and a field holds one value.
+enum class DropdownMenu { None, Settings, Navigation };
+
+// WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
+// emits it (architect 2026-08-02), so the painter and the open edge's damage
+// both need the anchor, and they must read ONE expression or the damaged band
+// and the painted box could start on different rows of pixels.
+inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
+    return m == DropdownMenu::Navigation ? RedesignButton::Navigation
+                                         : RedesignButton::Settings;
 }
 
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
@@ -823,19 +840,92 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
 
-// The dropdown's painted HEIGHT, derived from the table above and the scale
+// THE NAVIGATION DROPDOWN'S ITEMS (architect 2026-08-02) — a COMMAND MENU,
+// where the settings one is a list of keys to edit: every row IS an existing
+// keyboard command, dispatched through on_key exactly as a redesigned button
+// dispatches its chord, so every gate and refusal arrives by construction and
+// no second route exists. Seven rows in two categories over one separator: the
+// four zoom/framing commands, then the three marker/tab steppers.
+//
+// IT DISPLAYS ITS HOTKEYS, by explicit architect design and against nothing:
+// the no-gesture-hints-in-UI preference is about hint PROSE inside labels, and
+// the architect ordered kdenlive's accelerator column here (its own crop,
+// dropdown_full_hotkeys.png, is the anatomy). The spellings follow that crop's
+// convention — a bare letter uppercase, modifiers spelled out with `+`.
+//
+// AN ITEM NEVER GREYS OUT and never refuses here: a command that cannot act
+// right now still dispatches and its own arm answers, which is the roster's
+// standing buttons-never-grey rule ("one that cannot act right now simply does
+// nothing, exactly like its key") applied one surface further out.
+struct NavigationPopupItem {
+    const char* label;
+    const char* hotkey;   // the accelerator column's text, right-aligned
+    GuiKey      key;
+    bool        ctrl;
+    bool        shift;
+    bool        alt;
+    bool        separator_before;
+};
+inline constexpr NavigationPopupItem kNavigationPopupItems[] = {
+    {"Zoom in",         "=",              GuiKeys::Equal, false, false, false, false},
+    {"Zoom out",        "-",              GuiKeys::Minus, false, false, false, false},
+    {"Overview",        "0",              GuiKeys::Digit0, false, false, false, false},
+    {"Center on focus", "C",              GuiKeys::C,     false, false, false, false},
+    {"Next marker",     "Tab",            GuiKeys::Tab,   false, false, false, true},
+    {"Previous marker", "Shift+Tab",      GuiKeys::Tab,   false, true,  false, false},
+    {"Walk both tabs",  "Ctrl+Shift+Tab", GuiKeys::Tab,   true,  true,  false, false},
+};
+inline constexpr int kNavigationPopupItemCount =
+    static_cast<int>(std::size(kNavigationPopupItems));
+
+// The published-rect array's size: the widest menu decides it, so a menu that
+// grows a row grows the array with no second edit.
+inline constexpr int kDropdownMaxItemCount =
+    kSettingsPopupItemCount > kNavigationPopupItemCount
+        ? kSettingsPopupItemCount : kNavigationPopupItemCount;
+
+// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — what the two menus share,
+// which is exactly the row's TEXT and where the categories part. The ACTION is
+// deliberately not in here: the two kinds differ in kind (a settings key to
+// prefill, a chord to dispatch), each stays typed in its own table, and the
+// release body switches on the menu once. One shared view, two typed actions.
+struct DropdownRow {
+    const char* label;
+    const char* hotkey;   // nullptr -> this menu has no accelerator column
+    bool        separator_before;
+};
+inline constexpr int dropdown_item_count(DropdownMenu m) {
+    switch (m) {
+        case DropdownMenu::Settings:   return kSettingsPopupItemCount;
+        case DropdownMenu::Navigation: return kNavigationPopupItemCount;
+        case DropdownMenu::None:       break;
+    }
+    return 0;
+}
+inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
+    if (m == DropdownMenu::Navigation) {
+        const NavigationPopupItem& it =
+            kNavigationPopupItems[static_cast<size_t>(i)];
+        return {it.label, it.hotkey, it.separator_before};
+    }
+    const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
+    return {it.label, nullptr, it.separator_before};
+}
+
+// The open dropdown's painted HEIGHT, derived from its table and the scale
 // alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
-// (toggle_settings_popup), which has to damage the box on the frame BEFORE the
-// box exists: at 100% the popup happens to fit inside the top strip, but at 200%
-// it hangs ~40px past it, and a redraw is clipped to the damage it was given.
-// The painter calls this too, so the damaged height and the painted height are
-// one expression and cannot drift.
-inline int settings_popup_h_px() {
+// (toggle_dropdown), which has to damage the box on the frame BEFORE the box
+// exists: at 100% the settings popup happens to fit inside the top strip, but at
+// 200% it hangs ~40px past it, and a redraw is clipped to the damage it was
+// given. The painter calls this too, so the damaged height and the painted
+// height are one expression and cannot drift.
+inline int dropdown_h_px(DropdownMenu m) {
+    const int count = dropdown_item_count(m);
     int separators = 0;
-    for (const SettingsPopupItem& it : kSettingsPopupItems)
-        if (it.separator_before) ++separators;
+    for (int i = 0; i < count; ++i)
+        if (dropdown_row(m, i).separator_before) ++separators;
     const int border = popup_border_px();
-    return kSettingsPopupItemCount * popup_item_h_px() +
+    return count * popup_item_h_px() +
            separators * (2 * popup_sep_margin_y_px() + border) +
            2 * popup_item_margin_y_px() +
            2 * border;
@@ -1646,12 +1736,15 @@ struct AppState {
     };
     RedesignTooltip redesign_tooltip;
 
-    // THE SETTINGS DROPDOWN — the product's first popup, hanging under the menu
-    // row's Settings button. `open` is the whole modality: while it is true the
-    // popup owns the keyboard (on_key's popup gate), the pointer (the press
-    // claim's popup-first block) and the wheel, and the roster stops hovering.
-    // `hovered_item` is -1 or an index into the item table; `rect` and
-    // `item_rects` are PAINTER-PUBLISHED, so the hit tests read exactly the
+    // THE MENU ROW'S DROPDOWN — ONE popup state for BOTH menus (Settings since
+    // 2026-07-31, Navigation since 2026-08-02), hanging under whichever button
+    // emits it. `menu` is the whole modality AND the whole "never two at once"
+    // rule: while it is not None the popup owns the keyboard (on_key's popup
+    // gate), the pointer (the press claim's popup-first block) and the wheel,
+    // the roster stops hovering, and opening the other menu is simply writing
+    // this field — one value, one menu, no invariant to keep.
+    // `hovered_item` is -1 or an index into the open menu's item table; `rect`
+    // and `item_rects` are PAINTER-PUBLISHED, so the hit tests read exactly the
     // painted boxes and never re-shape a label (the displayed-basis doctrine).
     // Every rect is zero while closed, which is the correct cold answer: an
     // empty rect contains no point.
@@ -1661,14 +1754,16 @@ struct AppState {
     // button fires on press, a menu triggers on release by universal
     // convention — which is also the only reason a pressed face is visible long
     // enough to be worth painting.
-    struct SettingsPopup {
-        bool    open         = false;
-        int     hovered_item = -1;
-        int     pressed_item = -1;
-        GuiRect rect{0, 0, 0, 0};
-        std::array<GuiRect, kSettingsPopupItemCount> item_rects{};
+    struct Dropdown {
+        DropdownMenu menu         = DropdownMenu::None;
+        int          hovered_item = -1;
+        int          pressed_item = -1;
+        GuiRect      rect{0, 0, 0, 0};
+        std::array<GuiRect, kDropdownMaxItemCount> item_rects{};
+
+        bool open() const { return menu != DropdownMenu::None; }
     };
-    SettingsPopup settings_popup;
+    Dropdown dropdown;
 
     // WINDOW ACTIVATION (keyboard focus), mirrored from the platform's
     // xdg_toplevel state on each activation EDGE (main.cpp's hook, beside the
@@ -2348,6 +2443,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // the same arm.
         case RedesignButton::Quit:
         case RedesignButton::Settings:
+        case RedesignButton::Navigation:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
@@ -2357,8 +2453,6 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
-        case RedesignButton::IconZoomOut:
-        case RedesignButton::IconZoomIn:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -2428,12 +2522,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconIter:   return a.iteration_mode_enabled;
         case RedesignButton::Quit:
         case RedesignButton::Settings:
+        case RedesignButton::Navigation:
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
-        case RedesignButton::IconZoomOut:
-        case RedesignButton::IconZoomIn:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -2473,12 +2566,12 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // button has no tooltip", which is the whole story for the two that carry none.
 //
 // THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
-// two names (architect 2026-07-31): row 1's buttons are word labels that already
-// say what they do — "Quit" quits, "Settings" opens a menu that names itself —
-// so a hint repeating the label would be noise. Stating it as the ROW's property
-// means a future menu-row button inherits the exclusion instead of having to be
-// remembered. Every button on rows 2, 3 and 4 has one; its icon or single letter
-// is not self-describing.
+// names (architect 2026-07-31): row 1's buttons are word labels that already
+// say what they do — "Quit" quits, "Settings" and "Navigation" open menus that
+// name themselves — so a hint repeating the label would be noise. Stating it as
+// the ROW's property is what let Navigation inherit the exclusion in 2026-08-02
+// without being remembered. Every button on rows 2, 3 and 4 has one; its icon or
+// single letter is not self-describing.
 //
 // The names follow HELP's vocabulary so the hint and the manual agree.
 //
@@ -2497,6 +2590,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the combinations themselves, so a hint could only restate them.
         case RedesignButton::Quit:
         case RedesignButton::Settings:
+        case RedesignButton::Navigation:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:     return {nullptr, nullptr};
@@ -2521,8 +2615,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (T)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
-        case RedesignButton::IconZoomOut: return {"Zoom out (-)", nullptr};
-        case RedesignButton::IconZoomIn:  return {"Zoom in (=)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
@@ -2601,7 +2693,9 @@ inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
     // hovers at all — the popup's own item hover is the only hover there is, and
     // a lit button under a popup would advertise a click the popup is about to
     // swallow. The next motion after the close re-resolves the roster normally.
-    if (a.settings_popup.open) return false;
+    // (The menu's OWN button keeps its lit pill through the paint condition at
+    // the menu-row painter, which is not this bit.)
+    if (a.dropdown.open()) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
     if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
     if (b == RedesignButton::TabB) return a.active_tab_view != 'B';

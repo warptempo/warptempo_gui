@@ -451,8 +451,9 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's Quit and Settings, row 2's four,
-    // row 3's two tabs and row 4's thirteen (definitions beside on_motion in
+    // writer serving the WHOLE roster — row 1's Quit / Settings / Navigation and
+    // the view bar's three, row 2's four, row 3's two tabs and row 4's eleven
+    // (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
@@ -464,25 +465,31 @@ struct GuiInputHandler {
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
 
-    // THE SETTINGS DROPDOWN's two state writers and its hover. toggle_ is the
-    // Settings button's whole action (the roster's one non-chord button);
-    // close_ is what every dismissal route calls — an outside press, a wheel,
-    // bare Esc, Ctrl+Q, an item click, and any full relayout. Both damage the
-    // top strip AND the popup's published rect, because the popup hangs below
-    // the strip. recompute_ resolves the item hover on motion while it is open.
-    void toggle_settings_popup();
-    void close_settings_popup();
-    void recompute_settings_popup_hover();
+    // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
+    // popup state both menus share (AppState::Dropdown). toggle_ is the whole
+    // action of BOTH non-chord buttons, Settings and Navigation: it closes the
+    // named menu if it is the open one and otherwise opens it, so pressing the
+    // other button SWITCHES menus and "never two at once" is structural rather
+    // than a rule. close_ is what every dismissal route calls — an outside
+    // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
+    // Both damage the top strip AND the popup's published rect, because the
+    // popup hangs below the strip. recompute_ resolves the item hover on motion
+    // while it is open.
+    void toggle_dropdown(DropdownMenu menu);
+    void close_dropdown();
+    void recompute_dropdown_hover();
     // Which item is at (x, y), or -1 — the painter's published boxes.
-    int  settings_popup_item_at(int x, int y) const;
+    int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
     // Returns true when the popup owned the release. Release on the ARMED item
-    // triggers it (close + modal stop + the prefilled editor); release anywhere
-    // else drops the armed face and leaves the menu open.
-    bool finish_settings_popup_release(int x, int y);
+    // triggers it — CLOSE FIRST, then the menu's own action (settings: the modal
+    // stop and the prefilled editor; navigation: the item's chord through
+    // on_key) — and release anywhere else drops the armed face and leaves the
+    // menu open.
+    bool finish_dropdown_release(int x, int y);
     // Drop the armed face with no release to follow (the pointer-leave edge).
     // The menu stays OPEN — leaving the window is not a dismissal.
-    void clear_settings_popup_press();
+    void clear_dropdown_press();
 
     // THE HOVER TOOLTIP's hide, called from the hover recompute (hover ended),
     // every press and every wheel. Showing is NOT here: the run loop's tick
@@ -495,9 +502,10 @@ struct GuiInputHandler {
     // and, on a hit, applies that button's shift / enabled / radio rules, arms
     // the click face where the row has one, and dispatches the chord through
     // on_key. Returns true when a rect claimed the press — a refusal still
-    // claims it, a refusal being a consumed nothing. Row 1's Quit is the one
-    // button outside it (Settings, whose action is the dropdown toggle — not a
-    // chord, since no keyboard chord opens or closes a popup).
+    // claims it, a refusal being a consumed nothing. Row 1's Quit is inside it;
+    // the two buttons outside it are Settings and Navigation, whose action is a
+    // dropdown toggle — not a chord, since no keyboard chord opens or closes a
+    // popup.
     // Arm the dual-axis strip drag — ONE body shared by the gesture's TWO
     // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
     void arm_strip_drag_at(int x, int y);
@@ -515,11 +523,11 @@ struct GuiInputHandler {
     // right), so it returns having done nothing.
     void close_top_flag_editor_for_outside_press(int x, int y);
 
-    // True when the settings dropdown swallowed `key` — the popup-modal gate,
+    // True when the open dropdown swallowed `key` — the popup-modal gate,
     // ranked directly under the prompt at the top of on_key. Bare Esc closes,
     // Ctrl+Q closes and falls through to the close route, everything else is
     // swallowed inert so no command can run under an open popup.
-    bool settings_popup_key_blocked(GuiKey key, GuiInputState mods);
+    bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE CLICK FACE, dropped — the third face's only writer besides the
     // press claim. Called from the top of on_button_release (the physical
