@@ -1328,8 +1328,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
         // stepped pan and the Alt+drag captured grab-pan are untouched (separate
-        // handlers). On the keyboard alt survives only in the FIVE Ctrl+Alt
-        // render / propagate chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+I,
+        // handlers). On the keyboard alt survives only in the FOUR Ctrl+Alt
+        // render / propagate chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R,
         // Ctrl+Alt+P, Ctrl+Alt+Shift+P) — every other alt keybinding was retired
         // 2026-07-28, so nothing here defers to one.
         // Discarding a press here is TOTAL: it claimed
@@ -2329,8 +2329,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (changed) viewport.invalidate_top_strip();
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
-    // knows a hover STARTED. EVERY roster button but Quit and Settings carries a
-    // tooltip (redesign_button_tooltip owns that membership), so this walks the
+    // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip
+    // (redesign_button_tooltip owns that membership, and no state changes it —
+    // only Render's TEXT follows the iteration bit), so this walks the
     // whole roster: a newly hovered one stamps the clock, and moving between two
     // of them hides and re-stamps, so a fresh dwell begins on each arrival. The run
     // loop's tick compares the stamp against kTooltipDelayMs and flips
@@ -2338,7 +2339,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     int hovered_tip = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton id = static_cast<RedesignButton>(i);
-        if (redesign_button_tooltip(id).line1 != nullptr &&
+        if (redesign_button_tooltip(app, id).line1 != nullptr &&
             app.redesign_buttons[i].hovered) {
             hovered_tip = i;
             break;

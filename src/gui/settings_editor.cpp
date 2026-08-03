@@ -558,6 +558,18 @@ void GuiSettingsEditor::autocomplete_value() {
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
     // Only a truly unknown key is not recallable.
+    //
+    // ONE EXCEPTION, and it is the EDITOR's rather than the recall's: the seed
+    // below lands through text_editor::replace_selection, which filters its
+    // input to printable ASCII (0x20..0x7e) and DROPS everything else. The four
+    // free-text provenance values (title/bpm/notes/url/cover) are accepted
+    // VERBATIM by the strict load (engine_settings_io.cpp), so a HAND-EDITED
+    // `.settings` carrying a non-ASCII byte loads it, holds it, and would write
+    // it back on Ctrl+S — but recalls it stripped, and committing that stripped
+    // line writes the stripped value. The GUI itself can never author such a
+    // value (the typed-insert path carries the same filter), so the only
+    // producer is a hand edit, which is why this is recorded rather than
+    // guarded: the project line is that non-ASCII is unsupported.
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);
     if (!cur) cur = recall_gui_setting_value(app, key);

@@ -160,7 +160,8 @@ void GuiTargetRender::trigger() {
     }
 
     // A render dispatch kills the running render. Any running archival
-    // render (Ctrl+Alt+R / Ctrl+Alt+I / BPM-sweep) is on some other output;
+    // render (Ctrl+Alt+R, single or iteration sweep / Ctrl+Alt+Shift+R /
+    // BPM-sweep) is on some other output;
     // kill it. The batch state machine consults queue_cancel_requested at
     // on_batch_entry_complete time and finalizes instead of dispatching the
     // next entry, so setting it here is enough.

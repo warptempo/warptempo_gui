@@ -1194,7 +1194,7 @@ struct AppState {
     std::string phaseresetmarkers_path;
 
     // Absolute or relative path of the currently loaded audio file. Used by
-    // the render hotkeys (Ctrl+Alt+R / Ctrl+Alt+I) and
+    // the render hotkeys (Ctrl+Alt+R and its shifted twin) and
     // the render pipeline to compute output paths. Empty when no file is
     // loaded (blank state).
     std::string source_audio_path;
@@ -2450,6 +2450,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // beside the source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell) and
 // Paste (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state).
 //
+// THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
+// — and is therefore stateless. Render's twin does NOTHING in iteration mode
+// (Ctrl+Alt+Shift+R is a consumed no-op there, refused inside the render route),
+// but the shift press still routes to it and is still swallowed by the one
+// refusal rather than by a second gate here. What follows the mode is the
+// advertised FACE: the tooltip's shift line, at the override below.
+//
 // It lives here rather than as a column in the press claim's chord table
 // because it has TWO readers that must not drift: that table's shift rule, and
 // the TOOLTIP — the shift hint exists exactly where a shift press does
@@ -2526,6 +2533,42 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconCommit: return {"Commit render (')", nullptr};
     }
     return {nullptr, nullptr};
+}
+
+// THE RENDER BUTTON'S ITERATION FACE — the ONE row on this whole surface whose
+// text follows STATE rather than being a constant (architect 2026-08-02). With
+// iteration mode on, Ctrl+Alt+R IS the sweep, so the button says the sweep: its
+// LABEL reads "Render iterations" and its hint is the matching ONE-LINE form.
+//
+// THE SHIFT LINE GOES WITH IT, and that is the same fact rather than a second
+// decision: Ctrl+Alt+Shift+R is a consumed no-op in iteration mode (the refusal
+// is in the render route, input_key_dispatch.cpp), so advertising a shift press
+// there would advertise nothing. The rule the static_assert below states —
+// the hint exists exactly where a shift press does something — therefore holds
+// on this form too, not only on the constant table it overrides.
+//
+// BOTH STRINGS LIVE HERE, beside the constant table, so the label the button
+// paints and the name its hint gives cannot drift into two different words.
+inline constexpr const char* kRenderIterationsLabel = "Render iterations";
+inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
+                                                   RedesignButton b) {
+    if (b == RedesignButton::Render && a.iteration_mode_enabled) {
+        return {"Render iterations (Ctrl+Alt+R)", nullptr};
+    }
+    return redesign_button_tooltip(b);
+}
+
+// The toolbar's LABEL, by the same bit and for the same reason. The constant
+// per-button labels live with the painter's roster half (kToolbarButtons,
+// paint_handler.cpp); this answers only "does this button override its own",
+// which exactly one does. MEMBERSHIP IS UNCHANGED by either override: a button
+// with a tooltip keeps it in both modes, and a button with a label keeps one.
+inline const char* redesign_button_label(const AppState& a, RedesignButton b,
+                                         const char* table_label) {
+    if (b == RedesignButton::Render && a.iteration_mode_enabled) {
+        return kRenderIterationsLabel;
+    }
+    return table_label;
 }
 
 // THE SHIFT LINE EXISTS EXACTLY WHERE A SHIFT PRESS DOES SOMETHING. Checked at

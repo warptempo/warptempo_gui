@@ -826,10 +826,18 @@ private:
     // ("esc should cancel render"), the one flag the ruling-5 conversion carried.
     bool handle_escape_cancels(GuiKey key, GuiInputState mods);
 
-    // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
-    // (render iteration sweep). Returns true if key+mods matched
-    // one (on_key then returns), false otherwise.
+    // Render-trigger chords: Ctrl+Alt+R and Ctrl+Alt+Shift+R, and nothing else.
+    // Both read the ITERATION-MODE bit (architect 2026-08-02): mode off, they
+    // are the single render beside the source and the `_miscellaneous` cell as
+    // ever; mode ON, the plain chord becomes the ITERATION SWEEP and the shift
+    // chord is a consumed no-op. Returns true if key+mods matched one (on_key
+    // then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
+
+    // The iteration sweep's body, called from the one place its chord lives —
+    // handle_render_dispatch_keys' Ctrl+Alt+R arm, with the mode on. Its
+    // preconditions and its own refusals are stated at the definition.
+    void run_iteration_sweep_render();
 
     // P / I / M / L letter-key handlers: Ctrl+P-family phase-reset clipboard
     // ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `l` listen-to-

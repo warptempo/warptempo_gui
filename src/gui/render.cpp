@@ -101,7 +101,13 @@ static inline double frame_to_paint_sample(
 // warp flag callers route through here so display, hit-rects, and the editor
 // seed stay in sync.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, bool iteration_on) {
+                           int idx, bool iteration_on,
+                           size_t* out_bracket_pos,
+                           size_t* out_bracket_len) {
+    // "No bracket" is written FIRST and unconditionally, so every early return
+    // below reports it without repeating itself.
+    if (out_bracket_pos) *out_bracket_pos = std::string::npos;
+    if (out_bracket_len) *out_bracket_len = 0;
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
     const auto& m = markers[idx];
     if (!iteration_on || !iter_popup_eligible_marker(m)) {
@@ -111,7 +117,10 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
     // tempo, then the bracket, then optional scale and label. Values print
     // in the same serializer forms as flag_text.
     std::string text = format_tempo_cents(m.tempo_cents);
-    text += format_iter_bracket_inline(m);
+    const std::string bracket = format_iter_bracket_inline(m);
+    if (out_bracket_pos) *out_bracket_pos = text.size();
+    if (out_bracket_len) *out_bracket_len = bracket.size();
+    text += bracket;
     if (m.tempo_scale.has_value()) {
         text += "*";
         text += format_value_double(*m.tempo_scale, 4);
@@ -749,6 +758,7 @@ void iterate_visible_flags_impl(
     long long viewport_end_sample,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
+    bool iteration_on,
     Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -767,7 +777,9 @@ void iterate_visible_flags_impl(
     // edge can show nothing at all. The left margin is the width BOUND
     // (marker_flag_max_width_px) rather than the real width, which is not known
     // until the label is shaped — a bound over-admits a handful of offscreen
-    // markers per frame and never drops a visible one.
+    // markers per frame and never drops a visible one. `iteration_on` widens it
+    // by the iter bracket's own glyphs, which the budget does not cover; the
+    // reasoning is at the bound.
     //
     // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
     // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
@@ -779,7 +791,8 @@ void iterate_visible_flags_impl(
     // every grid-aligned surface. "At or past the right edge shows nothing" is
     // the stated rule; this is it spelled.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
-                           marker_flag_max_width_px() * samples_per_pixel;
+                           marker_flag_max_width_px(iteration_on) *
+                               samples_per_pixel;
     const double cull_hi = static_cast<double>(viewport_end_sample);
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
@@ -802,14 +815,54 @@ void iterate_visible_flags_impl(
     }
 }
 
+// A flag's composed text plus the byte span the budget does NOT count — the
+// iter bracket's, when one was spliced. The warp column fills both from its
+// composer; the phase-reset column's token has no exempt span and leaves it
+// empty. It exists so the truncation below has ONE input rather than two
+// positional arguments a caller could swap.
+struct FlagLabelText {
+    std::string text;
+    size_t      exempt_pos = std::string::npos;
+    size_t      exempt_len = 0;
+};
+
 // Cap a marker label at the nine-glyph budget — the contract, the byte/glyph
 // identity and the display-only rule all live at kMarkerLabelGlyphBudget
-// (render.h). Eight bytes plus U+2026.
-std::string cap_marker_label(std::string text) {
-    if (text.size() > kMarkerLabelGlyphBudget) {
-        text = text.substr(0, kMarkerLabelGlyphBudget - 1) + "\xe2\x80\xa6";
+// (render.h). Eight budgeted bytes plus U+2026.
+//
+// THE EXEMPT RUN IS NEITHER COUNTED NOR CUT (architect 2026-08-02, the iter
+// bracket): the walk below spends the budget on the other bytes only and emits
+// the run whole wherever it falls, so a bracketed flag shows its full label
+// allowance AND its full bracket and the box grows to hold both. Today the
+// bracket always opens at byte 4 (the tempo's `N.NN`), well inside the eight
+// kept bytes, so the trailing arm is the shape's guarantee rather than a case
+// that fires: if the budget ever ran out before the run were reached, the run
+// still prints — never truncated — with the ellipsis after it.
+std::string cap_marker_label(const FlagLabelText& lt) {
+    const std::string& text = lt.text;
+    const bool has_exempt = lt.exempt_len != 0 &&
+                            lt.exempt_pos != std::string::npos;
+    const size_t exempt_len = has_exempt ? lt.exempt_len : 0;
+    if (text.size() - exempt_len <= kMarkerLabelGlyphBudget) return text;
+
+    std::string out;
+    size_t i        = 0;
+    size_t budgeted = 0;
+    while (i < text.size() && budgeted < kMarkerLabelGlyphBudget - 1) {
+        if (has_exempt && i == lt.exempt_pos) {
+            out.append(text, lt.exempt_pos, exempt_len);
+            i += exempt_len;
+            continue;
+        }
+        out += text[i];
+        ++i;
+        ++budgeted;
     }
-    return text;
+    if (has_exempt && i <= lt.exempt_pos) {
+        out.append(text, lt.exempt_pos, exempt_len);
+    }
+    out += "\xe2\x80\xa6";
+    return out;
 }
 
 // The resolved paint of ONE marker flag: the three surfaces plus the stem.
@@ -950,7 +1003,11 @@ void render_flag_boxes_impl(
     std::vector<MarkerStem>* out_stems,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
-    int suppress_box_index) {
+    int suppress_box_index,
+    // Reaches the LEFT CULL only — it widens the width bound by the iter
+    // bracket's glyphs. The composed text is the label lambda's business, so
+    // this body never asks whether a given flag is bracketed.
+    bool iteration_on) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -981,8 +1038,10 @@ void render_flag_boxes_impl(
 
     iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
+                               warp_frame_map, drag_overlay, iteration_on,
         [&](int i, double left_x) {
+            // label_of returns the composed text WITH its exempt span (see
+            // FlagLabelText); the cap spends the budget on the rest.
             const std::string text = cap_marker_label(label_of(i));
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, text);
@@ -1153,11 +1212,17 @@ void render_flags(cairo_t* cr,
         selected_set, red_set,
         // The ONE composer the flag paint, the editor seed and the copy payload
         // all share, so a flag shows exactly what its editor would open with.
-        [&](int i) { return flag_text_iter(markers, i, iteration_on); },
+        // The bracket's byte span rides along because the budget must skip it.
+        [&](int i) {
+            FlagLabelText lt;
+            lt.text = flag_text_iter(markers, i, iteration_on,
+                                     &lt.exempt_pos, &lt.exempt_len);
+            return lt;
+        },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        editing_marker_index);
+        editing_marker_index, iteration_on);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -1179,8 +1244,12 @@ void render_phase_reset_flags(cairo_t* cr,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
-        // token (render.h owns it and the reason for its width).
-        [&](int) { return std::string(kPhaseResetLaneToken); },
+        // token (render.h owns it and the reason for its width). No exempt span:
+        // the iter bracket is a WARP-column form and this column has none.
+        [&](int) {
+            return FlagLabelText{std::string(kPhaseResetLaneToken),
+                                 std::string::npos, 0};
+        },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
@@ -1191,7 +1260,9 @@ void render_phase_reset_flags(cairo_t* cr,
         // editor and reads app.warpmarkers — so no phase-reset flag can ever be
         // the edited one. If a phase-reset payload editor is ever added, this
         // is the line it changes.
-        /*suppress_box_index=*/-1);
+        /*suppress_box_index=*/-1,
+        // No bracket on this column, so the cull's bound needs no widening.
+        /*iteration_on=*/false);
 }
 
 namespace {

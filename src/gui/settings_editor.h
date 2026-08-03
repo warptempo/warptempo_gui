@@ -89,9 +89,10 @@ struct GuiSettingsEditor {
     // Tab handler for the prompt: when any settable key is typed with an empty
     // value side (e.g. `notes=`, `playback_speed=`, `tab_a_trim_begin=`),
     // replace the value side with that key's current live value for recall and
-    // editing — byte-identical to what a Ctrl+S would write. No-op when the
-    // value side is already non-empty, when there is no `=`, or when the key is
-    // unknown.
+    // editing — byte-identical to what a Ctrl+S would write, with ONE recorded
+    // exception for a hand-edited non-ASCII provenance value (stated at the
+    // definition). No-op when the value side is already non-empty, when there is
+    // no `=`, or when the key is unknown.
     void autocomplete_value();
 
 private:

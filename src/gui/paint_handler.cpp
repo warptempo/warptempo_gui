@@ -927,9 +927,10 @@ constexpr double kTooltipPadXPx      = 5.0;
 // its shift line is static_asserted against redesign_button_shift_admits, so the
 // hint cannot appear where a shift press does nothing).
 //
-// EVERY BUTTON BUT QUIT AND SETTINGS HAS ONE (architect 2026-07-31): the
-// one-line form is the whole story for most, and the two shift-admitting
-// buttons add the hint line below it.
+// EVERY BUTTON BUT ROW 1'S HAS ONE (architect 2026-07-31, stated as the ROW's
+// property at the table): the one-line form is the whole story for most, and the
+// two shift-admitting buttons add the hint line below it — Render only while
+// iteration mode is OFF, where its shift press has a twin to reach.
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
 
@@ -1328,9 +1329,14 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
 
         // The label is shaped ONCE per button and both measured and painted from
         // that run — the button's width exists nowhere else, which is exactly why
-        // the painter publishes the hit rect.
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(font, def.label);
+        // the painter publishes the hit rect. So a label that CHANGES WITH STATE
+        // (Render's, in iteration mode — redesign_button_label owns which and
+        // why) simply shapes wider and takes the width it needs: the walk below
+        // is a css float walk with no authored button width anywhere in it, and
+        // every button to this one's right is placed from the running pen. There
+        // is nothing here to keep in step with the text.
+        const text_shape::ShapedRun run = text_shape::shape_text_run(
+            font, redesign_button_label(app, def.id, def.label));
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
         const int btn_w = pad_left + icon_px + icon_gap + label_w + pad_right;
 
@@ -1851,7 +1857,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     int hovered = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton id = static_cast<RedesignButton>(i);
-        if (redesign_button_tooltip(id).line1 == nullptr) continue;
+        if (redesign_button_tooltip(app, id).line1 == nullptr) continue;
         // A DISABLED BUTTON ADVERTISES NOTHING: a greyed Render's chords are as
         // refused as each other, so it gets no hint. The hover recompute already
         // refuses to hover a disabled button; this is the belt to that braces,
@@ -1865,7 +1871,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (hovered < 0) return;
 
     const RedesignTooltipText text =
-        redesign_button_tooltip(static_cast<RedesignButton>(hovered));
+        redesign_button_tooltip(app, static_cast<RedesignButton>(hovered));
     const GuiRect& btn = app.redesign_buttons[hovered].rect;
     if (btn.w <= 0 || btn.h <= 0) return;
 

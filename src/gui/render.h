@@ -1058,9 +1058,30 @@ inline int waveform_border_px() {
 // (U+2026, 3 bytes) — 11 bytes, 9 glyphs. Composed marker text is ASCII by
 // construction (printable-ASCII inserts, lowercase-ASCII label grammar), so a
 // byte is a glyph and the ellipsis is a truncation marker no clipboard route
-// can author. DISPLAY ONLY: the store, the sidecars, the editor seed and the
-// copy payload never see it.
+// can author — U+2026 itself is the ONE non-ASCII character the product
+// authors, and it shapes as one real glyph on the sans face (Liberation Sans
+// gid 2031, a 1-em advance). DISPLAY ONLY: the store, the sidecars, the editor
+// seed and the copy payload never see it.
+//
+// WHAT IT COVERS is the LABEL, and only the label — the iter bracket is exempt
+// (the next constant states why).
 inline constexpr size_t kMarkerLabelGlyphBudget = 9;
+
+// THE ITER BRACKET DOES NOT COUNT AGAINST THE BUDGET (architect 2026-08-02).
+// It is 14 glyphs on its own — `+[-4.00,+4.00]`, a LOCKED display shape
+// (format_iter_bracket_inline, warpmarkers.h: the `+[`, two signed
+// two-decimal values whose integer digit is bounded by the +-4.00 authoring
+// bracket, one comma, the `]`) — so budgeting it truncated every bracketed
+// flag down to a stub of its own bracket and showed nothing useful. The label
+// alone takes the nine, the bracket splices in WHOLE, and the box grows to fit:
+// a bracket is what the user is reading while iteration mode is on.
+//
+// THE BPM BRACKET NEEDS NO SUCH RULE, and the symmetry question is answered
+// rather than skipped: format_bpm_bracket_text (warpmarkers.h) is a different
+// composer feeding a different surface — it seeds the BOTTOM-STRIP BpmBracket
+// editor and never reaches a flag box — so no budget applies to it and there is
+// nothing to exempt. Only the iter bracket is spliced into flag text.
+inline constexpr size_t kIterBracketDisplayGlyphs = 14;
 
 // An UPPER BOUND on a flag box's painted width, used only to decide how far
 // LEFT of the viewport a marker may sit and still reach into it (flags run
@@ -1069,13 +1090,22 @@ inline constexpr size_t kMarkerLabelGlyphBudget = 9;
 // two pads bounds every box the truncation can produce. A bound, not a size:
 // nothing is laid out against it.
 //
+// `iteration_on` ADDS THE BRACKET'S OWN GLYPHS, and it must: with the bracket
+// outside the budget a bracketed box can be 14 glyphs wider than the budget
+// alone predicts, and a bound that no longer bounds would cull a marker whose
+// flag still reached into the viewport. The bracket's shape is FIXED, so this
+// stays a constant-time bound rather than becoming a measurement. It remains a
+// bound and not a layout input either way — over-admitting a few offscreen
+// markers per frame costs a shaped run each and drops nothing visible.
+//
 // THE LEFT BORDER IS DELIBERATELY NOT IN IT. This bound answers "how far RIGHT
 // of its frame column can a box reach", and the border grows the box the other
 // way — leftward, away from the viewport — so adding it would only over-admit
 // culled markers by one column and never save a visible one.
-inline double marker_flag_max_width_px() {
-    return static_cast<double>(kMarkerLabelGlyphBudget) *
-               redesign_font_size_px() +
+inline double marker_flag_max_width_px(bool iteration_on) {
+    const size_t glyphs = kMarkerLabelGlyphBudget +
+                          (iteration_on ? kIterBracketDisplayGlyphs : 0);
+    return static_cast<double>(glyphs) * redesign_font_size_px() +
            static_cast<double>(marker_flag_pad_left_px() +
                                marker_flag_pad_right_px());
 }
@@ -1900,11 +1930,23 @@ void render_phase_reset_flags(cairo_t* cr,
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
 // the tempo. The single canonical composer for warp flag text: the FLAG ITSELF
-// paints it (row 5, truncated at the nine-glyph budget) and the flag editor
-// seeds from it, so what a marker shows and what its editor opens with are one
-// string by construction.
+// paints it (row 5, its LABEL truncated at the nine-glyph budget with the
+// bracket exempt) and the flag editor seeds from it, so what a marker shows and
+// what its editor opens with are one string by construction.
+//
+// THE OPTIONAL OUT-PAIR REPORTS THE BRACKET'S BYTE SPAN in the returned string
+// — `[*out_bracket_pos, *out_bracket_pos + *out_bracket_len)` — and is written
+// as {npos, 0} whenever no bracket was spliced. It exists for exactly one
+// caller, the flag paint's truncation, which must not count or cut those bytes
+// (kIterBracketDisplayGlyphs states the ruling). The span is reported by the
+// composer rather than re-found by a search because the composer is the only
+// thing that knows where it put it: `+[` is not a token the label grammar can
+// otherwise produce today, but a search would be a second, weaker copy of the
+// composition rule. Callers wanting the plain string pass neither.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, bool iteration_on);
+                           int idx, bool iteration_on,
+                           size_t* out_bracket_pos = nullptr,
+                           size_t* out_bracket_len = nullptr);
 
 // (THE MEASURED MONOSPACE GRID IS GONE — row 7, 2026-08-01: monospace_advance,
 // monospace_text_box_h, monospace_text_row_baseline_offset,

@@ -567,9 +567,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+Shift+R
-    // miscellaneous render, Ctrl+Alt+I iteration sweep. (The render-commit
-    // opener is bare `'`, handled separately below.)
+    // Render-trigger chords: Ctrl+Alt+R (the single render, or the ITERATION
+    // SWEEP while iteration mode is on) and Ctrl+Alt+Shift+R (the
+    // miscellaneous render, a consumed no-op in iteration mode). (The
+    // render-commit opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Space is the sole playback toggle, and it is modifier-strict — every

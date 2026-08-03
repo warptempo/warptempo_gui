@@ -444,6 +444,268 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
     return cancel_archival_session();
 }
 
+// THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
+// authored in iteration mode. Output lands in
+// `<source_parent>/renders/<N>_iterations/`, one cell per product point with
+// basename `<seq>_<delta_csv>`; each cell renders one `.wav`. The CSV holds the
+// swept markers' deltas in timeline order, formatted `%+0.2f`; markers with no
+// iter range authored are excluded from the CSV and contribute one fixed value
+// (their authored tempo_cents) to the product. Per-cell progress and Esc
+// cancellation are handled by the batch runner (start_render_batch and the
+// ActiveBatch lifecycle).
+//
+// ONE CALLER, Ctrl+Alt+R's iteration arm (architect 2026-08-02: with the mode on
+// that chord IS the sweep, and the former Ctrl+Alt+I is retired). The caller has
+// already established both of this body's outer facts — a non-empty
+// source_audio_path and iteration mode ON — so they are not re-tested here; the
+// refusals below (no brackets authored, the inverted-bracket breach, the cell
+// cap) are the SWEEP'S OWN and are stated where they fire.
+void GuiInputHandler::run_iteration_sweep_render() {
+    // Dispatch validates nothing: the render worker's own resolve->build
+    // chain is the tripwire surface (marker arrangements normalize to
+    // tempo 1.00, trim never refuses). The per-cell tempo_cents mutations
+    // below need no validation either — they are in-bracket by
+    // construction now that the bracket rides its base (the retroactive
+    // clamp, warpmarkers.h), so nothing here leans on the async stderr
+    // backstop.
+
+    // Snapshot markers in timeline order (the GuiWarpMarkers store is
+    // sorted by time_frame, with ties legal). For each owning marker
+    // build its per-cell delta list in integer cents: a single 0 when
+    // no iter range is authored, otherwise the cents enumeration from
+    // iter_start_cents to iter_end_cents inclusive. Deltas and tempos
+    // share the one integer-cents domain, so the per-cell base + delta
+    // below is plain integer addition — no conversion anywhere.
+    const std::vector<GuiWarpMarker> base_warp_markers =
+        app.warpmarkers.markers();
+    std::vector<int>                  eligible_indices;
+    std::vector<std::vector<int64_t>> per_marker_delta_cents;
+    std::vector<bool>                 is_swept;
+    for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
+        const GuiWarpMarker& m = base_warp_markers[i];
+        if (!iter_popup_eligible_marker(m)) continue;
+        eligible_indices.push_back(i);
+        const bool swept =
+            m.iter_start_cents.has_value() && m.iter_end_cents.has_value();
+        is_swept.push_back(swept);
+        std::vector<int64_t> delta_cents;
+        if (swept) {
+            const int64_t start_cents = *m.iter_start_cents;
+            const int64_t end_cents   = *m.iter_end_cents;
+            // The editor commit enforces start <= end and the bracket is
+            // session-only (wiped on mode exit), so an inverted bracket
+            // here is an internal breach — refuse the dispatch loudly and
+            // enqueue nothing, repairing no iter state (the state is
+            // evidence; the bracket lifecycle owns wiping). Pre-mutation:
+            // nothing above has touched app state or the queue.
+            if (start_cents > end_cents) {
+                std::fprintf(stderr,
+                    "warptempo_gui: render-iterations refused: marker %d "
+                    "iter bracket start exceeds end\n", i);
+                return;
+            }
+            for (int64_t c = start_cents; c <= end_cents; ++c) {
+                delta_cents.push_back(c);
+            }
+        } else {
+            delta_cents.push_back(0);
+        }
+        per_marker_delta_cents.push_back(std::move(delta_cents));
+    }
+
+    bool any_swept = false;
+    for (bool s : is_swept) {
+        if (s) { any_swept = true; break; }
+    }
+    if (!any_swept) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-iterations: No iter ranges "
+            "authored; nothing to render\n");
+        return;
+    }
+
+    // Cap the Cartesian product before it can overflow or exhaust
+    // memory: each cell is a full archival render, so a real sweep is
+    // tens to hundreds of cells. The per-axis brackets don't bound the
+    // product — a handful of markers each with a wide bracket multiply
+    // into billions of cells, which narrows to a negative int at the
+    // reserve/enumeration site (std::length_error) or exhausts memory
+    // materializing RenderRequests. Accumulate with a CHECKED product
+    // that refuses the instant the running total exceeds the cap, so no
+    // overflow can occur (the cap sits far below any integer boundary).
+    // kMaxIterSweepCells is the architect-ruled cap.
+    constexpr size_t kMaxIterSweepCells = 1000;
+    size_t total_cells = 1;
+    bool over_cap = false;
+    for (const auto& d : per_marker_delta_cents) {
+        total_cells *= d.size();
+        if (total_cells > kMaxIterSweepCells) { over_cap = true; break; }
+    }
+    if (total_cells == 0) return;
+    if (over_cap) {
+        // Refuse before any allocation, batch-folder creation, request
+        // materialization, or render kill/park. `total_cells` here is an
+        // accurate lower bound on the true product (the running product
+        // already exceeded the cap before every axis was folded in), so
+        // report "more than <cap>" rather than computing the full
+        // product. Iteration mode and the brackets survive for
+        // correction — the wipe-and-exit tail below does not run.
+        prompt.open_error_notice(
+            "Iteration sweep refused: more than " +
+            std::to_string(kMaxIterSweepCells) +
+            " cells (cap " + std::to_string(kMaxIterSweepCells) +
+            "). Narrow the marker brackets and retry.");
+        return;
+    }
+
+    std::filesystem::path src(app.source_audio_path);
+    std::filesystem::path src_parent = src.parent_path();
+    if (src_parent.empty()) src_parent = std::filesystem::path(".");
+    const std::filesystem::path queue_root = src_parent / "renders";
+
+    // Resolve the next batch index: max+1 over `<digits>_<anything>`
+    // entries (the shared renders/ batch scan).
+    std::error_code ec;
+    const int next_index =
+        max_renders_batch_index(queue_root).max_index + 1;
+
+    const std::string command_tag = "iterations";
+    const std::filesystem::path batch_folder =
+        queue_root /
+        (std::to_string(next_index) + "_" + command_tag);
+    // The batch folder is created BEFORE requests are built here, the
+    // reverse of the bpm sweep (which creates AFTER building): the
+    // iteration sweep's delta enumeration is total, so no cell can be
+    // rejected and the folder can never end up empty. The bpm sweep's
+    // cells can be bracket-rejected, so it creates after building to
+    // avoid leaving an empty folder behind.
+    std::filesystem::create_directories(batch_folder, ec);
+    if (ec) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-iterations: Could not create "
+            "'%s': %s\n",
+            batch_folder.string().c_str(), ec.message().c_str());
+        return;
+    }
+
+    // The cap check above bounds total_cells at kMaxIterSweepCells
+    // (<= 1000), so this narrowing to int is exact — no truncation and
+    // no negative wrap can reach the reserve/enumeration below.
+    const int total = static_cast<int>(total_cells);
+    int pad_width = 1;
+    for (int n = total; n >= 10; n /= 10) ++pad_width;
+    if (pad_width > 9) pad_width = 9;
+
+    // Snapshot phase resets once — every cell shares the same
+    // phase reset configuration, only marker tempo_cents values
+    // differ across cells.
+    const std::vector<GuiPhaseResetMarker> base_phase_resets =
+        app.phaseresetmarkers.markers();
+
+    // Cartesian product enumeration. `indices[k]` holds the
+    // current cell coordinate along the k-th eligible marker
+    // (timeline order). Rightmost dimension increments fastest:
+    // consecutive cells differ in the last marker's delta first.
+    const size_t num_dims = per_marker_delta_cents.size();
+    std::vector<size_t> indices(num_dims, 0);
+
+    std::vector<RenderRequest> reqs;
+    reqs.reserve(total);
+    for (int cell = 0; cell < total; ++cell) {
+        std::string delta_csv;
+        for (size_t k = 0; k < num_dims; ++k) {
+            if (!is_swept[k]) continue;
+            // Signed two-decimal text straight from cents — no double
+            // round-trip (format_signed_delta_cents, warpmarkers.h).
+            if (!delta_csv.empty()) delta_csv += ',';
+            delta_csv += format_signed_delta_cents(
+                per_marker_delta_cents[k][indices[k]]);
+        }
+
+        char num_buf[16];
+        std::snprintf(num_buf, sizeof(num_buf),
+                      "%0*d", pad_width, cell + 1);
+        std::string basename = num_buf;
+        basename += '_';
+        basename += delta_csv;
+
+        std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
+        for (size_t k = 0; k < num_dims; ++k) {
+            const int mi = eligible_indices[k];
+            // Per-cell tempo is a computed value, not an authored one, and
+            // it needs no bracket gate HERE because it cannot leave the
+            // bracket: the bracket rides its base (architect 2026-08-02 —
+            // clamp_iter_bracket_to_tempo_bracket, warpmarkers.h, called
+            // by both base-tempo authoring surfaces), so both endpoints
+            // rest inside [kTempoMinCents - base, kTempoMaxCents - base]
+            // and every cell between them lands in the tempo bracket. No
+            // downstream backstop is load-bearing for this sum. Base and
+            // delta live in the one integer-cents domain, so the sum is
+            // plain integer addition and the cell sidecar's N.NN spelling
+            // re-parses to exactly this value — render-entry promotion
+            // (the `'` commit) stays closed under the grammar by type AND
+            // by VOCABULARY: the cell values a sweep can write are exactly
+            // the values the strict sidecar parse accepts.
+            cell_warp_markers[mi].tempo_cents =
+                base_warp_markers[mi].tempo_cents +
+                per_marker_delta_cents[k][indices[k]];
+            // The engine doesn't consume iter values; clear them
+            // so the request is quiet.
+            cell_warp_markers[mi].iter_start_cents.reset();
+            cell_warp_markers[mi].iter_end_cents.reset();
+        }
+
+        RenderRequest req = build_render_request(
+            app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
+            app.engine_settings,
+            app.trim.begin_frame, app.trim.end_frame,
+            batch_folder.string(), std::move(basename));
+        req.authoring = snapshot_current_authoring_state();
+        attach_shared_render_resources(req);
+        reqs.push_back(std::move(req));
+
+        // Increment rightmost dimension; carry left on overflow.
+        // The last cell leaves indices in an overflowed state but
+        // the loop exits before that's read.
+        for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
+            ++indices[k];
+            if (indices[k] < per_marker_delta_cents[k].size()) break;
+            indices[k] = 0;
+        }
+    }
+
+    // The batch's DISPLAY label — the progress parenthetical and the
+    // stderr summary. It stays LOWERCASE because it is a shared
+    // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
+    // surface: it sits inside "Rendering N of M (...)..." in the GUI, and
+    // in the summary it fills the tag slot ahead of the message proper,
+    // whose own first word takes the capital ("warptempo_gui: render
+    // iterations: Rendered 3 of 8 entries"). Its position after the
+    // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02
+    // terminal pass looks past the program-name prefix when it locates
+    // that first prose word. Contrast the BPM batch's label, which
+    // capitalizes as an acronym everywhere.
+    if (async_renderer.is_busy()) {
+        // A render dispatch kills the running render. Park the fully
+        // built batch for the worker-idle pump.
+        AppState::PendingArchivalCommand cmd;
+        cmd.reqs        = std::move(reqs);
+        cmd.batch_label = "render iterations";
+        kill_running_render_and_park(std::move(cmd));
+    } else {
+        start_render_batch(std::move(reqs), "render iterations");
+    }
+    // The sweep is committed to run either way (dispatched, or parked
+    // behind the killed render's drain): iteration mode turns off after
+    // fire, and exiting the mode IS the bracket clear (wipe_iter_state,
+    // the chokepoint every other iter-mode exit runs). Safe here: every
+    // request above carries its own per-cell marker copies, so nothing
+    // dispatched reads the live iter fields.
+    flag_editor.wipe_iter_state();
+    app.iteration_mode_enabled = false;
+    viewport.invalidate_top_strip();
+}
+
 // Render-trigger chords. See the declaration for the chord list.
 bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                                   GuiInputState mods) {
@@ -457,9 +719,21 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // the .fingerprint sidecar, but not batch-only sidecars
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
+    //
+    // ITERATION MODE RE-AIMS THIS CHORD (architect 2026-08-02): with the mode
+    // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
+    // under renders/, the same refusals — and there is no second chord for it.
+    // The single render below is the mode-OFF meaning, unchanged. Target view
+    // needs no clause of its own: mode-off-in-target is an invariant (the S->T
+    // toggle wipes iteration mode through wipe_iter_state), so a target-view
+    // press always takes the single-render arm exactly as it always did.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
+        if (app.iteration_mode_enabled) {
+            run_iteration_sweep_render();
+            return true;
+        }
 
         // Dispatch validates nothing: the render worker's own resolve->build
         // chain is the tripwire surface (the resolver normalizes ambiguous
@@ -528,9 +802,18 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // creation, the adopt wipe) runs on this same GUI thread, so none can
     // interleave with it. The idle route allocates here inline for the same
     // one implementation.
+    //
+    // ARCHIVAL IS A PLAIN-MODE ACT (architect 2026-08-02): while iteration mode
+    // is on this chord is a CONSUMED NO-OP. The refusal lives here, inside the
+    // route, rather than at any of the surfaces that reach it — so the keyboard
+    // press and the Render button's shift press are one refusal, not two. The
+    // button's face follows the same bit (its hint drops the shift line in
+    // iteration mode; redesign_button_tooltip, app_state.h), so nothing
+    // advertises a press this arm swallows.
     if (ctrl && alt && shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
+        if (app.iteration_mode_enabled) return true;
 
         // Dispatch validates nothing (same as Ctrl+Alt+R): the render worker's
         // own resolve->build chain is the tripwire surface.
@@ -562,270 +845,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         req.batch_folder   = std::move(folder);
         req.batch_basename = std::move(basename);
         dispatch_single_archival_render(std::move(req));
-        return true;
-    }
-
-    // Ctrl+Alt+I renders the Cartesian product of the per-marker iter ranges
-    // authored in iteration mode. Output lands in
-    // `<source_parent>/renders/<N>_iterations/`, one cell per product
-    // point with basename `<seq>_<delta_csv>`; each cell renders one `.wav`.
-    // The CSV holds the swept markers' deltas
-    // in timeline order, formatted `%+0.2f`; markers with no iter range
-    // authored are excluded from the CSV and contribute one fixed value (their
-    // authored tempo_cents) to the product. Per-cell progress and Esc
-    // cancellation are handled by the batch runner (start_render_batch and the
-    // ActiveBatch lifecycle). Silent no-op outside iteration mode.
-    if (ctrl && alt && !shift &&
-        key == GuiKeys::I) {
-        if (app.source_audio_path.empty()) return true;
-        // Also covers target view: mode-off-in-target is an invariant (the
-        // S->T toggle wipes iteration mode through wipe_iter_state), so a
-        // target-view press is mode-off and returns here.
-        if (!app.iteration_mode_enabled) return true;
-
-        // Dispatch validates nothing: the render worker's own resolve->build
-        // chain is the tripwire surface (marker arrangements normalize to
-        // tempo 1.00, trim never refuses). The per-cell tempo_cents mutations
-        // below need no validation either — they are in-bracket by
-        // construction now that the bracket rides its base (the retroactive
-        // clamp, warpmarkers.h), so nothing here leans on the async stderr
-        // backstop.
-
-        // Snapshot markers in timeline order (the GuiWarpMarkers store is
-        // sorted by time_frame, with ties legal). For each owning marker
-        // build its per-cell delta list in integer cents: a single 0 when
-        // no iter range is authored, otherwise the cents enumeration from
-        // iter_start_cents to iter_end_cents inclusive. Deltas and tempos
-        // share the one integer-cents domain, so the per-cell base + delta
-        // below is plain integer addition — no conversion anywhere.
-        const std::vector<GuiWarpMarker> base_warp_markers =
-            app.warpmarkers.markers();
-        std::vector<int>                  eligible_indices;
-        std::vector<std::vector<int64_t>> per_marker_delta_cents;
-        std::vector<bool>                 is_swept;
-        for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
-            const GuiWarpMarker& m = base_warp_markers[i];
-            if (!iter_popup_eligible_marker(m)) continue;
-            eligible_indices.push_back(i);
-            const bool swept =
-                m.iter_start_cents.has_value() && m.iter_end_cents.has_value();
-            is_swept.push_back(swept);
-            std::vector<int64_t> delta_cents;
-            if (swept) {
-                const int64_t start_cents = *m.iter_start_cents;
-                const int64_t end_cents   = *m.iter_end_cents;
-                // The editor commit enforces start <= end and the bracket is
-                // session-only (wiped on mode exit), so an inverted bracket
-                // here is an internal breach — refuse the dispatch loudly and
-                // enqueue nothing, repairing no iter state (the state is
-                // evidence; the bracket lifecycle owns wiping). Pre-mutation:
-                // nothing above has touched app state or the queue.
-                if (start_cents > end_cents) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: render-iterations refused: marker %d "
-                        "iter bracket start exceeds end\n", i);
-                    return true;
-                }
-                for (int64_t c = start_cents; c <= end_cents; ++c) {
-                    delta_cents.push_back(c);
-                }
-            } else {
-                delta_cents.push_back(0);
-            }
-            per_marker_delta_cents.push_back(std::move(delta_cents));
-        }
-
-        bool any_swept = false;
-        for (bool s : is_swept) {
-            if (s) { any_swept = true; break; }
-        }
-        if (!any_swept) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-iterations: No iter ranges "
-                "authored; nothing to render\n");
-            return true;
-        }
-
-        // Cap the Cartesian product before it can overflow or exhaust
-        // memory: each cell is a full archival render, so a real sweep is
-        // tens to hundreds of cells. The per-axis brackets don't bound the
-        // product — a handful of markers each with a wide bracket multiply
-        // into billions of cells, which narrows to a negative int at the
-        // reserve/enumeration site (std::length_error) or exhausts memory
-        // materializing RenderRequests. Accumulate with a CHECKED product
-        // that refuses the instant the running total exceeds the cap, so no
-        // overflow can occur (the cap sits far below any integer boundary).
-        // kMaxIterSweepCells is the architect-ruled cap.
-        constexpr size_t kMaxIterSweepCells = 1000;
-        size_t total_cells = 1;
-        bool over_cap = false;
-        for (const auto& d : per_marker_delta_cents) {
-            total_cells *= d.size();
-            if (total_cells > kMaxIterSweepCells) { over_cap = true; break; }
-        }
-        if (total_cells == 0) return true;
-        if (over_cap) {
-            // Refuse before any allocation, batch-folder creation, request
-            // materialization, or render kill/park. `total_cells` here is an
-            // accurate lower bound on the true product (the running product
-            // already exceeded the cap before every axis was folded in), so
-            // report "more than <cap>" rather than computing the full
-            // product. Iteration mode and the brackets survive for
-            // correction — the wipe-and-exit tail below does not run.
-            prompt.open_error_notice(
-                "Iteration sweep refused: more than " +
-                std::to_string(kMaxIterSweepCells) +
-                " cells (cap " + std::to_string(kMaxIterSweepCells) +
-                "). Narrow the marker brackets and retry.");
-            return true;
-        }
-
-        std::filesystem::path src(app.source_audio_path);
-        std::filesystem::path src_parent = src.parent_path();
-        if (src_parent.empty()) src_parent = std::filesystem::path(".");
-        const std::filesystem::path queue_root = src_parent / "renders";
-
-        // Resolve the next batch index: max+1 over `<digits>_<anything>`
-        // entries (the shared renders/ batch scan).
-        std::error_code ec;
-        const int next_index =
-            max_renders_batch_index(queue_root).max_index + 1;
-
-        const std::string command_tag = "iterations";
-        const std::filesystem::path batch_folder =
-            queue_root /
-            (std::to_string(next_index) + "_" + command_tag);
-        // The batch folder is created BEFORE requests are built here, the
-        // reverse of the bpm sweep (which creates AFTER building): the
-        // iteration sweep's delta enumeration is total, so no cell can be
-        // rejected and the folder can never end up empty. The bpm sweep's
-        // cells can be bracket-rejected, so it creates after building to
-        // avoid leaving an empty folder behind.
-        std::filesystem::create_directories(batch_folder, ec);
-        if (ec) {
-            std::fprintf(stderr,
-                "warptempo_gui: render-iterations: Could not create "
-                "'%s': %s\n",
-                batch_folder.string().c_str(), ec.message().c_str());
-            return true;
-        }
-
-        // The cap check above bounds total_cells at kMaxIterSweepCells
-        // (<= 1000), so this narrowing to int is exact — no truncation and
-        // no negative wrap can reach the reserve/enumeration below.
-        const int total = static_cast<int>(total_cells);
-        int pad_width = 1;
-        for (int n = total; n >= 10; n /= 10) ++pad_width;
-        if (pad_width > 9) pad_width = 9;
-
-        // Snapshot phase resets once — every cell shares the same
-        // phase reset configuration, only marker tempo_cents values
-        // differ across cells.
-        const std::vector<GuiPhaseResetMarker> base_phase_resets =
-            app.phaseresetmarkers.markers();
-
-        // Cartesian product enumeration. `indices[k]` holds the
-        // current cell coordinate along the k-th eligible marker
-        // (timeline order). Rightmost dimension increments fastest:
-        // consecutive cells differ in the last marker's delta first.
-        const size_t num_dims = per_marker_delta_cents.size();
-        std::vector<size_t> indices(num_dims, 0);
-
-        std::vector<RenderRequest> reqs;
-        reqs.reserve(total);
-        for (int cell = 0; cell < total; ++cell) {
-            std::string delta_csv;
-            for (size_t k = 0; k < num_dims; ++k) {
-                if (!is_swept[k]) continue;
-                // Signed two-decimal text straight from cents — no double
-                // round-trip (format_signed_delta_cents, warpmarkers.h).
-                if (!delta_csv.empty()) delta_csv += ',';
-                delta_csv += format_signed_delta_cents(
-                    per_marker_delta_cents[k][indices[k]]);
-            }
-
-            char num_buf[16];
-            std::snprintf(num_buf, sizeof(num_buf),
-                          "%0*d", pad_width, cell + 1);
-            std::string basename = num_buf;
-            basename += '_';
-            basename += delta_csv;
-
-            std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
-            for (size_t k = 0; k < num_dims; ++k) {
-                const int mi = eligible_indices[k];
-                // Per-cell tempo is a computed value, not an authored one, and
-                // it needs no bracket gate HERE because it cannot leave the
-                // bracket: the bracket rides its base (architect 2026-08-02 —
-                // clamp_iter_bracket_to_tempo_bracket, warpmarkers.h, called
-                // by both base-tempo authoring surfaces), so both endpoints
-                // rest inside [kTempoMinCents - base, kTempoMaxCents - base]
-                // and every cell between them lands in the tempo bracket. No
-                // downstream backstop is load-bearing for this sum. Base and
-                // delta live in the one integer-cents domain, so the sum is
-                // plain integer addition and the cell sidecar's N.NN spelling
-                // re-parses to exactly this value — render-entry promotion
-                // (the `'` commit) stays closed under the grammar by type AND
-                // by VOCABULARY: the cell values a sweep can write are exactly
-                // the values the strict sidecar parse accepts.
-                cell_warp_markers[mi].tempo_cents =
-                    base_warp_markers[mi].tempo_cents +
-                    per_marker_delta_cents[k][indices[k]];
-                // The engine doesn't consume iter values; clear them
-                // so the request is quiet.
-                cell_warp_markers[mi].iter_start_cents.reset();
-                cell_warp_markers[mi].iter_end_cents.reset();
-            }
-
-            RenderRequest req = build_render_request(
-                app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
-                app.engine_settings,
-                app.trim.begin_frame, app.trim.end_frame,
-                batch_folder.string(), std::move(basename));
-            req.authoring = snapshot_current_authoring_state();
-            attach_shared_render_resources(req);
-            reqs.push_back(std::move(req));
-
-            // Increment rightmost dimension; carry left on overflow.
-            // The last cell leaves indices in an overflowed state but
-            // the loop exits before that's read.
-            for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
-                ++indices[k];
-                if (indices[k] < per_marker_delta_cents[k].size()) break;
-                indices[k] = 0;
-            }
-        }
-
-        // The batch's DISPLAY label — the progress parenthetical and the
-        // stderr summary. It stays LOWERCASE because it is a shared
-        // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
-        // surface: it sits inside "Rendering N of M (...)..." in the GUI, and
-        // in the summary it fills the tag slot ahead of the message proper,
-        // whose own first word takes the capital ("warptempo_gui: render
-        // iterations: Rendered 3 of 8 entries"). Its position after the
-        // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02
-        // terminal pass looks past the program-name prefix when it locates
-        // that first prose word. Contrast the BPM batch's label, which
-        // capitalizes as an acronym everywhere.
-        if (async_renderer.is_busy()) {
-            // A render dispatch kills the running render. Park the fully
-            // built batch for the worker-idle pump.
-            AppState::PendingArchivalCommand cmd;
-            cmd.reqs        = std::move(reqs);
-            cmd.batch_label = "render iterations";
-            kill_running_render_and_park(std::move(cmd));
-        } else {
-            start_render_batch(std::move(reqs), "render iterations");
-        }
-        // The sweep is committed to run either way (dispatched, or parked
-        // behind the killed render's drain): iteration mode turns off after
-        // fire, and exiting the mode IS the bracket clear (wipe_iter_state,
-        // the chokepoint every other iter-mode exit runs). Safe here: every
-        // request above carries its own per-cell marker copies, so nothing
-        // dispatched reads the live iter fields.
-        flag_editor.wipe_iter_state();
-        app.iteration_mode_enabled = false;
-        viewport.invalidate_top_strip();
         return true;
     }
 
