@@ -535,12 +535,6 @@ private:
     // untouched). The region highlight is the only one: the phase-reset overlay
     // recolors no ground (architect 2026-07-27).
     void paint_region_ground(cairo_t* cr, const GuiRect& area);
-    // THE 1px CHANNEL SPLIT LINE (2026-08-01) — the L/R boundary, which is also
-    // the lower-half scrub boundary, drawn in cairo OVER the plate blit and
-    // under every boundary line above it (ground furniture, not a cursor). Both
-    // views, always; 1px at every gui_scale by ruling. Its row is the shared
-    // owner waveform_channel_split_row, read on the plate's published geometry.
-    void paint_channel_split(cairo_t* cr, const GuiRect& area);
     // The overlay band's 1px ring — the phase-reset overlay's whole visual —
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.

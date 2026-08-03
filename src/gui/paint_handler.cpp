@@ -2754,72 +2754,6 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
-// -- GuiPaintHandler::paint_channel_split --------------------------------
-
-// THE 1px CHANNEL SPLIT LINE (architect 2026-08-01): a horizontal rule across
-// the waveform where the two channel bands meet — which is EXACTLY the row the
-// lower-half SCRUB press begins at, so the gesture split the area has always
-// had is finally drawn. That coincidence is arithmetic, not luck: the press
-// test is `y >= area.y + area.h/2` (input_pointer.cpp) and the split row is
-// inset + (area.h - 2*inset)/2, which is area.h/2 under integer division for
-// every parity — an even band lands on it exactly, an odd one floors to the
-// same row through the spare row falling on the split. The line is therefore
-// the scrub half's FIRST row.
-//
-// CAIRO, OVER THE PLATE, NOT IN IT. The plate is the direct ARGB32 writer's
-// output and its pixel loop stays a pure per-column min/max bar writer; a
-// horizontal rule is not a column and does not belong in it. So the line is an
-// overlay: painted straight after the blit, under every boundary line above it
-// (the overlay ring, trim, the stems, the playheads) because it is GROUND
-// FURNITURE, not a cursor — nothing about it tracks state.
-//
-// CRISP BY THE HALF-PIXEL: line width 1.0 with the centreline at row + 0.5, so
-// the stroke covers exactly that device row with no antialiased pair.
-//
-// 1px AT EVERY gui_scale, DELIBERATELY. Every other length in the redesign
-// scales; this one is a hairline cue whose job is to mark a boundary, and a 2px
-// rule at 200% would read as a divider between two tracks instead. There is no
-// scaled accessor for it on purpose.
-//
-// GEOMETRY ON THE PLATE'S OWN BASIS, the pattern paint_ruler_row states at its
-// walk width: the row and the width come from the published fingerprint
-// (fp_area_h / fp_inset_px / fp_area_w — what the blitted pixels were rendered
-// against), with the live values as the cold fallback for the frame before the
-// first publish. During an async resize the blitted plate still shows the old
-// geometry, and a line drawn at the new one would cut across it. The ROW itself
-// is the shared owner waveform_channel_split_row, the same call the renderer
-// lays its bands with.
-void GuiPaintHandler::paint_channel_split(cairo_t* cr, const GuiRect& area) {
-    if (area.w <= 0 || area.h <= 0) return;
-
-    const int plate_h = wf_cache.fp_area_h > 0 ? wf_cache.fp_area_h : area.h;
-    const int inset   = wf_cache.fp_inset_px >= 0 ? wf_cache.fp_inset_px
-                                                  : waveform_inset_px();
-    const int row = waveform_channel_split_row(plate_h, inset);
-    if (row < 0) return;
-
-    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
-                                              : waveform_area(app).w;
-    if (wave_w <= 0) return;
-
-    // Clipped to the CONTENT band exactly as the plate blit is, so the rule can
-    // never reach the area's 2px black border rows (it cannot at any real
-    // inset — the statement is structural, like the blit's own).
-    const GuiRect content = waveform_content_rect(area);
-    cairo_save(cr);
-    cairo_rectangle(cr, content.x, content.y, content.w, content.h);
-    cairo_clip(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_line_width(cr, 1.0);
-    cairo_set_source_rgb(cr, kWaveformChannelSplit.r, kWaveformChannelSplit.g,
-                         kWaveformChannelSplit.b);
-    const double y = static_cast<double>(area.y + row) + 0.5;
-    cairo_move_to(cr, static_cast<double>(area.x), y);
-    cairo_line_to(cr, static_cast<double>(area.x + wave_w), y);
-    cairo_stroke(cr);
-    cairo_restore(cr);
-}
-
 // -- GuiPaintHandler::plate_viewport_basis / region_columns ----------
 
 // See the declaration comment in paint_handler.h: the fp-recipe basis locked to
@@ -3860,7 +3794,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //
         // Final paint order (bottom to top of the stack): canvas ground + its
         // 2px black border (painted above, unconditionally) -> region ground ->
-        // waveform plate -> channel split line -> overlay ring -> LIVE
+        // waveform plate -> overlay ring -> LIVE
         // TRIM (bar + endcaps + waveform stem segments, one pass)
         // -> cursor stem -> MARKER STEMS -> SCANNER -> ruler ->
         // flag blit -> flag editor overlay -> strip-drag anchor. (The bottom row
@@ -3898,11 +3832,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // The channel split line, straight over the blit: the L/R boundary
-            // and the scrub boundary are the same row, and it is drawn as
-            // GROUND FURNITURE — over the ink, under every boundary line that
-            // follows.
-            paint_channel_split(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top

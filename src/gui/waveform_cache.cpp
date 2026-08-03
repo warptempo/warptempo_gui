@@ -81,24 +81,21 @@ void render_waveform_to_cache_surface(
     // the top channel and below the bottom channel, with the channels
     // meeting at the inset region's vertical center.
     //
-    // THE TWO BANDS ARE EXACTLY EQUAL AND THE ODD ROW FALLS ON THE SPLIT
-    // (architect 2026-08-01, with the channel split line): an odd inset band
-    // leaves one row over after the halve, and it now sits BETWEEN the channels
-    // instead of below the bottom one. Two things come of it — the pair is
-    // symmetric about the band's own center row rather than resting a row high
-    // in it, and at an odd height the split line paints on a row no channel
-    // draws in, so the rule sits exactly on the boundary with no ink under it.
-    // (At an even height there is no spare row and the line lands on the bottom
-    // channel's first row.) THE ROW ITSELF COMES FROM THE SHARED OWNER,
-    // waveform_channel_split_row — the same call the line's paint pass makes —
-    // so the bands and the rule drawn between them cannot disagree. Purely a
-    // vertical band offset: no column's frame span moves, so plate column purity
-    // and both views' identity are untouched.
+    // THE TWO BANDS ARE EXACTLY EQUAL AND THEY MEET FLUSH (architect
+    // 2026-08-03, when the 1px channel-split line was retired): each channel
+    // takes the halved-and-floored band height and the bottom one begins
+    // immediately below the top one, so there is no row between them. At an odd
+    // band height the spare row falls at the BOTTOM of the drawing band, inside
+    // the symmetric inset where nothing draws — with no line on it, a spare row
+    // between the channels would read as a one-pixel gap in the ink. The split
+    // row comes from waveform_channel_split_row, which names where the bands
+    // meet. Purely a vertical band offset: no column's frame span moves, so
+    // plate column purity and both views' identity are untouched.
     const int split_row = waveform_channel_split_row(area_h, inset_px);
     if (split_row < 0) return;
     const int ch_h = split_row - cache_area.y;
     const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
-    const GuiRect ch1{0, cache_area.y + cache_area.h - ch_h, cache_area.w, ch_h};
+    const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk). These two

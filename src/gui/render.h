@@ -59,8 +59,8 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 // NOT BIT-IDENTICAL AT keep_own == 1, and this line used to claim it was: the
 // form is toward + (own - toward), and the subtraction is exact only when the
 // two channels are within a factor of two of each other (Sterbenz). Where they
-// are not — kWaveformInk over #fcfcfc, the channel split line — the result
-// misses `own` by an ULP. It has never mattered and cannot: every consumer hands
+// are far apart in magnitude the result misses `own` by an ULP.
+// It has never mattered and cannot: every consumer hands
 // these doubles straight to cairo, which quantizes to 8 bits, and an ULP never
 // survives that. Stated so no future caller builds an equality test on the old
 // claim. Used by the redesign's DISABLED FACE — the icon paths (icons.cpp)
@@ -294,9 +294,9 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 // rather than four literals that would have to be kept in step by hand. That
 // LSB is the whole cost of the derivation and it is not visible.
 //
-// FRACTION AND BASE ARE BOTH KNOBS, the kWaveformChannelSplit arrangement: the
-// base is what the bar lifts TOWARD, spelled out here rather than borrowed from
-// kRedesignLabel because it is a sampled coincidence and not a reference.
+// FRACTION AND BASE ARE BOTH KNOBS: the base is what the bar lifts TOWARD,
+// spelled out here rather than borrowed from kRedesignLabel because it is a
+// sampled coincidence and not a reference.
 inline constexpr GuiColor kRedesignViewBarLiftBase     = hex(0xFCFCFC);
 inline constexpr double   kRedesignViewBarSelectedMix  = 0.125;
 inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
@@ -505,48 +505,6 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // file itself; the record is at the palette header.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
-
-// THE CHANNEL SPLIT LINE (architect 2026-08-01): a 1px horizontal rule across
-// the waveform at the L/R channel boundary — which is also the SCRUB BOUNDARY,
-// the row that divides the upper half's region drag from the lower half's scrub
-// press, so the gesture split finally has a visible edge. It paints in both
-// views, always.
-//
-// DERIVED, NOT SAMPLED: there is no kdenlive crop for it (kdenlive draws no
-// such rule), so what the value is, is a RELATIONSHIP to the waveform's own two
-// colors — taken through the ONE mix_color owner, with the BASE and the
-// FRACTION both left standing as the architect's knobs.
-//
-// IT IS THE WAVEFORM INK ITSELF (architect 2026-08-02, "use waveform color"):
-// base kWaveformInk #1c816b, fraction 1.0 — fully retained, so the rule reads
-// as the waveform's own green drawn across the channel boundary.
-//
-// "FULLY RETAINED" IS EXACT ON THE PIXEL, NOT ON THE BIT, and the distinction is
-// recorded because the mix owner's contract oversells it: at keep_own == 1 the
-// expression is toward + (own - toward), which for THIS operand pair lands one
-// ULP off kWaveformInk on red and blue (the subtraction is inexact — the two
-// values are far apart in magnitude, so Sterbenz does not apply). Both quantize
-// to #1c816b, which is what cairo paints, so the drawn rule IS the ink; only the
-// doubles differ, and nothing here compares them.
-//
-// THIS SUPERSEDES THE PALE CANVAS-LIFT. The value was
-// mix_color(kWaveformCanvas, #fcfcfc, 0.75) — the canvas lifted a quarter of
-// the way toward white, approximately #4d645f — chosen on 2026-08-01 when he
-// asked for something "clear enough to see when choosing where to click, not
-// highly noticeable" after rejecting a first #2f9e44 as "lime green". The live
-// pass settled it the other way: his own 2026-08-01 framing named the family as
-// "canvas or waveform [ink] mixed with fcfcfc", and this is that family's OTHER
-// member at full strength. The prior expression is recorded here rather than
-// left in the tree.
-//
-// BOTH HALVES REMAIN TUNABLE, which is why the mix survives a fraction of 1.0
-// instead of collapsing to a bare alias: the FRACTION is still the subtlety
-// knob (lowering it washes the ink toward the base below, exactly as the old
-// 0.75 washed the canvas) and the BASE is still the family choice. A call site
-// that means "unchanged" costs nothing and says so — the mix owner's own
-// contract.
-inline constexpr GuiColor kWaveformChannelSplit =
-    mix_color(kWaveformInk, hex(0xFCFCFC), 1.0);
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1260,17 +1218,17 @@ inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
 }
 
-// THE CHANNEL SPLIT ROW — the ONE owner of where the two channel bands meet,
-// area-local (add the area's y for a window row). Shared by the plate renderer,
-// which lays the bands against it (render_waveform_to_cache_surface), and by the
-// split LINE's paint pass, which draws on it: the two cannot drift, and a line
-// drawn on a row the renderer did not split at is exactly the defect this
-// removes.
+// THE CHANNEL SPLIT ROW — where the two channel bands meet, area-local (add the
+// area's y for a window row). The plate renderer
+// (render_waveform_to_cache_surface) is its ONE caller: it lays the top band
+// down to this row and the bottom band from it. Nothing paints on the row —
+// the two channels meet flush.
 //
-// The band is the area minus the symmetric inset at each end; the channels take
-// EQUAL halves of it and an odd row over falls HERE, on the split, so the pair
-// is symmetric about this row (the reasoning is at the renderer). Returns -1
-// when the inset leaves no band at all — the callers' own refusal case.
+// The band is the area minus the symmetric inset at each end; each channel
+// takes the halved-and-floored height, so at an odd band height the spare row
+// falls at the BOTTOM of the drawing band, inside the inset, where nothing
+// draws (the reasoning is at the renderer). Returns -1 when the inset leaves no
+// band at all — the caller's own refusal case.
 inline int waveform_channel_split_row(int area_h, int inset_px) {
     const int inset_h = area_h - 2 * inset_px;
     if (inset_h <= 0) return -1;
