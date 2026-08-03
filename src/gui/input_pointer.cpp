@@ -1041,8 +1041,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
     // only where the chord table admits one, and any press in the band that is
     // not on a button is a consumed nothing. Each band differs ONLY in its rect
-    // and (row 1) in Settings' non-chord dropdown toggle, so the dispatch is ONE body,
-    // dispatch_redesign_chord, driven by the table's per-button flags.
+    // and (row 1) in the dropdown toggle of its TWO non-chord buttons, Settings
+    // and Navigation, so the dispatch is ONE body, dispatch_redesign_chord,
+    // driven by the table's per-button flags.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
     // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row) —
@@ -2974,12 +2975,23 @@ void GuiInputHandler::clear_dropdown_press() {
     viewport.invalidate_rect(app.dropdown.rect);
 }
 
-// THE HOVER TOOLTIP'S HIDE, called from every edge that ends a hover or takes
-// the pointer away — the hover recompute, ANY pointer press, ANY key press, any
-// wheel, and the dropdown's open edge. Damages the strip AND the box's last
-// painted rect, for the overhang reason above. Showing is the tick's job (the
-// dwell); this is only the hide, plus the stamp reset that makes the next hover
-// start its dwell from zero.
+// THE HOVER TOOLTIP'S HIDE. Its callers, re-derived by grep: the hover
+// recompute (the hover ended, or moved to another tooltip-bearing button), ANY
+// pointer press and ANY key press (the hint's job ends the moment the user
+// acts), any wheel, the dropdown's OPEN edge (the two floating surfaces never
+// coexist), and TWO main.cpp hooks — the pointer-leave / capability-loss edge
+// and the compositor close, the one modal opener that arrives with no key press
+// to carry the key-press hide's own rule.
+// THAT LAST ONE IS WHY THE RECOMPUTE IS NOT ENOUGH BY ITSELF. It damages the
+// strip AND the box's last painted rect, and the box hangs BELOW the strip — so
+// an edge that clears the hover bits without hiding here leaves the paint with
+// no owner to draw, which publishes a zero rect and returns, and the overhang
+// below the strip then has nothing left to erase it. clear_redesign_button_hover
+// has exactly TWO callers, re-derived by grep, and both are covered: the
+// dropdown's open edge hides two lines above its clear, and the leave hook now
+// hides beside its own.
+// Showing is the tick's job (the dwell); this is only the hide, plus the stamp
+// reset that makes the next hover start its dwell from zero.
 void GuiInputHandler::hide_shift_tooltip() {
     app.redesign_tooltip.hover_ms = 0;
     app.redesign_tooltip.owner    = -1;

@@ -944,6 +944,16 @@ int main(int argc, char** argv) {
         // nothing to revert), so there is no motion-free interval where it would
         // swallow keys until a later pointer motion noticed the lost button.
         input_handler.finalize_active_drags();
+        // THE HINT GOES DOWN WITH IT, and this is the SAME RULE AS THE KEY-PRESS
+        // HIDE rather than a new one: no floating hint stands over a modal. Every
+        // KEYBOARD opener implements it at the top of on_key; the compositor close
+        // is the one modal opener that arrives asynchronously, with no key and no
+        // pointer event to carry the hide, so the rule needs its call here or the
+        // hint stands over the prompt until the tick's dwell refusal catches it a
+        // frame later. Ordered ABOVE request_close so the box's published rect is
+        // damaged before the prompt's own repaint, and beside the popup close for
+        // the reason below — the two floating surfaces go down together.
+        input_handler.hide_shift_tooltip();
         // THE POPUP GOES DOWN BEFORE THE PROMPT GOES UP — including its armed
         // item and the menu row's mode, all three being the one close owner's
         // job. Without this the two would stand together and ownership would
@@ -1019,8 +1029,18 @@ int main(int argc, char** argv) {
     // states, at the coarser edge. It is a no-op while a menu is OPEN (the gate is
     // inside disarm_menu_row): leaving the window is not a dismissal, and the
     // popup that stays up stays the mode.
+    // THE TOOLTIP GOES DOWN ON THIS EDGE TOO, and it must go down HERE rather
+    // than be left to the tick's hover recompute: the hint hangs BELOW the top
+    // strip, and hide_shift_tooltip is the only route that damages the box's own
+    // published rect as well as the strip. The hover clear below queues STRIP
+    // damage alone, so a repaint running between this event and the next tick
+    // would find no hovered owner, publish a zero rect and return — leaving the
+    // part of the box below the strip in the buffer with no rect left to erase
+    // it with. Hiding in the same event that takes the pointer away makes the
+    // erase and the unhover one edge.
     gui.set_pointer_left_hook([&] {
         app.pointer_in_window = false;
+        input_handler.hide_shift_tooltip();
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
         input_handler.clear_dropdown_press();

@@ -2679,7 +2679,10 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // button that has one. It sits with the roster (rather than with the chord
 // table in input_pointer.cpp) because BOTH the painter and the pointer read it,
 // and because membership is the interesting part: a null `line1` means "this
-// button has no tooltip", which is the whole story for the two that carry none.
+// button has no tooltip", and the buttons that carry none are the WHOLE MENU
+// ROW — stated as the row rather than as a count, so a button added to row 1
+// inherits the exclusion instead of falsifying a number. The switch's null arms
+// and redesign_button_in_menu_row's true arms are the same six names.
 //
 // THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
 // names (architect 2026-07-31): row 1's buttons are word labels that already

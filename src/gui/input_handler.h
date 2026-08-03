@@ -529,10 +529,16 @@ struct GuiInputHandler {
     // The menu stays OPEN — leaving the window is not a dismissal.
     void clear_dropdown_press();
 
-    // THE HOVER TOOLTIP's hide, called from the hover recompute (hover ended),
-    // every pointer press, every KEY press, every wheel, and the dropdown's open
-    // edge — the hint's job ends the moment the user acts, by whatever means, and
-    // the two floating surfaces never coexist. Showing is NOT here: the run loop's
+    // THE HOVER TOOLTIP's hide — the hint's job ends the moment the user acts,
+    // by whatever means, the two floating surfaces never coexist, and a pointer
+    // that has left cannot be hovering anything. Its callers, re-derived by
+    // grep: the hover recompute (hover ended), every pointer press, every KEY
+    // press, every wheel, the dropdown's open edge, and two main.cpp hooks —
+    // the pointer-leave / capability-loss edge, which needs it because the hover
+    // clear beside it damages the STRIP only while this box hangs below it (the
+    // full argument is at the definition), and the compositor close, which is
+    // the key-press hide's own no-hint-over-a-modal rule at the one modal opener
+    // no key press reaches. Showing is NOT here: the run loop's
     // tick owns the dwell, comparing AppState::redesign_tooltip.hover_ms against
     // the delay. Damages the strip and the box's last painted rect.
     // A MODAL SURFACE NEEDS NO HIDE OF ITS OWN beyond the key press that opened
