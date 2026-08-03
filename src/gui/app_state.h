@@ -2640,7 +2640,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE RENDER BUTTON'S ITERATION FACE — the ONE row on this whole surface whose
 // text follows STATE rather than being a constant (architect 2026-08-02). With
 // iteration mode on, Ctrl+Alt+R IS the sweep, so the button says the sweep: its
-// LABEL reads "Render iterations" and its hint is the matching ONE-LINE form.
+// LABEL reads "Render Iterations" and its hint is the matching ONE-LINE form.
+//
+// THE CAPITAL I IS DELIBERATE AND SCOPED TO THIS STRING (architect 2026-08-03,
+// his explicit instruction): every other multi-word GUI label in the product
+// stays sentence case ("Playback speed", "Center on focus", "Next marker") —
+// this is the one named exception, not a precedent to copy outward or "fix".
 //
 // THE SHIFT LINE GOES WITH IT, and that is the same fact rather than a second
 // decision: Ctrl+Alt+Shift+R is a consumed no-op in iteration mode (the refusal
@@ -2651,11 +2656,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //
 // BOTH STRINGS LIVE HERE, beside the constant table, so the label the button
 // paints and the name its hint gives cannot drift into two different words.
-inline constexpr const char* kRenderIterationsLabel = "Render iterations";
+inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        return {"Render iterations (Ctrl+Alt+R)", nullptr};
+        return {"Render Iterations (Ctrl+Alt+R)", nullptr};
     }
     return redesign_button_tooltip(b);
 }
