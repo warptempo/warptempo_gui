@@ -282,10 +282,30 @@ public:
     // pointer capture — and neither of those knows where the pointer is in the
     // GUI's terms; they just restore what was last asked for.
     //
+    // A KIND NAMED FOR A POSITION THE POINTER DOES NOT OCCUPY IS DROPPED, not
+    // remembered (pointer_position_unknown_, whose contract is at the field). The
+    // GUI resolves the cursor from ITS idea of the pointer position, and a capture
+    // makes that idea virtual: motion keeps arriving through the lock as unbounded
+    // relative travel, so the GUI keeps answering — with the live-gesture Arrow,
+    // and then from wherever the travel ended — for a place the pointer is not.
+    // Remembering those answers is what would make the restore a lie, since the
+    // restore hands back the REMEMBERED kind: dropping them keeps the remembered
+    // kind the last one derived from a real position, which is the cue the gesture
+    // began under and the cue the restore position sits in.
+    // THE SPAN OUTLASTS THE LOCK by design, so a force-end that ends the capture
+    // and then re-derives from the remembered (still virtual) coordinates is
+    // dropped too, rather than replacing a stale cue with a confidently wrong one.
+    // ITS COST, RECORDED: an answer that did NOT depend on the position — the
+    // Arrow a prompt or an editor claims — is dropped in that span as well, so a
+    // Ctrl+Q taken mid-capture shows the gesture's own cue over the prompt it
+    // raises until the pointer next moves. That is the accepted-staleness class
+    // the zone map already documents, and it is one mouse movement wide.
+    //
     // WHILE A POINTER CAPTURE IS LIVE the cursor is HIDDEN, and this never
-    // un-hides it: the kind is recorded and nothing is applied until the capture
-    // releases (the guard is inside apply_cursor_kind, so every applier shares
-    // it). A no-op when there is no wl_pointer.
+    // un-hides it: nothing is applied until the capture releases (the guard is
+    // inside apply_cursor_kind, so every applier shares it — including the enter
+    // that can arrive with a kind this method did admit). A no-op when there is no
+    // wl_pointer.
     //
     // A kind whose xcursor name is missing from the theme falls back to Arrow,
     // and Arrow is itself the NULL-surface hide when no theme loaded at all.
@@ -508,6 +528,26 @@ private:
     double virtual_pointer_y_  = 0.0;
     double capture_restore_y_  = 0.0;
     std::optional<double> capture_restore_x_override_;
+
+    // "THE POSITION WE HAVE IS NOT THE POINTER'S." ONE FACT, ONE OWNER, and the
+    // whole reason set_cursor_kind can ignore a write (the rule is stated at that
+    // method's declaration). It goes TRUE when a lock is taken — from that moment
+    // pointer_x_/pointer_y_ carry the unbounded VIRTUAL travel, a point the
+    // pointer does not occupy — and stays true PAST the unlock, because the
+    // restore only tells the compositor where to put the cursor; where it ended
+    // up is not ours to know until the compositor says so. It goes false again at
+    // the next ABSOLUTE position the compositor delivers (wl_pointer.enter or
+    // wl_pointer.motion), which is exactly the event that re-establishes the
+    // truth — and which carries its own re-derivation with it, since the GUI
+    // resolves the cursor at the top of every motion.
+    // ONLY A REAL CAPTURE SETS IT: the degraded compositor (no pointer-constraints
+    // or no relative-pointer) never locks, so its "captured" gestures run on
+    // ordinary absolute motion with the position true throughout and every cursor
+    // write landing normally. That is what makes the captured and degraded paths
+    // ONE rule at the GUI's gesture ends rather than two.
+    // The clear is guarded on !pointer_captured_ so a stray absolute event mid-
+    // capture cannot declare the virtual position true.
+    bool pointer_position_unknown_ = false;
 
     // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: both of
     // that request's callers need a recent enter serial — apply_cursor_kind (the

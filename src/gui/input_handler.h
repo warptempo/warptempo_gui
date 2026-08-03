@@ -459,17 +459,27 @@ struct GuiInputHandler {
     //   * THE MODIFIER EDGE — main.cpp's modifiers-changed hook, the one entry
     //     that exists because a modifier can move the cue under a pointer that
     //     never moves;
-    //   * EVERY GESTURE END — the release arms and the button-lost arms in
-    //     input_pointer.cpp (whose own header states the rule, the ordering, and
-    //     the two CAPTURED gestures that deliberately abstain), plus the tail of
-    //     each force-end caller: the Ctrl+Q hatch in on_key and main.cpp's
-    //     WM-close and resize callbacks. The zone map REFUSES every cue while a
-    //     gesture is live and the trim gesture KEEPS its own, so an end that did
-    //     not re-derive would leave the compositor showing a promise about a
-    //     gesture that no longer exists.
-    // IN BOTH CLASSES THE CALL COMES AFTER THE STATE IT READS HAS SETTLED —
-    // after the teardown, after the prompt goes up, after the relayout — since
-    // the map derives from exactly that state.
+    //   * EVERY GESTURE END, POINTER-SIDE — the release arms and the button-lost
+    //     arms in input_pointer.cpp (whose own header states the rule, the
+    //     ordering, and what becomes of the call at the two CAPTURED gestures,
+    //     which take it like every other), plus the tail of the force-end callers
+    //     in main.cpp's WM-close and resize callbacks. The zone map REFUSES every
+    //     cue while a gesture is live and the trim gesture KEEPS its own, so an
+    //     end that did not re-derive would leave the compositor showing a promise
+    //     about a gesture that no longer exists;
+    //   * EVERY GESTURE END, KEYBOARD-SIDE — a key can end a gesture too (the
+    //     editor text drag's Esc / Ctrl+Q hatch, and the pointer gestures' Ctrl+Q
+    //     hatch in the drag-modal gate). Those routes fall onward through editor
+    //     and prompt handling, so they do not call this where the gesture ends:
+    //     on_key carries the fact to its return in ONE scope guard, which is the
+    //     keyboard's single owner of this call (input_handler.cpp).
+    // IN EVERY CLASS THE CALL COMES AFTER THE STATE IT READS HAS SETTLED —
+    // after the teardown, after the editor closes, after the prompt goes up,
+    // after the relayout — since the map derives from exactly that state.
+    // IT IS NOT ALWAYS THE LAST WORD, and that is deliberate rather than a hole:
+    // the platform DROPS a kind named while it has no real pointer position (the
+    // span a capture opens — GuiPlatform::set_cursor_kind), so a call made from
+    // the remembered virtual coordinates cannot put up a confidently wrong cue.
     void refresh_pointer_cursor(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
@@ -1300,13 +1310,19 @@ private:
     // anyway).
     //
     // ACCEPTED STALENESS, narrowed rather than deleted: the cursor is re-derived
-    // on MOTION, on a MODIFIER EDGE and at EVERY GESTURE END, so what remains
-    // stale is a state change with none of the three under it — a load
+    // on MOTION, on a MODIFIER EDGE and at EVERY GESTURE END — the keyboard's
+    // ends included since a key can finish a drag too — so what remains stale is
+    // a state change with none of the three under it — a load
     // completing while the pointer already rests on the waveform, a menu closing
     // by Esc — which shows at the next event of any of those kinds. (The GESTURE
     // END entry closed the largest of these: an end is neither a motion nor a
     // modifier edge, so a gesture that stopped under a still pointer used to
-    // leave its own refused-or-owned kind standing indefinitely.) There is
+    // leave its own refused-or-owned kind standing indefinitely.) THE CAPTURED
+    // GESTURES ADD ONE MEMBER TO THIS CLASS, not an exception to the rule: while
+    // the platform has no real pointer position it drops the kinds this map
+    // names (the reason is at GuiPlatform::set_cursor_kind), so a modifier
+    // released BEFORE the button, or a modal raised by a force-end mid-capture,
+    // shows at the pointer's next movement like every other member. There is
     // deliberately no tick hook for the rest: the correction is one mouse
     // movement away, and a cursor that repainted from a timer would be a second
     // owner of the same fact.

@@ -1186,6 +1186,13 @@ void GuiPlatform::apply_cursor_kind() {
 }
 
 void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
+    // A KIND DERIVED FOR A POSITION THE POINTER DOES NOT OCCUPY IS DROPPED — not
+    // recorded, so the remembered kind stays the last one derived from a real
+    // position and the capture release restores THAT. The span and the accepted
+    // cost are at pointer_position_unknown_'s declaration; the GUI needs no
+    // knowledge of it, which is what lets its gesture ends call the same refresh
+    // whether or not the compositor granted a capture.
+    if (pointer_position_unknown_) return;
     // APPLY ONLY ON A CHANGE. The GUI calls this on every motion event, so an
     // unmoving zone must cost nothing — and a set_cursor per motion would be
     // real protocol traffic for no visible difference.
@@ -2168,6 +2175,12 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
     pointer_focused_ = true;
     pointer_x_ = wl_fixed_to_int(surface_x);
     pointer_y_ = wl_fixed_to_int(surface_y);
+    // AN ABSOLUTE POSITION IS THE TRUTH COMING BACK: whatever a past capture left
+    // virtual is superseded here, so cursor kinds are recorded again — before the
+    // synthesized motion below, whose whole job is to re-derive one. Guarded on
+    // !pointer_captured_ because a lock's own virtual travel outranks a stray
+    // enter (the lock keeps the pointer on this surface, so it should not arrive).
+    if (!pointer_captured_) pointer_position_unknown_ = false;
     pointer_enter_serial_ = serial;
 
     // Hand the compositor the cursor the REMEMBERED KIND names — not the arrow.
@@ -2206,6 +2219,11 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
                                     int32_t surface_x, int32_t surface_y) {
     pointer_x_ = wl_fixed_to_int(surface_x);
     pointer_y_ = wl_fixed_to_int(surface_y);
+    // The pointer's real position, from the compositor: the post-capture unknown
+    // span ends here (same rule and same guard as the enter above), and the
+    // delivery below immediately re-derives the cursor for it — which is why the
+    // clear owes no cursor call of its own.
+    if (!pointer_captured_) pointer_position_unknown_ = false;
     if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
 }
 
@@ -2557,6 +2575,13 @@ void GuiPlatform::begin_pointer_capture() {
     zwp_locked_pointer_v1_add_listener(locked_pointer_,
                                        &s_locked_pointer_listener, this);
     pointer_captured_ = true;
+    // From here the GUI's pointer position is the virtual travel, so the kinds it
+    // names are about a place the pointer is not: they stop being recorded until
+    // the compositor next tells us where the pointer really is (the contract is at
+    // the field). Set beside pointer_captured_ and only on the path that actually
+    // locked — the degraded and lock-failed returns above leave it false, which is
+    // what keeps those gestures on the ordinary cursor path.
+    pointer_position_unknown_ = true;
 }
 
 void GuiPlatform::end_pointer_capture() {
@@ -2605,14 +2630,22 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
     // Whatever was showing when the hide ran comes back here, and for the strip
     // drag and the alt-pan that is the ZOOM or the PAN cue their own modifier
-    // put up: the modifier edge re-derived the cursor before the press, and the
-    // modifier is normally still held at the release. The GUI's next motion
-    // would correct a hard-coded arrow, but the frames in between would be a
-    // lie, and this is the reason the kind is REMEMBERED rather than passed
-    // (the platform's edges do not know where the pointer is in the GUI's
-    // terms). pointer_captured_ was cleared just above, so the
+    // put up: the modifier edge re-derived the cursor before the press, so the
+    // remembered kind is the last one derived from a REAL pointer position, and
+    // the restore puts the pointer back inside the zone that produced it (the
+    // anchor-stem column or the raw travel, y frozen at the press row). What
+    // makes that true rather than merely likely is set_cursor_kind's drop: no
+    // kind named during the capture — the live-gesture Arrow the GUI resolves at
+    // every delivered relative motion, above all — was ever recorded here.
+    // The GUI's next motion would correct a hard-coded arrow, but the frames in
+    // between would be a lie, and this is the reason the kind is REMEMBERED
+    // rather than passed (the platform's edges do not know where the pointer is
+    // in the GUI's terms). pointer_captured_ was cleared just above, so the
     // applier's capture guard admits this call. It is a no-op when the wl_pointer
     // is already gone (a pointer-capability loss releases it before this runs).
+    // pointer_position_unknown_ deliberately STAYS SET past this point: the hint
+    // above is a request, and only the compositor's next absolute event says
+    // where the pointer actually came back.
     apply_cursor_kind();
 }
 

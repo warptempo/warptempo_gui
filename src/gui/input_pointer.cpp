@@ -2294,16 +2294,20 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // re-derives the stale answer it was added to fix.
 // `mods` IS THE MODIFIER TRUTH the platform delivered WITH this release, so a
 // release under a held Ctrl re-derives the ctrl zone rather than the plain one.
-// TWO GESTURES DELIBERATELY DO NOT REFRESH — here or in on_motion's arms — and
-// both are the CAPTURED ones, the strip drag and the alt-pan. A capture hides
-// the cursor, moves the pointer
-// under unbounded VIRTUAL coordinates, and restores it at a position only the
-// platform knows (the anchor-stem column or the raw travel, y frozen at the
-// press row), which is emphatically not app.last_mouse_x/y — those hold the
-// virtual travel, a point the pointer does not occupy. Re-deriving there would
-// not be a stale cue but a WRONG one, so the platform's own re-apply at the
-// capture release (release_pointer_lock) stays the owner of that edge and the
-// compositor's post-restore motion carries the correction.
+// THE TWO CAPTURED GESTURES TAKE THE SAME LINE AS EVERY OTHER — the strip drag
+// and the alt-pan refresh here and in on_motion's arms exactly like the rest —
+// and the reason the one line serves both a granted capture and a degraded
+// compositor that never took one is that THE GUI IS NOT THE PLACE THAT KNOWS.
+// A capture makes app.last_mouse_x/y the unbounded VIRTUAL travel, a point the
+// pointer does not occupy, so a kind derived from it would not be a stale cue
+// but a WRONG one — and the platform DROPS it, unrecorded, for as long as it has
+// no real position (GuiPlatform::set_cursor_kind; the span outlasts the lock and
+// ends at the compositor's next absolute event). What comes back at the restore
+// is therefore the last kind derived from a real position, which is the cue the
+// gesture began under. Without a capture — the two optional protocols absent —
+// nothing is virtual and nothing is dropped: the pointer is where the GUI thinks
+// it is, the cursor was never hidden, and this same call is the ordinary
+// gesture-end re-resolve that leaves the true cue standing.
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState mods) {
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
@@ -2379,12 +2383,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             app.double_click = DoubleClickCandidate{};
         }
         app.strip_drag = StripDragState{};
-        // reappear the cursor at the anchor-stem column (y frozen at the press
-        // row) — the restore x override the drag set each event. NO CURSOR
-        // REFRESH HERE, and that is the deliberate one of the two: this is a
-        // CAPTURED gesture and the restore position is the platform's, not
-        // app.last_mouse_x/y (see the header above this function).
+        // Reappear the cursor at the anchor-stem column (y frozen at the press
+        // row) — the restore x override the drag set each event — as the kind
+        // that was showing when the capture began.
         end_strip_pointer_capture();
+        // The gesture-end re-resolve, like every other arm. Under a granted
+        // capture the platform drops it (the position is still virtual) and the
+        // restore above is the answer; on a degraded compositor the capture calls
+        // were no-ops, the position is real, and this is what puts the true cue
+        // back after a whole drag under the live-gesture Arrow. One line, both
+        // cases — the header states why the GUI does not distinguish them.
+        refresh_pointer_cursor(mods);
         return;
     }
     if (app.scroll_drag.active) {
@@ -2397,9 +2406,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // compositor that never captured is unharmed.
         if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
-        // No cursor refresh: the other CAPTURED gesture, same reason as the
-        // strip drag above (the header states it once).
         end_strip_pointer_capture();
+        // The same one line as the strip drag above, for the same two cases.
+        refresh_pointer_cursor(mods);
         return;
     }
     // (No scrub branch: the scrub is one act at the PRESS — it arms nothing,
@@ -2504,8 +2513,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // answers with the Arrow) and the resize rebuilds the layout geometry the map
 // measures against — so a refresh inside here would answer against state one
 // line from changing, which is exactly the defect the refresh exists to close.
-// Each of the three callers therefore ends with refresh_pointer_cursor at its
-// own tail; a fourth caller owes the same line.
+// Each of the three callers therefore re-resolves at its own tail; a fourth
+// caller owes the same. The two main.cpp callbacks call refresh_pointer_cursor
+// directly, while on_key's hatch arms the scope guard that runs it at the
+// route's return (input_handler.cpp) — one rule, and the keyboard's placement is
+// the stricter reading of it, since that route has editor and prompt handling
+// still ahead of it.
+// A FORCE-END MID-CAPTURE ends the capture through the two navigation arms
+// below, and the caller's re-resolve then reads coordinates that are still the
+// drag's VIRTUAL travel — which is why the platform drops a kind named while it
+// has no real position (GuiPlatform::set_cursor_kind). The restored pre-capture
+// cue stands until the pointer moves; nothing here needs to test for it.
 void GuiInputHandler::finalize_active_drags() {
     // Editor text-selection drag: FINALIZE (collapse a no-motion anchor to a
     // caret), the same act its release performs — selection-only, nothing to
@@ -3347,7 +3365,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // app.last_mouse_x/y, which THIS event wrote a few lines above, so
             // the position is this event's own. AFTER the teardown, always: the
             // map reads the state being cleared. (The two CAPTURED gestures
-            // below skip it for the reason stated at on_button_release.)
+            // below take the same line; what happens to it while their position
+            // is virtual is stated at on_button_release.)
             refresh_pointer_cursor(mods);
             return;
         }
@@ -3393,9 +3412,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
             app.double_click = DoubleClickCandidate{};
-            // No cursor refresh: CAPTURED gesture, its restore position is the
-            // platform's (the reason is at on_button_release's header).
             end_strip_pointer_capture();
+            // The gesture-end re-resolve, the same line the clean release takes
+            // (dropped while the capture's position is virtual, live on a
+            // degraded compositor — the reason is at on_button_release's header).
+            refresh_pointer_cursor(mods);
             return;
         }
         // Sub-pixel capture jitter must not promote a click to a drag: while the
@@ -3429,8 +3450,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (playback.is_playing()) playback.resync_predictor();
             app.scroll_drag = ScrollDragState{};
-            // No cursor refresh: the other CAPTURED gesture, same reason.
             end_strip_pointer_capture();     // reappear the cursor (idempotent)
+            refresh_pointer_cursor(mods);    // the same one line, both cases
             return;
         }
         const double spp = current_samples_per_pixel(app, audio);
