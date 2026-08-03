@@ -801,6 +801,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // OTHER menu's button the toggle switches, closing this one as it opens that
     // one (one popup state, so the switch is free).
     //
+    // SINCE THE HOVER SWITCHES TOO (2026-08-03, on_motion), that second case is
+    // now the rare one from a real pointer: crossing onto the other button has
+    // already switched the menu, so the press landing there finds that menu open
+    // and TOGGLES IT CLOSED — the ordinary menu-bar answer for pressing the
+    // button whose menu is up. Neither route changed; they simply meet here, and
+    // a press that arrives with no motion before it still takes the switch
+    // through this claim.
+    //
     // It sits BELOW the modal gates like every other pointer target, which is
     // also why a popup and an editor can never be open together: the popup opens
     // only from a press, and while an editor is up every press dies at those
@@ -2291,7 +2299,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit / Settings / Navigation and the view bar's three, row 2's
+// (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
 // four, row 3's two tabs and row 4's eleven — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
@@ -2662,10 +2670,48 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // the whole modal, the stash is already correct when the editor closes. A
     // pointer resting ON the button at the close keeps its lit pill, and that is
     // hover, not staleness.
+    //
+    // THE OPEN DROPDOWN IS NOT ONE OF THOSE SURFACES and its branch below runs
+    // NO roster recompute: redesign_button_hoverable (app_state.h) refuses the
+    // whole roster while a popup is up — the popup owns the pointer — and
+    // toggle_dropdown already cleared the stash at the open edge, so a recompute
+    // there could only re-derive the same all-false answer. The button the
+    // pointer is on still lights, through the ANCHOR's paint condition rather
+    // than a hover bit (paint_menu_row), which is also what makes the switch
+    // below visible on the frame it happens.
+    //
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
-    // so its item hover is the only hover to resolve and no gesture can be live
-    // under it (its own press consumed everything).
+    // so no gesture can be live under it (its own press consumed everything).
     if (app.dropdown.open()) {
+        // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
+        // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
+        // onto the next button without pressing, and that button's menu is what
+        // is up. The switch goes through toggle_dropdown, the same owner the
+        // CLICK uses, so the close-then-open, the anchor expression and the open
+        // edge's damage are one route with nothing restated here; a menu that is
+        // not the open one makes that toggle's same-menu test false, which is
+        // exactly the switch.
+        //
+        // The walk covers every menu that HAS an anchor instead of naming the
+        // pair, so the anchor owner stays the one place that knows which button
+        // emits which menu. Hovering the OPEN menu's own anchor is skipped
+        // outright — no re-open, no close, no damage — and hovering a row-1
+        // button that owns no dropdown (Quit, the view bar's three) does nothing
+        // to the popup either: a menu bar keeps its menu up while the pointer
+        // crosses the rest of the bar.
+        for (const DropdownMenu m : {DropdownMenu::Settings,
+                                     DropdownMenu::Navigation}) {
+            if (m == app.dropdown.menu) continue;
+            if (!redesign_button_hit(app, dropdown_anchor_button(m),
+                                     mouse_x, mouse_y)) continue;
+            toggle_dropdown(m);
+            break;
+        }
+        // The popup's item hover, the only hover there is while it is up. AFTER
+        // A SWITCH the new menu's item rects have not been published yet (the
+        // painter publishes them), so this resolves to no item on this frame and
+        // the row under the pointer lights on the next — correct as it stands,
+        // and the reason nothing here reaches into the painter for geometry.
         recompute_dropdown_hover();
         return;
     }

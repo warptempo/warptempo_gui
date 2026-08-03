@@ -476,14 +476,19 @@ struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
 };
+// SETTINGS SITS LAST (architect 2026-08-03, moving it behind Navigation). The
+// float is adjacent with no gap and the walk below is a pure shaped-run walk, so
+// the order lives HERE and in the roster enum (app_state.h, whose comment states
+// that enum order IS painted order) and in nothing else — no width, pad or
+// anchor term reads it.
 constexpr MenuButtonDef kMenuButtons[] = {
     {RedesignButton::Quit,       "Quit"},
-    {RedesignButton::Settings,   "Settings"},
     // THE SECOND DROPDOWN (architect 2026-08-02): a COMMAND MENU of the zoom and
-    // stepping commands, next in the left float with the row's usual no gap.
-    // Like Settings its action is a popup toggle rather than a chord, and the
-    // two share one popup state — see AppState::Dropdown.
+    // stepping commands, sharing the row's usual no gap. Like Settings its
+    // action is a popup toggle rather than a chord, and the two share one popup
+    // state — see AppState::Dropdown.
     {RedesignButton::Navigation, "Navigation"},
+    {RedesignButton::Settings,   "Settings"},
 };
 
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
@@ -952,37 +957,39 @@ constexpr double kTooltipPadXPx      = 5.0;
 // popup's OPEN EDGE must size the box before it is painted. Only the HORIZONTAL
 // terms, which depend on the widest shaped label, are the painter's alone.)
 // (BOTH MENUS SHARE EVERY NUMBER IN THIS BLOCK — chrome, item height, insets,
-// separator, faces. The navigation menu's own terms are its accelerator
-// column's, below.)
+// separator, faces — and since 2026-08-03 the horizontal terms below as well.)
 constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 
-// THE LABEL IS LEFT-ALIGNED at a small pad, NOT centred (architect 2026-07-31,
-// from dropdown_full): its items put text 36px from the highlight's left edge,
-// but that 36 is a RESERVED ICON COLUMN plus the text pad, and icons are ruled
-// OFF here exactly as they are on the tabs. Subtracting a ~28px Breeze icon
-// column (the 22px glyph plus its gaps) leaves 8 — which the architect then
-// widened to 12 at the live look, wanting the labels further from the Settings
-// button's own text above them. It remains the tweak knob.
-constexpr double kPopupLabelPadLeftPx = 12.0;
-
-// THE MINIMUM ITEM WIDTH, so the right side carries clearly more empty space
-// than the left — the tab-min-width pattern, and the reason a menu of short
-// labels still reads as a menu. DERIVED rather than copied: the crop's items are
-// 401px for labels of ~150px ink, but roughly half that width is the accelerator
-// and submenu column this product has no analogue for. Taking the text half
-// alone and scaling to our label set (widest "Playback speed" at 113px) leaves
-// 200 as the authored floor: 8px of left pad and 113 of label leaves 79px
-// trailing, about ten times the left pad, which is the stated asymmetry. This is
-// the knob the architect tweaks at 100%.
+// THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
+// short labels still reads as a menu. DERIVED rather than copied: the crop's
+// items are 401px for labels of ~150px ink, but roughly half that width is the
+// accelerator and submenu column this product has no analogue for; taking the
+// text half alone and scaling to our label set (widest "Playback speed" at
+// 113px) leaves 200 as the authored floor. This is the knob the architect
+// tweaks at 100%.
+//
+// IT STILL BINDS ON THE SETTINGS MENU AFTER THE 2026-08-03 HARMONIZATION, and
+// that is worth recording because it means the box did NOT change size: the
+// harmonized rule asks for 57 + 113 + 30 − 8 = 192 at 100% (384 against a 400
+// floor at 200%), so the floor answers at both scales and the settings popup
+// stays 208px wide. What moved is where the LABEL sits inside it — 42px further
+// right — so the trailing space is 38px against a 57px indent, where before it
+// was 80 against 15. The generous-right-side reading the floor was originally
+// justified by is therefore retired with the 12px pad; the floor survives as
+// what it does now, a width the shortest menus cannot fall below.
 constexpr double kPopupItemMinWidthPx = 200.0;
 
-// THE NAVIGATION MENU'S OWN HORIZONTAL TERMS, measured off its own crop
+// THE DROPDOWN'S HORIZONTAL TERMS, measured off the two-column crop
 // (dropdown_full_hotkeys.png, 403x579, the popup box including its 1px borders)
-// and authored in POPUP-BOX coordinates, which is how the crop reads: the
-// settings menu's label pad is item-box-relative because that menu has one
-// column, and a two-column menu is easier to state — and to check against the
-// crop — from the box's own edges.
+// and authored in POPUP-BOX coordinates, which is how the crop reads: a menu
+// with an accelerator column is easier to state — and to check against the crop
+// — from the box's own edges than from the item box's.
+//
+// BOTH MENUS TAKE THEM (architect 2026-08-03): the settings menu's own 12px
+// item-box label pad is retired and its labels now start on this same indent,
+// so the two menus differ in one derived term (whether an accelerator column
+// exists) rather than in their padding.
 //
 //  - THE LABEL INDENT is 57px from the popup's left edge to the label's pen
 //    origin (ink starts at 57 or 58 depending on the glyph — "Switch Monitor"
@@ -990,9 +997,7 @@ constexpr double kPopupItemMinWidthPx = 200.0;
 //    same 57 holds on the rows that carry an icon at 39, so the column is real
 //    and not a per-row accident). kdenlive reserves a CHECKBOX plus an ICON
 //    gutter in there; we have neither and reproduce the RESULTING INDENT as
-//    plain padding, by ruling. It is deliberately NOT the settings menu's 12px
-//    item pad — that menu sampled a crop with no checkbox column and the
-//    architect then tuned it by eye.
+//    plain padding, by ruling.
 //  - THE COLUMN GAP is the crop's GUARANTEED minimum separation: the widest
 //    label ink ends at x=239 ("Switch Monitor Fullscreen") and the leftmost
 //    accelerator ink starts at x=252 ("Ctrl+Shift+Space"), so 13px is what the
@@ -1006,9 +1011,12 @@ constexpr double kPopupItemMinWidthPx = 200.0;
 //    the accelerators sit off the edge rather than against it.
 // The three reproduce the crop's own width to a pixel: 57 + 183 (widest label
 // ink) + 13 + 121 (widest hotkey ink) + 30 = 404 against the measured 403.
-constexpr double kNavPopupLabelPadLeftPx   = 57.0;
-constexpr double kNavPopupHotkeyGapPx      = 13.0;
-constexpr double kNavPopupHotkeyPadRightPx = 30.0;
+// (They lost their `Nav` prefix with the harmonization — the indent and the
+// margin are now every menu's, and the gap is a term of the ONE width rule
+// below, present exactly when the optional accelerator column is.)
+constexpr double kPopupLabelIndentPx  = 57.0;
+constexpr double kPopupHotkeyGapPx    = 13.0;
+constexpr double kPopupPadRightPx     = 30.0;
 
 // The selected tab's outline: a rectangle with ROUNDED TOP corners, and — this
 // is the load-bearing part — NO BOTTOM EDGE. It is an OPEN path running up the
@@ -1063,8 +1071,8 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "Quit", "Settings" and
-    // "Navigation", and the RIGHT one, the view bar's S+W / T+P / T+W (both
+    // ground carrying TWO FLOATS — the LEFT one, "Quit", "Navigation" and
+    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (both
     // 2026-08-02). No ring; the kdenlive bar is flat.
     //
     // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not
@@ -1219,8 +1227,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // justify one has changed — recorded rather than acted on, since an
         // overlap layout is the architect's to specify. Re-measured with the
         // NAVIGATION button (2026-08-02, shaped-run walk at both scales): the
-        // left float is 223px at 100% (Quit 29 + Settings 58 + Navigation 96,
-        // each plus its two 10px pads) and the div 183 — 406 of the 1920px
+        // left float is 223px at 100% (shaped labels Quit 29 + Navigation 76 +
+        // Settings 58, each plus its two 10px pads — 49 + 96 + 78; the ORDER
+        // moved 2026-08-03 and the sum did not, which is the whole content of
+        // that change) and the div 183 — 406 of the 1920px
         // deployment width, 1514px of slack, and 310 of the 640px floor as
         // before. At 200% they are 446 and 366: still 1108px of slack at 1920,
         // but 812 against a 640px floor THAT DOES NOT SCALE — so at that one
@@ -2041,13 +2051,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     //
     // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
     // all three columns and this product has none of them, exactly as the tabs
-    // dropped theirs. What the columns' SPACE becomes is the labels' left pad
-    // (and, on the navigation menu, the accelerator's right margin).
+    // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
+    // and the accelerator's right margin.
     //
-    // THE TWO MENUS DIFFER IN EXACTLY TWO PLACES, both below: the accelerator
-    // COLUMN (navigation has one, settings does not) and therefore the width
-    // rule. Everything else — chrome, item height, insets, separator, faces,
-    // baseline — is one set of numbers by construction.
+    // THE TWO MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
+    // accelerator COLUMN, which navigation has and settings does not. The width
+    // FOLLOWS from it — one expression with an optional term — rather than being
+    // a second difference of its own, and everything else (chrome, item height,
+    // insets, separator, faces, baseline, and now the label indent and right
+    // margin) is one set of numbers by construction.
     app.dropdown.rect = GuiRect{0, 0, 0, 0};
     app.dropdown.item_rects = {};
     if (!app.dropdown.open()) return;
@@ -2069,7 +2081,6 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int item_h    = popup_item_h_px();
     const int block_mar = popup_item_margin_y_px();
     const int inset     = scaled_px(kPopupItemInsetPx);
-    const int label_pad = scaled_px(kPopupLabelPadLeftPx);
     const int sep_inset = scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = 2 * sep_mar + border;   // margin, line, margin
@@ -2083,34 +2094,39 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     text_shape::ShapedRun runs[kDropdownMaxItemCount];
     text_shape::ShapedRun hot_runs[kDropdownMaxItemCount];
     double widest = 0.0, widest_hot = 0.0;
+    bool has_hotkeys = false;
     for (int i = 0; i < count; ++i) {
         const DropdownRow row = dropdown_row(menu, i);
         runs[i] = text_shape::shape_text_run(font, row.label);
         widest = std::max(widest, runs[i].width_px);
         if (row.hotkey != nullptr) {
+            has_hotkeys = true;
             hot_runs[i] = text_shape::shape_text_run(font, row.hotkey);
             widest_hot = std::max(widest_hot, hot_runs[i].width_px);
         }
     }
-    // TWO WIDTH RULES, one per menu, each the rule its own crop states:
-    //   SETTINGS  — one column: the label pad, the widest label, the label pad,
-    //     all inside the item box (unchanged since 2026-07-31, pixel for pixel).
-    //   NAVIGATION — two columns, authored on the POPUP box: the label indent,
-    //     the widest label, the guaranteed column gap, the widest accelerator,
-    //     the right margin (kNavPopup* above).
+    // ONE WIDTH RULE WITH AN OPTIONAL COLUMN, authored on the POPUP box: the
+    // label indent, the widest label, then — only where an accelerator column
+    // exists — the guaranteed column gap and the widest accelerator, then the
+    // right margin, less the chrome the item box adds back below.
+    //
+    // THE OPTIONAL TERM IS DRIVEN OFF THE ITEM TABLE, not off the menu
+    // enumerator: an accelerator column is a property of the rows (a menu whose
+    // rows carry no hotkey has none), and expressing it that way is what leaves
+    // the two menus differing by one DERIVED term instead of by two hand-written
+    // rules. A menu that grew hotkeys would widen here with no edit.
+    //
     // The authored minimum applies to both — it is the item box's floor, the
     // reason a menu of short labels still reads as a menu — and the navigation
     // menu simply never reaches it.
-    const int nav_pad_l   = scaled_px(kNavPopupLabelPadLeftPx);
-    const int nav_gap     = scaled_px(kNavPopupHotkeyGapPx);
-    const int nav_pad_r   = scaled_px(kNavPopupHotkeyPadRightPx);
-    const int chrome_w    = 2 * inset + 2 * border;
+    const int pad_l    = scaled_px(kPopupLabelIndentPx);
+    const int gap      = scaled_px(kPopupHotkeyGapPx);
+    const int pad_r    = scaled_px(kPopupPadRightPx);
+    const int chrome_w = 2 * inset + 2 * border;
     const int content_w =
-        (menu == DropdownMenu::Navigation)
-            ? nav_pad_l + static_cast<int>(std::nearbyint(widest)) + nav_gap +
-                  static_cast<int>(std::nearbyint(widest_hot)) + nav_pad_r -
-                  chrome_w
-            : label_pad + static_cast<int>(std::nearbyint(widest)) + label_pad;
+        pad_l + static_cast<int>(std::nearbyint(widest)) +
+        (has_hotkeys ? gap + static_cast<int>(std::nearbyint(widest_hot)) : 0) +
+        pad_r - chrome_w;
     const int item_w = std::max(scaled_px(kPopupItemMinWidthPx), content_w);
     const int w = item_w + chrome_w;
     // THE HEIGHT COMES FROM THE SHARED SUM, not a second walk here: the open
@@ -2193,20 +2209,18 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             }
         }
 
-        // LEFT-ALIGNED at the pad, vertically centred by the shared solver. On
+        // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
+        // edge in both menus, and vertically centred by the shared solver. On
         // the settings menu the right side carries the leftover, which the
         // minimum width above is what guarantees; on the navigation menu the
         // accelerator carries it.
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        const bool nav = (menu == DropdownMenu::Navigation);
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
-        text_shape::show_shaped_run(
-            cr, runs[i],
-            static_cast<double>(nav ? x + nav_pad_l : item.x + label_pad),
-            base);
+        text_shape::show_shaped_run(cr, runs[i],
+                                    static_cast<double>(x + pad_l), base);
 
         // THE ACCELERATOR COLUMN is RIGHT-ALIGNED to the popup's own right
         // margin, not to the item box's: the margin is a fact about the box the
@@ -2216,7 +2230,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // hover/press cue, as it is for the label.
         if (row.hotkey != nullptr) {
             const double hot_x =
-                static_cast<double>(x + w - nav_pad_r) -
+                static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
             cairo_set_source_rgb(cr, kRedesignPopupHotkey.r,
                                  kRedesignPopupHotkey.g,

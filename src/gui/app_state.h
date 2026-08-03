@@ -729,8 +729,8 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's Quit, Settings and
-// Navigation plus the view bar's three, row 2's toolbar four, row 3's two TABS,
+// button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
+// Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
 // then row 4's eleven view / mode / action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -753,13 +753,20 @@ struct TrimBarPressSeed {
 // The enum ORDER is painted order, and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
 // main.cpp walks the range by index). The indices are DERIVED and never
-// serialized, so inserting a button mid-roster (as Settings was) renumbers the
-// stash harmlessly.
+// serialized, so inserting a button mid-roster (as Settings was) or REORDERING
+// two of them (as row 1's Settings and Navigation were, 2026-08-03) renumbers
+// the stash harmlessly.
 enum class RedesignButton {
     // Row 1, the menu row: the three LEFT-FLOATING buttons, then the three of
     // the RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
     // absolute view selectors S+W / T+P / T+W, which are bare 1/2/3.
-    Quit, Settings, Navigation, ViewSW, ViewTP, ViewTW,
+    //
+    // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03). The float
+    // is adjacent with no gap and its layout is a shaped-run walk, so the move
+    // is an ORDER change and nothing else — no width, no padding, no anchor
+    // expression follows it. This enum and the painter's kMenuButtons table are
+    // the two places that carry the order, and they move together.
+    Quit, Navigation, Settings, ViewSW, ViewTP, ViewTW,
     // Row 2, the toolbar.
     Save, Undo, Redo, Render,
     // Row 3, the tabs.
