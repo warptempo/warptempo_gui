@@ -125,9 +125,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     than adding a seventh — a dropdown is a dropdown;
     //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
     //     below, matching every other modal's Ctrl+Q hatch.
-    // A popup and an editor CANNOT be open together (the popup opens only from a
-    // press, and a press dies at the editor gates; `;` is swallowed here), so
-    // this gate can never contend with route_modal_editor_key.
+    // A popup and an editor CANNOT be open together, so this gate can never
+    // contend with route_modal_editor_key — and the claim rests on TWO
+    // mechanisms, one per class. The popup opens only from row 1, and while one
+    // of the three BOTTOM-STRIP editors is up the press that would open it dies
+    // at their swallow arms in on_button_press. The pointer-transparent FLAG
+    // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
+    // open path discards the edit, exactly as a press outside its box does. The
+    // reverse direction is this gate's own doing — `;` is swallowed here, so no
+    // editor opens under a popup either.
     if (app.dropdown.open()) {
         if (dropdown_key_blocked(key, mods)) return;
     }
@@ -548,9 +554,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       BOTH menus, Settings and Navigation, are this ONE binding: they
     //       share one popup state and one gate, so the second dropdown
     //       (2026-08-02) added no seventh place. It cannot collide with (a)/(b):
-    //       a popup and an editor can never be open together, the popup opening
-    //       only from a press and a press dying at the editor gates. It ranks
-    //       BELOW the prompt because Ctrl+Q from inside the popup can raise one;
+    //       a popup and an editor can never be open together, by TWO mechanisms
+    //       — the three bottom-strip editors swallow the press that would open a
+    //       menu, and the pointer-transparent flag editor, which does not, is
+    //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
+    //       prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,

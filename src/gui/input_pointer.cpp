@@ -967,10 +967,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // through this claim.
     //
     // It sits BELOW the modal gates like every other pointer target, which is
-    // also why a popup and an editor can never be open together: the popup opens
-    // only from a press, and while an editor is up every press dies at those
-    // gates. (The reverse is closed by the keyboard gate: while the popup is
-    // open, `;` is swallowed, so the editor cannot open under it either.)
+    // half of why a popup and an editor are never open together: the popup opens
+    // only from a press, and while one of the three BOTTOM-STRIP editors is up
+    // every press dies at those gates. The other half is not here — the
+    // pointer-transparent FLAG editor swallows nothing, so a press does reach
+    // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
+    // that edit (the rule is stated there). Two mechanisms, one claim. (The
+    // reverse direction is closed by the keyboard gate: while the popup is open,
+    // `;` is swallowed, so the editor cannot open under it either.)
     if (app.dropdown.open()) {
         // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one
         // (2026-08-01, with the right-click scrub below): only LEFT carries
@@ -2723,6 +2727,45 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     const bool same = (app.dropdown.menu == menu);
     close_dropdown();
     if (same) return;
+    // OPENING A MENU ENDS AN ACTIVE FLAG EDIT, discarding it — exactly what a
+    // press anywhere outside the editor's box already does. It is what keeps "a
+    // popup and an editor are never open together" true, and the FLAG editor is
+    // the one class that needs it: the three BOTTOM-STRIP modal editors (the
+    // settings and render-commit editors and the BPM bracket, the membership
+    // modal_bottom_strip_editor_active names) swallow every press at the top of
+    // on_button_press, above the row-1 band claim, so a menu button is not even
+    // reachable while one of them is up — but the FlagPayload editor is
+    // pointer-TRANSPARENT by ruling and swallows nothing, so its edit would
+    // otherwise stand under the open menu. That is not merely untidy: a settings
+    // item opens the settings editor, on_key tests the flag editor FIRST, and
+    // the typing would land in the flag buffer while the settings editor is what
+    // looks focused.
+    //
+    // IT SITS ON THE OPEN PATH RATHER THAN AT THE BAND CLAIM because this is the
+    // ONE route every open passes — the anchor click, the hover switch and the
+    // armed re-open all arrive here — while the band claim carries only the
+    // click. The hover routes are arguably out of reach with an edit open (the
+    // row arms only through a click, which would itself have closed the edit),
+    // but a rule that is impossible by construction is worth more here than one
+    // that is unreachable by argument. A toggle that CLOSES a menu discards
+    // nothing: it returned above.
+    //
+    // The teardown is called DIRECTLY rather than through
+    // close_top_flag_editor_for_outside_press, whose job includes the
+    // is-the-press-inside-the-box test. There is no press here at all on the
+    // hover routes, and the rect test is not merely skipped but INAPPLICABLE: a
+    // row-1 button cannot be inside the flag editor's box, which lives in the
+    // marker lane below the whole top strip's button rows.
+    //
+    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. Quit needs nothing: its
+    // Ctrl+Q is one of the three chords the keyboard-modal gate admits, so it
+    // tears the edit down through its own route. The view bar's bare 1/2/3 drop
+    // at that gate as consumed nothings — the modality ruling working as
+    // intended — and ending an edit there would be a behavior change nobody
+    // asked for.
+    if (text_editor::is_active(app.top_flag_editor)) {
+        flag_editor.exit_top_flag_edit_no_commit();
+    }
     app.dropdown.menu         = menu;
     app.dropdown.hovered_item = -1;
     // OPENING A MENU ARMS THE ROW — the mode's ONE producer, and it sits here
@@ -2799,7 +2842,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
 // restated here, and none is worth adding: that tail is exactly the reachability
 // the anchors' own PRESS claim has, so the hover opens a menu in precisely the
 // states in which a click opens one. (The pointer-transparent FLAG editor gates
-// neither route, by its own ruling — see the press claim.)
+// neither route, by its own ruling — see the press claim; the open it leads to
+// ENDS that edit, which is toggle_dropdown's business and not restated here.)
 void GuiInputHandler::update_menu_row_arming(int mouse_x, int mouse_y) {
     if (!app.dropdown.menu_row_armed) return;
     // LEAVING THE ROW GOES COLD, which is what keeps the mode from outliving the
