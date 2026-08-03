@@ -15,6 +15,19 @@
 // Wayland headers appear here on purpose; member pointer types are spelled
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_wayland.cpp.
+
+// THE POINTER CURSOR HAS TWO KINDS AND EXACTLY TWO (architect 2026-08-03).
+// Arrow is the system theme's left_ptr, the cursor everywhere in the window;
+// Speaker is our own player-volume image, shown only while the pointer rests on
+// the waveform's audition-scrub surface. There is no cursor-per-zone framework
+// here and none is wanted: the speaker exists because that one zone runs a
+// gesture the arrow cannot promise, and a second custom cursor would need its
+// own ruling.
+enum class GuiCursorKind {
+    Arrow,
+    Speaker,
+};
+
 class GuiPlatform {
 public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
@@ -202,6 +215,25 @@ public:
     // no override set (the alt-pan, which has no stem) restores at the raw
     // traveled virtual_pointer_x_.
     void set_capture_restore_x(double surface_x);
+
+    // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
+    // pointer's current position; this remembers it and applies it only on a
+    // CHANGE, so the per-motion call an unmoving zone makes costs no protocol
+    // traffic. The kind is REMEMBERED rather than passed because the platform
+    // re-applies the cursor on its own edges — a pointer enter, and the end of a
+    // pointer capture — and neither of those knows where the pointer is in the
+    // GUI's terms; they just restore what was last asked for.
+    //
+    // WHILE A POINTER CAPTURE IS LIVE the cursor is HIDDEN, and this never
+    // un-hides it: the kind is recorded and nothing is applied until the capture
+    // releases (the guard is inside apply_cursor_kind, so every applier shares
+    // it). A no-op when there is no wl_pointer.
+    //
+    // Speaker falls back to Arrow when the speaker image could not be built at
+    // init; Arrow is itself the NULL-surface hide when the theme failed to load.
+    // The two failures are independent — the speaker is our own buffer and owes
+    // the theme nothing, so a themeless session still shows it.
+    void set_cursor_kind(GuiCursorKind kind);
 
     // Parallel hookup for the GuiWaveformWorker's completion
     // eventfd. The poll set grows a fourth pollfd; on POLLIN the loop
@@ -431,9 +463,11 @@ private:
     double capture_restore_y_  = 0.0;
     std::optional<double> capture_restore_x_override_;
 
-    // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: the
-    // theme-cursor set on enter and the NULL-surface hide at capture begin both
-    // require a recent enter serial.
+    // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: both of
+    // that request's callers need a recent enter serial — apply_cursor_kind (the
+    // one owner of the VISIBLE cursor, shared by the enter, the capture-lock
+    // failure and the capture release) and the NULL-surface hide at capture
+    // begin, which is the only set_cursor call outside that owner.
     uint32_t pointer_enter_serial_ = 0;
 
     // -- Pointer --
@@ -513,6 +547,35 @@ private:
     int32_t                 cursor_hotspot_x_  = 0;
     int32_t                 cursor_hotspot_y_  = 0;
 
+    // THE SCRUB CURSOR — our own image beside the theme's, built once at init
+    // and kept for the process lifetime (build_speaker_cursor /
+    // destroy_speaker_cursor). wl_pointer.set_cursor takes ANY wl_surface, so a
+    // client cursor is just a surface with a buffer under it; this one carries
+    // the Breeze speaker glyph drawn through icons::draw.
+    //
+    // Its shm pool is its OWN, not a slice of the window's: this one is sized
+    // once for a single cursor image and never resized, which is exactly why
+    // sharing the window pool (which is destroyed and rebuilt on every window
+    // resize) would be wrong. The create/destroy pair follows recreate_shm_pool
+    // / destroy_shm_pool as a pattern and shares no state with them.
+    //
+    // The whole group is null/-1 when the build failed; the cursor then simply
+    // never changes (see set_cursor_kind).
+    struct wl_surface*  speaker_cursor_surface_ = nullptr;
+    struct wl_buffer*   speaker_cursor_buffer_  = nullptr;
+    struct wl_shm_pool* speaker_cursor_pool_    = nullptr;
+    int                 speaker_cursor_fd_      = -1;
+    void*               speaker_cursor_map_     = nullptr;
+    size_t              speaker_cursor_bytes_   = 0;
+    int32_t             speaker_hotspot_x_      = 0;
+    int32_t             speaker_hotspot_y_      = 0;
+
+    // The kind last asked for. THE ONE PLACE the current cursor is recorded —
+    // every applier reads it and none takes a kind as an argument, so a re-apply
+    // on an enter or a capture release cannot restore a different cursor than
+    // the one that was showing.
+    GuiCursorKind cursor_kind_ = GuiCursorKind::Arrow;
+
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
     // repeat_key_ is the GuiKey currently repeating (0 = none).
     // repeat_keycode_ is the raw xkb keycode of that key, used so the
@@ -568,6 +631,16 @@ private:
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
     bool load_cursor_theme();
+    // Build the speaker cursor's pool, buffer, cairo drawing and surface. One
+    // stderr line and false on any failure, leaving the group torn back down —
+    // a degraded cursor, never a fatal one.
+    bool build_speaker_cursor();
+    void destroy_speaker_cursor();
+    // THE ONE wl_pointer.set_cursor CALLER for the visible cursor: hands the
+    // compositor the surface and hotspot cursor_kind_ names, at the tracked
+    // enter serial. Silent no-op while a capture holds the cursor hidden, and
+    // while there is no wl_pointer.
+    void apply_cursor_kind();
     ShmBuffer* acquire_free_buffer();
     void schedule_frame_callback();
     void paint_one_frame();

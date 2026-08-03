@@ -1124,6 +1124,41 @@ private:
     // the interrupting click into a launch.
     void scrub_press_at(int click_rel_x);
 
+    // THE SCRUB CURSOR'S ZONE — true when a plain left press at (x, y) right now
+    // would run an audition scrub act, false everywhere else. ONE CALLER, the
+    // set_cursor_kind line at the top of on_motion; do not grow a second, and do
+    // not scatter set-cursor calls through the handlers.
+    //
+    // THE CURSOR PROMISES THE GESTURE (architect 2026-08-03). That is the whole
+    // rule, and it is why this predicate is DERIVED FROM THE PRESS PATH rather
+    // than written as a list of situations: every refusal here is a branch that
+    // actually swallows or diverts the press in on_button_press, re-derived from
+    // that handler and in its order. If the press path grows a new swallow over
+    // the waveform, this grows the same one.
+    //
+    // WHAT IT IS BLIND TO, deliberately and by ruling:
+    // - The BARE RIGHT press scrubs the waveform's FULL HEIGHT, and this marks
+    //   only the LEFT press's lower half. The cursor is a cue for the lower-half
+    //   SURFACE, not a map of every route into scrub_act_at — a speaker over the
+    //   whole waveform would promise the left button something the upper half
+    //   does not do.
+    // - READ-ONLY TABS do not refuse: an audition is not a mutation, the scrub
+    //   works there, and the cursor says so.
+    // - The FLAG editor does not refuse either — it is pointer-transparent by
+    //   ruling, so a scrub still acts under an open one and the cursor must not
+    //   lie about that. The three BOTTOM-STRIP modal editors DO refuse, because
+    //   they really do swallow the press (modal_bottom_strip_editor_active).
+    //
+    // ACCEPTED STALENESS, stated rather than chased: the cursor is re-derived
+    // only on MOTION, so a state change with no pointer movement under it — a
+    // load completing while the pointer already rests on the waveform, a menu
+    // closing by Esc, a modifier going down or up — leaves the cursor as it was
+    // until the next motion event corrects it. There is deliberately no tick
+    // hook and no second call site for that: the correction is one mouse
+    // movement away, and a cursor that repaints from a timer would be a second
+    // owner of the same fact.
+    bool pointer_over_scrub_surface(int x, int y, GuiInputState mods) const;
+
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
     // translates app.viewport_start_sample / playhead_cursor_sample /
@@ -1205,9 +1240,15 @@ private:
     // modal_bottom_strip_editor_active is for; other sites carry a pointer here.
     // It names the BOTTOM-STRIP modal surfaces only — the settings editor, the
     // render-commit editor, and the bpm bracket editor (plus the prompts, gated
-    // separately) — and it has exactly ONE CALLER: wheel_context's swallow
-    // (input_handler.cpp), because wheel zoom and Alt+wheel pan are NAVIGATION,
-    // not chords, so they still punch through an open top-strip flag editor.
+    // separately). TWO CALLERS, and they ask the same question about two pointer
+    // facts: wheel_context's swallow (input_handler.cpp), because wheel zoom and
+    // Alt+wheel pan are NAVIGATION, not chords, so they still punch through an
+    // open top-strip flag editor; and pointer_over_scrub_surface (2026-08-03),
+    // because these three editors are exactly the ones that SWALLOW a pointer
+    // press, so they are exactly the ones over which the scrub cursor must not
+    // promise a gesture. The flag editor's exemption is the same fact in both:
+    // it is pointer-transparent, so the wheel reaches the viewport under it and
+    // a scrub reaches the audio under it.
     // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
     // not decided here — but it is no longer scattered either: since 2026-07-28
     // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which

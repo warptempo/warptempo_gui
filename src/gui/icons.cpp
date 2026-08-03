@@ -190,6 +190,33 @@ constexpr IconPath kUnlockPaths[] = {
      "9h10v6h-10v-6"},
 };
 
+// THE SCRUB CURSOR'S SPEAKER, from actions/22/player-volume.svg — four paths,
+// all `fill="currentColor"` under the file's own `.ColorScheme-Text` (#fcfcfc =
+// kIconText), none carrying a transform. It is drawn into the pointer cursor's
+// own buffer rather than into a row (platform_wayland.cpp), which changes
+// nothing here: the table shape and the verbatim-`d` contract are the same.
+//
+// ONE FILE-LEVEL DETAIL, recorded because it is the set's first: the third path
+// (the volume bar) carries `fill-rule="evenodd"`, which this table does not
+// model. It costs nothing — that path is ONE closed rectangular subpath, and
+// evenodd and nonzero agree on every single-subpath outline — so the drawn
+// pixels are the file's. A path with self-crossing or nested subpaths and an
+// explicit evenodd would NOT be safe to transcribe this way; none exists here.
+constexpr IconPath kPlayerVolumePaths[] = {
+    {kIconText,
+     "m14.324219 7.28125-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 "
+     "1 -1.210938 2.861328l.539063.863281a5 5 0 0 0 1.671875-3.724609 5 5 0 0 "
+     "0 -1.675781-3.71875z"},
+    {kIconText,
+     "m13.865234 3.5371094-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 "
+     "1 -4.380859 6.478516l.24414.974609a8 8 0 0 0 5.136719-7.453125 8 8 0 0 0 "
+     "-5.134766-7.4628906z"},
+    {kIconText,
+     "m3 8h2v6h-2z"},
+    {kIconText,
+     "m6 14 5 5h1v-16h-1l-5 5z"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -203,6 +230,7 @@ constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
 constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
+constexpr IconDef kPlayerVolume       {22.0, kPlayerVolumePaths,        4};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -218,6 +246,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;
+        case Icon::PlayerVolume:        return kPlayerVolume;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

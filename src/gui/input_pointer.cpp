@@ -164,6 +164,20 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
         app.redesign_buttons[redesign_button_index(id)].rect, x, y);
 }
 
+// THE WAVEFORM'S HALF SPLIT, and the ONE expression of it. The plain left press
+// splits by half — upper = the placement press, lower = the audition scrub — and
+// since 2026-08-03 the pointer CURSOR marks that lower half too, so the boundary
+// has two readers and must have one owner: a painted-nothing boundary and a
+// cursor boundary that could drift by a pixel would be worse than either alone.
+//
+// It is the same arithmetic the retired 1px channel-split line was drawn on
+// (that line went 2026-08-03; the split it marked did not) — integer division,
+// so an odd-height area gives the lower half the extra row, which is what the
+// press has always done.
+bool waveform_lower_half(const GuiRect& area, int y) {
+    return y >= area.y + area.h / 2;
+}
+
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker
 // commits so a drop-at-playhead lands where a drag/nudge would. TARGET view:
@@ -552,6 +566,57 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const int64_t frame = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     scrub_act_at(frame);
+}
+
+// THE SCRUB CURSOR'S ZONE. The full contract — one caller, why it is derived
+// from the press path, what it is deliberately blind to, and the accepted
+// staleness — is at the declaration in input_handler.h.
+//
+// The refusals below are the press's OWN gates, in the press's order, each one
+// re-read out of on_button_press rather than remembered:
+//   1. the prompt swallow (the first line of the handler);
+//   2. the three BOTTOM-STRIP modal editors, which return without acting — the
+//      shared predicate is modal_bottom_strip_editor_active, whose second caller
+//      this is;
+//   3. the open dropdown, which owns the pointer and consumes every press over
+//      the pixels it floats above;
+//   4. the loading / empty-audio return, above the whole waveform band;
+//   5. any live pointer gesture — the press's own `drag`/`trim_drag` guards
+//      widened to any_pointer_gesture_active, the one authoritative "some
+//      pointer gesture is in flight" predicate. A gesture is not a swallow but
+//      it is a lie: mid-drag the button is already down and no new press can
+//      start a scrub.
+// THE FOUR REDESIGNED ROWS' band claims need no entry: they are top-strip
+// sub-bands and cannot contain a point in the waveform's lower half.
+//
+// MODIFIERS REFUSE, and the press path is what says so. Ctrl, Shift and Alt each
+// carry a REAL waveform-wide binding on the left button (the strip drag, the
+// region former, the grab-pan), and every one of them claims its gesture above
+// the plain path's half test — so a modified press on the lower half is not a
+// scrub, and the speaker would be promising a gesture the press will not run.
+// The staleness rule applies here as everywhere: pressing Ctrl without moving
+// leaves the speaker showing until the pointer moves.
+bool GuiInputHandler::pointer_over_scrub_surface(int x, int y,
+                                                 GuiInputState mods) const {
+    if (app.prompt.active) return false;
+    if (modal_bottom_strip_editor_active()) return false;
+    if (app.dropdown.open()) return false;
+    if (app.loading || audio.total_frames() <= 0) return false;
+    if (any_pointer_gesture_active(app)) return false;
+    if (mods.ctrl || mods.shift || mods.alt) return false;
+
+    // The waveform BAND, spelled exactly as the press spells it: full window
+    // width (top.w), not the effective width, so the <=15px inert right gutter
+    // counts as waveform by the user's lights on both surfaces alike. A press
+    // there is a silent no-op rather than a launch, which is a degenerate
+    // off-deployment case (the gutter is 0px at 1920/2560/3840) and not worth a
+    // second, narrower band that would then disagree with the press.
+    const GuiRect area = waveform_area(app);
+    const GuiRect top  = top_strip_area(app);
+    const bool inside_waveform =
+        x >= area.x && x < top.x + top.w &&
+        y >= area.y && y < area.y + area.h;
+    return inside_waveform && waveform_lower_half(area, y);
 }
 
 // Button-press handler. Verbatim from the lambda at the original
@@ -1905,8 +1970,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             // THE HALF TEST, first thing on the plain path — before the
             // deselect, because a scrub press must not deselect. Lower half of
-            // the waveform area (y >= a.y + a.h/2) = the SCRUB surface: the
-            // press drives the SCANNER (not the cursor) — the scanner fields
+            // the waveform area (waveform_lower_half, which the SCRUB CURSOR's
+            // zone predicate reads too — one owner, so the cue and the gesture
+            // cannot disagree about where the surface starts) = the SCRUB
+            // surface: the press drives the SCANNER (not the cursor) — the
+            // scanner fields
             // are meaningful only while active (the standing contract), and
             // this gesture is exactly the launches-the-scanner-independently-
             // of-the-cursor consumer that contract anticipated. Every scrub
@@ -1925,7 +1993,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // (click_rel_x outside [0, area.w)) returns silently — no launch
             // position exists there, unlike the upper half's
             // deselect-then-return.
-            if (y >= area.y + area.h / 2) {
+            if (waveform_lower_half(area, y)) {
                 // The scrub press body (scrub_press_at): gutter no-op, clamped
                 // frame from the column, one scrub act (stop a live session,
                 // else launch), nothing armed. This is the LEFT button's entry
@@ -2651,6 +2719,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
+    // THE SCRUB CURSOR, resolved ONCE and ABOVE every gesture branch — including
+    // the modal ones, which all return before the no-gesture tail. Placed here
+    // so that every early return below still leaves the pointer showing the
+    // right cursor for where it actually is; a call further down would freeze
+    // the cursor under exactly the states (a live drag, an open menu) whose
+    // refusals the predicate already spells. The platform applies only on a
+    // CHANGE, so the common case — an unmoving zone under a moving pointer —
+    // costs one predicate and no protocol traffic.
+    gui.set_cursor_kind(pointer_over_scrub_surface(mouse_x, mouse_y, mods)
+                            ? GuiCursorKind::Speaker
+                            : GuiCursorKind::Arrow);
     // THE BUTTON HOVER IS A POINTER FACT AND FOLLOWS THE POINTER, under every
     // modal surface (architect 2026-07-31, fixing a stale Settings pill). It is
     // recomputed in the two MODAL branches that return before the no-gesture

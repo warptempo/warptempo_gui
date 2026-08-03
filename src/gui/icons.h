@@ -16,6 +16,11 @@
 // transcription bug and nothing else. They are read by no code at runtime — the
 // product ships no icon files and reads none.
 //
+// ONE ENTRY IS NOT A ROW'S (2026-08-03): the scrub cursor's speaker is drawn
+// into the pointer-cursor buffer the platform owns, not into any painted row.
+// Nothing about the table changes for it — it is a Breeze `d` string like the
+// rest, and this is the tree's only interpreter for one.
+//
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU.
 
@@ -46,12 +51,17 @@ enum class Icon {
     // one (the slot's contract is at the tab painter).
     Lock,                // Locked: closed padlock, full color
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
+    // THE ONE ICON THE WINDOW NEVER PAINTS: the speaker is drawn into the
+    // pointer-cursor buffer the platform owns (platform_wayland.cpp), not into
+    // any row. It rides this table anyway because it is a Breeze `d` string
+    // like the thirteen above and there is no second interpreter to give it.
+    PlayerVolume,        // The scrub cursor's glyph
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 13;
+inline constexpr int kIconCount = 14;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'
