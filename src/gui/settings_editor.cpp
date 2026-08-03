@@ -18,6 +18,15 @@
 
 namespace {
 
+// The commit line's interactive latitude: strip surrounding whitespace from the
+// typed key and value (the FILE boundary is byte-exact and trims nothing).
+//
+// IT CANNOT SPLIT A MULTI-BYTE CHARACTER, which matters now that values carry
+// UTF-8. `std::isspace` is consulted in the "C" locale — nothing in this
+// program calls setlocale (locale_check.h states and enforces that) — where it
+// is true for exactly 0x09..0x0d and 0x20, all ASCII. Every byte of a UTF-8
+// multi-byte sequence is >= 0x80, so no continuation byte can be mistaken for
+// whitespace and the trim always lands on a codepoint boundary.
 std::string trim_ws(const std::string& s) {
     size_t a = 0;
     while (a < s.size() &&
@@ -559,17 +568,20 @@ void GuiSettingsEditor::autocomplete_value() {
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
     // Only a truly unknown key is not recallable.
     //
-    // ONE EXCEPTION, and it is the EDITOR's rather than the recall's: the seed
-    // below lands through text_editor::replace_selection, which filters its
-    // input to printable ASCII (0x20..0x7e) and DROPS everything else. The four
-    // free-text provenance values (title/bpm/notes/url/cover) are accepted
-    // VERBATIM by the strict load (engine_settings_io.cpp), so a HAND-EDITED
-    // `.settings` carrying a non-ASCII byte loads it, holds it, and would write
-    // it back on Ctrl+S — but recalls it stripped, and committing that stripped
-    // line writes the stripped value. The GUI itself can never author such a
-    // value (the typed-insert path carries the same filter), so the only
-    // producer is a hand edit, which is why this is recorded rather than
-    // guarded: the project line is that non-ASCII is unsupported.
+    // THE RECALL IS BYTE-EXACT WITH NO EXCEPTION (architect 2026-08-02, the
+    // UTF-8 relaxation). The seed below lands through
+    // text_editor::replace_selection, whose filter now passes well-formed UTF-8
+    // verbatim — and the free-text provenance values (title/bpm/notes/url/cover)
+    // are exactly what the strict load takes verbatim
+    // (engine_settings_io.cpp), so a value carrying non-ASCII text recalls
+    // unchanged and commits back unchanged. The one-way hole this note used to
+    // record — a hand-edited non-ASCII value recalling stripped, and committing
+    // that stripped line — is CLOSED for TEXT, which is the whole of what the
+    // exception was ever about. What the filter still drops is ASCII control
+    // bytes and malformed byte sequences: not text, authorable by nothing in
+    // the product (the typed path encodes real codepoints and the file writer
+    // writes what it held), and reachable only by hand-editing a value into a
+    // state the GUI cannot express.
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);
     if (!cur) cur = recall_gui_setting_value(app, key);

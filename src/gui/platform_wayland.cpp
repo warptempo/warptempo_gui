@@ -582,10 +582,13 @@ void GuiPlatform::set_title(const std::string& title) {
 // else; the bottom strip's old dirty cell is gone.
 //
 // The whole string is handed straight to xdg_toplevel.set_title, which is
-// defined as UTF-8. labwc shapes the titlebar with its own font stack, so this
-// string never touches text_shape and the product's one-face rule does not
-// apply to it — that latitude simply is not needed any more now that every
-// codepoint here is ASCII.
+// defined as UTF-8, and the project name inside it is a FILESYSTEM folder name
+// taken verbatim — so it carries whatever bytes that folder is spelled with.
+// That is safe here and nowhere else's business: labwc shapes the titlebar with
+// its own font stack, so this string never touches text_shape and the product's
+// one-face rule does not apply to it. Only the fixed parts this site composes —
+// the separator, the binary name, the asterisk — are the product's own, and
+// those are ASCII.
 //
 // project_title_ is empty until the load derives it, so the pre-load frames
 // (and the loading line) keep the bare binary name init() seeded: with no

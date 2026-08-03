@@ -5,7 +5,7 @@
 // Every text surface that goes proportional measures AND paints through the
 // same ShapedRun: `shape_text_run` produces it, `width_px` is the measurement,
 // `show_shaped_run` paints exactly those glyphs at exactly those offsets. That
-// single-run rule is the whole point — width, truncation, ellipsis and hit
+// single-run rule is the whole point — width, truncation and hit
 // geometry are computed from the same positions the pixels come from, so they
 // cannot disagree. It is the proportional successor of the monospace path's
 // glyph-count arithmetic, where a character count times one advance was both
@@ -24,8 +24,14 @@
 //   - `font` is a FreeType-backed cairo_scaled_font_t in a non-error state.
 //     Every cairo font on this platform's Linux/Wayland target is FT-backed,
 //     so a non-FT font has no producer here.
-//   - `utf8` is well-formed UTF-8. Project input is ASCII-only, and HarfBuzz
-//     consumes arbitrary bytes safely in any case, so there is no validation.
+//   - `utf8` is well-formed UTF-8. Free-text fields and the editors carry real
+//     UTF-8 (architect 2026-08-02); it arrives already filtered
+//     (text_editor::replace_selection is the one incoming boundary) or
+//     verbatim from a hand-edited file, and HarfBuzz consumes arbitrary bytes
+//     safely in any case, so there is no validation here.
+//   - ONE FACE, NO FALLBACK. A codepoint the face does not cover shapes to
+//     .notdef and paints as the empty box — accepted, in the same class as the
+//     no-bidi exclusion below. Liberation Sans covers Latin, Greek and Cyrillic.
 //   - `show_shaped_run` is called with the SAME scaled font set on `cr` that
 //     the run was shaped with; the glyph ids are that face's, and no other.
 //

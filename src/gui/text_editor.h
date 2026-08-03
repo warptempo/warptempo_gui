@@ -16,9 +16,40 @@
 //
 // Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
+//
+// THE TEXT IS UTF-8 (architect 2026-08-02, the relaxation that retired the
+// "non-ASCII unsupported" stance — a fossil of the deleted cairo monospace
+// path). `pending` holds any well-formed UTF-8 the typed path or the filter
+// admits, and the free-text settings fields round-trip it; the STRUCTURAL
+// grammars this editor feeds (labels, numeric spellings, settings keys) stay
+// ASCII, but that is their validators' business at commit and not this
+// module's. Three properties make it work:
+//
+//   - INDICES STAY BYTE INDICES. `pending`, the shaped run's per-byte pen
+//     offsets (text_shape::byte_offsets_px) and the click-to-byte search all
+//     address by byte, so there is exactly one coordinate and nothing to
+//     convert between.
+//   - EVERY STEP MOVES A WHOLE CODEPOINT. Left/Right, BackSpace/Delete, the
+//     Ctrl word walks and the double-click run selector all land on codepoint
+//     boundaries, so `cursor_pos` and `selection_anchor` are boundaries by
+//     construction and no operation can split a character. Home/End and Ctrl+A
+//     take the string's extremes, which are boundaries trivially.
+//   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
+//     the no-bidi and no-font-fallback exclusions: a combining mark is its own
+//     codepoint, so it carets and deletes separately from the base character it
+//     sits on. Accepted — the free-text fields are provenance notes, not a text
+//     processor.
+//
+// Rendering follows from the same one face: an uncovered glyph draws .notdef
+// (no fallback), and shaping is single-direction LTR.
 
 namespace text_editor {
 
+// EVERY CAP BELOW IS IN BYTES — `pending.size()`, which is what every cap test
+// reads. With UTF-8 admitted a multi-byte character spends the bytes it costs,
+// so a field's cap is a storage bound rather than a character count. The names
+// are historical; nothing measures characters anywhere in this module.
+//
 // Maximum characters allowed in `pending`. The cap 52 covers a hypothetical
 // full-double BASE and SCALE in the payload `BASE*SCALE:a.aa` — worst
 // case 23 chars per value (17 significant digits plus point and exponent):
@@ -64,7 +95,7 @@ constexpr int kMaxPendingCharsRenderCommit = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
-// (handle_key accepts any printable ASCII and defers grammar to the
+// (handle_key accepts any character-bearing key and defers grammar to the
 // commit-time validator). The flag editor uses FlagPayload (payload text,
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
@@ -100,7 +131,9 @@ struct State {
     // and metadata flags. Display-only; not editable.
     std::string locked_prefix;
 
-    // Byte index into `pending`. Clamped to [0, pending.size()].
+    // Byte index into `pending`, always on a UTF-8 CODEPOINT BOUNDARY (the
+    // invariant and the routes that maintain it are at the head of this file).
+    // Clamped to [0, pending.size()].
     int cursor_pos = 0;
 
     // -1 means no selection. When >= 0, the selected range is
@@ -136,6 +169,20 @@ struct State {
     std::chrono::steady_clock::time_point blink_epoch =
         std::chrono::steady_clock::now();
 };
+
+// THE UTF-8 PRIMITIVE, public because one site outside the editors needs the
+// same answer: a continuation byte is 10xxxxxx, and every other byte STARTS a
+// codepoint. That single test is what every boundary walk in this module is
+// built from — it needs no sequence length and degrades safely on malformed
+// bytes.
+//
+// The ONE outside caller is the render-commit editor's Tab autocomplete
+// (input_key_dispatch.cpp), which backs its byte-wise longest-common-prefix off
+// to a boundary before seeding `pending`. It is exposed rather than the
+// boundary walks themselves because that is the whole of what the caller needs:
+// prev_codepoint_boundary always steps back a WHOLE codepoint, which is the
+// wrong answer for a prefix that already ends on a complete one.
+bool is_utf8_continuation_byte(unsigned char b);
 
 inline bool is_active(const State& s) { return s.target >= 0; }
 
@@ -207,7 +254,10 @@ enum class KeyClass {
     // as in any one-line text field); alt binds nothing, so an alt-carrying
     // motion press is NotEditorKey.
     MotionEditKey,
-    PrintableKey,   // no ctrl/alt, codepoint 0x20..0x7e — repeats
+    // No ctrl/alt and a character-bearing codepoint: >= 0x20, not DEL, not a
+    // surrogate, within Unicode. Not ASCII-limited — the platform resolves a
+    // full codepoint and the editor UTF-8 encodes it. Repeats.
+    PrintableKey,
 };
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
@@ -228,14 +278,24 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 
 // Clipboard primitives, used by the input handler to bridge the editor's
 // selection model to the session clipboard. selected_text returns the
-// highlighted substring (empty if no selection). replace_selection is the
-// paste/cut primitive: it sanitizes `raw` to printable ASCII (0x20..0x7e —
-// dropping control chars, newlines, tabs, non-ASCII), then atomically either
-// replaces the selection with the FULL sanitized text or, when that would
-// grow the pending past the field's per-Kind cap, refuses the whole operation
-// and sets the red state (buffer and selection untouched). Cut calls it with
-// an empty string, an always-accepted shrink that simply deletes the
-// selection.
+// highlighted substring (empty if no selection — and always a whole number of
+// codepoints, since both endpoints are boundaries).
+//
+// replace_selection is the paste/cut primitive and THE ONE INCOMING-TEXT
+// FILTER. Its acceptance rule:
+//   - PRINTABLE ASCII (0x20..0x7e) passes.
+//   - WELL-FORMED MULTI-BYTE UTF-8 passes verbatim — the sequence's length
+//     matches its lead byte, every continuation byte is one, and the decoded
+//     value is neither overlong, a surrogate, nor past U+10FFFF.
+//   - Everything else is DROPPED byte by byte: ASCII control characters
+//     (0x00..0x1f, including newlines and tabs, plus DEL) and any malformed
+//     byte. A malformed byte costs itself and nothing after it — the scan
+//     resumes at the next byte, so the good text around it survives.
+// It then atomically either replaces the selection with the FULL filtered text
+// or, when that would grow the pending past the field's per-Kind byte cap,
+// refuses the whole operation and sets the red state (buffer and selection
+// untouched). Cut calls it with an empty string, an always-accepted shrink that
+// simply deletes the selection.
 std::string selected_text(const State& s);
 void        replace_selection(State& s, const std::string& raw);
 
@@ -256,6 +316,12 @@ bool cursor_visible_now(const State& s);
 // Clicking the left half of a glyph puts the caret before it and the right half
 // after it, which is what every text field does. The returned index is within
 // [0, boundaries.size() - 1] by construction; an empty vector returns 0.
+//
+// IT NEVER RETURNS A MID-CODEPOINT INDEX, structurally rather than by a guard:
+// byte_offsets_px gives every byte of a cluster its cluster's START offset, so
+// a multi-byte character's interior boundaries tie with its first one — and the
+// tie rule keeps the LOWER index, which is the boundary. The same argument
+// covers a ligature's interior bytes.
 int byte_index_from_shaped_x(double click_x, double text_origin_x,
                              const std::vector<double>& boundaries);
 
@@ -268,7 +334,8 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // differs from cursor-motion word-walking, and every toolkit (GTK/Qt/Kate/
 // Firefox) ships a tailored selection heuristic rather than reusing its motion
 // boundaries. Three classes, the Qt/Kate "programmer's word" variant: WORD is
-// [A-Za-z0-9_] plus any byte >= 0x80 (multibyte UTF-8 stays whole), WHITESPACE
+// [A-Za-z0-9_] plus any byte >= 0x80 (so a multi-byte character is one uniform
+// run and a selection edge lands only on codepoint boundaries), WHITESPACE
 // is ' ' and '\t', PUNCTUATION is every other byte — so clicking `=`, `.`, or
 // `::` selects that punctuation run. The double-click path in the input handler
 // calls this after mapping the click x to a byte index

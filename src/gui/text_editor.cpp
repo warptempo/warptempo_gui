@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace text_editor {
 
@@ -9,6 +10,72 @@ namespace {
 
 void touch_blink(State& s) {
     s.blink_epoch = std::chrono::steady_clock::now();
+}
+
+// ---------------------------------------------------------------------------
+// UTF-8, the editor's unit of movement (the contract is at the head of
+// text_editor.h). Indices stay BYTE indices — the shaped run addresses by byte
+// and so does `pending` — but every step that a user perceives as "one
+// character" moves a whole codepoint, so a multi-byte character can never be
+// half-deleted or caretted into.
+// ---------------------------------------------------------------------------
+
+// The codepoint boundary strictly LEFT of `pos` (0 when there is none).
+int prev_codepoint_boundary(const std::string& s, int pos) {
+    if (pos <= 0) return 0;
+    int i = std::min(pos, static_cast<int>(s.size())) - 1;
+    while (i > 0 && is_utf8_continuation_byte(
+                        static_cast<unsigned char>(s[static_cast<size_t>(i)])))
+        --i;
+    return i;
+}
+
+// The codepoint boundary strictly RIGHT of `pos` (the end when there is none).
+int next_codepoint_boundary(const std::string& s, int pos) {
+    const int n = static_cast<int>(s.size());
+    if (pos >= n) return n;
+    int i = std::max(pos, 0) + 1;
+    while (i < n && is_utf8_continuation_byte(
+                        static_cast<unsigned char>(s[static_cast<size_t>(i)])))
+        ++i;
+    return i;
+}
+
+// The insertable codepoints for the typed path: everything from U+0020 up
+// EXCEPT the C0 controls, DEL, the surrogate range, and anything past the
+// Unicode maximum. ASCII controls are dropped as they always were (Return and
+// Escape produce sub-0x20 codepoints and are session keys, not characters);
+// the rest of the exclusions describe values xkb_state_key_get_utf32 does not
+// produce and exist so `encode_utf8` below has a stated domain rather than an
+// unreachable failure arm. C1 (U+0080..U+009F) is deliberately NOT excluded —
+// no keyboard produces one, and adding a rule for a non-producer is the kind of
+// guard the validation topology forbids.
+bool is_insertable_codepoint(uint32_t cp) {
+    return cp >= 0x20 && cp != 0x7f && cp <= 0x10ffff &&
+           !(cp >= 0xd800 && cp <= 0xdfff);
+}
+
+// Encode ONE insertable codepoint as UTF-8. Precondition:
+// is_insertable_codepoint(cp) — the two callers gate on it (handle_key's
+// printable branch, which classify_key admitted on the same predicate).
+std::string encode_utf8(uint32_t cp) {
+    std::string out;
+    if (cp < 0x80) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp < 0x800) {
+        out.push_back(static_cast<char>(0xc0 | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    } else if (cp < 0x10000) {
+        out.push_back(static_cast<char>(0xe0 | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    } else {
+        out.push_back(static_cast<char>(0xf0 | (cp >> 18)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+    }
+    return out;
 }
 
 // Remove the selected range from `pending`, place the cursor at the
@@ -23,7 +90,16 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
+// The CURSOR-MOTION word class (Ctrl+Left/Right and the word erases), distinct
+// from the double-click selector's three-class `classify` below. Any byte >=
+// 0x80 counts as a word character, which is what makes the two byte walks below
+// codepoint-safe without carrying a decoder: a multi-byte character's bytes are
+// ALL >= 0x80, so a run of them is one uniform class and a boundary can never
+// land inside one. It also gives the behavior a user expects — a word of
+// accented Latin walks as one word.
 bool is_word_char(char c) {
+    const unsigned char u = static_cast<unsigned char>(c);
+    if (u >= 0x80) return true;
     return (c >= '0' && c <= '9') ||
            (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z');
@@ -50,15 +126,17 @@ int next_word_boundary(const std::string& s, int pos) {
 
 // Character class for the double-click run selector (below). Three classes,
 // the Qt/Kate "programmer's word" convention: WORD is [A-Za-z0-9_] plus any
-// byte >= 0x80 (UTF-8 lead/continuation bytes classify as word so multibyte
-// characters stay whole — the free-text fields carry UTF-8); WHITESPACE is
-// ' ' and '\t'; PUNCTUATION is every other byte. Distinct from the
-// cursor-motion word class above (which excludes '_' and treats every
-// non-word byte as a separator to skip). The >= 0x80 rule guarantees only that
-// a selection never SPLITS a multibyte character and keeps a correctly-probed
-// word whole; it does NOT correct a byte-shifted probe when non-ASCII earlier in
-// the line has already shifted the click-to-byte mapping (see
-// byte_index_from_shaped_x's mapping — see its declaration).
+// byte >= 0x80 (UTF-8 lead and continuation bytes both classify as word, so a
+// multi-byte character is one uniform run and a selection edge can never land
+// inside one); WHITESPACE is ' ' and '\t'; PUNCTUATION is every other byte.
+// Distinct from the cursor-motion word class above, which excludes '_' and
+// treats every non-word byte as a separator to skip.
+//
+// THE PROBE IS EXACT, not a degradation: `pos` comes from
+// byte_index_from_shaped_x over the shaped run's OWN per-byte pen offsets, so
+// non-ASCII earlier in the line shifts nothing (the pre-shaping monospace
+// mapping, which divided x by one advance, is what could be shifted — it died
+// with the face).
 enum class CharClass { Word, Whitespace, Punctuation };
 
 CharClass classify(char c) {
@@ -73,6 +151,10 @@ CharClass classify(char c) {
 }
 
 } // namespace
+
+// The module's UTF-8 primitive, public because one site outside the editors
+// needs the same answer (the contract is at the declaration).
+bool is_utf8_continuation_byte(unsigned char b) { return (b & 0xc0) == 0x80; }
 
 // Nearest boundary, ties to the lower index — the contract is at the
 // declaration. Linear over at most kMaxPendingCharsFlagIter + 1 entries, run
@@ -131,12 +213,57 @@ std::string selected_text(const State& s) {
 }
 
 void replace_selection(State& s, const std::string& raw) {
-    // Filter the incoming text to printable ASCII (dropping non-printables is
-    // vocabulary filtering, not data loss); this is the `ins` length below.
-    std::string clean;
+    // THE ONE INCOMING-TEXT FILTER (the acceptance rule is at the declaration):
+    // printable ASCII and WELL-FORMED multi-byte UTF-8 pass through verbatim;
+    // ASCII controls (0x00..0x1f and DEL) and MALFORMED bytes are dropped, the
+    // rest of the string kept. Dropping is vocabulary filtering, not data loss —
+    // an editor buffer must never hold a byte the shaper and the walks below
+    // cannot address.
+    //
+    // Recovery on a malformed byte is the standard one: drop that ONE byte and
+    // re-scan from the next, so a single bad byte never eats the good text after
+    // it. The malformed arm has no producer today — xkb emits only well-formed
+    // UTF-8 and the session clipboard only ever holds what this filter already
+    // passed — and is kept because this is the boundary an external clipboard
+    // would arrive through.
+    std::string  clean;
     clean.reserve(raw.size());
-    for (unsigned char c : raw) {
-        if (c >= 0x20 && c <= 0x7e) clean.push_back(static_cast<char>(c));
+    const size_t n = raw.size();
+    size_t       i = 0;
+    while (i < n) {
+        const unsigned char b0 = static_cast<unsigned char>(raw[i]);
+        if (b0 < 0x80) {                       // ASCII: printable only
+            if (b0 >= 0x20 && b0 != 0x7f) clean.push_back(static_cast<char>(b0));
+            ++i;
+            continue;
+        }
+        // A multi-byte sequence: length from the lead byte, then every
+        // continuation byte checked, then the decoded value range-checked so an
+        // OVERLONG form (a codepoint spelled in more bytes than it needs) and a
+        // surrogate or out-of-range value are refused like any other malformed
+        // input. A continuation byte appearing alone, or an 0xf8..0xff byte, has
+        // no length at all and takes the same single-byte drop.
+        size_t   len = 0;
+        uint32_t cp  = 0;
+        if      ((b0 & 0xe0) == 0xc0) { len = 2; cp = b0 & 0x1fu; }
+        else if ((b0 & 0xf0) == 0xe0) { len = 3; cp = b0 & 0x0fu; }
+        else if ((b0 & 0xf8) == 0xf0) { len = 4; cp = b0 & 0x07u; }
+        else                          { ++i; continue; }
+        if (i + len > n) { ++i; continue; }    // truncated at the string's end
+        bool ok = true;
+        for (size_t k = 1; k < len; ++k) {
+            const unsigned char bk = static_cast<unsigned char>(raw[i + k]);
+            if (!is_utf8_continuation_byte(bk)) { ok = false; break; }
+            cp = (cp << 6) | (bk & 0x3fu);
+        }
+        if (!ok) { ++i; continue; }
+        static constexpr uint32_t kShortest[5] = {0, 0, 0x80, 0x800, 0x10000};
+        if (cp < kShortest[len] || !is_insertable_codepoint(cp)) {
+            ++i;
+            continue;
+        }
+        clean.append(raw, i, len);
+        i += len;
     }
     int cap = kMaxPendingChars;
     if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
@@ -251,9 +378,13 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
          key == GuiKeys::Home || key == GuiKeys::End ||
          key == GuiKeys::BackSpace || key == GuiKeys::Delete))
         return KeyClass::MotionEditKey;
-    // Printable insertion: no Ctrl/Alt, printable ASCII codepoint.
-    if (!mods.ctrl && !mods.alt &&
-        mods.codepoint >= 0x20 && mods.codepoint <= 0x7e)
+    // Printable insertion: no Ctrl/Alt, and a character-bearing codepoint —
+    // ASCII or otherwise (is_insertable_codepoint owns the range, and
+    // handle_key's branch tests the SAME predicate so membership and effect
+    // cannot drift). The platform hands over a full Unicode codepoint
+    // (xkb_state_key_get_utf32), so a compose or dead-key sequence classifies
+    // here exactly as a letter does.
+    if (!mods.ctrl && !mods.alt && is_insertable_codepoint(mods.codepoint))
         return KeyClass::PrintableKey;
     return KeyClass::NotEditorKey;
 }
@@ -339,14 +470,18 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
             touch_blink(s);
             return KeyAction::Consumed;
         }
+        // One CODEPOINT left, not one byte: `pending` carries UTF-8 and a caret
+        // must never rest inside a character (the contract is at the head of
+        // text_editor.h). The selection endpoints inherit the property, since
+        // both are cursor positions.
         if (shift) {
             if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            if (s.cursor_pos > 0) s.cursor_pos--;
+            s.cursor_pos = prev_codepoint_boundary(s.pending, s.cursor_pos);
         } else {
             if (has_selection(s)) {
                 s.cursor_pos = selection_start(s);
-            } else if (s.cursor_pos > 0) {
-                s.cursor_pos--;
+            } else {
+                s.cursor_pos = prev_codepoint_boundary(s.pending, s.cursor_pos);
             }
             s.selection_anchor = -1;
         }
@@ -365,17 +500,15 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
             touch_blink(s);
             return KeyAction::Consumed;
         }
+        // One CODEPOINT right — the mirror of the Left branch above.
         if (shift) {
             if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
-            if (s.cursor_pos < static_cast<int>(s.pending.size())) {
-                s.cursor_pos++;
-            }
+            s.cursor_pos = next_codepoint_boundary(s.pending, s.cursor_pos);
         } else {
             if (has_selection(s)) {
                 s.cursor_pos = selection_end(s);
-            } else if (s.cursor_pos <
-                       static_cast<int>(s.pending.size())) {
-                s.cursor_pos++;
+            } else {
+                s.cursor_pos = next_codepoint_boundary(s.pending, s.cursor_pos);
             }
             s.selection_anchor = -1;
         }
@@ -420,8 +553,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                     s.red = false;
                 }
             } else if (s.cursor_pos > 0) {
-                s.pending.erase(static_cast<size_t>(s.cursor_pos - 1), 1);
-                s.cursor_pos--;
+                // A WHOLE CODEPOINT, not a byte — deleting one byte of a
+                // multi-byte character would leave the buffer malformed.
+                const int b =
+                    prev_codepoint_boundary(s.pending, s.cursor_pos);
+                s.pending.erase(static_cast<size_t>(b),
+                                static_cast<size_t>(s.cursor_pos - b));
+                s.cursor_pos = b;
                 s.red = false;
             }
         }
@@ -442,7 +580,11 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                     s.red = false;
                 }
             } else if (s.cursor_pos < static_cast<int>(s.pending.size())) {
-                s.pending.erase(static_cast<size_t>(s.cursor_pos), 1);
+                // A WHOLE CODEPOINT forward — the mirror of BackSpace's.
+                const int e =
+                    next_codepoint_boundary(s.pending, s.cursor_pos);
+                s.pending.erase(static_cast<size_t>(s.cursor_pos),
+                                static_cast<size_t>(e - s.cursor_pos));
                 s.red = false;
             }
         }
@@ -450,20 +592,20 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::Consumed;
     }
 
-    // Printable insertion (length-capped). Each Kind's cap admits its
+    // Printable insertion (length-capped in BYTES). Each Kind's cap admits its
     // longest full-precision value form (see the kMaxPendingChars*
     // comments in text_editor.h).
-    // Accept any printable character the keyboard produced. The platform
-    // resolved the effective codepoint (shift / layout applied) via
-    // xkbcommon; insert it when no Ctrl/Alt is held and it is a printable
-    // ASCII character. Characters that are invalid for this field are NOT
-    // filtered here — the commit-time validator rejects the value (red
-    // flash) when Enter is pressed. This replaces the per-Kind
-    // keysym_to_char vocabulary entirely; the only thing Kind still selects
-    // is the length cap below.
-    if (!ctrl && !mods.alt &&
-        mods.codepoint >= 0x20 && mods.codepoint <= 0x7e) {
-        const char ch = static_cast<char>(mods.codepoint);
+    // Accept any character-bearing key the keyboard produced. The platform
+    // resolved the effective codepoint (shift / layout / compose applied) via
+    // xkb_state_key_get_utf32 — a FULL Unicode codepoint, not a byte — so a
+    // compose or dead-key sequence arrives here whole and is UTF-8 encoded
+    // below, landing as one insertion of one to four bytes. Characters that are
+    // invalid for this field are NOT filtered here — the commit-time validator
+    // rejects the value (red flash) when Enter is pressed. This replaces the
+    // per-Kind keysym_to_char vocabulary entirely; the only thing Kind still
+    // selects is the length cap below.
+    if (!ctrl && !mods.alt && is_insertable_codepoint(mods.codepoint)) {
+        const std::string ch = encode_utf8(mods.codepoint);
         int cap = kMaxPendingChars;
         if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
@@ -474,12 +616,14 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         // so a refusal leaves the buffer (selection included) untouched.
         // Refuse exactly when the insert would push past the cap AND grow the
         // pending; replacing a full selection with one char shrinks-then-grows
-        // within the cap and is accepted.
+        // within the cap and is accepted. The insert's length is the ENCODED
+        // byte count, so a multi-byte character is weighed as what it costs.
         const int old_size = static_cast<int>(s.pending.size());
         const int sel      = has_selection(s)
                                  ? selection_end(s) - selection_start(s)
                                  : 0;
-        const int new_size = old_size - sel + 1;
+        const int ins      = static_cast<int>(ch.size());
+        const int new_size = old_size - sel + ins;
         if (new_size > cap && new_size > old_size) {
             s.red = true;
             touch_blink(s);
@@ -488,8 +632,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (has_selection(s)) {
             erase_selection(s);
         }
-        s.pending.insert(static_cast<size_t>(s.cursor_pos), 1, ch);
-        s.cursor_pos++;
+        s.pending.insert(static_cast<size_t>(s.cursor_pos), ch);
+        s.cursor_pos += ins;
         s.red = false;
         touch_blink(s);
         return KeyAction::Consumed;

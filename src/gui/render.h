@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class GuiAudio;
@@ -1075,19 +1076,30 @@ inline int marker_flag_baseline_px() {
 inline int waveform_border_px() {
     return scaled_px(kWaveformBorderPx, 1);
 }
-// THE NINE-GLYPH BUDGET, kept from the retired marker-text lane: a label longer
-// than nine glyphs displays as its first EIGHT bytes plus the UTF-8 ellipsis
-// (U+2026, 3 bytes) — 11 bytes, 9 glyphs. Composed marker text is ASCII by
-// construction (printable-ASCII inserts, lowercase-ASCII label grammar), so a
-// byte is a glyph and the ellipsis is a truncation marker no clipboard route
-// can author — U+2026 itself is the ONE non-ASCII character the product
-// authors, and it shapes as one real glyph on the sans face (Liberation Sans
-// gid 2031, a 1-em advance). DISPLAY ONLY: the store, the sidecars, the editor
-// seed and the copy payload never see it.
+// THE NINE-GLYPH LABEL BUDGET, kept from the retired marker-text lane. It
+// counts the KEPT LABEL GLYPHS, not the painted total: a label longer than nine
+// glyphs displays as its first NINE bytes plus a literal three-period `...`, so
+// a truncated flag paints twelve glyphs. The truncation marker is three ASCII
+// periods rather than U+2026 by the architect's own side-by-side verdict
+// (2026-08-02): he compared the two on his flag crop and preferred the wider,
+// looser three-dot look, so it is the spec.
+//
+// Composed marker text is printable ASCII by construction (the lowercase-ASCII
+// label grammar, the numeric serializers, the locked iter bracket), and with the
+// ellipsis gone the product authors NO non-ASCII glyph anywhere — a flag byte is
+// a flag glyph, which is what makes this a byte walk. (Free-text settings fields
+// and the editors accept UTF-8; none of them reaches a flag box.) DISPLAY ONLY:
+// the store, the sidecars, the editor seed and the copy payload never see the
+// dots.
 //
 // WHAT IT COVERS is the LABEL, and only the label — the iter bracket is exempt
 // (the next constant states why).
 inline constexpr size_t kMarkerLabelGlyphBudget = 9;
+
+// THE TRUNCATION MARKER ITSELF, so the bytes cap_marker_label appends and the
+// glyphs the width bound below charges for have ONE owner and cannot drift
+// apart. Pure ASCII, so its size() is both its byte length and its glyph count.
+inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 
 // THE ITER BRACKET DOES NOT COUNT AGAINST THE BUDGET (architect 2026-08-02).
 // It is 14 glyphs on its own — `+[-4.00,+4.00]`, a LOCKED display shape
@@ -1108,9 +1120,14 @@ inline constexpr size_t kIterBracketDisplayGlyphs = 14;
 // An UPPER BOUND on a flag box's painted width, used only to decide how far
 // LEFT of the viewport a marker may sit and still reach into it (flags run
 // rightward, so the left cull needs a width and the right cull does not). No
-// ASCII glyph in a sans face advances more than one em, so budget * em + the
+// ASCII glyph in a sans face advances more than one em, so glyphs * em + the
 // two pads bounds every box the truncation can produce. A bound, not a size:
 // nothing is laid out against it.
+//
+// THE GLYPH COUNT IS THE WORST PAINTED TOTAL, not the budget: the budget is the
+// KEPT LABEL, and a truncated flag paints the marker's own glyphs after it, so
+// both terms are here. An untruncated label is shorter than the budget by
+// definition, so the truncated form is the worst case on both arms.
 //
 // `iteration_on` ADDS THE BRACKET'S OWN GLYPHS, and it must: with the bracket
 // outside the budget a bracketed box can be 14 glyphs wider than the budget
@@ -1126,6 +1143,7 @@ inline constexpr size_t kIterBracketDisplayGlyphs = 14;
 // culled markers by one column and never save a visible one.
 inline double marker_flag_max_width_px(bool iteration_on) {
     const size_t glyphs = kMarkerLabelGlyphBudget +
+                          kMarkerLabelTruncationMarker.size() +
                           (iteration_on ? kIterBracketDisplayGlyphs : 0);
     return static_cast<double>(glyphs) * redesign_font_size_px() +
            static_cast<double>(marker_flag_pad_left_px() +

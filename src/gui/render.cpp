@@ -828,16 +828,17 @@ struct FlagLabelText {
 
 // Cap a marker label at the nine-glyph budget — the contract, the byte/glyph
 // identity and the display-only rule all live at kMarkerLabelGlyphBudget
-// (render.h). Eight budgeted bytes plus U+2026.
+// (render.h). NINE budgeted bytes are kept, then the truncation marker follows:
+// twelve painted glyphs in the plain case.
 //
 // THE EXEMPT RUN IS NEITHER COUNTED NOR CUT (architect 2026-08-02, the iter
 // bracket): the walk below spends the budget on the other bytes only and emits
 // the run whole wherever it falls, so a bracketed flag shows its full label
 // allowance AND its full bracket and the box grows to hold both. Today the
-// bracket always opens at byte 4 (the tempo's `N.NN`), well inside the eight
+// bracket always opens at byte 4 (the tempo's `N.NN`), well inside the nine
 // kept bytes, so the trailing arm is the shape's guarantee rather than a case
 // that fires: if the budget ever ran out before the run were reached, the run
-// still prints — never truncated — with the ellipsis after it.
+// still prints — never truncated — with the marker after it.
 std::string cap_marker_label(const FlagLabelText& lt) {
     const std::string& text = lt.text;
     const bool has_exempt = lt.exempt_len != 0 &&
@@ -848,7 +849,7 @@ std::string cap_marker_label(const FlagLabelText& lt) {
     std::string out;
     size_t i        = 0;
     size_t budgeted = 0;
-    while (i < text.size() && budgeted < kMarkerLabelGlyphBudget - 1) {
+    while (i < text.size() && budgeted < kMarkerLabelGlyphBudget) {
         if (has_exempt && i == lt.exempt_pos) {
             out.append(text, lt.exempt_pos, exempt_len);
             i += exempt_len;
@@ -861,7 +862,7 @@ std::string cap_marker_label(const FlagLabelText& lt) {
     if (has_exempt && i <= lt.exempt_pos) {
         out.append(text, lt.exempt_pos, exempt_len);
     }
-    out += "\xe2\x80\xa6";
+    out += kMarkerLabelTruncationMarker;
     return out;
 }
 

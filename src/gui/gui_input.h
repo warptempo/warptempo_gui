@@ -79,9 +79,13 @@ struct GuiInputState {
     bool     alt                 = false;
     bool     primary_button_held = false;
     // The Unicode codepoint this key event resolves to under the live
-    // keyboard state (shift / layout applied), as computed by
+    // keyboard state (shift / layout / compose applied), as computed by
     // xkb_state_key_get_utf32 at the platform boundary; 0 when the key
-    // produces no character (function keys, bare modifiers). THREE CONSUMERS
+    // produces no character (function keys, bare modifiers). It is a FULL
+    // CODEPOINT, not a byte — a compose or dead-key sequence arrives here
+    // whole (U+2026, U+2014, an accented letter) and the text editors UTF-8
+    // encode it on insertion, so nothing truncates at this boundary. THREE
+    // CONSUMERS
     // (re-derived 2026-07-30): the text editors' printable-insertion path,
     // repeat_eligible's editor-typing repeat gate, and the bottom-strip prompt's
     // LETTER responses — the last joined 2026-07-30, because the prompt is the

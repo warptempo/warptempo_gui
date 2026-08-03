@@ -1152,6 +1152,27 @@ void GuiInputHandler::commit_editor_exit_no_commit() {
 // common prefix does not advance past what is already typed (mirrors the
 // settings editor's no-op-on-ambiguity Tab). A unique matching candidate
 // completes fully — its whole string is the common prefix of the singleton.
+//
+// THE COMPARISON IS BY BYTE, DELIBERATELY: an entry identifier is a FILESYSTEM
+// PATH, and a path is bytes — it is not text the UTF-8 relaxation covers, and
+// the resolve below matches it byte-exactly against the same strings. Program-
+// written batch folders and cell basenames are ASCII, so the byte compare is
+// the whole story for every name this product writes.
+//
+// WHAT THE PREFIX WRITES IS TEXT, THOUGH, and that is the one place the two
+// domains meet: the result becomes an editor `pending`, which must end on a
+// UTF-8 codepoint boundary (the invariant is at the head of text_editor.h).
+// Two hand-placed files in renders/ whose stems pass the numeric-prefix filter
+// and share a PARTIAL multi-byte character would otherwise cut the prefix
+// mid-character, seeding a buffer the caret walks and the shaper draws as
+// .notdef. So the prefix is backed off to a boundary before it is published.
+// The back-off reads the SEED CANDIDATE rather than the prefix itself, which is
+// what makes it exact: `lcp` is a prefix of `first` throughout (every step only
+// truncates), so the cut is mid-character exactly when the byte `first` carries
+// AT the cut is a continuation byte — a question the prefix alone cannot answer,
+// since a COMPLETE trailing sequence also ends in continuation bytes. It is a
+// provable no-op for ASCII identifiers: no ASCII byte is a continuation byte, so
+// the loop never takes a step for any name the product writes.
 void GuiInputHandler::commit_editor_autocomplete() {
     if (!text_editor::is_active(app.commit_editor)) return;
     const std::string pending = app.commit_editor.pending;
@@ -1160,12 +1181,13 @@ void GuiInputHandler::commit_editor_autocomplete() {
         renders_dir.enumerate_render_entries();
 
     std::string lcp;
+    std::string first;
     bool have = false;
     for (const auto& e : list) {
         const std::string c = render_entry_id(e);
         if (c.size() < pending.size() ||
             c.compare(0, pending.size(), pending) != 0) continue;
-        if (!have) { lcp = c; have = true; }
+        if (!have) { lcp = c; first = c; have = true; }
         else {
             const size_t n = std::min(lcp.size(), c.size());
             size_t i = 0;
@@ -1174,6 +1196,13 @@ void GuiInputHandler::commit_editor_autocomplete() {
         }
     }
     if (!have) return;                          // no candidate has this prefix
+    // Back the prefix off to a codepoint boundary (see the note above). Runs
+    // BEFORE the advancement test, so a prefix that reached only into the
+    // middle of a character correctly collapses to a no-op.
+    while (lcp.size() < first.size() &&
+           text_editor::is_utf8_continuation_byte(
+               static_cast<unsigned char>(first[lcp.size()])))
+        lcp.pop_back();
     if (lcp.size() <= pending.size()) return;   // common prefix does not advance
 
     app.commit_editor.pending          = std::move(lcp);
