@@ -1190,11 +1190,12 @@ void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     // recorded, so the remembered kind stays the last one derived from a real
     // position and the capture release restores THAT. The span and the accepted
     // cost are at pointer_position_unknown_'s declaration; the GUI needs no
-    // knowledge of it, which is what lets its gesture ends call the same refresh
-    // whether or not the compositor granted a capture.
+    // knowledge of it, which is what lets its one per-iteration refresh run the
+    // same way whether or not the compositor granted a capture.
     if (pointer_position_unknown_) return;
-    // APPLY ONLY ON A CHANGE. The GUI calls this on every motion event, so an
-    // unmoving zone must cost nothing — and a set_cursor per motion would be
+    // APPLY ONLY ON A CHANGE. The GUI calls this once per run-loop iteration —
+    // its cursor has ONE owner and that owner runs at the loop boundary — so an
+    // unmoving answer must cost nothing, and a set_cursor per iteration would be
     // real protocol traffic for no visible difference.
     if (kind == cursor_kind_) return;
     cursor_kind_ = kind;
@@ -1408,6 +1409,27 @@ void GuiPlatform::run() {
                 on_waveform_worker_completion_();
             }
         }
+
+        // THE ITERATION HAS SETTLED. Everything this pass dispatched is above:
+        // the display's events, the tick, and both worker completions. A loop
+        // boundary is by definition after every write any of them made, which is
+        // what lets a consumer here derive an answer without knowing who wrote
+        // what — the reason this hook exists at all is stated at its setter.
+        //
+        // NOT THE PRE-PAINT AND NOT THE TICK, both considered and both wrong for
+        // it: the pre-paint runs only when a frame is scheduled, so a state
+        // change that damages nothing would never reach it, and the tick is the
+        // PLAYBACK cadence — firing there would make a second cadence own a fact
+        // that belongs to the loop.
+        //
+        // THE `continue` AND `break` PATHS ABOVE DELIBERATELY SKIP THIS. EINTR
+        // dispatched nothing, so nothing settled; the two connection-loss breaks
+        // leave a display that can no longer be talked to; and the should_exit_
+        // test below covers the clean quit, where the loop is about to end and
+        // the answer would be computed for a frame that is never presented. The
+        // test is here rather than inside the consumer so the platform keeps the
+        // one fact ("are we leaving?") that the consumer has no way to see.
+        if (!should_exit_) loop_settled_hook_(current_mods());
     }
 
     wl_display_dispatch_pending(wl_display_);
@@ -1695,20 +1717,15 @@ void GuiPlatform::on_frame_done(struct wl_callback* cb) {
 // there was without a scroll frame to re-probe; there is no state left to
 // compare it against, so it is simply dropped.
 //
-// THE CURSOR EDGE FIRES FROM HERE, which is the reason this is a function and
-// not two parallel tails. Modifiers SELECT between cursor kinds over the
-// waveform, so clearing the bits without telling the cursor leaves the old cue
-// up under a resting pointer — a Zoom promise the platform has already stopped
-// believing in, and one the capture's remembered-kind restore would hand back
-// after a release. The fire uses the SAME test wl_keyboard.modifiers does: the
-// MODELED TRIO only, since a Super-only change moves no cursor kind. It goes
-// LAST, after the synthesized-left teardown, because ending a held button can
-// end a gesture and a live gesture is one of the things the cursor kind is
-// derived from — firing first would answer against a state one line from
-// changing.
+// THE CURSOR OWES NOTHING TO THIS EDGE ANY MORE, and that is the point of the
+// per-iteration owner rather than an omission here: dropping the modifier bits
+// (and, below, a held synthesized button that can end a gesture) changes what
+// the cursor's zone map answers, and the run loop's tail re-derives it in this
+// same iteration — a wl_keyboard.leave and a capability loss both arrive as
+// dispatched events, so neither can outrun the boundary. A fire of its own
+// would only be an earlier answer to the same question, from a spot that would
+// then owe an ordering rule about the teardown below it.
 void GuiPlatform::forget_keyboard_state() {
-    const bool trio_changed = mod_ctrl_ || mod_shift_ || mod_alt_;
-
     mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_   = 0;
     scroll_accum_ = 0.0;
@@ -1716,8 +1733,6 @@ void GuiPlatform::forget_keyboard_state() {
     // A held synthesized-left button can never see its keycode-matched release
     // once the key stream has ended, so end it here.
     end_left_hold_source(/*physical=*/false);
-
-    if (trio_changed) modifiers_changed_hook_(current_mods());
 }
 
 void GuiPlatform::on_seat_capabilities(uint32_t caps) {
@@ -2030,27 +2045,28 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         xkb_state_, XKB_MOD_NAME_LOGO,
         XKB_STATE_MODS_EFFECTIVE);
 
-    // THE MODIFIER EDGE, and both of its consumers. This event fires when the
-    // modifier state CHANGES and not on ordinary key presses, so the test below
-    // is only about the three modifiers the application models (a Super edge
-    // moves neither consumer). The OTHER place the modeled state moves is
+    // THE MODIFIER EDGE, and its ONE remaining consumer. This event fires when
+    // the modifier state CHANGES and not on ordinary key presses, so the test
+    // below is only about the three modifiers the application models (a Super
+    // edge moves nothing here). The OTHER place the modeled state moves is
     // forget_keyboard_state, where it vanishes with no event to announce it; it
-    // applies this same trio test to the cursor consumer and drops the wheel
-    // remainder outright, for the reasons recorded there.
+    // drops the wheel remainder outright, for the reason recorded there.
     if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
         mod_alt_ != prev_alt) {
-        // (1) It ends any continuous wheel chord session, so the sub-detent
+        // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
         // scroll frame that would re-probe. The wheel chords route differently
         // by modifier (plain zoom vs Alt pan), so remainder accumulated under
         // one chord must never assemble a detent under another.
         scroll_accum_ = 0.0;
-        // (2) It re-derives the POINTER CURSOR. Modifiers SELECT between cursor
-        // kinds over the waveform (ctrl is the zoom drag, alt the pan), so a
-        // modifier going down under a resting pointer must change the cue AT
-        // ONCE — waiting for the next motion event would show the wrong promise
-        // for exactly as long as the user held still.
-        modifiers_changed_hook_(current_mods());
+        // THE POINTER CURSOR USED TO BE THE SECOND CONSUMER HERE, through a
+        // hook fired on this same test — modifiers SELECT between cursor kinds
+        // over the waveform, so a Ctrl pressed under a resting pointer has to
+        // move the cue with no motion under it. It is no longer this edge's
+        // business: this event is DISPATCHED inside a run-loop iteration, and
+        // that iteration's tail re-derives the cursor from the settled state
+        // (set_loop_settled_hook), which answers the modifier case and every
+        // other stale class with one owner instead of a hook per fact.
     }
 
     // No on_key synthesis on modifier change — the next non-modifier
@@ -2186,10 +2202,10 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
     // Hand the compositor the cursor the REMEMBERED KIND names — not the arrow.
     // A pointer that left the window over the scrub surface and came back to the
     // same spot must return with the same cursor; the synthesized motion below
-    // then re-derives the kind for the entry coordinates and corrects it in this
-    // same event if the GUI's answer moved while we had no pointer. The serial
-    // is already stashed above, so the applier's own tracked-serial use is this
-    // enter's serial.
+    // records the entry coordinates, and the tail of THIS loop iteration
+    // re-derives the kind from them, correcting the remembered one if the GUI's
+    // answer moved while we had no pointer. The serial is already stashed above,
+    // so the applier's own tracked-serial use is this enter's serial.
     apply_cursor_kind();
 
     // Synthesize a motion delivery so consumers register the pointer
@@ -2220,9 +2236,9 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
     pointer_x_ = wl_fixed_to_int(surface_x);
     pointer_y_ = wl_fixed_to_int(surface_y);
     // The pointer's real position, from the compositor: the post-capture unknown
-    // span ends here (same rule and same guard as the enter above), and the
-    // delivery below immediately re-derives the cursor for it — which is why the
-    // clear owes no cursor call of its own.
+    // span ends here (same rule and same guard as the enter above), and this
+    // iteration's tail re-derives the cursor for it once the delivery below has
+    // recorded it — which is why the clear owes no cursor call of its own.
     if (!pointer_captured_) pointer_position_unknown_ = false;
     if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
 }
@@ -2630,13 +2646,14 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
     // Whatever was showing when the hide ran comes back here, and for the strip
     // drag and the alt-pan that is the ZOOM or the PAN cue their own modifier
-    // put up: the modifier edge re-derived the cursor before the press, so the
-    // remembered kind is the last one derived from a REAL pointer position, and
-    // the restore puts the pointer back inside the zone that produced it (the
-    // anchor-stem column or the raw travel, y frozen at the press row). What
-    // makes that true rather than merely likely is set_cursor_kind's drop: no
-    // kind named during the capture — the live-gesture Arrow the GUI resolves at
-    // every delivered relative motion, above all — was ever recorded here.
+    // put up: the loop iteration in which that modifier arrived re-derived the
+    // cursor before the press, so the remembered kind is the last one derived
+    // from a REAL pointer position, and the restore puts the pointer back inside
+    // the zone that produced it (the anchor-stem column or the raw travel, y
+    // frozen at the press row). What makes that true rather than merely likely
+    // is set_cursor_kind's drop: no kind named during the capture — the
+    // live-gesture Arrow the GUI re-derives at every loop iteration the lock's
+    // relative motion wakes, above all — was ever recorded here.
     // The GUI's next motion would correct a hard-coded arrow, but the frames in
     // between would be a lie, and this is the reason the kind is REMEMBERED
     // rather than passed (the platform's edges do not know where the pointer is
@@ -2957,7 +2974,7 @@ void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
-void GuiPlatform::set_modifiers_changed_hook(std::function<void(GuiInputState)> cb) { modifiers_changed_hook_ = std::move(cb); }
+void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

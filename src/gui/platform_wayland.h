@@ -193,39 +193,36 @@ public:
     // other event to carry its repaint). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
 
-    // Fired at each CHANGE of the ctrl / shift / alt state, from the TWO places
-    // that state can move: wl_keyboard.modifiers — which the compositor sends
-    // when the state moves and NOT on an ordinary key press, so it needs no
-    // filtering beyond the changed test — and forget_keyboard_state, the
-    // teardown wl_keyboard.leave and keyboard-capability loss share, which
-    // clears the bits with no event to announce it. Both apply the same test, so
-    // the hook is the modeled trio's edge wherever it happens. It carries the
-    // same GuiInputState the pointer callbacks build, so a consumer sees one
-    // modifier truth.
+    // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
+    // the display dispatch, the tick and both worker completions, so it observes
+    // the iteration's FULLY SETTLED state. That placement is the whole point: a
+    // loop boundary is by definition after every write an iteration made, so a
+    // consumer that derives an answer here needs no list of the writers it
+    // depends on and no "call me after your state has settled" rule at each of
+    // them. Null-free (seeded with a no-op), so the fire site needs no test.
     //
-    // IT EXISTS FOR THE CURSOR. Modifiers SELECT between cursor kinds over the
-    // waveform, so without this edge a Ctrl going down under a resting pointer
-    // would leave the wrong cue showing until the pointer moved — the whole
-    // affordance, late. main.cpp wires it to the input handler's cursor refresh
-    // and to nothing else. Super is deliberately NOT an edge here: it is absent
-    // from GuiInputState and gates key delivery instead.
-    void set_modifiers_changed_hook(std::function<void(GuiInputState)> cb);
-
-    // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
-    // callback and the modifiers-changed hook above are built from, read out of
-    // the tracked ctrl/shift/alt bits and the logical left-button hold. PUBLIC
-    // because two callbacks that carry NO modifier state of their own need it:
-    // main.cpp's WM-close and resize handlers force-end the in-flight pointer
-    // gestures and must then re-derive the pointer cursor, whose zone map picks
-    // between kinds by ctrl/alt/shift — a default-constructed state there would
-    // put up the wrong cue with the same confidence as the right one.
-    // THE ALTERNATIVE — remembering the last-seen modifiers beside the last-seen
-    // pointer position — was rejected as a SECOND representation of a fact this
-    // object already owns, with its own staleness invariant to keep. The split
-    // that IS right is the one end_left_hold_source already documents for its
-    // synthesized release: the POSITION must be remembered (only pointer events
-    // carry it) and the MODIFIERS must not (they are live here).
-    GuiInputState current_mods() const;
+    // WHEN IT DOES NOT FIRE, and why: not on the EINTR `continue` (nothing was
+    // dispatched, so nothing settled), not on any `break` (the loop is leaving,
+    // and the two connection-loss breaks leave a display that cannot be talked
+    // to at all), and not once should_exit_ is set (the iteration is the last
+    // one — the objects the consumer reads are still alive, main.cpp's outlive
+    // run(), but the frame it would compute for is never presented). The
+    // condition is stated once, at the fire site.
+    //
+    // IT EXISTS FOR THE POINTER CURSOR, and it is that cue's ONE owner: the kind
+    // is derived from roughly ten independent facts (the pointer's position, the
+    // modifiers, every gesture's state, the trim window, the layout, read-only,
+    // the modal surfaces), and a push at each writer of any of them is a set
+    // nobody can enumerate and keep enumerated — two review rounds each found a
+    // class the previous derivation had missed. main.cpp wires this to
+    // GuiInputHandler::refresh_pointer_cursor and to nothing else.
+    // IT CARRIES THE LIVE MODIFIER STATE, the same GuiInputState the pointer
+    // callbacks are built from, because modifiers SELECT between cursor kinds
+    // over the waveform and the platform is that fact's owner — the consumer
+    // therefore never reaches back for it, and no second copy of the modifier
+    // state exists to go stale. Super is deliberately not in it (absent from
+    // GuiInputState; it gates key delivery instead).
+    void set_loop_settled_hook(std::function<void(GuiInputState)> cb);
 
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
@@ -276,8 +273,8 @@ public:
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
-    // CHANGE, so the per-motion call an unmoving zone makes costs no protocol
-    // traffic. The kind is REMEMBERED rather than passed because the platform
+    // CHANGE, so the once-per-loop-iteration call an unmoving answer makes costs
+    // no protocol traffic. The kind is REMEMBERED rather than passed because the platform
     // re-applies the cursor on its own edges — a pointer enter, and the end of a
     // pointer capture — and neither of those knows where the pointer is in the
     // GUI's terms; they just restore what was last asked for.
@@ -286,8 +283,9 @@ public:
     // remembered (pointer_position_unknown_, whose contract is at the field). The
     // GUI resolves the cursor from ITS idea of the pointer position, and a capture
     // makes that idea virtual: motion keeps arriving through the lock as unbounded
-    // relative travel, so the GUI keeps answering — with the live-gesture Arrow,
-    // and then from wherever the travel ended — for a place the pointer is not.
+    // relative travel, so the GUI keeps answering — every iteration of the run
+    // loop, with the live-gesture Arrow and then from wherever the travel ended —
+    // for a place the pointer is not.
     // Remembering those answers is what would make the restore a lie, since the
     // restore hands back the REMEMBERED kind: dropping them keeps the remembered
     // kind the last one derived from a real position, which is the cue the gesture
@@ -538,13 +536,14 @@ private:
     // up is not ours to know until the compositor says so. It goes false again at
     // the next ABSOLUTE position the compositor delivers (wl_pointer.enter or
     // wl_pointer.motion), which is exactly the event that re-establishes the
-    // truth — and which carries its own re-derivation with it, since the GUI
-    // resolves the cursor at the top of every motion.
+    // truth — and the re-derivation follows in that same loop iteration, at the
+    // tail hook that owns the cursor (set_loop_settled_hook).
     // ONLY A REAL CAPTURE SETS IT: the degraded compositor (no pointer-constraints
     // or no relative-pointer) never locks, so its "captured" gestures run on
     // ordinary absolute motion with the position true throughout and every cursor
-    // write landing normally. That is what makes the captured and degraded paths
-    // ONE rule at the GUI's gesture ends rather than two.
+    // write landing normally. That is what lets the GUI's ONE per-iteration
+    // re-resolve serve the captured and the degraded path alike, with nothing in
+    // the GUI testing which case it is in.
     // The clear is guarded on !pointer_captured_ so a stray absolute event mid-
     // capture cannot declare the virtual position true.
     bool pointer_position_unknown_ = false;
@@ -700,11 +699,10 @@ private:
     std::function<void()> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
-    // Fired at each ctrl/shift/alt EDGE, from wl_keyboard.modifiers and from
-    // forget_keyboard_state (see set_modifiers_changed_hook). SEEDED with a
-    // no-op, like the input handler's capture hooks, so neither fire site needs
-    // a null test.
-    std::function<void(GuiInputState)> modifiers_changed_hook_ =
+    // Fired at the TAIL of every run() iteration that is not leaving the loop
+    // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
+    // capture hooks, so the fire site needs no null test.
+    std::function<void(GuiInputState)> loop_settled_hook_ =
         [](GuiInputState) {};
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
@@ -779,13 +777,27 @@ private:
     // both mean the same thing: no further key event can arrive on the state
     // built so far, so the modifier bits, the repeat arm, the wheel sub-detent
     // remainder and a held synthesized-left button are all dropped together.
-    // Hoisted so a third such edge cannot land with one of the four forgotten —
-    // in particular the cursor edge, which fires from inside here.
+    // Hoisted so a third such edge cannot land with one of the four forgotten.
     void forget_keyboard_state();
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
-    // (current_mods() is PUBLIC, declared beside set_modifiers_changed_hook —
-    // main.cpp's two modifier-less force-end callbacks read it there.)
+    // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
+    // callback and the loop-settled hook are built from, read out of the tracked
+    // ctrl/shift/alt bits and the logical left-button hold.
+    // PRIVATE AGAIN since 2026-08-03: it was public for exactly two callers,
+    // main.cpp's WM-close and resize callbacks, which carried no modifier state
+    // of their own and had to re-derive the pointer cursor after force-ending a
+    // gesture. The per-iteration cursor owner deleted both calls, and the hook
+    // that replaced them is HANDED this state rather than fetching it — so the
+    // door is closed rather than left standing with nothing asking for it (the
+    // pointer_focused() note above records the same disposal).
+    // THE STANDING SPLIT, which is why this is read live and never stashed: the
+    // POSITION must be remembered (only pointer events carry it) and the
+    // MODIFIERS must not (they are live here) — end_left_hold_source documents
+    // the same split for its synthesized release. A remembered copy of the
+    // modifiers would be a second representation of a fact this object owns,
+    // with its own staleness invariant to keep.
+    GuiInputState current_mods() const;
 
     // -- Pointer handlers --
     void on_pointer_enter(uint32_t serial, struct wl_surface* surface,

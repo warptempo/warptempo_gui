@@ -904,19 +904,13 @@ int main(int argc, char** argv) {
         // below, so the resize still lands on a gesture-free, popup-free state.
         input_handler.close_dropdown();
         paint_handler.on_resize(w, h);
-        // A GESTURE THAT ENDS MUST RE-RESOLVE THE CURSOR. The cursor kind is
-        // derived on motion and on a modifier edge, and a force-end is neither:
-        // the finalizer above cleared the gesture state the zone map reads, so
-        // without this the kind the compositor is showing stays whatever the
-        // gesture last named (a trim endcap's edge cue, say) until the pointer
-        // happens to move. ORDER IS THE WHOLE POINT — this runs LAST, after the
-        // finalizer AND after on_resize, because the map reads BOTH the gesture
-        // state and the layout geometry the resize just rebuilt; re-derived any
-        // earlier it would answer against exactly the state about to change.
-        // The modifiers are the platform's live ones (this callback carries
-        // none), the position is the remembered one — the split current_mods()
-        // documents.
-        input_handler.refresh_pointer_cursor(gui.current_mods());
+        // (THE CURSOR RE-RESOLVE THAT STOOD HERE IS GONE, 2026-08-03. This
+        // callback force-ends the gestures and rebuilds the layout — both facts
+        // the cursor's zone map reads — and it used to owe a refresh at its
+        // tail, ordered after BOTH writes above. It owes nothing now: a configure
+        // is dispatched inside a run-loop iteration whose tail re-derives the
+        // cursor from the settled state, so the ordering rule this comment used
+        // to spell is a property of the loop rather than of this placement.)
     });
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
@@ -984,14 +978,10 @@ int main(int argc, char** argv) {
         // which closes the menu and only then lets the close route run.
         input_handler.close_dropdown();
         prompt.request_close();
-        // THE CURSOR RE-RESOLVES AFTER THE FORCE-END, exactly as the resize path
-        // does and for the same reason: the finalizer cleared the gesture state
-        // the zone map reads and no motion event is coming to notice. ORDERED
-        // LAST DELIBERATELY — request_close may raise the unsaved-work prompt,
-        // which the map's first line answers with the Arrow, so re-deriving
-        // before it would trade a stale endcap cue for a stale hover cue instead
-        // of landing on the truth. Live modifiers, remembered position.
-        input_handler.refresh_pointer_cursor(gui.current_mods());
+        // (The cursor re-resolve this callback used to end with is gone for the
+        // same reason the resize path's is — see there. The prompt this may have
+        // just raised is one of the zone map's own refusals, and the map is asked
+        // again at this iteration's tail, past everything above.)
     });
 
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,
@@ -1081,14 +1071,35 @@ int main(int argc, char** argv) {
         viewport.invalidate_top_strip();
     });
 
-    // MODIFIER EDGE -> the pointer cursor, and nothing else. Modifiers SELECT
-    // between cursor kinds over the waveform (ctrl the zoom drag, alt the pan),
-    // so the cue has to move the moment the modifier does — deriving it on
-    // motion alone leaves the wrong promise on screen for as long as the user
-    // holds still. It takes the pointer-leave hook's shape for the same reason:
-    // an edge the platform owns that changes what should be on screen and
-    // carries no pointer event to do it.
-    gui.set_modifiers_changed_hook([&](GuiInputState mods) {
+    // THE POINTER CURSOR'S ONE OWNER (architect 2026-08-03, replacing the
+    // per-site model). The run loop fires this at the TAIL of every iteration it
+    // is not leaving, so the cursor is re-derived once per poll wakeup from a
+    // state that has fully settled — after the display's events, the tick and
+    // both worker completions.
+    //
+    // WHAT IT REPLACED, and why the replacement is structural rather than one
+    // more site: the kind used to be PUSHED from twenty-three places — the top of
+    // on_motion, eight release arms, ten button-lost and refused-begin arms in
+    // on_motion, the two force-end callbacks above, a modifier-edge hook in the
+    // platform, and a scope guard in on_key — each owing the rule "run after the
+    // state you read has settled". The zone map reads about ten independent fact
+    // families, so a refresh was owed by
+    // every writer of any of them: a set nobody could enumerate and keep
+    // enumerated, and two review rounds each found a class the previous
+    // derivation had missed while whole classes (a wheel zoom moving the trim
+    // endcaps under a resting pointer, the zoom and navigation keys, `x`, an
+    // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
+    // and close, a dropdown item click) had no site to hang a call on at all.
+    // A LOOP BOUNDARY IS AFTER EVERY SETTLE BY DEFINITION, so all of them are
+    // answered by this one call and the ordering rule itself is gone.
+    //
+    // THE COST IS ONE MAP EVALUATION PER WAKEUP and no protocol traffic while
+    // the answer holds: GuiPlatform::set_cursor_kind applies only on a change.
+    // refresh_pointer_cursor is a no-op while the pointer is outside the window,
+    // and it does nothing but re-derive and apply — no hover recompute, no
+    // damage, no gesture logic. `mods` is the platform's live modifier truth,
+    // handed over rather than fetched.
+    gui.set_loop_settled_hook([&](GuiInputState mods) {
         input_handler.refresh_pointer_cursor(mods);
     });
 

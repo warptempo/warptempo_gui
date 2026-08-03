@@ -198,34 +198,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // FINALIZES the text selection, restoring nothing, and the Esc it falls
     // through to belongs to the EDITOR's own modality (discard the buffer), which
     // is a different thing from cancelling a gesture.
-    // A GESTURE THAT ENDS RE-RESOLVES THE CURSOR, AND SOME GESTURES END ON A KEY.
-    // The rule and its ordering live with the POINTER's ends (the header above
-    // on_button_release, input_pointer.cpp); this is the keyboard's half, and it
-    // is a real half — the zone map refuses every cue while a gesture is live, so
-    // a keyboard-ended gesture leaves the compositor showing an Arrow that
-    // promises a drag nobody is doing, with no motion and no modifier edge coming
-    // to correct it. TWO ROUTES END A GESTURE FROM A KEY: the text-drag hatch
-    // immediately below (bare Esc / Ctrl+Q, which FINALIZE the selection) and the
-    // pointer gestures' Ctrl+Q hatch in the drag-modal gate further down.
-    // THE REFRESH CANNOT RUN WHERE THE GESTURE ENDS, which is the whole
-    // difficulty: both routes fall onward, and for the three bottom-strip editors
-    // the editor is still open one line later — the map would answer with the
-    // modal's own Arrow and the re-derivation would be spent on the state about to
-    // change. It belongs after the route has SETTLED the editor and prompt state,
-    // immediately before the route returns; and these routes have many returns.
-    // So the FACT is carried to the return instead of the call being placed at
-    // each one: arming the flag says "a gesture ended in this key", and the guard
-    // below is its single owner, running after everything else in this call. A key
-    // that merely passes through arms nothing and costs one bool.
-    bool gesture_ended_in_this_key = false;
-    struct CursorRefreshAtReturn {
-        GuiInputHandler* handler;
-        GuiInputState    mods;
-        const bool*      armed;
-        ~CursorRefreshAtReturn() {
-            if (*armed) handler->refresh_pointer_cursor(mods);
-        }
-    } cursor_refresh_at_return{this, mods, &gesture_ended_in_this_key};
+    // (THE KEYBOARD OWNS NO CURSOR RE-RESOLVE, 2026-08-03. A scope guard stood
+    // here, armed by the two routes that end a gesture from a key — the text-drag
+    // hatch immediately below and the pointer gestures' Ctrl+Q hatch in the
+    // drag-modal gate — and paid at whatever return the route took, because the
+    // refresh could not run where the gesture ends: both routes fall onward, and
+    // the editor is still open one line later, so the map would answer with the
+    // modal's own Arrow. The whole difficulty was an ordering problem, and the
+    // per-iteration cursor owner dissolves it: this handler is called from a
+    // dispatched key event, and the loop's tail re-resolves after the entire call
+    // has returned — past every editor close, every prompt raise and every
+    // teardown any route below performs.)
 
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
@@ -236,13 +219,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // THE HATCH IS A GESTURE END: this drag holds the cursor down to the
         // Arrow through any_pointer_gesture_active, so pressing Esc over the
         // ruler or the waveform's lower half must come back showing the Zoom or
-        // the Scrub. It is armed here and paid at the return, once the editor
-        // below has closed (see the guard above).
-        // THE TOP FLAG EDITOR NEEDS IT TOO, and by a different route: it is
+        // the Scrub — which it does at this iteration's tail, once the editor
+        // below has closed and everything else this call does has settled.
+        // (The TOP FLAG EDITOR is in it too, by a different route: it is
         // pointer-transparent, so its own modality never forced the Arrow — the
-        // live text drag alone did, through the same gesture refusal, so the stale
-        // end is identical there.
-        gesture_ended_in_this_key = true;
+        // live text drag alone did, through the same gesture refusal.)
         // fall through: the editor handler below runs Esc (cancel the
         // edit) or Ctrl+Q (tear the edit down, then the close prompt
         // opens) exactly as with no drag in flight.
@@ -394,20 +375,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             finalize_active_drags();
             prompt.request_close();
-            // THE CURSOR RE-RESOLVES AFTER THE FORCE-END: the finalizer cleared
-            // the gesture state pointer_cursor_kind reads, and neither of the
-            // two edges that normally re-derive it (a motion, a modifier change)
-            // is coming. ORDER IS LOAD-BEARING and it is the bug in miniature —
-            // it must run after BOTH calls above, since the map answers on the
-            // cleared gesture state AND on the prompt, which request_close may
-            // have just raised (a prompt is the map's first Arrow arm). ARMING
-            // THE GUARD rather than calling here is what makes that ordering
-            // structural instead of a placement to preserve: the refresh runs at
-            // the return, past anything a later edit puts below. It is also the
-            // keyboard's ONE re-resolve owner, shared with the text-drag hatch
-            // (the guard's declaration states the rule). `mods` is the press's
-            // own, so the ctrl this chord is held with is real.
-            gesture_ended_in_this_key = true;
+            // THE CURSOR RE-RESOLVES AFTER THE FORCE-END, and nothing here has
+            // to arrange it: the finalizer cleared the gesture state
+            // pointer_cursor_kind reads and request_close may have raised the
+            // prompt it reads next, and the loop's per-iteration owner answers
+            // after both — after this whole call, in fact, so a later edit below
+            // cannot get the ordering wrong.
             return;
         }
         return;
