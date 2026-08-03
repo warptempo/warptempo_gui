@@ -451,10 +451,25 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
-    // with a fresh modifier state — the modifier-edge half of the cursor's two
-    // routes, wired in main.cpp to the platform's modifiers-changed hook and
-    // called from nowhere else. The contract, and the zone map it consults, are
-    // at pointer_cursor_kind below.
+    // with a fresh modifier state. The contract, and the zone map it consults,
+    // are at pointer_cursor_kind below.
+    //
+    // THE CALLERS ARE TWO CLASSES, and the authoritative membership is derived
+    // at their sites rather than listed here by name:
+    //   * THE MODIFIER EDGE — main.cpp's modifiers-changed hook, the one entry
+    //     that exists because a modifier can move the cue under a pointer that
+    //     never moves;
+    //   * EVERY GESTURE END — the release arms and the button-lost arms in
+    //     input_pointer.cpp (whose own header states the rule, the ordering, and
+    //     the two CAPTURED gestures that deliberately abstain), plus the tail of
+    //     each force-end caller: the Ctrl+Q hatch in on_key and main.cpp's
+    //     WM-close and resize callbacks. The zone map REFUSES every cue while a
+    //     gesture is live and the trim gesture KEEPS its own, so an end that did
+    //     not re-derive would leave the compositor showing a promise about a
+    //     gesture that no longer exists.
+    // IN BOTH CLASSES THE CALL COMES AFTER THE STATE IT READS HAS SETTLED —
+    // after the teardown, after the prompt goes up, after the relayout — since
+    // the map derives from exactly that state.
     void refresh_pointer_cursor(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
@@ -603,6 +618,10 @@ struct GuiInputHandler {
     // under it; resize ends them before the geometry rebuild, whose new
     // samples-per-pixel would otherwise make the next motion derive its delta
     // across two coordinate systems).
+    // EACH CALLER OWES A refresh_pointer_cursor AT ITS OWN TAIL — not this
+    // function, which would run it too early: every caller changes more of what
+    // the cursor's zone map reads after this returns (the prompt goes up, the
+    // layout is rebuilt). The reasoning is at the definition.
     void finalize_active_drags();
 
     // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
@@ -1194,8 +1213,9 @@ private:
     // scatter set-cursor calls through the handlers. TWO CALLERS, both of which
     // hand the answer straight to GuiPlatform::set_cursor_kind: the line at the
     // top of on_motion (with the event's own coordinates) and
-    // refresh_pointer_cursor below (with the remembered ones, on a modifier
-    // edge).
+    // refresh_pointer_cursor above (with the remembered ones), whose own two
+    // caller classes — the modifier edge and every gesture end — are enumerated
+    // at its declaration.
     //
     // THE CURSOR PROMISES THE GESTURE (architect 2026-08-03). That is the whole
     // rule, and it is why every zone here is DERIVED FROM THE PRESS PATH rather
@@ -1273,19 +1293,24 @@ private:
     // anyway).
     //
     // ACCEPTED STALENESS, narrowed rather than deleted: the cursor is re-derived
-    // on MOTION and on a MODIFIER EDGE, so what remains stale is a state change
-    // with neither under it — a load completing while the pointer already rests
-    // on the waveform, a menu closing by Esc — which shows at the next event of
-    // either kind. There is deliberately no tick hook for that: the correction is
-    // one mouse movement away, and a cursor that repainted from a timer would be
-    // a second owner of the same fact.
+    // on MOTION, on a MODIFIER EDGE and at EVERY GESTURE END, so what remains
+    // stale is a state change with none of the three under it — a load
+    // completing while the pointer already rests on the waveform, a menu closing
+    // by Esc — which shows at the next event of any of those kinds. (The GESTURE
+    // END entry closed the largest of these: an end is neither a motion nor a
+    // modifier edge, so a gesture that stopped under a still pointer used to
+    // leave its own refused-or-owned kind standing indefinitely.) There is
+    // deliberately no tick hook for the rest: the correction is one mouse
+    // movement away, and a cursor that repainted from a timer would be a second
+    // owner of the same fact.
     // THE SECOND CALLER, refresh_pointer_cursor (declared public beside
     // on_motion), reads app.last_mouse_x / last_mouse_y and does exactly this
     // and nothing more — no hover recompute, no damage, no gesture logic —
-    // because a modifier edge is not a pointer event and must not become one. It
-    // is a no-op while the pointer is outside the window, where those remembered
-    // coordinates mean nothing (a pointer enter re-applies the remembered kind
-    // and synthesizes a motion, which re-derives anyway).
+    // because neither a modifier edge nor a gesture end is a pointer event and
+    // neither may become one. It is a no-op while the pointer is outside the
+    // window, where those remembered coordinates mean nothing (a pointer enter
+    // re-applies the remembered kind and synthesizes a motion, which re-derives
+    // anyway).
     GuiCursorKind pointer_cursor_kind(int x, int y, GuiInputState mods) const;
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.

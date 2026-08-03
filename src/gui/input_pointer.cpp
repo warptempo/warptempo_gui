@@ -2273,8 +2273,30 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         warpops.drop_copy_previous_at_playhead();
 }
 
+// A GESTURE THAT ENDS RE-RESOLVES THE CURSOR, and this handler is one of the
+// three places a gesture ends (the others are on_motion's button-lost arms and
+// the force-end finalizer below). THE ZONE MAP REFUSES EVERY CUE WHILE A
+// GESTURE IS LIVE — with the trim gesture's named exception, which keeps its
+// own kind — so the moment an arm below clears its state the kind the
+// compositor is showing becomes a claim about a gesture that no longer exists,
+// and nothing corrects it until the pointer next moves. Each arm therefore ends
+// with refresh_pointer_cursor(mods), the one owner, AFTER its teardown: the map
+// reads the very state the arm is clearing, so a refresh above the clear
+// re-derives the stale answer it was added to fix.
+// `mods` IS THE MODIFIER TRUTH the platform delivered WITH this release, so a
+// release under a held Ctrl re-derives the ctrl zone rather than the plain one.
+// TWO GESTURES DELIBERATELY DO NOT REFRESH — here or in on_motion's arms — and
+// both are the CAPTURED ones, the strip drag and the alt-pan. A capture hides
+// the cursor, moves the pointer
+// under unbounded VIRTUAL coordinates, and restores it at a position only the
+// platform knows (the anchor-stem column or the raw travel, y frozen at the
+// press row), which is emphatically not app.last_mouse_x/y — those hold the
+// virtual travel, a point the pointer does not occupy. Re-deriving there would
+// not be a stale cue but a WRONG one, so the platform's own re-apply at the
+// capture release (release_pointer_lock) stays the owner of that edge and the
+// compositor's post-restore motion carries the correction.
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
-                                        int y, GuiInputState /*mods*/) {
+                                        int y, GuiInputState mods) {
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
     // pointer, and its items are the redesign's one act-on-release surface.
     if (button == GuiMouseButton::Left && app.dropdown.open()) {
@@ -2301,6 +2323,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
                 .target = -1};
         }
+        refresh_pointer_cursor(mods);
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
@@ -2348,7 +2371,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         app.strip_drag = StripDragState{};
         // reappear the cursor at the anchor-stem column (y frozen at the press
-        // row) — the restore x override the drag set each event.
+        // row) — the restore x override the drag set each event. NO CURSOR
+        // REFRESH HERE, and that is the deliberate one of the two: this is a
+        // CAPTURED gesture and the restore position is the platform's, not
+        // app.last_mouse_x/y (see the header above this function).
         end_strip_pointer_capture();
         return;
     }
@@ -2362,6 +2388,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // compositor that never captured is unharmed.
         if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
+        // No cursor refresh: the other CAPTURED gesture, same reason as the
+        // strip drag above (the header states it once).
         end_strip_pointer_capture();
         return;
     }
@@ -2389,13 +2417,22 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
         if (moved) end_region_drag_min_size_check(app, audio, viewport);
+        // A region drag released over the scrub half must show the Scrub cue at
+        // once, not at the next motion.
+        refresh_pointer_cursor(mods);
         return;
     }
     // (No tempo-drag arms here: the target-view tempo drag and its pending are
     // DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
     // step alone. See marker_drag.h.)
     if (app.trim_drag.active) {
+        // THE ARM THE RETAINED CUE IS MOST VISIBLE ON: the trim gesture is the
+        // one that KEEPS its own kind for its whole life, so releasing an endcap
+        // drag out over the waveform used to leave the boundary-extension cursor
+        // standing there. commit_trim_drag clears app.trim_drag at its tail,
+        // which is why the refresh reads correctly only after it.
         commit_trim_drag();
+        refresh_pointer_cursor(mods);
         return;
     }
     if (app.pending_trim_drag.active) {
@@ -2408,6 +2445,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // and commits through the branch above, where the setter's deselect and
         // the trim-mutation stop live.)
         app.pending_trim_drag = PendingTrimDrag{};
+        // The pending is the trim cue's OTHER holder (the map reads both), so it
+        // owes the same re-resolve — and the click may rest up to the drag
+        // threshold away from the geometry it pressed, which is a different zone.
+        refresh_pointer_cursor(mods);
         return;
     }
     if (app.pending_marker_drag.active) {
@@ -2422,10 +2463,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // (A crossed pending became app.drag — dropping the candidate at the
         // threshold crossing — and commits through the branch below.)
         app.pending_marker_drag = PendingMarkerDrag{};
+        // The pending refuses every cue through any_pointer_gesture_active while
+        // it stands, and its release can rest up to the drag threshold from the
+        // flag it pressed — far enough to be in the ruler band above the marker
+        // lane, whose cue is the Zoom.
+        refresh_pointer_cursor(mods);
         return;
     }
     if (!app.drag.active) return;
+    // The marker reposition drag's own end. commit_drag clears app.drag, so the
+    // map answers on a gesture-free state only after it. (The plain
+    // no-gesture fall-through above owes nothing: with no gesture live the
+    // cursor was already the hover answer before this release arrived.)
     marker_drag.commit_drag();
+    refresh_pointer_cursor(mods);
 }
 
 // END every in-flight pointer gesture THROUGH ITS OWN RELEASE BODY. The one
@@ -2438,6 +2489,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // same order, and the region arm needs this TU's file-local min-size helper.
 // The gestures are mutually exclusive in practice, so this reads as a chain of
 // no-ops around the one that is live.
+// THE CURSOR REFRESH IS THE CALLER'S, NOT THIS FUNCTION'S, and that placement is
+// the ordering rule rather than an omission: every caller does MORE after this
+// returns — the two prompt routes raise the unsaved-work box (which the zone map
+// answers with the Arrow) and the resize rebuilds the layout geometry the map
+// measures against — so a refresh inside here would answer against state one
+// line from changing, which is exactly the defect the refresh exists to close.
+// Each of the three callers therefore ends with refresh_pointer_cursor at its
+// own tail; a fourth caller owes the same line.
 void GuiInputHandler::finalize_active_drags() {
     // Editor text-selection drag: FINALIZE (collapse a no-motion anchor to a
     // caret), the same act its release performs — selection-only, nothing to
@@ -3212,6 +3271,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.editor_text_drag.active) {
         if (!mods.primary_button_held) {
             finalize_editor_text_drag();
+            // THE BUTTON-LOST ARMS END A GESTURE AND SO RE-RESOLVE THE CURSOR.
+            // The kind was already set at the top of this function — with the
+            // gesture still live, so it is the map's live-gesture answer — and
+            // the teardown just below it invalidates that answer with no further
+            // event guaranteed to arrive. refresh_pointer_cursor re-reads
+            // app.last_mouse_x/y, which THIS event wrote a few lines above, so
+            // the position is this event's own. AFTER the teardown, always: the
+            // map reads the state being cleared. (The two CAPTURED gestures
+            // below skip it for the reason stated at on_button_release.)
+            refresh_pointer_cursor(mods);
             return;
         }
         const ActiveEditorText g = active_editor_text(app, audio);
@@ -3256,6 +3325,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
             app.double_click = DoubleClickCandidate{};
+            // No cursor refresh: CAPTURED gesture, its restore position is the
+            // platform's (the reason is at on_button_release's header).
             end_strip_pointer_capture();
             return;
         }
@@ -3290,6 +3361,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (playback.is_playing()) playback.resync_predictor();
             app.scroll_drag = ScrollDragState{};
+            // No cursor refresh: the other CAPTURED gesture, same reason.
             end_strip_pointer_capture();     // reappear the cursor (idempotent)
             return;
         }
@@ -3321,6 +3393,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.trim_drag.active) {
         if (!mods.primary_button_held) {
             commit_trim_drag();
+            // commit_trim_drag clears app.trim_drag, so the map answers on a
+            // gesture-free state only from here — and this is the gesture whose
+            // retained cue is most visible, since it keeps its own kind.
+            refresh_pointer_cursor(mods);
             return;
         }
         update_trim_drag(mouse_x);
@@ -3346,6 +3422,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // lifetime the seed's own declaration states (app_state.h). Only the
             // CLEAN release is allowed to seed.
             app.trim_bar_press = TrimBarPressSeed{};
+            refresh_pointer_cursor(mods);
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
@@ -3373,7 +3450,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int  press_x  = app.pending_trim_drag.press_x;
         app.pending_trim_drag = PendingTrimDrag{};
         begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
-        if (!app.trim_drag.active) return;  // begin refused (no pair / no audio)
+        if (!app.trim_drag.active) {
+            // A REFUSED BEGIN IS A GESTURE END TOO (no pair / no audio): the
+            // pending was cleared a line above and nothing took its place, so
+            // the trim cue it was holding has to go with it.
+            refresh_pointer_cursor(mods);
+            return;
+        }
         update_trim_drag(mouse_x);
         return;
     }
@@ -3400,6 +3483,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.region_drag = RegionDragState{};
             if (moved)
                 end_region_drag_min_size_check(app, audio, viewport);
+            refresh_pointer_cursor(mods);
             return;
         }
         const GuiRect area = waveform_area(app);
@@ -3518,6 +3602,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // land, span collapse), so this just disarms (the deferred completion
             // died with the group drag — see the release branch).
             app.pending_marker_drag = PendingMarkerDrag{};
+            refresh_pointer_cursor(mods);
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
@@ -3542,7 +3627,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the press.
         app.double_click = DoubleClickCandidate{};
         if (!marker_drag.begin_drag(marker, press_x)) {
-                return;   // begin refused (bad index / no audio): drop the gesture
+                // Begin refused (bad index / no audio): the gesture is DROPPED,
+                // its pending already cleared above, so this is a gesture end
+                // like any other and owes the cursor the same re-resolve.
+                refresh_pointer_cursor(mods);
+                return;
         }
         // No follow override needed: the marker drag always begins from a
         // top-strip flag press, which already stopped playback (the marker
@@ -3576,7 +3665,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // Left button must still be held down — otherwise release was lost.
     if (!mods.primary_button_held) {
-        marker_drag.commit_drag();
+        marker_drag.commit_drag();   // clears app.drag; the refresh reads after
+        refresh_pointer_cursor(mods);
         return;
     }
     const int sr = audio.sample_rate();

@@ -355,6 +355,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             finalize_active_drags();
             prompt.request_close();
+            // THE CURSOR RE-RESOLVES AFTER THE FORCE-END: the finalizer cleared
+            // the gesture state pointer_cursor_kind reads, and neither of the
+            // two edges that normally re-derive it (a motion, a modifier change)
+            // is coming. ORDER IS LOAD-BEARING and it is the bug in miniature —
+            // this must run AFTER both calls above, since the map answers on the
+            // cleared gesture state AND on the prompt, which request_close may
+            // have just raised (a prompt is the map's first Arrow arm). `mods`
+            // is the press's own, so the ctrl this chord is held with is real.
+            refresh_pointer_cursor(mods);
             return;
         }
         return;

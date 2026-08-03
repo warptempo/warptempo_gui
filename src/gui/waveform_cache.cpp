@@ -824,9 +824,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // (No trim pass here: "markers over trim" is structural pass order now —
-    // the live trim pass paints before the playheads, and this cache blits
-    // after them — so the cache carries marker/phase-reset flag shapes only.)
+    // (No trim pass here: trim is painted LIVE, every pixel of it, inside its
+    // own lane (GuiPaintHandler::paint_trim over top_trim_row_area), and this
+    // cache holds the marker and phase-reset FLAG shapes. Two owners over two
+    // disjoint bands — nothing to arbitrate between them.)
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback, painted the hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed

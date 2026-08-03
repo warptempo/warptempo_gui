@@ -211,6 +211,22 @@ public:
     // from GuiInputState and gates key delivery instead.
     void set_modifiers_changed_hook(std::function<void(GuiInputState)> cb);
 
+    // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
+    // callback and the modifiers-changed hook above are built from, read out of
+    // the tracked ctrl/shift/alt bits and the logical left-button hold. PUBLIC
+    // because two callbacks that carry NO modifier state of their own need it:
+    // main.cpp's WM-close and resize handlers force-end the in-flight pointer
+    // gestures and must then re-derive the pointer cursor, whose zone map picks
+    // between kinds by ctrl/alt/shift — a default-constructed state there would
+    // put up the wrong cue with the same confidence as the right one.
+    // THE ALTERNATIVE — remembering the last-seen modifiers beside the last-seen
+    // pointer position — was rejected as a SECOND representation of a fact this
+    // object already owns, with its own staleness invariant to keep. The split
+    // that IS right is the one end_left_hold_source already documents for its
+    // synthesized release: the POSITION must be remembered (only pointer events
+    // carry it) and the MODIFIERS must not (they are live here).
+    GuiInputState current_mods() const;
+
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -728,7 +744,8 @@ private:
     void forget_keyboard_state();
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
-    GuiInputState current_mods() const;
+    // (current_mods() is PUBLIC, declared beside set_modifiers_changed_hook —
+    // main.cpp's two modifier-less force-end callbacks read it there.)
 
     // -- Pointer handlers --
     void on_pointer_enter(uint32_t serial, struct wl_surface* surface,

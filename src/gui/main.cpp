@@ -904,6 +904,19 @@ int main(int argc, char** argv) {
         // below, so the resize still lands on a gesture-free, popup-free state.
         input_handler.close_dropdown();
         paint_handler.on_resize(w, h);
+        // A GESTURE THAT ENDS MUST RE-RESOLVE THE CURSOR. The cursor kind is
+        // derived on motion and on a modifier edge, and a force-end is neither:
+        // the finalizer above cleared the gesture state the zone map reads, so
+        // without this the kind the compositor is showing stays whatever the
+        // gesture last named (a trim endcap's edge cue, say) until the pointer
+        // happens to move. ORDER IS THE WHOLE POINT — this runs LAST, after the
+        // finalizer AND after on_resize, because the map reads BOTH the gesture
+        // state and the layout geometry the resize just rebuilt; re-derived any
+        // earlier it would answer against exactly the state about to change.
+        // The modifiers are the platform's live ones (this callback carries
+        // none), the position is the remembered one — the split current_mods()
+        // documents.
+        input_handler.refresh_pointer_cursor(gui.current_mods());
     });
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
@@ -971,6 +984,14 @@ int main(int argc, char** argv) {
         // which closes the menu and only then lets the close route run.
         input_handler.close_dropdown();
         prompt.request_close();
+        // THE CURSOR RE-RESOLVES AFTER THE FORCE-END, exactly as the resize path
+        // does and for the same reason: the finalizer cleared the gesture state
+        // the zone map reads and no motion event is coming to notice. ORDERED
+        // LAST DELIBERATELY — request_close may raise the unsaved-work prompt,
+        // which the map's first line answers with the Arrow, so re-deriving
+        // before it would trade a stale endcap cue for a stale hover cue instead
+        // of landing on the truth. Live modifiers, remembered position.
+        input_handler.refresh_pointer_cursor(gui.current_mods());
     });
 
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,
