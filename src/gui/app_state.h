@@ -800,6 +800,50 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
+// WHICH BUTTONS ARE ROW 1'S — the menu row's three plus the view bar's three,
+// named beside the roster because that is where a reader meets the membership.
+// The enum's order IS the painted order, so the six happen to be contiguous at
+// its head; this says ROW rather than "index < 6" anyway, because the row is
+// the fact and the contiguity is an accident of how the roster is written.
+//
+// ITS ONE CONSUMER IS THE HOVER PREDICATE (redesign_button_hoverable below),
+// which lets row 1 keep hovering under an open dropdown while the rows the
+// popup can cover do not.
+//
+// EXHAUSTIVE, NO `default` ARM — redesign_button_enabled's rule for the same
+// reason: a new button fails to compile here until its row is stated, instead
+// of silently inheriting another row's answer.
+inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::Quit:
+        case RedesignButton::Navigation:
+        case RedesignButton::Settings:
+        case RedesignButton::ViewSW:
+        case RedesignButton::ViewTP:
+        case RedesignButton::ViewTW:
+            return true;
+        case RedesignButton::Save:
+        case RedesignButton::Undo:
+        case RedesignButton::Redo:
+        case RedesignButton::Render:
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
+        case RedesignButton::IconS:
+        case RedesignButton::IconT:
+        case RedesignButton::IconW:
+        case RedesignButton::IconP:
+        case RedesignButton::IconCopy:
+        case RedesignButton::IconPaste:
+        case RedesignButton::IconBpm:
+        case RedesignButton::IconIter:
+        case RedesignButton::IconFollow:
+        case RedesignButton::IconListen:
+        case RedesignButton::IconCommit:
+            break;
+    }
+    return false;
+}
+
 // THE MENU ROW'S DROPDOWNS — WHICH ONE IS UP. There is ONE popup state in the
 // product (AppState::dropdown below), and this names its content; `None` IS the
 // closed state, which is what makes "two dropdowns are never open together"
@@ -2704,13 +2748,23 @@ static_assert(
 // chord table's `radio` flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
-    // THE OPEN DROPDOWN OWNS THE POINTER: while it is up, no roster button
-    // hovers at all — the popup's own item hover is the only hover there is, and
-    // a lit button under a popup would advertise a click the popup is about to
-    // swallow. The next motion after the close re-resolves the roster normally.
+    // THE OPEN DROPDOWN OWNS THE POINTER OVER THE ROWS IT COVERS — rows 2, 3
+    // and 4, which refuse the hover face for as long as it is up: a lit button
+    // under a popup would advertise a click the popup is about to swallow. The
+    // next motion after the close re-resolves them normally.
+    //
+    // ROW 1 IS EXEMPT (architect 2026-08-03, naming Quit), and the reason is
+    // structural rather than a taste call: the popup box hangs from its anchor
+    // button's BOTTOM edge, so it BEGINS below row 1 and cannot occlude any part
+    // of it — the buttons it floats over are the lower rows' — and row 1 carries
+    // no tooltips at all (redesign_button_tooltip owns that membership), so
+    // lighting it arms nothing that could paint over the menu. A menu bar whose
+    // buttons keep answering the pointer while a menu is up is also what the
+    // pointer-side switch behaviour already assumes.
     // (The menu's OWN button keeps its lit pill through the paint condition at
-    // the menu-row painter, which is not this bit.)
-    if (a.dropdown.open()) return false;
+    // the menu-row painter, which is not this bit — and the two agree by
+    // construction, both asking for the one pill face.)
+    if (a.dropdown.open() && !redesign_button_in_menu_row(b)) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
     if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
     if (b == RedesignButton::TabB) return a.active_tab_view != 'B';

@@ -53,19 +53,19 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 
 // THE ONE COLOR-MIX OWNER: `own` retained by keep_own, the remainder made up
 // with `toward`. keep_own == 0 returns `toward` exactly (the `own` term is
-// annihilated), and keep_own == 1 returns `own` TO WITHIN ONE ULP — near enough
-// that a call site meaning "unchanged" costs nothing and says so.
+// annihilated).
 //
-// NOT BIT-IDENTICAL AT keep_own == 1, and this line used to claim it was: the
-// form is toward + (own - toward), and the subtraction is exact only when the
-// two channels are within a factor of two of each other (Sterbenz). Where they
-// are far apart in magnitude the result misses `own` by an ULP.
+// EXACT ON THE PIXEL, NOT IN THE ARITHMETIC: the form is toward + (own -
+// toward), and the subtraction is exact only when the two channels are within a
+// factor of two of each other (Sterbenz). Where they are far apart in magnitude
+// the result misses the true mix by an ULP.
 // It has never mattered and cannot: every consumer hands
 // these doubles straight to cairo, which quantizes to 8 bits, and an ULP never
-// survives that. Stated so no future caller builds an equality test on the old
-// claim. Used by the redesign's DISABLED FACE — the icon paths (icons.cpp)
-// and the label (paint_handler.cpp) resolve through this single expression, so
-// the two halves of a greyed button can never dim by different arithmetic.
+// survives that. Stated so no future caller builds an equality test on this
+// function's output. Used by the redesign's DISABLED FACE — the icon paths
+// (icons.cpp) and the label (paint_handler.cpp) resolve through this single
+// expression, so the two halves of a greyed button can never dim by different
+// arithmetic.
 // A MIX, NOT AN ALPHA: the palette is fully opaque and nothing composites; this
 // resolves to a solid color before it reaches cairo. Clamped, so no caller can
 // push a channel outside cairo's [0,1] domain.

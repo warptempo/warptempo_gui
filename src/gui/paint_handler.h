@@ -511,9 +511,11 @@ private:
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
     // overlap the rows they hang over. They cannot coexist: the dropdown opens
-    // on a PRESS and any press hides the tooltip, and while the dropdown is open
-    // no roster button hovers (redesign_button_hoverable), so no tooltip can
-    // arm. Both PUBLISH the rect they painted (AppState::redesign_tooltip.rect,
+    // on a PRESS and any press hides the tooltip, and the only buttons that
+    // hover while the dropdown is open are ROW 1'S (redesign_button_hoverable —
+    // the popup hangs below that row and covers the lower ones instead), which
+    // carry no tooltips at all, so no tooltip can arm. Both PUBLISH the rect
+    // they painted (AppState::redesign_tooltip.rect,
     // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
     // tests, the tooltip's only so the hide edge can damage it — and both write
     // a zero rect when not shown, which is the correct empty answer.

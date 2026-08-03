@@ -2648,12 +2648,21 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
         viewport.invalidate_rect(
             GuiRect{0, btn.y + btn.h, app.width, dropdown_h_px(menu)});
     }
-    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
-    // (redesign_button_hoverable refuses every button while it is up) and no
-    // motion event follows a press, so the faces would otherwise stay lit under
-    // a surface that has taken the pointer from them. Clearing hover also
-    // disarms any pending tooltip, which is the other half of "these two never
-    // coexist".
+    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup over
+    // every row the box covers (redesign_button_hoverable refuses rows 2, 3 and
+    // 4 while it is up) and no motion event follows a press, so those faces
+    // would otherwise stay lit under a surface that has taken the pointer from
+    // them. Clearing hover also disarms any pending tooltip, which is the other
+    // half of "these two never coexist".
+    //
+    // ROW 1 IS CLEARED HERE TOO AND RE-RESOLVES AT THE NEXT MOTION OR THE NEXT
+    // TICK (main.cpp runs the same recompute per frame, gesture-gated only),
+    // which costs nothing visible: the only row-1 button the pointer can be on
+    // at an open
+    // edge is the one just pressed, and that is the popup's ANCHOR, whose pill
+    // the paint condition below keeps regardless of the hover bit. A blanket
+    // clear also stays the honest shape for the pointer-leave and switch edges,
+    // which arrive through the same call.
     //
     // IT NO LONGER DECIDES THE MENU BUTTON'S PILL, and the inversion is worth
     // stating because this line used to be what darkened it: since 2026-08-02
@@ -2750,18 +2759,28 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // pointer resting ON the button at the close keeps its lit pill, and that is
     // hover, not staleness.
     //
-    // THE OPEN DROPDOWN IS NOT ONE OF THOSE SURFACES and its branch below runs
-    // NO roster recompute: redesign_button_hoverable (app_state.h) refuses the
-    // whole roster while a popup is up — the popup owns the pointer — and
-    // toggle_dropdown already cleared the stash at the open edge, so a recompute
-    // there could only re-derive the same all-false answer. The button the
-    // pointer is on still lights, through the ANCHOR's paint condition rather
-    // than a hover bit (paint_menu_row), which is also what makes the switch
-    // below visible on the frame it happens.
+    // THE OPEN DROPDOWN IS NOT ONE OF THOSE SURFACES EITHER and its branch below
+    // recomputes the roster too (architect 2026-08-03): row 1 HOVERS while a
+    // popup is up — the box hangs below that row and cannot cover it — so the
+    // walk resolves the six real answers there, while rows 2, 3 and 4 still
+    // answer false through the one predicate (redesign_button_hoverable,
+    // app_state.h) because those are the buttons the popup floats over. The
+    // recompute runs BEFORE the menu-switch walk, so a frame that switches menus
+    // has already lit the button it switched onto. Row 1 carries no tooltips, so
+    // the recompute's dwell half finds nothing to arm here.
+    // The ANCHOR of the open menu lights through the paint condition as well
+    // (paint_menu_row) — that is what keeps its pill through the open edge's
+    // clear and what makes the switch visible on the frame it happens.
     //
     // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
     // so no gesture can be live under it (its own press consumed everything).
     if (app.dropdown.open()) {
+        // ROW 1 KEEPS ANSWERING THE POINTER (the rationale is at the modal-hover
+        // block above, the membership at redesign_button_hoverable): this one
+        // call resolves the six row-1 faces and re-derives false for every
+        // button the popup can cover. It runs BEFORE the switch walk, so on a
+        // frame that changes menus the button switched onto is already lit.
+        recompute_redesign_button_hover();
         // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
         // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide
         // onto the next button without pressing, and that button's menu is what
@@ -2786,7 +2805,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             toggle_dropdown(m);
             break;
         }
-        // The popup's item hover, the only hover there is while it is up. AFTER
+        // The popup's own item hover, beside row 1's — the two are the whole
+        // hover answer while a menu is up, and they cannot collide, since the
+        // box starts below the row. AFTER
         // A SWITCH the new menu's item rects have not been published yet (the
         // painter publishes them), so this resolves to no item on this frame and
         // the row under the pointer lights on the next — correct as it stands,

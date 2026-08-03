@@ -962,23 +962,32 @@ constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 
 // THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
-// short labels still reads as a menu. DERIVED rather than copied: the crop's
-// items are 401px for labels of ~150px ink, but roughly half that width is the
-// accelerator and submenu column this product has no analogue for; taking the
-// text half alone and scaling to our label set (widest "Playback speed" at
-// 113px) leaves 200 as the authored floor. This is the knob the architect
-// tweaks at 100%.
+// short labels still reads as a menu. THE VALUE IS AUTHORED, NOT DERIVED: 242
+// is the architect's knob turned at the live look (2026-08-03, a flat +42px on
+// the number below), which is what this constant has always been for. Nothing
+// re-derives it and nothing should try.
 //
-// IT STILL BINDS ON THE SETTINGS MENU AFTER THE 2026-08-03 HARMONIZATION, and
-// that is worth recording because it means the box did NOT change size: the
-// harmonized rule asks for 57 + 113 + 30 − 8 = 192 at 100% (384 against a 400
-// floor at 200%), so the floor answers at both scales and the settings popup
-// stays 208px wide. What moved is where the LABEL sits inside it — 42px further
-// right — so the trailing space is 38px against a 57px indent, where before it
-// was 80 against 15. The generous-right-side reading the floor was originally
-// justified by is therefore retired with the 12px pad; the floor survives as
-// what it does now, a width the shortest menus cannot fall below.
-constexpr double kPopupItemMinWidthPx = 200.0;
+// ITS PREDECESSOR WAS a derivation, and the distinction is the point: 200 came
+// off the crop, whose items are 401px for labels of ~150px ink with roughly
+// half that width going to an accelerator and submenu column — taking the text
+// half alone and scaling to our label set (widest "Playback speed" at 113px)
+// landed there. The measurement still stands; it is simply no longer what sets
+// the floor.
+//
+// WHICH MENU IT BINDS ON, measured: the SETTINGS menu, whose content asks for
+// 57 + 113 + 30 − 8 = 192 at 100% (384 at 200%), so the floor answers at both
+// scales — and the whole +42 therefore lands on that popup's width, 208 -> 250
+// at 100% and 416 -> 500 at 200%. The NAVIGATION menu does not move at all: its
+// accelerator column puts content at 57 + 117 ("Previous marker") + 13 + 101
+// ("Ctrl+Shift+Tab") + 30 − 8 = 310, already past both floors, so its box stays
+// 318px wide.
+//
+// What the 2026-08-03 harmonization did to the SETTINGS box is separate and
+// still true: the labels now start on the shared 57px indent rather than a 12px
+// item pad, so the generous-right-side reading the original derivation leaned on
+// is retired. The floor survives as what it does now — a width the shortest
+// menus cannot fall below.
+constexpr double kPopupItemMinWidthPx = 242.0;
 
 // THE DROPDOWN'S HORIZONTAL TERMS, measured off the two-column crop
 // (dropdown_full_hotkeys.png, 403x579, the popup box including its 1px borders)
@@ -1170,6 +1179,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // close owner close_dropdown, ALREADY invalidate the top strip on both
         // edges, so the comparator could only ever re-notice a change that was
         // damaged at its source.
+        //
+        // THE TWO TERMS ARE BOTH TRUE ON THE OPEN MENU'S ANCHOR whenever the
+        // pointer rests on it, since row 1 keeps hovering under an open dropdown
+        // (architect 2026-08-03) — and NEITHER "wins", which is the deliberate
+        // answer rather than an accident of the operator: row 1 has exactly two
+        // faces, so both terms ask for the SAME pill and the disjunction is
+        // idempotent. There is no third face for an anchor-that-is-also-hovered
+        // to fall into, and adding one would be a look change.
         const bool pill = face.hovered ||
                           (app.dropdown.open() &&
                            def.id == dropdown_anchor_button(app.dropdown.menu));
