@@ -496,14 +496,18 @@ struct GuiInputHandler {
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. recompute_ resolves the item hover on motion
-    // while it is open. They are also the mode's two writers: toggle_'s open
+    // while it is open AND, under a live press that went down on an item, the
+    // ARMED item with it — one walk, one hit, because a menu lights exactly one
+    // item and the press only decides which face it wears (the rule, and why
+    // the arm cannot double as the liveness test, are at the definition).
+    // They are also the mode's two writers: toggle_'s open
     // ARMS the menu row and close_ DISARMS it — unconditionally, ABOVE its own
     // "nothing is open" return, since the mode outlives the popup and a
     // dismissal must reach it in that state too (the one close that re-arms is
     // named at close_'s definition).
     void toggle_dropdown(DropdownMenu menu);
     void close_dropdown();
-    void recompute_dropdown_hover();
+    void recompute_dropdown_hover(GuiInputState mods);
 
     // THE MENU ROW'S MODE — the three entries that maintain the armed bit outside
     // toggle_ (which sets it) and close_ (which clears it on every dismissal);
@@ -534,14 +538,17 @@ struct GuiInputHandler {
     // Which item is at (x, y), or -1 — the painter's published boxes.
     int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
-    // Returns true when the popup owned the release. Release on the ARMED item
-    // triggers it — CLOSE FIRST, then the menu's own action (settings: the modal
-    // stop and the prefilled editor; navigation: the item's chord through
-    // on_key) — and release anywhere else drops the armed face and leaves the
-    // menu open.
-    bool finish_dropdown_release(int x, int y);
-    // Drop the armed face with no release to follow (the pointer-leave edge).
-    // The menu stays OPEN — leaving the window is not a dismissal.
+    // Returns true when the popup owned the release. It TRIGGERS THE ARMED ITEM
+    // — CLOSE FIRST, then the menu's own action (settings: the modal stop and
+    // the prefilled editor; navigation: the item's chord through on_key) — and
+    // takes no position of its own, because the arm follows the pointer and so
+    // already IS the item under it. With nothing armed (the press slid onto the
+    // separator, the chrome or off the box) nothing runs, the release is
+    // consumed and the menu stays open.
+    bool finish_dropdown_release();
+    // Drop the armed face and the press claim with no release to follow (the
+    // pointer-leave edge). The menu stays OPEN — leaving the window is not a
+    // dismissal.
     void clear_dropdown_press();
 
     // THE HOVER TOOLTIP's hide — the hint's job ends the moment the user acts,

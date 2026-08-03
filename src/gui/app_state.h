@@ -1811,11 +1811,28 @@ struct AppState {
     // Every rect is zero while closed, which is the correct cold answer: an
     // empty rect contains no point.
     // `pressed_item` is the ARMED item: set by a press on one, cleared by the
-    // release (wherever it lands) and by every close. It exists because the
-    // dropdown is the ONE redesign surface that acts on RELEASE — every row
-    // button fires on press, a menu triggers on release by universal
-    // convention — which is also the only reason a pressed face is visible long
-    // enough to be worth painting.
+    // release and by every close. It exists because the dropdown is the ONE
+    // redesign surface that acts on RELEASE — every row button fires on press,
+    // a menu triggers on release by universal convention — which is also the
+    // only reason a pressed face is visible long enough to be worth painting.
+    // THE ARM FOLLOWS THE POINTER while the press is live (architect
+    // 2026-08-03): sliding from one item to the next moves it, and sliding onto
+    // the separator, the chrome or off the box sets it to -1 with the press
+    // still live. That is what keeps EXACTLY ONE item distinguished at a time —
+    // an arm that stayed where it went down lit the pressed face there while
+    // `hovered_item` lit the hover face under the pointer, two lit items in a
+    // menu that shows one. The rule, and the release that follows from it, live
+    // at recompute_dropdown_hover (input_pointer.cpp).
+    // `press_began_on_item` is WHERE the currently held button went down, NOT
+    // whether it is still down: the platform's own tracking answers that
+    // (GuiInputState::primary_button_held), and the arm cannot answer either
+    // question now that it moves — it reads -1 both before any press and while
+    // a live press stands over a separator. The bit is the anchor gesture's
+    // scope line: a press on the Settings/Navigation button followed by a drag
+    // into the popup is deliberately NOT supported, and without this term the
+    // pointer's button state alone would arm items under that drag too. Set by
+    // the popup's item press, cleared by the release, by the pointer-leave drop
+    // and by every close (the struct reset).
     // `menu_row_armed` is the MENU ROW'S MODE, and it is the one field here that
     // means something while the popup is CLOSED: once a menu has been opened
     // from the row, the row answers the pointer alone — entering either anchor's
@@ -1859,10 +1876,11 @@ struct AppState {
     // path; the unconditional clear above the early return is what makes the
     // rule hold in the closed-and-armed state the reset never reaches.
     struct Dropdown {
-        DropdownMenu menu           = DropdownMenu::None;
-        int          hovered_item   = -1;
-        int          pressed_item   = -1;
-        bool         menu_row_armed = false;
+        DropdownMenu menu                = DropdownMenu::None;
+        int          hovered_item        = -1;
+        int          pressed_item        = -1;
+        bool         press_began_on_item = false;
+        bool         menu_row_armed      = false;
         GuiRect      rect{0, 0, 0, 0};
         std::array<GuiRect, kDropdownMaxItemCount> item_rects{};
 

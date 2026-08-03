@@ -2197,6 +2197,12 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             //     stroke, so no inset: the fill's own edge is the visible edge.
             //     It is visible at all only because items act on RELEASE, the
             //     one redesign surface that does.
+            //     EXACTLY ONE ITEM IS EVER LIT, and that is the input side's
+            //     doing rather than a rule here: the ARM FOLLOWS THE POINTER
+            //     while a press is live, so the pressed and hovered indices are
+            //     the same item then and this test simply picks the face —
+            //     pressed while the button is down, hovered when it is not.
+            //     Nothing distinguishes an item the pointer has left.
             //   HOVERED — the same 30% accent tint the click faces use, over
             //     THIS popup's ground, under a 1px outline of the accent
             //     lightened 15% toward white. Fill and stroke share ONE INSET

@@ -1043,8 +1043,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // because that is the universal convention (press, slide, release
                 // on what you meant) and because it is what makes the pressed
                 // face worth painting at all: a press-to-act item would show its
-                // accent fill for a single frame. The release body below decides
-                // whether the arm becomes an action.
+                // accent fill for a single frame.
+                //
+                // THE ARM DOES NOT STAY HERE: from this press until the button
+                // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
+                // so the slide of "press, slide, release on what you meant" is
+                // literally the arm moving, and the release acts on wherever it
+                // ended. The bit is what tells that walk this press landed on an
+                // ITEM — the anchor button's press arms nothing and must keep
+                // arming nothing while it drags into the popup — and it is set
+                // OUTSIDE the transition test below, which is about damage.
+                app.dropdown.press_began_on_item = true;
                 if (pop.pressed_item != hit) {
                     app.dropdown.pressed_item = hit;
                     viewport.invalidate_top_strip();
@@ -2300,7 +2309,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
     // pointer, and its items are the redesign's one act-on-release surface.
     if (button == GuiMouseButton::Left && app.dropdown.open()) {
-        if (finish_dropdown_release(x, y)) return;
+        if (finish_dropdown_release()) return;
     }
     // THE CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
     // prompt opened by the press (or any other early return) must not strand a
@@ -2659,13 +2668,40 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     }
 }
 
-// THE OPEN DROPDOWN'S OWN HOVER, the pointer's only hover while it is up. One
-// transition writer like the roster's, damaging the strip and the popup box on
-// a change; the rects are the painter's published item boxes, so a highlighted
-// item is exactly the box that lights and exactly the box a click hits. The
-// closed menu's rects are zero and contain no point, so the walk needs no
-// membership test beyond the open check.
-void GuiInputHandler::recompute_dropdown_hover() {
+// THE OPEN DROPDOWN'S OWN HOVER AND ITS ARMED ITEM, the pointer's only hover
+// while it is up. One transition writer like the roster's, damaging the strip
+// and the popup box on a change; the rects are the painter's published item
+// boxes, so a highlighted item is exactly the box that lights and exactly the
+// box a click hits. The closed menu's rects are zero and contain no point, so
+// the walk needs no membership test beyond the open check.
+//
+// THE ARM FOLLOWS THE POINTER while a press is live inside the popup (architect
+// 2026-08-03): slide from one item onto the next and the pressed face travels
+// with the pointer, slide onto the separator, the chrome or off the box and
+// NOTHING is lit though the press is still live, slide back on and it re-arms.
+// That is why the two answers are resolved in ONE walk from ONE hit: a menu
+// shows exactly one item in a distinguished state, and which FACE that item
+// wears is only the question of whether the button is down. An arm that stayed
+// where it went down lit the accent fill there while this hover lit the tint
+// under the pointer — the two lit items this rule exists to prevent.
+//
+// WHY THE ARM CANNOT ANSWER "IS A PRESS LIVE" ANY MORE: it is -1 both before
+// any press and while a live press stands over a separator, so `pressed_item >=
+// 0` as the liveness test would strand the drag at the first separator
+// crossing. The two facts are read from their own owners instead — WHETHER the
+// button is still down is the PLATFORM's tracking, threaded in with the motion
+// (GuiInputState::primary_button_held, the same field every button-lost arm in
+// on_motion reads, so there is no second copy to desync), and WHERE it went
+// down is the popup's own bit.
+//
+// THAT SECOND TERM IS THE SCOPE LINE, and it is deliberately ONE condition. A
+// press on the ANCHOR button (Settings or Navigation) followed by a drag into
+// the popup is the other half of the standard menu gesture and is currently OUT
+// OF SCOPE: the anchor press opens the menu and arms nothing, and with the
+// button state alone this walk would arm items under that drag and make the
+// release fire them. Supporting it later is widening this one term — the anchor
+// press recording a claim of its own — not a restructure.
+void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     if (!app.dropdown.open()) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
@@ -2677,8 +2713,18 @@ void GuiInputHandler::recompute_dropdown_hover() {
             break;
         }
     }
-    if (app.dropdown.hovered_item == hit) return;
+    const bool press_live =
+        mods.primary_button_held && app.dropdown.press_began_on_item;
+    const int armed = press_live ? hit : app.dropdown.pressed_item;
+    if (app.dropdown.hovered_item == hit &&
+        app.dropdown.pressed_item == armed) return;
     app.dropdown.hovered_item = hit;
+    app.dropdown.pressed_item = armed;
+    // ONE DAMAGE PAIR FOR BOTH ITEMS. The popup's WHOLE published box is
+    // invalidated, so a frame in which the arm leaves one item and lands on
+    // another erases and repaints both with no per-item rect arithmetic — the
+    // same path the hover move already took, and the reason the following arm
+    // needed no second invalidation of its own.
     viewport.invalidate_top_strip();
     viewport.invalidate_rect(app.dropdown.rect);
 }
@@ -2763,24 +2809,39 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // on the button coming UP. Returns true when the release belonged to the popup
 // and the caller must stop.
 //
-// RELEASE ON THE ARMED ITEM triggers it; release ANYWHERE ELSE (another item,
-// the popup's chrome, outside the window) just drops the armed face and LEAVES
-// THE POPUP OPEN — the menu convention, and the escape hatch for a press that
-// landed on the wrong row. The outside-press close is untouched by this: that is
-// a PRESS act and still closes and consumes, so the two rules do not overlap —
-// a press outside never arms anything, so no release can be owed.
-bool GuiInputHandler::finish_dropdown_release(int x, int y) {
+// IT ACTS ON THE ARM AND NEEDS NO POSITION OF ITS OWN, which is the whole
+// consequence of the arm following the pointer (recompute_dropdown_hover): the
+// armed item IS the item under the pointer and is the ONE item lit, so "the
+// release runs what is lit" and "the release runs the item under the pointer"
+// are one sentence. ARMED NOTHING — a press that went down on an item and then
+// slid onto the separator, the chrome or off the box — runs nothing, is
+// consumed, and LEAVES THE POPUP OPEN: that is the escape hatch for a press
+// that landed on the wrong row, and it is now the same act the user sees, since
+// nothing was lit to release onto. The outside-press close is untouched by
+// this: that is a PRESS act and still closes and consumes, so the two rules do
+// not overlap — a press outside never arms anything, so no release can be owed.
+//
+// THE POSITION COMPARE THIS BODY CARRIED (the item under the release point
+// against the armed one, refusing when they differed) IS GONE AS STRUCTURALLY
+// DEAD, not as a tidy-up: with an item armed it could not be true. The arm is
+// recomputed at EVERY delivered motion while the press is live, and the
+// platform delivers a release at the coordinates of the last motion it
+// delivered — absolute motion is delivered synchronously (on_pointer_motion),
+// and the one deferred kind, a captured drag's coalesced relative motion, is
+// flushed immediately BEFORE any button event, with the held bit crossing on
+// the pre-release side so that flushed motion still reads the button as down
+// (flush_deferred_motion, platform_wayland.cpp). The release's own consumed
+// no-op case is the armed-nothing return above, which the compare never owned:
+// that one predates it and answers a press that armed nothing at all.
+bool GuiInputHandler::finish_dropdown_release() {
     if (!app.dropdown.open()) return false;
     const int armed = app.dropdown.pressed_item;
-    if (armed < 0) return true;   // a popup press that armed nothing; consumed
+    // The press claim ends here whatever it armed, so nothing the pointer does
+    // afterwards can move an arm this button-down no longer owns.
+    app.dropdown.press_began_on_item = false;
+    if (armed < 0) return true;   // nothing was lit; consumed, menu stays up
     const DropdownMenu menu = app.dropdown.menu;
     app.dropdown.pressed_item = -1;
-    if (dropdown_item_at(x, y) != armed) {
-        // Slid off: drop the face, keep the menu up.
-        viewport.invalidate_top_strip();
-        viewport.invalidate_rect(app.dropdown.rect);
-        return true;
-    }
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
     // runs, so a modal it opens never overlaps the menu even for a frame, and a
     // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
@@ -3058,7 +3119,12 @@ void GuiInputHandler::disarm_menu_row() {
 // THE ARMED ITEM'S DROP, with no release to follow (the pointer-leave edge): no
 // release will arrive, so the face would otherwise stay lit under a pointer that
 // is gone. The menu itself STAYS OPEN — leaving the window is not a dismissal.
+// THE PRESS CLAIM GOES WITH IT, above the face's own transition gate: this is
+// the button-LOST edge, so a re-entry that still reports the button down must
+// not resurrect an arm no release will ever be attributed to. Coming back takes
+// a fresh press, exactly as it did before the arm followed the pointer.
 void GuiInputHandler::clear_dropdown_press() {
+    app.dropdown.press_began_on_item = false;
     if (app.dropdown.pressed_item < 0) return;
     app.dropdown.pressed_item = -1;
     viewport.invalidate_top_strip();
@@ -3250,14 +3316,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             toggle_dropdown(m);
             break;
         }
-        // The popup's own item hover, beside row 1's — the two are the whole
-        // hover answer while a menu is up, and they cannot collide, since the
-        // box starts below the row. AFTER
+        // The popup's own item hover AND its armed item, beside row 1's — the
+        // two are the whole hover answer while a menu is up, and they cannot
+        // collide, since the box starts below the row. AFTER
         // A SWITCH the new menu's item rects have not been published yet (the
         // painter publishes them), so this resolves to no item on this frame and
         // the row under the pointer lights on the next — correct as it stands,
         // and the reason nothing here reaches into the painter for geometry.
-        recompute_dropdown_hover();
+        // `mods` carries the platform's button state, which is what lets the arm
+        // follow the pointer under a live press (the rule is at the definition).
+        recompute_dropdown_hover(mods);
         return;
     }
     if (app.prompt.active) {
