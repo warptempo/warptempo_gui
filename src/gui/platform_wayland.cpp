@@ -1,7 +1,6 @@
 #include "platform_wayland.h"
 
 #include "render.h"   // kMinWindowWidthPx / kMinWindowHeightPx
-#include "icons.h"    // the scrub cursor's speaker glyph
 
 #include <wayland-client.h>
 #include <wayland-cursor.h>
@@ -26,6 +25,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <utility>
 
@@ -642,16 +642,12 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     recreate_shm_pool(width_, height_);
 
-    // Cursor theme load is best-effort: failure leaves cursor_surface_ NULL,
-    // and on_pointer_enter then passes NULL to wl_pointer.set_cursor (which
-    // hides the cursor over our window). That degraded state is acceptable —
-    // the GUI is still fully usable.
+    // Cursor theme load is best-effort: failure leaves every kind's surface
+    // NULL, and apply_cursor_kind then passes NULL to wl_pointer.set_cursor
+    // (which hides the cursor over our window). That degraded state is
+    // acceptable — the GUI is still fully usable. It loads the WHOLE SET here,
+    // once, so no cue is resolved on a pointer event.
     load_cursor_theme();
-    // The scrub cursor, built beside it and just as best-effort. INDEPENDENT of
-    // the theme in both directions: this image is our own buffer, so it shows
-    // even when the theme load above failed, and its own failure costs only the
-    // speaker (the arrow then never changes).
-    build_speaker_cursor();
 
     xkb_context_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!xkb_context_) {
@@ -881,23 +877,20 @@ void GuiPlatform::destroy_wayland_state() {
         wl_surface_ = nullptr;
     }
 
-    // Cursor: destroy the surface before the theme. The surface holds a
-    // buffer owned by the theme, and freeing in dependency order avoids
-    // any compositor surprise even though libwayland-cursor's buffers can
-    // technically outlive the surface.
-    if (cursor_surface_) {
-        wl_surface_destroy(cursor_surface_);
-        cursor_surface_ = nullptr;
+    // Cursor: destroy EVERY kind's surface before the theme. The surfaces hold
+    // buffers owned by the theme, and freeing in dependency order avoids any
+    // compositor surprise even though libwayland-cursor's buffers can
+    // technically outlive the surface. The wl_cursor objects themselves are the
+    // theme's and are never held past the load.
+    for (ThemeCursor& tc : cursors_) {
+        if (!tc.surface) continue;
+        wl_surface_destroy(tc.surface);
+        tc.surface = nullptr;
     }
     if (wl_cursor_theme_) {
         wl_cursor_theme_destroy(wl_cursor_theme_);
         wl_cursor_theme_ = nullptr;
-        wl_cursor_arrow_ = nullptr;  // owned by the theme; no destroy
     }
-    // The scrub cursor's whole group, its own pool included — it owns every
-    // object it holds, unlike the theme cursor whose buffer belongs to
-    // libwayland-cursor.
-    destroy_speaker_cursor();
 
     destroy_shm_pool();
 
@@ -1033,8 +1026,8 @@ namespace {
 // the product's one scale axis for everything the WINDOW paints; a cursor is not
 // painted by the window — it is a surface the compositor composites at pointer
 // scale, and the user's pointer size is a desktop-wide setting the cursor theme
-// already answers. Both cursors read this one function, which is what keeps the
-// pointer the same size as it crosses into the scrub surface.
+// already answers. Every kind is loaded at this one size, which is what keeps
+// the pointer from resizing as it crosses a zone boundary.
 //
 // XCURSOR_SIZE if the user has set it; otherwise 24, the freedesktop fallback.
 int cursor_theme_size() {
@@ -1046,7 +1039,71 @@ int cursor_theme_size() {
     return size;
 }
 
+int cursor_kind_index(GuiCursorKind kind) {
+    return static_cast<int>(kind);
+}
+
+// THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
+// cursor art: five standard freedesktop names, all present in Breeze and in
+// Adwaita. The images and their hotspots are the THEME's — we never centre a
+// hotspot ourselves, because these files declare real ones and the theme has
+// already centred the ones that want centring (Breeze's grab is 16,16 in a 32
+// canvas, its zoom-in 15.5,15.5).
+//
+// ARROW IS FIRST, and its position matters: it is the fallback every other kind
+// degrades to, and the only one whose absence is reported as a broken theme.
+//
+// THERE IS NO "grabbing" CURSOR AND THAT IS DELIBERATE (architect): the alt-pan
+// and the strip drag both take a POINTER CAPTURE, and the capture HIDES the
+// cursor — that hide is what buys unlimited travel, and the strip drag paints an
+// anchor stem to show where the gesture is. A pressed-state cursor was
+// considered and refused: it would flash for the frame before the hide and then
+// be invisible for the whole gesture. The hidden-during-capture behaviour is
+// unchanged by any of this.
+struct CursorKindName {
+    GuiCursorKind kind;
+    const char*   name;
+};
+constexpr CursorKindName kCursorKindNames[] = {
+    {GuiCursorKind::Arrow,      "left_ptr"},
+    {GuiCursorKind::Scrub,      "crosshair"},
+    {GuiCursorKind::Pan,        "grab"},
+    {GuiCursorKind::Zoom,       "zoom-in"},
+    {GuiCursorKind::TrimResize, "ew-resize"},
+};
+static_assert(static_cast<int>(std::size(kCursorKindNames)) ==
+                  kGuiCursorKindCount,
+              "Every GuiCursorKind needs exactly one xcursor name");
+
 }  // namespace
+
+bool GuiPlatform::load_theme_cursor(GuiCursorKind kind,
+                                    const char* xcursor_name) {
+    struct wl_cursor* cur =
+        wl_cursor_theme_get_cursor(wl_cursor_theme_, xcursor_name);
+    if (!cur || cur->image_count == 0) return false;
+
+    // First frame only; animated cursors (rare) collapse to frame 0.
+    struct wl_cursor_image* image = cur->images[0];
+    struct wl_buffer* buf = wl_cursor_image_get_buffer(image);
+    if (!buf) return false;
+
+    // One surface per kind, created once for the process lifetime. The buffer
+    // attachment is STICKY and this surface never switches images, which is what
+    // lets set_cursor swap kinds by naming a different surface with no image
+    // work per swap.
+    struct wl_surface* surface = wl_compositor_create_surface(wl_compositor_);
+    if (!surface) return false;
+    wl_surface_attach(surface, buf, 0, 0);
+    wl_surface_damage(surface, 0, 0, image->width, image->height);
+    wl_surface_commit(surface);
+
+    ThemeCursor& tc = cursors_[cursor_kind_index(kind)];
+    tc.surface   = surface;
+    tc.hotspot_x = static_cast<int32_t>(image->hotspot_x);
+    tc.hotspot_y = static_cast<int32_t>(image->hotspot_y);
+    return true;
+}
 
 bool GuiPlatform::load_cursor_theme() {
     const int size = cursor_theme_size();
@@ -1060,192 +1117,26 @@ bool GuiPlatform::load_cursor_theme() {
         return false;
     }
 
-    // left_ptr is the freedesktop standard arrow name. If the active theme
-    // is missing it, the theme is broken; report and move on without a
-    // cursor rather than guess at an alternative.
-    wl_cursor_arrow_ = wl_cursor_theme_get_cursor(wl_cursor_theme_, "left_ptr");
-    if (!wl_cursor_arrow_ || wl_cursor_arrow_->image_count == 0) {
+    for (const CursorKindName& row : kCursorKindNames) {
+        if (load_theme_cursor(row.kind, row.name)) continue;
+        // left_ptr is the freedesktop standard arrow name. If the active theme
+        // is missing it, the theme is broken; report and move on without a
+        // cursor rather than guess at an alternative.
+        if (row.kind == GuiCursorKind::Arrow) {
+            std::fprintf(stderr,
+                "warptempo_gui: Cursor theme has no \"%s\"; "
+                "pointer will not display a cursor image\n", row.name);
+            return false;
+        }
+        // A MISSING NAME DEGRADES TO THE ARROW, per kind — the theme-load
+        // failure's own shape, one stderr line and nothing stops working. A
+        // theme without these names is a poor environment, not a broken one:
+        // the zone loses its cue and every gesture in it still runs.
         std::fprintf(stderr,
-            "warptempo_gui: Cursor theme has no \"left_ptr\"; "
-            "pointer will not display a cursor image\n");
-        return false;
+            "warptempo_gui: Cursor theme has no \"%s\"; "
+            "that pointer cue falls back to the arrow\n", row.name);
     }
-
-    // First frame only; animated arrows (rare) collapse to frame 0.
-    struct wl_cursor_image* image = wl_cursor_arrow_->images[0];
-    struct wl_buffer* buf = wl_cursor_image_get_buffer(image);
-    if (!buf) {
-        std::fprintf(stderr,
-            "warptempo_gui: wl_cursor_image_get_buffer returned null; "
-            "pointer will not display a cursor image\n");
-        return false;
-    }
-
-    cursor_hotspot_x_ = static_cast<int32_t>(image->hotspot_x);
-    cursor_hotspot_y_ = static_cast<int32_t>(image->hotspot_y);
-
-    // Dedicated cursor surface, created once for the process lifetime.
-    // The buffer attachment is sticky; this surface never switches images. The
-    // scrub cursor is a SECOND surface with its own buffer, not a re-attach
-    // here — which is what lets set_cursor swap between the two by naming a
-    // different surface, with no image work per swap.
-    cursor_surface_ = wl_compositor_create_surface(wl_compositor_);
-    if (!cursor_surface_) {
-        std::fprintf(stderr,
-            "warptempo_gui: wl_compositor_create_surface for cursor failed\n");
-        return false;
-    }
-    wl_surface_attach(cursor_surface_, buf, 0, 0);
-    wl_surface_damage(cursor_surface_, 0, 0, image->width, image->height);
-    wl_surface_commit(cursor_surface_);
     return true;
-}
-
-// The scrub cursor's image: one square ARGB32 buffer on a dedicated shm pool,
-// cleared to fully transparent, with the Breeze speaker drawn into it at the
-// buffer's full size.
-//
-// PREMULTIPLIED, NO CONVERSION: cairo's CAIRO_FORMAT_ARGB32 and wl_shm's
-// WL_SHM_FORMAT_ARGB8888 are the same 32-bit premultiplied-alpha layout, which
-// is why cairo can draw straight into the mapping the compositor reads.
-//
-// NO BACKGROUND IS PAINTED. The buffer starts fully transparent (a fresh memfd
-// is zero-filled, and zero IS transparent in a premultiplied format) and the
-// glyph's own coverage is the only alpha there is, so the compositor composites
-// the speaker over whatever is behind the pointer — the cursor is the shape, not
-// a tile carrying it.
-bool GuiPlatform::build_speaker_cursor() {
-    // The ONE arm that does not tear down on the way out, and the only one that
-    // can afford not to: it runs before the first allocation, so every member is
-    // still at its header default and the teardown would be a no-op in every
-    // branch. Silent, too — a missing wl_shm or wl_compositor has already been
-    // reported by the caller that needed it first.
-    if (!wl_shm_ || !wl_compositor_) return false;
-
-    const int    size   = cursor_theme_size();
-    const int    stride = size * 4;
-    const size_t bytes  = static_cast<size_t>(stride) * static_cast<size_t>(size);
-
-    // FAILURE IS DEGRADED, NEVER FATAL, exactly as the theme load above is: one
-    // stderr line, the group torn back down, and the cursor simply never
-    // changes. There is no retry and no second image — a rare, loud,
-    // non-silent fault gets no recovery code in this project.
-    speaker_cursor_fd_ = open_shm_fd(bytes);
-    if (speaker_cursor_fd_ < 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: Failed to open shm fd for the scrub cursor: %s; "
-            "the pointer will not change over the scrub surface\n",
-            std::strerror(errno));
-        destroy_speaker_cursor();
-        return false;
-    }
-    speaker_cursor_map_ = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
-                               MAP_SHARED, speaker_cursor_fd_, 0);
-    if (speaker_cursor_map_ == MAP_FAILED) {
-        speaker_cursor_map_ = nullptr;
-        std::fprintf(stderr,
-            "warptempo_gui: mmap of the scrub cursor pool failed: %s; "
-            "the pointer will not change over the scrub surface\n",
-            std::strerror(errno));
-        destroy_speaker_cursor();
-        return false;
-    }
-    speaker_cursor_bytes_ = bytes;
-
-    // THE POOL IS CHECKED BEFORE IT IS USED, not beside the buffer afterwards:
-    // libwayland's request wrappers DEREFERENCE the proxy they are handed, so
-    // passing a null pool into wl_shm_pool_create_buffer would crash inside that
-    // request rather than reaching a failure arm below it. Each object gets its
-    // own check, its own message, and the same destroy-then-return shape, so a
-    // reader of the stderr line knows which one failed.
-    speaker_cursor_pool_ = wl_shm_create_pool(wl_shm_, speaker_cursor_fd_,
-                                              static_cast<int32_t>(bytes));
-    if (!speaker_cursor_pool_) {
-        std::fprintf(stderr,
-            "warptempo_gui: Could not create the scrub cursor shm pool; "
-            "the pointer will not change over the scrub surface\n");
-        destroy_speaker_cursor();
-        return false;
-    }
-    // No wl_buffer listener: this buffer is written ONCE, before any attach, and
-    // then never touched again, so there is no release to wait for. (The window
-    // pool's buffers need one because they are repainted.)
-    speaker_cursor_buffer_ = wl_shm_pool_create_buffer(
-        speaker_cursor_pool_, 0, size, size, stride, WL_SHM_FORMAT_ARGB8888);
-    if (!speaker_cursor_buffer_) {
-        std::fprintf(stderr,
-            "warptempo_gui: Could not create the scrub cursor buffer; "
-            "the pointer will not change over the scrub surface\n");
-        destroy_speaker_cursor();
-        return false;
-    }
-
-    cairo_surface_t* cs = cairo_image_surface_create_for_data(
-        static_cast<unsigned char*>(speaker_cursor_map_),
-        CAIRO_FORMAT_ARGB32, size, size, stride);
-    if (cairo_surface_status(cs) != CAIRO_STATUS_SUCCESS) {
-        cairo_surface_destroy(cs);
-        std::fprintf(stderr,
-            "warptempo_gui: Could not wrap the scrub cursor buffer in cairo; "
-            "the pointer will not change over the scrub surface\n");
-        destroy_speaker_cursor();
-        return false;
-    }
-    cairo_t* cr = cairo_create(cs);
-    icons::draw(cr, icons::Icon::PlayerVolume, 0.0, 0.0,
-                static_cast<double>(size));
-    cairo_destroy(cr);
-    cairo_surface_flush(cs);
-    cairo_surface_destroy(cs);
-
-    speaker_cursor_surface_ = wl_compositor_create_surface(wl_compositor_);
-    if (!speaker_cursor_surface_) {
-        std::fprintf(stderr,
-            "warptempo_gui: wl_compositor_create_surface for the scrub cursor "
-            "failed; the pointer will not change over the scrub surface\n");
-        destroy_speaker_cursor();
-        return false;
-    }
-    wl_surface_attach(speaker_cursor_surface_, speaker_cursor_buffer_, 0, 0);
-    wl_surface_damage(speaker_cursor_surface_, 0, 0, size, size);
-    wl_surface_commit(speaker_cursor_surface_);
-
-    // HOTSPOT: THE IMAGE CENTRE, both axes. An arrow has a pointed tip and the
-    // hotspot goes there; a speaker has no tip at all, so any edge choice would
-    // be arbitrary. It has to be a place the user can REASON about, because the
-    // scrub press seeks to the column under the hotspot — the audition starts
-    // where the hotspot is, not where the glyph looks like it is pointing — and
-    // the middle of the speaker is the one point a round-ish symmetric glyph
-    // offers.
-    speaker_hotspot_x_ = static_cast<int32_t>(size / 2);
-    speaker_hotspot_y_ = static_cast<int32_t>(size / 2);
-    return true;
-}
-
-void GuiPlatform::destroy_speaker_cursor() {
-    // Dependency order, and idempotent: the build calls this on every failure
-    // arm, so it must cope with a half-made group.
-    if (speaker_cursor_surface_) {
-        wl_surface_destroy(speaker_cursor_surface_);
-        speaker_cursor_surface_ = nullptr;
-    }
-    if (speaker_cursor_buffer_) {
-        wl_buffer_destroy(speaker_cursor_buffer_);
-        speaker_cursor_buffer_ = nullptr;
-    }
-    if (speaker_cursor_pool_) {
-        wl_shm_pool_destroy(speaker_cursor_pool_);
-        speaker_cursor_pool_ = nullptr;
-    }
-    if (speaker_cursor_map_) {
-        munmap(speaker_cursor_map_, speaker_cursor_bytes_);
-        speaker_cursor_map_   = nullptr;
-        speaker_cursor_bytes_ = 0;
-    }
-    if (speaker_cursor_fd_ >= 0) {
-        close(speaker_cursor_fd_);
-        speaker_cursor_fd_ = -1;
-    }
 }
 
 void GuiPlatform::apply_cursor_kind() {
@@ -1257,22 +1148,20 @@ void GuiPlatform::apply_cursor_kind() {
     // which point pointer_captured_ is already false.
     if (pointer_captured_) return;
 
-    struct wl_surface* surface   = cursor_surface_;
-    int32_t            hotspot_x = cursor_hotspot_x_;
-    int32_t            hotspot_y = cursor_hotspot_y_;
-    if (cursor_kind_ == GuiCursorKind::Speaker && speaker_cursor_surface_) {
-        surface   = speaker_cursor_surface_;
-        hotspot_x = speaker_hotspot_x_;
-        hotspot_y = speaker_hotspot_y_;
-    }
+    // THE PER-KIND FALLBACK, and the one place it lives: a kind whose xcursor
+    // name the theme did not carry has a null surface, and it shows the ARROW
+    // instead. That is what makes a missing name cost the cue and nothing else.
+    const ThemeCursor& want = cursors_[cursor_kind_index(cursor_kind_)];
+    const ThemeCursor& use =
+        want.surface ? want : cursors_[cursor_kind_index(GuiCursorKind::Arrow)];
     // A NULL surface here is the protocol's "hide the cursor" request, not
     // "use the default" — there is no protocol-level default-cursor request, so
-    // a client must supply an image. That is the ARROW's degraded state when the
-    // theme failed to load, and it is strictly better than skipping the call
-    // (which leaves the cursor appearance undefined per protocol). The SPEAKER
-    // never reaches it: a failed speaker build falls back to the arrow above.
-    wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, surface,
-                          hotspot_x, hotspot_y);
+    // a client must supply an image. That is the ARROW's own degraded state when
+    // no theme loaded at all, and it is strictly better than skipping the call
+    // (which leaves the cursor appearance undefined per protocol). No other kind
+    // reaches it: they all fall back to the arrow above.
+    wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, use.surface,
+                          use.hotspot_x, use.hotspot_y);
 }
 
 void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
@@ -2105,14 +1994,25 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         xkb_state_, XKB_MOD_NAME_LOGO,
         XKB_STATE_MODS_EFFECTIVE);
 
-    // A modifier-state change ends any continuous wheel chord session, so the
-    // sub-detent remainder — bound to the old chord — is dropped outright,
-    // before a scroll frame that would re-probe. The wheel chords route
-    // differently by modifier (plain zoom vs Alt pan), so remainder accumulated
-    // under one chord must never assemble a detent under another.
+    // THE MODIFIER EDGE, and both of its consumers. This event fires when the
+    // modifier state CHANGES and not on ordinary key presses, so the test below
+    // is only about the three modifiers the application models (a Super edge
+    // moves neither consumer).
     if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
-        mod_alt_ != prev_alt)
+        mod_alt_ != prev_alt) {
+        // (1) It ends any continuous wheel chord session, so the sub-detent
+        // remainder — bound to the old chord — is dropped outright, before a
+        // scroll frame that would re-probe. The wheel chords route differently
+        // by modifier (plain zoom vs Alt pan), so remainder accumulated under
+        // one chord must never assemble a detent under another.
         scroll_accum_ = 0.0;
+        // (2) It re-derives the POINTER CURSOR. Modifiers SELECT between cursor
+        // kinds over the waveform (ctrl is the zoom drag, alt the pan), so a
+        // modifier going down under a resting pointer must change the cue AT
+        // ONCE — waiting for the next motion event would show the wrong promise
+        // for exactly as long as the user held still.
+        modifiers_changed_hook_(current_mods());
+    }
 
     // No on_key synthesis on modifier change — the next non-modifier
     // key event carries the updated state.
@@ -2671,12 +2571,14 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     pointer_captured_ = false;
 
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
-    // Whatever was showing when the hide ran comes back here (a capture can begin
-    // under the speaker: the modifier that arms a strip drag or an alt-pan goes
-    // down with no motion under it, so the cursor has not been re-derived yet).
-    // The GUI's next motion would correct a hard-coded arrow, but the frames in
-    // between would be a lie, and this is the reason the kind is REMEMBERED
-    // rather than passed. pointer_captured_ was cleared just above, so the
+    // Whatever was showing when the hide ran comes back here, and for the strip
+    // drag and the alt-pan that is the ZOOM or the PAN cue their own modifier
+    // put up: the modifier edge re-derived the cursor before the press, and the
+    // modifier is normally still held at the release. The GUI's next motion
+    // would correct a hard-coded arrow, but the frames in between would be a
+    // lie, and this is the reason the kind is REMEMBERED rather than passed
+    // (the platform's edges do not know where the pointer is in the GUI's
+    // terms). pointer_captured_ was cleared just above, so the
     // applier's capture guard admits this call. It is a no-op when the wl_pointer
     // is already gone (a pointer-capability loss releases it before this runs).
     apply_cursor_kind();
@@ -2990,6 +2892,7 @@ void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
+void GuiPlatform::set_modifiers_changed_hook(std::function<void(GuiInputState)> cb) { modifiers_changed_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

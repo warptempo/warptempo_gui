@@ -1016,6 +1016,17 @@ int main(int argc, char** argv) {
         viewport.invalidate_top_strip();
     });
 
+    // MODIFIER EDGE -> the pointer cursor, and nothing else. Modifiers SELECT
+    // between cursor kinds over the waveform (ctrl the zoom drag, alt the pan),
+    // so the cue has to move the moment the modifier does — deriving it on
+    // motion alone leaves the wrong promise on screen for as long as the user
+    // holds still. It takes the pointer-leave hook's shape for the same reason:
+    // an edge the platform owns that changes what should be on screen and
+    // carries no pointer event to do it.
+    gui.set_modifiers_changed_hook([&](GuiInputState mods) {
+        input_handler.refresh_pointer_cursor(mods);
+    });
+
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
         input_handler.on_motion(mouse_x, mouse_y, mods);
     });

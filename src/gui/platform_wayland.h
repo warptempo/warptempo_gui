@@ -16,17 +16,28 @@
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_wayland.cpp.
 
-// THE POINTER CURSOR HAS TWO KINDS AND EXACTLY TWO (architect 2026-08-03).
-// Arrow is the system theme's left_ptr, the cursor everywhere in the window;
-// Speaker is our own player-volume image, shown only while the pointer rests on
-// the waveform's audition-scrub surface. There is no cursor-per-zone framework
-// here and none is wanted: the speaker exists because that one zone runs a
-// gesture the arrow cannot promise, and a second custom cursor would need its
-// own ruling.
+// THE POINTER CURSOR KINDS. EVERY ONE OF THEM IS A NAMED CURSOR FROM THE USER'S
+// OWN XCURSOR THEME, UNMODIFIED (architect 2026-08-03): the product ships no
+// cursor art and draws no cursor pixels, so a kind is a name to look up
+// (load_cursor_theme's table, platform_wayland.cpp) and the theme's own image
+// and its own declared hotspot are what the compositor gets.
+//
+// Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
+// also the FALLBACK: a theme missing one of the other four names degrades that
+// KIND to the arrow with one stderr line, which costs the cue and nothing else.
+// The four beside it each mark a zone whose gesture the arrow cannot promise —
+// the mapping from zone to kind is the GUI's (pointer_cursor_kind,
+// input_handler.h), and this enum is only the vocabulary.
 enum class GuiCursorKind {
     Arrow,
-    Speaker,
+    Scrub,
+    Pan,
+    Zoom,
+    TrimResize,
 };
+// Roster size, for the platform's per-kind cursor array. Keep it equal to the
+// enumerator count above.
+inline constexpr int kGuiCursorKindCount = 5;
 
 class GuiPlatform {
 public:
@@ -169,6 +180,21 @@ public:
     // pointer-leave hook takes for the same reason (a protocol edge with no
     // other event to carry its repaint). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
+
+    // Fired at each CHANGE of the ctrl / shift / alt state, from
+    // wl_keyboard.modifiers — which the compositor sends when that state moves
+    // and NOT on an ordinary key press, so this is the modifier edge itself and
+    // nothing needs to filter it further. It carries the same GuiInputState the
+    // pointer callbacks build, so a consumer sees one modifier truth.
+    //
+    // IT EXISTS FOR THE CURSOR. Modifiers SELECT between cursor kinds over the
+    // waveform, so without this edge a Ctrl going down under a resting pointer
+    // would leave the wrong cue showing until the pointer moved — the whole
+    // affordance, late. main.cpp wires it to the input handler's cursor refresh
+    // and to nothing else. Super is deliberately NOT an edge here: it is absent
+    // from GuiInputState and gates key delivery instead.
+    void set_modifiers_changed_hook(std::function<void(GuiInputState)> cb);
+
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -229,10 +255,8 @@ public:
     // releases (the guard is inside apply_cursor_kind, so every applier shares
     // it). A no-op when there is no wl_pointer.
     //
-    // Speaker falls back to Arrow when the speaker image could not be built at
-    // init; Arrow is itself the NULL-surface hide when the theme failed to load.
-    // The two failures are independent — the speaker is our own buffer and owes
-    // the theme nothing, so a themeless session still shows it.
+    // A kind whose xcursor name is missing from the theme falls back to Arrow,
+    // and Arrow is itself the NULL-surface hide when no theme loaded at all.
     void set_cursor_kind(GuiCursorKind kind);
 
     // Parallel hookup for the GuiWaveformWorker's completion
@@ -536,44 +560,34 @@ private:
     // scroll scratch at the frame boundary.
     bool   frame_have_relmotion_ = false;
 
-    // Cursor (system theme, loaded once at init, kept for the process
-    // lifetime). cursor_surface_ is a dedicated wl_surface that holds
-    // the cursor image buffer; it is distinct from the main window
-    // wl_surface_ and is passed to wl_pointer.set_cursor on every
-    // pointer enter.
-    struct wl_cursor_theme* wl_cursor_theme_   = nullptr;
-    struct wl_cursor*       wl_cursor_arrow_   = nullptr;
-    struct wl_surface*      cursor_surface_    = nullptr;
-    int32_t                 cursor_hotspot_x_  = 0;
-    int32_t                 cursor_hotspot_y_  = 0;
-
-    // THE SCRUB CURSOR — our own image beside the theme's, built once at init
-    // and kept for the process lifetime (build_speaker_cursor /
-    // destroy_speaker_cursor). wl_pointer.set_cursor takes ANY wl_surface, so a
-    // client cursor is just a surface with a buffer under it; this one carries
-    // the Breeze speaker glyph drawn through icons::draw.
+    // THE CURSOR SET (system theme, loaded once at init, kept for the process
+    // lifetime). ONE ENTRY PER GuiCursorKind, indexed by the enumerator.
     //
-    // Its shm pool is its OWN, not a slice of the window's: this one is sized
-    // once for a single cursor image and never resized, which is exactly why
-    // sharing the window pool (which is destroyed and rebuilt on every window
-    // resize) would be wrong. The create/destroy pair follows recreate_shm_pool
-    // / destroy_shm_pool as a pattern and shares no state with them.
+    // Each entry is a dedicated wl_surface — distinct from the main window
+    // wl_surface_ — with the theme image's buffer attached once and never
+    // re-attached, plus THE HOTSPOT THAT IMAGE DECLARES. A set_cursor therefore
+    // swaps kinds by naming a different SURFACE, with no image work per swap,
+    // which is what makes the per-motion applier free.
     //
-    // The whole group is null/-1 when the build failed; the cursor then simply
-    // never changes (see set_cursor_kind).
-    struct wl_surface*  speaker_cursor_surface_ = nullptr;
-    struct wl_buffer*   speaker_cursor_buffer_  = nullptr;
-    struct wl_shm_pool* speaker_cursor_pool_    = nullptr;
-    int                 speaker_cursor_fd_      = -1;
-    void*               speaker_cursor_map_     = nullptr;
-    size_t              speaker_cursor_bytes_   = 0;
-    int32_t             speaker_hotspot_x_      = 0;
-    int32_t             speaker_hotspot_y_      = 0;
+    // The BUFFERS belong to libwayland-cursor and die with wl_cursor_theme_; the
+    // surfaces are ours and are destroyed before the theme (shutdown). A null
+    // surface means that name was missing from the theme: apply_cursor_kind
+    // falls back to Arrow's, and Arrow's own null (a theme with no left_ptr, or
+    // no theme at all) is the protocol hide.
+    struct ThemeCursor {
+        struct wl_surface* surface   = nullptr;
+        int32_t            hotspot_x = 0;
+        int32_t            hotspot_y = 0;
+    };
+    struct wl_cursor_theme* wl_cursor_theme_ = nullptr;
+    ThemeCursor             cursors_[kGuiCursorKindCount];
 
     // The kind last asked for. THE ONE PLACE the current cursor is recorded —
     // every applier reads it and none takes a kind as an argument, so a re-apply
     // on an enter or a capture release cannot restore a different cursor than
-    // the one that was showing.
+    // the one that was showing. It outlived the custom-buffer cursor it was
+    // written for and is load-bearing for those two platform-side edges, which
+    // know nothing about where the pointer is in the GUI's terms.
     GuiCursorKind cursor_kind_ = GuiCursorKind::Arrow;
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
@@ -624,6 +638,11 @@ private:
     std::function<void()> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
+    // Fired at each ctrl/shift/alt EDGE (see set_modifiers_changed_hook).
+    // SEEDED with a no-op, like the input handler's capture hooks, so the fire
+    // site needs no null test.
+    std::function<void(GuiInputState)> modifiers_changed_hook_ =
+        [](GuiInputState) {};
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
@@ -631,11 +650,12 @@ private:
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
     bool load_cursor_theme();
-    // Build the speaker cursor's pool, buffer, cairo drawing and surface. One
-    // stderr line and false on any failure, leaving the group torn back down —
-    // a degraded cursor, never a fatal one.
-    bool build_speaker_cursor();
-    void destroy_speaker_cursor();
+    // Look one theme cursor up by its xcursor NAME and give it a surface with
+    // the theme image's buffer and the image's OWN hotspot. False when the theme
+    // has no such name (or the buffer/surface could not be made), leaving that
+    // kind's entry null; the caller decides whether that is fatal (Arrow) or a
+    // degraded cue (every other kind).
+    bool load_theme_cursor(GuiCursorKind kind, const char* xcursor_name);
     // THE ONE wl_pointer.set_cursor CALLER for the visible cursor: hands the
     // compositor the surface and hotspot cursor_kind_ names, at the tracked
     // enter serial. Silent no-op while a capture holds the cursor hidden, and

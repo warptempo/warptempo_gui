@@ -450,6 +450,13 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
+    // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
+    // with a fresh modifier state — the modifier-edge half of the cursor's two
+    // routes, wired in main.cpp to the platform's modifiers-changed hook and
+    // called from nowhere else. The contract, and the zone map it consults, are
+    // at pointer_cursor_kind below.
+    void refresh_pointer_cursor(GuiInputState mods);
+
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
     // the view bar's three, row 2's four, row 3's two tabs and row 4's eleven
@@ -1124,40 +1131,77 @@ private:
     // the interrupting click into a launch.
     void scrub_press_at(int click_rel_x);
 
-    // THE SCRUB CURSOR'S ZONE — true when a plain left press at (x, y) right now
-    // would run an audition scrub act, false everywhere else. ONE CALLER, the
-    // set_cursor_kind line at the top of on_motion; do not grow a second, and do
-    // not scatter set-cursor calls through the handlers.
+    // THE POINTER CURSOR'S ZONE MAP — the kind the pointer should be showing at
+    // (x, y) with `mods` held right now. THE ONE OWNER of that question; do not
+    // scatter set-cursor calls through the handlers. TWO CALLERS, both of which
+    // hand the answer straight to GuiPlatform::set_cursor_kind: the line at the
+    // top of on_motion (with the event's own coordinates) and
+    // refresh_pointer_cursor below (with the remembered ones, on a modifier
+    // edge).
     //
     // THE CURSOR PROMISES THE GESTURE (architect 2026-08-03). That is the whole
-    // rule, and it is why this predicate is DERIVED FROM THE PRESS PATH rather
-    // than written as a list of situations: every refusal here is a branch that
-    // actually swallows or diverts the press in on_button_press, re-derived from
-    // that handler and in its order. If the press path grows a new swallow over
-    // the waveform, this grows the same one.
+    // rule, and it is why every zone here is DERIVED FROM THE PRESS PATH rather
+    // than written as a list of situations: each arm is a branch that actually
+    // claims (or swallows, or diverts) the press in on_button_press and the band
+    // routers, re-derived from them and in their order. If the press path grows a
+    // new swallow over the waveform, this grows the same one.
+    //
+    // THE ZONES, each with the press branch it is taken from:
+    // - Scrub: the waveform's LOWER half, plain — the audition scrub press,
+    //   sharing its half test through waveform_lower_half.
+    // - Pan: the waveform, EITHER half, ALT-exact — the captured grab-pan, which
+    //   arms anywhere inside the waveform, so the cue covers the full height.
+    // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip drag;
+    //   and the RULER band, plain — the SAME gesture through the same hoisted
+    //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
+    //   share a cursor.
+    // - TrimResize: the TRIM BAR band, plain — the endcap / bridge drags.
+    // - Arrow: everything else, the marker lane and the four button rows
+    //   included.
+    // THE MODIFIER ARMS OUTRANK THE PLAIN ZONES ON THE WAVEFORM, exactly as the
+    // press path ranks them: alt or ctrl held means the pan or the zoom drag, not
+    // the scrub. SHIFT IS NOT IN THE MAP — it forms a region, which has no themed
+    // cursor worth borrowing, so it takes the Arrow like everything unnamed and
+    // still refuses the Scrub cue as it always did.
+    //
+    // READ-ONLY IS PER-ZONE, each following its own gesture's answer: the strip
+    // drag and the pan are navigation and do not refuse there, an audition is not
+    // a mutation so the scrub does not either — but the TRIM drags DO refuse in a
+    // read-only tab (the band-level gate at the plain trim-bar press), so the
+    // TrimResize cue refuses with them.
     //
     // WHAT IT IS BLIND TO, deliberately and by ruling:
     // - The BARE RIGHT press scrubs the waveform's FULL HEIGHT, and this marks
     //   only the LEFT press's lower half. The cursor is a cue for the lower-half
-    //   SURFACE, not a map of every route into scrub_act_at — a speaker over the
-    //   whole waveform would promise the left button something the upper half
+    //   SURFACE, not a map of every route into scrub_act_at — a scrub cue over
+    //   the whole waveform would promise the left button something the upper half
     //   does not do.
-    // - READ-ONLY TABS do not refuse: an audition is not a mutation, the scrub
-    //   works there, and the cursor says so.
-    // - The FLAG editor does not refuse either — it is pointer-transparent by
-    //   ruling, so a scrub still acts under an open one and the cursor must not
-    //   lie about that. The three BOTTOM-STRIP modal editors DO refuse, because
-    //   they really do swallow the press (modal_bottom_strip_editor_active).
+    // - The FLAG editor does not refuse — it is pointer-transparent by ruling, so
+    //   a scrub still acts under an open one and the cursor must not lie about
+    //   that. The three BOTTOM-STRIP modal editors DO refuse, because they really
+    //   do swallow the press (modal_bottom_strip_editor_active).
     //
-    // ACCEPTED STALENESS, stated rather than chased: the cursor is re-derived
-    // only on MOTION, so a state change with no pointer movement under it — a
-    // load completing while the pointer already rests on the waveform, a menu
-    // closing by Esc, a modifier going down or up — leaves the cursor as it was
-    // until the next motion event corrects it. There is deliberately no tick
-    // hook and no second call site for that: the correction is one mouse
-    // movement away, and a cursor that repaints from a timer would be a second
-    // owner of the same fact.
-    bool pointer_over_scrub_surface(int x, int y, GuiInputState mods) const;
+    // THE CUES ARE HOVER-ONLY: the live-gesture refusal is uniform across every
+    // kind, so no cursor changes during any drag, captured or not. ONE KNOWN
+    // CONSEQUENCE, recorded rather than special-cased: a live TRIM drag shows the
+    // Arrow rather than keeping TrimResize, because that refusal does not except
+    // the gesture whose own cue it is.
+    //
+    // ACCEPTED STALENESS, narrowed rather than deleted: the cursor is re-derived
+    // on MOTION and on a MODIFIER EDGE, so what remains stale is a state change
+    // with neither under it — a load completing while the pointer already rests
+    // on the waveform, a menu closing by Esc — which shows at the next event of
+    // either kind. There is deliberately no tick hook for that: the correction is
+    // one mouse movement away, and a cursor that repainted from a timer would be
+    // a second owner of the same fact.
+    // THE SECOND CALLER, refresh_pointer_cursor (declared public beside
+    // on_motion), reads app.last_mouse_x / last_mouse_y and does exactly this
+    // and nothing more — no hover recompute, no damage, no gesture logic —
+    // because a modifier edge is not a pointer event and must not become one. It
+    // is a no-op while the pointer is outside the window, where those remembered
+    // coordinates mean nothing (a pointer enter re-applies the remembered kind
+    // and synthesizes a motion, which re-derives anyway).
+    GuiCursorKind pointer_cursor_kind(int x, int y, GuiInputState mods) const;
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
@@ -1243,12 +1287,12 @@ private:
     // separately). TWO CALLERS, and they ask the same question about two pointer
     // facts: wheel_context's swallow (input_handler.cpp), because wheel zoom and
     // Alt+wheel pan are NAVIGATION, not chords, so they still punch through an
-    // open top-strip flag editor; and pointer_over_scrub_surface (2026-08-03),
-    // because these three editors are exactly the ones that SWALLOW a pointer
-    // press, so they are exactly the ones over which the scrub cursor must not
-    // promise a gesture. The flag editor's exemption is the same fact in both:
-    // it is pointer-transparent, so the wheel reaches the viewport under it and
-    // a scrub reaches the audio under it.
+    // open top-strip flag editor; and pointer_cursor_kind (2026-08-03), because
+    // these three editors are exactly the ones that SWALLOW a pointer press, so
+    // they are exactly the ones over which no cursor may promise a gesture. The
+    // flag editor's exemption is the same fact in both: it is
+    // pointer-transparent, so the wheel reaches the viewport under it and a
+    // scrub reaches the audio under it.
     // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
     // not decided here — but it is no longer scattered either: since 2026-07-28
     // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
