@@ -1772,9 +1772,14 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
-        // Same hover drop as wl_pointer.leave: capability loss ends the pointer
-        // stream with no leave/motion to follow, so the hovered button faces
-        // must be cleared here.
+        // Same hook as wl_pointer.leave, and here the hard version of the reason:
+        // capability loss ends this pointer stream with no leave, no motion and
+        // no release to follow, so every pointer-derived face must be dropped
+        // here or it stays on screen with no event left that could take it down.
+        // WHAT the hook clears is main.cpp's hook body (its authoritative list) —
+        // more than the roster's hovered buttons: the click face, an open
+        // dropdown's hovered AND armed items with the popup's press claim, the
+        // hover tooltip, and the menu row's armed mode.
         if (pointer_left_hook_) pointer_left_hook_();
 
         // Capability loss is the hard end of this wl_pointer event stream:
@@ -2219,15 +2224,20 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
                                    struct wl_surface* surface) {
     if (surface != wl_surface_) return;
     pointer_focused_ = false;
-    // Drop hover: no motion event follows a leave, so without this a redesigned
-    // row's button would keep its lit face after the pointer slid out the window
-    // edge. The hook owns the erase damage. (The MARKER hover popup rode this
+    // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
+    // without this a redesigned row's button would keep its lit face for that
+    // whole span after the pointer slid out the window edge. This is NOT the
+    // capability-loss case — the stream is not over, re-entry fires a synthesized
+    // motion (on_pointer_enter) that re-resolves, and the held state below
+    // survives — so what the hook drops is the pointer-derived FACES, leaving a
+    // return with nothing stale on screen rather than relying on the absence of
+    // later events. The hook owns the erase damage, and main.cpp's hook body is
+    // the authoritative list of what it clears. (The MARKER hover popup rode this
     // edge too until row 5 deleted it; a marker's value lives on its flag now,
     // so there is no pointer-position-dependent marker surface left — but an
     // open dropdown's item hover/arm is one, and it rides this same edge:
     // main.cpp's hook widened 2026-08-03 to drop it alongside the roster's;
-    // see clear_dropdown_pointer_state.) Re-entry fires a synthesized motion
-    // (on_pointer_enter) that re-resolves.
+    // see clear_dropdown_pointer_state.)
     if (pointer_left_hook_) pointer_left_hook_();
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because

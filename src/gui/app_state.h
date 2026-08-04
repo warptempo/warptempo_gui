@@ -1765,13 +1765,19 @@ struct AppState {
 
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
-    // physically held down on an ENABLED button that HAS the face, -1 otherwise.
+    // physically held down on an ENABLED button that HAS the face AND the
+    // pointer's claim on that hold still stands, -1 otherwise.
     // Written by exactly two routes, each damaging the strip on the transition:
     // the press claim sets it (input_pointer.cpp) and clear_redesign_button_press
-    // clears it (the left release and the pointer-leave / button-lost hook). The
-    // face rides the PHYSICAL hold, not the action — the chord already fired at
-    // the press — so it is visual only and survives the pointer wandering off
-    // the button mid-hold. WHICH buttons have it is the chord table's
+    // clears it (the left release and the pointer-leave / capability-loss hook).
+    // The face rides the PHYSICAL hold, not the action — the chord already fired
+    // at the press — so it is visual only and survives the pointer wandering off
+    // the button mid-hold. THE ONE PLACE THE INDEX AND THE HOLD PART COMPANY is
+    // the leave: the pointer going out of the window drops the face while the
+    // button may still be physically down, because a face is a statement about
+    // where the pointer IS. After an ordinary leave the release still arrives
+    // normally and simply finds nothing to clear. WHICH buttons have it is the
+    // chord table's
     // `click_face` column (rows 2 and 4 do; rows 1 and 3 keep two faces), not a
     // fact restated here.
     int redesign_pressed = -1;
@@ -1808,8 +1814,10 @@ struct AppState {
     // `hovered_item` is -1 or an index into the open menu's item table, written
     // by the motion recompute, by every close (the struct reset) and by the
     // POINTER-LEAVE drop — that last one because the painter lights the item it
-    // names with no pointer_in_window term of its own, and no motion event
-    // follows a leave.
+    // names with no pointer_in_window term of its own, so the item would stay
+    // lit for the whole time the pointer is outside (until a re-entry's
+    // synthesized motion recomputes it — or forever, on capability loss, which
+    // has no return to wait for).
     // `rect` and `item_rects` are PAINTER-PUBLISHED, so the hit tests read
     // exactly the painted boxes and never re-shape a label (the displayed-basis
     // doctrine).

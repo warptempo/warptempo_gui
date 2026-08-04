@@ -174,16 +174,21 @@ public:
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
     // Fired when the pointer LEAVES the surface (wl_pointer.leave) and at
-    // pointer-capability loss — the two edges that drop pointer focus without a
-    // motion event. The one owner of the hover-off-on-leave behavior: main.cpp
-    // wires it to the REDESIGNED ROWS' button-face clears (hover, click, popup
-    // press), so a pointer that slides out through the window edge cannot leave
-    // a lit pill or a stranded pressed interior behind. It USED to clear the
+    // pointer-capability loss — the two edges on which pointer focus is dropped
+    // and no position event will follow (outright, for capability loss; for the
+    // ordinary leave, for as long as the pointer stays outside — it may re-enter
+    // with a synthesized motion, and a held button still releases normally).
+    // The one owner of the drop-what-the-pointer-was-naming behavior. What
+    // main.cpp wires it to is enumerated THERE, at the hook body, which is the
+    // authoritative list — this contract deliberately does not keep a second
+    // copy — but the shape is: every face and claim derived from where the
+    // pointer is, so a pointer that slides out through the window edge cannot
+    // leave a lit pill, a stranded pressed interior, a lit menu item or a
+    // hanging tooltip behind. It USED to clear the
     // marker hover popup as well; that whole surface died with the marker-text
-    // lane in row 5. Widened 2026-08-03 to drop an open dropdown's two
-    // pointer-derived item faces (hovered and armed) alongside the roster's —
-    // the roster's button faces are not the only hover state this edge drops
-    // any more; full story at clear_dropdown_pointer_state. Null-safe.
+    // lane in row 5. Widened 2026-08-03 to the open dropdown's pointer-derived
+    // state — the roster's button faces are not the only such state this edge
+    // drops any more; full story at clear_dropdown_pointer_state. Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
 
     // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
@@ -754,10 +759,12 @@ private:
     WheelContextProbe    wheel_context_probe_;
     TextEditorProbe      text_editor_active_probe_;
     RepeatEligibleProbe  repeat_eligible_probe_;
-    // The one owner of hover-off-on-pointer-leave: fired at wl_pointer.leave and
-    // at pointer-capability loss (the two focus-dropping edges with no motion
-    // event to re-resolve hover). Wired to the redesigned rows' face clears; the
-    // marker hover popup it also dropped no longer exists. Null-safe.
+    // The one owner of the pointer-leave drop: fired at wl_pointer.leave and at
+    // pointer-capability loss (the two focus-dropping edges with no motion to
+    // re-resolve — permanently on capability loss, and for the duration of the
+    // absence on an ordinary leave). Wired to everything derived from where the
+    // pointer is, main.cpp's hook body holding the authoritative list; the marker
+    // hover popup it also dropped no longer exists. Null-safe.
     std::function<void()> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;

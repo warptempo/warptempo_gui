@@ -3012,7 +3012,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     hide_shift_tooltip();
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
     // redesign_button_hoverable refuses the WHOLE roster while a dropdown is up.
-    // No motion event follows a press, so a face lit at the moment of the open
+    // A press carries no motion of its own and the pointer may then stand still
+    // indefinitely ("next motion" is not a property, as the tooltip hide above
+    // says), so a face lit at the moment of the open
     // would otherwise stay lit under a surface that has taken the pointer from
     // it. It is also what keeps the tooltip DOWN for as long as the popup is up:
     // with no button hoverable, the dwell writer (recompute_redesign_button_
@@ -3101,8 +3103,11 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
 
 // THE MODE'S END, the one gated writer every route that is not close_dropdown
 // goes through. Its callers, re-derived by grep: the band exit above, the
-// pointer-leave hook (main.cpp, beside the row's other face clears — no motion
-// event follows that edge), ANY pointer press (on_button_press's top) and ANY
+// pointer-leave hook (main.cpp, beside the row's other face clears — a pointer
+// that has left the window has left the VISIT, the band exit's own reason at a
+// coarser edge, NOT a claim that no motion can follow: a re-entry synthesizes
+// one, and it finds a cold row that takes a click again, which is the intent),
+// ANY pointer press (on_button_press's top) and ANY
 // key press (on_key's top). It damages nothing: the mode is invisible, painting
 // no face of its own; what it changes is what the NEXT motion does.
 //
@@ -3195,11 +3200,17 @@ void GuiInputHandler::hide_shift_tooltip() {
 }
 
 // THE CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
-// two edges that end a hold both come here: the left release (on_button_release,
-// at its very top so a modal or an early return cannot strand a lit button) and
-// the pointer-leave / capability-loss hook, which is the button-lost edge — no
-// release event follows a leave, so without this a pointer that slides out of
-// the window mid-press would leave the interior filled forever. Transition-gated
+// two edges that end the pointer's claim on a hold both come here: the left
+// release (on_button_release, at its very top so a modal or an early return
+// cannot strand a lit button) and the pointer-leave / capability-loss hook.
+// THAT SECOND EDGE IS "BUTTON-LOST" FOR THE FACE, not for the event stream:
+// capability loss really does end the stream with no release to come, while an
+// ordinary leave keeps the held state and delivers the release normally once it
+// happens — but the face is a statement about where the pointer IS, so it goes
+// either way, and without this a pointer that slides out of the window mid-press
+// would leave the interior filled for the whole absence. The later release is
+// then a no-op on this transition gate, which is what makes the early clear safe
+// rather than any inability of the release to arrive. Transition-gated
 // like the hover clear beside it, and one invalidate_top_strip when it fires.
 void GuiInputHandler::clear_redesign_button_press() {
     if (app.redesign_pressed < 0) return;

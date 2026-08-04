@@ -499,8 +499,12 @@ struct GuiInputHandler {
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
-    // / capability-loss drop, wired in main.cpp on the pointer-leave hook
-    // because no motion event follows those edges. Both damage ONLY on a real
+    // / capability-loss drop, wired in main.cpp on the pointer-leave hook,
+    // because a face is an answer to "where is the pointer" and the pointer is
+    // gone: capability loss ends that stream outright, and an ordinary leave has
+    // no motion only WHILE the pointer stays outside — long enough for a lit
+    // pill to sit there unowned until a re-entry's synthesized motion recomputes
+    // it. Both damage ONLY on a real
     // transition, and at most one invalidate_top_strip per call however many
     // faces moved.
     void recompute_redesign_button_hover();
@@ -546,8 +550,11 @@ struct GuiInputHandler {
     //     too. A modal owning the pointer is a reason not to open a menu, and no
     //     reason to forget that the pointer left the row.
     // disarm_ is the mode's end, called from both of those, from the
-    // pointer-leave hook (main.cpp, beside the row's other face clears — no
-    // motion event follows that edge), and from the top of on_button_press and
+    // pointer-leave hook (main.cpp, beside the row's other face clears — a
+    // pointer that has left the window has left the VISIT, which is the same
+    // reason the band exit disarms, at a coarser edge; it is not a claim that no
+    // motion can follow, since a re-entry synthesizes one), and from the top of
+    // on_button_press and
     // on_key (any press, any chord). It carries the "no menu open" gate, because
     // leaving the WINDOW is not a dismissal, a menu left standing is still the
     // mode, and while one is up the POPUP's own routes own the mode.
@@ -635,7 +642,11 @@ struct GuiInputHandler {
     // THE CLICK FACE, dropped — the third face's only writer besides the
     // press claim. Called from the top of on_button_release (the physical
     // release) and from the pointer-leave hook beside clear_redesign_button_hover
-    // (the button-lost edge, which sends no release). Transition-gated, one
+    // (the button-LOST edge as far as the FACE is concerned: the hold stops being
+    // the pointer's to show). Only capability loss actually guarantees no later
+    // release; after an ordinary leave one may well arrive, and it finds the face
+    // already cleared and does nothing, which is what makes clearing early safe
+    // rather than the events being unable to come. Transition-gated, one
     // invalidate_top_strip when it fires. Rows 1 and 3 never set the state it
     // clears (their buttons carry click_face=false); rows 2 and 4 do.
     void clear_redesign_button_press();

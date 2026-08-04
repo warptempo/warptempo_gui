@@ -1028,25 +1028,45 @@ int main(int argc, char** argv) {
         return input_handler.repeat_eligible(key, mods);
     });
 
-    // Pointer-leave / capability-loss drop: no motion event follows those edges,
-    // so the hover-driven faces must be cleared here or a pointer that slides
-    // out of the window over a button leaves its pill / outline lit. THE MARKER
+    // Pointer-leave / capability-loss drop. THIS BODY IS THE AUTHORITATIVE
+    // EFFECT LIST for the hook — tooltip hide, roster hover, roster click face,
+    // the popup's two item faces plus its press claim, and the conditional
+    // menu-row disarm. The platform-side sites name their OWN concern and point
+    // here rather than each keeping a list that can drift (the setter contract
+    // and the member comment in platform_wayland.h, and the capability-loss fire
+    // site in platform_wayland.cpp).
+    // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03), and the difference
+    // is the reason none of the clears below may lean on "no later event". Only
+    // CAPABILITY LOSS ends that pointer stream outright — no motion and no
+    // release will ever arrive on the object again. AN ORDINARY LEAVE has no
+    // position event only WHILE the pointer stays outside: the platform PRESERVES
+    // `pointer_left_held_`, a re-entry synthesizes a motion, and a still-held
+    // button releases normally afterward. WHAT MAKES EVERY CLEAR HERE SAFE is
+    // that each drops a VISUAL FACE or a press CLAIM, so a later motion or
+    // release lands unowned or as a harmless no-op — never an inability of those
+    // events to arrive.
+    // The hover-driven faces must therefore be cleared here, or a pointer that
+    // slides out of the window over a button leaves its pill / outline lit for
+    // as long as it stays outside. THE MARKER
     // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
     // redesigned rows' button hover is the only ROSTER hover left (an open
     // dropdown's item hover is the other pointer-position-dependent surface
     // this edge drops, below), and it is separate state with its own clear.
-    // Row 2's CLICK face joins it: a leave is also the
-    // BUTTON-LOST edge (no release event follows it either), and a stranded
-    // pressed interior would outlive the hold that justified it. Both are
-    // transition-gated.
+    // Row 2's CLICK face joins it: this is the BUTTON-LOST edge as far as the
+    // FACE is concerned — the hold stops being the pointer's to show — and a
+    // stranded pressed interior would outlive it. A release that does arrive
+    // later (the ordinary-leave case) finds the face already cleared and clears
+    // nothing, on_button_release's own top call being transition-gated too:
+    // the harmless no-op named above. Both are transition-gated.
     // AN OPEN POPUP'S TWO FACES GO WITH THEM, and only they: the item under
     // the pointer is lit by `hovered_item` with no in-window term in the
-    // painter, and the armed item by `pressed_item` with no release to follow,
-    // so both would outlive the pointer that named them — a flick out of the
+    // painter, and the armed item by `pressed_item`, so both would outlive the
+    // pointer that named them — a flick out of the
     // window whose last on-surface motion was still over an item leaves it lit
-    // until a RETURN motion recomputes. One call clears both
-    // (clear_dropdown_pointer_state); the MENU ITSELF STAYS UP, because leaving
-    // the window is not a dismissal.
+    // until a RETURN motion recomputes. One call clears both faces AND the press
+    // claim (clear_dropdown_pointer_state), and dropping the claim is what
+    // leaves a re-entry's motion and any later release owning nothing; the MENU
+    // ITSELF STAYS UP, because leaving the window is not a dismissal.
     // THE MENU ROW'S MODE ENDS HERE TOO (the armed bit, AppState::Dropdown::
     // menu_row_armed): once a menu has been opened from row 1 the anchors open on
     // hover alone, and a pointer that has left the window has left the visit, so
