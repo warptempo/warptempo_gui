@@ -181,6 +181,19 @@ void GuiActiveViews::toggle_active_markers_view() {
     // and an auto-select there would be overwritten for nothing.
     clear_region_highlight(app, viewport);
     auto_select_marker_at_playhead(app, audio, selection, viewport);
+    // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH — the W/P half of the
+    // rule the S/T toggle carries at its own chokepoint
+    // (handle_active_audio_view_toggle; the contract and the full clearer list
+    // are at AppState::HistoryMode::focus). The focus is an ordinal into the
+    // PAINTED diff-flag list, and this flip changes that list wholesale: the
+    // mode paints the ACTIVE column's half of a commit's delta, so W and P show
+    // different flags at different ordinals. Placed before the kick below, which
+    // rebuilds the flag cache — `focus` is one of that cache's fingerprint
+    // fields. Unconditional, and a no-op with the mode down (the field rests at
+    // -1 there). The propagate paste's tail reaches
+    // switch_active_markers_view_to directly rather than this toggle, and needs
+    // nothing: no route into it is admitted while the mode stands.
+    app.history_mode.focus = -1;
     // SYNCHRONOUS REBUILD, the third member of the view-switch class (architect
     // 2026-07-30). `p` moves NO viewport and NO domain, so unlike its two
     // siblings the plate CONTENT is unchanged — but app.active_markers_view is a

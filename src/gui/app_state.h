@@ -1332,14 +1332,16 @@ struct AppState {
     // convention; the recheck normalizes it against the local clone's own
     // `origin` remote and refuses a mismatch, since the clone is only the
     // transport and a rebound setting must never silently read the wrong
-    // history. The default lives in ONE place, kDefaultProjectsRepo
-    // (settings_file.h), read by this initializer, the first-open template,
-    // and the schema's own fallback — unlike audio_player, whose default is
-    // spelled twice, because this key is the schema's one OPTIONAL key and the
-    // fallback for a file omitting it has to agree with the template stamp.
+    // history. The key is REQUIRED in every `.settings` (architect approval
+    // 2026-08-04, retiring the one-day optional-key exception it landed under),
+    // so a load always assigns this field from the file and the initializer here
+    // is pre-load state exactly like audio_player's. That value lives in ONE
+    // place, kDefaultProjectsRepo (settings_file.h), read by this initializer,
+    // the SettingsFile member and the first-open template — unlike audio_player,
+    // whose default is spelled twice, because the stamp a fresh project gets and
+    // the value a session starts with are worth pinning to one constant.
     // Persisted on Ctrl+S. No gesture: the settings editor
     // (`:projects_repo=<host/path>`) is its sole authoring surface.
-    // (architect approval 2026-08-03.)
     std::string projects_repo = kDefaultProjectsRepo;
 
     // Render-environment attestation: the STORED per-library stat-identity
@@ -2042,13 +2044,16 @@ struct AppState {
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
-    // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view band, and
+    // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it: zoom, the paged scroll, the overview toggle and
     // playback's follow chase move viewport_start_sample or zoom_level, the
-    // pointer's pan / strip / ruler drags move both, and the mode's OWN
-    // diff-flag click lands the playhead — every one of them a per-tab key the
-    // settings writer persists. So after any of them the frozen text is a stale
+    // pointer's pan / strip / ruler drags move both, the mode's OWN diff-flag
+    // click lands the playhead, and since 2026-08-04 the admitted VIEW SWITCHES
+    // move the two whole-file keys `active_audio_view=` and
+    // `active_markers_view=` (`t` moving the per-tab band with them, the
+    // playhead and viewport translating across the domain flip) — every one of
+    // them a key the settings writer persists. So after any of them the frozen text is a stale
     // snapshot of bytes a Ctrl+S would write differently. That is invisible in
     // the diff (the mode displays only `scale=`) and would be a LIE in a
     // checkpoint, so the act rebuilds the now side fresh at commit time rather
@@ -2063,8 +2068,24 @@ struct AppState {
         std::size_t index  = 0;
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection — a plain click on a diff
-        // flag sets it and lands the playhead on that flag's frame, a click on
-        // empty lane clears it, and every step clears it.
+        // flag sets it and lands the playhead on that flag's frame.
+        //
+        // EVERY CLEARER, the whole list, and they all clear for ONE reason: the
+        // value is an ordinal into the PAINTED list, so anything that rebuilds
+        // that list would otherwise leave the highlight on an unrelated flag.
+        //   - a click on empty lane (the deliberate clear)
+        //   - each `,` / `.` step (handle_history_mode_key)
+        //   - each VIEW SWITCH, both axes (2026-08-04, when `t` / `p` / 1 / 2 /
+        //     3 joined the keyboard allowlist): the lane paints only the ACTIVE
+        //     COLUMN's half of a commit's delta, so W and P are different lists,
+        //     and the S/T flip re-lays the same list on another domain. The
+        //     clear sits at each axis's own toggle — handle_active_audio_view_-
+        //     toggle and GuiActiveViews::toggle_active_markers_view — which is
+        //     what makes the 1/2/3 selectors, the view bar and the icon row's
+        //     radios inherit it by composition.
+        //   - entry and exit (the whole-struct reset at both owners)
+        // The playhead a click landed is NOT taken back by any of them: that
+        // landing was navigation, and it stays where the user put it.
         int         focus  = -1;
         // The commit's delta resolved into painted order, published by the flag
         // cache's rebuild (the sole producer, beside the hit rects and stems it

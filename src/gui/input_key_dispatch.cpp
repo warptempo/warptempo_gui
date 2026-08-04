@@ -277,6 +277,22 @@ void GuiInputHandler::close_history_mode() {
 // hit is "nothing", which is the correct cold answer rather than a wrong warm
 // one. The cost is the same frame's stems, absent instead of stale — and the
 // edge's own full-window damage is already repainting.
+//
+// A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
+// (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist), and
+// the reason is the CADENCE the three edges above are fighting: each of them
+// only DAMAGES (invalidate_all) and leaves republication to the next tick, which
+// is what opens the frame this function closes. A view switch ends in
+// kick_waveform_sync, and that route rebuilds the flag cache INLINE at its tail
+// — the same call that republishes both stashes — so the new view's rects are
+// already standing when the press returns and there is no frame to protect.
+// Nor is there a domain change to protect against: on both sides of a view
+// switch `marker_index` indexes app.history_mode.flags, the mode owning the lane
+// throughout. Dropping anyway would be worse than redundant if it ran after the
+// kick, erasing the geometry that kick had just published. (The LIVE lane leans
+// on the very same synchronous rebuild across `p`, where its stash genuinely
+// does change domain — warp store index to phase-reset store index — so the
+// mode is asking no more of that route than the live columns already do.)
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.flag_hit_rects.clear();
     app.marker_stems.clear();
@@ -405,6 +421,64 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             is the mode's navigation vocabulary: the delta is
 //                             laid out on the viewport, so panning and zooming
 //                             it is reading it.
+//   - t / p / 1 / 2 / 3     → THE VIEW SWITCHES (architect 2026-08-04, from his
+//     (bare)                  first real session with the mode). THE DELTA IS
+//                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
+//                             which is the whole reason they belong here: a
+//                             commit's typed delta is a LINE diff over the three
+//                             sidecar texts (history_diff.h), computed once and
+//                             identical in every view, while the lane paints
+//                             only the ACTIVE COLUMN's half of it
+//                             (rebuild_history_diff_flags picks warp or
+//                             phase-reset entries by active_markers_view). So
+//                             switching views is how both halves of a
+//                             checkpoint's delta get read, and it is a REPAINT
+//                             rather than a re-init: no session work, no new
+//                             walk, no re-measured now side.
+//                             THEY RUN THEIR ORDINARY HANDLERS WHOLE, side
+//                             effects and all, each weighed against the mode's
+//                             own invariants. The S->T entry's iteration wipe
+//                             writes the warp store and pushes an undo entry,
+//                             and it is admitted on the READ-ONLY gate's own
+//                             argument (stated at is_sub_t in
+//                             read_only_key_blocked): iter brackets are
+//                             session-only, serialized nowhere, so the frozen
+//                             now side — which is the three sidecar TEXTS —
+//                             cannot see the write at all. `p` clears the live
+//                             selection and runs the coincidence auto-select;
+//                             the mode neither reads nor paints that selection
+//                             (the lane suppresses every live flag while it
+//                             stands, and the mode's focus is its own field), so
+//                             those land unseen and leave exactly the state the
+//                             same press leaves outside the mode. The playhead
+//                             moves `t` can make (its selection-gated re-land)
+//                             are navigation, which is already this mode's
+//                             vocabulary — its own diff-flag click lands the
+//                             playhead too. The region clear is scratch, the
+//                             playback stop is running state, and the flag-
+//                             editor teardown is unreachable here (no editor can
+//                             be open while this gate is reached at all — see
+//                             the modal note below). The S->T tail's target
+//                             PREVIEW render is derived data, not authoring
+//                             state, and the mode already tolerates one: a
+//                             render live from before `/` runs on, and the
+//                             adopt's own tail triggers one from inside the
+//                             mode. The synchronous plate
+//                             rebuild each switch ends in is load-bearing rather
+//                             than incidental: it is what republishes the lane's
+//                             hit rects in the same press (drop_lane_stash_-
+//                             across_history_edge states why that means a view
+//                             switch is NOT one of the stash-dropping edges).
+//                             WHAT THIS COSTS THE FROZEN SIDE is one more
+//                             producer of SETTINGS-file drift — active_audio_-
+//                             view= and active_markers_view= are persisted keys
+//                             — which the commit act already answers by
+//                             rebuilding the now side fresh (the drift inventory
+//                             is at AppState::HistoryMode).
+//                             THE VIEW BAR AND THE S/T + W/P RADIOS need no rule
+//                             of their own: they synthesize these very chords
+//                             through dispatch_redesign_chord, like every other
+//                             redesigned button.
 //   - ' (bare)              → THE COMMIT EDITOR, and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
 //                             the mode it commits something else: the editor
@@ -452,9 +526,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: the PLAYHEAD
 // steps and Home/End (they move the cursor, and in the marker lane the very same
 // press nudges a marker), `c` and `f` (a jump onto a live marker's focus, and a
-// session-state toggle), `t` / `p` / 1 / 2 / 3 and both Tab cycles (a view flip
-// would repaint half the story — the delta is column- AND view-shaped), `o`, and
-// BARE ESC. Esc carries no binding of the mode's own — the bare-Esc inventory
+// session-state toggle), BOTH TAB CYCLES and the A/B tab switches (Tab,
+// Shift+Tab, Ctrl+Tab, Ctrl+Shift+Tab), `o`, and BARE ESC.
+//
+// VIEWS ARE ADMITTED, TABS ARE NOT, and the line between them is not arbitrary:
+// a view switch re-reads THE SAME piece — the same three sidecar texts the now
+// side was frozen from, the same delta, another column of it — while an A/B tab
+// switch swaps the per-tab band (viewport, zoom, playhead, trim, read_only) the
+// session was measured with, and `c` and Tab both navigate by LIVE MARKERS,
+// which the mode is not showing. The architect admitted views on 2026-08-04 and
+// nothing else with them. Esc carries no binding of the mode's own — the bare-Esc inventory
 // stays at six places — and admitting it only to reach the render cancel would
 // put this mode in the middle of that list for one arm's sake; a render started
 // before `/` runs to completion, and `/` gets its cancel back.
@@ -480,7 +561,20 @@ bool GuiInputHandler::history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_commit_act = (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
+    // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
+    // all three bare-exact, read off their own arms in on_key (the `t` toggle,
+    // the `p` toggle, and the 1/2/3 absolute selectors, which compose those two
+    // handlers and add no third route). Admitting a shape the dispatch does not
+    // bind would admit a press that then does nothing, which is the allowlist
+    // telling a lie about itself.
+    const bool is_audio_view_switch  = (key == GuiKeys::T && bare);
+    const bool is_marker_view_switch = (key == GuiKeys::P && bare);
+    const bool is_view_selector =
+        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+          key == GuiKeys::Digit3) && bare);
     return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
+             is_audio_view_switch || is_marker_view_switch ||
+             is_view_selector ||
              is_commit || is_commit_act || is_save || is_ctrl_q);
 }
 

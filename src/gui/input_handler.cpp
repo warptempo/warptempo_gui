@@ -1493,6 +1493,21 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         return;
     }
 
+    // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH, exactly as it clears
+    // on a `,` / `.` step and for the identical reason — it is an ordinal into
+    // the PAINTED diff-flag list, and the switch is about to rebuild that list
+    // (the contract, and the full clearer list, are at AppState::HistoryMode::
+    // focus). This axis's clear lives HERE, at the S/T chokepoint, so the bare
+    // `t` key, the icon row's S/T radios and the 1/2/3 selectors that compose
+    // this handler all inherit it with no second route; the W/P axis clears at
+    // its own toggle. Placed BELOW the refusal above (a switch that never
+    // happened must not clear anything) and far above the kick at the tail,
+    // which is what rebuilds the flag cache — `focus` is one of that cache's
+    // fingerprint fields, so it has to be settled before the rebuild reads it.
+    // Unconditional: with the mode down the field already rests at -1, the
+    // whole-struct reset at close_history_mode having put it there.
+    app.history_mode.focus = -1;
+
     // The warp flag editor is a source-view-only authoring surface (the
     // home-view binding rule, 2026-07-22). The S -> T toggle would strand a
     // live one on a now-refusing target surface, so close it WITHOUT

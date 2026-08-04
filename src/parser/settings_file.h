@@ -26,16 +26,16 @@
 // other). The program writes every key it knows, so a file short of a REQUIRED
 // one is hand-damaged and refuses.
 //
-// EXACTLY ONE KEY IS OPTIONAL — `projects_repo` (architect approval
-// 2026-08-03) — and the exception is narrow by construction: recognition
-// (validate_gui_setting) and requirement (kCanonicalSettingsKeys) have always
-// been separate lists, so a key can be known without being demanded, and this
-// one is registered in the first and deliberately absent from the second. A
-// sidecar written before the key existed keeps loading in both products and
-// takes the SettingsFile member's default; the next save adds the line. Making
-// it required instead would have turned every sidecar already on disk
-// load-fatal at once, with no migration route — which is why the required-key
-// tail below still speaks for every OTHER key without exception.
+// NO KEY IS OPTIONAL — the required-key rule speaks for the whole canonical set
+// without exception, and the one exception it ever had is retired: from
+// 2026-08-03 `projects_repo` was recognized but not demanded, and on 2026-08-04
+// the architect made it required like every other key (approval recorded at
+// kCanonicalSettingsKeys, settings_file.cpp, with the consequence — a sidecar
+// written before that date and missing the line is load-fatal in both products,
+// hand-edit recovery, no migration). Recognition (validate_gui_setting) and
+// requirement (kCanonicalSettingsKeys) remain SEPARATE LISTS, so the schema can
+// still express a known-but-not-demanded key; nothing in it is one today, and a
+// new key belongs on both.
 //
 // This schema owns the zoom-level range too: a zoom outside
 // [kMinZoom, kMaxZoom] is refused here in both products. What
@@ -135,11 +135,13 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
            end_frame == total_frames - 1;
 }
 
-// The repository that is the projects home when a `.settings` names none.
-// ONE definition, read by the schema default below, the first-open template's
-// kSettingsOrder entry, and AppState's own field default — so the value a
-// fresh project is stamped with and the value a key-less file falls back to
-// can never drift apart. (architect approval 2026-08-03.)
+// The repository a project is STAMPED WITH when it has never named one — the
+// first-open template's `projects_repo=` value, and the pre-load state of the
+// two structs that carry the setting. ONE definition, read by all three: the
+// kSettingsOrder descriptor (settings_io.cpp), SettingsFile's member below, and
+// AppState's own field. It is NOT a load fallback — the key is required since
+// 2026-08-04, so a file either names a repository or refuses (architect
+// approval 2026-08-03 for the constant, 2026-08-04 for the requirement).
 inline constexpr const char* kDefaultProjectsRepo =
     "github.com/warptempo/warptempo_gui";
 
@@ -192,17 +194,15 @@ struct SettingsFile {
     // normalizes both sides before comparing, so a scheme, an scp-style
     // `git@host:path`, or a trailing `.git` all compare equal).
     // (architect approval 2026-08-03 — the frozen-parser grant this key landed
-    // under.)
+    // under; REQUIRED since 2026-08-04 under a second grant, recorded at
+    // kCanonicalSettingsKeys.)
     //
-    // THE SCHEMA'S ONE OPTIONAL KEY, and the member default above is what
-    // makes it optional: `projects_repo` is deliberately ABSENT from
-    // kCanonicalSettingsKeys (settings_file.cpp), so a `.settings` written
-    // before this key existed still loads and simply keeps this default. Every
-    // other key is required — see the required-key tail — and the split is
-    // load-bearing: making this one required would turn every sidecar already
-    // on disk load-fatal in BOTH products at once, with no migration route.
-    // Recognition and requirement are separate lists, which is what lets a new
-    // key be known without being demanded.
+    // The key is required, so the reader always assigns this field on a
+    // successful load — exactly like audio_player above. The initializer is
+    // CONSTRUCTION STATE, not a fallback for a missing line: there is no such
+    // line to fall back for any more. It reads kDefaultProjectsRepo rather than
+    // repeating the text so that a default-constructed SettingsFile names the
+    // same repository the first-open template stamps.
     std::string projects_repo = kDefaultProjectsRepo;
     // Render-environment attestation (env_fingerprint.h): the per-library
     // stat-identity digests recorded at the last save, one 16-lowercase-hex-digit

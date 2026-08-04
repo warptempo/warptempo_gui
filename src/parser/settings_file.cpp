@@ -31,19 +31,28 @@ using warptempo_parse::prefix_line_error;
 // or validate_gui_setting for a GUI-kind key). kEngineKeys stays file-local to
 // engine_settings_io.cpp; this flat list owns requirement here.
 //
-// `projects_repo` IS DELIBERATELY ABSENT — the schema's one optional key
-// (architect approval 2026-08-03), not a missed edit. It is registered in
-// validate_gui_setting below, so it is recognized rather than unknown, and
-// SettingsFile's member default is what a file lacking it falls back to. The
-// two lists were always separate; this key is the first to sit in one and not
-// the other, because requiring it would have made every sidecar already on
-// disk load-fatal in both products with no migration route. A future key
-// belongs HERE unless it has the same "already-written files must survive"
-// problem.
+// EVERY KEY IS REQUIRED, NO EXCEPTIONS — the rule is whole again as of
+// 2026-08-04, when `projects_repo` joined this list at its kSettingsOrder
+// position (architect approval 2026-08-04). It had been the schema's ONE
+// optional key for one day (architect approval 2026-08-03), registered in
+// validate_gui_setting below but deliberately absent here so that sidecars
+// written before it existed kept loading; the architect retired that exception
+// with his eyes open, and "recognized" and "required" are the same membership
+// question for every key once more.
+//
+// THE CONSEQUENCE, stated where the refusal is: a `.settings` written before
+// 2026-08-04 that carries no `projects_repo=` line is LOAD-FATAL in BOTH
+// products, taking the ordinary missing-required-key refusal below — no
+// migration tool and no reader leniency, the standing convention (hand-edit the
+// line in, or let a save from a loaded session write it). The architect ruled
+// this knowing the cost: the corpus has one live project and its checkpoint
+// already carries the key, and the GUI's writer has emitted the line since the
+// key existed, so the population of files this refuses is the ones written
+// before then.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "playback_speed", "follow", "gui_scale", "audio_player",
+    "playback_speed", "follow", "gui_scale", "audio_player", "projects_repo",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -297,9 +306,10 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // own `origin` and refuses the mismatch there, which is a far better
         // place to judge it than a parser that cannot see the clone. An empty
         // value is legal and simply never matches, disabling the feature.
-        // Registering the key HERE is what makes it recognized; it is
-        // deliberately not in kCanonicalSettingsKeys, so it is not required.
-        // (architect approval 2026-08-03.)
+        // Registering the key HERE is what makes it recognized; it is REQUIRED
+        // like every other key, sitting in kCanonicalSettingsKeys at its
+        // kSettingsOrder position (architect approval 2026-08-04, retiring the
+        // one-day optional-key exception of 2026-08-03).
         out.text = value;
         return R(out);
     }
