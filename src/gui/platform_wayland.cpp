@@ -1776,10 +1776,8 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // capability loss ends this pointer stream with no leave, no motion and
         // no release to follow, so every pointer-derived face must be dropped
         // here or it stays on screen with no event left that could take it down.
-        // WHAT the hook clears is main.cpp's hook body (its authoritative list) —
-        // more than the roster's hovered buttons: the click face, an open
-        // dropdown's hovered AND armed items with the popup's press claim, the
-        // hover tooltip, and the menu row's armed mode.
+        // WHAT the hook clears is main.cpp's hook body, the authoritative list —
+        // more than the roster's hovered buttons, and not restated here.
         if (pointer_left_hook_) pointer_left_hook_();
 
         // Capability loss is the hard end of this wl_pointer event stream:

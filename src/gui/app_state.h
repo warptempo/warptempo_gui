@@ -1812,7 +1812,10 @@ struct AppState {
     // the roster stops hovering, and opening the other menu is simply writing
     // this field — one value, one menu, no invariant to keep.
     // `hovered_item` is -1 or an index into the open menu's item table, written
-    // by the motion recompute, by every close (the struct reset) and by the
+    // by the hover recompute (from motion AND from the run loop's settled tail,
+    // the two callers named at recompute_dropdown_hover — the rects it hit-tests
+    // are published by the painter, so they move with no pointer event under
+    // them), by every close (the struct reset) and by the
     // POINTER-LEAVE drop — that last one because the painter lights the item it
     // names with no pointer_in_window term of its own, so the item would stay
     // lit for the whole time the pointer is outside (until a re-entry's

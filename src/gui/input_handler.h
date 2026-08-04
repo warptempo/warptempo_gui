@@ -468,6 +468,9 @@ struct GuiInputHandler {
     // at the tail of the loop body — after the display dispatch, the tick and
     // both worker completions — so this runs against a fully settled state, once
     // per poll wakeup, and nothing else in the product pushes a cursor kind.
+    // The HOOK has a second consumer beside this one (the open dropdown's item
+    // faces, the same class of answer for the same reason); this function does
+    // not, and its own job stays exactly the cursor.
     // WHY THAT IS THE SHAPE (architect 2026-08-03, replacing a per-site model
     // with twenty-three push sites): the map reads about ten independent fact
     // families, so a push was owed by EVERY writer of any of them — a set that
@@ -522,12 +525,19 @@ struct GuiInputHandler {
     // the anchor-press gesture needs: two of its callers carry no press at all
     // (the menu-row hover open, the hover switch), so the claim is the press
     // site's, written from this toggle's outcome (AppState::Dropdown::
-    // press_began_on_item). recompute_ resolves the item hover on motion
-    // while it is open AND, under a live press CLAIMED BY THE POPUP — one that
-    // went down on an item, or on the anchor whose menu it opened — the ARMED
-    // item with it, one walk, one hit, because a menu lights exactly one
-    // item and the press only decides which face it wears (the rule, and why
-    // the arm cannot double as the liveness test, are at the definition).
+    // press_began_on_item). recompute_ resolves the item hover while it is open
+    // AND, under a live press CLAIMED BY THE POPUP — one that went down on an
+    // item, or on the anchor whose menu it opened — the ARMED item with it, one
+    // walk, one hit, because a menu lights exactly one item and the press only
+    // decides which face it wears (the rule, and why the arm cannot double as the
+    // liveness test, are at the definition). IT HAS TWO CALLERS AND BOTH ARE
+    // LOAD-BEARING: on_motion's open-dropdown branch runs it per DELIVERED
+    // MOTION, which is the premise the release's deleted position compare rests
+    // on, and main.cpp's settled hook runs it once per RUN-LOOP ITERATION,
+    // because the walk's inputs — the painter-published item rects — can move
+    // with no pointer event under them. It refuses while the pointer is outside
+    // the window (its own first lines), so the per-iteration caller cannot
+    // re-light what the pointer-leave drop cleared.
     // They are also the mode's two writers: toggle_'s open
     // ARMS the menu row and close_ DISARMS it — unconditionally, ABOVE its own
     // "nothing is open" return, since the mode outlives the popup and a

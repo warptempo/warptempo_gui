@@ -216,13 +216,21 @@ public:
     // run(), but the frame it would compute for is never presented). The
     // condition is stated once, at the fire site.
     //
-    // IT EXISTS FOR THE POINTER CURSOR, and it is that cue's ONE owner: the kind
-    // is derived from roughly ten independent facts (the pointer's position, the
-    // modifiers, every gesture's state, the trim window, the layout, read-only,
-    // the modal surfaces), and a push at each writer of any of them is a set
-    // nobody can enumerate and keep enumerated — two review rounds each found a
-    // class the previous derivation had missed. main.cpp wires this to
-    // GuiInputHandler::refresh_pointer_cursor and to nothing else.
+    // IT EXISTS FOR POINTER-DERIVED FACES WHOSE INPUTS CAN SETTLE WITH NO POINTER
+    // EVENT UNDER THEM — one class, and the reason it is a class rather than a
+    // single wiring: such a face cannot be maintained by pushes at the sites that
+    // move its inputs, because that set is not enumerable and does not stay
+    // enumerated. THE POINTER CURSOR WAS THE FIRST CONSUMER and is that cue's ONE
+    // owner: the kind is derived from roughly ten independent facts (the pointer's
+    // position, the modifiers, every gesture's state, the trim window, the layout,
+    // read-only, the modal surfaces), and two review rounds each found a class the
+    // previous per-site derivation had missed. THE OPEN DROPDOWN'S ITEM FACES ARE
+    // THE SECOND (2026-08-03): their hit test reads PAINTER-PUBLISHED rects, which
+    // are zero until the popup's first paint, so a pointer that stops moving
+    // before that paint would otherwise have nothing lit and nothing armed with no
+    // event left to fix it. WHAT IS WIRED HERE is enumerated in main.cpp's hook
+    // body, which is the authoritative list — this contract deliberately keeps no
+    // second copy.
     // IT CARRIES THE LIVE MODIFIER STATE, the same GuiInputState the pointer
     // callbacks are built from, because modifiers SELECT between cursor kinds
     // over the waveform and the platform is that fact's owner — the consumer

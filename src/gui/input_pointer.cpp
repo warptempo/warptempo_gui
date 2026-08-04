@@ -2725,6 +2725,27 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // box a click hits. The closed menu's rects are zero and contain no point, so
 // the walk needs no membership test beyond the open check.
 //
+// TWO CALLERS, AND EACH ANSWERS A QUESTION THE OTHER CANNOT (2026-08-03).
+// PER DELIVERED MOTION, from on_motion's open-dropdown branch: the arm must
+// follow the pointer at the granularity the RELEASE reads it, because
+// finish_dropdown_release acts on the arm and carries no position of its own —
+// its old position compare was deleted as structurally dead on the premise
+// "the arm is recomputed at EVERY delivered motion", and the platform's settled
+// hook does NOT run between the events one wl_display_dispatch_pending
+// delivers, so a batch carrying a motion onto item 2 and then the release would
+// fire item 1 if this call moved to the loop tail.
+// PER RUN-LOOP ITERATION, from main.cpp's settled hook: the INPUTS of this walk
+// move with no pointer event under them. The item rects are PAINTER-PUBLISHED
+// and are zero from the open until paint_dropdown publishes them, so a motion
+// delivered before that paint resolves nothing — and a pointer that then RESTS
+// has no next motion to be self-corrected by, which left the anchor-press
+// gesture (press Settings, slide onto an item within the opening frame, stop,
+// release) permanently missing its item. The iteration that paints the box ends
+// by resolving against it, so the face lands on the next painted frame with no
+// pointer event of any kind required. Same cure as the pointer cursor's, same
+// boundary, one class: a pointer-derived face whose inputs can settle on their
+// own.
+//
 // THE ARM FOLLOWS THE POINTER while a press is live inside the popup (architect
 // 2026-08-03): slide from one item onto the next and the pressed face travels
 // with the pointer, slide onto the separator, the chrome or off the box and
@@ -2755,6 +2776,20 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // to), and any held button whose press this popup never saw at all.
 void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     if (!app.dropdown.open()) return;
+    // THE REMEMBERED COORDINATES NAME A POINT INSIDE THE WINDOW even after the
+    // pointer has left, and a LEAVE IS NOT A DISMISSAL — the menu stays up — so
+    // without this the per-iteration caller would find the last on-surface
+    // position still inside an item rect and RE-LIGHT, on every wakeup, exactly
+    // the two faces the pointer-leave / capability-loss hook just dropped
+    // (clear_dropdown_pointer_state, which is the only thing that can drop them
+    // while the pointer is outside).
+    // THE GUARD LIVES HERE, NOT AT THE HOOK WIRING, because this function is the
+    // two faces' one derivation: on_motion writes app.pointer_in_window true at
+    // its top and seeds the coordinates in the same breath, so the motion caller
+    // is unaffected by construction, and a future third caller inherits the rule
+    // instead of having to remember it. Same first line and same reason as
+    // refresh_pointer_cursor's, the boundary's other consumer.
+    if (!app.pointer_in_window) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
     int hit = -1;
@@ -3202,9 +3237,11 @@ void GuiInputHandler::disarm_menu_row() {
 //     window whose last on-surface motion was still over an item leaves that
 //     item lit until a RETURN motion recomputes it (capability loss has no
 //     return to wait for; this branch's actual audience is the ordinary
-//     leave). Nothing else clears it: recompute_dropdown_hover needs a
-//     motion event, and close_dropdown's struct reset needs a dismissal this
-//     edge is not.
+//     leave). Nothing else clears it: recompute_dropdown_hover REFUSES while
+//     the pointer is outside the window — that guard is precisely what stops
+//     its per-iteration caller (main.cpp's settled hook) from re-lighting from
+//     the remembered coordinates what this function drops — and
+//     close_dropdown's struct reset needs a dismissal this edge is not.
 // THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and so
 // does the row's armed mode (the leave hook calls disarm_menu_row for that, and
 // its no-menu-open gate owns the question).
@@ -3418,10 +3455,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // The popup's own item hover AND its armed item, beside row 1's — the
         // two are the whole hover answer while a menu is up, and they cannot
         // collide, since the box starts below the row. AFTER
-        // A SWITCH the new menu's item rects have not been published yet (the
-        // painter publishes them), so this resolves to no item on this frame and
-        // the row under the pointer lights on the next — correct as it stands,
-        // and the reason nothing here reaches into the painter for geometry.
+        // A SWITCH (and after any open) the new menu's item rects have not been
+        // published yet — the painter publishes them — so this call resolves to
+        // no item, and nothing here reaches into the painter for geometry to
+        // avoid that. WHAT FINISHES THE JOB IS THE SETTLED BOUNDARY, not the next
+        // motion: main.cpp's per-iteration hook calls this same walk again, so the
+        // iteration that paints the box ends by resolving against it and the item
+        // lights on the next painted frame even if the pointer never moves again
+        // (the standing "self-corrects on the next motion" reading was true only
+        // while the pointer kept moving, and it is retired).
+        // THIS CALL STAYS ANYWAY, and per DELIVERED MOTION rather than per
+        // iteration: the release acts on the arm alone, and a dispatch batch can
+        // carry a motion and then the release with no loop tail in between (the
+        // full argument is at the definition).
         // `mods` carries the platform's button state, which is what lets the arm
         // follow the pointer under a live press (the rule is at the definition).
         recompute_dropdown_hover(mods);

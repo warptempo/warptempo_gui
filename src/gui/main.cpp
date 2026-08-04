@@ -1105,12 +1105,21 @@ int main(int argc, char** argv) {
         viewport.invalidate_top_strip();
     });
 
-    // THE POINTER CURSOR'S ONE OWNER (architect 2026-08-03, replacing the
-    // per-site model). The run loop fires this at the TAIL of every iteration it
-    // is not leaving, so the cursor is re-derived once per poll wakeup from a
-    // state that has fully settled — after the display's events, the tick and
-    // both worker completions.
+    // THE SETTLED BOUNDARY AND ITS TWO CONSUMERS (architect 2026-08-03,
+    // replacing the per-site model). The run loop fires this at the TAIL of every
+    // iteration it is not leaving, so whatever is derived here is derived once per
+    // poll wakeup from a state that has fully settled — after the display's
+    // events, the tick and both worker completions.
     //
+    // WHAT BELONGS HERE IS ONE CLASS: a POINTER-DERIVED FACE whose INPUTS can
+    // move with no pointer event under them. Such a face cannot be maintained by
+    // pushes at the sites that move its inputs — the set of those sites is not
+    // enumerable and stays wrong — and the loop boundary answers all of them at
+    // once. This body IS the authoritative list of what rides the boundary; the
+    // platform-side contracts name only their own concern and point here.
+    //
+    // THE POINTER CURSOR WAS THE FIRST CONSUMER and is still the one this
+    // boundary was built for.
     // WHAT IT REPLACED, and why the replacement is structural rather than one
     // more site: the kind used to be PUSHED from twenty-three places — the top of
     // on_motion, eight release arms, ten button-lost and refused-begin arms in
@@ -1133,8 +1142,35 @@ int main(int argc, char** argv) {
     // and it does nothing but re-derive and apply — no hover recompute, no
     // damage, no gesture logic. `mods` is the platform's live modifier truth,
     // handed over rather than fetched.
+    //
+    // THE OPEN DROPDOWN'S ITEM FACES ARE THE SECOND CONSUMER (2026-08-03, from
+    // codex), and they are the same disease at a different surface: the popup's
+    // item rects are PAINTER-PUBLISHED, zero from the open until paint_dropdown
+    // publishes them, so a motion delivered before that paint resolves NO item —
+    // and if the pointer then RESTS, no further motion exists to correct it.
+    // Press Settings, hold, slide down onto an item's position inside the frame
+    // the menu came up in, stop moving, release after it paints: nothing was ever
+    // armed, nothing was lit, and the release ran nothing — permanently, not for
+    // one frame. Rects moving under a stationary pointer is exactly what this
+    // boundary answers, so the iteration that PAINTS them ends by resolving hover
+    // and arm against them, under the live button state the hook already carries.
+    // recompute_dropdown_hover returns immediately with no menu open and damages
+    // only on a change, so the standing cost is a compare per wakeup.
+    // IT DOES NOT REPLACE on_motion's call: that one is per DELIVERED MOTION, and
+    // the release acts on the arm alone (finish_dropdown_release, whose position
+    // compare was deleted as dead on exactly that premise) — a dispatch batch can
+    // carry a motion and then the release with no loop tail between them. The two
+    // callers answer different questions; the reasoning is at the definition.
+    //
+    // THE TWO ARE INDEPENDENT, so the order here is free: the zone map refuses
+    // every cue while a popup is open and reads neither item face, and the
+    // recompute writes nothing the map reads.
+    // NEITHER RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED: each refuses on
+    // app.pointer_in_window inside its own body, so a per-iteration call cannot
+    // resurrect a face from coordinates the pointer has left behind.
     gui.set_loop_settled_hook([&](GuiInputState mods) {
         input_handler.refresh_pointer_cursor(mods);
+        input_handler.recompute_dropdown_hover(mods);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
