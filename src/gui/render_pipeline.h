@@ -24,8 +24,9 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // Authoring-state snapshot captured at dispatch time. Sole consumer: the
 // per-entry `.settings` writer inside do_render, which composes the
 // standard whole-file schema from these fields (the commit tab's trim and
-// identity plus the session prefs) so the `'` render-commit
-// (adopt_render_entry) can adopt the entry with plain load semantics. The
+// identity plus the session prefs) so the `'` load-in-place
+// (load_render_entry_in_place) can apply the entry with plain load
+// semantics. The
 // trim fields duplicate the request's own trim
 // on purpose: the request trim feeds the engine, this block feeds the
 // sidecar, and keeping the block self-contained keeps the writer trivial.
@@ -140,7 +141,7 @@ struct RenderRequest {
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
     // and `.settings` sidecars in the same folder. Those sidecars are
-    // commit-critical to success; `.fingerprint` is an optional cache
+    // load-in-place-critical to success; `.fingerprint` is an optional cache
     // artifact.
     // The folder must already exist; do_render does not create it. When
     // `batch_folder` is empty, do_render uses the

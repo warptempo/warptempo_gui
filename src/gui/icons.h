@@ -50,7 +50,7 @@ enum class Icon {
     BlackSum,            // Iteration mode
     GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
-    DialogOkApply,       // Commit a render as the baseline
+    DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`/`)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable

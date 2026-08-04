@@ -408,8 +408,8 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // (base_tempo, scale) per cell and rendering one `.wav` per cell into
 // `<source_parent>/renders/<N>_bpm/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
-// by do_render); the `'` render-commit (adopt_render_entry) adopts them
-// when committing a BPM cell. The
+// by do_render); the `'` load-in-place (load_render_entry_in_place) applies
+// them when loading a BPM cell in place. The
 // substantive difference from the iter render handler is per-cell
 // mutation of cell_settings.scale, in addition to per-cell marker mutation.
 // Returns true iff a batch was dispatched; every guard bail returns false.
@@ -565,8 +565,8 @@ bool GuiInputHandler::render_bpm_sweep() {
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
         // Provenance descriptor for this cell's per-entry .settings; promoted
-        // verbatim into the source .settings on the `'` render-commit
-        // (adopt_render_entry).
+        // verbatim into the source .settings on the `'` load-in-place
+        // (load_render_entry_in_place).
         cell_settings.bpm =
             format_bpm_descriptor(
                 owner.bpm_beats, bpm,

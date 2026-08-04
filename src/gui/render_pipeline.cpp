@@ -32,7 +32,7 @@ void unlink_silent(const std::string& path) {
     ::unlink(path.c_str());
 }
 
-struct CommitCriticalSidecars {
+struct LoadInPlaceCriticalSidecars {
     bool ok = true;
     std::vector<std::string> created_paths;
 };
@@ -293,7 +293,7 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     };
 
-    // Publish the commit-critical batch sidecars. A write failure here is
+    // Publish the load-in-place-critical batch sidecars. A write failure here is
     // UNCONDITIONALLY a hard failure: both call sites treat a false `result.ok`
     // by unwinding (removing what this created, and the wav where one was just
     // published) and returning RenderOutcome::Failed, so the diagnostic says
@@ -301,8 +301,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // select between those two WORDS is deleted (architect 2026-07-30) — both
     // callers passed true, so it selected a word and never a behavior.
     auto publish_commit_critical_batch_sidecars =
-        [&]() -> CommitCriticalSidecars {
-            CommitCriticalSidecars result;
+        [&]() -> LoadInPlaceCriticalSidecars {
+            LoadInPlaceCriticalSidecars result;
             if (!batch_render || req.output_buffer) return result;
 
             const std::filesystem::path bf(req.batch_folder);
@@ -345,26 +345,27 @@ RenderOutcome do_render(const RenderRequest& req,
             note_created(tm_path, existed);
 
             // `.settings` sidecar: the SAME standard whole-file schema a
-            // source carries, so the `'` render-commit (adopt_render_entry)
-            // adopts it with plain load semantics.
+            // source carries, so the `'` load-in-place (load_render_entry_in_place)
+            // applies it with plain load semantics.
             {
                 // The commit tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
                 // This file is written ONCE here and never touched again: the
-                // `'` commit (adopt_render_entry) reads the whole frozen
+                // `'` load-in-place (load_render_entry_in_place) reads the whole
+                // frozen
                 // file back as the session, so these keys land in the committed
-                // target view THROUGH the file — the commit adopts the file,
+                // target view THROUGH the file — the load-in-place applies the file,
                 // never a separate live latch. Those keys are captured on
                 // the LIVE map's axis; a sweep cell rewrites its markers per
                 // cell, giving the cell a different (possibly shorter) target
                 // axis, so the values are CLAMPED into this entry's own map
-                // domain before writing — the adopted view then lands sensibly
-                // on the entry's own axis rather than off its end. Viewport
-                // start sits in [0, total-1] (a start on the total's frame
-                // shows nothing) and the playhead in [0, total] (it may rest
-                // on the end exactly). target_total is this entry's map domain
-                // total.
+                // domain before writing — the loaded-in-place view then
+                // lands sensibly on the entry's own axis rather than off its
+                // end. Viewport start sits in [0, total-1] (a start on the
+                // total's frame shows nothing) and the playhead in [0, total]
+                // (it may rest on the end exactly). target_total is this
+                // entry's map domain total.
                 // Zoom passes through: the live zoom is always in the persisted
                 // vocabulary. Its trim comes from the recipe trim that shaped
                 // this render; read_only and the rest take their ViewState
@@ -377,23 +378,23 @@ RenderOutcome do_render(const RenderRequest& req,
                     static_cast<int64_t>(total_frames), full_warp_frame_map);
                 const int64_t vp_hi =
                     target_total > 0 ? target_total - 1 : 0;
-                ViewState commit_tab;
-                commit_tab.viewport_start_sample = std::clamp<int64_t>(
+                ViewState dispatch_tab;
+                dispatch_tab.viewport_start_sample = std::clamp<int64_t>(
                     req.authoring.view_viewport_start_frame, 0, vp_hi);
-                commit_tab.zoom_level             =
+                dispatch_tab.zoom_level             =
                     req.authoring.view_zoom_level;
-                commit_tab.playhead_cursor_sample = std::clamp<int64_t>(
+                dispatch_tab.playhead_cursor_sample = std::clamp<int64_t>(
                     req.authoring.view_playhead_frame, 0, target_total);
-                commit_tab.trim.begin_frame = req.authoring.trim_begin_frame;
-                commit_tab.trim.end_frame   = req.authoring.trim_end_frame;
+                dispatch_tab.trim.begin_frame = req.authoring.trim_begin_frame;
+                dispatch_tab.trim.end_frame   = req.authoring.trim_end_frame;
 
                 ViewState other_tab;
                 other_tab.trim =
                     full_trim_window(static_cast<int64_t>(total_frames));
 
-                const bool commit_is_a = req.authoring.active_tab != 'B';
-                const ViewState& tab_a = commit_is_a ? commit_tab : other_tab;
-                const ViewState& tab_b = commit_is_a ? other_tab : commit_tab;
+                const bool dispatch_is_a = req.authoring.active_tab != 'B';
+                const ViewState& tab_a = dispatch_is_a ? dispatch_tab : other_tab;
+                const ViewState& tab_b = dispatch_is_a ? other_tab : dispatch_tab;
 
                 // The view zoom / typed live prefs all sit inside the strict
                 // schema's vocabularies by construction (the live zoom rests in
@@ -544,16 +545,17 @@ RenderOutcome do_render(const RenderRequest& req,
         std::fprintf(stderr,
             "warptempo_gui: Render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
-        CommitCriticalSidecars sidecars =
+        LoadInPlaceCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars();
         if (!sidecars.ok) {
             remove_created_commit_sidecars(sidecars.created_paths);
             cleanup_all();
             return RenderOutcome::Failed;
         }
-        // The fingerprint plus the commit-critical sidecars just
+        // The fingerprint plus the load-in-place-critical sidecars just
         // (re)published above are the whole reuse condition: the `'`
-        // commit derives everything it adopts from the snapshot set, so there
+        // load-in-place derives everything it applies from the snapshot set, so
+        // there
         // is nothing else the entry needs on disk.
         return finish_success("reused_up_to_date");
     }
@@ -562,16 +564,16 @@ RenderOutcome do_render(const RenderRequest& req,
     // artifacts: .fingerprint is warning-only. Sweep batch wavs are
     // committable artifact sets: wav plus source-domain .warpmarkers,
     // source-domain .phaseresetmarkers (including the empty-file form), and
-    // .settings. Those commit-critical sidecars must publish before the wav
+    // .settings. Those load-in-place-critical sidecars must publish before the wav
     // is reported as successful. .fingerprint is written last of all: it is
     // the attestation that the artifact set is complete, so a fingerprint
     // match on a later render implies those files exist. Process death
     // after the wav rename lands on disk but before those sidecars finish
     // can leave an orphan wav that enumerate_render_entries surfaces;
-    // adopt_render_entry's validate-before-mutate path refuses that entry
+    // load_render_entry_in_place's validate-before-mutate path refuses that entry
     // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
-        CommitCriticalSidecars sidecars =
+        LoadInPlaceCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars();
         if (!sidecars.ok) {
             remove_created_commit_sidecars(sidecars.created_paths);

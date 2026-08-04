@@ -727,7 +727,7 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 // [100, 200] (100 = the 1920x1080 design baseline, 200 = the 4K case); the
 // current value lives as file-scope state in render.cpp, pushed by three
 // application points (file load, the settings editor's `gui_scale=` commit, the
-// `'` adopt).
+// `'` load-in-place).
 //
 // EVERY PAINTED DIMENSION IN THE TREE RIDES IT: crop-measured 100% values are
 // the authored constants, and every conversion rounds with std::nearbyint.

@@ -31,7 +31,8 @@ struct AppState;
 // commit's blobs are then read at the paths THAT commit's own tree gives, the
 // same idea applied per era. (The narrowing RETIRED a tree-wide match, and with
 // it the pre-`projects/` era's commits: they are legacy-format checkpoints that
-// refuse adopt anyway, and a foreign copy of a sidecar name elsewhere in the
+// refuse the load-in-place anyway, and a foreign copy of a sidecar name
+// elsewhere in the
 // tree can no longer make the match ambiguous.)
 //
 // THE BRANCH IS THE LOCAL ONE, `HEAD`, not `origin/main` — because this module
@@ -139,10 +140,10 @@ struct GuiHistoryCommitDelta {
     // the one this session matched on the branch tip — an older era's
     // `projects/B/song.*` beside today's `projects/A/song.*`, which the walk's
     // basename pathspec pulls into one list. Every list below is EMPTY in that
-    // state (the lane paints nothing) and the bottom-strip line names it; adopt
-    // of such a commit refuses in read_commit_sidecars. Ambiguity is not a
-    // property of the piece, only of the commit: its neighbours in the same walk
-    // resolve normally.
+    // state (the lane paints nothing) and the bottom-strip line names it; a
+    // load-in-place of such a commit refuses in read_commit_sidecars.
+    // Ambiguity is not a property of the piece, only of the commit: its
+    // neighbours in the same walk resolve normally.
     bool ambiguous = false;
 
     std::vector<GuiHistoryWarpEntry>  warp_added;
@@ -203,10 +204,12 @@ struct GuiHistoryCommitSidecars {
     GuiHistorySidecarBlob settings;
 };
 
-// READ ONE COMMIT'S SIDECARS BY SPELLING — the adopt-from-commit path's input
-// (GuiInputHandler::adopt_history_commit), and the session walk's per-commit
+// READ ONE COMMIT'S SIDECARS BY SPELLING — the load-in-place-from-a-commit
+// path's input
+// (GuiInputHandler::load_history_commit_in_place), and the session walk's per-commit
 // read generalized off the walk: the cache above is INDEX-keyed and holds
-// deltas, while the adopt starts from a SHA the user typed, which may name a
+// deltas, while the load-in-place starts from a SHA the user typed, which may
+// name a
 // commit outside the walked depth or outside the list entirely.
 //
 // `spelling` is anything `git rev-parse --verify <spelling>^{commit}` resolves —
@@ -227,14 +230,16 @@ struct GuiHistoryCommitSidecars {
 //
 // A resolved commit that carries none of the three is NOT a failure here — every
 // blob comes back with an empty path and the CALLER decides what a missing
-// sidecar means (the adopt refuses on one; the display path treats it as
+// sidecar means (the load-in-place refuses on one; the display path treats it
+// as
 // "everything added").
 //
 // EVERY BLOB IT DOES RETURN IS WHOLE. A `git show` that could not run yields an
 // empty string, and an empty sidecar is a valid file both marker loaders accept,
 // so this cross-checks each read against the byte count the tree listing states
 // and refuses on any disagreement. That is what keeps "the commit's own three
-// sidecars" a true description of the adopt's input rather than a hope.
+// sidecars" a true description of the load-in-place's input rather than a
+// hope.
 //
 // False with `reason` set when the spelling does not resolve to a commit, when
 // the commit is ambiguous, or when a blob could not be read whole. Nothing here

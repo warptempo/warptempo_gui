@@ -78,7 +78,8 @@ bool spawn_audio_player(const std::string& player,
 
 // Removes its directory tree when it falls out of scope, on EVERY exit — the
 // refusals, the success, and a throw the allocations below could raise. Its one
-// user is the adopt-from-commit path's session scratch (adopt_history_commit),
+// user is the load-in-place-from-a-commit path's session scratch
+// (load_history_commit_in_place),
 // where the same guarantee written by hand would be one `remove_all` per refusal
 // arm and a leaked directory the first time an arm was added without one.
 struct ScratchDirGuard {
@@ -237,7 +238,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 
 // Leave the mode, clearing it WHOLE — the commit walk with it, so the next entry
 // re-inits and measures against the state at THAT moment. The one exit owner:
-// bare `/`, the adopt, and any future closer call this rather than clearing
+// bare `/`, the load-in-place, and any future closer call this rather than clearing
 // fields themselves. Idempotent, so a closer may fire with the mode already down.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
@@ -475,7 +476,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             PREVIEW render is derived data, not authoring
 //                             state, and the mode already tolerates one: a
 //                             render live from before `/` runs on, and the
-//                             adopt's own tail triggers one from inside the
+//                             load-in-place's own tail triggers one from inside the
 //                             mode. The synchronous plate
 //                             rebuild each switch ends in is load-bearing rather
 //                             than incidental: it is what republishes the lane's
@@ -492,18 +493,20 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             of their own: they synthesize these very chords
 //                             through dispatch_redesign_chord, like every other
 //                             redesigned button.
-//   - ' (bare)              → THE COMMIT EDITOR, and the mode's one admitted
+//   - ' (bare)              → THE LOAD EDITOR, and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
-//                             the mode it commits something else: the editor
+//                             the mode it loads something else in place: the editor
 //                             opens prefilled with the viewed commit's SHA and
-//                             adopts THAT COMMIT's three sidecars
-//                             (adopt_history_commit), which is the mode's own
+//                             loads THAT COMMIT's three sidecars in place
+//                             (load_history_commit_in_place), which is the
+//                             mode's own
 //                             act rather than an authoring chord that would
 //                             leave the frozen now side describing a state that
-//                             no longer exists — and the adopt closes the mode
+//                             no longer exists — and the load-in-place closes
+//                             the mode
 //                             as part of itself, so the mode never outlives the
 //                             state it was measured against. The icon row's
-//                             commit button reaches it here, like every other
+//                             load button reaches it here, like every other
 //                             redesigned button, by synthesizing this same bare
 //                             chord.
 //   - Ctrl+Alt+R (no shift) → THE COMMIT ACT, the mode's second admitted mutator
@@ -731,7 +734,7 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     return true;        // every other chord is inert while the popup is up
 }
 
-// The BOTTOM-STRIP modal surfaces: the settings editor, the render-commit
+// The BOTTOM-STRIP modal surfaces: the settings editor, the load
 // editor, and the bpm editor (top_flag_editor reused with Kind::BpmBracket,
 // painted in the bottom strip) — plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
@@ -743,7 +746,7 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
-           text_editor::is_active(app.commit_editor) ||
+           text_editor::is_active(app.load_editor) ||
            (text_editor::is_active(app.top_flag_editor) &&
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
@@ -754,7 +757,7 @@ bool GuiInputHandler::modal_bottom_strip_editor_active() const {
 // true that key types a normal letter rather than emulating the left button.
 bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
-           text_editor::is_active(app.commit_editor) ||
+           text_editor::is_active(app.load_editor) ||
            text_editor::is_active(app.top_flag_editor);
 }
 
@@ -838,7 +841,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL FOUR editors — the settings and render-commit prompts,
+// dropped. It serves ALL FOUR editors — the settings and load prompts,
 // the bpm bracket, and (architect 2026-07-28) the top-strip flag editor, which
 // this ruling brought under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
@@ -857,7 +860,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // unbound chord and drops right here, so it cannot cancel, commit, paste, move
 // the caret, or erase. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered on
-// top: the settings/commit editors' own bare-Tab value autocomplete (their
+// top: the settings/load editors' own bare-Tab value autocomplete (their
 // handle_*_editor_key intercepts it before handle_key; the bpm and flag editors
 // have no Tab route, so bare Tab drops while either is open), Ctrl+S (save), and
 // Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
@@ -874,11 +877,11 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_settings_autocomplete =
         (text_editor::is_active(app.settings_editor) &&
          key == GuiKeys::Tab && !ctrl && !shift && !alt);
-    // The render-commit editor's bare-Tab entry-name autocomplete
-    // (handle_commit_editor_key intercepts it before handle_key), the sibling
+    // The load editor's bare-Tab entry-name autocomplete
+    // (handle_load_editor_key intercepts it before handle_key), the sibling
     // of the settings editor's value autocomplete.
     const bool is_commit_autocomplete =
-        (text_editor::is_active(app.commit_editor) &&
+        (text_editor::is_active(app.load_editor) &&
          key == GuiKeys::Tab && !ctrl && !shift && !alt);
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
@@ -1306,7 +1309,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // `<N>.wav` inside that folder. Because the target is a batch folder,
     // do_render writes the FULL entry sidecar set (.warpmarkers /
     // .phaseresetmarkers / .settings / .fingerprint), so each misc cell is a
-    // first-class `l`-auditionable, `'`-adoptable entry. Repeat presses
+    // first-class `l`-auditionable entry that `'` loads in place. Repeat presses
     // with unchanged state are DELIBERATE — each is an explicit command that
     // produces one more cell; identical bytes come cheap from do_render's reuse
     // rungs (render_cache, then the on-disk artifact against its .fingerprint).
@@ -1323,7 +1326,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // once the worker is confirmed idle makes the scan exact: idle drains the
     // whole CompletionPending interval, so worker publication is fully done
     // before the scan, and every other renders/ mutation (batch-folder
-    // creation, the adopt wipe) runs on this same GUI thread, so none can
+    // creation, the load-in-place wipe) runs on this same GUI thread, so none can
     // interleave with it. The idle route allocates here inline for the same
     // one implementation.
     //
@@ -1390,15 +1393,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 // so the id is unique by filesystem construction; Tab autocomplete then
 // discriminates on the short leading batch-folder name instead of deep value
 // decimals inside near-identical cell basenames, and the painted
-// `commit: ./renders/<id>` line is the entry's real on-disk path. The `'`
-// commit editor resolves the typed identifier against these strings.
+// `Load: ./renders/<id>` line is the entry's real on-disk path. The `'`
+// load editor resolves the typed identifier against these strings.
 static std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }
 
-// -- Standalone render-entry adoption (the `'` commit editor) --------
+// -- Standalone render-entry load-in-place (the `'` load editor) ------
 //
-// Adopt render entry `e`'s frozen sidecar recipe as the new authoring
+// Load render entry `e`'s frozen sidecar recipe in place as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
 // takes an explicit entry, and the caller owns the visible refusal (the `'`
 // editor red-flashes).
@@ -1414,15 +1417,16 @@ static std::string render_entry_id(const AppState::RenderEntry& e) {
 // caller's own unknown-id refusal — a typed identifier matching no entry — stays
 // SILENT: a typo is not a fault, and the flash is the whole answer. Returns true
 // after the recipe is applied and renders/ wiped.
-bool GuiInputHandler::adopt_render_entry(
+bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
-    // Self-guard on the standalone mutator: a successful adopt wipes renders/,
+    // Self-guard on the standalone mutator: a successful load-in-place wipes
+    // renders/,
     // which must never race a batch publishing into it. The `'` opener
     // already refuses on this same condition, so the keyboard route never
     // reaches here; this backstop protects any other caller.
     if (app.queue_running || app.pending_archival.armed) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: a render batch is running or an "
+            "warptempo_gui: Load in place refused: a render batch is running or an "
             "archival is armed\n");
         return false;
     }
@@ -1438,8 +1442,8 @@ bool GuiInputHandler::adopt_render_entry(
     std::error_code ec;
     if (!std::filesystem::is_regular_file(e.wav_path, ec)) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: entry WAV missing or not a regular "
-            "file: '%s'\n",
+            "warptempo_gui: Load in place refused: entry WAV missing or not "
+            "a regular file: '%s'\n",
             e.wav_path.string().c_str());
         return false;
     }
@@ -1448,7 +1452,7 @@ bool GuiInputHandler::adopt_render_entry(
     const auto settings = read_settings_file(sidecar.string());
     if (!settings) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: invalid settings in '%s': %s\n",
+            "warptempo_gui: Load in place refused: invalid settings in '%s': %s\n",
             sidecar.string().c_str(), settings.error().c_str());
         return false;
     }
@@ -1462,7 +1466,7 @@ bool GuiInputHandler::adopt_render_entry(
         auto r = m.load(wm.string());
         if (!r) {
             std::fprintf(stderr,
-                "warptempo_gui: Adopt refused: invalid warp markers in "
+                "warptempo_gui: Load in place refused: invalid warp markers in "
                 "'%s': %s\n",
                 wm.string().c_str(), r.error().c_str());
             return false;
@@ -1476,8 +1480,8 @@ bool GuiInputHandler::adopt_render_entry(
         auto r = t.load(tm.string());
         if (!r) {
             std::fprintf(stderr,
-                "warptempo_gui: Adopt refused: invalid phase reset markers in "
-                "'%s': %s\n",
+                "warptempo_gui: Load in place refused: invalid phase reset "
+                "markers in '%s': %s\n",
                 tm.string().c_str(), r.error().c_str());
             return false;
         }
@@ -1499,7 +1503,7 @@ bool GuiInputHandler::adopt_render_entry(
     // act rather than with one of its callers.
     close_history_mode();
 
-    const char commit_tab = settings->active_tab_view;
+    const char load_tab = settings->active_tab_view;
 
     std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
@@ -1513,13 +1517,13 @@ bool GuiInputHandler::adopt_render_entry(
     // hunt down stale index sets in either ViewState).
     selection.clear_selection();
 
-    // One cross-file undo entry: the marker pair plus the pre-commit engine
+    // One cross-file undo entry: the marker pair plus the outgoing engine
     // settings (captured inside push_undo_both). The inherited prefs and view
     // state ride OUTSIDE undo — the same convention that keeps view state and
     // trim out of history.
-    const char commit_marker_mode = app.active_markers_view;
+    const char load_marker_mode = app.active_markers_view;
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        commit_marker_mode, commit_tab);
+                        load_marker_mode, load_tab);
     undo.recompute_dirty();
 
     const std::filesystem::path src(app.source_audio_path);
@@ -1548,7 +1552,8 @@ bool GuiInputHandler::adopt_render_entry(
     app.tab_a = view_state_from_settings_tab(settings->tab_a);
     app.tab_b = view_state_from_settings_tab(settings->tab_b);
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
-    // routine a source load also calls — so adopt applies engine_settings,
+    // routine a source load also calls — so the load-in-place applies
+    // engine_settings,
     // follow, active_audio_view, active_markers_view, active_tab_view,
     // playback_speed, gui_scale, audio_player and projects_repo 1:1 with
     // load.
@@ -1559,20 +1564,21 @@ bool GuiInputHandler::adopt_render_entry(
     // empty-selection state.
     //
     // This replaces the four LIVE env hashes with the entry's. The hashes are
-    // history-less, no-dirty GUI-kind state (like the other adopted view
-    // prefs), so this replacement marks nothing dirty on its own; adopt is
-    // dirty via its cross-file history push regardless, and the adopted hashes
+    // history-less, no-dirty GUI-kind state (like the other loaded-in-place view
+    // prefs), so this replacement marks nothing dirty on its own; the
+    // load-in-place is dirty via its cross-file history push regardless, and
+    // the loaded-in-place hashes
     // ride the next ordinary Ctrl+S.
     apply_settings_engine_and_prefs(app, *settings);
 
-    // Clamp both adopted tab bands' playheads into the live domain (the
+    // Clamp both loaded-in-place tab bands' playheads into the live domain (the
     // shared chokepoint, clamp_playhead_to_live_domain), mirroring the source
     // load's tab-snapshot clamp at the same point in the sequence: the
-    // adopted S/T domain is computable here (active_audio_view and the
+    // loaded-in-place S/T domain is computable here (active_audio_view and the
     // markers/engine settings the target total derives from are all applied
     // above; one global domain, one total clamps both). Entry sidecars are
     // trusted (written once at dispatch from an in-domain live state), so
-    // this is a no-op there — it keeps the adopt 1:1 with a source load of
+    // this is a no-op there — it keeps the load-in-place 1:1 with a source load of
     // the same sidecars, which clamps at this point too.
     app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
         app.tab_a.playhead_cursor_sample, app, audio);
@@ -1580,7 +1586,7 @@ bool GuiInputHandler::adopt_render_entry(
         app.tab_b.playhead_cursor_sample, app, audio);
 
     // Activate the file's tab band. active_tab_view was just set by the shared
-    // routine (== commit_tab) and both bands are already the file's, so pull
+    // routine (== load_tab) and both bands are already the file's, so pull
     // the live fields straight from the active band with no double-apply (NOT
     // switch_active_tab_view_to).
     {
@@ -1604,9 +1610,10 @@ bool GuiInputHandler::adopt_render_entry(
     paint_handler.on_resize(app.width, app.height);
 
     clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT, the adopt chokepoint (the rule, the formula and the
+    // COINCIDENCE AUTO-SELECT, the load-in-place chokepoint (the rule, the
+    // formula and the
     // authoritative call-site inventory live at auto_select_marker_at_playhead,
-    // input_pointer.cpp / input_handler.h). The adopt
+    // input_pointer.cpp / input_handler.h). The load-in-place
     // is specified 1:1 with a source load and a load runs this, so it runs here too
     // (architect 2026-07-30, closing the one entry route that honored a stored
     // playhead and withheld the recovery). PLACED HERE, at the tail: the wholesale
@@ -1623,32 +1630,33 @@ bool GuiInputHandler::adopt_render_entry(
     viewport.invalidate_timestamp_area();
 
     // The tail's trigger owns the rebind for a 'T' landing: it marks the
-    // buffer stale and dispatches the adopted target preview, which rebinds
+    // buffer stale and dispatches the loaded-in-place state's target preview,
+    // which rebinds
     // playback on completion.
     target_render.trigger();
 
-    // Wipe renders/ AFTER the successful adopt. The committed render survives
+    // Wipe renders/ AFTER the successful load-in-place. The loaded render survives
     // through the render cache, not as a folder artifact.
     if (std::filesystem::is_directory(renders_root, ec)) {
         std::filesystem::remove_all(renders_root, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: commit: Wipe failed for '%s': %s\n",
+                "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
                 renders_root.string().c_str(), ec.message().c_str());
         }
     }
 
     std::fprintf(stderr,
-        "warptempo_gui: commit: Committed render and wiped renders/\n");
+        "warptempo_gui: load-in-place: Loaded render in place and wiped renders/\n");
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
 
-// -- Adoption from a COMMIT (the `'` editor while the `/` history mode stands) --
+// -- Load-in-place from a COMMIT (the `'` editor in the `/` history mode) --
 //
-// WHAT IT IS: the same act adopt_render_entry performs, with the committed
+// WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
 // history as its source instead of a render entry. `spelling` is whatever the
-// user left in the commit editor — the viewed commit's SHA the opener prefilled,
+// user left in the load editor — the viewed commit's SHA the opener prefilled,
 // or any other spelling git can resolve (a short SHA pasted out of GitHub's web
 // UI is the ruled use case). ONE STATE IN, ONE STATE OUT: the three sidecars
 // THAT commit carried become the live session, in memory, and the disk is never
@@ -1660,7 +1668,7 @@ bool GuiInputHandler::adopt_render_entry(
 // mode's session's, which is why this route is gated on the mode standing.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
-// contract adopt_render_entry states and this path mirrors: an unresolvable
+// contract load_render_entry_in_place states and this path mirrors: an unresolvable
 // spelling, a commit missing ANY of the three sidecars, and a sidecar that the
 // STRICT WHOLE-FILE LOADERS refuse. That last one is the point rather than a
 // side effect: a commit from the legacy MM:SS.mmm era, or one carrying a
@@ -1673,36 +1681,39 @@ bool GuiInputHandler::adopt_render_entry(
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
 // stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
-// SOURCE — this adopts a recipe for the file already open, exactly as the mode's
-// diff measures a commit against the session for that same file. The render
-// adopt's wav-existence check has no counterpart here.
+// SOURCE — this loads a recipe in place for the file already open, exactly as
+// the mode's
+// diff measures a commit against the session for that same file. The render-entry
+// load-in-place's wav-existence check has no counterpart here.
 //
-// NO RUNNING-RENDER GUARD, deliberately. adopt_render_entry's self-guard
+// NO RUNNING-RENDER GUARD, deliberately. load_render_entry_in_place's self-guard
 // protects ITS TAIL — the renders/ wipe, which must never race a batch
 // publishing into that directory — and this path has no tail to protect: it
 // wipes nothing and reads no render entry. A render dispatched BEFORE the mode
 // opened (the mode blocks the launchers, not a render already in flight) renders
 // from the request snapshot it was built with, publishes into renders/ and the
 // render cache, and is untouched by and untouching of this act; its entries then
-// describe the pre-adopt state exactly as they do after any other authoring
+// describe the state from before the load-in-place exactly as they do after
+// any other authoring
 // edit.
 //
-// WHAT IS APPLIED is adopt_render_entry's own sequence, whole: the wholesale
+// WHAT IS APPLIED is load_render_entry_in_place's own sequence, whole: the wholesale
 // store replace with its selection clear, ONE cross-file undo entry with dirty
-// set (auditioning the adopted state and Ctrl+Z-ing back out is the point of the
+// set (auditioning the loaded-in-place state and Ctrl+Z-ing back out is the
+// point of the
 // feature), the iteration/bpm session reset, both tab bands, the values-only
 // engine-and-prefs apply a source load shares, the two band clamps, the live
 // band pull, the three caller-side side effects, the coincidence auto-select and
 // the target preview trigger. Note that the prefs apply includes
 // `projects_repo`, 1:1 with a load: a commit whose settings named a different
-// projects home adopts that answer too, and the next `/` reads it.
+// projects home installs that answer too, and the next `/` reads it.
 //
 // AND THE MODE CLOSES, at the first line past the last refusal — the placement
-// adopt_render_entry states and for its reason: this is the other route that
+// load_render_entry_in_place states and for its reason: this is the other route that
 // replaces the very state the frozen now side was measured against, so leaving
 // the mode standing would leave every flag in the lane describing a session that
 // no longer exists.
-bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
+bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) {
     // The mode is the route's precondition, not a courtesy: the sidecar base
     // name comes from the session (init() owns that derivation), and the close
     // below is part of the act.
@@ -1715,22 +1726,23 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     // The session's matched directory goes with the spelling: it is what settles
     // a commit whose tree carries this base name in more than one place (an older
     // era's copy of another piece), and an unsettleable one refuses rather than
-    // adopting a guess.
+    // acting on a guess.
     if (!read_commit_sidecars(spelling, base_name,
                               app.history_mode.session.project_directory(),
                               snap, reason)) {
-        std::fprintf(stderr, "warptempo_gui: Adopt refused: %s\n",
+        std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
         return false;
     }
 
     // A PARTIAL COMMIT IS A REFUSAL. The mode's DISPLAY treats a sidecar the
-    // commit lacks as "everything added" — the natural line-diff answer — but an
-    // adopt is a whole-state replace, and inheriting two files from the commit
+    // commit lacks as "everything added" — the natural line-diff answer — but a
+    // load-in-place is a whole-state replace, and inheriting two files from
+    // the commit
     // and the third from nowhere would compose a state no checkpoint ever was.
     auto missing = [&](const char* ext) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: commit %s carries no '%s%s'\n",
+            "warptempo_gui: Load in place refused: commit %s carries no '%s%s'\n",
             snap.sha.c_str(), base_name.c_str(), ext);
         return false;
     };
@@ -1753,22 +1765,22 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     // source (the working sidecars are the user's, and a read must not write
     // near them).
     std::error_code   ec;
-    const std::string leaf = "warptempo_gui-adopt-" +
+    const std::string leaf = "warptempo_gui-load-in-place-" +
                              std::to_string(static_cast<long>(::getpid())) +
                              "-" + snap.sha.substr(0, 7);
     const std::filesystem::path scratch =
         std::filesystem::temp_directory_path(ec) / leaf;
     if (ec) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: no temporary directory available: "
-            "%s\n", ec.message().c_str());
+            "warptempo_gui: Load in place refused: no temporary directory "
+            "available: %s\n", ec.message().c_str());
         return false;
     }
     ScratchDirGuard guard(scratch);
     std::filesystem::create_directories(scratch, ec);
     if (ec) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: could not create '%s': %s\n",
+            "warptempo_gui: Load in place refused: could not create '%s': %s\n",
             scratch.string().c_str(), ec.message().c_str());
         return false;
     }
@@ -1784,8 +1796,8 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
             return true;
         }
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: could not stage '%s' from commit "
-            "%s\n", blob.path.c_str(), snap.sha.c_str());
+            "warptempo_gui: Load in place refused: could not stage '%s' "
+            "from commit %s\n", blob.path.c_str(), snap.sha.c_str());
         return false;
     };
     std::filesystem::path settings_file, warp_file, phase_reset_file;
@@ -1795,13 +1807,14 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
                phase_reset_file))                                return false;
 
     // -- Read + validate every input BEFORE touching a store. The three loaders
-    //    and their order are the render adopt's, and the refusal text carries
-    //    the SHA the render adopt has no need of.
+    //    and their order are the render-entry load-in-place's, and the
+    //    refusal text carries
+    //    the SHA the render-entry load-in-place has no need of.
     const auto settings = read_settings_file(settings_file.string());
     if (!settings) {
         std::fprintf(stderr,
-            "warptempo_gui: Adopt refused: invalid settings in '%s' at commit "
-            "%s: %s\n",
+            "warptempo_gui: Load in place refused: invalid settings in '%s' "
+            "at commit %s: %s\n",
             snap.settings.path.c_str(), snap.sha.c_str(),
             settings.error().c_str());
         return false;
@@ -1814,8 +1827,8 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
         auto r = m.load(warp_file.string());
         if (!r) {
             std::fprintf(stderr,
-                "warptempo_gui: Adopt refused: invalid warp markers in '%s' at "
-                "commit %s: %s\n",
+                "warptempo_gui: Load in place refused: invalid warp markers "
+                "in '%s' at commit %s: %s\n",
                 snap.warpmarkers.path.c_str(), snap.sha.c_str(),
                 r.error().c_str());
             return false;
@@ -1827,8 +1840,8 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
         auto r = t.load(phase_reset_file.string());
         if (!r) {
             std::fprintf(stderr,
-                "warptempo_gui: Adopt refused: invalid phase reset markers in "
-                "'%s' at commit %s: %s\n",
+                "warptempo_gui: Load in place refused: invalid phase reset "
+                "markers in '%s' at commit %s: %s\n",
                 snap.phaseresetmarkers.path.c_str(), snap.sha.c_str(),
                 r.error().c_str());
             return false;
@@ -1839,18 +1852,20 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     // Every input is in hand and valid; nothing below refuses.
 
     // NOT a modal open, so NOT the modal-open owner's business — the standalone
-    // mutator's own self-guard, exactly as the render adopt spells it. The `'`
+    // mutator's own self-guard, exactly as the render-entry load-in-place
+    // spells it. The `'`
     // editor's open already froze playback through that owner on the keyboard
     // route; stopping again here keeps the mutator correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
 
     // THE MODE ENDS HERE, on the first line past the last refusal and before the
-    // first store write — the render adopt's placement and its reason (see the
+    // first store write — the render-entry load-in-place's placement and its
+    // reason (see the
     // paragraph at the head of this function). It also clears the session this
     // function read its base name from, which is why that read is at the top.
     close_history_mode();
 
-    const char commit_tab = settings->active_tab_view;
+    const char load_tab = settings->active_tab_view;
 
     std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
@@ -1862,13 +1877,13 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     // else to reset — no per-tab per-mode slot holds a copy.
     selection.clear_selection();
 
-    // One cross-file undo entry: the marker pair plus the pre-commit engine
+    // One cross-file undo entry: the marker pair plus the outgoing engine
     // settings (captured inside push_undo_both). The inherited prefs and view
     // state ride OUTSIDE undo — the same convention that keeps view state and
     // trim out of history.
-    const char commit_marker_mode = app.active_markers_view;
+    const char load_marker_mode = app.active_markers_view;
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        commit_marker_mode, commit_tab);
+                        load_marker_mode, load_tab);
     undo.recompute_dirty();
 
     // Wholesale authoring reset: clear every marker's session-only iteration
@@ -1886,13 +1901,13 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
 
     // Both tab bands from the file, then the engine block and the scalar session
     // prefs VALUES ONLY through the one routine a source load also calls — the
-    // render adopt's two steps, unchanged, so a commit adopts 1:1 with a load of
-    // the same three files.
+    // render-entry load-in-place's two steps, unchanged, so a commit loads in
+    // place 1:1 with a load of the same three files.
     app.tab_a = view_state_from_settings_tab(settings->tab_a);
     app.tab_b = view_state_from_settings_tab(settings->tab_b);
     apply_settings_engine_and_prefs(app, *settings);
 
-    // Clamp both adopted bands' playheads into the live domain (the shared
+    // Clamp both loaded-in-place bands' playheads into the live domain (the shared
     // chokepoint), mirroring the source load's tab-snapshot clamp at the same
     // point in the sequence. Unlike an entry sidecar — written once at dispatch
     // from an in-domain live state — a COMMITTED band is only as in-domain as
@@ -1924,9 +1939,9 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     paint_handler.on_resize(app.width, app.height);
 
     clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT at the adopt chokepoint (rule and inventory at
-    // auto_select_marker_at_playhead), at the tail for the reason the render
-    // adopt states: everything the scan reads has landed.
+    // COINCIDENCE AUTO-SELECT at the load-in-place chokepoint (rule and inventory at
+    // auto_select_marker_at_playhead), at the tail for the reason the render-entry
+    // load-in-place states: everything the scan reads has landed.
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
@@ -1935,30 +1950,35 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
     // The tail's trigger owns the rebind for a 'T' landing.
     target_render.trigger();
 
-    // NO renders/ WIPE. That step is the render adopt's cleanup of the folder it
+    // NO renders/ WIPE. That step is the render-entry load-in-place's cleanup
+    // of the folder it
     // consumed an entry from; this path consumed a commit and renders/ is none of
     // its business.
     std::fprintf(stderr,
-        "warptempo_gui: commit: Adopted the sidecar state of commit %s\n",
+        "warptempo_gui: load-in-place: Loaded the sidecar state of commit "
+        "%s in place\n",
         snap.sha.c_str());
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
 
-// Open the `'` render-commit prompt. No-op with no source loaded. An empty
+// Open the `'` load prompt. No-op with no source loaded. An empty
 // renders/ reports a one-line bottom-strip status and does not open. Stops
 // playback only when the modal actually opens (after every guard), so a
 // refused open leaves a listening session running.
 //
 // THE `/` HISTORY MODE CHANGES WHAT THIS EDITOR IS FOR, and the whole change is
-// this one branch plus the routing at commit_editor_commit: in the mode the
+// this one branch plus the routing at load_editor_commit: in the mode the
 // editor takes a COMMIT SPELLING and opens PREFILLED with the viewed commit's
-// full SHA (adopt_history_commit). Both of the renders-side guards drop with the
-// renders-side subject — an empty renders/ is no obstacle to adopting a commit,
-// and the running-render refusal exists for the wipe at the render adopt's tail,
-// which the commit adopt does not have (the reasoning is at that function).
-void GuiInputHandler::open_commit_editor() {
-    if (text_editor::is_active(app.commit_editor)) return;
+// full SHA (load_history_commit_in_place). Both of the renders-side guards
+// drop with the
+// renders-side subject — an empty renders/ is no obstacle to loading a commit
+// in place,
+// and the running-render refusal exists for the wipe at the render-entry
+// load-in-place's tail, which the from-commit load-in-place does not have
+// (the reasoning is at that function).
+void GuiInputHandler::open_load_editor() {
+    if (text_editor::is_active(app.load_editor)) return;
     if (app.source_audio_path.empty()) return;
 
     std::string prefill;
@@ -1969,7 +1989,7 @@ void GuiInputHandler::open_commit_editor() {
         // mode only opens with a non-empty walk and every step clamps.
         prefill = app.history_mode.session.sha_at(app.history_mode.index);
     } else {
-        // Running-render guard: adopt wipes renders/, which would race a
+        // Running-render guard: the load-in-place wipes renders/, which would race a
         // background sweep writing into it. Refuse, don't cancel — a running
         // batch may be irreplaceable queued work; Esc is the explicit cancel.
         if (app.queue_running || app.pending_archival.armed) {
@@ -1980,7 +2000,7 @@ void GuiInputHandler::open_commit_editor() {
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
-            app.transient_status_message = "No renders to commit";
+            app.transient_status_message = "No renders to load in place";
             viewport.invalidate_timestamp_area();
             return;
         }
@@ -1993,29 +2013,29 @@ void GuiInputHandler::open_commit_editor() {
     // modal blocked set, so once open, playback cannot restart until the editor
     // closes.
     playback_lifecycle.stop_playback_for_modal_open();
-    text_editor::enter(app.commit_editor,
+    text_editor::enter(app.load_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",
                        std::move(prefill),
-                       text_editor::Kind::RenderCommit);
+                       text_editor::Kind::LoadInPlace);
     // OPEN-SELECTED ON A SEEDED BUFFER, the flag editor's convention (the
     // product's only other prefilling opener) and for its stated reason: the
     // first keystroke replaces the seed wholesale, so pasting another SHA over
     // the prefilled one is one act rather than a select-all first. An EMPTY seed
     // — every renders-side open, which is byte-identical to before — takes
     // enter()'s own caret-at-end-of-nothing rest state and selects nothing.
-    if (!app.commit_editor.pending.empty()) {
-        app.commit_editor.selection_anchor = 0;
-        app.commit_editor.cursor_pos =
-            static_cast<int>(app.commit_editor.pending.size());
+    if (!app.load_editor.pending.empty()) {
+        app.load_editor.selection_anchor = 0;
+        app.load_editor.cursor_pos =
+            static_cast<int>(app.load_editor.pending.size());
     }
     viewport.invalidate_timestamp_area();
 }
 
-void GuiInputHandler::commit_editor_exit_no_commit() {
-    if (!text_editor::is_active(app.commit_editor)) return;
+void GuiInputHandler::load_editor_exit_no_commit() {
+    if (!text_editor::is_active(app.load_editor)) return;
     viewport.invalidate_timestamp_area();
-    text_editor::deactivate(app.commit_editor);
+    text_editor::deactivate(app.load_editor);
 }
 
 // Tab handler: extend the pending to the longest common prefix of the entry
@@ -2044,14 +2064,14 @@ void GuiInputHandler::commit_editor_exit_no_commit() {
 // since a COMPLETE trailing sequence also ends in continuation bytes. It is a
 // provable no-op for ASCII identifiers: no ASCII byte is a continuation byte, so
 // the loop never takes a step for any name the product writes.
-void GuiInputHandler::commit_editor_autocomplete() {
-    if (!text_editor::is_active(app.commit_editor)) return;
+void GuiInputHandler::load_editor_autocomplete() {
+    if (!text_editor::is_active(app.load_editor)) return;
     // IN THE `/` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
     // pending is a commit spelling, and the entry identifiers below name renders
     // this route never reads. A bare Tab is a consumed no-op there rather than a
     // completion out of the wrong vocabulary.
     if (app.history_mode.active) return;
-    const std::string pending = app.commit_editor.pending;
+    const std::string pending = app.load_editor.pending;
 
     std::vector<AppState::RenderEntry> list =
         renders_dir.enumerate_render_entries();
@@ -2081,42 +2101,43 @@ void GuiInputHandler::commit_editor_autocomplete() {
         lcp.pop_back();
     if (lcp.size() <= pending.size()) return;   // common prefix does not advance
 
-    app.commit_editor.pending          = std::move(lcp);
-    app.commit_editor.cursor_pos       =
-        static_cast<int>(app.commit_editor.pending.size());
-    app.commit_editor.selection_anchor = -1;
-    app.commit_editor.red              = false;
+    app.load_editor.pending          = std::move(lcp);
+    app.load_editor.cursor_pos       =
+        static_cast<int>(app.load_editor.pending.size());
+    app.load_editor.selection_anchor = -1;
+    app.load_editor.red              = false;
     viewport.invalidate_timestamp_area();
 }
 
-// Enter handler: resolve the pending to exactly one entry and adopt it.
+// Enter handler: resolve the pending to exactly one entry and load it in place.
 // Resolution accepts exactly the entry's canonical id
 // (`<batch_dir>/<basename>.wav`); ids are unique by filesystem construction
 // (one path per file), so the first match resolves. On a resolve,
-// adopt_render_entry runs; a true result closes the editor, a false result
+// load_render_entry_in_place runs; a true result closes the editor, a false result
 // (bad sidecar / missing wav) red-flashes and stays open — the mutator having
 // named the cause on stderr. Zero matches red-flash and stay open SILENTLY: an
 // identifier matching nothing is a typo, not a fault, and the flash is the whole
 // answer (architect 2026-08-02).
 //
 // IN THE `/` HISTORY MODE THE SUBJECT IS A COMMIT, not a render entry: the
-// pending goes to adopt_history_commit, which owns every refusal on that route
+// pending goes to load_history_commit_in_place, which owns every refusal on
+// that route
 // and names each one on stderr. The two routes share this function's SHAPE
 // exactly — a true result closes the editor, a false one red-flashes and stays
 // open — so a failed resolve leaves the typed spelling in place to be corrected.
-void GuiInputHandler::commit_editor_commit() {
-    if (!text_editor::is_active(app.commit_editor)) return;
-    const std::string pending = app.commit_editor.pending;
+void GuiInputHandler::load_editor_commit() {
+    if (!text_editor::is_active(app.load_editor)) return;
+    const std::string pending = app.load_editor.pending;
 
     auto reject = [&]() {
-        app.commit_editor.red = true;
+        app.load_editor.red = true;
         viewport.invalidate_timestamp_area();
     };
 
     if (app.history_mode.active) {
-        if (adopt_history_commit(pending)) {
+        if (load_history_commit_in_place(pending)) {
             viewport.invalidate_timestamp_area();
-            text_editor::deactivate(app.commit_editor);
+            text_editor::deactivate(app.load_editor);
         } else {
             reject();
         }
@@ -2135,19 +2156,19 @@ void GuiInputHandler::commit_editor_commit() {
     }
     if (!found) { reject(); return; }
 
-    // Copy the entry before adopting: adopt wipes renders/ at its tail, and
+    // Copy the entry before the load-in-place: its tail wipes renders/, and
     // the copy is self-contained (paths + basename), so it stays valid.
     const AppState::RenderEntry entry = *found;
-    if (adopt_render_entry(entry)) {
+    if (load_render_entry_in_place(entry)) {
         viewport.invalidate_timestamp_area();
-        text_editor::deactivate(app.commit_editor);
+        text_editor::deactivate(app.load_editor);
     } else {
         reject();
     }
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
-// render-commit prompt, the bpm bracket editor, and the top-strip flag editor.
+// load prompt, the bpm bracket editor, and the top-strip flag editor.
 // All four spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
@@ -2206,16 +2227,16 @@ bool GuiInputHandler::route_modal_editor_key(
     return true;  // modal: swallow
 }
 
-// Routes a key to the active render-commit editor through the shared modal
+// Routes a key to the active load editor through the shared modal
 // route; bare Tab autocompletes the entry identifier.
-bool GuiInputHandler::handle_commit_editor_key(GuiKey key,
+bool GuiInputHandler::handle_load_editor_key(GuiKey key,
                                                GuiInputState mods) {
     return route_modal_editor_key(
-        app.commit_editor, key, mods,
-        [this] { commit_editor_autocomplete(); },
-        [this] { commit_editor_commit(); },
-        [this] { commit_editor_exit_no_commit(); },
-        [this] { commit_editor_exit_no_commit(); },
+        app.load_editor, key, mods,
+        [this] { load_editor_autocomplete(); },
+        [this] { load_editor_commit(); },
+        [this] { load_editor_exit_no_commit(); },
+        [this] { load_editor_exit_no_commit(); },
         [this] { viewport.invalidate_timestamp_area(); });
 }
 

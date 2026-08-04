@@ -228,7 +228,8 @@ long long monotonic_ms() {
 // WHAT A CAPTURE ANSWERED — a distinction the boolean this used to return could
 // not make. "The command failed" and "the command succeeded and said nothing"
 // are the same empty string, and two callers are wrong when they are confused:
-// an adopt would stage a sidecar a FAILED `show` invented as empty and replace
+// a load-in-place would stage a sidecar a FAILED `show` invented as empty and
+// replace
 // the live store with a state the named commit never held, and the commit act's
 // pre-flight would read a FAILED `status` as "nothing to commit" and tell the
 // user the checkpoint already carries bytes that are in fact still uncommitted.
@@ -244,7 +245,8 @@ long long monotonic_ms() {
 // rejected pathspec, a locked index — lands in Ran with an empty string. So a
 // caller whose question is "did this succeed" needs a witness IN THE OUTPUT, and
 // both of them have one: the commit act's status probe asks with `--branch`,
-// whose header line is emitted only on a successful run, and the adopt
+// whose header line is emitted only on a successful run, and the
+// load-in-place
 // cross-checks each blob against the byte count the tree listing stated. Neither
 // rests on this enum alone; what the enum adds is the case no output-shaped
 // witness could ever cover, that git never ran.
@@ -257,7 +259,8 @@ enum class GitCapture {
 //
 // THE ONLY SUBCOMMANDS THIS ENTRY POINT EVER PASSES ARE `log`, `show`,
 // `ls-tree`, `rev-parse`, `status`, `rev-list`, `diff-tree` AND `remote get-url`
-// (rev-parse joined 2026-08-04 with the adopt-from-commit path's spelling
+// (rev-parse joined 2026-08-04 with the load-in-place-from-a-commit path's
+// spelling
 // resolution, status the same day with the commit act's pre-flight probe, and
 // rev-list + diff-tree with the same act's ATTRIBUTION verdict — the bounded
 // `before..HEAD` walk, each candidate's own changed-path list, and rev-list
@@ -373,7 +376,8 @@ GitCapture run_git_capture(const std::vector<std::string>& args,
 // wants whose question is answered by the output itself: a `log` with no commits,
 // a `rev-parse` that resolved nothing and an `ls-tree` of a tree with no matching
 // path are all "no history here" and all correctly fail this. The two callers
-// whose question is NOT the output's content (the adopt's blob reads and the
+// whose question is NOT the output's content (the load-in-place's blob reads
+// and the
 // commit act's status pre-flight) call run_git_capture directly and read the
 // outcome.
 bool git_output(const std::vector<std::string>& args, std::string& out) {
@@ -825,7 +829,8 @@ std::string directory_of(const std::string& path) {
 }
 
 // ONE MATCHED ROW OF A TREE LISTING: where the blob sits and how many bytes the
-// object database says it is. THE SIZE IS THE ADOPT'S CROSS-CHECK — `git show`
+// object database says it is. THE SIZE IS THE LOAD-IN-PLACE'S CROSS-CHECK —
+// `git show`
 // hands back a byte string, and a string that came up SHORT (a killed child, a
 // read that lost its tail) is otherwise indistinguishable from the file's own
 // contents; the tree already knows the true length, so carrying it costs one
@@ -1091,8 +1096,8 @@ bool clone_is_projects_home(const std::string& projects_repo,
 // `ambiguous` is a REFUSAL, not a variant of "carries none": this commit's tree
 // holds the base name in several directories and none of them is the one HEAD
 // matched, so which piece the blobs belong to has no answer. All three paths are
-// empty in that state, and both consumers say so rather than showing or adopting
-// a guess.
+// empty in that state, and both consumers say so rather than showing or
+// loading in place a guess.
 struct GuiHistoryCommitPaths {
     std::string path[3];
     long long   size[3] = {-1, -1, -1};
@@ -1111,7 +1116,7 @@ struct GuiHistoryCommitPaths {
 // renamed or removed, still sits in those old trees beside today's
 // `projects/A/song.*`, and the walk's basename pathspec pulls commits that touched
 // either into one list. The old rule — most siblings, ties lexicographic — would
-// then silently display B's state as A's and let `'` adopt it.
+// then silently display B's state as A's and let `'` load it in place.
 //
 // THE RULE IS HEAD'S OWN DIRECTORY FIRST. `head_directory` is what init matched
 // on the tip tree, the one directory this session means by "this piece"; if this
@@ -1119,7 +1124,8 @@ struct GuiHistoryCommitPaths {
 // carries. Failing that, a SINGLE candidate directory is unambiguous and is taken
 // (which is every ordinary pre-rename era: the piece sat somewhere else and
 // nowhere else). Anything left is genuinely ambiguous and REFUSES — the display
-// paints no delta for that commit and names the state in the corner, and an adopt
+// paints no delta for that commit and names the state in the corner, and a
+// load-in-place
 // of it is refused with its own line.
 GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
                                            const std::string& base_name,
@@ -1172,7 +1178,8 @@ GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
 // FALSE MEANS THE READ DID NOT HAPPEN — git could not be run, or ran and failed.
 // An EMPTY path is not that case: the commit carries no such file, `out` is empty
 // and this is true, which is the "no bytes on the then side" answer the diff
-// wants. The two are separated because the ADOPT cannot tell an invented empty
+// wants. The two are separated because the LOAD-IN-PLACE cannot tell an
+// invented empty
 // file from a real one and must never stage the first (see read_commit_sidecars).
 bool read_snapshot_at(const std::string& sha, const std::string& path,
                       std::string& out) {
@@ -1183,7 +1190,8 @@ bool read_snapshot_at(const std::string& sha, const std::string& path,
 
 // The lenient reading, for the DISPLAY side alone: a failed read is empty bytes
 // and the commit reads as everything-added. Deliberate — a diff is a picture and
-// a wrong one costs a keystroke to step away from and back, while the adopt is a
+// a wrong one costs a keystroke to step away from and back, while the
+// load-in-place is a
 // whole-state replace and gets the strict path.
 std::string read_snapshot_or_empty(const std::string& sha,
                                    const std::string& path) {
@@ -1254,7 +1262,8 @@ bool read_commit_sidecars(const std::string&        spelling,
 
     // THE BYTES, AND THE PROOF THEY ARE ALL OF THEM. A `show` that could not run
     // hands back an empty string, and an empty sidecar is a perfectly VALID whole
-    // file in both marker grammars — so without a second witness the adopt would
+    // file in both marker grammars — so without a second witness the
+    // load-in-place would
     // stage that emptiness, pass every strict loader, and replace the live store
     // with a state the commit never held. The tree listing is that witness: it
     // stated each blob's true length, so a read that came back short (a killed
@@ -1500,8 +1509,8 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
     d.settings_lines.removed    = static_cast<int>(settings_diff.removed.size());
 
     // A line that yields no frame drops out of the typed lists entirely —
-    // legacy timestamp spellings, hand-edit damage. Adoption is where full
-    // parsing gates; a view just shows less.
+    // legacy timestamp spellings, hand-edit damage. The load-in-place is where
+    // full parsing gates; a view just shows less.
     for (const std::string& line : warp_diff.added) {
         GuiHistoryWarpEntry e;
         if (extract_warp_entry(line, e)) d.warp_added.push_back(std::move(e));
@@ -1964,7 +1973,8 @@ bool commit_touches_only(const std::string&              sha,
 //
 // Each path is required PRESENT in the commit's own tree with the tree's stated
 // byte count, and then read whole and compared. The size cross-check is the
-// adopt path's own guard reused (`ls-tree -l` states the true length, so a short
+// load-in-place path's own guard reused (`ls-tree -l` states the true length,
+// so a short
 // read cannot pass as content), and the byte comparison is strictly stronger
 // than a size compare on its own; a `show` that could not run yields an empty
 // string, which equals our text for no file the writers produce and in any case

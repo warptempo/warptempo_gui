@@ -87,11 +87,11 @@ constexpr int kMaxPendingCharsBpm = 60;
 // feature is scoped to the surface that needed it, not adopted product-wide.
 // See `view_offset_px` below for which side writes it.
 constexpr int kMaxPendingCharsSettings = 1024;
-// Render-commit prompt (bare `'`). Holds a render entry's identifier relative
+// Load prompt (bare `'`). Holds a render entry's identifier relative
 // to renders/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
 // bare basename. Program-written batch/entry names are short; 256 is a
 // generous ceiling for the relative path a user types or Tab-completes.
-constexpr int kMaxPendingCharsRenderCommit = 256;
+constexpr int kMaxPendingCharsLoadInPlace = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -99,13 +99,13 @@ constexpr int kMaxPendingCharsRenderCommit = 256;
 // commit-time validator). The flag editor uses FlagPayload (payload text,
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
-// render-commit prompt uses RenderCommit (a render entry's relative-path
+// load prompt uses LoadInPlace (a render entry's relative-path
 // identifier, resolved against the renders/ listing at commit).
 enum class Kind {
     FlagPayload,
     BpmBracket,
     SettingsAssignment,
-    RenderCommit,
+    LoadInPlace,
 };
 
 // State for a single editable rect.
@@ -176,7 +176,7 @@ struct State {
 // built from — it needs no sequence length and degrades safely on malformed
 // bytes.
 //
-// The ONE outside caller is the render-commit editor's Tab autocomplete
+// The ONE outside caller is the load editor's Tab autocomplete
 // (input_key_dispatch.cpp), which backs its byte-wise longest-common-prefix off
 // to a boundary before seeding `pending`. It is exposed rather than the
 // boundary walks themselves because that is the whole of what the caller needs:

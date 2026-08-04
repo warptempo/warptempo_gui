@@ -9,7 +9,7 @@
 
 // Renders-folder enumeration: the flat list of valid render entries under
 // <source_parent>/renders/, plus the per-entry .settings path helper. The `l`
-// launcher and the `'` commit editor call them.
+// launcher and the `'` load editor call them.
 
 // Enumerate the flat render-entry list under <source_parent>/renders/.
 // Returns an empty vector if no source path is set or if the renders root

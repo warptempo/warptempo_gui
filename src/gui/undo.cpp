@@ -388,7 +388,8 @@ void apply_post_restore_rules_impl(AppState& app,
     // rule ("the restore's touched set wins over the tab-entry auto-select in every
     // reachable case") true with no exception, and it is not a SELECT — the same
     // shape the 'S' arm uses. REACHABILITY, the reachable sequence: `push_undo_both`
-    // (notably the render-entry ADOPT, which records the current marker mode and the
+    // (notably the render-entry LOAD-IN-PLACE, which records the current
+    // marker mode and the
     // dispatch tab while the entry may change only engine settings and/or the OTHER
     // column) leaves the active column's vector byte-identical, so undoing it from
     // the other tab auto-selects on arrival and the active-column diff then finds

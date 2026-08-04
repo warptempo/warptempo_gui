@@ -152,7 +152,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconIter,   GuiKeys::I,   false, false, false, false, true},   // bare i
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
     {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
-    {RedesignButton::IconCommit, GuiKeys::Apostrophe, false, false, false, false, true}, // bare '
+    {RedesignButton::IconLoadInPlace,
+     GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // THE HISTORY MODE (2026-08-04), the row's twelfth and the table's
     // twenty-second: bare `/`, a TOGGLE like follow and iteration — its chord
     // opens the mode and closes it, and the button dispatches on both edges
@@ -230,13 +231,13 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     const AppState::BottomEditorText& be = app.bottom_editor_text;
     const bool bottom_open =
         text_editor::is_active(app.settings_editor) ||
-        text_editor::is_active(app.commit_editor) ||
+        text_editor::is_active(app.load_editor) ||
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
     if (bottom_open) {
         if (!be.valid) return g;
         g.ed = text_editor::is_active(app.settings_editor) ? &app.settings_editor
-             : text_editor::is_active(app.commit_editor)   ? &app.commit_editor
+             : text_editor::is_active(app.load_editor)   ? &app.load_editor
                                                            : &app.top_flag_editor;
         g.text_left    = be.text_origin_x;
         g.byte_x       = &be.byte_x;
@@ -345,8 +346,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
 //   which in this mode IS the checkpoint commit and wears the "Commit" face),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
-//   switches), the render-commit opener (bare `'`, which in this mode adopts the
-//   viewed commit), and the history button itself (bare `/`, the mode's own key,
+//   switches), the load-editor opener (bare `'`, which in this mode loads
+//   the viewed commit in place), and the history button itself (bare `/`, the
+//   mode's own key,
 //   selected while it stands).
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); BOTH TABS (Ctrl+Tab), the lock
 //   slots with them — the active tab's padlock dispatches bare `o`, blocked, and
@@ -1094,7 +1096,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
 
     if (text_editor::is_active(app.settings_editor)) return;
-    if (text_editor::is_active(app.commit_editor)) return;
+    if (text_editor::is_active(app.load_editor)) return;
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         // The BPM editor is a bottom-strip modal owner (like the settings
@@ -2529,7 +2531,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
-    if (text_editor::is_active(app.commit_editor)) return;
+    if (text_editor::is_active(app.load_editor)) return;
     // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
     // finishes something a LEFT press armed, and no other button arms anything.
     // The bare RIGHT press bound 2026-08-01 is a one-shot scrub act — it arms no
@@ -3309,7 +3311,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // press anywhere outside the editor's box already does. It is what keeps "a
     // popup and an editor are never open together" true, and the FLAG editor is
     // the one class that needs it: the three BOTTOM-STRIP modal editors (the
-    // settings and render-commit editors and the BPM bracket, the membership
+    // settings and load editors and the BPM bracket, the membership
     // modal_bottom_strip_editor_active names) swallow every press at the top of
     // on_button_press, above the row-1 band claim, so a menu button is not even
     // reachable while one of them is up — but the FlagPayload editor is
@@ -3644,7 +3646,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // POINTER FACT — "the pointer is over this rect" is true or false regardless
     // of who owns the keyboard — and NOT that these surfaces let pointer input
     // through: only the top-strip FlagPayload editor is pointer- and
-    // wheel-transparent, while the settings editor, the render-commit editor and
+    // wheel-transparent, while the settings editor, the load editor and
     // the BpmBracket kind (modal_bottom_strip_editor_active, which is also the
     // wheel swallow) take every press outside their own text row and drop it. The
     // prompt takes the same answer for the same reason: it suppresses no other
@@ -3799,7 +3801,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (text_editor::is_active(app.settings_editor) ||
-        text_editor::is_active(app.commit_editor)) {
+        text_editor::is_active(app.load_editor)) {
         // The button hover stays live under a keyboard-modal editor — the
         // rationale is at the prompt branch above, and THIS is the branch the
         // reported staleness came through (the Settings button opens the

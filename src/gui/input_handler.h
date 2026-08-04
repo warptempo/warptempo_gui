@@ -252,8 +252,9 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // stating only its own class and pointing there: the source load's tail
 // (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
-// the `'` render-entry ADOPT's tail (adopt_render_entry, input_key_dispatch.cpp —
-// joined 2026-07-30 because the adopt is specified 1:1 with a source load, and the
+// the `'` render-entry LOAD-IN-PLACE's tail (load_render_entry_in_place,
+// input_key_dispatch.cpp — joined 2026-07-30 because the load-in-place is
+// specified 1:1 with a source load, and the
 // load has always run this). No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
@@ -346,7 +347,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
 // that touches a trim bound is not a command in this sense: auto_clear_crossed_trim
 // is a shared commit tail every setter already runs inside its own body, and the
 // ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
-// tab-band pull, `'` adopt) install a trim wholesale.
+// tab-band pull, `'` load-in-place) install a trim wholesale.
 // A PLAIN TRIM-BAR CLICK IS NO LONGER A TRIM ROUTE AT ALL (architect 2026-07-30):
 // its three arms existed only to publish the highlight, so with the publisher gone
 // they retire outright — a click that never becomes a drag is a consumed nothing,
@@ -795,7 +796,7 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
     // True when ANY text editor is consuming printable keys — the settings
-    // editor, the commit editor, or the top-strip flag editor in EITHER kind
+    // editor, the load editor, or the top-strip flag editor in EITHER kind
     // (unlike modal_bottom_strip_editor_active, which names only the three
     // BOTTOM-STRIP surfaces and omits the FlagPayload editor). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
@@ -905,7 +906,8 @@ private:
     // GuiAsyncRenderer::is_busy() is false, which spans the whole
     // CompletionPending interval, so the prior worker has finished do_render
     // and ALL publication into renders/ before the scan runs; every OTHER
-    // renders/ mutation (sweep batch-folder creation, the adopt wipe) runs on
+    // renders/ mutation (sweep batch-folder creation, the load-in-place
+    // wipe) runs on
     // this same GUI event thread, so none can interleave with the scan
     // either; the only other writer thread, the master-floats cache writer,
     // writes solely under the cache tree, never renders/ — so an
@@ -1051,7 +1053,7 @@ private:
     void handle_plain_bare_keys(GuiKey key);
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
-    // the render-commit prompt, the bpm bracket editor, and (architect
+    // the load prompt, the bpm bracket editor, and (architect
     // 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
@@ -1087,35 +1089,37 @@ private:
     // of `key=` from the key's current stored value.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // Render-commit prompt (bare `'`). A bottom-strip modal editor, structural
+    // Load prompt (bare `'`). A bottom-strip modal editor, structural
     // sibling of the settings editor: it takes a render entry's identifier
-    // relative to renders/ and, on Enter, adopts that render's frozen sidecar
-    // recipe as the new authoring baseline through adopt_render_entry.
+    // relative to renders/ and, on Enter, loads that render's frozen sidecar
+    // recipe in place as the new authoring baseline through
+    // load_render_entry_in_place.
     //
     // THE `/` HISTORY MODE GIVES THE SAME EDITOR A SECOND SUBJECT (2026-08-04):
     // while the mode stands it takes a COMMIT SPELLING, opens prefilled with the
-    // viewed commit's SHA, and commits through adopt_history_commit. The mode is
+    // viewed commit's SHA, and loads it in place through
+    // load_history_commit_in_place. The mode is
     // the only discriminator, tested at the opener, at the commit and at the
     // autocomplete; every other line of the editor — its keys, its modality, its
     // painted cell, its Esc — is the same one behaviour for both subjects.
     //
-    // open_commit_editor: bare `'` opener (no-op with no source loaded; outside
+    // open_load_editor: bare `'` opener (no-op with no source loaded; outside
     // the mode also refuses over a running/parked render and over an empty
     // renders/, both guards being renders-side).
-    // commit_editor_autocomplete:
+    // load_editor_autocomplete:
     // bare-Tab longest-common-prefix completion over the entry identifiers; a
     // no-op in the mode, whose vocabulary it does not speak.
-    // commit_editor_commit: resolve the pending — to exactly one render entry,
-    // or in the mode to a commit — and adopt.
-    // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:
+    // load_editor_commit: resolve the pending — to exactly one render entry,
+    // or in the mode to a commit — and load it in place.
+    // load_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_load_editor_key:
     // the key router, through route_modal_editor_key like the settings editor.
-    void open_commit_editor();
-    void commit_editor_autocomplete();
-    void commit_editor_commit();
-    void commit_editor_exit_no_commit();
-    bool handle_commit_editor_key(GuiKey key, GuiInputState mods);
+    void open_load_editor();
+    void load_editor_autocomplete();
+    void load_editor_commit();
+    void load_editor_exit_no_commit();
+    bool handle_load_editor_key(GuiKey key, GuiInputState mods);
 
-    // adopt_render_entry: apply render entry `e`'s frozen sidecar recipe
+    // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
     // agnostic (source OR target authoring view). Reads and validates the wav's
     // existence and all three sidecars BEFORE mutating any store, and returns
@@ -1124,9 +1128,9 @@ private:
     // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
     // behind its red flash; otherwise applies the recipe wholesale, wipes
     // renders/, and returns true.
-    bool adopt_render_entry(const AppState::RenderEntry& e);
+    bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
-    // adopt_history_commit: the same act with the COMMITTED HISTORY as its
+    // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
     // source — apply the three sidecars commit `spelling` carried (whatever
     // `git rev-parse` resolves: the SHA the `'` editor prefilled in the `/`
     // mode, a short SHA, a branch) as the new authoring baseline, in memory,
@@ -1138,7 +1142,7 @@ private:
     // no renders/ wipe and so no running-render guard, and the mode itself
     // closes as part of the act. Gated on the mode standing: the sidecar base
     // name is the session's. Full behaviour paragraph at the definition.
-    bool adopt_history_commit(const std::string& spelling);
+    bool load_history_commit_in_place(const std::string& spelling);
 
     // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
     // (no context-awareness beyond that) — a live region trims to it, begin at
@@ -1457,7 +1461,7 @@ private:
     // geometry-and-cache rebuild — the redesigned rows' lane heights come from
     // this value, so a change re-lays-out the whole window. The settings
     // editor's `gui_scale=` commit is the sole caller and gates the no-op case
-    // (the file-load and adopt paths push straight through
+    // (the file-load and load-in-place paths push straight through
     // set_gui_scale_percent, not through here). It is the ONE such applier since
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
@@ -1522,7 +1526,7 @@ private:
     // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
     // modal_bottom_strip_editor_active is for; other sites carry a pointer here.
     // It names the BOTTOM-STRIP modal surfaces only — the settings editor, the
-    // render-commit editor, and the bpm bracket editor (plus the prompts, gated
+    // load editor, and the bpm bracket editor (plus the prompts, gated
     // separately). TWO CALLERS, and they ask the same question about two pointer
     // facts: wheel_context's swallow (input_handler.cpp), because wheel zoom and
     // Alt+wheel pan are NAVIGATION, not chords, so they still punch through an

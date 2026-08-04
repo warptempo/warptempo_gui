@@ -168,7 +168,7 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
     return s;
 }
 
-// The three bottom-strip editors (settings / render-commit / BPM) share this one
+// The three bottom-strip editors (settings / load / BPM) share this one
 // body, differing only in prefix and which State they read. It shapes PREFIX AND
 // PENDING AS ONE RUN — so the pair kerns exactly as it paints — and addresses
 // the pending half through that run's own byte boundaries, which it publishes
@@ -887,7 +887,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // than as a transport control.
     {RedesignButton::IconFollow, IconRowLead::Gap,   nullptr, icons::Icon::GoJump},
     {RedesignButton::IconListen, IconRowLead::Separator, nullptr, icons::Icon::PreviewRenderOn},
-    {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
+    {RedesignButton::IconLoadInPlace,
+     IconRowLead::Gap, nullptr, icons::Icon::DialogOkApply},
     // THE HISTORY MODE'S BUTTON (2026-08-04) — the row's twelfth, and a GROUP OF
     // ITS OWN: the architect asked for "a separation there and then another
     // button", and this row's vocabulary for a group boundary is exactly one
@@ -3176,7 +3177,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // basis span by basis.area_w (the width the committed items were mapped
 // against), which is why the waveform rect handed to them carries that width.
 //
-// COLD STATES (nothing promoted yet — first paint after load/adopt, the view
+// COLD STATES (nothing promoted yet — first paint after a load or
+// load-in-place, the view
 // toggle): the free accessors fall back to the LIVE viewport/map, so trim
 // paints on the pre-first-publish frame too. Small intentional behavior
 // change: the retired cached path SKIPPED its null cache surfaces there, so
@@ -3580,7 +3582,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // (GuiPlatform::apply_window_title) — the title is the mark's only home now.
     //
     // PRECEDENCE IN THE MODAL SPAN, highest first: prompt > queue /
-    // loading status > settings editor > commit editor > BPM editor > transient
+    // loading status > settings editor > load editor > BPM editor > transient
     // status message > the resolved-value readout. MODAL TEXT WINS OVER THE
     // READOUT (the planner's call at the row-7 brief, FLAGGED for the architect):
     // the readout is a passive description of the selection, the others are
@@ -3706,32 +3708,33 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         }
         show_row_text(cr, font, sec.c_x, baseline, assembled, kRedesignLabel);
     } else if (app.history_mode.active &&
-               text_editor::is_active(app.commit_editor)) {
-        // THE COMMIT EDITOR OVER THE MODE'S OWN LINE (2026-08-04). The mode
-        // ADMITS `'` — in the mode that editor adopts a COMMIT rather than a
-        // render entry — so for the first time the mode's line has a contender
-        // for the cell, and the editor takes it: it is the surface the user is
-        // typing into, and a caret with nowhere to paint is not a modal editor.
+               text_editor::is_active(app.load_editor)) {
+        // THE LOAD EDITOR OVER THE MODE'S OWN LINE (2026-08-04). The mode
+        // ADMITS `'` — in the mode that editor loads a COMMIT in place
+        // rather than a render entry — so for the first time the mode's line
+        // has a contender for the cell, and the editor takes it: it is the
+        // surface the user is typing into, and a caret with nowhere to paint
+        // is not a modal editor.
         // The mode's line comes straight back when the edit ends either way.
         //
         // THE BRANCH IS MODE-SCOPED, above the mode's line and therefore above
         // the queue status too, which is the ranking the mode already has:
         // while it stands, this span is the mode's, and an editor the mode
         // itself opened inherits that standing. OUTSIDE the mode the chain is
-        // untouched — the ordinary commit editor keeps its old rank below the
+        // untouched — the ordinary load editor keeps its old rank below the
         // queue status, where the opener's own running-render guard means the
         // two never contend anyway.
         //
-        // ITS PREFIX IS THE SUBJECT'S: `Commit: ` with no ./renders/ lead-in,
+        // ITS PREFIX IS THE SUBJECT'S: `Load: ` with no ./renders/ lead-in,
         // since what the buffer holds is a commit spelling.
-        render_bottom_strip_editor(cr, app, font, app.commit_editor,
-                                   kCommitEditorHistoryPrefix,
+        render_bottom_strip_editor(cr, app, font, app.load_editor,
+                                   kLoadEditorHistoryPrefix,
                                    sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
         // THE `/` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
         // three bottom-strip editors paint in. It ranks directly under the
         // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and the
-        // in-mode commit editor above, and over the queue status, the remaining
+        // in-mode load editor above, and over the queue status, the remaining
         // editors and the readout, because while the mode stands this line is
         // what the strip is for. Those remaining editors cannot arrive here at
         // all: the mode's keyboard allowlist admits no opener but `'`.
@@ -3803,11 +3806,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         render_bottom_strip_editor(cr, app, font, app.settings_editor,
                                    kSettingsEditorPrefix,
                                    sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.commit_editor)) {
-        // Render-commit prompt overlay: "commit: ./renders/<pending>", through
+    } else if (text_editor::is_active(app.load_editor)) {
+        // Load prompt overlay: "Load: ./renders/<pending>", through
         // the same shared body; its red flash is an unresolved / bad commit.
-        render_bottom_strip_editor(cr, app, font, app.commit_editor,
-                                   kCommitEditorPrefix,
+        render_bottom_strip_editor(cr, app, font, app.load_editor,
+                                   kLoadEditorPrefix,
                                    sec.c_x, baseline, band_y, band_h);
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind ==

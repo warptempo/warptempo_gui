@@ -110,7 +110,8 @@ void finish_position_nudge(
     // reach here; the marker-moving routes were re-grepped against this rule and
     // every one of them — drop, delete, the disabled/inherits toggles, both
     // tempo steps, the drag commit, the flag-editor commit, the propagate paste,
-    // the render-entry adopt and the undo restores — pays the same full call).
+    // the render-entry load-in-place and the undo restores — pays the same
+    // full call).
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // (e) playhead follows the nudged marker's committed frame.

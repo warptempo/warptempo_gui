@@ -166,7 +166,8 @@ inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
 // bound every cell; without this, a base walking toward an edge drags cells
 // out of [kTempoMinCents, kTempoMaxCents] and the cell RENDERS (the frame-map
 // build refuses only a non-positive tempo) into a render-entry sidecar whose
-// strict tempo parse hard-rejects on load — the `'` adopt refuses it and the
+// strict tempo parse hard-rejects on load — the `'` load-in-place refuses it
+// and the
 // CLI insurance path is dead for that entry. Folding the deltas into
 // [kTempoMinCents - base, kTempoMaxCents - base] makes the sweep's cell
 // vocabulary closed by CONSTRUCTION rather than by discipline.

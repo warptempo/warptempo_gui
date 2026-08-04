@@ -67,7 +67,7 @@ struct GuiPlaybackLifecycle {
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
     // opens, by every site that opens one: the `;` settings editor
-    // (input_handler.cpp), the `'` render-commit editor and the `m` bpm editor
+    // (input_handler.cpp), the `'` load editor and the `m` bpm editor
     // (input_key_dispatch.cpp), and the three prompt opens (prompt.cpp).
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
@@ -87,7 +87,8 @@ struct GuiPlaybackLifecycle {
     // Mechanically this IS stop_playback_if_playing (a modal open needs no
     // teardown the gesture stop does not already do); the separate name is what
     // gives the rule and its one exemption a greppable home. The NON-modal stops
-    // (gesture stops, the S/T toggle, the adopt mutator's self-guard) keep
+    // (gesture stops, the S/T toggle, the load-in-place mutator's self-guard)
+    // keep
     // calling stop_playback_if_playing directly.
     void stop_playback_for_modal_open();
 

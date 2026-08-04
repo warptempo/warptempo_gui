@@ -105,7 +105,8 @@ struct Viewport {
     //    off this list — the bare Left/Right tempo-image step and the pointer tempo
     //    DRAG. What remains: the bare Up/Down tempo step
     //    (adjust_tempo_cents, singleton AND group — the whole tempo surface now),
-    //    the settings engine-scale commit, undo/redo, and adopt. Each kicks so
+    //    the settings engine-scale commit, undo/redo, and the load-in-place.
+    //    Each kicks so
     //    displayed == live at the command boundary, leaving no
     //    divergence window for the displayed-basis gestures (phase / trim drags)
     //    to ride out. Warp PLACEMENT edits (drop / delete / marker drag / the
@@ -141,7 +142,8 @@ struct Viewport {
         // zoom-out. clamp_viewport_start clamps the level first (clamp_zoom_level)
         // then snaps/clamps the viewport, and is IDEMPOTENT: for every caller that
         // already clamped before kicking (the zoom paths, move_playhead_to,
-        // center-on-playhead, apply_zoom_to_start, the strip drag, undo, adopt,
+        // center-on-playhead, apply_zoom_to_start, the strip drag, undo, the
+        // load-in-place,
         // active_views, the settings editor, the tick backstop) it is a pure no-op.
         // The tick backstop (main.cpp) remains cheap belt-and-braces insurance
         // for any future total-changing path that skips this reclamp — with
@@ -207,7 +209,7 @@ struct Viewport {
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings
-    // engine-scale commit, undo/redo, adopt — every
+    // engine-scale commit, undo/redo, the load-in-place — every
     // total-changing warp-map edit; the full grep-derived caller inventory lives
     // at kick_waveform_sync above).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through

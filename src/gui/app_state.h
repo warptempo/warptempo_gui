@@ -782,7 +782,7 @@ enum class RedesignButton {
     // untouched.)
     IconS, IconT, IconW, IconP,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
-    IconListen, IconCommit,
+    IconListen, IconLoadInPlace,
     // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
     // landed with the commit act: bare `/`, in its own group past a separator,
     // lit while the mode stands. Its chord toggles, so the same click that
@@ -852,7 +852,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconIter:
         case RedesignButton::IconFollow:
         case RedesignButton::IconListen:
-        case RedesignButton::IconCommit:
+        case RedesignButton::IconLoadInPlace:
         case RedesignButton::IconHistory:
             break;
     }
@@ -1308,7 +1308,8 @@ struct AppState {
     // set through the settings editor (`:gui_scale=`, no hotkey). LIVE since
     // 2026-07-31: pushed to the renderer's file-scope state via
     // set_gui_scale_percent at all three application points (file load, the
-    // settings-editor commit, the `'` adopt), and the editor commit APPLIES it
+    // settings-editor commit, the `'` load-in-place), and the editor commit
+    // APPLIES it
     // live through GuiInputHandler::apply_gui_scale (the resize-path geometry
     // rebuild). SINCE ROW 7 IT IS THE ONE SCALE AXIS — every painted dimension
     // in the product rides it, the former font_size axis having died with the
@@ -1512,7 +1513,7 @@ struct AppState {
     // hit map advances exactly when the on-screen items commit — not at the
     // offscreen rebuild. Lifecycle: WRITTEN by the paint-pass promotion (target
     // view) / cleared-value promotion (source view, mapless items); CLEARED
-    // (with the staged value) at source load and `'` adopt (through
+    // (with the staged value) at source load and `'` load-in-place (through
     // apply_settings_engine_and_prefs) and at a view toggle
     // (handle_active_audio_view_toggle). Shutdown is terminal — no teardown
     // clear. The item hit tests read it through displayed_or_live_target_map so
@@ -1573,7 +1574,8 @@ struct AppState {
     // yet); the accessor then falls back to the live viewport, matching
     // displayed_or_live_target_map's cold live-map fallback. Written by the
     // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
-    // every clear site (source load / `'` adopt / view toggle). Deliberately
+    // every clear site (source load / `'` load-in-place / view toggle).
+    // Deliberately
     // SEPARATE from GuiPaintHandler::plate_viewport_basis, which reads the
     // LIVE wf_cache.fp_* so the PLATE-REGISTERED paint overlays stay locked to
     // the just-blitted plate; WHICH overlays those are is enumerated at that
@@ -1777,7 +1779,7 @@ struct AppState {
     FlagEditorBox flag_editor_box;
 
     // THE OPEN BOTTOM-STRIP EDITOR'S TEXT GEOMETRY — the same painter-publishes-
-    // shaped-geometry contract one row down, for the settings / render-commit /
+    // shaped-geometry contract one row down, for the settings / load /
     // BPM editors after row 7 took them off the monospace grid (2026-08-01).
     // There is no BOX to publish: those editors have no chip around them any
     // more (the press region is the whole bottom strip, as it has always been),
@@ -1976,8 +1978,9 @@ struct AppState {
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
     // its own reason on stderr and the mode simply does not open.
     //
-    // WHAT CLOSES IT, the whole list: bare `/` again; EITHER ADOPT — the `'`
-    // editor's render-entry adopt and, since 2026-08-04, its adopt-from-commit
+    // WHAT CLOSES IT, the whole list: bare `/` again; EITHER LOAD-IN-PLACE —
+    // the `'` editor's render-entry load-in-place and, since 2026-08-04, its
+    // load-in-place-from-a-commit
     // (both rewrite the very state the frozen now side was measured against);
     // Ctrl+Q and the WM close, trivially, the process going with it. ESC IS NOT
     // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
@@ -2009,7 +2012,8 @@ struct AppState {
     // face and ignores the pointer, so Undo, Redo, both tabs, copy, paste, bpm,
     // iteration, follow, listen and the two menu anchors grey out while Quit,
     // the view bar, Save, the Commit-faced Render, the S/T + W/P radios, the
-    // commit opener and the history button stay lit. The partition is DERIVED
+    // load-in-place opener and the history button stay lit. The partition is
+    // DERIVED
     // from the two gates above (plus the anchors' toggle_dropdown lockout) and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp
     // — and it is read live from `active` below, so leaving the mode restores
@@ -2020,12 +2024,14 @@ struct AppState {
     // second is Ctrl+Alt+R, further down, on the same reasoning). In the
     // mode that editor's subject CHANGES: it opens prefilled with the viewed
     // commit's full SHA, takes any spelling git can resolve in its place, and on
-    // Enter adopts THAT COMMIT's three sidecars into the live session 1:1
-    // (GuiInputHandler::adopt_history_commit — parse-gated by the strict
+    // Enter loads THAT COMMIT's three sidecars into the live session in
+    // place, 1:1
+    // (GuiInputHandler::load_history_commit_in_place — parse-gated by the strict
     // whole-file loaders, so an unresolvable commit, a missing sidecar or a
     // legacy format is a red flash and one stderr line with nothing touched),
     // one cross-file undo entry, no disk write anywhere. The mode closes as part
-    // of a successful adopt, so the frozen now side never outlives the state it
+    // of a successful load-in-place, so the frozen now side never outlives the
+    // state it
     // was measured against. THE EDITOR-OPEN SUB-STATE is the mode standing with
     // that editor up: the mode's two gates stop being reached — the
     // keyboard-modal editor gate sits above them in on_key, and any pointer
@@ -2054,7 +2060,7 @@ struct AppState {
     // returns to 0, and the lane shows an EMPTY diff — which is the visual
     // confirmation that what is in memory is now what is committed. Nothing
     // about the live authoring state changes, which is why this mutator, unlike
-    // the adopt, does not have to close the mode.
+    // the load-in-place, does not have to close the mode.
     //
     // WHY THE FROZEN NOW SIDE CANNOT GO STALE — as a statement about the
     // AUTHORED state, which is what the flags describe. GuiHistoryDiff captures
@@ -2063,7 +2069,8 @@ struct AppState {
     // would drift from what is on screen — and it is not one here BY
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session, and the
-    // one route that changes them anyway (the adopt) closes the mode first. The
+    // one route that changes them anyway (the load-in-place) closes the mode
+    // first. The
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
@@ -2248,8 +2255,8 @@ struct AppState {
 
     // Typed engine settings. The live authoring store: settings editor
     // commits, .settings file load, the BPM-sweep scale commit, and the
-    // `'` render-commit (adopt_render_entry, a full engine-settings
-    // adopt) all mutate fields of this struct directly. Carried by
+    // `'` load-in-place (load_render_entry_in_place, a full engine-settings
+    // application) all mutate fields of this struct directly. Carried by
     // RenderRequest at dispatch; serialized to .settings on Ctrl+S.
     // Default-constructed before any source load.
     EngineSettings engine_settings;
@@ -2294,15 +2301,16 @@ struct AppState {
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
-    // Render-commit prompt editor. Opens on bare `'` from an authoring view,
+    // Load prompt editor. Opens on bare `'` from an authoring view,
     // takes a render entry's identifier relative to renders/
     // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
-    // Enter adopts that render's frozen sidecar recipe as the new authoring
-    // baseline (GuiInputHandler::adopt_render_entry). A bottom-strip modal like
+    // Enter loads that render's frozen sidecar recipe in place as the new
+    // authoring baseline (GuiInputHandler::load_render_entry_in_place). A
+    // bottom-strip modal like
     // the settings editor; separate State so the two paint regions stay
     // independent.
-    text_editor::State commit_editor;
-    bool commit_editor_blink_last = false;
+    text_editor::State load_editor;
+    bool load_editor_blink_last = false;
 
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
@@ -2415,8 +2423,8 @@ struct AppState {
     // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
-    // Consumed by the `l` listen-to-renders launcher and the `'` commit
-    // editor (adopt_render_entry).
+    // Consumed by the `l` listen-to-renders launcher and the `'` load
+    // editor (load_render_entry_in_place).
     struct RenderEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
@@ -2706,7 +2714,7 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 // funnels through here: Viewport::move_playhead_to (the gesture route),
 // and the non-gesture live-ization routes a persisted or stashed value
 // takes into the live fields — the source load's tab snapshots, the
-// Ctrl+Tab restore, and the render-entry adopt's tab bands — so an
+// Ctrl+Tab restore, and the render-entry load-in-place's tab bands — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
 // arithmetic (the S/T toggle's double->int64 conversion, Space's lead-in
@@ -2894,7 +2902,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconIter:
         case RedesignButton::IconFollow:
         case RedesignButton::IconListen:
-        case RedesignButton::IconCommit:
+        case RedesignButton::IconLoadInPlace:
         // THE HISTORY BUTTON MIRRORS NOTHING EITHER, and its gates are worth
         // naming because the temptation to mirror them is real: `/` refuses
         // while audio is loading or absent (on_key's own blank-state return,
@@ -2978,7 +2986,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
-        case RedesignButton::IconCommit:
+        case RedesignButton::IconLoadInPlace:
             break;
     }
     return false;
@@ -3072,7 +3080,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconIter:   return {"Iteration mode (I)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
         case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
-        case RedesignButton::IconCommit: return {"Commit render (')", nullptr};
+        case RedesignButton::IconLoadInPlace:
+            return {"Load render in place (')", nullptr};
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
         case RedesignButton::IconHistory: return {"History (/)", nullptr};

@@ -1264,7 +1264,8 @@ int main(int argc, char** argv) {
         // backstop finds their geometry already clamped (no movement, no second
         // render). live_total_frames is live-warp-map-derived, and every path
         // that can change that map is now synchronous (edits) or self-clamping
-        // (load/adopt), so no NAMED asynchronous case remains — preview
+        // (load / load-in-place), so no NAMED asynchronous case remains —
+        // preview
         // completion repaints the plate but never touches the live map. This
         // stays cheap belt-and-braces insurance (a silent-wrong-geometry guard)
         // for any future path that moves the total without clamping.
@@ -1419,12 +1420,12 @@ int main(int argc, char** argv) {
                 invalidate_timestamp_area();
             }
         }
-        // Same shape for the bottom-strip render-commit prompt.
-        if (text_editor::is_active(app.commit_editor)) {
+        // Same shape for the bottom-strip load prompt.
+        if (text_editor::is_active(app.load_editor)) {
             const bool now_visible =
-                text_editor::cursor_visible_now(app.commit_editor);
-            if (now_visible != app.commit_editor_blink_last) {
-                app.commit_editor_blink_last = now_visible;
+                text_editor::cursor_visible_now(app.load_editor);
+            if (now_visible != app.load_editor_blink_last) {
+                app.load_editor_blink_last = now_visible;
                 invalidate_timestamp_area();
             }
         }

@@ -8,7 +8,8 @@
 // Renders-folder enumeration. The directory scan of
 // <source_parent>/renders/<batch>/<basename>.wav and the per-entry .settings
 // path helper. Both are consumed by the `l` listen-to-renders launcher and the
-// `'` commit editor (adopt_render_entry in input_key_dispatch.cpp). Reads
+// `'` load editor (load_render_entry_in_place in input_key_dispatch.cpp).
+// Reads
 // only AppState (the source path); holds no audio, playback, or view state.
 struct GuiRendersDir {
     AppState& app;

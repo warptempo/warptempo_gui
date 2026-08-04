@@ -55,7 +55,8 @@ struct GuiFileLoader {
 // playback_speed, gui_scale, audio_player, projects_repo, the four stored
 // render-environment hashes) into `app`. VALUES ONLY — no side
 // effects: the caller runs set_speed / set_gui_scale_percent / on_resize itself,
-// so both callers (load_file and the render-entry adopt) apply these fields
+// so both callers (load_file and the render-entry load-in-place) apply these
+// fields
 // identically while owning their own side-effect timing. SettingsFile is
 // visible here via app_state.h -> settings_file.h.
 void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf);

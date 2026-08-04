@@ -24,7 +24,8 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.engine_settings = sf.engine;
     app.follow_mode         = sf.follow;
     // Event-synchronized hit geometry: this routine (re)establishes the live
-    // view from settings — the source-load and `'` adopt paths both call it —
+    // view from settings — the source-load and `'` load-in-place paths both
+    // call it —
     // so drop any displayed hit map from the previous file/session, AND the
     // staged value (else a stale staged map would promote wrong geometry at the
     // next paint). It reflects the OTHER file's last target item pixels;
@@ -45,10 +46,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.staged_displayed_valid = false;
     // The resting selection region is view-domain scratch: its frame span reads
     // against whichever view is live. This routine re-establishes the live view
-    // for BOTH the source load and the `'` adopt, so the clear lives here
-    // structurally — a per-caller clear leaked on the adopt path, where a
+    // for BOTH the source load and the `'` load-in-place, so the clear lives
+    // here structurally — a per-caller clear leaked on the load-in-place path,
+    // where a
     // source-view region survived into the forced target view and a later `x`
-    // overwrote the freshly adopted recipe trim with the stale span.
+    // overwrote the freshly loaded-in-place recipe trim with the stale span.
     app.region = RegionState{};
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
@@ -61,8 +63,9 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // removal this paragraph used to name).
     app.gui_scale           = sf.gui_scale;
     // GUI launch preference for the `l` render-listen command, applied
-    // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
-    // this routine, so an adopted render entry's player is 1:1 with its file.
+    // verbatim: a blank value is the deliberate no-player opt-out. The
+    // load-in-place shares this routine, so a loaded-in-place render entry's
+    // player is 1:1 with its file.
     app.audio_player        = sf.audio_player;
     // The projects home for the GitHub recheck, applied verbatim like the
     // launcher above: the key is required, so a successful load always carries
@@ -70,7 +73,8 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // ask. An empty value is legal and simply disables the feature.
     app.projects_repo       = sf.projects_repo;
     // Render-environment attestation, assigned like every settings field
-    // (adopt therefore applies an entry's stored hashes 1:1 with a load).
+    // (the load-in-place therefore applies an entry's stored hashes 1:1 with
+    // a load).
     // The load-time mismatch compare against compute_render_env_hashes()
     // runs caller-side, after the whole load succeeds.
     app.libm_hash           = sf.libm_hash;
@@ -278,9 +282,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // mutators are the anchor's only owners).
     app.shift_range_anchor = -1;
     // (The displayed hit map AND the resting selection region are cleared in
-    // apply_settings_engine_and_prefs, the shared load+adopt view-establishment
-    // routine, not here. The live-pointer-drag scratch above stays load-only:
-    // adopt runs from the modal commit editor, where no pointer gesture can be
+    // apply_settings_engine_and_prefs, the shared load / load-in-place
+    // view-establishment routine, not here. The live-pointer-drag scratch
+    // above stays load-only: the load-in-place runs from the modal load
+    // editor, where no pointer gesture can be
     // live, so it needs no drag clears — only the view-domain region clear.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). SEED IT TO THE FULL WINDOW explicitly before
@@ -432,7 +437,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // playback_speed, gui_scale, audio_player, the four stored
         // render-environment hashes), VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_scale_percent,
-        // on_resize) stay below where they always ran. The render-entry adopt
+        // on_resize) stay below where they always ran. The render-entry
+        // load-in-place
         // shares this exact routine so its in-memory result is 1:1 with a load.
         apply_settings_engine_and_prefs(app, sf);
         // Per-tab trim: both bounds are always meaningful in the schema (the
@@ -553,7 +559,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // first would swallow the adversarial defect in one product only. The
     // live app.trim mirror was copied from the active tab at activation
     // above, so it re-syncs after the resets. Render-entry sidecars reach
-    // memory through adopt_render_entry's own application path and
+    // memory through load_render_entry_in_place's own application path and
     // deliberately skip this: they are written once at dispatch from a live
     // store that can no longer rest crossed — trusted, no re-check.
     {

@@ -68,15 +68,16 @@ inline int bottom_row_pad_x() {
 // IS the painted one rather than a re-derivation that could drift from it.
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
-// The render-commit prompt (bare `'`) label. The typed entry identifier —
+// The load prompt (bare `'`) label. The typed entry identifier —
 // `<batch_dir>/<basename>` relative to renders/ — renders directly after the
 // trailing slash, so the prefix carries no trailing space.
-constexpr const char* kCommitEditorPrefix   = "Commit: ./renders/";
+constexpr const char* kLoadEditorPrefix   = "Load: ./renders/";
 // THE SAME EDITOR'S OTHER SUBJECT: in the `/` history mode it takes a COMMIT
-// SPELLING (adopt_history_commit), so the renders/ path lead-in would be a false
-// statement about what is being committed. One label, one trailing space, and
-// the branch that selects it is the only place the two ever differ.
-constexpr const char* kCommitEditorHistoryPrefix = "Commit: ";
+// SPELLING (load_history_commit_in_place), so the renders/ path lead-in
+// would be a false statement about what is being loaded in place. One label,
+// one trailing space, and the branch that selects it is the only place the
+// two ever differ.
+constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //

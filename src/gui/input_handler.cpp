@@ -274,12 +274,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
-    // Render-commit prompt editor (bare `'` opener). Same modal shape as the
+    // Load prompt editor (bare `'` opener). Same modal shape as the
     // settings editor block above; the two are mutually exclusive in practice
     // (each opener no-ops while the other owns the keyboard). Routed before the
     // render/batch Esc cancel so Esc closes the edit first.
-    if (text_editor::is_active(app.commit_editor)) {
-        if (handle_commit_editor_key(key, mods)) return;
+    if (text_editor::is_active(app.load_editor)) {
+        if (handle_load_editor_key(key, mods)) return;
     }
 
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
@@ -655,7 +655,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Render-trigger chords: Ctrl+Alt+R (the single render, or the ITERATION
     // SWEEP while iteration mode is on) and Ctrl+Alt+Shift+R (the
     // miscellaneous render, a consumed no-op in iteration mode). (The
-    // render-commit opener is bare `'`, handled separately below.)
+    // load-editor opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Space is the sole playback toggle, and it is modifier-strict — every
@@ -922,21 +922,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `'` opens the render-commit prompt in the bottom strip: commit a
-    // chosen render as the new authoring baseline by NAME — or, while the `/`
+    // Bare `'` opens the load prompt in the bottom strip: load a chosen
+    // render in place as the new authoring baseline by NAME — or, while the `/`
     // history mode stands, a COMMIT by its SHA, the editor's other subject
-    // (open_commit_editor's own branch; the mode admits this one key through
+    // (open_load_editor's own branch; the mode admits this one key through
     // history_mode_key_blocked above). TWO PRODUCERS, ONE ROUTE: this key and
-    // the icon row's commit button, which synthesizes exactly this bare chord
+    // the icon row's load button, which synthesizes exactly this bare chord
     // through the redesign chord table, so both subjects reach both producers
     // and no second opener exists. A modal bottom-strip
-    // surface. open_commit_editor owns the no-source / renders-side guards AND
+    // surface. open_load_editor owns the no-source / renders-side guards AND
     // the playback stop: playback halts only when the modal actually opens, so a
     // refused open leaves a listening session undisturbed (once open, Space is
     // inside the modal blocked set, so playback cannot restart until the editor
     // closes).
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
-        open_commit_editor();
+        open_load_editor();
         return;
     }
 
@@ -1301,7 +1301,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // eventual emission could not fire in.
     //
     // Only the BOTTOM-STRIP modal surfaces swallow the wheel (the settings and
-    // render-commit editors and the BpmBracket reuse of top_flag_editor) —
+    // load editors and the BpmBracket reuse of top_flag_editor) —
     // modal_bottom_strip_editor_active, deliberately NOT the keyboard gate's
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,
