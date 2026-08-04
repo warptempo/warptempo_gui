@@ -51,10 +51,19 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 // makes this product a producer of checkpoints, and one whose push failed must
 // still be visible history rather than hidden until the next successful push.
 // `HEAD` is the spelling because it needs no name — it is whatever this clone
-// has checked out — and the same word serves the tip listing, the walk and the
-// push destination, so the three cannot come to mean different things. The
-// projects_repo guard is unaffected either way: it asks which REPOSITORY this
-// clone is, not how fresh it is.
+// has checked out — and the same word serves the tip listing and the history
+// walk, so the mode's two readers cannot come to mean different things.
+//
+// THE COMMIT ACT DOES NOT USE THIS SPELLING FOR ITS OBSERVATIONS. It reads HEAD
+// exactly once, to learn the branch NAME, and every source-side observation it
+// makes afterwards names `refs/heads/<that name>` — because the act both
+// observes and PUBLISHES, and a symbolic HEAD that moves under it would let the
+// two name different branches (commit_history_checkpoint's `source_ref` owns the
+// reasoning). The read-only mode has no such exposure: it publishes nothing, and
+// a checkout under it simply shows the branch that is now checked out.
+//
+// The projects_repo guard is unaffected either way: it asks which REPOSITORY
+// this clone is, not how fresh it is.
 constexpr const char* kBranchRef = "HEAD";
 
 // The three sidecars a source carries, in no significant order. A directory
@@ -1566,6 +1575,12 @@ namespace {
 // A spelling's object name, or "" when it does not resolve. `--verify` is what
 // makes a missing ref an error rather than an echo of the argument, which is how
 // the push check below asks "does this remote-tracking ref exist yet".
+//
+// THE EMPTY ANSWER IS TWO ANSWERS — a ref that is absent and a read that could
+// not be made — and callers that must tell them apart go through
+// resolve_ref_witnessed rather than reading this directly; its comment owns the
+// witness. The callers that do read it directly (the act's own branch-tip reads)
+// treat both as the same failure by design: no tip, no act.
 std::string resolved_object_name(const std::string& spelling) {
     std::string out;
     if (!git_output({"rev-parse", "--verify", spelling}, out)) return {};
@@ -1682,14 +1697,69 @@ GuiHistoryContainment ref_containment(const std::string& tip,
                         : GuiHistoryContainment::Missing;
 }
 
-// DOES `tip` CARRY `sha` — the question both verdict sites actually ask, with
-// the equality shortcut that needs no walk at all folded in. Only a demonstrated
-// containment is true here; `unavailable` comes back set when the walk could not
-// answer, so a caller can say "could not be observed" instead of "no".
-bool ref_carries(const std::string& tip, const std::string& sha,
-                 bool& unavailable) {
+// WHAT AN EMPTY `rev-parse` ANSWER MEANS — the distinction the tri-state above
+// is worth nothing without, since both verdict sites reach the walk through a
+// ref NAME that may not resolve at all. `resolved_object_name` returns "" for a
+// ref that is genuinely ABSENT (no `origin/<branch>` yet — the state before the
+// first push) and for a read that could not be MADE (the capture could not exec,
+// the repository could not be read), and those two answers must route
+// differently: absent is an honest "the remote does not carry it", unavailable
+// is "could not ask" and may never be reported as a no.
+//
+// THE WITNESS IS A SECOND REF KNOWN TO EXIST. The act runs from a checked-out
+// branch, so `refs/heads/<captured>` resolves in any repository that can answer
+// at all; asking for it through the same capture right after an empty first read
+// turns silence into evidence. If the witness PRINTS, the repository answers
+// queries and the first read's emptiness is the target ref's own absence. If the
+// witness comes back empty too — a failed exec, an unreadable repository, or the
+// captured branch deleted out from under the act — nothing here can tell that
+// apart from a broken observation, so the answer is UNAVAILABLE.
+//
+// THE ONE FALSE UNAVAILABLE, named because it is real: a captured branch deleted
+// mid-act makes a healthy repository answer "could not ask". It costs a
+// fall-through to a push that the missing branch would refuse anyway, which is
+// the cheap direction — calling an unreadable repository "absent" would cost a
+// false NEGATIVE on the one question this module may never guess at.
+enum class GuiHistoryRefRead {
+    Unavailable,  // the read did not run, or the repository could not answer
+    Absent,       // it ran; there is no such ref
+    Resolved,     // it ran; `object_name` is what the ref names
+};
+
+GuiHistoryRefRead resolve_ref_witnessed(const std::string& spelling,
+                                        const std::string& witness,
+                                        std::string&       object_name) {
+    object_name = resolved_object_name(spelling);
+    if (!object_name.empty()) return GuiHistoryRefRead::Resolved;
+    return resolved_object_name(witness).empty()
+               ? GuiHistoryRefRead::Unavailable
+               : GuiHistoryRefRead::Absent;
+}
+
+// DOES `ref` CARRY `sha` — the question both verdict sites actually ask, taken
+// from the ref's NAME rather than from an already-resolved tip, because
+// RESOLVING it is where the absent/unavailable distinction lives and both
+// callers need that distinction carried all the way through. `witness` is the
+// ref that proves the repository answers (above). The equality shortcut needs no
+// walk at all and is folded in.
+//
+// Only a demonstrated containment is true here; `unavailable` comes back set
+// when the ref could not be READ or the walk could not ANSWER, so a caller can
+// say "could not be observed" instead of "no". An ABSENT ref is a plain false: a
+// remote-tracking ref that does not exist demonstrably carries nothing.
+bool ref_carries(const std::string& ref, const std::string& witness,
+                 const std::string& sha, bool& unavailable) {
     unavailable = false;
-    if (tip.empty()) return false;
+    std::string tip;
+    switch (resolve_ref_witnessed(ref, witness, tip)) {
+        case GuiHistoryRefRead::Resolved:
+            break;
+        case GuiHistoryRefRead::Absent:
+            return false;
+        case GuiHistoryRefRead::Unavailable:
+            unavailable = true;
+            return false;
+    }
     if (tip == sha) return true;
     switch (ref_containment(tip, sha)) {
         case GuiHistoryContainment::Contains:
@@ -1832,9 +1902,19 @@ bool commit_carries_our_bytes(const std::string&              sha,
 // oldest — the first to publish the content — would leave the commits above it
 // unpublished for no gain: the content is the same by construction.)
 //
+// WHICH TIP THE WALK ENDS AT: `source_ref`, the act's captured branch ref, never
+// the symbolic `HEAD`. The commit necessarily lands wherever git is checked out
+// when it runs, which no argument here can pin — so the RANGE is what binds the
+// verdict to the branch this act is publishing on. A checkout mid-act therefore
+// makes the walk find nothing, and the act reports a failure having published
+// nothing, instead of attributing a commit made on some other branch and pushing
+// that branch's ancestry onto the captured one (commit_history_checkpoint's
+// branch paragraph owns the whole reasoning).
+//
 // `observed` is filled with what the walk actually saw whenever the answer is
 // "no match", so the failure line names a fact rather than a guess.
-std::string find_checkpoint_commit(const std::string&              before,
+std::string find_checkpoint_commit(const std::string&              source_ref,
+                                   const std::string&              before,
                                    const std::string&              title,
                                    const std::string&              base_name,
                                    const std::vector<std::string>& paths,
@@ -1844,12 +1924,14 @@ std::string find_checkpoint_commit(const std::string&              before,
     std::string walk;
     if (!git_output({"rev-list",
                      "--max-count=" + std::to_string(kAttributionWalkDepth),
-                     before + ".." + std::string(kBranchRef)},
+                     before + ".." + source_ref},
                     walk)) {
-        // No output is the ordinary "HEAD is still `before`" answer; a failed
-        // run reads the same way and lands on the same honest verdict, since
-        // either way no commit of ours has been demonstrated.
-        observed = "HEAD did not move";
+        // No output is the ordinary "the branch is still `before`" answer — the
+        // commit was refused, or it landed on some other branch a checkout put
+        // under git; a failed run reads the same way and lands on the same
+        // honest verdict, since either way no commit of ours has been
+        // demonstrated on the branch this act publishes.
+        observed = "the branch did not move";
         return {};
     }
 
@@ -1879,8 +1961,8 @@ std::string find_checkpoint_commit(const std::string&              before,
     }
 
     observed = seen.empty()
-                   ? std::string("HEAD did not move")
-                   : ("HEAD moved to " + seen +
+                   ? std::string("the branch did not move")
+                   : ("the branch moved to " + seen +
                       ", none of which carries this checkpoint");
     return {};
 }
@@ -1939,13 +2021,33 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& projects_repo, const GuiHistoryNowSide& bytes) {
     const std::string title = history_checkpoint_title(project_directory);
 
-    // THE BRANCH, READ ONCE, and every later use is this one value: the
-    // remote-tracking ref the two verdicts read, and the refspec the push
-    // writes. Reading it per site is what let a checkout mid-act have the
+    // THE BRANCH, READ ONCE — and this is the ONLY place the act reads the
+    // mutable symbolic HEAD. Every later use is this one value: the
+    // remote-tracking ref the two verdicts read, the refspec the push writes,
+    // and — through `source_ref` below — every source-side observation the act
+    // makes. Reading HEAD per site is what let a checkout mid-act have the
     // observation name one branch and the publication another; one read cannot.
     // Empty means a detached HEAD — no name, no remote-tracking ref, no refspec
     // — which each site answers for itself.
     const std::string branch = current_branch_name();
+
+    // THE SOURCE REF, which is what makes the capture above worth anything: the
+    // act's own before/tip/walk reads all name `refs/heads/<captured>`
+    // EXPLICITLY, so none of them can follow a checkout onto another branch.
+    // `git commit` itself still commits wherever git is checked out — no
+    // argument can pin that — and it does not need to be pinned: if a checkout
+    // intervened, the commit lands on the other branch, the walk over THIS
+    // ref's range finds nothing, and the act returns CommitFailed having
+    // published nothing. The clean arm reasons the same way: a checkout before
+    // it makes this read report the captured branch's true state, so the retry
+    // pushes that branch's own tip bytes and never the other branch's.
+    //
+    // A DETACHED HEAD KEEPS THE OLD SPELLING because it has no branch ref to
+    // name, and it costs nothing: that arm publishes nothing at all (the push
+    // refuses below), so a checkout under it can move what gets COMMITTED but
+    // never what gets published.
+    const std::string source_ref =
+        branch.empty() ? std::string(kBranchRef) : ("refs/heads/" + branch);
 
     // kSidecarExtensions order, which is what pairs each text with its path.
     const std::string* texts[3] = {&bytes.warpmarkers_text,
@@ -2023,17 +2125,37 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // arriving between the attribution walk and the push cannot change it. There
     // is NO force anywhere: an explicit-sha refspec is an ordinary
     // fast-forward-or-refuse push, and a refusal is a plain PushFailed with the
-    // checkpoint intact. The recorded trade of sending the sha: a commit sitting
+    // checkpoint intact.
+    //
+    // WHAT THAT MEANS FOR THE UNOBSERVABLE FALL-THROUGH, the clean arm's push
+    // over a containment it could not read, stated exactly because "harmless" is
+    // two different mechanisms: it is a NO-OP only when the remote tip EQUALS
+    // the checkpoint (git answers "Everything up-to-date"). When the remote tip
+    // is a DESCENDANT — which this module's own containment definition also
+    // calls carrying it — the refspec asks to move the branch BACKWARD onto the
+    // checkpoint and git REJECTS it as a non-fast-forward (verified live), which
+    // is safe precisely because nothing here forces. A rejected push does NOT
+    // update the remote-tracking ref (also verified live), so the verdict below
+    // reads exactly what that ref already said and reports accordingly —
+    // unconfirmed where it still cannot be read. Either way nothing at the
+    // remote is lost or rewound, which is the whole claim this fall-through
+    // rests on.
+    //
+    // The recorded trade of sending the sha: a commit sitting
     // ON TOP of the checkpoint stays unpublished (a whole-branch push would have
     // carried it along), which is the correct cost — this act publishes the
     // checkpoint it made, and the branch's own commits are the user's to push.
     //
-    // BRANCH: `branch` is read ONCE at act start and used for both the refspec
-    // and the remote-tracking ref, so a checkout that happens while the act runs
-    // cannot make those two name different branches; it also cannot silently
-    // redirect the publication, since the content is a sha rather than HEAD. A
-    // detached HEAD has no branch to name in a refspec and no remote-tracking
-    // ref to observe, so it publishes nothing and says so, rather than guessing.
+    // BRANCH: `branch` is read ONCE at act start — the act's single reading of
+    // the symbolic HEAD — and serves the refspec, the remote-tracking ref AND
+    // (as `source_ref`) every source-side observation, so a checkout that
+    // happens while the act runs cannot make any two of them name different
+    // branches; it also cannot silently redirect the publication, since the
+    // content is a sha rather than HEAD, and it cannot smuggle another branch's
+    // ancestry in behind that sha, since the walk that produced it read the
+    // captured ref (find_checkpoint_commit's range owns that half). A detached
+    // HEAD has no branch to name in a refspec and no remote-tracking ref to
+    // observe, so it publishes nothing and says so, rather than guessing.
     //
     // THE VERDICT IS THE REPOSITORY'S. A push updates the local remote-tracking
     // ref as its last act (verified live for this explicit-sha refspec shape,
@@ -2044,22 +2166,34 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // then hung in a post-push hook until the deadline killed it still pushed.
     // An UNOBSERVABLE containment is reported as unconfirmed and never as
     // pushed (ref_containment owns that reading).
-    auto push_branch = [&](const std::string& landed,
-                           bool already_committed) {
-        auto say_committed = [&]() {
-            if (already_committed) {
+    //
+    // WHAT THE LOCAL-CHECKPOINT LINE MAY CLAIM. "Still unpushed" is an
+    // OBSERVATION, so it is printed only where one was made: `publication_known`
+    // carries whether the remote's containment could be read at all — the
+    // caller's own reading on the arms that run before the push, this leg's own
+    // afterwards — and an unobservable one drops the clause rather than
+    // asserting the negative fact the very next line calls unknowable.
+    auto push_branch = [&](const std::string& landed, bool already_committed,
+                           bool publication_known) {
+        auto say_committed = [&](bool known) {
+            if (!already_committed) {
+                std::fprintf(stderr, "warptempo_gui: Committed %s \"%s\"\n",
+                             short_sha(landed).c_str(), title.c_str());
+            } else if (known) {
                 std::fprintf(stderr,
                              "warptempo_gui: The checkpoint %s \"%s\" is "
                              "committed locally and still unpushed\n",
                              short_sha(landed).c_str(), title.c_str());
             } else {
-                std::fprintf(stderr, "warptempo_gui: Committed %s \"%s\"\n",
+                std::fprintf(stderr,
+                             "warptempo_gui: The checkpoint %s \"%s\" is "
+                             "committed locally\n",
                              short_sha(landed).c_str(), title.c_str());
             }
         };
 
         if (branch.empty()) {
-            say_committed();
+            say_committed(publication_known);
             std::fprintf(stderr,
                          "warptempo_gui: Push refused: HEAD is detached, so "
                          "there is no branch to publish the checkpoint on\n");
@@ -2069,7 +2203,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         std::string guard_reason;
         std::string destination;
         if (!clone_is_projects_home(projects_repo, guard_reason, &destination)) {
-            say_committed();
+            say_committed(publication_known);
             std::fprintf(stderr, "warptempo_gui: Push refused: %s\n",
                          guard_reason.c_str());
             return GuiHistoryCommitOutcome::CommittedNotPushed;
@@ -2086,9 +2220,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                        push_line);
 
         bool       unobserved = false;
-        const bool pushed     = ref_carries(
-            resolved_object_name("refs/remotes/origin/" + branch), landed,
-            unobserved);
+        const bool pushed = ref_carries("refs/remotes/origin/" + branch,
+                                        source_ref, landed, unobserved);
 
         if (pushed) {
             if (already_committed) {
@@ -2103,7 +2236,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
             }
             return GuiHistoryCommitOutcome::Committed;
         }
-        say_committed();
+        say_committed(!unobserved);
         if (unobserved) {
             // The push may well have arrived; what failed is the question about
             // it. Saying so is the honest verdict — the checkpoint is intact
@@ -2149,24 +2282,26 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // would tell the user everything is done while the remote has none of
         // it, with no route left that would ever retry the push.
         //
-        // So: clean AND the remote already carries HEAD is the ordinary
-        // committed-twice non-failure. Clean AND the remote is BEHIND means the
-        // work exists locally and only the push is missing, so this arm pushes.
-        // It does not ask WHO made that commit and deliberately so — the user
-        // may simply have committed from a terminal and left it unpushed, and
-        // publishing it is the correct answer whoever made it (the same
-        // content-identity contract find_checkpoint_commit states in full).
-        // What it DOES confirm first is that HEAD carries the checkpoint's
+        // So: clean AND the remote already carries the branch tip is the
+        // ordinary committed-twice non-failure. Clean AND the remote is BEHIND
+        // means the work exists locally and only the push is missing, so this
+        // arm pushes. It does not ask WHO made that commit and deliberately so
+        // — the user may simply have committed from a terminal and left it
+        // unpushed, and publishing it is the correct answer whoever made it (the
+        // same content-identity contract find_checkpoint_commit states in full).
+        // What it DOES confirm first is that the tip carries the checkpoint's
         // bytes, so the line it prints about "the checkpoint" names something
         // real — and what it then publishes is that confirmed commit by sha.
-        const std::string head = resolved_object_name(kBranchRef);
+        //
+        // THE TIP IS THE CAPTURED BRANCH'S, not the symbolic HEAD's: a checkout
+        // mid-act would otherwise have this arm confirm the OTHER branch's bytes
+        // and push that branch's tip onto the captured one. Reading the captured
+        // ref makes the answer the true state of the branch this act publishes
+        // on, whatever git happens to have checked out.
+        const std::string head = resolved_object_name(source_ref);
         if (head.empty()) {
-            return commit_failed("could not read HEAD while confirming the "
-                                 "existing checkpoint");
-        }
-        std::string remote_tip;
-        if (!branch.empty()) {
-            remote_tip = resolved_object_name("refs/remotes/origin/" + branch);
+            return commit_failed("could not read the branch tip while "
+                                 "confirming the existing checkpoint");
         }
         // UNOBSERVABLE IS NOT PUBLISHED, and this arm is the reason that
         // distinction has to exist: "already published" is the answer that ENDS
@@ -2174,12 +2309,16 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // — that is precisely the reading that turned an unpushed checkpoint
         // into "nothing to commit" and left no route that ever retried. An
         // unobserved containment therefore falls through to the push below,
-        // which costs a no-op push if the remote did have it and recovers the
-        // checkpoint if it did not, and whose own verdict reports what it could
-        // observe.
-        bool       unobserved = false;
-        const bool already_published =
-            ref_carries(remote_tip, head, unobserved);
+        // which recovers the checkpoint if the remote did not have it and is
+        // refused harmlessly if it did (ref_carries owns the reading, and the
+        // push leg's own paragraph owns what that fallback actually does at the
+        // remote).
+        bool unobserved        = false;
+        bool already_published = false;
+        if (!branch.empty()) {
+            already_published = ref_carries("refs/remotes/origin/" + branch,
+                                            source_ref, head, unobserved);
+        }
 
         if (already_published || branch.empty()) {
             // A detached HEAD has no remote-tracking ref to be behind, so it
@@ -2199,19 +2338,23 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         if (!commit_carries_our_bytes(head, base_name, paths, texts)) {
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit: the checkpoint "
-                         "paths are clean, but HEAD could not be confirmed to "
-                         "carry these bytes, so nothing was pushed\n");
+                         "paths are clean, but the branch tip could not be "
+                         "confirmed to carry these bytes, so nothing was "
+                         "pushed\n");
             return GuiHistoryCommitOutcome::NothingToCommit;
         }
-        return push_branch(head, /*already_committed=*/true);
+        return push_branch(head, /*already_committed=*/true,
+                           /*publication_known=*/!unobserved);
     }
 
     // BEFORE MUST BE A REAL OBSERVATION. A failed capture here returns "" and an
     // empty string is no starting point for the walk below, which is scoped
-    // `before..HEAD`. So the failure is the failure.
-    const std::string before = resolved_object_name(kBranchRef);
+    // `before..<source_ref>`. So the failure is the failure. It reads the
+    // CAPTURED ref for the same reason the walk does: the range's two ends must
+    // name the same branch, and that branch must be the one the push publishes.
+    const std::string before = resolved_object_name(source_ref);
     if (before.empty()) {
-        return commit_failed("could not read HEAD before committing");
+        return commit_failed("could not read the branch tip before committing");
     }
 
     // (b) Stage, then commit — both pathspec-scoped to the same three paths.
@@ -2243,8 +2386,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // (find_checkpoint_commit owns the three legs, the sequences they close, and
     // why content identity — not act identity — is the ruled contract).
     std::string       observed;
-    const std::string landed = find_checkpoint_commit(before, title, base_name,
-                                                      paths, texts, observed);
+    const std::string landed = find_checkpoint_commit(
+        source_ref, before, title, base_name, paths, texts, observed);
     if (landed.empty()) {
         std::string why = observed;
         // The transport's own account, where it had one — a hook's rejection
@@ -2269,6 +2412,10 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      short_sha(landed).c_str(), commit_line.c_str());
     }
 
-    // (c) The push.
-    return push_branch(landed, /*already_committed=*/false);
+    // (c) The push. `publication_known` is irrelevant on this route — the
+    // checkpoint was just made, so the line the flag forks is the "Committed"
+    // one, which claims nothing about the remote — and false is the reading that
+    // matches: nothing has asked the remote anything yet.
+    return push_branch(landed, /*already_committed=*/false,
+                       /*publication_known=*/false);
 }
