@@ -532,10 +532,13 @@ struct GuiInputHandler {
     // decides which face it wears (the rule, and why the arm cannot double as the
     // liveness test, are at the definition). IT HAS TWO CALLERS AND BOTH ARE
     // LOAD-BEARING: on_motion's open-dropdown branch runs it per DELIVERED
-    // MOTION, which is the premise the release's deleted position compare rests
-    // on, and main.cpp's settled hook runs it once per RUN-LOOP ITERATION,
-    // because the walk's inputs — the painter-published item rects — can move
-    // with no pointer event under them. It refuses while the pointer is outside
+    // MOTION, because a dispatch batch can carry a motion and then the PAINT that
+    // reads these faces with no loop tail in between, and main.cpp's settled hook
+    // runs it once per RUN-LOOP ITERATION, because the walk's inputs — the
+    // painter-published item rects — can move with no pointer event under them.
+    // WHAT IT WRITES SERVES THE FACES; the RELEASE derives its own item from the
+    // release coordinates rather than depending on either caller having run last
+    // (finish_dropdown_release). It refuses while the pointer is outside
     // the window (its own first lines), so the per-iteration caller cannot
     // re-light what the pointer-leave drop cleared.
     // They are also the mode's two writers: toggle_'s open
@@ -579,17 +582,23 @@ struct GuiInputHandler {
     // Which item is at (x, y), or -1 — the painter's published boxes.
     int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
-    // Returns true when the popup owned the release. It TRIGGERS THE ARMED ITEM
-    // — CLOSE FIRST, then the menu's own action (settings: the modal stop and
-    // the prefilled editor; navigation: the item's chord through on_key) — and
-    // takes no position of its own, because the arm follows the pointer and so
-    // already IS the item under it. With nothing armed (the claimed press stands
-    // over the separator, the chrome, the anchor button or off the box) nothing
-    // runs, the release is consumed and the menu stays open — dismissal is a
-    // PRESS act here and a release never dismisses, which is what makes the
-    // plain anchor click open-and-stay-up by construction (the rule is stated
-    // at the definition, where the item and anchor gestures meet).
-    bool finish_dropdown_release();
+    // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
+    // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
+    // stop and the prefilled editor; navigation: the item's chord through on_key).
+    // IT TAKES THE RELEASE'S OWN (x, y) and, while the press CLAIM is live,
+    // DERIVES that item with dropdown_item_at — the arm's own defining
+    // expression, read at delivery — instead of trusting the recorded arm, which
+    // a paint publishing the item rects later in the same dispatch batch can
+    // leave one step behind. It is NOT the old position compare: that one refused
+    // when the two disagreed; this one acts, and cannot disagree with an arm that
+    // is current (the equivalence, and the batch that motivates it, are at the
+    // definition). With nothing derived (the claimed press stands over the
+    // separator, the chrome, the anchor button or off the box) nothing runs, the
+    // release is consumed and the menu stays open — dismissal is a PRESS act here
+    // and a release never dismisses, which is what makes the plain anchor click
+    // open-and-stay-up by construction. An UNCLAIMED release derives nothing and
+    // takes the recorded arm, which is -1 in every state that can reach it.
+    bool finish_dropdown_release(int x, int y);
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
     // face and the press claim — at the hook fired by both the pointer-leave
     // and capability-loss edges (its only caller). Only capability loss ends

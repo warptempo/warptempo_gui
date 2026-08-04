@@ -2376,9 +2376,13 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
-    // pointer, and its items are the redesign's one act-on-release surface.
+    // pointer, and its items are the redesign's one act-on-release surface. It
+    // takes THIS RELEASE'S coordinates because it derives the acted-on item from
+    // them under a live press claim, rather than trusting an arm that may have
+    // been resolved before the item rects were published (the full argument is at
+    // the definition).
     if (button == GuiMouseButton::Left && app.dropdown.open()) {
-        if (finish_dropdown_release()) return;
+        if (finish_dropdown_release(x, y)) return;
     }
     // THE CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
     // prompt opened by the press (or any other early return) must not strand a
@@ -2726,14 +2730,15 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // the walk needs no membership test beyond the open check.
 //
 // TWO CALLERS, AND EACH ANSWERS A QUESTION THE OTHER CANNOT (2026-08-03).
-// PER DELIVERED MOTION, from on_motion's open-dropdown branch: the arm must
-// follow the pointer at the granularity the RELEASE reads it, because
-// finish_dropdown_release acts on the arm and carries no position of its own —
-// its old position compare was deleted as structurally dead on the premise
-// "the arm is recomputed at EVERY delivered motion", and the platform's settled
-// hook does NOT run between the events one wl_display_dispatch_pending
-// delivers, so a batch carrying a motion onto item 2 and then the release would
-// fire item 1 if this call moved to the loop tail.
+// PER DELIVERED MOTION, from on_motion's open-dropdown branch: the settled hook
+// does NOT run between the events one wl_display_dispatch_pending delivers, so a
+// batch carrying a motion onto item 2 and then a PAINT would light item 1 on the
+// frame that batch produces if this call moved to the loop tail. THIS WALK SERVES
+// THE FACES, and the faces are consumed by the painter, which can run inside the
+// batch. The RELEASE no longer depends on it being last: finish_dropdown_release
+// re-reads the arm's own definition at the release's coordinates, because the
+// walk's INPUTS can move at that same in-batch paint (the whole argument, and the
+// equivalence that makes it safe, are at that function).
 // PER RUN-LOOP ITERATION, from main.cpp's settled hook: the INPUTS of this walk
 // move with no pointer event under them. The item rects are PAINTER-PUBLISHED
 // and are zero from the open until paint_dropdown publishes them, so a motion
@@ -2896,16 +2901,16 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // on the button coming UP. Returns true when the release belonged to the popup
 // and the caller must stop.
 //
-// IT ACTS ON THE ARM AND NEEDS NO POSITION OF ITS OWN, which is the whole
-// consequence of the arm following the pointer (recompute_dropdown_hover): the
-// armed item IS the item under the pointer and is the ONE item lit, so "the
-// release runs what is lit" and "the release runs the item under the pointer"
-// are one sentence. ARMED NOTHING — a claimed press (on an item, or on the
-// ANCHOR that opened the menu) standing over the separator, the chrome, the
-// anchor button itself or off the box — runs nothing, is consumed, and LEAVES
-// THE POPUP OPEN: that is the escape hatch for a press that landed on the wrong
-// row, and it is now the same act the user sees, since nothing was lit to
-// release onto.
+// IT ACTS ON THE ITEM UNDER THE POINTER, which is the arm's own DEFINITION
+// (recompute_dropdown_hover): the armed item IS the item under the pointer and
+// is the ONE item lit, so "the release runs what is lit" and "the release runs
+// the item under the pointer" are one sentence — and where the two clauses can
+// part company, this body reads the second (the derive, below). NOTHING UNDER
+// THE POINTER — a claimed press (on an item, or on the ANCHOR that opened the
+// menu) standing over the separator, the chrome, the anchor button itself or off
+// the box — runs nothing, is consumed, and LEAVES THE POPUP OPEN: that is the
+// escape hatch for a press that landed on the wrong row, and it is the same act
+// the user sees, since nothing was lit to release onto.
 //
 // THE TWO GESTURES MEET HERE, which is why the dismissal rule is stated at this
 // one site: DISMISSAL IS A PRESS ACT IN THIS PRODUCT and a release never
@@ -2917,21 +2922,62 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // return below. The two rules cannot overlap either — a press outside never
 // arms anything, so no release can be owed there.
 //
-// THE POSITION COMPARE THIS BODY CARRIED (the item under the release point
-// against the armed one, refusing when they differed) IS GONE AS STRUCTURALLY
-// DEAD, not as a tidy-up: with an item armed it could not be true. The arm is
-// recomputed at EVERY delivered motion while the press is live, and the
-// platform delivers a release at the coordinates of the last motion it
-// delivered — absolute motion is delivered synchronously (on_pointer_motion),
-// and the one deferred kind, a captured drag's coalesced relative motion, is
-// flushed immediately BEFORE any button event, with the held bit crossing on
-// the pre-release side so that flushed motion still reads the button as down
-// (flush_deferred_motion, platform_wayland.cpp). The release's own consumed
-// no-op case is the armed-nothing return above, which the compare never owned:
-// that one predates it and answers a press that armed nothing at all.
-bool GuiInputHandler::finish_dropdown_release() {
+// THE POSITION COMPARE THIS BODY ONCE CARRIED (the item under the release point
+// against the armed one, REFUSING when they differed) IS GONE AND STAYS GONE: it
+// was deleted as structurally dead under the premise "the arm is recomputed at
+// EVERY delivered motion", and with an item armed it could not be true. What
+// stands here now is the opposite act on the same coordinates — a DERIVE, which
+// ACTS on the freshest truth where the compare refused on disagreement.
+//
+// WHY THE DERIVE (2026-08-03, from codex): that premise has exactly ONE
+// exception, and it is not about motion at all. The item rects are
+// PAINTER-PUBLISHED and are zero from the open until paint_dropdown publishes
+// them, so they can move — from nothing to real — at a PAINT with no pointer
+// event between the publish and the release. paint_one_frame runs from the frame
+// callback, which wl_display_dispatch_pending delivers out of the same batch as
+// the pointer events, and the loop's settled tail runs only after the WHOLE
+// batch: one batch can therefore carry [frame done → rects published] and then
+// [the release], with nothing resolving the arm in between. Press the anchor,
+// flick onto an item and release inside the frame the menu came up in, and the
+// arm the release read was still the pre-paint -1 — the activation LOST, the
+// release consumed, the menu standing. Reading the definition at delivery time is
+// the premise's honest completion.
+//
+// IT CAN NEVER DISAGREE WITH A CORRECT ARM, which is what makes it a completion
+// rather than the compare's return: whenever the arm IS current, the recompute
+// set it from dropdown_item_at at app.last_mouse_x/y against the same published
+// rects, and the platform delivers a release AT THOSE COORDINATES — absolute
+// motion is delivered synchronously (on_pointer_motion) and the release carries
+// the platform's own pointer_x_/pointer_y_, while the one deferred kind, a
+// captured drag's coalesced relative motion, is flushed immediately BEFORE any
+// button event with the held bit crossing on the pre-release side so that flushed
+// motion still reads the button as down (flush_deferred_motion,
+// platform_wayland.cpp). Same expression, same coordinates, same rects: the two
+// answers are equal by construction wherever the arm is resolvable at all, and
+// where they differ the ARM is the stale one. So nothing that fires today stops
+// firing, and the stale-rect window stops swallowing an activation.
+//
+// THE ACCEPTED COSMETIC RESIDUE, stated rather than papered over: in exactly that
+// window the publish and the release are sub-frame apart, so the item ACTS
+// without its pressed face ever having been painted. A face nobody had time to
+// see is strictly better than an activation nobody gets.
+//
+// The release's own consumed no-op case is still the armed-nothing return below,
+// which the compare never owned either: it predates all of this and answers a
+// press that armed nothing at all.
+bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     if (!app.dropdown.open()) return false;
-    const int armed = app.dropdown.pressed_item;
+    // THE CLAIM IS THE GATE, NOT THE ARM. Only a press this popup owns can
+    // activate anything, so with no claim nothing is derived and the recorded arm
+    // answers — which is -1 in every reachable unclaimed state, the arm having
+    // exactly one writer that raises it (the item press, which also sets the
+    // claim) and being dropped together with the claim at the pointer-leave /
+    // capability-loss edge and by every close's struct reset. Deriving there
+    // instead would be the one behavior change this round refuses: a held button
+    // this popup never saw must not fire an item it happens to come up over.
+    const int armed = app.dropdown.press_began_on_item
+                          ? dropdown_item_at(x, y)
+                          : app.dropdown.pressed_item;
     // The press claim ends here whatever it armed, so nothing the pointer does
     // afterwards can move an arm this button-down no longer owns.
     app.dropdown.press_began_on_item = false;
@@ -3465,9 +3511,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // (the standing "self-corrects on the next motion" reading was true only
         // while the pointer kept moving, and it is retired).
         // THIS CALL STAYS ANYWAY, and per DELIVERED MOTION rather than per
-        // iteration: the release acts on the arm alone, and a dispatch batch can
-        // carry a motion and then the release with no loop tail in between (the
-        // full argument is at the definition).
+        // iteration: a dispatch batch can carry a motion and then a PAINT with no
+        // loop tail in between, and the faces this walk writes are what that paint
+        // reads. The RELEASE is no longer among its dependants — it derives the
+        // item from its own coordinates (the full argument is at the definition).
         // `mods` carries the platform's button state, which is what lets the arm
         // follow the pointer under a live press (the rule is at the definition).
         recompute_dropdown_hover(mods);

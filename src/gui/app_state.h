@@ -1840,8 +1840,12 @@ struct AppState {
     // That is what keeps EXACTLY ONE item distinguished at a time —
     // an arm that stayed where it went down lit the pressed face there while
     // `hovered_item` lit the hover face under the pointer, two lit items in a
-    // menu that shows one. The rule, and the release that follows from it, live
-    // at recompute_dropdown_hover (input_pointer.cpp).
+    // menu that shows one. The rule lives at recompute_dropdown_hover
+    // (input_pointer.cpp). THE RELEASE READS THAT SAME DEFINITION FOR ITSELF, at
+    // the coordinates the release carries (finish_dropdown_release), rather than
+    // this field: the rects the walk hit-tests are published by the PAINTER, and
+    // a paint can land between the last walk and the release inside one dispatch
+    // batch, so the act is derived where the face is remembered.
     // `press_began_on_item` is WHETHER THE HELD BUTTON BELONGS TO THIS POPUP'S
     // GESTURE — where it went down, NOT whether it is still down: the platform's
     // own tracking answers that (GuiInputState::primary_button_held), and the
@@ -1928,20 +1932,33 @@ struct AppState {
     // (the platform's accessor states why that is never visible).
     bool window_activated = false;
 
-    // Cursor screen position from the last on_motion event. Used by
-    // recompute_redesign_button_hover() — the one surviving hover — to
-    // re-evaluate the button faces from the tick when the cursor is stationary.
-    // -1 means "no motion seen yet".
+    // THE REMEMBERED POINTER POSITION, from the last on_motion event, and the
+    // source every pointer-derived answer re-reads when it has to re-resolve with
+    // no motion under it. -1 means "no motion seen yet". Its readers, each with
+    // its own cadence and its own reason:
+    //   * the ROSTER's button faces (recompute_redesign_button_hover), repaired
+    //     from the TICK, gated on "no pointer gesture" so the freeze-hover rule
+    //     holds — geometry and enabled-state changes move those faces under a
+    //     stationary cursor;
+    //   * the POINTER CURSOR (refresh_pointer_cursor) and the open dropdown's
+    //     ITEM FACES (recompute_dropdown_hover), both repaired from the run
+    //     loop's per-iteration SETTLED HOOK, because their inputs — about ten
+    //     fact families for the one, the painter-published item rects for the
+    //     other — settle with no pointer event of any kind under them.
+    // The dropdown's RELEASE is deliberately NOT a reader: it derives its item
+    // from the coordinates the release itself carries (finish_dropdown_release).
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
 
     // Is the pointer INSIDE the window? last_mouse_{x,y} keep the last position
     // the pointer was seen at, which is a point INSIDE the window even after it
-    // has left — so anything that re-resolves hover from those coordinates
-    // without this flag would re-light a button under a pointer that is gone.
-    // That matters because the hover recompute is no longer motion-only: the run
-    // loop's tick runs it too (so state and geometry changes that arrive without
-    // motion still re-resolve), and the tick keeps running after a leave.
+    // has left — so anything that re-resolves from those coordinates without this
+    // flag would answer for a pointer that is gone (a re-lit hover pill, a
+    // re-lit menu item, a cursor kind for a zone nobody is over). That is the
+    // shared guard of all three repairs above, each carrying it inside its OWN
+    // body rather than at its wiring: the tick and the settled hook keep running
+    // after a leave, and neither may resurrect what the pointer-leave hook just
+    // dropped.
     // Written at exactly two edges: true in on_motion, false in the
     // pointer-leave / capability-loss hook beside the hover and press clears.
     // Re-entry delivers a synthesized motion, which sets it back.

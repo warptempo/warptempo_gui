@@ -1157,10 +1157,12 @@ int main(int argc, char** argv) {
     // recompute_dropdown_hover returns immediately with no menu open and damages
     // only on a change, so the standing cost is a compare per wakeup.
     // IT DOES NOT REPLACE on_motion's call: that one is per DELIVERED MOTION, and
-    // the release acts on the arm alone (finish_dropdown_release, whose position
-    // compare was deleted as dead on exactly that premise) — a dispatch batch can
-    // carry a motion and then the release with no loop tail between them. The two
-    // callers answer different questions; the reasoning is at the definition.
+    // a dispatch batch can carry a motion and then the PAINT that reads these
+    // faces with no loop tail between them. What neither caller has to be is LAST
+    // before a release: the release derives its item from its own coordinates
+    // (finish_dropdown_release), precisely because this walk's inputs can move at
+    // an in-batch paint. The two callers answer different questions; the reasoning
+    // is at the definition.
     //
     // THE TWO ARE INDEPENDENT, so the order here is free: the zone map refuses
     // every cue while a popup is open and reads neither item face, and the
