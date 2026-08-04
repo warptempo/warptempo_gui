@@ -231,6 +231,17 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
+// The same land with the store lookup taken off the front: place the playhead on
+// an authored SOURCE frame directly, through the identical two-step basis and
+// the identical damage. It exists for the ONE caller holding a frame that
+// belongs to no store entry — the `/` history mode's focus click, whose removed
+// diff flags name frames the session no longer has — and land_playhead_on_marker
+// is its other caller, so the marker route and the frame route cannot drift.
+// Same contract otherwise: pure playhead write, no region, no selection,
+// read-only allowed.
+void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport, int64_t src_frame);
+
 // COINCIDENCE AUTO-SELECT — the entry counterpart of the never-park rule
 // (architect 2026-07-29): the selection is never stashed, so an ENTRY re-acquires
 // it from the playhead instead of from memory. Scans the ACTIVE column's store in
@@ -1490,4 +1501,32 @@ private:
     // Ctrl+Q). It serves all four editors, top strip included.
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
+
+    // THE `/` HISTORY MODE's three entry points (bodies in
+    // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The
+    // mode itself — what it shows, what opens and closes it, what it refuses and
+    // why its frozen diff cannot go stale — is stated ONCE at
+    // AppState::HistoryMode (app_state.h); each body states only its own
+    // membership.
+    //   * handle_history_mode_key owns `/`, `,` and `.`, all bare-exact, and
+    //     returns true when it consumed the press. Its position in on_key IS its
+    //     entry-gate list.
+    //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
+    //     blocked's shape: true when the press is not admitted while the mode
+    //     stands. The redesigned buttons and the Navigation menu's items reach it
+    //     through their synthesized chords, so it covers them too.
+    //   * handle_history_mode_press is the pointer half, and it both refuses and
+    //     acts: true when the press was consumed (either as the mode's own
+    //     lane-focus act or as a refusal), false for the navigation gestures the
+    //     mode lets through untouched.
+    //   * close_history_mode is the ONE exit owner; every closer calls it.
+    //   * drop_lane_stash_across_history_edge empties the marker lane's
+    //     published geometry at both mode edges, where its entries change
+    //     domain. Its own comment carries the argument.
+    bool handle_history_mode_key(GuiKey key, GuiInputState mods);
+    void drop_lane_stash_across_history_edge();
+    bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
+    bool handle_history_mode_press(GuiMouseButton button, int x, int y,
+                                   GuiInputState mods);
+    void close_history_mode();
 };

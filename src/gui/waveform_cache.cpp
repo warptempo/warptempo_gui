@@ -6,10 +6,13 @@
 #include "waveform_worker.h"
 #include "warp_frame_map.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <set>
+#include <string>
+#include <utility>
 #include <vector>
 
 // Waveform / flag cache production. The off-screen surfaces
@@ -695,6 +698,119 @@ uint64_t hash_selection(const std::set<int>& s,
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).
 
+namespace {
+
+// ONE DIFF FLAG'S LABEL, both columns, both sides. The shape is: the bracketed
+// SIGN, then — when the line has a payload at all — one space and that payload
+// VERBATIM, with the line's own `#` disable spelling in front of it.
+//
+// A WARP line's payload is its tempo token, so this reads `[+] 1.05` live and
+// `[+] #1.05` disabled. A PHASE RESET line has no payload — its frame is its
+// whole identity, and the frame is the column the flag stands on — so it reads
+// the bare `[-]` / `[+]`, with the disable spelling as its ONE payload when the
+// bit is set: `[+] #`.
+//
+// THAT LAST CASE IS THE DISABLE RULE APPLIED TO THE PHASE-RESET COLUMN RATHER
+// THAN AN EXTRA FORM, and it is what makes that column's CHANGED pair say
+// anything: a phase-reset same-frame change IS a disable toggle and nothing else
+// (the model pairs it for exactly that reason, history_diff.h), so a pair
+// spelled `[-]` beside `[+]` would be a double-width flag carrying no
+// information at all. With the prefix it reads `[-] #` beside `[+]`, which is
+// the toggle, in the file's own spelling.
+//
+// ASCII by construction: the two signs are literals and the tokens come from
+// sidecar grammars that are ASCII-only.
+std::string history_diff_label(const char* sign, bool disabled,
+                               const std::string& token) {
+    std::string out(sign);
+    if (disabled || !token.empty()) {
+        out += ' ';
+        if (disabled) out += '#';
+        out += token;
+    }
+    return out;
+}
+
+} // namespace
+
+void GuiPaintHandler::rebuild_history_diff_flags() {
+    std::vector<HistoryDiffFlag>& out = app.history_mode.flags;
+    out.clear();
+
+    const GuiHistoryCommitDelta* d =
+        app.history_mode.session.delta_at(app.history_mode.index);
+    if (!d) return;
+
+    // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
+    // the live lane walks: warp entries where warp flags paint, phase-reset
+    // entries where phase resets paint. The other column's delta is not shown —
+    // one lane, one column, and the mode is a view onto that lane.
+    if (app.active_markers_view == 'P') {
+        for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
+            HistoryDiffFlag f;
+            f.time_frame   = c.frame;
+            f.removed      = true;
+            f.added        = true;
+            f.removed_text = history_diff_label("[-]", c.then_disabled, {});
+            f.added_text   = history_diff_label("[+]", c.now_disabled, {});
+            out.push_back(std::move(f));
+        }
+        for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
+            HistoryDiffFlag f;
+            f.time_frame   = e.frame;
+            f.removed      = true;
+            f.removed_text = history_diff_label("[-]", e.disabled, {});
+            out.push_back(std::move(f));
+        }
+        for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
+            HistoryDiffFlag f;
+            f.time_frame = e.frame;
+            f.added      = true;
+            f.added_text = history_diff_label("[+]", e.disabled, {});
+            out.push_back(std::move(f));
+        }
+    } else {
+        for (const GuiHistoryWarpChange& c : d->warp_changed) {
+            HistoryDiffFlag f;
+            f.time_frame   = c.frame;
+            f.removed      = true;
+            f.added        = true;
+            f.removed_text =
+                history_diff_label("[-]", c.then_disabled, c.then_tempo_token);
+            f.added_text =
+                history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
+            out.push_back(std::move(f));
+        }
+        for (const GuiHistoryWarpEntry& e : d->warp_removed) {
+            HistoryDiffFlag f;
+            f.time_frame   = e.frame;
+            f.removed      = true;
+            f.removed_text =
+                history_diff_label("[-]", e.disabled, e.tempo_token);
+            out.push_back(std::move(f));
+        }
+        for (const GuiHistoryWarpEntry& e : d->warp_added) {
+            HistoryDiffFlag f;
+            f.time_frame = e.frame;
+            f.added      = true;
+            f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
+            out.push_back(std::move(f));
+        }
+    }
+
+    // PAINTED IN FRAME ORDER, which is the live lane's own reading order — its
+    // stores are time-ordered, so its flags run left to right and a later box
+    // covers an earlier one's tail. The three groups above arrive interleaved by
+    // frame otherwise, which would scatter the occlusion. The sort is STABLE, so
+    // coincident entries keep the group order they were built in — changed, then
+    // removed, then added — and the ADDED flag, the state the session actually
+    // holds, is the one on top.
+    std::stable_sort(out.begin(), out.end(),
+                     [](const HistoryDiffFlag& a, const HistoryDiffFlag& b) {
+                         return a.time_frame < b.time_frame;
+                     });
+}
+
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.loading || audio.total_frames() <= 0) return;
 
@@ -738,6 +854,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
          app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
             ? app.top_flag_editor.target : -1;
 
+    // THE HISTORY MODE'S THREE INPUTS (contract at the FlagCache fields).
+    const bool        history_active = app.history_mode.active;
+    const std::size_t history_index  = app.history_mode.index;
+    const int         history_focus  = app.history_mode.focus;
+
     const bool matches =
         flag_cache.surface &&
         flag_cache.fp_vp_start                == vp_start &&
@@ -752,7 +873,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_iteration_mode          == iter_on &&
-        flag_cache.fp_editing_flag_target     == editing_flag_target;
+        flag_cache.fp_editing_flag_target     == editing_flag_target &&
+        flag_cache.fp_history_active          == history_active &&
+        flag_cache.fp_history_index           == history_index &&
+        flag_cache.fp_history_focus           == history_focus;
 
     if (matches) return;
 
@@ -846,7 +970,28 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // that can report them. The active view supplies its own column's stash and
     // the other column's is not retained — hit tests and the stem pass are both
     // active-column-only.
-    if (mv == 'P') {
+    if (history_active) {
+        // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
+        // marker paints, and this arm becomes the producer of the same two
+        // stashes the two marker arms below produce — with `marker_index`
+        // carrying an index into app.history_mode.flags rather than into a
+        // store, which is what lets hit_test_flag serve the mode's focus click
+        // unchanged.
+        rebuild_history_diff_flags();
+        render_history_diff_flags(
+            ccr, local_top_strip, flag_lanes, wave_w,
+            app.history_mode.flags,
+            vp_start, vp_end,
+            history_focus,
+            &app.flag_hit_rects,
+            &app.marker_stems,
+            // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
+            // is an authored SOURCE frame exactly as a marker's is, in both
+            // stores, so target view translates it through the same segments and
+            // a removed marker lands on the column a live one at that frame
+            // would.
+            tmap_arg);
+    } else if (mv == 'P') {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;
         render_phase_reset_flags(
@@ -892,6 +1037,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_iteration_mode          = iter_on;
     flag_cache.fp_editing_flag_target     = editing_flag_target;
+    flag_cache.fp_history_active          = history_active;
+    flag_cache.fp_history_index           = history_index;
+    flag_cache.fp_history_focus           = history_focus;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

@@ -210,6 +210,187 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q);
 }
 
+// -- THE HISTORY MODE'S THREE KEYS AND ITS ONE KEYBOARD ALLOWLIST -----------
+//
+// The mode itself, what opens and closes it and why the frozen now side is safe
+// are all stated ONCE, at AppState::HistoryMode (app_state.h). What lives here
+// is the mechanism.
+
+// Leave the mode, clearing it WHOLE — the commit walk with it, so the next entry
+// re-inits and measures against the state at THAT moment. The one exit owner:
+// bare `/`, the adopt, and any future closer call this rather than clearing
+// fields themselves. Idempotent, so a closer may fire with the mode already down.
+void GuiInputHandler::close_history_mode() {
+    if (!app.history_mode.active) return;
+    app.history_mode = AppState::HistoryMode{};
+    drop_lane_stash_across_history_edge();
+    // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
+    // class): the lane swaps its whole content, the stems in the waveform swap
+    // with it, and the bottom strip's modal span gives its line back. Narrow
+    // damage would have to know all three, and none of them is worth a rect.
+    viewport.invalidate_all();
+}
+
+// DROP THE LANE'S PUBLISHED GEOMETRY AT EVERY MODE EDGE — both stashes, at the
+// entry, the exit and each commit step.
+//
+// The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK
+// by the flag cache's rebuild, so they legitimately run one frame behind a
+// press; the product accepts that lag deliberately and documents it at the
+// producer. What it cannot accept is what a MODE EDGE would otherwise do to it:
+// across this one edge the entries change DOMAIN, `marker_index` meaning a store
+// index on one side and an index into app.history_mode.flags on the other. A
+// press landing in the frame between the edge and the next tick would read the
+// old side's indices under the new side's rules — after an exit, selecting or
+// landing on whatever store marker happens to share a diff flag's ordinal, or
+// none at all.
+//
+// Clearing is the whole fix and it is the lane's own rule applied: nothing is
+// clickable that is not drawn, and for that one frame the answer to every lane
+// hit is "nothing", which is the correct cold answer rather than a wrong warm
+// one. The cost is the same frame's stems, absent instead of stale — and the
+// edge's own full-window damage is already repainting.
+void GuiInputHandler::drop_lane_stash_across_history_edge() {
+    app.flag_hit_rects.clear();
+    app.marker_stems.clear();
+}
+
+// `/`, `,` and `.` — the mode's whole keyboard surface, all three BARE-EXACT.
+// Returns true when the press was consumed.
+//
+// THE ENTRY GATES ARE POSITIONAL, NOT RE-TESTED, and that is the point: this is
+// reached from on_key's main body, BELOW every gate that must refuse an entry,
+// so each refusal is the existing gate's and there is no second copy to
+// drift. In on_key's own order — the prompt swallow (returns unconditionally),
+// the open dropdown (dropdown_key_blocked: every chord but Ctrl+Q is inert while
+// a popup is up), loading-or-absent audio (returns), the editor text drag, the
+// keyboard-modal editor gate (keyboard_modal_editor_active + modal_editor_key_-
+// blocked, and a printable `/` is a PrintableKey, so it is not merely dropped
+// but TYPED — the editor's own handler consumes it and returns above this
+// point), and the drag-modal gate (any live pointer gesture swallows every key
+// but Ctrl+Q). `,` and `.` inherit the identical list.
+//
+// ONLY `/` IS BOUND OUTSIDE THE MODE. `,` and `.` fall through to the ordinary
+// dispatch when it is down, where they remain the unbound no-ops they have
+// always been.
+bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
+    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
+    if (!bare) return false;
+
+    if (key == GuiKeys::Slash) {
+        if (app.history_mode.active) {
+            close_history_mode();
+            return true;
+        }
+        // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
+        // the visit must measure against the state the user is looking at.
+        AppState::HistoryMode fresh;
+        if (!fresh.session.init(app)) {
+            // UNAVAILABLE IS A CONSUMED NO-OP. init() has already put its own
+            // one line on stderr naming the reason, and that is the whole
+            // story — no new UI surface, no red flash, and above all no
+            // half-open mode.
+            return true;
+        }
+        fresh.active = true;
+        fresh.index  = 0;      // the newest commit
+        fresh.focus  = -1;
+        app.history_mode = std::move(fresh);
+        drop_lane_stash_across_history_edge();
+        viewport.invalidate_all();
+        return true;
+    }
+
+    if (!app.history_mode.active) return false;
+
+    // `,` steps OLDER (further back in the walk, index+1), `.` steps NEWER
+    // (index-1). Each CLAMPS at its wall as a consumed no-op — the walk has
+    // ends, and running off one must not wrap or refuse loudly.
+    if (key == GuiKeys::Comma || key == GuiKeys::Period) {
+        const std::size_t count = app.history_mode.session.commit_count();
+        const std::size_t here  = app.history_mode.index;
+        std::size_t there = here;
+        if (key == GuiKeys::Comma) {
+            if (here + 1 >= count) return true;   // oldest already
+            there = here + 1;
+        } else {
+            if (here == 0) return true;           // newest already
+            there = here - 1;
+        }
+        app.history_mode.index = there;
+        // THE MODE FOCUS CLEARS ON EVERY STEP: it indexes into the list the
+        // step is about to replace, so carrying it would light an unrelated
+        // flag — and the playhead it landed stays where it is, which is the
+        // navigation the click was.
+        app.history_mode.focus = -1;
+        // The lane's published geometry describes the commit that is leaving —
+        // same domain as the one arriving, so no index can be misread, but the
+        // FRAMES behind those rects are the old commit's until the next tick
+        // republishes. Dropping it makes the intervening frame answer "nothing"
+        // instead of landing the playhead on a flag that is no longer shown.
+        drop_lane_stash_across_history_edge();
+        viewport.invalidate_all();
+        return true;
+    }
+
+    return false;
+}
+
+// THE MODE'S KEYBOARD ALLOWLIST — the shape read_only_key_blocked has, and for
+// the same reason: one gate with a stated membership beats twenty scattered
+// refusals. True when the press is NOT admitted and should be dropped as a
+// consumed no-op.
+//
+// WHAT IS ADMITTED, the whole list:
+//   - Space (bare)          → the audition. Playback is RUNNING state, not
+//                             authored state; the frozen now side cannot see it.
+//   - = / - (bare)          → zoom in / out
+//   - 0 (bare)              → the overview toggle
+//   - PageUp/PageDown       → the paged viewport scroll
+//     (bare)                  — the three above are PURE VIEWPORT MOVES, which
+//                             is the mode's navigation vocabulary: the delta is
+//                             laid out on the viewport, so panning and zooming
+//                             it is reading it.
+//   - Ctrl+S                → the save. It writes the LIVE state, which is
+//                             exactly the now side the diff is measured against,
+//                             so it cannot make the display disagree with disk.
+//   - Ctrl+Q                → the close routing.
+// `/`, `,` and `.` never reach here — handle_history_mode_key consumes them one
+// line above.
+//
+// WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: the PLAYHEAD
+// steps and Home/End (they move the cursor, and in the marker lane the very same
+// press nudges a marker), `c` and `f` (a jump onto a live marker's focus, and a
+// session-state toggle), `t` / `p` / 1 / 2 / 3 and both Tab cycles (a view flip
+// would repaint half the story — the delta is column- AND view-shaped), `o`, and
+// BARE ESC. Esc carries no binding of the mode's own — the bare-Esc inventory
+// stays at six places — and admitting it only to reach the render cancel would
+// put this mode in the middle of that list for one arm's sake; a render started
+// before `/` runs to completion, and `/` gets its cancel back.
+//
+// THE REDESIGNED BUTTONS AND THE NAVIGATION MENU'S ITEMS PASS THROUGH HERE
+// UNCHANGED, which is why they need no rule of their own: both synthesize a
+// chord and call on_key (dispatch_redesign_chord and finish_dropdown_release),
+// so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
+// their keys do. The one non-chord route out of that row — the two dropdown
+// anchors — is shut at toggle_dropdown instead.
+bool GuiInputHandler::history_mode_key_blocked(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    const bool bare  = !ctrl && !shift && !alt;
+    const bool is_play_pause = is_play_pause_key(key, mods);
+    const bool is_zoom_symbol =
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
+    const bool is_zero  = (key == GuiKeys::Digit0 && bare);
+    const bool is_page_updown =
+        ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
+    const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
+    const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
+    return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
+             is_save || is_ctrl_q);
+}
+
 // THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is
 // one popup state and a dropdown is a dropdown (the Navigation menu joined
 // 2026-08-02 and needed nothing here: bare Esc stays the SIXTH bare-Esc binding
@@ -965,6 +1146,18 @@ bool GuiInputHandler::adopt_render_entry(
     // Every input is in hand and valid. Apply the recipe wholesale. The commit
     // tab is the tab the entry was dispatched from; its view-state band carries
     // the recipe trim that shaped this render.
+
+    // THE `/` HISTORY MODE ENDS HERE, on the first line past the last refusal
+    // and before the first store write. It is the one route in the product that
+    // replaces the authored state the mode's frozen now side was measured
+    // against, so leaving the mode standing would leave every flag in the lane
+    // describing a session that no longer exists. Placed at the MUTATOR rather
+    // than at the `'` key because this function is what performs the replacement
+    // — the opener is blocked by the mode's keyboard allowlist today, so the
+    // keyboard route cannot reach here at all, and the close belongs with the
+    // act rather than with one of its callers.
+    close_history_mode();
+
     const char commit_tab = settings->active_tab_view;
 
     std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();

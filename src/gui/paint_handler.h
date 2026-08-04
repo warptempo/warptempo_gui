@@ -255,6 +255,19 @@ struct FlagCache {
     // suppressed frame after the editor closed — and keep the drawn box while it
     // opened. Contract at render_flags' editing_marker_index (render.h).
     int       fp_editing_flag_target      = -1;
+    // THE HISTORY MODE'S THREE INPUTS (the `/` view — AppState::HistoryMode).
+    // While it stands this surface carries the shown commit's DELTA instead of
+    // any live marker, so what it must contain is decided by: whether the mode
+    // stands at all (entering and leaving both swap the whole lane), WHICH
+    // commit is shown (`,` / `.` step it), and which diff flag holds the mode's
+    // focus (a colour swap, exactly as the live selection hash is a field for
+    // the live lane). Nothing else about the mode can move without moving one of
+    // these: the delta of a given commit is fixed for the session's lifetime,
+    // and a re-entry re-inits behind an active bit that necessarily went false
+    // and back true.
+    bool        fp_history_active         = false;
+    std::size_t fp_history_index          = 0;
+    int         fp_history_focus          = -1;
 
     void destroy_surface() {
         if (surface) {
@@ -338,7 +351,11 @@ struct GuiPaintHandler {
     //     fp_active_markers_view;
     //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
     //     and fp_editing_flag_target (the open editor's marker, whose box this
-    //     pass SKIPS).
+    //     pass SKIPS);
+    //   - THE HISTORY MODE, three (2026-08-04): fp_history_active,
+    //     fp_history_index, fp_history_focus — the `/` view replaces the lane's
+    //     whole content, so these decide it as completely as the five
+    //     marker-driven fields decide the live one.
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a
@@ -347,6 +364,15 @@ struct GuiPaintHandler {
     // trim-stem cache's rebuild was the only other one) — see the staging
     // comment at its tail in waveform_cache.cpp.
     void maybe_rebuild_flag_cache();
+
+    // Resolve the history mode's CURRENT commit into app.history_mode.flags, the
+    // painted-order list the lane's diff pass consumes. Called from
+    // maybe_rebuild_flag_cache's history arm and nowhere else, so the list is
+    // rebuilt exactly when the surface that shows it is — one producer for the
+    // flags, their hit rects and their stems alike. A commit whose delta cannot
+    // be resolved (an out-of-range index, an unavailable session) yields an
+    // empty list, which paints an empty lane rather than a stale one.
+    void rebuild_history_diff_flags();
 
     // Force a synchronous waveform rebuild + fp_vp_* update for a user-driven
     // viewport jump. Renders into the live surface on the calling (main)

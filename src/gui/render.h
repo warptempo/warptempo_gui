@@ -438,6 +438,42 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
+// THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
+// row_5_lane_3_marker_green_{unselected,selected}.png and
+// row_5_lane_3_marker_red_{unselected,selected}.png (all four 56x17). They paint
+// the `/` history mode's marker lane, where a GREEN flag is a line the session
+// has and the shown commit did not (added) and a RED flag one the commit had and
+// the session dropped (removed). Each crop is read the same way the live marker
+// crops above are: column 0 is the 1px LEFT BORDER (#131516 in all four, the
+// same kMarkerFlagBorder the live classes take — one more agreeing sample), row
+// 0 away from the corners is the 1px TOP EDGE, and the interior modal value is
+// the FILL. The measured values, in that order:
+//   green unselected  fill #1abc9c  edge #0e6857
+//   green selected    fill #22f4cb  edge #138871
+//   red   unselected  fill #da4453  edge #79262e
+//   red   selected    fill #ff6c7b  edge #8e3c44
+//
+// SELECTION HERE IS THE MODE'S OWN FOCUS — at most one diff flag, set by a plain
+// click on it — and it is the same color swap the live lane's selection is,
+// which is why the crops come in pairs and both pairs are constants.
+//
+// THE RED PAIR IS SAMPLED AFRESH RATHER THAN REUSED, deliberately, even though
+// its values overlap the live red class's: kMarkerFlagFillRed / kMarkerFlagEdgeRed
+// above hold the SELECTED red crop's fill and edge while kMarkerStemRed holds
+// the UNSELECTED red crop's fill, so the live class's three constants are a
+// mixture of the two crops and cannot be re-read as a pair. Reconciling that is
+// a separately queued audit; these constants take the crops directly so this
+// mode's ladder is internally consistent whatever that audit concludes, and
+// nothing above is touched.
+inline constexpr GuiColor kHistoryAddedFill      = hex(0x1ABC9C);
+inline constexpr GuiColor kHistoryAddedEdge      = hex(0x0E6857);
+inline constexpr GuiColor kHistoryAddedFillSel   = hex(0x22F4CB);
+inline constexpr GuiColor kHistoryAddedEdgeSel   = hex(0x138871);
+inline constexpr GuiColor kHistoryRemovedFill    = hex(0xDA4453);
+inline constexpr GuiColor kHistoryRemovedEdge    = hex(0x79262E);
+inline constexpr GuiColor kHistoryRemovedFillSel = hex(0xFF6C7B);
+inline constexpr GuiColor kHistoryRemovedEdgeSel = hex(0x8E3C44);
+
 // THE BOX'S 1px LEFT BORDER (architect 2026-08-02). COLUMN 0 of all three
 // marker crops is #131516 for the crop's whole height: identical in the
 // unselected, the selected and the 17-row red shot, and the composite
@@ -1924,6 +1960,58 @@ void render_phase_reset_flags(cairo_t* cr,
                             std::vector<MarkerStem>* out_stems = nullptr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
+
+// ONE PREPARED DIFF FLAG for the `/` history mode's lane, in the ORDER it is
+// painted and published. The caller (maybe_rebuild_flag_cache) resolves the
+// commit's delta into these; this file only paints what it is handed, so the
+// diff model's types never reach the renderer.
+//
+// THE FRAME FIELD IS NAMED time_frame ON PURPOSE: it is what the shared column
+// mapper iterate_visible_flags_impl reads off a marker, so a diff flag rides the
+// EXACT expression a live marker rides — same map, same viewport, same width,
+// same nearbyint — rather than a second spelling of it.
+//
+// The two halves are independent bools rather than an enum because the CHANGED
+// case is exactly "both": one double-width flag, the removed half left and red,
+// the added half right and green.
+struct HistoryDiffFlag {
+    int64_t     time_frame = 0;
+    bool        removed    = false;   // the commit had this line
+    bool        added      = false;   // the session has this line
+    std::string removed_text;
+    std::string added_text;
+};
+
+// THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
+// flags wholesale while the mode stands: no live marker paints, and this pass
+// becomes the producer of the same two stashes they produce (out_hit_rects with
+// `marker_index` carrying the INDEX INTO `flags`, out_stems the same), so
+// hit_test_flag keeps working unchanged and answers a diff-flag index.
+//
+// THE ANATOMY IS THE LIVE FLAG'S, one class ladder narrower: the 1px left
+// border outside the fill (kMarkerFlagBorder, class-invariant here as there), a
+// full-lane-height fill, a 1px top edge, and the label on the redesign's sans at
+// the lane baseline. A CHANGED pair is that same box at double width — the
+// halves' own fills and top edges side by side with NO border column at the seam
+// (the fill boundary is the seam) and ONE border column wrapping the whole, at
+// its left. The top edge splits with the halves because it is part of each
+// half's face; it runs horizontally and so is never a divider.
+//
+// `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
+// swaps that flag to its class's selected pair, both halves of a double flag
+// together. The STEM reads the class alone, never the focus, exactly as the live
+// lane's does — and a CHANGED pair stems RED, deferring to the old.
+void render_history_diff_flags(cairo_t* cr,
+                               GuiRect top_strip_area,
+                               FlagLaneRects lanes,
+                               int waveform_width,
+                               const std::vector<HistoryDiffFlag>& flags,
+                               long long viewport_start_sample,
+                               long long viewport_end_sample,
+                               int focus_index,
+                               std::vector<FlagHitRect>* out_hit_rects,
+                               std::vector<MarkerStem>* out_stems,
+                               const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
 // Iteration-aware flag text composer. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-

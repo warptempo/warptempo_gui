@@ -413,6 +413,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // cursor writes (move_playhead_to's scanner-inactive
 // convention). External linkage (declared in input_handler.h) so undo.cpp and
 // the ops/views TUs can reach it.
+// THE STORE LOOKUP IS ALL THIS FUNCTION ADDS to the one below it. Resolving the
+// index to an authored frame is the marker-shaped half; the two-step placement
+// basis and the damage are the frame-shaped half, hoisted into
+// land_playhead_on_source_frame so a caller holding a frame that belongs to NO
+// store entry — the `/` history mode's diff flags, whose removed lines exist in
+// no store at all — lands through the identical expression instead of a second
+// copy of it. Everything the list above says about WHEN a land happens and what
+// it must not touch governs both halves alike.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
     int64_t src_frame = 0;
@@ -426,27 +434,31 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
         if (hit < 0 || hit >= static_cast<int>(mv.size())) valid = false;
         else src_frame = mv[hit].time_frame;
     }
-    if (valid) {
-        int64_t sample = source_frame_to_active_domain(app, audio, src_frame);
-        sample = clamp_playhead_to_live_domain(sample, app, audio);
-        // IDEMPOTENCE ONLY, carrying no semantics: a land onto the sample the
-        // playhead already holds writes the same value and moves no pixel, so
-        // there is nothing to damage. It decides nothing about the region — the
-        // caller's own clear (when the caller is a point command) runs either
-        // way, before or after this call. Compared AFTER the clamp, because the
-        // clamp is what decides where the land actually seats.
-        if (sample == app.playhead_cursor_sample) return;
-        app.playhead_cursor_sample = sample;
-        // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
-        // old/new column pair computed on the LIVE viewport): the cursor's
-        // pixels are PLATE-registered, and this free helper takes no
-        // GuiPaintHandler, so it widens rather than adding one — a land is a
-        // discrete command and a full-area invalidate cannot ride the wrong
-        // epoch. Rule and per-site shape table at playhead_pixel_x
-        // (app_state.h).
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-    }
+    if (valid) land_playhead_on_source_frame(app, audio, viewport, src_frame);
+}
+
+// The frame-shaped half, above. Its own two decisions:
+void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport, int64_t src_frame) {
+    int64_t sample = source_frame_to_active_domain(app, audio, src_frame);
+    sample = clamp_playhead_to_live_domain(sample, app, audio);
+    // IDEMPOTENCE ONLY, carrying no semantics: a land onto the sample the
+    // playhead already holds writes the same value and moves no pixel, so
+    // there is nothing to damage. It decides nothing about the region — the
+    // caller's own clear (when the caller is a point command) runs either
+    // way, before or after this call. Compared AFTER the clamp, because the
+    // clamp is what decides where the land actually seats.
+    if (sample == app.playhead_cursor_sample) return;
+    app.playhead_cursor_sample = sample;
+    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
+    // old/new column pair computed on the LIVE viewport): the cursor's
+    // pixels are PLATE-registered, and this free helper takes no
+    // GuiPaintHandler, so it widens rather than adding one — a land is a
+    // discrete command and a full-area invalidate cannot ride the wrong
+    // epoch. Rule and per-site shape table at playhead_pixel_x
+    // (app_state.h).
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
 }
 
 // COINCIDENCE AUTO-SELECT (architect 2026-07-29, the entry half of THE SELECTION
@@ -648,7 +660,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
     // bound-set clicks). The presses gate on the top strip first and so does this.
     const GuiRect trim_bar_row = top_trim_row_area(app);
+    // THE `/` HISTORY MODE REFUSES THIS BAND AND ONLY THIS BAND, which is why it
+    // enters the map HERE rather than as a fourth blanket return above. The mode
+    // is PER-ZONE exactly as read-only is: the Pan, the Zoom (both entries) and
+    // the Scrub stay live under it — they are its navigation vocabulary — while
+    // all three TRIM gestures are consumed no-ops, so all three trim cues must
+    // go. Emptying the band here is the whole change: the plain arm falls past
+    // its endcap/bridge branch to the Arrow, the ctrl arm to the waveform's own
+    // Zoom-or-Arrow question, and the ctrl+shift arm to the Arrow it already
+    // returns everywhere else.
     const bool in_trim_bar = inside_top &&
+                             !app.history_mode.active &&
                              y >= trim_bar_row.y &&
                              y < trim_bar_row.y + trim_bar_row.h;
 
@@ -1259,6 +1281,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // should still be held down for a drag to exist).
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
+
+    // THE `/` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
+    // and the second and last of the mode's two gates.
+    //
+    // PLACED BELOW THE FOUR REDESIGNED ROWS' BAND CLAIMS ON PURPOSE. Those rows
+    // dispatch their buttons as synthesized CHORDS through on_key, so they are
+    // already covered by the keyboard gate — Save, Undo, Redo, Render and the
+    // view bar drop there exactly as their keys do, with no second membership to
+    // keep in step — and letting them through here is what keeps that single
+    // coverage true. The row's one non-chord pair, the Settings and Navigation
+    // anchors, is shut at toggle_dropdown instead.
+    if (app.history_mode.active &&
+        handle_history_mode_press(button, x, y, mods)) {
+        return;
+    }
 
     // RIGHT-CLICK ANYWHERE ON THE WAVEFORM IS A SCRUB (architect 2026-08-01) —
     // the right button's FIRST and ONLY binding in the product. The lower-half
@@ -3057,6 +3094,97 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
 // and it re-arms on the line after its call to this. It is the only site in the
 // tree that writes that bit true outside toggle_dropdown's open.
+// THE `/` HISTORY MODE's POINTER ALLOWLIST, and its one act. True = the press is
+// CONSUMED here (refused outright, or handled as the mode's lane-focus click);
+// false = the press is one of the navigation gestures the mode leaves alone, and
+// on_button_press proceeds with it untouched.
+//
+// WHAT PASSES THROUGH, the whole list — the mode's navigation vocabulary, the
+// pointer half of what history_mode_key_blocked admits on the keyboard:
+//   * the RIGHT button, whole. Its one and only binding in the product is the
+//     full-height waveform scrub; the arm's own bare-exactness, its
+//     gesture-in-flight gate and its gutter no-op all still apply below.
+//   * ALT-exact over the waveform — the captured grab-pan.
+//   * CTRL-exact over the waveform — the dual-axis strip drag. Ctrl+Shift is NOT
+//     admitted anywhere: over the waveform it is already a no-op, and over the
+//     TRIM BAR it sets the end bound, which is a write.
+//   * a PLAIN press in the RULER band — the strip drag's other entry.
+//   * a PLAIN press in the waveform's LOWER HALF — the scrub.
+//
+// THE ONE ACT: a PLAIN press in the MARKER LANE is the mode's own focus click.
+// On a diff flag it takes the mode's focus (at most one, painted in its class's
+// selected pair) and LANDS THE PLAYHEAD on that flag's authored frame — pure
+// navigation, through the same owner every marker land uses, and it touches
+// NOTHING else: no store selection, no live focus, no auto-select, no region.
+// On empty lane it clears the focus and lands nothing. A modified press over the
+// lane is a consumed nothing like every other unlisted press, since only the
+// bare arm reaches here.
+//
+// EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks and their drag arm,
+// the empty-lane marker drop, the trim bar's three routes, the upper-half
+// placement press and its region arm, and every unbound modifier combination.
+bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
+                                                int x, int y,
+                                                GuiInputState mods) {
+    if (button == GuiMouseButton::Right) return false;
+    if (button != GuiMouseButton::Left)  return true;
+
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+
+    // The waveform BAND, spelled as on_button_press spells it (the inert right
+    // gutter counts as waveform by the user's lights).
+    const GuiRect area = waveform_area(app);
+    const GuiRect top  = top_strip_area(app);
+    const bool inside_waveform =
+        x >= area.x && x < top.x + top.w &&
+        y >= area.y && y < area.y + area.h;
+
+    if (alt && !ctrl && !shift) return !inside_waveform;
+    if (ctrl && !shift && !alt) return !inside_waveform;
+    if (ctrl || shift || alt)   return true;
+
+    // Plain from here. The two bands are tested by y alone, exactly as their own
+    // claims test them: both lie inside the top strip, which spans the full
+    // window width.
+    {
+        const GuiRect ruler = top_ruler_row_area(app);
+        if (y >= ruler.y && y < ruler.y + ruler.h) return false;
+    }
+    if (inside_waveform && waveform_lower_half(area, y)) return false;
+
+    const GuiRect lane = top_marker_row_area(app);
+    if (y >= lane.y && y < lane.y + lane.h) {
+        // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
+        // painter's stash holds the diff flags' rects, published by the same
+        // pass that built app.history_mode.flags, so the index it returns is an
+        // index into that list — a double-width changed pair claiming as the one
+        // rect it is painted as. A cold stash answers -1, which is the
+        // empty-lane answer and is correct: nothing is clickable that is not
+        // drawn.
+        const int hit = hit_test_flag(app, audio, x, y);
+        const int was = app.history_mode.focus;
+        app.history_mode.focus =
+            (hit >= 0 &&
+             hit < static_cast<int>(app.history_mode.flags.size())) ? hit : -1;
+        if (app.history_mode.focus >= 0) {
+            land_playhead_on_source_frame(
+                app, audio, viewport,
+                app.history_mode.flags[
+                    static_cast<std::size_t>(app.history_mode.focus)].time_frame);
+        }
+        // A DISCRETE COMMAND: full-window damage when the focus actually moved
+        // (the flag's colour swaps and its stem stays put), and none when it did
+        // not — a re-click on the focused flag re-lands a playhead that is
+        // already there, and the land owner is itself idempotent.
+        if (was != app.history_mode.focus) viewport.invalidate_all();
+        return true;
+    }
+
+    return true;
+}
+
 void GuiInputHandler::close_dropdown() {
     app.dropdown.menu_row_armed = false;
     if (!app.dropdown.open()) return;
@@ -3067,6 +3195,24 @@ void GuiInputHandler::close_dropdown() {
 }
 
 void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
+    // A POPUP AND THE `/` HISTORY MODE ARE NEVER UP TOGETHER, and this is the
+    // half of that rule the mode cannot enforce from its own gates: the mode
+    // refuses to OPEN while a popup stands (the entry sits below on_key's
+    // dropdown gate), and this line refuses the popup while the MODE stands. The
+    // guard belongs here for the same reason the flag-editor teardown below
+    // does — this is the ONE route every open passes, the anchor click, the
+    // hover switch and the armed re-open alike.
+    //
+    // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS. Every other route
+    // out of row 1 dispatches a synthesized chord through on_key and so meets
+    // the mode's keyboard allowlist; the two anchors do not, and a Settings item
+    // opens the settings editor by a DIRECT call (finish_dropdown_release),
+    // reaching no gate at all. Refusing the menu is one line where covering that
+    // path per item would be several.
+    //
+    // Above the close below, and safely so: no menu can be open here, since the
+    // mode could not have been entered with one up nor a menu opened since.
+    if (app.history_mode.active) return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on the OTHER menu's
     // button switches — the close below runs first, damaging the box that is

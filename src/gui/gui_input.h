@@ -40,6 +40,7 @@ namespace GuiKeys {
     constexpr GuiKey Comma        = 0x002c;
     constexpr GuiKey Minus        = 0x002d;
     constexpr GuiKey Period       = 0x002e;
+    constexpr GuiKey Slash        = 0x002f;
     constexpr GuiKey Colon        = 0x003a;
     constexpr GuiKey Semicolon    = 0x003b;
     constexpr GuiKey Equal        = 0x003d;

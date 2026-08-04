@@ -386,6 +386,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // THE `/` HISTORY MODE — its three keys, then its allowlist. Placed HERE,
+    // directly under the drag-modal gate and directly over the read-only one,
+    // and the position carries two facts rather than being a convenience.
+    //
+    // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt, an open
+    // dropdown, loading-or-absent audio, the editor text drag, any of the four
+    // keyboard-modal editors and any live pointer gesture all swallow the press
+    // above this line, so `/` cannot open the mode in any of those states and no
+    // predicate is re-tested here to say so. The full statement is at
+    // handle_history_mode_key.
+    //
+    // (2) THE READ-ONLY BIT IS IRRELEVANT TO THE MODE, and being above that gate
+    // is what makes it so: the mode gates by itself, in both tabs and both
+    // views, so `/`, `,` and `.` never meet the read-only allowlist and need no
+    // entry in it. A locked tab reads history exactly as a writable one does —
+    // it is a viewer either way.
+    if (handle_history_mode_key(key, mods)) return;
+    if (app.history_mode.active && history_mode_key_blocked(key, mods)) return;
+
     // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
     // out every authoring chord while admitting navigation, playback,
     // view-switching, the close-prompt routing, and the bare-o

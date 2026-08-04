@@ -3581,6 +3581,59 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             assembled += label;
         }
         show_row_text(cr, font, sec.c_x, baseline, assembled, kRedesignLabel);
+    } else if (app.history_mode.active) {
+        // THE `/` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
+        // three bottom-strip editors paint in, which it can never contend with:
+        // the mode refuses to open with an editor up and its keyboard allowlist
+        // refuses every opener while it stands. It ranks directly under the
+        // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and over the
+        // queue status, the editors and the readout, because while the mode
+        // stands this line is what the strip is for.
+        //
+        // THE SHAPE: the commit's position in the walk and its short SHA, then
+        // the scale. `Scale: <token>` when the two sides agree; `Scale: [-] <then
+        // token> [+] <now token>` when they do not, in the lane's own sign
+        // vocabulary. A side carrying no `scale=` line at all has an EMPTY token
+        // and shows as nothing after its sign; when BOTH are empty the Scale
+        // segment is omitted whole rather than printing a bare label.
+        //
+        // THE POSITION/SHA LEAD-IN IS THE PLANNER'S CHOICE, flagged for the
+        // architect's live pass — it is one `if` and one `+=`, deliberately
+        // removable without touching the scale half.
+        //
+        // Plain label ink (kRedesignLabel) through show_row_text, matching the
+        // prompt branch above and the transient-message and readout branches
+        // below: this is a passive report, not an editor, so it takes no caret,
+        // no prefix face and no flash.
+        std::string line;
+        const std::size_t count = app.history_mode.session.commit_count();
+        if (count > 0) {
+            line += std::to_string(app.history_mode.index + 1);
+            line += '/';
+            line += std::to_string(count);
+            const std::string& sha =
+                app.history_mode.session.sha_at(app.history_mode.index);
+            if (!sha.empty()) {
+                line += ' ';
+                line += sha.substr(0, 7);
+            }
+        }
+        const GuiHistoryCommitDelta* d =
+            app.history_mode.session.delta_at(app.history_mode.index);
+        if (d && !(d->then_scale_token.empty() && d->now_scale_token.empty())) {
+            if (!line.empty()) line += ' ';
+            line += "Scale:";
+            if (d->scale_changed) {
+                line += " [-] ";
+                line += d->then_scale_token;
+                line += " [+] ";
+                line += d->now_scale_token;
+            } else {
+                line += ' ';
+                line += d->now_scale_token;
+            }
+        }
+        show_row_text(cr, font, sec.c_x, baseline, line, kRedesignLabel);
     } else if (!app.queue_progress_text.empty()) {
         // The render/batch/queue status AND the startup "loading..." line —
         // one slot, and the reason this painter runs on the loading frame class

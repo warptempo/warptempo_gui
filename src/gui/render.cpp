@@ -758,7 +758,16 @@ void iterate_visible_flags_impl(
     long long viewport_end_sample,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
-    bool iteration_on,
+    // The LEFT cull's width bound in pixels — how far left of the viewport a box
+    // may open and still reach into it. A caller-supplied number rather than a
+    // derivation here because the callers do not share one width family: the
+    // marker columns pass marker_flag_max_width_px(iteration_on), a constant
+    // bound their nine-glyph label budget guarantees, while the history mode's
+    // diff lane does not truncate at all and derives its bound from the commit's
+    // own longest label. A bound over-admits a handful of offscreen items per
+    // frame and never drops a visible one, so the only requirement is that it
+    // not UNDER-state.
+    double cull_width_px,
     Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -774,12 +783,9 @@ void iterate_visible_flags_impl(
     // THE CULL IS ASYMMETRIC BECAUSE THE BOX IS. A flag opens at its column and
     // runs RIGHTWARD, so a marker to the LEFT of the viewport can still reach
     // into it (by up to a full box width) while a marker AT OR PAST the right
-    // edge can show nothing at all. The left margin is the width BOUND
-    // (marker_flag_max_width_px) rather than the real width, which is not known
-    // until the label is shaped — a bound over-admits a handful of offscreen
-    // markers per frame and never drops a visible one. `iteration_on` widens it
-    // by the iter bracket's own glyphs, which the budget does not cover; the
-    // reasoning is at the bound.
+    // edge can show nothing at all. The left margin is a width BOUND rather than
+    // the real width, which is not known until the label is shaped; the caller
+    // supplies it (see cull_width_px above).
     //
     // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
     // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
@@ -791,8 +797,7 @@ void iterate_visible_flags_impl(
     // every grid-aligned surface. "At or past the right edge shows nothing" is
     // the stated rule; this is it spelled.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
-                           marker_flag_max_width_px(iteration_on) *
-                               samples_per_pixel;
+                           cull_width_px * samples_per_pixel;
     const double cull_hi = static_cast<double>(viewport_end_sample);
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
@@ -1039,7 +1044,11 @@ void render_flag_boxes_impl(
 
     iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay, iteration_on,
+                               warp_frame_map, drag_overlay,
+                               // `iteration_on` widens the bound by the iter
+                               // bracket's own glyphs, which the label budget
+                               // does not cover; the reasoning is at the bound.
+                               marker_flag_max_width_px(iteration_on),
         [&](int i, double left_x) {
             // label_of returns the composed text WITH its exempt span (see
             // FlagLabelText); the cap spends the budget on the rest.
@@ -1264,6 +1273,197 @@ void render_phase_reset_flags(cairo_t* cr,
         /*suppress_box_index=*/-1,
         // No bracket on this column, so the cull's bound needs no widening.
         /*iteration_on=*/false);
+}
+
+void render_history_diff_flags(
+        cairo_t* cr,
+        GuiRect top_strip_area,
+        FlagLaneRects lanes,
+        int waveform_width,
+        const std::vector<HistoryDiffFlag>& flags,
+        long long viewport_start_sample,
+        long long viewport_end_sample,
+        int focus_index,
+        std::vector<FlagHitRect>* out_hit_rects,
+        std::vector<MarkerStem>* out_stems,
+        const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+    // The same clear-first contract the two marker painters carry: this pass is
+    // the SOLE producer of both stashes while the history mode stands, so a
+    // frame that paints nothing must leave nothing claimable behind.
+    if (out_hit_rects) out_hit_rects->clear();
+    if (out_stems)     out_stems->clear();
+    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+
+    const GuiRect lane = lanes.marker_lane;
+    if (lane.h <= 0) return;
+
+    cairo_save(cr);
+    // The redesign's one sans face, set once for the pass — the text_shape
+    // precondition (shape with the font you paint with), exactly as
+    // render_flag_boxes_impl sets it.
+    cairo_select_font_face(cr, "sans",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int    pad_l    = marker_flag_pad_left_px();
+    const int    pad_r    = marker_flag_pad_right_px();
+    const int    edge_h   = marker_flag_edge_h_px();
+    const int    border_w = marker_flag_border_px();
+    const double baseline = static_cast<double>(lane.y) +
+                            static_cast<double>(marker_flag_baseline_px());
+
+    // THE LEFT CULL'S BOUND, DERIVED FROM THIS COMMIT'S OWN TEXT rather than
+    // from the lane's nine-glyph budget, because THESE LABELS ARE NOT CAPPED.
+    // The live lane truncates because a marker label is free text the user types
+    // and a runaway one would swamp its neighbours; a diff flag's label is the
+    // SIDECAR'S OWN TOKEN with a four-byte sign prefix, and cutting it would
+    // throw away the one thing the flag exists to show — a `[-] chorus=1.05`
+    // capped at nine budgeted bytes reads `[-] choru...`, which names neither
+    // the label nor the value. So the text prints whole and the bound follows
+    // it: one byte per em is the same over-estimate marker_flag_max_width_px
+    // makes (no ASCII glyph on this face advances a full em at these sizes), and
+    // an over-estimate is exactly what a cull bound must be.
+    double widest_bytes = 0.0;
+    for (const HistoryDiffFlag& f : flags) {
+        const double n = static_cast<double>(f.removed_text.size() +
+                                             f.added_text.size());
+        if (n > widest_bytes) widest_bytes = n;
+    }
+    const double cull_width_px =
+        widest_bytes * redesign_font_size_px() +
+        2.0 * static_cast<double>(pad_l + pad_r) +
+        static_cast<double>(border_w);
+
+    iterate_visible_flags_impl(
+        top_strip_area, waveform_width, flags,
+        viewport_start_sample, viewport_end_sample,
+        warp_frame_map,
+        // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
+        // marker drag can be in flight while this pass runs — and a diff flag is
+        // not a marker in any store, so nothing could index it anyway.
+        /*drag_overlay=*/nullptr,
+        cull_width_px,
+        [&](int i, double left_x) {
+            const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
+            // THE MODE'S OWN FOCUS, not the live selection: one flag at most,
+            // and BOTH HALVES of a changed pair take their own class's selected
+            // pair together — a double flag is one item, so it lights as one.
+            const bool focused = (i == focus_index);
+
+            text_shape::ShapedRun run_removed;
+            text_shape::ShapedRun run_added;
+            int w_removed = 0;
+            int w_added   = 0;
+            if (f.removed) {
+                run_removed = text_shape::shape_text_run(font, f.removed_text);
+                w_removed = pad_l + pad_r +
+                    static_cast<int>(std::nearbyint(run_removed.width_px));
+            }
+            if (f.added) {
+                run_added = text_shape::shape_text_run(font, f.added_text);
+                w_added = pad_l + pad_r +
+                    static_cast<int>(std::nearbyint(run_added.width_px));
+            }
+            const int bw = w_removed + w_added;
+            // A flag with neither half is not constructible by the resolver
+            // above; the guard keeps a degenerate one from publishing a
+            // zero-width claim.
+            if (bw <= 0) return;
+
+            const int bx = static_cast<int>(std::nearbyint(left_x));
+
+            const GuiColor removed_fill =
+                focused ? kHistoryRemovedFillSel : kHistoryRemovedFill;
+            const GuiColor removed_edge =
+                focused ? kHistoryRemovedEdgeSel : kHistoryRemovedEdge;
+            const GuiColor added_fill =
+                focused ? kHistoryAddedFillSel : kHistoryAddedFill;
+            const GuiColor added_edge =
+                focused ? kHistoryAddedEdgeSel : kHistoryAddedEdge;
+
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            // ONE BORDER COLUMN FOR THE WHOLE BOX, outside the fill at its left
+            // — the live lane's own geometry, and the reason a changed pair
+            // carries NO column at the seam: the border marks where the flag
+            // starts, and a changed pair is one flag. Its colour is
+            // kMarkerFlagBorder undamped: the disabled blend is a LIVE-marker
+            // face and this lane paints no live markers, so there is nothing
+            // here for a class ladder to choose between.
+            cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                                 kMarkerFlagBorder.b);
+            cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
+            cairo_fill(cr);
+            // The halves, left (removed / red) then right (added / green). Each
+            // takes its own fill for the lane's full height and its own 1px top
+            // edge over its own width: the edge runs HORIZONTALLY and so is
+            // never the divider the seam must not have — the fills meeting is
+            // the seam, and nothing is drawn on it.
+            if (w_removed > 0) {
+                cairo_set_source_rgb(cr, removed_fill.r, removed_fill.g,
+                                     removed_fill.b);
+                cairo_rectangle(cr, bx, lane.y, w_removed, lane.h);
+                cairo_fill(cr);
+                cairo_set_source_rgb(cr, removed_edge.r, removed_edge.g,
+                                     removed_edge.b);
+                cairo_rectangle(cr, bx, lane.y, w_removed, edge_h);
+                cairo_fill(cr);
+            }
+            if (w_added > 0) {
+                cairo_set_source_rgb(cr, added_fill.r, added_fill.g,
+                                     added_fill.b);
+                cairo_rectangle(cr, bx + w_removed, lane.y, w_added, lane.h);
+                cairo_fill(cr);
+                cairo_set_source_rgb(cr, added_edge.r, added_edge.g,
+                                     added_edge.b);
+                cairo_rectangle(cr, bx + w_removed, lane.y, w_added, edge_h);
+                cairo_fill(cr);
+            }
+            cairo_restore(cr);
+
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            if (w_removed > 0) {
+                text_shape::show_shaped_run(
+                    cr, run_removed, static_cast<double>(bx + pad_l), baseline);
+            }
+            if (w_added > 0) {
+                text_shape::show_shaped_run(
+                    cr, run_added,
+                    static_cast<double>(bx + w_removed + pad_l), baseline);
+            }
+
+            if (out_hit_rects) {
+                // THE WHOLE BOX, BORDER INCLUDED, and a changed pair claims as
+                // ONE rect — which is what makes the mode's focus click land on
+                // one item however wide it is painted.
+                FlagHitRect r;
+                r.marker_index = i;
+                r.x = static_cast<double>(bx - border_w);
+                r.y = static_cast<double>(lane.y);
+                r.w = static_cast<double>(bw + border_w);
+                r.h = static_cast<double>(lane.h);
+                out_hit_rects->push_back(r);
+            }
+            if (out_stems) {
+                // THE STEM READS THE CLASS ALONE, never the focus — the live
+                // lane's rule, and here the class is "does the commit still have
+                // this line": a removed or CHANGED entry stems red (deference to
+                // the old, the architect's ruling for the pair), a purely added
+                // one green. Both classes always stem: the no-stem rule belongs
+                // to live DISABLED markers, and a diff flag for a disabled line
+                // is a diff flag like any other.
+                out_stems->push_back(
+                    MarkerStem{i, static_cast<double>(bx),
+                               f.removed ? kHistoryRemovedFill
+                                         : kHistoryAddedFill});
+            }
+        });
+
+    cairo_restore(cr);
 }
 
 namespace {

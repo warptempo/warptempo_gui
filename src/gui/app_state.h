@@ -2,6 +2,7 @@
 
 #include "engine_settings.h"
 #include "gui_input.h"
+#include "history_diff.h"
 #include "render_pipeline.h"
 #include "render.h"
 #include "settings_file.h"
@@ -1935,6 +1936,76 @@ struct AppState {
         bool open() const { return menu != DropdownMenu::None; }
     };
     Dropdown dropdown;
+
+    // THE GITHUB RECHECK'S HISTORY VIEW — a READ-ONLY MODE over the committed
+    // sidecar history of the loaded source (the model, and what "committed
+    // history" means here, are at GuiHistoryDiff, history_diff.h).
+    //
+    // WHAT IT SHOWS. While it stands the marker lane paints NO live marker.
+    // In their place it paints ONE COMMIT'S DELTA against the session: a GREEN
+    // flag per line the session has and that commit did not, a RED flag per line
+    // that commit had and the session dropped, and ONE DOUBLE-WIDTH flag per
+    // same-frame pair (red half then, green half now). The flags sit at their
+    // authored frames through the live lane's own column mapping, so a removed
+    // marker stands exactly where it stood. The bottom strip's modal span
+    // carries the commit's position, its short SHA and its `scale=` value.
+    //
+    // WHAT OPENS IT: bare `/`, and nothing else. The key reaches the toggle only
+    // from on_key's main body, so every gate above that point is an entry
+    // refusal for free — a prompt, any of the four editors, an open dropdown,
+    // loading or absent audio, and any live pointer gesture (the authoritative
+    // ordering is at the gate itself, handle_history_mode_key in
+    // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
+    // its own reason on stderr and the mode simply does not open.
+    //
+    // WHAT CLOSES IT, the whole list: bare `/` again; the `'` render-entry adopt
+    // (which rewrites the very state the frozen now side was measured against);
+    // Ctrl+Q and the WM close, trivially, the process going with it. There is NO
+    // Esc binding — the bare-Esc inventory stays at six places. A RESIZE does
+    // NOT close it: the delta is re-laid-out against the new geometry by the
+    // flag cache's own rebuild, exactly as live flags are.
+    //
+    // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
+    // while it stands, through TWO gates and no scattered ifs — history_mode_-
+    // key_blocked (the keyboard allowlist, which the redesigned buttons and the
+    // Navigation menu's items pass through too, since both dispatch as chords
+    // via on_key) and handle_history_mode_press (the pointer allowlist). Each
+    // states its own admitted set at its definition. The dropdowns are shut out
+    // structurally instead, at toggle_dropdown, which is what keeps the mode and
+    // a popup from ever standing together — the same shape that keeps a popup
+    // and an editor apart.
+    //
+    // WHY THE FROZEN NOW SIDE CANNOT GO STALE. GuiHistoryDiff captures the three
+    // sidecar texts once at init() and measures every commit against them. That
+    // would be a real hazard in an authoring session — the answer would drift
+    // from what is on screen — and it is not one here BY CONSTRUCTION: the two
+    // gates above refuse every route that could change those bytes for the whole
+    // life of the session, and the one route that changes them anyway (the
+    // adopt) closes the mode first. The mode's entry re-inits, so each visit
+    // measures against the state at that visit.
+    //
+    // PER-SESSION SCRATCH: never persisted, never stashed, cleared WHOLE on
+    // exit (session and all, so the next entry pays a fresh commit walk).
+    struct HistoryMode {
+        bool        active = false;
+        // Index into the commit walk, 0 = newest. `,` steps older (+1), `.`
+        // newer (-1), each clamping at its wall as a consumed no-op.
+        std::size_t index  = 0;
+        // The mode's OWN focus: an index into `flags` below, -1 for none. It is
+        // NOT a marker index and touches no selection — a plain click on a diff
+        // flag sets it and lands the playhead on that flag's frame, a click on
+        // empty lane clears it, and every step clears it.
+        int         focus  = -1;
+        // The commit's delta resolved into painted order, published by the flag
+        // cache's rebuild (the sole producer, beside the hit rects and stems it
+        // publishes for these same items). `focus` and every hit rect's
+        // marker_index index INTO THIS VECTOR, so all three move together or not
+        // at all.
+        std::vector<HistoryDiffFlag> flags;
+
+        GuiHistoryDiff session;
+    };
+    HistoryMode history_mode;
 
     // WINDOW ACTIVATION (keyboard focus), mirrored from the platform's
     // xdg_toplevel state on each activation EDGE (main.cpp's hook, beside the
