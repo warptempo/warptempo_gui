@@ -250,7 +250,23 @@ public:
     // begin is a guarded no-op when a capture is already active; end is
     // idempotent, so every gesture exit path (release, lost button, the force-end
     // finalizer — no cancel path exists) may call it unconditionally.
-    void begin_pointer_capture();
+    //
+    // THE RESTORE KIND IS A PARAMETER BECAUSE THE GESTURE IS THE ONLY THING THAT
+    // KNOWS IT. Under a granted lock the cursor is hidden and every kind the GUI
+    // names is about a place the pointer is not, so the release hands back a
+    // REMEMBERED kind (apply_cursor_kind) — and inferring that from whatever was
+    // remembered at press time is exactly what cannot be relied on: the cursor is
+    // resolved once per RUN-LOOP ITERATION, and a single dispatch batch can carry
+    // the motion (or the modifier edge) that selects the gesture's zone AND the
+    // press that begins the capture, with no re-derivation in between. So the
+    // caller passes the cue its own gesture wears — Zoom for the strip drag (both
+    // entries are Zoom zones), Pan for the alt-pan — the same "read the drag's own
+    // record" the live trim cue uses, and the platform STAMPS it as the remembered
+    // kind on the path that actually locked. Only there: a degraded compositor
+    // hides nothing and restores nothing, and its gesture keeps running on real
+    // coordinates with the loop tail deriving normally, so a stamp would be a cue
+    // nobody asked for.
+    void begin_pointer_capture(GuiCursorKind restore_kind);
     void end_pointer_capture();
 
     // (THE pointer_focused() ACCESSOR IS GONE — 2026-08-02. It answered "is the
@@ -288,8 +304,11 @@ public:
     // for a place the pointer is not.
     // Remembering those answers is what would make the restore a lie, since the
     // restore hands back the REMEMBERED kind: dropping them keeps the remembered
-    // kind the last one derived from a real position, which is the cue the gesture
-    // began under and the cue the restore position sits in.
+    // kind the last one derived from a real position OR THE KIND THE GESTURE
+    // STAMPED at capture begin, whichever is later — and for a granted capture it
+    // is always the stamp, which is the cue the gesture wears and the cue the
+    // restore position sits in (the full statement is at begin_pointer_capture's
+    // restore_kind parameter; the drop is what keeps the stamp standing).
     // THE SPAN OUTLASTS THE LOCK by design, so a force-end that ends the capture
     // and then re-derives from the remembered (still virtual) coordinates is
     // dropped too, rather than replacing a stale cue with a confidently wrong one.
@@ -538,6 +557,11 @@ private:
     // wl_pointer.motion), which is exactly the event that re-establishes the
     // truth — and the re-derivation follows in that same loop iteration, at the
     // tail hook that owns the cursor (set_loop_settled_hook).
+    // WHAT SURVIVES THE SPAN is not an inference: the same granted-lock path that
+    // sets this STAMPS the gesture's own cue as the remembered kind (the
+    // restore_kind parameter at begin_pointer_capture), so the release restores a
+    // fact the gesture supplied while the position was still real, rather than
+    // whatever the last dispatch batch happened to leave behind.
     // ONLY A REAL CAPTURE SETS IT: the degraded compositor (no pointer-constraints
     // or no relative-pointer) never locks, so its "captured" gestures run on
     // ordinary absolute motion with the position true throughout and every cursor
@@ -628,7 +652,7 @@ private:
     // wl_surface_ — with the theme image's buffer attached once and never
     // re-attached, plus THE HOTSPOT THAT IMAGE DECLARES. A set_cursor therefore
     // swaps kinds by naming a different SURFACE, with no image work per swap,
-    // which is what makes the per-motion applier free.
+    // which is what makes the per-run-loop-iteration applier free.
     //
     // The BUFFERS belong to libwayland-cursor and die with wl_cursor_theme_; the
     // surfaces are ours and are destroyed before the theme (shutdown). A null
@@ -649,6 +673,9 @@ private:
     // the one that was showing. It outlived the custom-buffer cursor it was
     // written for and is load-bearing for those two platform-side edges, which
     // know nothing about where the pointer is in the GUI's terms.
+    // TWO WRITERS: set_cursor_kind (the GUI's answer for a REAL position) and
+    // begin_pointer_capture's stamp on the granted-lock path (the gesture's own
+    // cue, written for the release that will hand it back). Nothing else.
     GuiCursorKind cursor_kind_ = GuiCursorKind::Arrow;
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).

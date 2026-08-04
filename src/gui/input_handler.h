@@ -362,7 +362,16 @@ struct GuiInputHandler {
     // platform methods are self-guarding — begin no-ops when a capture is live
     // or the compositor lacks the managers, end is idempotent — so a strip drag
     // that never captured (degraded compositor) still calls end harmlessly.
-    std::function<void()> begin_strip_pointer_capture = []{};
+    // BEGIN CARRIES THE GESTURE'S OWN CURSOR KIND, which is the kind the capture
+    // release hands back: Zoom for the strip drag (both entries arm inside the
+    // Zoom zones), Pan for the alt-pan. A capture hides the cursor and makes the
+    // GUI's pointer position virtual, so the platform cannot re-derive what to
+    // restore and must not guess from what was showing at press time — the
+    // reasoning, and why the stamp rides the granted-lock path only, are at
+    // GuiPlatform::begin_pointer_capture. It is the same shape as the live trim
+    // cue: read the gesture's own record, never the pointer's position.
+    std::function<void(GuiCursorKind)> begin_strip_pointer_capture =
+        [](GuiCursorKind){};
     std::function<void()> end_strip_pointer_capture   = []{};
     // Set the active capture's release-restore x to the anchor stem's surface
     // x. apply_strip_drag_at fires it each event (the last wins at release) so

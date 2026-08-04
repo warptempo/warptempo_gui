@@ -859,8 +859,12 @@ int main(int argc, char** argv) {
     // infinite pan/zoom travel.
     // Both platform methods self-guard (begin no-ops when a capture is live or
     // the compositor lacks the managers; end is idempotent), so the input layer
-    // stays agnostic to whether capture is available.
-    input_handler.begin_strip_pointer_capture = [&]() { gui.begin_pointer_capture(); };
+    // stays agnostic to whether capture is available. The begin hook forwards the
+    // gesture's own cursor kind, which is what the release restores (contract at
+    // GuiPlatform::begin_pointer_capture).
+    input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
+        gui.begin_pointer_capture(restore_kind);
+    };
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 

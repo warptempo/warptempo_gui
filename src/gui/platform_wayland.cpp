@@ -1164,7 +1164,7 @@ void GuiPlatform::apply_cursor_kind() {
     if (!wl_pointer_) return;
     // A LIVE CAPTURE OWNS THE CURSOR AND IT IS HIDDEN. Every applier passes
     // through here, so this one guard is what makes "the setter must not
-    // un-hide" true for the GUI's per-motion calls AND for a pointer enter that
+    // un-hide" true for the GUI's per-iteration calls AND for a pointer enter that
     // arrives mid-capture. The capture's own release re-applies afterwards, at
     // which point pointer_captured_ is already false.
     if (pointer_captured_) return;
@@ -1187,9 +1187,10 @@ void GuiPlatform::apply_cursor_kind() {
 
 void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     // A KIND DERIVED FOR A POSITION THE POINTER DOES NOT OCCUPY IS DROPPED — not
-    // recorded, so the remembered kind stays the last one derived from a real
-    // position and the capture release restores THAT. The span and the accepted
-    // cost are at pointer_position_unknown_'s declaration; the GUI needs no
+    // recorded, so the remembered kind stays what the capture's own begin STAMPED
+    // there (the gesture's cue, see begin_pointer_capture) and the release
+    // restores THAT. The span and the accepted cost are at
+    // pointer_position_unknown_'s declaration; the GUI needs no
     // knowledge of it, which is what lets its one per-iteration refresh run the
     // same way whether or not the compositor granted a capture.
     if (pointer_position_unknown_) return;
@@ -2546,7 +2547,7 @@ void GuiPlatform::destroy_relative_pointer() {
     }
 }
 
-void GuiPlatform::begin_pointer_capture() {
+void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     // Guarded no-op when a capture is already active (a second strip-drag press
     // cannot exist while the button is held, but the guard makes the contract
     // explicit). Degraded compositor (either manager absent, so no relative
@@ -2572,7 +2573,8 @@ void GuiPlatform::begin_pointer_capture() {
     // OUTSIDE apply_cursor_kind, and deliberately so: the hide is not a KIND, it
     // is the absence of one, and routing it through the owner would need a third
     // enumerator whose only job is to mean "no cursor". cursor_kind_ keeps
-    // naming what will come BACK at the release.
+    // naming what will come BACK at the release — the stamp below writes it once
+    // the lock is granted.
     wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, nullptr, 0, 0);
 
     // Lock the pointer at its current position. NULL region = surface input
@@ -2584,13 +2586,33 @@ void GuiPlatform::begin_pointer_capture() {
     if (!locked_pointer_) {
         // Creation failed: un-hide and stay uncaptured. pointer_captured_ is
         // still false here, so the applier's capture guard lets this through,
-        // and the cursor comes back as whatever kind was showing.
+        // and the cursor comes back as whatever kind was showing — NOT the
+        // gesture's restore kind, which is deliberately not stamped until the
+        // lock exists. Nothing was locked, so nothing is virtual: the gesture
+        // runs on real coordinates and the loop tail owns the cue from here,
+        // exactly as on the degraded returns above.
         apply_cursor_kind();
         return;
     }
     zwp_locked_pointer_v1_add_listener(locked_pointer_,
                                        &s_locked_pointer_listener, this);
     pointer_captured_ = true;
+
+    // STAMP THE KIND THE RELEASE WILL RESTORE, from the gesture's own identity
+    // rather than from whatever the remembered kind happens to be right now.
+    // WHY IT IS NEEDED: the cursor is re-derived once per RUN-LOOP ITERATION, and
+    // the batch that delivered this press may have delivered, just above it, the
+    // motion or the modifier edge that moved the answer — so the remembered kind
+    // can still be a cue from before this gesture's zone was entered. The caller
+    // knows what its gesture is; nothing here can work that out.
+    // WHY IT IS WRITTEN DIRECTLY rather than through set_cursor_kind: this is not
+    // the statement "the cursor should be X now" — the line above HID it — but
+    // "X is what comes back". Going through the setter would make the stamp
+    // depend on the two flags' ordering (it drops once the line below opens the
+    // unknown span) and lean on the applier's capture guard to swallow the
+    // protocol traffic. One assignment states the fact and owes neither.
+    cursor_kind_ = restore_kind;
+
     // From here the GUI's pointer position is the virtual travel, so the kinds it
     // names are about a place the pointer is not: they stop being recorded until
     // the compositor next tells us where the pointer really is (the contract is at
@@ -2644,22 +2666,27 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     pointer_captured_ = false;
 
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
-    // Whatever was showing when the hide ran comes back here, and for the strip
-    // drag and the alt-pan that is the ZOOM or the PAN cue their own modifier
-    // put up: the loop iteration in which that modifier arrived re-derived the
-    // cursor before the press, so the remembered kind is the last one derived
-    // from a REAL pointer position, and the restore puts the pointer back inside
-    // the zone that produced it (the anchor-stem column or the raw travel, y
-    // frozen at the press row). What makes that true rather than merely likely
-    // is set_cursor_kind's drop: no kind named during the capture — the
-    // live-gesture Arrow the GUI re-derives at every loop iteration the lock's
-    // relative motion wakes, above all — was ever recorded here.
+    // For a granted capture that kind is the one the GESTURE ITSELF STAMPED at
+    // begin_pointer_capture: Zoom for the strip drag, Pan for the alt-pan, the
+    // cue the gesture wears by identity rather than one inferred from what was
+    // on screen when the press landed. That is the whole reason it is stamped —
+    // the cursor is re-derived once per RUN-LOOP ITERATION, so the batch that
+    // delivered the press can also have delivered the motion or the modifier
+    // edge that chose the zone, leaving the remembered kind a cue from BEFORE
+    // the gesture existed. The restore puts the pointer back inside the zone the
+    // stamped kind names (the anchor-stem column or the raw travel, y frozen at
+    // the press row). What keeps the stamp standing through the drag is
+    // set_cursor_kind's drop: no kind named during the capture — the live-gesture
+    // Arrow the GUI re-derives at every loop iteration the lock's relative motion
+    // wakes, above all — was ever recorded here.
     // The GUI's next motion would correct a hard-coded arrow, but the frames in
-    // between would be a lie, and this is the reason the kind is REMEMBERED
-    // rather than passed (the platform's edges do not know where the pointer is
-    // in the GUI's terms). pointer_captured_ was cleared just above, so the
-    // applier's capture guard admits this call. It is a no-op when the wl_pointer
-    // is already gone (a pointer-capability loss releases it before this runs).
+    // between would be a lie — which is why THIS edge reads a value rather than
+    // computing one: the platform's edges do not know where the pointer is in the
+    // GUI's terms, so the answer has to have been handed to them (by the loop
+    // tail's set_cursor_kind ordinarily, by the gesture's stamp for a capture).
+    // pointer_captured_ was cleared just above, so the applier's capture guard
+    // admits this call. It is a no-op when the wl_pointer is already gone (a
+    // pointer-capability loss releases it before this runs).
     // pointer_position_unknown_ deliberately STAYS SET past this point: the hint
     // above is a request, and only the compositor's next absolute event says
     // where the pointer actually came back.

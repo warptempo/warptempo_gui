@@ -738,7 +738,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
 
 // THE POINTER CURSOR'S WHOLE APPLIER, called once per run-loop iteration from
 // the platform's settled-state hook and from nowhere else (the contract, and why
-// the twenty-two per-site pushes are gone, are at the declaration).
+// the twenty-three per-site pushes are gone, are at the declaration).
 void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
     // The remembered coordinates name a point INSIDE the window even after the
     // pointer has left, so the flag is what keeps this from resolving a cue for
@@ -880,7 +880,12 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     app.strip_drag.anchor_sample =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(x) * spp;
-    begin_strip_pointer_capture();
+    // ZOOM IS THE GESTURE'S CUE ON BOTH ENTRIES — the ctrl-waveform press and the
+    // ruler plain press are exactly the zone map's two Zoom surfaces — so this is
+    // the kind the capture release restores. Passing it is what makes the restore
+    // independent of what was on screen when the press landed (contract at
+    // GuiPlatform::begin_pointer_capture).
+    begin_strip_pointer_capture(GuiCursorKind::Zoom);
 }
 
 // The flag editor's guard-free close, shared by the left and right press arms
@@ -1423,7 +1428,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.scroll_drag = ScrollDragState{};
                 app.scroll_drag.active = true;
                 app.scroll_drag.last_x = x;
-                begin_strip_pointer_capture();
+                // PAN IS THIS GESTURE'S CUE (the alt-over-waveform zone), and the
+                // capture release hands it back — see arm_strip_drag_at's twin
+                // above and the contract at GuiPlatform::begin_pointer_capture.
+                begin_strip_pointer_capture(GuiCursorKind::Pan);
             }
             return;
         }
