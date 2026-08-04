@@ -311,6 +311,79 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
+// THE `/` HISTORY VIEW'S DEAD SET — the roster's ONE mode-scoped disabled-face
+// partition, and THE AUTHORITATIVE INVENTORY of it (every other site carries a
+// pointer here). The architect's principle, 2026-08-04: while the view stands,
+// EVERY BUTTON WHOSE ACT THE VIEW CONSUMES WEARS ITS ROW'S DISABLED FACE and
+// ignores the pointer, and the ones that stay lit are exactly the ones that
+// still work. It is the mode-scoped exception to the icon row's never-grey rule
+// and to rows 1 and 3 having no disabled face, on the view bar's own precedent
+// (a whole surface wearing a state that is not the enabled bit).
+//
+// IT IS DERIVED, NOT LISTED. Each roster button but two IS a chord
+// (dispatch_redesign_chord synthesizes it and calls on_key), so "the view
+// consumes this button's act" is exactly "the view's keyboard gate consumes this
+// button's chord" — this walks kToolbarChords and asks that gate. So the faces
+// cannot drift from the allowlist: admit a chord there and its button lights on
+// the next frame with nothing to remember here.
+//
+// THE TWO ANCHORS ARE THE HAND ENTRY, because they are the roster's two
+// NON-chord actions and there is no chord to ask about: Settings and Navigation
+// each toggle a popup, and toggle_dropdown refuses whole while the mode stands
+// (its first line — the same lockout that keeps a popup and this mode mutually
+// exclusive). One named site, not a policy invented here.
+//
+// THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
+// never sees `/`, `,` or `.` — handle_history_mode_key consumes them one line
+// above it — so asking the allowlist alone would call bare `/` blocked and grey
+// out THE VERY BUTTON THAT LEAVES THE VIEW. history_mode_owns_key is that line's
+// own predicate, shared rather than re-spelled.
+//
+// THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
+// 2026-08-04):
+//   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
+//   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
+//   which in this mode IS the checkpoint commit and wears the "Commit" face),
+//   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
+//   switches), the render-commit opener (bare `'`, which in this mode adopts the
+//   viewed commit), and the history button itself (bare `/`, the mode's own key,
+//   selected while it stands).
+//   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); BOTH TABS (Ctrl+Tab), the lock
+//   slots with them — the active tab's padlock dispatches bare `o`, blocked, and
+//   the inactive tab's whole box is the Ctrl+Tab press, so the tab surface is
+//   dead as one object; copy phase (Ctrl+P), paste phase (Ctrl+Alt+P), the BPM
+//   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
+//   (bare `l`); and the two menu anchors, Settings and Navigation.
+//
+// TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face:
+// Render is LIVE on Ctrl+Alt+R though its SHIFT twin is consumed in the mode —
+// the shift press stays swallowed by the render route's own refusal and the
+// tooltip already drops its shift line here, which is the honest pair. (2) A
+// button the READ-ONLY tab bit refuses is not this function's business: that
+// refusal is the lock's, it applies inside the view exactly as outside it, and
+// row 4's never-grey rule still answers for it (the `'` button stays lit on a
+// locked tab, in the view as out of it). Only the VIEW's own consumption greys
+// anything here.
+bool history_mode_disables_button(RedesignButton b) {
+    if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
+        return true;
+    }
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (tc.id != b) continue;
+        GuiInputState chord{};
+        chord.ctrl  = tc.ctrl;
+        chord.shift = tc.shift;
+        chord.alt   = tc.alt;
+        if (history_mode_owns_key(tc.key, chord)) return false;
+        return history_mode_key_blocked(tc.key, chord);
+    }
+    // Not in the table and not an anchor: nothing to consume. Unreachable today
+    // (the table plus the two anchors is the whole roster) and stated rather
+    // than asserted, so a future button defaults to LIVE — the face it already
+    // had — instead of greying on a chord nobody has written yet.
+    return false;
+}
+
 // THE MARKER LANE OWNS THE PLAYHEAD (architect 2026-07-28) — the rule this
 // helper serves, stated ONCE here; the other landing sites carry only their own
 // class plus a pointer back to this comment. With a non-empty selection the bare
@@ -2901,7 +2974,11 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         // through on a frame the paint disagreed with. Dispatching anyway would
         // be harmless — every one of these chords refuses on its own — but it
         // would leave the disabled face lying about what a click does. Rows 1, 3
-        // and 4 have no disabled face and the predicate is simply true there.
+        // and 4 have no disabled face of their own, so the predicate is simply
+        // true there — EXCEPT while the `/` history view stands, which greys
+        // every button whose act it consumes across all four rows and is
+        // therefore the one state in which this line consumes a row-1, row-3 or
+        // row-4 press (history_mode_disables_button, above).
         if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a

@@ -354,9 +354,22 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // ONLY `/` IS BOUND OUTSIDE THE MODE. `,` and `.` fall through to the ordinary
 // dispatch when it is down, where they remain the unbound no-ops they have
 // always been.
+//
+// THE THREE KEYS' SHAPE IS ITS OWN PREDICATE (history_mode_owns_key) because it
+// has a SECOND reader: the redesign roster's mode-scoped disabled-face partition
+// (history_mode_disables_button, input_pointer.cpp) asks "would this button's
+// chord act in the mode", and the answer for the history button's own bare `/`
+// is decided HERE — one line above the allowlist — rather than in it. Spelling
+// the membership twice is exactly how that face would come to lie about the
+// button that opens the view.
+bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
+    if (mods.ctrl || mods.shift || mods.alt) return false;
+    return key == GuiKeys::Slash || key == GuiKeys::Comma ||
+           key == GuiKeys::Period;
+}
+
 bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
-    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
-    if (!bare) return false;
+    if (!history_mode_owns_key(key, mods)) return false;
 
     if (key == GuiKeys::Slash) {
         if (app.history_mode.active) {
@@ -514,6 +527,29 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             exactly the now side the diff is measured against,
 //                             so it cannot make the display disagree with disk.
 //   - Ctrl+Q                → the close routing.
+//   - Esc (bare)            → ITS EXISTING BINDINGS, AND NOT ONE OF ITS OWN
+//                             (architect 2026-08-04, closing the arc's recorded
+//                             cost). Admitting it adds NO seventh Esc place: the
+//                             bare-Esc inventory is still the six enumerated at
+//                             on_key's dispatch point (input_handler.cpp), and
+//                             this line only lets the two that can be live in
+//                             this mode run — the REGION CLEAR (a span formed
+//                             before `/`; the mode's pointer allowlist admits no
+//                             region former, so nothing in here can make a new
+//                             one) and the RENDER / BATCH CANCEL (a render
+//                             launched before `/`, whose progress line the mode's
+//                             corner outranks). Both sit BELOW this gate in
+//                             on_key and neither mutates authored state, so the
+//                             frozen now side is untouched — the same argument
+//                             the read-only allowlist admits Esc on.
+//                             IT CANNOT CLOSE THE VIEW, structurally rather than
+//                             by refusal: the toggle is handle_history_mode_key's
+//                             and that function owns `/`, `,` and `.` alone
+//                             (history_mode_owns_key), so no Esc reaches it. The
+//                             view's exits are unchanged, and `/` is still the
+//                             key that leaves. With no region resting and no
+//                             render running a bare Esc is a consumed nothing,
+//                             which is what it is everywhere else too.
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
@@ -527,7 +563,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // steps and Home/End (they move the cursor, and in the marker lane the very same
 // press nudges a marker), `c` and `f` (a jump onto a live marker's focus, and a
 // session-state toggle), BOTH TAB CYCLES and the A/B tab switches (Tab,
-// Shift+Tab, Ctrl+Tab, Ctrl+Shift+Tab), `o`, and BARE ESC.
+// Shift+Tab, Ctrl+Tab, Ctrl+Shift+Tab), and `o`.
 //
 // VIEWS ARE ADMITTED, TABS ARE NOT, and the line between them is not arbitrary:
 // a view switch re-reads THE SAME piece — the same three sidecar texts the now
@@ -535,10 +571,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // switch swaps the per-tab band (viewport, zoom, playhead, trim, read_only) the
 // session was measured with, and `c` and Tab both navigate by LIVE MARKERS,
 // which the mode is not showing. The architect admitted views on 2026-08-04 and
-// nothing else with them. Esc carries no binding of the mode's own — the bare-Esc inventory
-// stays at six places — and admitting it only to reach the render cancel would
-// put this mode in the middle of that list for one arm's sake; a render started
-// before `/` runs to completion, and `/` gets its cancel back.
+// nothing else with them. THE TAB CYCLES STAY CONSUMED and that is ratified
+// rather than pending (same day): a tab switch swaps the very per-tab band the
+// session was measured with, and the tabs now WEAR the refusal — see the face
+// paragraph below.
 //
 // THE REDESIGNED BUTTONS AND THE NAVIGATION MENU'S ITEMS PASS THROUGH HERE
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
@@ -546,7 +582,19 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
 // their keys do. The one non-chord route out of that row — the two dropdown
 // anchors — is shut at toggle_dropdown instead.
-bool GuiInputHandler::history_mode_key_blocked(GuiKey key, GuiInputState mods) {
+//
+// AND SINCE 2026-08-04 THIS GATE IS ALSO READ BY THE FACES: a button whose chord
+// this predicate blocks wears its row's DISABLED face while the mode stands and
+// ignores the pointer, so the roster says what it will do rather than swallowing
+// clicks silently. The partition is DERIVED from this function (and from the
+// toggle_dropdown lockout for the two anchors), never hand-listed —
+// history_mode_disables_button, input_pointer.cpp, which carries the whole
+// inventory.
+//
+// THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is a
+// pure function of key+mods (it always was), and the face derivation asks it
+// about a table of chords with no press in hand.
+bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -572,9 +620,10 @@ bool GuiInputHandler::history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && bare);
+    const bool is_esc = (key == GuiKeys::Escape && bare);
     return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
-             is_view_selector ||
+             is_view_selector || is_esc ||
              is_commit || is_commit_act || is_save || is_ctrl_q);
 }
 

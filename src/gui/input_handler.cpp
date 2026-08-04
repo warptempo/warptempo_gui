@@ -627,6 +627,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    // THE `/` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
+    // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) — the
+    // only two of the six reachable in there — run inside the view. It gained no
+    // binding of its own, and Esc cannot close it: the view's toggle is
+    // handle_history_mode_key's `/`, which no Esc reaches.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
     // NO drop-to-span, and no collapse of anything but the span itself. A 2+
     // selection and a singleton are

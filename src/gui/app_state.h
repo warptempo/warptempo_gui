@@ -743,9 +743,11 @@ struct TrimBarPressSeed {
 // than growing a parallel pair: their rect is painter-published from a shaped
 // label exactly as every other entry's is, their hover is the same one-transition
 // recompute, and their press is the same band claim dispatching a chord through
-// on_key. What they do NOT take is the two row-2-only faces — no click face and
-// no disabled face — which is stated at each face's site rather than modelled
-// here (row 4 takes the click face but not the disabled one). Row 1's SETTINGS
+// on_key. What they do NOT take is the two row-2-only faces — no click face, and
+// no disabled face of their own — which is stated at each face's site rather
+// than modelled here (row 4 takes the click face but not the disabled one; the
+// `/` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
+// and is the one exception, at redesign_button_enabled below). Row 1's SETTINGS
 // and NAVIGATION are the roster's TWO non-chord entries: each press TOGGLES ITS
 // OWN DROPDOWN, which no keyboard chord does, and both are spelled at the menu
 // claim rather than in the chord table. Quit is not one of them — Ctrl+Q is its
@@ -1977,10 +1979,20 @@ struct AppState {
     // WHAT CLOSES IT, the whole list: bare `/` again; EITHER ADOPT — the `'`
     // editor's render-entry adopt and, since 2026-08-04, its adopt-from-commit
     // (both rewrite the very state the frozen now side was measured against);
-    // Ctrl+Q and the WM close, trivially, the process going with it. There is NO
-    // Esc binding — the bare-Esc inventory stays at six places. A RESIZE does
-    // NOT close it: the delta is re-laid-out against the new geometry by the
-    // flag cache's own rebuild, exactly as live flags are.
+    // Ctrl+Q and the WM close, trivially, the process going with it. ESC IS NOT
+    // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
+    // that function owns `/`, `,` and `.` alone, so no Esc reaches it. A RESIZE
+    // does NOT close it: the delta is re-laid-out against the new geometry by
+    // the flag cache's own rebuild, exactly as live flags are.
+    //
+    // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO SEVENTH ESC PLACE.
+    // The bare-Esc inventory is still the six enumerated at its dispatch point
+    // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
+    // so the two bindings that can be live in here run — the REGION CLEAR (a
+    // span formed before `/`, since the pointer allowlist admits no region
+    // former) and the RENDER / BATCH CANCEL (a render launched before `/`).
+    // Neither touches authored state, which is why admitting it costs the frozen
+    // now side nothing. With neither standing, Esc is a consumed nothing.
     //
     // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
@@ -1991,6 +2003,17 @@ struct AppState {
     // structurally instead, at toggle_dropdown, which is what keeps the mode and
     // a popup from ever standing together — the same shape that keeps a popup
     // and an editor apart.
+    //
+    // AND THE ROSTER WEARS THOSE REFUSALS (architect 2026-08-04): every
+    // redesigned button whose act this mode consumes takes its row's DISABLED
+    // face and ignores the pointer, so Undo, Redo, both tabs, copy, paste, bpm,
+    // iteration, follow, listen and the two menu anchors grey out while Quit,
+    // the view bar, Save, the Commit-faced Render, the S/T + W/P radios, the
+    // commit opener and the history button stay lit. The partition is DERIVED
+    // from the two gates above (plus the anchors' toggle_dropdown lockout) and
+    // inventoried in one place — history_mode_disables_button, input_pointer.cpp
+    // — and it is read live from `active` below, so leaving the mode restores
+    // every face on the next frame with nothing latched.
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
@@ -2771,11 +2794,22 @@ inline bool history_step_actionable(const AppState& a,
     return !((tt == 'B') ? a.tab_b.read_only : a.tab_a.read_only);
 }
 
+// WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `/` HISTORY VIEW? True for exactly
+// the buttons the view refuses, false for the ones that still work in it.
+// DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
+// beside the chord table it walks) asks history_mode_key_blocked about each
+// button's own chord and names the toggle_dropdown lockout for the two anchors
+// that have none, and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
+// only while the mode stands (the caller below tests that), so it says nothing
+// about any other state.
+bool history_mode_disables_button(RedesignButton b);
+
 // THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
-// (row 2's third face) and for hoverability, mirroring each chord's OWN
-// refusals rather than inventing a policy. Three readers: the painter (which
-// stashes what it painted), the press claim (a disabled press is a consumed
-// nothing — the chord is not dispatched), and main.cpp's staleness comparator.
+// (row 2's third face, and every row's while the history view stands) and for
+// hoverability, mirroring each chord's OWN refusals rather than inventing a
+// policy. Three readers: the painter (which stashes what it painted), the press
+// claim (a disabled press is a consumed nothing — the chord is not dispatched),
+// and main.cpp's staleness comparator.
 //
 // WHAT EACH ENTRY MIRRORS, read off the routes themselves:
 //   * ALL FOUR row-2 chords drop at on_key's `app.loading || total <= 0` guard
@@ -2794,10 +2828,11 @@ inline bool history_step_actionable(const AppState& a,
 //     fault, not stable state, and greying a button on it would hide the one
 //     stderr line that reports it.
 //   * Render takes Ctrl+Alt+R's own first line, an empty source_audio_path.
-//   * Row 1's Quit and row 3's tabs are ALWAYS enabled: Quit keeps its two
-//     faces by ruling, and a tab has no disabled face at all. Their entries
-//     exist so the vector is total over the roster and the comparator needs no
-//     membership test.
+//   * Row 1's Quit and row 3's tabs answer true HERE: Quit keeps its two faces
+//     by ruling, and a tab has no disabled face of its own. Their entries exist
+//     so the vector is total over the roster and the comparator needs no
+//     membership test. (Both tabs still go dead in the history view — through
+//     the mode line at the top of the body, not through these arms.)
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
 // swallows the PRESS at the pointer path's own modal gate, and a modal that
 // greyed the chrome under it would be a fourth face nobody asked for.
@@ -2808,21 +2843,39 @@ inline bool history_step_actionable(const AppState& a,
 // every id that is not one of row 2's four.
 inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
                                     RedesignButton b) {
+    // THE `/` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
+    // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
+    // view consumes wears its row's disabled face and ignores the pointer, and
+    // the ones that stay lit are exactly the ones that still work. It is ranked
+    // FIRST because it outranks every row's own answer below — rows 1, 3 and 4
+    // return true unconditionally there — and because the partition is about the
+    // MODE rather than about the button's own chord refusals, which still decide
+    // everything else. The reasoning is the roster's standing one: a face that
+    // says nothing while the press does nothing is the drift the enabled
+    // predicate exists to prevent. Whose act is consumed is DERIVED from the
+    // mode's own gates (history_mode_disables_button, above), so this line
+    // cannot fall out of step with the allowlist.
+    if (a.history_mode.active && history_mode_disables_button(b)) return false;
     switch (b) {
-        // Rows 1, 3 and 4 have NO DISABLED FACE AT ALL — row 4 by the
+        // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
         // 1 and 3 by their face scope. Their presses always dispatch and the
         // CHORDS' OWN refusals answer: the read-only gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
         // guards. Inherited through on_key, never mirrored here — which is why
         // these are a plain `return true` and not a second copy of those gates.
+        // (The history view above is the one thing that greys them, and it is
+        // scoped to that mode: leave the view and these rows answer true again
+        // on the very next frame, no latched state anywhere.)
         //
         // THE VIEW BAR'S "DISABLED" CROPS ARE THE UNFOCUSED WINDOW (architect
         // 2026-08-02), not a disabled button: they are the row-1/2 ground swap's
         // sibling on app.window_activated, a PAINT-ONLY variant of the whole
         // bar, and never this bit. So the row-1 claim above stays true in its own
-        // terms — no button on this row has a disabled face — and the three join
-        // the same arm.
+        // terms — no button on this row has a disabled face of its own — and the
+        // three join the same arm. THE VIEW BAR STAYS LIVE IN THE HISTORY VIEW
+        // (its 1/2/3 are on the mode's allowlist), so the two faces never meet
+        // there either.
         case RedesignButton::Quit:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:

@@ -1105,8 +1105,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (both
     // 2026-08-02). No ring; the kdenlive bar is flat.
     //
-    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not
-    // three, for ALL THREE buttons: at rest the label paints bare on the row ground;
+    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for ALL
+    // THREE buttons — plus ONE mode-scoped third, the history view's disabled
+    // face on the two anchors (below, at the pill):
+    // at rest the label paints bare on the row ground;
     // hovered, a filled blue pill sits under it, FLUSH with the row's CONTENT
     // height (the css float model — a flat button fills its whole row, architect
     // 2026-07-31). A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
@@ -1172,9 +1174,11 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // width above exists only here, so the pointer code reads this stash
         // rather than re-shaping the string. Written every paint — a font, scale
         // or window change lands in it on the frame that displays it.
-        // Neither menu button has a disabled or selected face — both are live
-        // during a load and on a blank state, which is the whole reason this
-        // row paints outside the audio branches. The stash is written anyway
+        // Neither menu button has a selected face, and both are live during a
+        // load and on a blank state — which is the whole reason this row paints
+        // outside the audio branches. (The one state that DOES dead them is the
+        // history view, which cannot be entered from either.) The stash is
+        // written anyway
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
@@ -1209,9 +1213,27 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // itself once its menu is down. They are written as a disjunction because
         // row 1 has exactly two faces and both ask for the SAME pill: were they to
         // coincide, nothing would need to win.
-        const bool pill = face.hovered ||
-                          (app.dropdown.open() &&
-                           def.id == dropdown_anchor_button(app.dropdown.menu));
+        // THE ROW'S THIRD FACE, AND IT EXISTS ONLY IN THE `/` HISTORY VIEW
+        // (architect 2026-08-04): while that view stands the two MENU ANCHORS
+        // are dead — toggle_dropdown refuses every open — so Settings and
+        // Navigation wear the disabled face and Quit does not. Built from the
+        // row's own vocabulary rather than a new sample: row 1's whole ink is
+        // its label, so the label retains kRedesignDisabledMix of itself over
+        // the row ground, exactly as row 2's icon+label pair does. The partition
+        // and its derivation are at history_mode_disables_button
+        // (input_pointer.cpp); this reads only the published bit.
+        //
+        // NO PILL ON A DEAD ANCHOR, and the term is gated here rather than
+        // trusted to be impossible: both of its inputs are structurally false in
+        // the view (no roster button hovers under a disabled bit, and no popup
+        // can be open at all), but a button can go dead UNDER a resting hover
+        // with no pointer event to refresh it — row 2's outline carries the same
+        // guard for the same frame.
+        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        const bool pill = face.enabled &&
+                          (face.hovered ||
+                           (app.dropdown.open() &&
+                            def.id == dropdown_anchor_button(app.dropdown.menu)));
         if (pill) {
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                                  kRedesignAccent.b);
@@ -1221,10 +1243,12 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             cairo_fill(cr);
         }
 
-        // The label color is the SAME in both faces; the pill under it is the
-        // whole hover cue.
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        // The label color is the SAME in the row's two live faces; the pill
+        // under it is the whole hover cue. Dead, it is the one thing that dims
+        // (keep above) — mixed toward the ROW GROUND, which is what is under it
+        // there, since a dead button never wears the pill.
+        const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
+        cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
             redesign_baseline(font, static_cast<double>(row.y),
@@ -1533,8 +1557,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // is a 3px accent trim with rounded top corners over an interior that is the
     // row ground itself — so it reads as an opening rather than as a filled
     // shape — flanked by 1px side borders. The inactive tab is a flat fill, rest
-    // or hover; there is no selected-hover face and no click or disabled face
-    // anywhere in this row (a tab press is a chord, never a refusal).
+    // or hover; there is no selected-hover face and no click face anywhere in
+    // this row (a tab press is a chord, never a refusal), and the ONE disabled
+    // face it has is mode-scoped: the `/` history view's, built below.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
@@ -1611,6 +1636,41 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             GuiRect{x, lane.y, tab_w, content_h});
         const bool selected = face.selected;
 
+        // THE ROW'S DISABLED FACE, WHICH EXISTS ONLY IN THE `/` HISTORY VIEW
+        // (architect 2026-08-04). Both tabs go dead there — Ctrl+Tab is not on
+        // the mode's allowlist and neither is the lock's bare `o` — so the whole
+        // tab surface, lock slot included, is one dead object; the partition and
+        // its derivation are at history_mode_disables_button (input_pointer.cpp).
+        //
+        // BUILT FROM THE ROW'S OWN CONVENTIONS, sampling nothing new: EVERY ink
+        // and edge this tab paints retains kRedesignDisabledMix of itself over
+        // the row ground — the product's one disabled blend, already the rule
+        // for row 2's ink and for this row's own unlocked padlock, here applied
+        // to the whole surface on the view bar's precedent (a surface-wide
+        // variant that is not the enabled bit). The SELECTED tab therefore keeps
+        // its accent trim and side borders, muted rather than removed: which tab
+        // is active is state the view must not hide, and a mixed accent still
+        // reads plainly against this ground. The tab's INTERIOR is the row
+        // ground, so it mixes to itself and does not move — the dim is entirely
+        // in the ink, which is why the row still looks like a tab row.
+        //
+        // SCALE-INDEPENDENT BY CONSTRUCTION: every term here is a colour mix,
+        // and gui_scale moves only geometry (scaled_px / the radius). The face
+        // is the same at 100% and at 200%; the glyphs and boxes scale exactly as
+        // they do in the live faces.
+        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        // HOVER IS GATED ON THE LIVE BIT, not trusted: the recompute refuses to
+        // hover a disabled button, but a tab can go dead UNDER a resting hover
+        // with no pointer event to refresh it (row 2's outline carries the same
+        // guard). One name, used everywhere below.
+        const bool hovered = face.hovered && face.enabled;
+        // The face this tab actually wears, dim included — the fill for an
+        // inactive tab, and the ground every ink below mixes toward.
+        const GuiColor tab_face = mix_color(
+            selected ? kRedesignTabGround
+                     : (hovered ? kRedesignTabHover : kRedesignTabRest),
+            kRedesignTabGround, keep);
+
         if (selected) {
             sel_x = x;
             sel_w = tab_w;
@@ -1629,8 +1689,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                                            static_cast<double>(tab_w),
                                            static_cast<double>(content_h),
                                            radius);
-            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                 kRedesignAccent.b);
+            const GuiColor trim_c =
+                mix_color(kRedesignAccent, kRedesignTabGround, keep);
+            cairo_set_source_rgb(cr, trim_c.r, trim_c.g, trim_c.b);
             cairo_fill(cr);
             cairo_restore(cr);
 
@@ -1653,8 +1714,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                 //    every row down to the border, which is what the crop shows.
                 const double half = static_cast<double>(line_w) * 0.5;
                 cairo_set_line_width(cr, static_cast<double>(line_w));
-                cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                     kRedesignTabLine.b);
+                const GuiColor side_c =
+                    mix_color(kRedesignTabLine, kRedesignTabGround, keep);
+                cairo_set_source_rgb(cr, side_c.r, side_c.g, side_c.b);
                 redesign_rounded_top_rect_path(
                     cr, x + half, lane.y + half,
                     static_cast<double>(tab_w - line_w),
@@ -1667,13 +1729,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // The inactive tab: a flat fill, square corners, no borders. Hovered
             // it takes the lighter blue-grey PLUS a 1px edge across its own
             // bottom row — the hover face recolors that row, which is the crop's
-            // whole difference from rest.
-            const GuiColor fill =
-                face.hovered ? kRedesignTabHover : kRedesignTabRest;
-            cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
+            // whole difference from rest. Dead, `tab_face` is the rest fill dim
+            // (a hover cannot stand on it) and the edge below is unreachable.
+            cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
             cairo_rectangle(cr, x, lane.y, tab_w, content_h);
             cairo_fill(cr);
-            if (face.hovered && content_h > line_w) {
+            if (hovered && content_h > line_w) {
                 cairo_set_source_rgb(cr, kRedesignTabHoverEdge.r,
                                      kRedesignTabHoverEdge.g,
                                      kRedesignTabHoverEdge.b);
@@ -1683,7 +1744,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             }
         }
 
-        // The label is the SAME white in every state, CENTERED on both axes:
+        // The label is the SAME white in every LIVE state (dead, it takes the
+        // row's dim over the face it sits on), CENTERED on both axes:
         // horizontally in the tab box (the padding is the width FLOOR's term,
         // not an anchor — at the minimum width a left-padded label would hug the
         // border instead of sitting in the middle), vertically by the shared
@@ -1691,8 +1753,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // integer-domain conversion, so the glyphs stay crisp; the halving makes
         // a 1px bias unavoidable at odd leftovers and nearbyint's banker's
         // rounding is the project's one answer for that.
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        const GuiColor tab_label_c = mix_color(kRedesignLabel, tab_face, keep);
+        cairo_set_source_rgb(cr, tab_label_c.r, tab_label_c.g, tab_label_c.b);
         text_shape::show_shaped_run(
             cr, run,
             static_cast<double>(x) +
@@ -1723,6 +1785,14 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // BOTH TABS SHOW IT; only the ACTIVE one's rect is published (the
         // contract is at AppState::tab_lock_rect) — the click is bare `o`, which
         // is defined on the active tab alone.
+        //
+        // THE SLOT GOES DEAD WITH ITS TAB in the history view: its click is bare
+        // `o`, which the mode's allowlist blocks, so the pair stops being a
+        // control and becomes a state display. The CLOSED padlock joins the open
+        // one at the row's dim (they read as one object, as they must when
+        // neither can be pressed), and WHICH lock it is — closed or open — is
+        // the state cue that survives; the open one is not dimmed twice, since
+        // the disabled mix it already wears is the same mix.
         {
             const ViewState& vs = (def.letter == 'B') ? app.tab_b : app.tab_a;
             const int lx = x + tab_w - lock_mar - lock_box;
@@ -1730,18 +1800,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             if (vs.read_only) {
                 icons::draw(cr, icons::Icon::Lock,
                             static_cast<double>(lx), static_cast<double>(ly),
-                            static_cast<double>(lock_box));
+                            static_cast<double>(lock_box), keep, tab_face);
             } else {
-                // The face this tab is actually wearing, which is the ground the
-                // dim mixes toward.
-                const GuiColor ground =
-                    selected ? kRedesignTabGround
-                             : (face.hovered ? kRedesignTabHover
-                                             : kRedesignTabRest);
                 icons::draw(cr, icons::Icon::Unlock,
                             static_cast<double>(lx), static_cast<double>(ly),
                             static_cast<double>(lock_box),
-                            kRedesignDisabledMix, ground);
+                            kRedesignDisabledMix, tab_face);
             }
             if (selected) app.tab_lock_rect = GuiRect{lx, ly, lock_box, lock_box};
         }
@@ -1811,7 +1875,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // presses here always dispatch and the CHORDS' OWN refusals answer (the
     // read-only gate blocks the authoring ones, loading blocks everything),
     // inherited through on_key rather than mirrored — the standing
-    // chord-dispatch ruling doing exactly the work it exists for.
+    // chord-dispatch ruling doing exactly the work it exists for. THE ONE RULED
+    // EXCEPTION, and it is a MODE rather than a refusal: the `/` history view
+    // greys the buttons it consumes (architect 2026-08-04, at the face code
+    // below) — a whole mode saying what it will not do, which the per-press
+    // refusals above cannot express.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -1870,7 +1938,32 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         AppState::RedesignButtonFace& face = publish_button_face(
             app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
 
+        // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `/` history view
+        // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
+        // rule above, scoped to that mode alone — while the view stands, copy,
+        // paste, bpm, iteration, follow and listen are consumed acts and say so,
+        // while the S/T + W/P radios, the commit opener and the history button
+        // itself stay live. Which is which is DERIVED from the mode's own gates
+        // (history_mode_disables_button, input_pointer.cpp, where the whole
+        // partition is inventoried); nothing here decides membership.
+        //
+        // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
+        // one disabled blend, row 2's rule applied to this row's glyph, letter
+        // and box: everything retains that fraction of itself over what sits
+        // under it, so a dead button dims as ONE object. A dead SELECTED toggle
+        // (iteration or follow left on) keeps its fill and outline muted rather
+        // than dropped: the mode cannot change that state, so hiding it would be
+        // a lie, and dimming it says "true, but not yours right now". Colour
+        // only — gui_scale moves geometry, so the face is identical at 100% and
+        // 200%.
+        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        // Both pointer faces are gated on the live bit rather than trusted: the
+        // recompute refuses to hover a disabled button and the claim never
+        // records a press on one, but a button can go dead UNDER either with no
+        // pointer event to refresh it (row 2's outline carries the same guard).
+        const bool hovered = face.hovered && face.enabled;
         const bool pressed =
+            face.enabled &&
             app.redesign_pressed == redesign_button_index(def.id);
 
         // THE FILL AND THE OUTLINE ARE DECIDED SEPARATELY, which is exactly the
@@ -1878,7 +1971,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // is here" and the fill says "this is the state", so every combination
         // of the two falls out instead of being enumerated.
         const bool has_fill = pressed || face.selected;
-        const bool has_line = face.hovered || pressed || face.selected;
+        const bool has_line = hovered || pressed || face.selected;
+        // What the glyph ends up sitting on, which is the ground its own dim
+        // mixes toward: the painted fill where there is one, else the row.
+        GuiColor under = kRedesignTabGround;
         if (has_fill || has_line) {
             // The shared face box (redesign_face_box — one path, filled and
             // stroked, the half-stroke inset rule stated there). THIS ROW'S FIT
@@ -1887,17 +1983,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             // full-box fill scores 270 at its own best radius and 2129 at this
             // one, and it is what the source widget does (a single rounded rect
             // drawn with both a brush and a pen).
-            const GuiColor fill =
+            const GuiColor fill = mix_color(
                 pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
                                     kRedesignClickMix)
-                        : kRedesignSelectedFill;
+                        : kRedesignSelectedFill,
+                kRedesignTabGround, keep);
             // Accent when the pointer is on it or it is held; otherwise the
             // calm grey that frames a resting toggled-on button.
-            const GuiColor line = (face.hovered || pressed)
-                                      ? kRedesignAccent : kRedesignLine;
+            const GuiColor line = mix_color(
+                (hovered || pressed) ? kRedesignAccent : kRedesignLine,
+                kRedesignTabGround, keep);
             redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
                               has_line ? &line : nullptr);
+            if (has_fill) under = fill;
         }
 
         if (def.glyph != nullptr) {
@@ -1906,8 +2005,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             // baseline from the shared extents solver.
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, def.glyph);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            const GuiColor letter_c = mix_color(kRedesignLabel, under, keep);
+            cairo_set_source_rgb(cr, letter_c.r, letter_c.g, letter_c.b);
             text_shape::show_shaped_run(
                 cr, run,
                 static_cast<double>(x) +
@@ -1917,12 +2016,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                                   static_cast<double>(btn)));
         } else {
             // An ICON BUTTON: the 22px box centered in the 32px button (+5 at
-            // 100%), each path in its own color from the icon table. No dimming
-            // term — this row has no disabled face.
+            // 100%), each path in its own color from the icon table. The dimming
+            // term is the mode-scoped dead face's and is inert (keep == 1, the
+            // table's colors bit-identical) in every other state.
             icons::draw(cr, def.icon,
                         static_cast<double>(x + (btn - glyph_px) / 2),
                         static_cast<double>(btn_y + (btn - glyph_px) / 2),
-                        static_cast<double>(glyph_px));
+                        static_cast<double>(glyph_px), keep, under);
         }
 
         x += btn;

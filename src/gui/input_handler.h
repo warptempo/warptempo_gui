@@ -277,6 +277,22 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
+// THE `/` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
+// input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
+// is stated at AppState::HistoryMode). They are free rather than members because
+// each has a SECOND reader that holds no press and no handler: the redesign
+// roster's mode-scoped disabled-face partition
+// (history_mode_disables_button, app_state.h) asks both of them about a table of
+// chords.
+//   * history_mode_owns_key — the mode's own three keys, bare-exact: `/`, `,`,
+//     `.`. handle_history_mode_key consumes exactly these, one line ABOVE the
+//     allowlist, which is why a face derivation has to ask this first.
+//   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
+//     shape: true when the press is not admitted while the mode stands. Its
+//     admitted membership is enumerated at the definition.
+bool history_mode_owns_key(GuiKey key, GuiInputState mods);
+bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
+
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3):
 // the trim window no longer publishes itself as a region highlight at all — the
@@ -1543,7 +1559,12 @@ private:
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
     //     stands. The redesigned buttons and the Navigation menu's items reach it
-    //     through their synthesized chords, so it covers them too.
+    //     through their synthesized chords, so it covers them too — and since
+    //     2026-08-04 it also DECIDES THEIR FACES (history_mode_disables_button,
+    //     app_state.h). It is a FREE function beside this class, with
+    //     history_mode_owns_key (the three keys' shape), for that second reader:
+    //     both are pure functions of key+mods and the face derivation has no
+    //     press in hand. Declarations above the class.
     //   * handle_history_mode_press is the pointer half, and it both refuses and
     //     acts: true when the press was consumed (either as the mode's own
     //     lane-focus act or as a refusal), false for the navigation gestures the
@@ -1568,7 +1589,6 @@ private:
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
-    bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods);
     void close_history_mode();
