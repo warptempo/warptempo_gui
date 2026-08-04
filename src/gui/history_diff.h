@@ -336,17 +336,28 @@ enum class GuiHistoryCommitOutcome {
 // line, and this returns how far it got; it prints its own success line too, so
 // the caller reports nothing.
 //
-// `projects_repo` is the setting's own value, and it is here because the push
-// destination is REVALIDATED immediately before the push — the same guard init()
-// runs as the mode's gate, asked a second time at the mutating boundary, where a
-// config changed since the mode opened would otherwise publish to a repository
-// the user never confirmed.
+// `projects_repo` is the setting's own value, and it is here because THE PUSH
+// CONSUMES THE VALIDATED DESTINATION: the same guard init() runs as the mode's
+// gate is asked again at the mutating boundary, and the URL it validates there
+// is pinned into the push's own child rather than re-resolved from the mutable
+// remote name — so a config changed since the mode opened cannot publish to a
+// repository the user never confirmed, and neither can one changed between the
+// check and the push. The publication's other two terms are bound the same way:
+// the attributed commit is sent BY SHA, and the branch is read once at act start
+// (the .cpp's push leg owns all three, with the `-c` mechanics).
 //
 // EVERY OUTCOME IS A REPOSITORY OBSERVATION, never a transport result: a commit
 // that landed under a hung post-commit hook is FOUND and pushed rather than
 // reported failed, and a pre-flight that finds the checkpoint already committed
 // but not yet pushed PUSHES IT (the retry route for exactly that shape) instead
-// of answering NothingToCommit.
+// of answering NothingToCommit. An observation that could not be MADE is its own
+// answer everywhere — never silence read as a yes.
+//
+// WHAT "FOUND" MEANS IS CONTENT, NOT AUTHORSHIP: the act attributes a commit
+// carrying exactly this checkpoint — its title, only these three paths, and
+// these exact bytes — and content-equivalent commits are deliberately
+// interchangeable, whoever ran the git. The .cpp's find_checkpoint_commit owns
+// the full contract and why it is the ruled one.
 //
 // IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
 // mode at all, so there is nothing to bootstrap from here — the first checkpoint
