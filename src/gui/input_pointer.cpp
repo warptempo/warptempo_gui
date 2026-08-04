@@ -344,7 +344,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // 2026-08-04):
 //   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
-//   which in this mode IS the checkpoint commit and wears the "Commit" face),
+//   which in this mode IS the save-and-commit checkpoint act and wears the
+//   "Save and Commit" face),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads
 //   the viewed commit in place), and the history button itself (bare `/`, the

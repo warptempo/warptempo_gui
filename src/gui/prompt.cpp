@@ -98,8 +98,15 @@ void GuiPrompt::open_history_commit_confirm(const std::string& commit_title,
     // decision table).
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
+    // THE QUESTION NAMES BOTH HALVES since 2026-08-04: the act saves the piece
+    // beside its source through the ordinary Ctrl+S owner and only then writes,
+    // commits and pushes the checkpoint, so a question that said "Commit" alone
+    // would understate what `y` does. SENTENCE CASE HERE, deliberately: this is
+    // prose, and the title-cased "Save and Commit" is the BUTTON's label, which
+    // is the architect's named exception to the sentence-case convention rather
+    // than a spelling to copy into a sentence.
     app.prompt.text =
-        "Commit \"" + commit_title + "\" to " + repo + "?";
+        "Save and commit \"" + commit_title + "\" to " + repo + "?";
     app.prompt.response_keys   = {'y', '\x1b'};
     app.prompt.response_labels = {"[Y]es", "[Esc]"};
     app.prompt.trigger         = DialogTrigger::HISTORY_COMMIT;

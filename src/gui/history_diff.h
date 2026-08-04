@@ -307,9 +307,11 @@ private:
 // What the mode reads, it can now also WRITE: while the history mode stands,
 // Ctrl+Alt+R commits the live authoring state into the piece's directory in the
 // projects repository (the mode bit selects the command, exactly as the
-// iteration bit selects the sweep). The GUI half — the confirmation prompt, the
-// stderr register, the session re-init that turns the freshly written checkpoint
-// into an empty diff — lives at GuiInputHandler::run_history_commit;
+// iteration bit selects the sweep). The GUI half — the confirmation prompt, THE
+// ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and Commit", and a
+// failed save refuses it before this module is reached at all), the stderr
+// register, the session re-init that turns the freshly written checkpoint into
+// an empty diff — lives at GuiInputHandler::run_history_commit;
 // what lives here is the act itself.
 
 // The commit message this act writes, and the one the prompt shows: `Update

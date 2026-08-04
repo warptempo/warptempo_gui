@@ -634,14 +634,17 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the three
 // writes, the pathspec-scoped commit, the push, and every stderr line about
-// them. What lives here is the question in front of it and the re-entry behind
+// them. What lives here is the question in front of it, THE SAVE in front of
+// that (2026-08-04 — the act is "Save and Commit" now), and the re-entry behind
 // it.
 
 // ASK FIRST. One caller: Ctrl+Alt+R's own arm while the mode stands.
 //
 // THE QUESTION NAMES THE DEED, not a rephrasing of it — the commit message comes
 // from the act's own owner, so the prompt cannot advertise a title the commit
-// does not write. The message is not editable and is not asked about (the
+// does not write, and since the act gained its save prelude the question names
+// that too ("Save and commit ..."), the deed having grown a half. The message
+// is not editable and is not asked about (the
 // architect's ruling: it is derived from the piece, not chosen), so this is a
 // confirmation and its answers are `y` and Esc.
 //
@@ -687,11 +690,55 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // re-entry that finds no history is not a state this can produce — the commit
 // just landed on the branch the walk reads — so its only honest answer is to
 // close the mode, which init() has already explained on stderr.
+//
+// THE ACT SAVES FIRST (architect 2026-08-04): the checkpoint is what you see,
+// SAVED and published, one sentence. Before this the act wrote and committed the
+// repo copies while the session still claimed unsaved changes — incoherent in
+// the architect's own workflow, where the loaded source LIVES in the matched
+// projects/<id>/ and the act's repo write therefore IS the working sidecar set:
+// the bytes on disk were exactly a save's and the title bar still carried the
+// dirty dot. So the prelude below is the REAL Ctrl+S, through its one owner
+// (GuiSaveOps::save — the same three atomic writes beside the source, the same
+// per-write stderr, the same mark_saved + recompute_dirty tail), never a second
+// writer or a partial imitation of it.
+//
+// A FAILED SAVE REFUSES THE WHOLE ACT, and by construction rather than by
+// discipline: the refusal returns ABOVE commit_history_checkpoint, which is the
+// only call in this body that writes bytes or runs git at all, so nothing is
+// written to the repository and no git child is spawned. The save's own failure
+// line has already named the path; this one names the act that declined
+// because of it. The prompt is already down (the prompt's `y` closes it before
+// calling here), which is every other failure's shape in this act too.
+//
+// THE DOUBLE WRITE IS DELIBERATE AND HARMLESS in the coincident workflow. When
+// the source lives inside the matched projects/<id>/, the save and the act's
+// own write hit THE SAME THREE PATHS with BYTE-IDENTICAL CONTENT — the now side
+// is built from the save writers' own string halves (build_history_now_side
+// mirrors refresh_active_tab_view_from_app onto local copies, so a save running
+// first changes none of its bytes), and both writers are the atomic tmp + fsync
+// + rename, so the second rename simply replaces a file with its own contents.
+// It is not deduped: recognizing the coincidence would mean canonicalizing three
+// absolute paths against the repo root and then carrying a skip that only one
+// user's layout ever takes, to save three renames of bytes we already hold. When
+// the source lives ELSEWHERE (the older workflow), both writes are wanted and
+// distinct — the save publishes beside the source, the act publishes the repo's
+// copies — which is the same code doing the same thing for the same reason.
+//
+// AND THE SAVE BUTTON STAYS (architect's explicit reasoning): saving to disk is
+// its own act and the common one; this act is a save that also PUBLISHES. Two
+// buttons because one is to disk and one is to disk and the remote.
 void GuiInputHandler::run_history_commit() {
     if (!app.history_mode.active) return;
     const std::string dir  = app.history_mode.session.project_directory();
     const std::string base = app.history_mode.session.sidecar_base_name();
     if (dir.empty() || base.empty()) return;
+
+    if (!save_ops.save()) {
+        std::fprintf(stderr,
+            "warptempo_gui: Save and commit refused: the save failed, so "
+            "nothing was committed\n");
+        return;
+    }
 
     const GuiHistoryCommitOutcome outcome = commit_history_checkpoint(
         dir, base, app.projects_repo, build_history_now_side(app));
@@ -1234,8 +1281,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // reaches the chord needs to know which command it currently is.
     //
     // THE HISTORY MODE COMES FIRST (architect 2026-08-04) because it is the
-    // outer mode: while it stands, Ctrl+Alt+R is THE COMMIT ACT — write the live
-    // state into the projects repository as a checkpoint — and the mode's own
+    // outer mode: while it stands, Ctrl+Alt+R is THE SAVE-AND-COMMIT ACT — save
+    // the piece, then write the live state into the projects repository as a
+    // checkpoint and push it — and the mode's own
     // keyboard allowlist is what admits the chord here at all. It outranks the
     // iteration bit unconditionally, including in the state where the mode was
     // opened with iteration mode already on (nothing can toggle that bit while

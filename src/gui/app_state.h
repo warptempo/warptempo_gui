@@ -2042,18 +2042,23 @@ struct AppState {
     //
     // THE OTHER ADMITTED MUTATOR IS Ctrl+Alt+R, AND IT WRITES OUTSIDE THIS
     // SESSION (architect 2026-08-04): while the mode stands that chord is not a
-    // render but THE COMMIT ACT — the mode bit selecting the command exactly as
-    // the iteration bit selects the sweep, one route with the selection inside
-    // it (handle_render_dispatch_keys). It asks first, through the product's
-    // fourth prompt, and on `y` writes the live authoring state as the three
-    // sidecars into the piece's directory in the projects repository, commits
-    // them pathspec-scoped under `Update <id>` and pushes
+    // render but THE SAVE-AND-COMMIT ACT — the mode bit selecting the command
+    // exactly as the iteration bit selects the sweep, one route with the
+    // selection inside it (handle_render_dispatch_keys). It asks first, through
+    // the product's fourth prompt, and on `y` runs THE ORDINARY SAVE beside the
+    // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
+    // dirty cleared with it) and only then writes the live authoring state as
+    // the three sidecars into the piece's directory in the projects repository,
+    // commits them pathspec-scoped under `Update <id>` and pushes
     // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
-    // git route, and its only writer outside the user's own save). Ctrl+Alt+-
+    // git route, and its only writer outside the user's own save). A FAILED SAVE
+    // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
+    // committed; run_history_commit (input_key_dispatch.cpp) owns the order, the
+    // refusal and the coincident-path reasoning. Ctrl+Alt+-
     // Shift+R is NOT admitted, so the miscellaneous render stays a consumed
     // nothing here and the Render button drops its shift line with it; the
-    // button itself wears the commit icon and the label "Commit" while the mode
-    // stands, and reaches the act through its ordinary chord.
+    // button itself wears the commit icon and the label "Save and Commit" while
+    // the mode stands, and reaches the act through its ordinary chord.
     //
     // THE MODE STAYS OPEN ACROSS THE ACT (architect's ruling) and the session
     // RE-INITS in place: the walk re-heads at the new checkpoint, the index
@@ -3095,8 +3100,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // by the history face 2026-08-04). Ctrl+Alt+R is a chord whose MEANING is
 // selected by a mode bit, and the button says whichever command it currently is:
 //
-//   HISTORY MODE STANDING → "Commit", and the vcs-commit icon with it: the chord
-//   commits the live state into the projects repository as a checkpoint. It is
+//   HISTORY MODE STANDING → "Save and Commit", and the vcs-commit icon with it:
+//   the chord SAVES the piece beside its source through the ordinary Ctrl+S
+//   owner and then commits the live state into the projects repository as a
+//   checkpoint (run_history_commit, input_key_dispatch.cpp, owns the order and
+//   the refusal). The label carries both halves because the act does. It is
 //   ranked FIRST because it is the outer mode — the history mode's own allowlist
 //   is what admits the chord at all, and it admits it as the commit act whether
 //   or not iteration mode happens to have been left on underneath (nothing can
@@ -3107,10 +3115,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   ITERATION MODE ON → "Render Iterations", the sweep, and its own one-line
 //   hint.
 //
-// THE CAPITAL I IS DELIBERATE AND SCOPED TO THIS STRING (architect 2026-08-03,
-// his explicit instruction): every other multi-word GUI label in the product
-// stays sentence case ("Playback speed", "Center on focus", "Next marker") —
-// this is the one named exception, not a precedent to copy outward or "fix".
+// THE TITLE CASE IS DELIBERATE AND SCOPED TO THESE TWO STRINGS (architect
+// 2026-08-03 for the capital I, 2026-08-04 for the capital C beside it): every
+// other multi-word GUI label in the product stays sentence case ("Playback
+// speed", "Center on focus", "Next marker") — these two are the named
+// exceptions, not a precedent to copy outward or "fix". The joining word stays
+// LOWERCASE ("and"), which is what title case means and what the architect
+// spelled; the prompt that asks about the act is PROSE and takes the ordinary
+// sentence case ("Save and commit ... ?", prompt.cpp), so the two spellings
+// differ on purpose.
 //
 // THE SHIFT LINE GOES WITH IT, and that is the same fact rather than a second
 // decision: Ctrl+Alt+Shift+R is a consumed no-op in iteration mode (the refusal
@@ -3122,11 +3135,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // BOTH STRINGS LIVE HERE, beside the constant table, so the label the button
 // paints and the name its hint gives cannot drift into two different words.
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
-inline constexpr const char* kRenderCommitLabel     = "Commit";
+inline constexpr const char* kRenderCommitLabel     = "Save and Commit";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
     if (b == RedesignButton::Render && a.history_mode.active) {
-        return {"Commit (Ctrl+Alt+R)", nullptr};
+        return {"Save and Commit (Ctrl+Alt+R)", nullptr};
     }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return {"Render Iterations (Ctrl+Alt+R)", nullptr};
