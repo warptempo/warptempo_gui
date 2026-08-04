@@ -703,12 +703,18 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // writer or a partial imitation of it.
 //
 // A FAILED SAVE REFUSES THE WHOLE ACT, and by construction rather than by
-// discipline: the refusal returns ABOVE commit_history_checkpoint, which is the
-// only call in this body that writes bytes or runs git at all, so nothing is
-// written to the repository and no git child is spawned. The save's own failure
-// line has already named the path; this one names the act that declined
-// because of it. The prompt is already down (the prompt's `y` closes it before
-// calling here), which is every other failure's shape in this act too.
+// discipline: the refusal returns ABOVE commit_history_checkpoint, the only
+// remaining call in this body that writes bytes or runs git, so no
+// checkpoint-side write happens and no git child is spawned. That is
+// narrower than "nothing reaches the repository": the save's own three
+// writes are sequential, not cross-file transactional (save_ops.cpp), so a
+// save that fails partway through can leave earlier atomic renames on disk
+// exactly as any ordinary Ctrl+S failure can — and in the coincident
+// projects/<id>/ workflow those are repository working-tree paths. The
+// save's own failure line has already named the path; this one names the
+// act that declined because of it. The prompt is already down (the
+// prompt's `y` closes it before calling here), which is every other
+// failure's shape in this act too.
 //
 // THE DOUBLE WRITE IS DELIBERATE AND HARMLESS in the coincident workflow. When
 // the source lives inside the matched projects/<id>/, the save and the act's
