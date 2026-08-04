@@ -43,12 +43,18 @@ struct AppState;
 // things.
 //
 // WHICH REPOSITORY IS THE PROJECTS HOME is the `projects_repo` setting's
-// answer, not this module's assumption. init() compares it against the local
-// clone's own `origin` remote, normalized to bare host/path on both sides, and
-// refuses on a mismatch: the clone is the transport, and a rebound setting
-// must never quietly produce a confident answer out of the wrong history. The
+// answer, not this module's assumption. The guard compares it against this
+// clone's `origin` — its FETCH url AND EVERY EFFECTIVE PUSH url (`remote
+// get-url` plus `--push --all`, since a configured `pushurl` can send a
+// checkpoint somewhere the fetch url never named) — normalized to bare host/path
+// on both sides, and refuses on any mismatch: the clone is the transport, and a
+// rebound setting must never quietly produce a confident answer out of the wrong
+// history, nor publish into one. It runs at TWO SITES for two different
+// questions — init(), as the mode's gate, and the commit act immediately before
+// its push, as the mutating boundary's own check, because config can move while
+// the mode stands (clone_is_projects_home in the .cpp is the one owner). The
 // guard asks WHICH REPOSITORY THIS CLONE IS, never how fresh it is — it reads
-// the remote's URL and no ref at all — so moving the walk from `origin/main` to
+// remote URLs and no ref at all — so moving the walk from `origin/main` to
 // the local branch left it untouched and means exactly what it always did.
 //
 // The diff runs THEN -> NOW, and the "now" side is the LIVE IN-MEMORY STATE
@@ -248,9 +254,10 @@ public:
     // the committed tree, and resolve the commit list. Returns available().
     // Every failure path is UNAVAILABLE with one stderr line and no further
     // git work: the repo root missing, no `origin` remote, a `projects_repo`
-    // that is empty or names a different repository than this clone's origin,
-    // no committed file bearing this source's sidecar names, more than one
-    // directory bearing them, or no commit touching any of them.
+    // that is empty or that names a different repository than this clone's
+    // FETCH url or than any of its effective PUSH urls, no committed file
+    // bearing this source's sidecar names, more than one directory bearing
+    // them, or no commit touching any of them.
     bool init(const AppState& app);
 
     bool               available() const { return available_; }
@@ -329,9 +336,21 @@ enum class GuiHistoryCommitOutcome {
 // line, and this returns how far it got; it prints its own success line too, so
 // the caller reports nothing.
 //
+// `projects_repo` is the setting's own value, and it is here because the push
+// destination is REVALIDATED immediately before the push — the same guard init()
+// runs as the mode's gate, asked a second time at the mutating boundary, where a
+// config changed since the mode opened would otherwise publish to a repository
+// the user never confirmed.
+//
+// EVERY OUTCOME IS A REPOSITORY OBSERVATION, never a transport result: a commit
+// that landed under a hung post-commit hook is FOUND and pushed rather than
+// reported failed, and a pre-flight that finds the checkpoint already committed
+// but not yet pushed PUSHES IT (the retry route for exactly that shape) instead
+// of answering NothingToCommit.
+//
 // IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
 // mode at all, so there is nothing to bootstrap from here — the first checkpoint
 // of a new piece stays a manual act.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
-    const GuiHistoryNowSide& bytes);
+    const std::string& projects_repo, const GuiHistoryNowSide& bytes);

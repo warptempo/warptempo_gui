@@ -641,13 +641,17 @@ void GuiInputHandler::run_history_commit() {
     const std::string base = app.history_mode.session.sidecar_base_name();
     if (dir.empty() || base.empty()) return;
 
-    const GuiHistoryCommitOutcome outcome =
-        commit_history_checkpoint(dir, base, build_history_now_side(app));
+    const GuiHistoryCommitOutcome outcome = commit_history_checkpoint(
+        dir, base, app.projects_repo, build_history_now_side(app));
 
     // A CHECKPOINT EXISTS IN BOTH SURVIVING ARMS — pushed or not — and that is
     // exactly why the walk reads the local branch: an unpushed checkpoint is
     // still history, and the user must be able to see that it landed. Every
-    // other outcome leaves the walk as it was, so the mode is left alone.
+    // other outcome leaves the walk as it was, so the mode is left alone. (Both
+    // arms also cover the act's RETRY shape, where the checkpoint was already
+    // committed by an earlier attempt whose transport died over it and only the
+    // push was outstanding; re-heading the walk at a commit it already heads at
+    // is a no-op the empty diff confirms exactly as it does a fresh one.)
     if (outcome != GuiHistoryCommitOutcome::Committed &&
         outcome != GuiHistoryCommitOutcome::CommittedNotPushed) {
         return;

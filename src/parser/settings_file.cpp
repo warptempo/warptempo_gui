@@ -43,8 +43,11 @@ using warptempo_parse::prefix_line_error;
 // THE CONSEQUENCE, stated where the refusal is: a `.settings` written before
 // 2026-08-04 that carries no `projects_repo=` line is LOAD-FATAL in BOTH
 // products, taking the ordinary missing-required-key refusal below — no
-// migration tool and no reader leniency, the standing convention (hand-edit the
-// line in, or let a save from a loaded session write it). The architect ruled
+// migration tool and no reader leniency, the standing convention. HAND-EDITING
+// THE LINE IN IS THE WHOLE RECOVERY: a save cannot be the other half of it,
+// since a file that refuses to load can never produce the loaded session a save
+// would be written from (comment-only correction 2026-08-04, under the same
+// day's grant that made the key required). The architect ruled
 // this knowing the cost: the corpus has one live project and its checkpoint
 // already carries the key, and the GUI's writer has emitted the line since the
 // key existed, so the population of files this refuses is the ones written
@@ -398,8 +401,12 @@ std::expected<SettingsFile, std::string> read_settings_file(
         } else if (key == "audio_player") {
             out.audio_player = gv.text;
         } else if (key == "projects_repo") {
-            // Present in the file: it overrides the member default that a
-            // file omitting the key keeps. (architect approval 2026-08-03.)
+            // The reader ALWAYS assigns, like every other required key: a file
+            // omitting the line never reaches this arm, since the required-key
+            // tail refuses the whole load first. (Arm added under architect
+            // approval 2026-08-03; this comment retold 2026-08-04 under the
+            // same-day grant that made the key required, comment-only — the
+            // one-day optional story it used to tell is retired.)
             out.projects_repo = gv.text;
         } else if (key == "libm_hash") {
             out.libm_hash = gv.text;

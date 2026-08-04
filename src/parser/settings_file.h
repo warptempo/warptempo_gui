@@ -261,14 +261,17 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // The typed result of a GUI-kind (key, value) grammar check. The consumers
 // (the whole-file reader and the settings editor) route by key name / tab
 // suffix, so only the parsed-value members below are read; each member's
-// comment names the key(s) that fill it.
+// comment names the key(s) that fill it. (`text`'s list gained `projects_repo`
+// 2026-08-04 — comment-only, the owner list catching up with the key that
+// landed under the 2026-08-03 grant and became required under the 2026-08-04
+// one.)
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, gui_scale
     float       f    = 0.0f;    // playback_speed
     double      d    = 0.0;     // tab_X_zoom
-    std::string text;           // audio_player, the four *_hash keys
+    std::string text;           // audio_player, projects_repo, the four *_hash keys
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the
