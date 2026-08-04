@@ -854,10 +854,15 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
          app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
             ? app.top_flag_editor.target : -1;
 
-    // THE HISTORY MODE'S THREE INPUTS (contract at the FlagCache fields).
-    const bool        history_active = app.history_mode.active;
-    const std::size_t history_index  = app.history_mode.index;
-    const int         history_focus  = app.history_mode.focus;
+    // THE HISTORY MODE'S FOUR INPUTS (contract at the FlagCache fields). The
+    // GENERATION is the one that is not about the shown commit but about WHICH
+    // SESSION is showing it: the commit act re-enters the mode in place, leaving
+    // the other three exactly as they were, and without this the freshly
+    // committed session's empty lane would keep blitting the old session's flags.
+    const bool               history_active = app.history_mode.active;
+    const std::size_t        history_index  = app.history_mode.index;
+    const int                history_focus  = app.history_mode.focus;
+    const unsigned long long history_generation = app.history_mode.generation;
 
     const bool matches =
         flag_cache.surface &&
@@ -876,7 +881,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_editing_flag_target     == editing_flag_target &&
         flag_cache.fp_history_active          == history_active &&
         flag_cache.fp_history_index           == history_index &&
-        flag_cache.fp_history_focus           == history_focus;
+        flag_cache.fp_history_focus           == history_focus &&
+        flag_cache.fp_history_generation      == history_generation;
 
     if (matches) return;
 
@@ -1040,6 +1046,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_active          = history_active;
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;
+    flag_cache.fp_history_generation      = history_generation;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

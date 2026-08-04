@@ -241,7 +241,15 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // fields themselves. Idempotent, so a closer may fire with the mode already down.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
+    // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
+    // counts VISITS rather than describing one: letting it fall back to zero
+    // would let a close-then-open pair reissue a number the flag cache has
+    // already seen, which is the very collision the counter exists to prevent
+    // (a `/` off and a `/` on delivered in one dispatch batch reach the paint as
+    // a single edge, with no intervening rebuild to notice `active` blinking).
+    const unsigned long long generation = app.history_mode.generation;
     app.history_mode = AppState::HistoryMode{};
+    app.history_mode.generation = generation;
     drop_lane_stash_across_history_edge();
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
@@ -297,6 +305,15 @@ bool GuiInputHandler::open_history_mode_fresh() {
     fresh.active = true;
     fresh.index  = 0;      // the newest commit
     fresh.focus  = -1;
+    // EVERY ENTRY IS A NEW GENERATION, including the in-place one the commit act
+    // makes. The flag cache identifies the mode's content by (active, index,
+    // focus) plus this, and without it a re-entry that lands on the same index
+    // with the same focus — which the commit act's re-entry always does, and
+    // which `active` never going false cannot betray — is indistinguishable from
+    // no change at all, leaving the previous session's diff flags on screen.
+    // The bump is HERE rather than at the two call sites because this is the one
+    // entry owner, so a third caller inherits it.
+    fresh.generation = app.history_mode.generation + 1;
     app.history_mode = std::move(fresh);
     drop_lane_stash_across_history_edge();
     viewport.invalidate_all();
@@ -1548,7 +1565,13 @@ bool GuiInputHandler::adopt_history_commit(const std::string& spelling) {
 
     GuiHistoryCommitSidecars snap;
     std::string              reason;
-    if (!read_commit_sidecars(spelling, base_name, snap, reason)) {
+    // The session's matched directory goes with the spelling: it is what settles
+    // a commit whose tree carries this base name in more than one place (an older
+    // era's copy of another piece), and an unsettleable one refuses rather than
+    // adopting a guess.
+    if (!read_commit_sidecars(spelling, base_name,
+                              app.history_mode.session.project_directory(),
+                              snap, reason)) {
         std::fprintf(stderr, "warptempo_gui: Adopt refused: %s\n",
                      reason.c_str());
         return false;

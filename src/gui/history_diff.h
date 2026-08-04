@@ -128,6 +128,17 @@ struct GuiHistoryLineCounts {
 struct GuiHistoryCommitDelta {
     std::string sha;
 
+    // THIS COMMIT HAS NO ANSWER, and says so instead of guessing one. Its tree
+    // carries the sidecar base name in several directories and none of them is
+    // the one this session matched on the branch tip — an older era's
+    // `projects/B/song.*` beside today's `projects/A/song.*`, which the walk's
+    // basename pathspec pulls into one list. Every list below is EMPTY in that
+    // state (the lane paints nothing) and the bottom-strip line names it; adopt
+    // of such a commit refuses in read_commit_sidecars. Ambiguity is not a
+    // property of the piece, only of the commit: its neighbours in the same walk
+    // resolve normally.
+    bool ambiguous = false;
+
     std::vector<GuiHistoryWarpEntry>  warp_added;
     std::vector<GuiHistoryWarpEntry>  warp_removed;
     std::vector<GuiHistoryWarpChange> warp_changed;
@@ -200,15 +211,31 @@ struct GuiHistoryCommitSidecars {
 //
 // The sidecar paths are resolved from THAT COMMIT'S OWN TREE by base name, the
 // same era-agnostic rule the walk uses, so a commit from before a corpus rename
-// reads with no knowledge of what the directory used to be called. A resolved
-// commit that carries none of the three is NOT a failure here — every blob comes
-// back with an empty path and the CALLER decides what a missing sidecar means
-// (the adopt refuses on one; the display path treats it as "everything added").
+// reads with no knowledge of what the directory used to be called.
+// `head_directory` is the session's own match (GuiHistoryDiff::project_directory)
+// and breaks the one tie that rule can hit: a commit carrying the base name in
+// several directories resolves to THIS piece's if it is among them, to a lone
+// candidate otherwise, and REFUSES when neither holds — an ambiguous commit may
+// belong to another piece entirely and a whole-state replace out of it would be
+// the worst kind of confident wrong.
 //
-// False with `reason` set only when the spelling does not resolve to a commit.
-// Nothing here writes anything: this is `rev-parse`, `ls-tree` and `show`.
+// A resolved commit that carries none of the three is NOT a failure here — every
+// blob comes back with an empty path and the CALLER decides what a missing
+// sidecar means (the adopt refuses on one; the display path treats it as
+// "everything added").
+//
+// EVERY BLOB IT DOES RETURN IS WHOLE. A `git show` that could not run yields an
+// empty string, and an empty sidecar is a valid file both marker loaders accept,
+// so this cross-checks each read against the byte count the tree listing states
+// and refuses on any disagreement. That is what keeps "the commit's own three
+// sidecars" a true description of the adopt's input rather than a hope.
+//
+// False with `reason` set when the spelling does not resolve to a commit, when
+// the commit is ambiguous, or when a blob could not be read whole. Nothing here
+// writes anything: this is `rev-parse`, `ls-tree` and `show`.
 bool read_commit_sidecars(const std::string&         spelling,
                           const std::string&         base_name,
+                          const std::string&         head_directory,
                           GuiHistoryCommitSidecars&  out,
                           std::string&               reason);
 

@@ -101,15 +101,16 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // are the same shape and the same concern: free-text environment
     // preferences with no dedicated gesture, sitting at the tail of the
     // non-tab GUI band so the per-tab bands stay contiguous below.
-    // The default is non-empty (unlike url/cover), and it is the SAME constant
-    // the schema falls back to when a file omits the key
-    // (kDefaultProjectsRepo, settings_file.h) — the template stamp and the
-    // fallback are one value, so a fresh project and an old sidecar agree.
+    // The default is non-empty (unlike url/cover), and it is LITERALLY the same
+    // constant the schema falls back to when a file omits the key — this
+    // descriptor names kDefaultProjectsRepo (settings_file.h) rather than
+    // repeating its text, so the template stamp and the fallback are one value by
+    // construction and cannot drift apart with an edit to either.
     // THE SCHEMA'S ONE OPTIONAL KEY: it is absent from kCanonicalSettingsKeys
     // by design, so this writer always emits it while a file lacking it still
     // loads. NOT an engine key — it never enters kEngineKeys and never reaches
     // the render fingerprint. (architect approval 2026-08-03.)
-    { "projects_repo",               SettingKind::ProjectsRepoName,     EngineField::Title,                   "github.com/warptempo/warptempo_gui" },
+    { "projects_repo",               SettingKind::ProjectsRepoName,     EngineField::Title,                   kDefaultProjectsRepo },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },

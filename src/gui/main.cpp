@@ -659,11 +659,20 @@ int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
     // Auto-reap the fire-and-forget external audio players the `l`
-    // ("Listen to renders") command spawns — the product's only subprocess.
-    // Ignoring SIGCHLD makes the kernel discard child exit status so the
-    // detached players never linger as zombies; set once here, never
-    // per-press. No other code forks or waits, so nothing depends on the
-    // default disposition.
+    // ("Listen to renders") command spawns. Ignoring SIGCHLD makes the kernel
+    // discard child exit status so the detached players never linger as zombies;
+    // set once here, never per-press.
+    //
+    // TWO SUBSYSTEMS FORK NOW, and both are written to this disposition rather
+    // than against it. The players are the fire-and-forget half. THE HISTORY MODE
+    // (src/gui/history_diff.cpp) is the other: it runs git synchronously through
+    // two fenced entry points — reads for the diff and the walk, and the commit
+    // act's `add`/`commit`/`push` — and because this disposition makes waitpid
+    // return ECHILD, it decides nothing from child status. A read reports whether
+    // it RAN (an exec self-pipe) and what it said; the commit act's verdicts are
+    // observations of the repository afterwards. Both helpers' comments own the
+    // reasoning; what matters here is that neither depends on the default
+    // disposition being restored.
     std::signal(SIGCHLD, SIG_IGN);
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process

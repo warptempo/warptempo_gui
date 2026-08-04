@@ -3666,7 +3666,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         }
         const GuiHistoryCommitDelta* d =
             app.history_mode.session.delta_at(app.history_mode.index);
-        if (d && !(d->then_scale_token.empty() && d->now_scale_token.empty())) {
+        if (d && d->ambiguous) {
+            // AN UNAVAILABLE DELTA, in the slot the scale would have taken. This
+            // commit's tree carries the sidecar base name in directories none of
+            // which is this piece's, so it may not be this piece's checkpoint at
+            // all; the lane is empty for it by the same reasoning, and this one
+            // word is what tells the two kinds of empty lane apart — nothing
+            // changed here versus nothing can be said about here.
+            if (!line.empty()) line += ' ';
+            line += "Ambiguous";
+        } else if (d && !(d->then_scale_token.empty() &&
+                          d->now_scale_token.empty())) {
             if (!line.empty()) line += ' ';
             line += "Scale:";
             if (d->scale_changed) {

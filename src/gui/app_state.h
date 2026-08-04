@@ -2073,6 +2073,27 @@ struct AppState {
         // at all.
         std::vector<HistoryDiffFlag> flags;
 
+        // WHICH SESSION THIS IS — a counter the ONE entry owner
+        // (open_history_mode_fresh) bumps on every entry, and the reason the
+        // flag cache can tell one visit from the next.
+        //
+        // (active, index, focus) is not enough, and the gap is not a corner: the
+        // COMMIT ACT re-enters in place, replacing the whole session while
+        // `active` never goes false — new walk, new commit list, an empty delta
+        // where a full one stood — and lands on index 0 with focus -1, which is
+        // exactly the ordinary shape it was already in. Every other fingerprint
+        // input (the marker generations, the viewport) is unchanged too, because
+        // the commit changed nothing in memory. So the cached surface MATCHED and
+        // the pre-commit diff flags kept being blitted over a session that no
+        // longer had them — visible, unclickable (the hit stashes were cleared),
+        // and contradicting the empty-diff confirmation the act exists to show.
+        // Damage cannot fix that: invalidate_all schedules a repaint, and the
+        // repaint is what consults this fingerprint.
+        //
+        // It never wraps in any real session and is never persisted; it is only
+        // ever compared for equality.
+        unsigned long long generation = 0;
+
         GuiHistoryDiff session;
     };
     HistoryMode history_mode;
