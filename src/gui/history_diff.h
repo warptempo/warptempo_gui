@@ -344,10 +344,13 @@ enum class GuiHistoryCommitOutcome {
 // repository the user never confirmed, and neither can one changed between the
 // check and the push. The publication's other two terms are bound the same way:
 // the attributed commit is sent BY SHA, and the branch is read once at act start
-// — the act's ONLY reading of the symbolic HEAD, with every source-side
-// observation after it naming that branch's own `refs/heads/` ref, so a checkout
-// mid-act cannot make the observation and the publication mean different
-// branches (the .cpp's push leg owns all three, with the `-c` mechanics).
+// — the act's ONLY reading of the symbolic HEAD for a value, with every
+// source-side observation after it BOUND to that branch: all but one by naming
+// its own `refs/heads/` ref, and the pre-flight `git status` — which takes no ref
+// and so cannot be spelled — by verifying its `##` header still names that
+// branch and ending the act when it does not. So a checkout mid-act cannot make
+// the observation and the publication mean different branches (the .cpp's push
+// leg owns all three, with the `-c` mechanics).
 //
 // EVERY OUTCOME IS A REPOSITORY OBSERVATION, never a transport result: a commit
 // that landed under a hung post-commit hook is FOUND and pushed rather than

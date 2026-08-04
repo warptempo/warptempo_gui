@@ -56,11 +56,16 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 //
 // THE COMMIT ACT DOES NOT USE THIS SPELLING FOR ITS OBSERVATIONS. It reads HEAD
 // exactly once, to learn the branch NAME, and every source-side observation it
-// makes afterwards names `refs/heads/<that name>` — because the act both
-// observes and PUBLISHES, and a symbolic HEAD that moves under it would let the
-// two name different branches (commit_history_checkpoint's `source_ref` owns the
-// reasoning). The read-only mode has no such exposure: it publishes nothing, and
-// a checkout under it simply shows the branch that is now checked out.
+// makes afterwards is BOUND TO THAT NAME — all but one by naming
+// `refs/heads/<that name>` outright, and the one that cannot (the pre-flight
+// `git status`, which takes no ref) by VERIFYING that the name is still what git
+// has checked out, through the `##` header status_of_paths already demanded as
+// its ran-witness. Either way no post-capture observation can answer for another
+// branch — because the act both observes and PUBLISHES, and a symbolic HEAD that
+// moves under it would let the two name different branches
+// (commit_history_checkpoint's `source_ref` owns the reasoning). The read-only
+// mode has no such exposure: it publishes nothing, and a checkout under it simply
+// shows the branch that is now checked out.
 //
 // The projects_repo guard is unaffected either way: it asks which REPOSITORY
 // this clone is, not how fresh it is.
@@ -1572,19 +1577,38 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
 
 namespace {
 
-// A spelling's object name, or "" when it does not resolve. `--verify` is what
-// makes a missing ref an error rather than an echo of the argument, which is how
-// the push check below asks "does this remote-tracking ref exist yet".
+// A SPELLING'S OBJECT NAME, WITH THE CAPTURE'S OWN VERDICT BESIDE IT. `--verify`
+// is what makes a missing ref an error rather than an echo of the argument,
+// which is how the push check below asks "does this remote-tracking ref exist
+// yet".
 //
-// THE EMPTY ANSWER IS TWO ANSWERS — a ref that is absent and a read that could
-// not be made — and callers that must tell them apart go through
-// resolve_ref_witnessed rather than reading this directly; its comment owns the
-// witness. The callers that do read it directly (the act's own branch-tip reads)
-// treat both as the same failure by design: no tip, no act.
+// THE TWO RETURNS ARE TWO DIFFERENT FACTS, and keeping them apart here is the
+// whole reason this form exists. `object_name` answers WHAT THE REF NAMES and is
+// empty when the ref did not resolve; the returned GitCapture answers WHETHER
+// THE INVOCATION RAN, which an empty name cannot carry and which no later probe
+// can reconstruct — a second question answered now proves the repository speaks
+// now, never that an earlier invocation ever executed. resolve_ref_witnessed is
+// the consumer that needs both, and its comment owns what it does with them.
+GitCapture resolve_ref_capture(const std::string& spelling,
+                               std::string&       object_name) {
+    std::string      out;
+    const GitCapture capture =
+        run_git_capture({"rev-parse", "--verify", spelling}, out);
+    object_name =
+        (capture == GitCapture::Ran) ? trim_trailing_ws(out) : std::string();
+    return capture;
+}
+
+// The same read for the callers that need only the name, which collapses the two
+// answers on purpose: THE EMPTY ANSWER IS TWO ANSWERS — a ref that is absent and
+// a read that could not be made — and the callers that read this directly (the
+// act's own branch-tip reads) treat both as the same failure by design: no tip,
+// no act. A caller that must tell them apart calls resolve_ref_capture, or goes
+// through resolve_ref_witnessed which does.
 std::string resolved_object_name(const std::string& spelling) {
-    std::string out;
-    if (!git_output({"rev-parse", "--verify", spelling}, out)) return {};
-    return trim_trailing_ws(out);
+    std::string name;
+    resolve_ref_capture(spelling, name);
+    return name;
 }
 
 }  // namespace
@@ -1605,13 +1629,79 @@ namespace {
 // the answer, and neither is inferred from the other. (The exit status would say
 // the same thing and is not available: main()'s SIG_IGN regime, documented at the
 // capture helper.)
+//
+// THE HEADER IS ALSO THE BINDING, which is the second thing `--branch` buys and
+// the one that keeps this probe honest about WHICH BRANCH it just answered for.
+// `git status` has no ref argument: it compares the working tree against the
+// CURRENT symbolic HEAD, and there is no spelling that pins it the way every
+// other source-side read of the act names `refs/heads/<captured>`. So the probe
+// cannot be pinned — it must be CHECKED, and the header is the check: it names
+// the branch git actually compared against, so comparing it to the branch
+// captured at act start turns an unpinnable observation into a verified one.
+//
+// WITHOUT THAT COMPARE THE CLEAN ARM COULD END THE ACT ON ANOTHER BRANCH'S
+// ANSWER (reproduced live): captured `main` carries the old sidecar bytes, a
+// topic branch already carries the new ones, another terminal checks that topic
+// out before the probe, and the act's freshly written bytes match the topic tree
+// exactly — so `status` reports CLEAN, the clean arm resolves captured
+// `refs/heads/main` and finds `origin/main` caught up with it, and the act
+// returns NothingToCommit before the byte confirmation ever runs. Nothing is
+// committed, nothing is pushed, captured `main` still lacks the bytes, and the
+// user is told the checkpoint already carries them — the one line that tells
+// them to stop looking. OtherBranch is that sequence's close.
 enum class GuiHistoryPathStatus {
     Unavailable,  // git did not run, or ran and failed
-    Clean,        // it ran; the three paths match HEAD
-    Dirty,        // it ran; at least one differs
+    OtherBranch,  // it ran, but against a branch that is not the captured one
+    Clean,        // it ran on the captured branch; the three paths match its tip
+    Dirty,        // it ran on the captured branch; at least one differs
 };
 
-GuiHistoryPathStatus status_of_paths(const std::vector<std::string>& pathspecs) {
+// THE BRANCH THE `##` HEADER NAMES, in the same spelling `current_branch_name`
+// returns — "" for a detached HEAD, so the two answers compare directly.
+//
+// THE GRAMMAR, verified live against git 2.55 in every shape the act can meet:
+// `## main` (no upstream), `## main...origin/main` (with one),
+// `## main...origin/main [ahead 1]` / `[behind 1]` / `[ahead 1, behind 2]`,
+// `## HEAD (no branch)` (detached), `## No commits yet on main` (unborn).
+//
+// THE TWO CUTS ARE UNAMBIGUOUS BECAUSE OF WHAT A REFNAME MAY NOT CONTAIN: git
+// refuses a branch name holding two consecutive dots or a space
+// (`git check-ref-format`'s own rules), so the `...` that introduces the upstream
+// and the space that introduces a decoration can never be part of the name
+// itself. A name may freely carry single dots and slashes (`feat/a.b.c` parses
+// whole, verified), which is why the cut is on `...` and not on the first `.`.
+//
+// THE DETACHED FORM IS TESTED WHOLE rather than cut, because cutting it would
+// yield the literal "HEAD" and turn the ordinary detached act — which proceeds
+// and simply publishes nothing — into a spurious mismatch failure.
+//
+// EVERY OTHER SHAPE FAILS CLOSED BY CONSTRUCTION. The unborn header cuts to "No",
+// which matches no captured branch, so an unborn repository ends the act instead
+// of running it — already the outcome there (the mode cannot open on a piece with
+// no committed history, and the tip reads below fail anyway), and the safe
+// direction for any future header decoration this parse has not seen.
+std::string branch_of_status_header(const std::string& header) {
+    // Past the `##` the caller has already proved is there, plus its separator.
+    std::size_t start = 2;
+    while (start < header.size() && header[start] == ' ') ++start;
+    const std::string rest = trim_trailing_ws(header.substr(start));
+    if (rest == "HEAD (no branch)") return {};  // detached: no name, as captured
+
+    std::size_t end         = rest.find("...");
+    const std::size_t space = rest.find(' ');
+    if (space != std::string::npos && (end == std::string::npos || space < end)) {
+        end = space;
+    }
+    return rest.substr(0, end);  // npos takes the whole remainder
+}
+
+// `expect_branch` is the branch captured at act start ("" for a detached HEAD);
+// `checked_out_branch` comes back with what the header named, so the caller's
+// failure line can name both.
+GuiHistoryPathStatus status_of_paths(const std::vector<std::string>& pathspecs,
+                                     const std::string& expect_branch,
+                                     std::string&       checked_out_branch) {
+    checked_out_branch.clear();
     std::vector<std::string> args{"status", "--porcelain", "--branch", "--"};
     for (const std::string& p : pathspecs) args.push_back(p);
     std::string out;
@@ -1622,6 +1712,12 @@ GuiHistoryPathStatus status_of_paths(const std::vector<std::string>& pathspecs) 
     if (lines.empty() || lines.front().size() < 2 ||
         lines.front().compare(0, 2, "##") != 0) {
         return GuiHistoryPathStatus::Unavailable;
+    }
+    checked_out_branch = branch_of_status_header(lines.front());
+    if (checked_out_branch != expect_branch) {
+        // The entries below this header are about the wrong branch too, so they
+        // are not read at all: there is no answer here for the act to use.
+        return GuiHistoryPathStatus::OtherBranch;
     }
     for (std::size_t i = 1; i < lines.size(); ++i) {
         if (!lines[i].empty()) return GuiHistoryPathStatus::Dirty;
@@ -1715,11 +1811,29 @@ GuiHistoryContainment ref_containment(const std::string& tip,
 // captured branch deleted out from under the act — nothing here can tell that
 // apart from a broken observation, so the answer is UNAVAILABLE.
 //
+// WHAT THE WITNESS MAY NOT ADJUDICATE, and the reason the target read comes back
+// as a CAPTURE rather than as a bare string: a target probe THAT NEVER RAN is
+// Unavailable on the spot, with no witness probe run at all. A witness proves the
+// repository answers NOW; it cannot reach backwards and prove that the preceding
+// invocation executed, so letting a healthy witness convert a could-not-exec
+// target read into "the ref is absent" would manufacture exactly the false
+// negative this tri-state exists to prevent (a push route reporting `Push failed`
+// over a tracking ref that carries the checkpoint). Only a target read that RAN
+// and came back empty is the witness's question — that emptiness is genuinely
+// either absence or an unreadable repository, which is what a witness can settle.
+//
 // THE ONE FALSE UNAVAILABLE, named because it is real: a captured branch deleted
-// mid-act makes a healthy repository answer "could not ask". It costs a
-// fall-through to a push that the missing branch would refuse anyway, which is
-// the cheap direction — calling an unreadable repository "absent" would cost a
-// false NEGATIVE on the one question this module may never guess at.
+// mid-act makes a healthy repository answer "could not ask". What that costs is a
+// fall-through to a push — and the push is NOT refused by the branch's absence,
+// which is what makes the routing conservative rather than self-correcting: the
+// refspec is `<sha>:refs/heads/<captured>`, an object name the act already holds,
+// so git resolves no local branch to send it and the push can create or update
+// the REMOTE branch with the local one gone (verified live). The Unavailable
+// answer is still the right one — it never claims a containment it could not
+// observe, and calling an unreadable repository "absent" would cost a false
+// NEGATIVE on the one question this module may never guess at — but the reason it
+// is safe is that a redundant push moves nothing at the remote, not that the
+// missing branch would stop it.
 enum class GuiHistoryRefRead {
     Unavailable,  // the read did not run, or the repository could not answer
     Absent,       // it ran; there is no such ref
@@ -1729,11 +1843,16 @@ enum class GuiHistoryRefRead {
 GuiHistoryRefRead resolve_ref_witnessed(const std::string& spelling,
                                         const std::string& witness,
                                         std::string&       object_name) {
-    object_name = resolved_object_name(spelling);
+    if (resolve_ref_capture(spelling, object_name) != GitCapture::Ran) {
+        return GuiHistoryRefRead::Unavailable;
+    }
     if (!object_name.empty()) return GuiHistoryRefRead::Resolved;
-    return resolved_object_name(witness).empty()
-               ? GuiHistoryRefRead::Unavailable
-               : GuiHistoryRefRead::Absent;
+    std::string witness_name;
+    if (resolve_ref_capture(witness, witness_name) != GitCapture::Ran ||
+        witness_name.empty()) {
+        return GuiHistoryRefRead::Unavailable;
+    }
+    return GuiHistoryRefRead::Absent;
 }
 
 // DOES `ref` CARRY `sha` — the question both verdict sites actually ask, taken
@@ -2022,13 +2141,20 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string title = history_checkpoint_title(project_directory);
 
     // THE BRANCH, READ ONCE — and this is the ONLY place the act reads the
-    // mutable symbolic HEAD. Every later use is this one value: the
+    // mutable symbolic HEAD for a value. Every later use is this one value: the
     // remote-tracking ref the two verdicts read, the refspec the push writes,
     // and — through `source_ref` below — every source-side observation the act
     // makes. Reading HEAD per site is what let a checkout mid-act have the
     // observation name one branch and the publication another; one read cannot.
     // Empty means a detached HEAD — no name, no remote-tracking ref, no refspec
     // — which each site answers for itself.
+    //
+    // ONE LATER SITE READS HEAD AGAIN, AND ONLY TO CHECK THIS VALUE: the
+    // pre-flight `git status`, which has no ref argument and so always answers
+    // for whatever is checked out. Its `##` header is compared against this name
+    // and a mismatch ENDS THE ACT (status_of_paths owns the grammar and the
+    // sequence). That is not a second source of truth — it is this one being
+    // verified still current at the one observation that cannot be pinned.
     const std::string branch = current_branch_name();
 
     // THE SOURCE REF, which is what makes the capture above worth anything: the
@@ -2147,9 +2273,12 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // checkpoint it made, and the branch's own commits are the user's to push.
     //
     // BRANCH: `branch` is read ONCE at act start — the act's single reading of
-    // the symbolic HEAD — and serves the refspec, the remote-tracking ref AND
-    // (as `source_ref`) every source-side observation, so a checkout that
-    // happens while the act runs cannot make any two of them name different
+    // the symbolic HEAD for a value — and serves the refspec, the
+    // remote-tracking ref AND (as `source_ref`) every source-side observation
+    // that can be spelled with a ref, with the one that cannot (the pre-flight
+    // status) checking its `##` header against this same name and failing the
+    // act on a mismatch. So a checkout that happens while the act runs cannot
+    // make any two of them name different
     // branches; it also cannot silently redirect the publication, since the
     // content is a sha rather than HEAD, and it cannot smuggle another branch's
     // ancestry in behind that sha, since the walk that produced it read the
@@ -2240,8 +2369,14 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         if (unobserved) {
             // The push may well have arrived; what failed is the question about
             // it. Saying so is the honest verdict — the checkpoint is intact
-            // locally and the retry route pushes it again, which costs nothing
-            // if it was already there.
+            // locally and the retry route pushes it again, which is SAFE
+            // whatever the remote already held, though not silent: it is the
+            // `Everything up-to-date` no-op only at TIP-EQUALITY, while a remote
+            // tip that has since advanced to a DESCENDANT carrying the
+            // checkpoint rejects the explicit `<sha>:refs/heads/<branch>`
+            // refspec as an ordinary non-fast-forward (verified live). Nothing
+            // forces, so neither outcome moves a byte at the remote — which is
+            // the whole claim the retry rests on.
             std::fprintf(stderr,
                          "warptempo_gui: Push unconfirmed: could not read "
                          "whether 'origin/%s' carries the checkpoint\n",
@@ -2267,11 +2402,36 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // the working tree: the most misleading line this act could print, since it
     // tells the user to stop looking. Now only a status that DEMONSTRABLY ran and
     // came back clean is the non-failure.
-    const GuiHistoryPathStatus before_status = status_of_paths(pathspecs);
+    //
+    // AND IT IS A VERDICT ABOUT THE CAPTURED BRANCH. `git status` takes no ref
+    // and compares against whatever HEAD points at, so it is the one source-side
+    // observation the act cannot pin by spelling; it is pinned by CHECKING
+    // instead, against the `##` header's own branch name (status_of_paths owns
+    // the grammar and the sequence a missing compare leaves open). A mismatch is
+    // neither Clean nor Dirty — it is no usable answer at all — so it ends the
+    // act here, having committed and pushed nothing.
+    std::string                checked_out_branch;
+    const GuiHistoryPathStatus before_status =
+        status_of_paths(pathspecs, branch, checked_out_branch);
     if (before_status == GuiHistoryPathStatus::Unavailable) {
         return commit_failed("could not read 'git status' for the checkpoint "
                              "paths; the written files are still in the working "
                              "tree");
+    }
+    if (before_status == GuiHistoryPathStatus::OtherBranch) {
+        // The written sidecars stay in the working tree exactly as they do after
+        // any other failure here (the act's own "what remains after a failure"
+        // paragraph owns why they are never rolled back) — visible to `git
+        // status` and committable by hand.
+        auto branch_phrase = [](const std::string& name) {
+            return name.empty() ? std::string("a detached HEAD")
+                                : ("'" + name + "'");
+        };
+        return commit_failed(
+            "git has " + branch_phrase(checked_out_branch) +
+            " checked out but this act captured " + branch_phrase(branch) +
+            ", so nothing was committed or pushed; the written files are still "
+            "in the working tree");
     }
     if (before_status == GuiHistoryPathStatus::Clean) {
         // CLEAN IS TWO STATES, NOT ONE, and telling them apart is what makes a
