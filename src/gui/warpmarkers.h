@@ -99,6 +99,14 @@ public:
                      const std::vector<GuiWarpMarker>& markers);
 };
 
+// The `.warpmarkers` file's exact bytes for `markers`, built and returned
+// without touching disk — the string half both save() overloads hand to the
+// atomic writer, so the two can never diverge. Its other consumer is the
+// GitHub recheck's "now" side (history_diff.h), which diffs the live store
+// against a committed snapshot and needs precisely what a Ctrl+S would land at
+// this instant, with no file anywhere.
+std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
+
 // True if the marker at `idx` should render as disabled. `disabled` is allowed
 // on any marker — a locally set flag always counts. For an active
 // (non-locally-disabled) `label_ref`, the cascade rule applies: the ref

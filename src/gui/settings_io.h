@@ -66,6 +66,10 @@ struct NonEngineSettingsSnapshot {
     float              playback_speed;
     int                gui_scale;
     const std::string& audio_player;
+    // The repository that is the projects home (the GitHub recheck's corpus).
+    // A reference member like audio_player: the caller's storage, borrowed for
+    // the call. (architect approval 2026-08-03.)
+    const std::string& projects_repo;
     // The STORED render-environment hashes (AppState's four *_hash fields, or
     // the dispatch-moment copies in AuthoringSnapshot) — never the current
     // environment's: an unacknowledged mismatch must survive a save.
@@ -85,6 +89,17 @@ struct NonEngineSettingsSnapshot {
 // Best-effort: failure is logged by the caller.
 bool write_settings_file(
     const std::string& path,
+    const NonEngineSettingsSnapshot& gui,
+    const EngineSettings& engine);
+
+// The `.settings` file's exact bytes for this value set, built and returned
+// without touching disk — the string half write_settings_file hands to the
+// atomic writer, so the two can never diverge. Its other consumer is the
+// GitHub recheck's "now" side (history_diff.h), which diffs the live state
+// against a committed snapshot and needs precisely what a Ctrl+S would land at
+// this instant, with no file anywhere. The key order and per-key value
+// serialization are documented at the definition's kSettingsOrder walk.
+std::string format_settings_text(
     const NonEngineSettingsSnapshot& gui,
     const EngineSettings& engine);
 

@@ -64,6 +64,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
     // this routine, so an adopted render entry's player is 1:1 with its file.
     app.audio_player        = sf.audio_player;
+    // A file that omitted projects_repo carries the schema's own default here
+    // (the key is the schema's one optional), so this assignment applies the
+    // fallback and an explicit value identically — there is no "was it
+    // present" question to ask. (architect approval 2026-08-03.)
+    app.projects_repo       = sf.projects_repo;
     // Render-environment attestation, assigned like every settings field
     // (adopt therefore applies an entry's stored hashes 1:1 with a load).
     // The load-time mismatch compare against compute_render_env_hashes()

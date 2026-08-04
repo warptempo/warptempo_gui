@@ -178,6 +178,12 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/flag_editor.cpp
         src/gui/renders_dir.cpp
         src/gui/save_ops.cpp
+        # GUI-ONLY: the GitHub recheck's history model reads the repo's own
+        # projects/ corpus through read-only git subprocesses, so like
+        # text_shape.cpp and icons.cpp it is deliberately in none of the four
+        # shared per-directory source lists — warptempo_cli must never carry
+        # it. It needs no dependency beyond the C++ standard library and POSIX.
+        src/gui/history_diff.cpp
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp
         src/gui/target_render.cpp

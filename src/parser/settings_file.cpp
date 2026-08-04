@@ -23,14 +23,23 @@ using warptempo_parse::parse_bool_token;
 // parse_value_double against its own canonical-spelling round-trip.)
 using warptempo_parse::prefix_line_error;
 
-// Every canonical .settings key, in kSettingsOrder's on-disk order. This is
-// the membership SoT for the required-key check: EVERY key is required, so a
-// file missing any one is load-fatal. It is the parser-side twin of the GUI
-// writer's kSettingsOrder (settings_io.cpp) — adding a settings key touches
-// BOTH lists (and, for its grammar, kEngineKeys/validate_engine_setting for an
-// engine key or validate_gui_setting for a GUI-kind key). kEngineKeys stays
-// file-local to engine_settings_io.cpp; this flat list owns membership
-// completeness here.
+// Every REQUIRED .settings key, in kSettingsOrder's on-disk order. This is the
+// membership SoT for the required-key check: a file missing any key on this
+// list is load-fatal. It is the parser-side twin of the GUI writer's
+// kSettingsOrder (settings_io.cpp) — adding a settings key touches BOTH lists
+// (and, for its grammar, kEngineKeys/validate_engine_setting for an engine key
+// or validate_gui_setting for a GUI-kind key). kEngineKeys stays file-local to
+// engine_settings_io.cpp; this flat list owns requirement here.
+//
+// `projects_repo` IS DELIBERATELY ABSENT — the schema's one optional key
+// (architect approval 2026-08-03), not a missed edit. It is registered in
+// validate_gui_setting below, so it is recognized rather than unknown, and
+// SettingsFile's member default is what a file lacking it falls back to. The
+// two lists were always separate; this key is the first to sit in one and not
+// the other, because requiring it would have made every sidecar already on
+// disk load-fatal in both products with no migration route. A future key
+// belongs HERE unless it has the same "already-written files must survive"
+// problem.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
@@ -281,6 +290,19 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.text = value;
         return R(out);
     }
+    if (key == "projects_repo") {
+        // GUI-kind name of the repository holding the projects corpus. Free
+        // text, taken verbatim in UTF-8 with no host/path grammar enforced
+        // here — the GitHub recheck normalizes it against the local clone's
+        // own `origin` and refuses the mismatch there, which is a far better
+        // place to judge it than a parser that cannot see the clone. An empty
+        // value is legal and simply never matches, disabling the feature.
+        // Registering the key HERE is what makes it recognized; it is
+        // deliberately not in kCanonicalSettingsKeys, so it is not required.
+        // (architect approval 2026-08-03.)
+        out.text = value;
+        return R(out);
+    }
 
     return std::nullopt;  // not a GUI-kind key
 }
@@ -365,6 +387,10 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "audio_player") {
             out.audio_player = gv.text;
+        } else if (key == "projects_repo") {
+            // Present in the file: it overrides the member default that a
+            // file omitting the key keeps. (architect approval 2026-08-03.)
+            out.projects_repo = gv.text;
         } else if (key == "libm_hash") {
             out.libm_hash = gv.text;
         } else if (key == "libmvec_hash") {

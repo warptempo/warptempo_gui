@@ -67,6 +67,7 @@ bool GuiSaveOps::save() {
             app.playback_speed,
             app.gui_scale,
             app.audio_player,
+            app.projects_repo,
             app.libm_hash,
             app.libmvec_hash,
             app.fftw3_hash,

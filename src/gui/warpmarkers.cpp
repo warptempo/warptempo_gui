@@ -14,9 +14,7 @@ std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
     return load_impl(path, parse_warpmarkers_file);
 }
 
-namespace {
-
-// Serializer contract: this save performs no ordering validation.
+// Serializer contract: this serialization performs no ordering validation.
 // The store is sorted by construction — ordered insert for drops, and
 // every time-mutating gesture (drag commit, shift, nudge) reorders
 // through the reorder-and-remap path — so rows serialize in
@@ -30,8 +28,14 @@ namespace {
 // whole source frames and persist through the authored pair
 // (frame_format.h), so a saved store reloads bit-identically under the
 // authored parse.
-bool save_impl(const std::string& path,
-               const std::vector<GuiWarpMarker>& markers_) {
+//
+// The file's bytes and the disk write are separate halves: this one builds
+// the text and touches nothing, save() hands it to the atomic writer. The
+// second consumer is the GitHub recheck's "now" side (history_diff.h), which
+// needs exactly the bytes a Ctrl+S would land at this instant without a file
+// existing anywhere.
+std::string format_warpmarkers_text(
+    const std::vector<GuiWarpMarker>& markers_) {
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
@@ -72,13 +76,8 @@ bool save_impl(const std::string& path,
 
         out << '\n';
     }
-    const std::string data = out.str();
-
-    // tmp + fsync + rename, preserving the existing file's mode.
-    return atomic_write_string_to_path(path, data);
+    return out.str();
 }
-
-}  // namespace
 
 bool GuiWarpMarkers::save(const std::string& path) const {
     return save(path, markers());
@@ -88,7 +87,8 @@ bool GuiWarpMarkers::save(const std::string& path,
                       const std::vector<GuiWarpMarker>& markers_) {
     // Authored domain: positions are whole source frames (int64), written
     // as plain integer text (format_authored_frame).
-    return save_impl(path, markers_);
+    // tmp + fsync + rename, preserving the existing file's mode.
+    return atomic_write_string_to_path(path, format_warpmarkers_text(markers_));
 }
 
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {

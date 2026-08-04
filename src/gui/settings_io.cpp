@@ -30,6 +30,7 @@ enum class SettingKind {
     FollowFlag,
     GuiScalePercent,
     AudioPlayerPath,
+    ProjectsRepoName,
     TrimBegin_A,
     TrimEnd_A,
     TrimBegin_B,
@@ -94,6 +95,21 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // an explicit empty value (`audio_player=`) is the deliberate opt-out
     // meaning "no external player".
     { "audio_player",                SettingKind::AudioPlayerPath,      EngineField::Title,                   "audacious" },
+    // GUI-kind name of the repository holding the projects corpus — the home
+    // of the architect's committed working checkpoints, and what the GitHub
+    // recheck reads history out of. Placed BESIDE audio_player because the two
+    // are the same shape and the same concern: free-text environment
+    // preferences with no dedicated gesture, sitting at the tail of the
+    // non-tab GUI band so the per-tab bands stay contiguous below.
+    // The default is non-empty (unlike url/cover), and it is the SAME constant
+    // the schema falls back to when a file omits the key
+    // (kDefaultProjectsRepo, settings_file.h) — the template stamp and the
+    // fallback are one value, so a fresh project and an old sidecar agree.
+    // THE SCHEMA'S ONE OPTIONAL KEY: it is absent from kCanonicalSettingsKeys
+    // by design, so this writer always emits it while a file lacking it still
+    // loads. NOT an engine key — it never enters kEngineKeys and never reaches
+    // the render fingerprint. (architect approval 2026-08-03.)
+    { "projects_repo",               SettingKind::ProjectsRepoName,     EngineField::Title,                   "github.com/warptempo/warptempo_gui" },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
@@ -155,6 +171,9 @@ std::optional<std::string> format_nonengine_value(
             return std::string(buf);
         case SettingKind::AudioPlayerPath:
             return gui.audio_player;
+        case SettingKind::ProjectsRepoName:
+            // Free text, emitted verbatim in UTF-8 exactly as audio_player is.
+            return gui.projects_repo;
         case SettingKind::TrimBegin_A:
             return format_authored_frame(gui.tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
@@ -343,8 +362,7 @@ std::string format_default_settings_template(const std::string& stem,
     return s;
 }
 
-bool write_settings_file(
-    const std::string& path,
+std::string format_settings_text(
     const NonEngineSettingsSnapshot& gui,
     const EngineSettings& engine) {
     std::string data;
@@ -368,7 +386,14 @@ bool write_settings_file(
         data += '\n';
     }
 
-    return atomic_write_string_to_path(path, data);
+    return data;
+}
+
+bool write_settings_file(
+    const std::string& path,
+    const NonEngineSettingsSnapshot& gui,
+    const EngineSettings& engine) {
+    return atomic_write_string_to_path(path, format_settings_text(gui, engine));
 }
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
@@ -405,6 +430,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
         app.playback_speed, app.gui_scale, app.audio_player,
+        app.projects_repo,
         app.libm_hash, app.libmvec_hash,
         app.fftw3_hash, app.fftw3_threads_hash};
     return format_nonengine_value(desc->kind, gui);

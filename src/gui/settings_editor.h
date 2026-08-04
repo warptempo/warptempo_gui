@@ -21,7 +21,8 @@ struct GuiInputHandler;
 // The editor is a keyboard front-end to EVERY key that can appear in a
 // `.settings` file: it funnels each key into the SAME code its gesture uses
 // (no parallel writers). commit() routes the typed key through:
-// 1. audio_player (a launcher path with no gesture): set directly.
+// 1. audio_player (a launcher path with no gesture) and projects_repo (the
+//    projects-home repository name, likewise gesture-less): set directly.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / playback_speed / per-tab trim /
 //    per-tab read_only / gui_scale / the four *_hash keys):

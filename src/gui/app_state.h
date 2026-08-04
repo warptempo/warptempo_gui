@@ -1311,6 +1311,22 @@ struct AppState {
     // by the `l` launcher.
     std::string audio_player = "audacious";
 
+    // GUI-kind preference: the repository that is the PROJECTS HOME — where
+    // the architect's committed working checkpoints live, and the corpus the
+    // GitHub recheck reads history out of. Free text, host/path form by
+    // convention; the recheck normalizes it against the local clone's own
+    // `origin` remote and refuses a mismatch, since the clone is only the
+    // transport and a rebound setting must never silently read the wrong
+    // history. The default lives in ONE place, kDefaultProjectsRepo
+    // (settings_file.h), read by this initializer, the first-open template,
+    // and the schema's own fallback — unlike audio_player, whose default is
+    // spelled twice, because this key is the schema's one OPTIONAL key and the
+    // fallback for a file omitting it has to agree with the template stamp.
+    // Persisted on Ctrl+S. No gesture: the settings editor
+    // (`:projects_repo=<host/path>`) is its sole authoring surface.
+    // (architect approval 2026-08-03.)
+    std::string projects_repo = kDefaultProjectsRepo;
+
     // Render-environment attestation: the STORED per-library stat-identity
     // digests (16 lowercase hex digits each, env_fingerprint.h) the loaded
     // `.settings` recorded at its last save. Pre-load default is empty — never
@@ -1981,8 +1997,8 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
     // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // gui_scale, audio_player, and the four *_hash env-attestation
-    // keys) — do
+    // gui_scale, audio_player, projects_repo, and the four *_hash
+    // env-attestation keys) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
     // dirty, so quitting without saving simply drops them. Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but

@@ -40,8 +40,8 @@ public:
     // no dedup or ordering validation; the serializer contract (the store
     // is sorted by construction, equal-time rows are legal and reload,
     // and the render boundary — not the serializer — collapses an
-    // exact-equal group to one event) is documented at the static save
-    // overload in phaseresetmarkers.cpp.
+    // exact-equal group to one event) is documented at
+    // format_phaseresetmarkers_text in phaseresetmarkers.cpp.
     bool save(const std::string& path) const;
 
     // Static variant for callers that hold a raw GuiPhaseResetMarker vector
@@ -51,3 +51,13 @@ public:
     static bool save(const std::string& path,
                      const std::vector<GuiPhaseResetMarker>& markers);
 };
+
+// The `.phaseresetmarkers` file's exact bytes for `markers`, built and
+// returned without touching disk — the string half both save() overloads hand
+// to the atomic writer, so the two can never diverge. Its other consumer is
+// the GitHub recheck's "now" side (history_diff.h), which diffs the live store
+// against a committed snapshot and needs precisely what a Ctrl+S would land at
+// this instant, with no file anywhere. The serializer contract is at the
+// definition.
+std::string format_phaseresetmarkers_text(
+    const std::vector<GuiPhaseResetMarker>& markers);

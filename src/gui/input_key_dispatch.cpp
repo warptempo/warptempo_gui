@@ -1016,7 +1016,8 @@ bool GuiInputHandler::adopt_render_entry(
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
     // routine a source load also calls — so adopt applies engine_settings,
     // follow, active_audio_view, active_markers_view, active_tab_view,
-    // playback_speed, gui_scale, and audio_player 1:1 with load.
+    // playback_speed, gui_scale, audio_player and projects_repo 1:1 with
+    // load.
     // There is NO
     // W/P carve-out: active_markers_view is now applied from the file like
     // every other key. The one selection was cleared above, so landing on the

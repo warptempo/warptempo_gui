@@ -386,6 +386,29 @@ void GuiSettingsEditor::commit() {
     // preference: no undo history, no dirty tracking, silently
     // persisted on Ctrl+S. A same-value commit no-op-deactivates like every
     // routed GUI-kind key (the empty value included).
+    // projects_repo is audio_player's twin in every respect that matters here
+    // — free text, no gesture, no undo history, no dirty tracking, silently
+    // persisted on Ctrl+S — so it takes the same direct-set arm rather than a
+    // chokepoint route that does not exist for it. An empty value simply never
+    // matches any remote, which disables the GitHub recheck.
+    // (architect approval 2026-08-03.)
+    if (key == "projects_repo") {
+        if (value == app.projects_repo) {
+            std::fprintf(stderr,
+                "warptempo_gui: Setting unchanged: %s=%s\n",
+                key.c_str(), value.c_str());
+            viewport.invalidate_timestamp_area();
+            text_editor::deactivate(app.settings_editor);
+            return;
+        }
+        app.projects_repo = value;
+        std::fprintf(stderr, "warptempo_gui: projects_repo set: '%s'\n",
+            value.c_str());
+        viewport.invalidate_timestamp_area();
+        text_editor::deactivate(app.settings_editor);
+        return;
+    }
+
     if (key == "audio_player") {
         if (value == app.audio_player) {
             std::fprintf(stderr,
@@ -561,7 +584,7 @@ void GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // playback_speed, follow, gui_scale, audio_player, per-tab
+    // playback_speed, follow, gui_scale, audio_player, projects_repo, per-tab
     // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
