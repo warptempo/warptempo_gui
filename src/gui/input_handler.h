@@ -518,9 +518,14 @@ struct GuiInputHandler {
     // than a rule. close_ is what every dismissal route calls — an outside
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
-    // popup hangs below the strip. recompute_ resolves the item hover on motion
-    // while it is open AND, under a live press that went down on an item, the
-    // ARMED item with it — one walk, one hit, because a menu lights exactly one
+    // popup hangs below the strip. toggle_ does NOT record the press claim that
+    // the anchor-press gesture needs: two of its callers carry no press at all
+    // (the menu-row hover open, the hover switch), so the claim is the press
+    // site's, written from this toggle's outcome (AppState::Dropdown::
+    // press_began_on_item). recompute_ resolves the item hover on motion
+    // while it is open AND, under a live press CLAIMED BY THE POPUP — one that
+    // went down on an item, or on the anchor whose menu it opened — the ARMED
+    // item with it, one walk, one hit, because a menu lights exactly one
     // item and the press only decides which face it wears (the rule, and why
     // the arm cannot double as the liveness test, are at the definition).
     // They are also the mode's two writers: toggle_'s open
@@ -568,9 +573,12 @@ struct GuiInputHandler {
     // — CLOSE FIRST, then the menu's own action (settings: the modal stop and
     // the prefilled editor; navigation: the item's chord through on_key) — and
     // takes no position of its own, because the arm follows the pointer and so
-    // already IS the item under it. With nothing armed (the press slid onto the
-    // separator, the chrome or off the box) nothing runs, the release is
-    // consumed and the menu stays open.
+    // already IS the item under it. With nothing armed (the claimed press stands
+    // over the separator, the chrome, the anchor button or off the box) nothing
+    // runs, the release is consumed and the menu stays open — dismissal is a
+    // PRESS act here and a release never dismisses, which is what makes the
+    // plain anchor click open-and-stay-up by construction (the rule is stated
+    // at the definition, where the item and anchor gestures meet).
     bool finish_dropdown_release();
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
     // face and the press claim — at the hook fired by both the pointer-leave

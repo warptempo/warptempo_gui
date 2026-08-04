@@ -1832,21 +1832,32 @@ struct AppState {
     // THE ARM FOLLOWS THE POINTER while the press is live (architect
     // 2026-08-03): sliding from one item to the next moves it, and sliding onto
     // the separator, the chrome or off the box sets it to -1 with the press
-    // still live. That is what keeps EXACTLY ONE item distinguished at a time —
+    // still live — which is also how a press that began on the ANCHOR arms its
+    // first item without ever having pressed one (`press_began_on_item` below).
+    // That is what keeps EXACTLY ONE item distinguished at a time —
     // an arm that stayed where it went down lit the pressed face there while
     // `hovered_item` lit the hover face under the pointer, two lit items in a
     // menu that shows one. The rule, and the release that follows from it, live
     // at recompute_dropdown_hover (input_pointer.cpp).
-    // `press_began_on_item` is WHERE the currently held button went down, NOT
-    // whether it is still down: the platform's own tracking answers that
-    // (GuiInputState::primary_button_held), and the arm cannot answer either
-    // question now that it moves — it reads -1 both before any press and while
-    // a live press stands over a separator. The bit is the anchor gesture's
-    // scope line: a press on the Settings/Navigation button followed by a drag
-    // into the popup is deliberately NOT supported, and without this term the
-    // pointer's button state alone would arm items under that drag too. Set by
-    // the popup's item press, cleared by the release, by the pointer-leave drop
-    // and by every close (the struct reset).
+    // `press_began_on_item` is WHETHER THE HELD BUTTON BELONGS TO THIS POPUP'S
+    // GESTURE — where it went down, NOT whether it is still down: the platform's
+    // own tracking answers that (GuiInputState::primary_button_held), and the
+    // arm cannot answer either question now that it moves — it reads -1 both
+    // before any press and while a live press stands over a separator.
+    // TWO PRODUCERS, ONE MEANING: the popup's own ITEM press, and (architect
+    // 2026-08-03) the ANCHOR press that OPENS a menu — press Settings or
+    // Navigation, hold, drag down into the menu that came up, and releasing on
+    // an item fires it, the desktop menu bar's one continuous gesture. The name
+    // predates the second producer and is kept: both are the same fact, "the
+    // button now down was pressed on this popup — either on one of its items or
+    // on the anchor that brought it up". An anchor press that CLOSES its menu
+    // claims nothing (nothing is left to belong to), and the claim's value is
+    // read back from the toggle's outcome rather than predicted, at the press
+    // site rather than in toggle_dropdown — whose other callers, the menu-row
+    // hover open and the hover switch, carry no held button at all.
+    // Cleared by the release, by the pointer-leave drop and by every close (the
+    // struct reset — which is why a mid-hold hover switch onto the other anchor
+    // drops claim and arm together).
     // `menu_row_armed` is the MENU ROW'S MODE, and it is the one field here that
     // means something while the popup is CLOSED: once a menu has been opened
     // from the row, the row answers the pointer alone — entering either anchor's

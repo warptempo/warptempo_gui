@@ -1062,10 +1062,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
                 // so the slide of "press, slide, release on what you meant" is
                 // literally the arm moving, and the release acts on wherever it
-                // ended. The bit is what tells that walk this press landed on an
-                // ITEM — the anchor button's press arms nothing and must keep
-                // arming nothing while it drags into the popup — and it is set
-                // OUTSIDE the transition test below, which is about damage.
+                // ended. The bit is what tells that walk the held button belongs
+                // to this popup's gesture — it has a SECOND producer since
+                // 2026-08-03, the anchor press that opened the menu, whose drag
+                // into the box is the same gesture arriving from outside — and it
+                // is set OUTSIDE the transition test below, which is about
+                // damage.
                 app.dropdown.press_began_on_item = true;
                 if (pop.pressed_item != hit) {
                     app.dropdown.pressed_item = hit;
@@ -1121,13 +1123,55 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // dropdown is a pointer affordance for an existing road, never a
                 // second one. Shift-exact is refused like every other
                 // non-admitting button.
-                if (!mods.shift &&
-                    redesign_button_hit(app, RedesignButton::Settings, x, y)) {
-                    toggle_dropdown(DropdownMenu::Settings);
-                } else if (!mods.shift &&
-                           redesign_button_hit(app, RedesignButton::Navigation,
-                                               x, y)) {
-                    toggle_dropdown(DropdownMenu::Navigation);
+                //
+                // THE ANCHOR PAIR IS WALKED rather than spelled twice — the same
+                // shape on_motion's two anchor walks take, so
+                // dropdown_anchor_button stays the one place that knows which
+                // button emits which menu — and the walk is what gives the CLAIM
+                // below exactly ONE site instead of one per branch.
+                DropdownMenu anchored = DropdownMenu::None;
+                if (!mods.shift) {
+                    for (const DropdownMenu m : {DropdownMenu::Settings,
+                                                 DropdownMenu::Navigation}) {
+                        if (!redesign_button_hit(app, dropdown_anchor_button(m),
+                                                 x, y)) continue;
+                        anchored = m;
+                        break;
+                    }
+                }
+                if (anchored != DropdownMenu::None) {
+                    toggle_dropdown(anchored);
+                    // AN ANCHOR PRESS THAT OPENS A MENU CLAIMS THE HELD BUTTON
+                    // FOR THE POPUP (architect 2026-08-03): press the button,
+                    // hold, drag down into the menu that came up and release on
+                    // an item, and that item fires — the desktop menu bar's one
+                    // continuous gesture. This ONE assignment is the whole
+                    // feature. Everything past it is the item press's own
+                    // machinery, reused unchanged: the arm FOLLOWS THE POINTER
+                    // from here (recompute_dropdown_hover, whose live-press test
+                    // is the platform's button state AND this bit), the
+                    // separator / the chrome / the box's outside / this very
+                    // button arm nothing because none of them is an item, and
+                    // the release acts on whatever is armed
+                    // (finish_dropdown_release).
+                    //
+                    // ITS VALUE IS THE TOGGLE'S OUTCOME READ BACK, never
+                    // predicted: the toggle's other half CLOSES the menu whose
+                    // anchor was pressed, and a press that put a menu AWAY claims
+                    // nothing — there is no popup left for a gesture to belong
+                    // to, and the release that follows must find the claim false.
+                    // A SWITCH (this anchor pressed while the OTHER menu stood)
+                    // is an open like any other and claims like one.
+                    //
+                    // THE CLAIM IS THIS PRESS SITE'S TO RECORD, NOT
+                    // toggle_dropdown'S, and the reason is that owner's other
+                    // callers: the menu-row hover open and the hover switch carry
+                    // NO held button at all, so a claim written inside the toggle
+                    // would be a lie on those routes. Its open path also RESETS
+                    // the popup struct, which is exactly what makes a mid-hold
+                    // hover switch onto the other anchor drop claim and arm
+                    // together — the recorded rule, kept.
+                    app.dropdown.press_began_on_item = app.dropdown.open();
                 } else {
                     dispatch_redesign_chord(x, y, mods);
                 }
@@ -2700,13 +2744,15 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // on_motion reads, so there is no second copy to desync), and WHERE it went
 // down is the popup's own bit.
 //
-// THAT SECOND TERM IS THE SCOPE LINE, and it is deliberately ONE condition. A
-// press on the ANCHOR button (Settings or Navigation) followed by a drag into
-// the popup is the other half of the standard menu gesture and is currently OUT
-// OF SCOPE: the anchor press opens the menu and arms nothing, and with the
-// button state alone this walk would arm items under that drag and make the
-// release fire them. Supporting it later is widening this one term — the anchor
-// press recording a claim of its own — not a restructure.
+// THAT SECOND TERM WAS THE SCOPE LINE AND THE SCOPE WIDENED (architect
+// 2026-08-03): a press on the ANCHOR button (Settings or Navigation) followed by
+// a drag into the popup is the other half of the standard menu gesture, and it
+// now works — the anchor press that OPENS a menu records the same claim an item
+// press does, so this walk serves both halves with nothing added here. The bit
+// was scoped for exactly that, and the widening cost the one line at the press
+// site it was designed to cost. What the term still buys is the two routes that
+// must NOT arm: an anchor press that CLOSED a menu (there is no popup to belong
+// to), and any held button whose press this popup never saw at all.
 void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     if (!app.dropdown.open()) return;
     const int mx = app.last_mouse_x;
@@ -2819,13 +2865,22 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // consequence of the arm following the pointer (recompute_dropdown_hover): the
 // armed item IS the item under the pointer and is the ONE item lit, so "the
 // release runs what is lit" and "the release runs the item under the pointer"
-// are one sentence. ARMED NOTHING — a press that went down on an item and then
-// slid onto the separator, the chrome or off the box — runs nothing, is
-// consumed, and LEAVES THE POPUP OPEN: that is the escape hatch for a press
-// that landed on the wrong row, and it is now the same act the user sees, since
-// nothing was lit to release onto. The outside-press close is untouched by
-// this: that is a PRESS act and still closes and consumes, so the two rules do
-// not overlap — a press outside never arms anything, so no release can be owed.
+// are one sentence. ARMED NOTHING — a claimed press (on an item, or on the
+// ANCHOR that opened the menu) standing over the separator, the chrome, the
+// anchor button itself or off the box — runs nothing, is consumed, and LEAVES
+// THE POPUP OPEN: that is the escape hatch for a press that landed on the wrong
+// row, and it is now the same act the user sees, since nothing was lit to
+// release onto.
+//
+// THE TWO GESTURES MEET HERE, which is why the dismissal rule is stated at this
+// one site: DISMISSAL IS A PRESS ACT IN THIS PRODUCT and a release never
+// dismisses. A press outside the popup closes and consumes; a release that
+// armed nothing leaves the menu standing, whichever gesture it belonged to. So
+// the classic CLICK on the anchor — press and release without moving — opens
+// the menu and leaves it up by construction rather than by exception: the
+// anchor is not an item, so the release finds nothing armed and takes the
+// return below. The two rules cannot overlap either — a press outside never
+// arms anything, so no release can be owed there.
 //
 // THE POSITION COMPARE THIS BODY CARRIED (the item under the release point
 // against the armed one, refusing when they differed) IS GONE AS STRUCTURALLY
