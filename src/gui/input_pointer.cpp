@@ -2980,11 +2980,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // this: the item press raises the arm while SETTING the claim; the recompute
     // may raise the arm only while the claim AND the platform's held bit are both
     // live; and every clearer of the claim (the pointer-leave / capability-loss
-    // edge, every close's struct reset) drops the arm with it. So an unclaimed
-    // press can never observe a raised arm — the recompute that could have raised
-    // one needs the claim to run at all. Deriving here without the claim would be
-    // the one behavior change this round refuses: a held button this popup never
-    // saw must not fire an item it happens to come up over.
+    // edge, every close's struct reset, and THIS RELEASE ITSELF, a few lines
+    // below) drops the arm with it. The release is the third clearer, and it
+    // takes both its outcomes: an activating release clears the arm explicitly
+    // (`pressed_item = -1`) before the close, and a consumed no-item release can
+    // return above that assignment only because the derive equivalence above
+    // already makes the recorded arm `-1` there too — `dropdown_item_at(x, y)`
+    // answering `-1` when `press_began_on_item` is true, or `pressed_item`
+    // already reading `-1` when it is not. So an unclaimed press can never
+    // observe a raised arm — the recompute that could have raised one needs the
+    // claim to run at all. Deriving here without the claim would be the one
+    // behavior change this round refuses: a held button this popup never saw
+    // must not fire an item it happens to come up over.
     const int armed = app.dropdown.press_began_on_item
                           ? dropdown_item_at(x, y)
                           : app.dropdown.pressed_item;
