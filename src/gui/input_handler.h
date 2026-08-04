@@ -1071,11 +1071,21 @@ private:
     // relative to renders/ and, on Enter, adopts that render's frozen sidecar
     // recipe as the new authoring baseline through adopt_render_entry.
     //
-    // open_commit_editor: bare `'` opener (no-op with no source loaded or a
-    // running/parked render; refuses to open over an empty renders/).
+    // THE `/` HISTORY MODE GIVES THE SAME EDITOR A SECOND SUBJECT (2026-08-04):
+    // while the mode stands it takes a COMMIT SPELLING, opens prefilled with the
+    // viewed commit's SHA, and commits through adopt_history_commit. The mode is
+    // the only discriminator, tested at the opener, at the commit and at the
+    // autocomplete; every other line of the editor — its keys, its modality, its
+    // painted cell, its Esc — is the same one behaviour for both subjects.
+    //
+    // open_commit_editor: bare `'` opener (no-op with no source loaded; outside
+    // the mode also refuses over a running/parked render and over an empty
+    // renders/, both guards being renders-side).
     // commit_editor_autocomplete:
-    // bare-Tab longest-common-prefix completion over the entry identifiers.
-    // commit_editor_commit: resolve the pending to exactly one entry and adopt.
+    // bare-Tab longest-common-prefix completion over the entry identifiers; a
+    // no-op in the mode, whose vocabulary it does not speak.
+    // commit_editor_commit: resolve the pending — to exactly one render entry,
+    // or in the mode to a commit — and adopt.
     // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:
     // the key router, through route_modal_editor_key like the settings editor.
     void open_commit_editor();
@@ -1094,6 +1104,20 @@ private:
     // behind its red flash; otherwise applies the recipe wholesale, wipes
     // renders/, and returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
+
+    // adopt_history_commit: the same act with the COMMITTED HISTORY as its
+    // source — apply the three sidecars commit `spelling` carried (whatever
+    // `git rev-parse` resolves: the SHA the `'` editor prefilled in the `/`
+    // mode, a short SHA, a branch) as the new authoring baseline, in memory,
+    // with the disk untouched. Validate-before-mutate like its sibling: the
+    // resolve, the three-sidecar presence and all three STRICT whole-file parses
+    // run before any store is written, each failure returning false with one
+    // stderr line naming the cause, the committed path and the SHA. No wav is
+    // compared (the corpus stores no audio — the loaded source is the source),
+    // no renders/ wipe and so no running-render guard, and the mode itself
+    // closes as part of the act. Gated on the mode standing: the sidecar base
+    // name is the session's. Full behaviour paragraph at the definition.
+    bool adopt_history_commit(const std::string& spelling);
 
     // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
     // (no context-awareness beyond that) — a live region trims to it, begin at

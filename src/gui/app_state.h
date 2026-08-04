@@ -1958,8 +1958,9 @@ struct AppState {
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
     // its own reason on stderr and the mode simply does not open.
     //
-    // WHAT CLOSES IT, the whole list: bare `/` again; the `'` render-entry adopt
-    // (which rewrites the very state the frozen now side was measured against);
+    // WHAT CLOSES IT, the whole list: bare `/` again; EITHER ADOPT — the `'`
+    // editor's render-entry adopt and, since 2026-08-04, its adopt-from-commit
+    // (both rewrite the very state the frozen now side was measured against);
     // Ctrl+Q and the WM close, trivially, the process going with it. There is NO
     // Esc binding — the bare-Esc inventory stays at six places. A RESIZE does
     // NOT close it: the delta is re-laid-out against the new geometry by the
@@ -1974,6 +1975,24 @@ struct AppState {
     // structurally instead, at toggle_dropdown, which is what keeps the mode and
     // a popup from ever standing together — the same shape that keeps a popup
     // and an editor apart.
+    //
+    // THE ONE ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
+    // own act, not an exception carved out of the allowlist's reasoning. In the
+    // mode that editor's subject CHANGES: it opens prefilled with the viewed
+    // commit's full SHA, takes any spelling git can resolve in its place, and on
+    // Enter adopts THAT COMMIT's three sidecars into the live session 1:1
+    // (GuiInputHandler::adopt_history_commit — parse-gated by the strict
+    // whole-file loaders, so an unresolvable commit, a missing sidecar or a
+    // legacy format is a red flash and one stderr line with nothing touched),
+    // one cross-file undo entry, no disk write anywhere. The mode closes as part
+    // of a successful adopt, so the frozen now side never outlives the state it
+    // was measured against. THE EDITOR-OPEN SUB-STATE is the mode standing with
+    // that editor up: the mode's two gates stop being reached — the
+    // keyboard-modal editor gate sits above them in on_key, and any pointer
+    // press outside the editor's own text-drag reach is the editor's to swallow
+    // — so `/`, `,` and `.` TYPE into the buffer rather than stepping the walk,
+    // and the mode's bottom-strip line yields its cell to the editor for the
+    // life of the edit.
     //
     // WHY THE FROZEN NOW SIDE CANNOT GO STALE. GuiHistoryDiff captures the three
     // sidecar texts once at init() and measures every commit against them. That

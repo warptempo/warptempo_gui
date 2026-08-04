@@ -3581,14 +3581,36 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             assembled += label;
         }
         show_row_text(cr, font, sec.c_x, baseline, assembled, kRedesignLabel);
+    } else if (app.history_mode.active &&
+               text_editor::is_active(app.commit_editor)) {
+        // THE COMMIT EDITOR OVER THE MODE'S OWN LINE (2026-08-04). The mode
+        // ADMITS `'` — in the mode that editor adopts a COMMIT rather than a
+        // render entry — so for the first time the mode's line has a contender
+        // for the cell, and the editor takes it: it is the surface the user is
+        // typing into, and a caret with nowhere to paint is not a modal editor.
+        // The mode's line comes straight back when the edit ends either way.
+        //
+        // THE BRANCH IS MODE-SCOPED, above the mode's line and therefore above
+        // the queue status too, which is the ranking the mode already has:
+        // while it stands, this span is the mode's, and an editor the mode
+        // itself opened inherits that standing. OUTSIDE the mode the chain is
+        // untouched — the ordinary commit editor keeps its old rank below the
+        // queue status, where the opener's own running-render guard means the
+        // two never contend anyway.
+        //
+        // ITS PREFIX IS THE SUBJECT'S: `Commit: ` with no ./renders/ lead-in,
+        // since what the buffer holds is a commit spelling.
+        render_bottom_strip_editor(cr, app, font, app.commit_editor,
+                                   kCommitEditorHistoryPrefix,
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
         // THE `/` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
-        // three bottom-strip editors paint in, which it can never contend with:
-        // the mode refuses to open with an editor up and its keyboard allowlist
-        // refuses every opener while it stands. It ranks directly under the
-        // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and over the
-        // queue status, the editors and the readout, because while the mode
-        // stands this line is what the strip is for.
+        // three bottom-strip editors paint in. It ranks directly under the
+        // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and the
+        // in-mode commit editor above, and over the queue status, the remaining
+        // editors and the readout, because while the mode stands this line is
+        // what the strip is for. Those remaining editors cannot arrive here at
+        // all: the mode's keyboard allowlist admits no opener but `'`.
         //
         // THE SHAPE: the commit's position in the walk and its short SHA, then
         // the scale. `Scale: <token>` when the two sides agree; `Scale: [-] <then

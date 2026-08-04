@@ -72,6 +72,11 @@ constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // `<batch_dir>/<basename>` relative to renders/ — renders directly after the
 // trailing slash, so the prefix carries no trailing space.
 constexpr const char* kCommitEditorPrefix   = "Commit: ./renders/";
+// THE SAME EDITOR'S OTHER SUBJECT: in the `/` history mode it takes a COMMIT
+// SPELLING (adopt_history_commit), so the renders/ path lead-in would be a false
+// statement about what is being committed. One label, one trailing space, and
+// the branch that selects it is the only place the two ever differ.
+constexpr const char* kCommitEditorHistoryPrefix = "Commit: ";
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //

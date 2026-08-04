@@ -918,12 +918,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare `'` opens the render-commit prompt in the bottom strip: commit a
-    // chosen render as the new authoring baseline by NAME. Keyboard-only. A
-    // modal bottom-strip surface. open_commit_editor owns the no-source /
-    // empty-renders guards AND the playback stop: playback halts only when the
-    // modal actually opens, so a refused open leaves a listening session
-    // undisturbed (once open, Space is inside the modal blocked set, so
-    // playback cannot restart until the editor closes).
+    // chosen render as the new authoring baseline by NAME — or, while the `/`
+    // history mode stands, a COMMIT by its SHA, the editor's other subject
+    // (open_commit_editor's own branch; the mode admits this one key through
+    // history_mode_key_blocked above). TWO PRODUCERS, ONE ROUTE: this key and
+    // the icon row's commit button, which synthesizes exactly this bare chord
+    // through the redesign chord table, so both subjects reach both producers
+    // and no second opener exists. A modal bottom-strip
+    // surface. open_commit_editor owns the no-source / renders-side guards AND
+    // the playback stop: playback halts only when the modal actually opens, so a
+    // refused open leaves a listening session undisturbed (once open, Space is
+    // inside the modal blocked set, so playback cannot restart until the editor
+    // closes).
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
         open_commit_editor();
         return;

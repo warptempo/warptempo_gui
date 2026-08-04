@@ -60,10 +60,11 @@ constexpr std::string_view kScaleKeyPrefix = "scale=";
 
 // Run `git -C <repo> <args...>` and capture its stdout.
 //
-// THE ONLY SUBCOMMANDS THIS FEATURE EVER PASSES ARE `log`, `show`, `ls-tree`
-// AND `remote get-url` — the recheck reads history and never writes it, and
-// that constraint is meant to stay checkable by reading the call sites below
-// rather than by trusting a runtime guard.
+// THE ONLY SUBCOMMANDS THIS FEATURE EVER PASSES ARE `log`, `show`, `ls-tree`,
+// `rev-parse` AND `remote get-url` (rev-parse joined 2026-08-04 with the
+// adopt-from-commit path's spelling resolution) — the recheck reads history and
+// never writes it, and that constraint is meant to stay checkable by reading the
+// call sites below rather than by trusting a runtime guard.
 //
 // argv exec, NEVER system() and never a shell: the committed directory names
 // carry spaces ("550 - 1") and so do the sidecar base names, and every one of
@@ -559,6 +560,62 @@ std::string read_snapshot_at(const std::string& sha, const std::string& path) {
 }
 
 }  // namespace
+
+bool read_commit_sidecars(const std::string&        spelling,
+                          const std::string&        base_name,
+                          GuiHistoryCommitSidecars& out,
+                          std::string&              reason) {
+    out    = GuiHistoryCommitSidecars{};
+    reason.clear();
+
+    if (spelling.empty()) {
+        reason = "no commit was named";
+        return false;
+    }
+    if (base_name.empty()) {
+        reason = "the source has no sidecar base name";
+        return false;
+    }
+
+    // `--verify` makes a non-resolving spelling an error rather than an echo of
+    // the argument, and `^{commit}` peels whatever resolved to a commit — a tag
+    // or a tree spelling that is not one fails here rather than downstream.
+    std::string raw;
+    if (!run_git_capture({"rev-parse", "--verify", spelling + "^{commit}"},
+                         raw)) {
+        reason = "'" + spelling + "' does not name a commit in " +
+                 std::string(kRepoRoot);
+        return false;
+    }
+    const std::string sha = trim_trailing_ws(raw);
+    // Defensive shape check on git's own answer: --verify with the peel suffix
+    // yields exactly one full object name, so anything else means the assumption
+    // broke rather than that the user typed something odd.
+    auto is_hex40 = [](const std::string& s) {
+        if (s.size() != 40) return false;
+        for (const char c : s) {
+            const bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+            if (!ok) return false;
+        }
+        return true;
+    };
+    if (!is_hex40(sha)) {
+        reason = "'" + spelling + "' did not resolve to a single commit";
+        return false;
+    }
+    out.sha = sha;
+
+    // That commit's OWN tree decides where the sidecars sit — the same
+    // basename match the walk uses, applied to an arbitrary commit.
+    const GuiHistoryCommitPaths paths = resolve_commit_paths(sha, base_name);
+    out.warpmarkers.path       = paths.path[0];
+    out.phaseresetmarkers.path = paths.path[1];
+    out.settings.path          = paths.path[2];
+    out.warpmarkers.text       = read_snapshot_at(sha, paths.path[0]);
+    out.phaseresetmarkers.text = read_snapshot_at(sha, paths.path[1]);
+    out.settings.text          = read_snapshot_at(sha, paths.path[2]);
+    return true;
+}
 
 GuiHistoryNowSide build_history_now_side(const AppState& app) {
     GuiHistoryNowSide out;

@@ -48,10 +48,10 @@ struct AppState;
 // is the natural re-init point.
 //
 // READ-ONLY BY CONSTRUCTION: the only git subcommands this feature ever runs
-// are `log`, `show`, `ls-tree` and `remote get-url`, through an argv exec with
-// no shell anywhere (the committed directory names carry spaces, so shell
-// quoting would be a hazard rather than a convenience). Nothing here writes a
-// file, a ref, or the index.
+// are `log`, `show`, `ls-tree`, `rev-parse` and `remote get-url`, through an
+// argv exec with no shell anywhere (the committed directory names carry spaces,
+// so shell quoting would be a hazard rather than a convenience). Nothing here
+// writes a file, a ref, or the index.
 
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
@@ -144,6 +144,50 @@ struct GuiHistoryNowSide {
 // editor's autocomplete recall does, so the bytes match a save without this
 // const read mutating anything.
 GuiHistoryNowSide build_history_now_side(const AppState& app);
+
+// ONE SIDECAR AS ONE COMMIT CARRIED IT. `path` is the committed path in THAT
+// commit's own tree and is EMPTY when the commit carries no file by that name —
+// the distinction the bytes alone cannot make, since a committed empty file and
+// an absent one both read as no bytes.
+struct GuiHistorySidecarBlob {
+    std::string path;
+    std::string text;
+};
+
+// One commit's three sidecars, read whole.
+struct GuiHistoryCommitSidecars {
+    // The full 40-char SHA git resolved the caller's spelling to.
+    std::string sha;
+    GuiHistorySidecarBlob warpmarkers;
+    GuiHistorySidecarBlob phaseresetmarkers;
+    GuiHistorySidecarBlob settings;
+};
+
+// READ ONE COMMIT'S SIDECARS BY SPELLING — the adopt-from-commit path's input
+// (GuiInputHandler::adopt_history_commit), and the session walk's per-commit
+// read generalized off the walk: the cache above is INDEX-keyed and holds
+// deltas, while the adopt starts from a SHA the user typed, which may name a
+// commit outside the walked depth or outside the list entirely.
+//
+// `spelling` is anything `git rev-parse --verify <spelling>^{commit}` resolves —
+// a full SHA, a short SHA, a tag or a branch name. The peel suffix is what makes
+// the resolution a COMMIT rather than any object, and it doubles as the argv
+// hardening: a spelling starting with '-' reaches git as `-foo^{commit}`, which
+// matches no option spelling and simply fails to resolve.
+//
+// The sidecar paths are resolved from THAT COMMIT'S OWN TREE by base name, the
+// same era-agnostic rule the walk uses, so a commit from before a corpus rename
+// reads with no knowledge of what the directory used to be called. A resolved
+// commit that carries none of the three is NOT a failure here — every blob comes
+// back with an empty path and the CALLER decides what a missing sidecar means
+// (the adopt refuses on one; the display path treats it as "everything added").
+//
+// False with `reason` set only when the spelling does not resolve to a commit.
+// Nothing here writes anything: this is `rev-parse`, `ls-tree` and `show`.
+bool read_commit_sidecars(const std::string&         spelling,
+                          const std::string&         base_name,
+                          GuiHistoryCommitSidecars&  out,
+                          std::string&               reason);
 
 // The session object: the commit list resolved once at init, each commit's
 // snapshot and delta computed lazily on first request and cached thereafter,
