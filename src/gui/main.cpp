@@ -1032,8 +1032,10 @@ int main(int argc, char** argv) {
     // so the hover-driven faces must be cleared here or a pointer that slides
     // out of the window over a button leaves its pill / outline lit. THE MARKER
     // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
-    // redesigned rows' button hover is the only hover left, and it is separate
-    // state with its own clear. Row 2's CLICK face joins it: a leave is also the
+    // redesigned rows' button hover is the only ROSTER hover left (an open
+    // dropdown's item hover is the other pointer-position-dependent surface
+    // this edge drops, below), and it is separate state with its own clear.
+    // Row 2's CLICK face joins it: a leave is also the
     // BUTTON-LOST edge (no release event follows it either), and a stranded
     // pressed interior would outlive the hold that justified it. Both are
     // transition-gated.

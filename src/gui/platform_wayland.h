@@ -180,8 +180,10 @@ public:
     // press), so a pointer that slides out through the window edge cannot leave
     // a lit pill or a stranded pressed interior behind. It USED to clear the
     // marker hover popup as well; that whole surface died with the marker-text
-    // lane in row 5, so the button faces are the only hover state left on this
-    // edge. Null-safe.
+    // lane in row 5. Widened 2026-08-03 to drop an open dropdown's two
+    // pointer-derived item faces (hovered and armed) alongside the roster's —
+    // the roster's button faces are not the only hover state this edge drops
+    // any more; full story at clear_dropdown_pointer_state. Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
 
     // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel

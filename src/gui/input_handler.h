@@ -566,9 +566,14 @@ struct GuiInputHandler {
     // consumed and the menu stays open.
     bool finish_dropdown_release();
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
-    // face and the press claim — at the one edge that has neither a motion nor
-    // a release to follow (the pointer-leave / capability-loss hook, its only
-    // caller). Both faces answer "where is the pointer" and the pointer is
+    // face and the press claim — at the hook fired by both the pointer-leave
+    // and capability-loss edges (its only caller). Only capability loss ends
+    // that pointer stream outright; an ordinary leave has no event WHILE the
+    // pointer stays outside, and may re-enter (a synthesized motion) with a
+    // still-held button releasing normally afterward — clearing the press
+    // claim here is what leaves that later motion/release owning nothing, not
+    // an inability of those events to arrive. Both faces answer "where is the
+    // pointer" and the pointer is
     // gone; the painter lights the hovered item with no in-window term of its
     // own, so dropping the arm alone would leave an item lit outside the
     // window. The menu stays OPEN and the row stays ARMED — leaving the window

@@ -2223,8 +2223,11 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // row's button would keep its lit face after the pointer slid out the window
     // edge. The hook owns the erase damage. (The MARKER hover popup rode this
     // edge too until row 5 deleted it; a marker's value lives on its flag now,
-    // so there is no pointer-position-dependent marker surface left.) Re-entry
-    // fires a synthesized motion (on_pointer_enter) that re-resolves.
+    // so there is no pointer-position-dependent marker surface left — but an
+    // open dropdown's item hover/arm is one, and it rides this same edge:
+    // main.cpp's hook widened 2026-08-03 to drop it alongside the roster's;
+    // see clear_dropdown_pointer_state.) Re-entry fires a synthesized motion
+    // (on_pointer_enter) that re-resolves.
     if (pointer_left_hook_) pointer_left_hook_();
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because

@@ -3123,17 +3123,28 @@ void GuiInputHandler::disarm_menu_row() {
     app.dropdown.menu_row_armed = false;
 }
 
-// THE POPUP'S POINTER-DERIVED STATE, DROPPED WITH NO EVENT TO FOLLOW (the
-// pointer-leave edge). BOTH FACES GO, and that is one function rather than two
-// because BOTH are answers to "where is the pointer" and the pointer is gone:
-//   * the ARMED item, with no release to follow — none will arrive, so the
-//     pressed face would otherwise stay lit under a pointer that has left;
-//   * the HOVERED item, with no motion to follow — the painter lights an item
-//     whenever `hovered_item` names it, with no pointer_in_window term of its
-//     own, so a flick out of the window whose last on-surface motion was still
-//     over an item leaves that item lit until a RETURN motion recomputes it.
-//     Nothing else clears it: recompute_dropdown_hover needs a motion event,
-//     and close_dropdown's struct reset needs a dismissal this edge is not.
+// THE POPUP'S POINTER-DERIVED STATE, DROPPED AT THE ONE HOOK FIRED ON BOTH
+// the pointer-leave AND capability-loss edges (codex 2026-08-03: the two are
+// not the same). Capability loss ends that pointer stream outright — no
+// motion or release for it will ever arrive again. An ordinary leave has no
+// event only WHILE the pointer stays outside; it may re-enter (a synthesized
+// motion) and a still-held button may release normally afterward. Both faces
+// are dropped here regardless, and BOTH FACES GO, one function rather than
+// two, because BOTH are answers to "where is the pointer" and the pointer is
+// gone:
+//   * the ARMED item — the pressed face would otherwise stay lit under a
+//     pointer that has left; on capability loss no release ever comes to
+//     un-press it, and on an ordinary leave a later release lands on nothing
+//     because clearing the press claim below leaves it unowned (below);
+//   * the HOVERED item, with no motion to follow while the pointer stays
+//     outside — the painter lights an item whenever `hovered_item` names it,
+//     with no pointer_in_window term of its own, so a flick out of the
+//     window whose last on-surface motion was still over an item leaves that
+//     item lit until a RETURN motion recomputes it (capability loss has no
+//     return to wait for; this branch's actual audience is the ordinary
+//     leave). Nothing else clears it: recompute_dropdown_hover needs a
+//     motion event, and close_dropdown's struct reset needs a dismissal this
+//     edge is not.
 // THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and so
 // does the row's armed mode (the leave hook calls disarm_menu_row for that, and
 // its no-menu-open gate owns the question).
