@@ -1805,16 +1805,22 @@ struct AppState {
     // gate), the pointer (the press claim's popup-first block) and the wheel,
     // the roster stops hovering, and opening the other menu is simply writing
     // this field — one value, one menu, no invariant to keep.
-    // `hovered_item` is -1 or an index into the open menu's item table; `rect`
-    // and `item_rects` are PAINTER-PUBLISHED, so the hit tests read exactly the
-    // painted boxes and never re-shape a label (the displayed-basis doctrine).
+    // `hovered_item` is -1 or an index into the open menu's item table, written
+    // by the motion recompute, by every close (the struct reset) and by the
+    // POINTER-LEAVE drop — that last one because the painter lights the item it
+    // names with no pointer_in_window term of its own, and no motion event
+    // follows a leave.
+    // `rect` and `item_rects` are PAINTER-PUBLISHED, so the hit tests read
+    // exactly the painted boxes and never re-shape a label (the displayed-basis
+    // doctrine).
     // Every rect is zero while closed, which is the correct cold answer: an
     // empty rect contains no point.
     // `pressed_item` is the ARMED item: set by a press on one, cleared by the
-    // release and by every close. It exists because the dropdown is the ONE
-    // redesign surface that acts on RELEASE — every row button fires on press,
-    // a menu triggers on release by universal convention — which is also the
-    // only reason a pressed face is visible long enough to be worth painting.
+    // release, by every close and by the same pointer-leave drop. It exists
+    // because the dropdown is the ONE redesign surface that acts on RELEASE —
+    // every row button fires on press, a menu triggers on release by universal
+    // convention — which is also the only reason a pressed face is visible long
+    // enough to be worth painting.
     // THE ARM FOLLOWS THE POINTER while the press is live (architect
     // 2026-08-03): sliding from one item to the next moves it, and sliding onto
     // the separator, the chrome or off the box sets it to -1 with the press

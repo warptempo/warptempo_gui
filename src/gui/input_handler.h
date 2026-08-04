@@ -565,10 +565,16 @@ struct GuiInputHandler {
     // separator, the chrome or off the box) nothing runs, the release is
     // consumed and the menu stays open.
     bool finish_dropdown_release();
-    // Drop the armed face and the press claim with no release to follow (the
-    // pointer-leave edge). The menu stays OPEN — leaving the window is not a
-    // dismissal.
-    void clear_dropdown_press();
+    // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
+    // face and the press claim — at the one edge that has neither a motion nor
+    // a release to follow (the pointer-leave / capability-loss hook, its only
+    // caller). Both faces answer "where is the pointer" and the pointer is
+    // gone; the painter lights the hovered item with no in-window term of its
+    // own, so dropping the arm alone would leave an item lit outside the
+    // window. The menu stays OPEN and the row stays ARMED — leaving the window
+    // is not a dismissal, and the mode is disarm_menu_row's question, asked
+    // beside this call.
+    void clear_dropdown_pointer_state();
 
     // THE HOVER TOOLTIP's hide — the hint's job ends the moment the user acts,
     // by whatever means, the two floating surfaces never coexist, and a pointer

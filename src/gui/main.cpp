@@ -1037,6 +1037,14 @@ int main(int argc, char** argv) {
     // BUTTON-LOST edge (no release event follows it either), and a stranded
     // pressed interior would outlive the hold that justified it. Both are
     // transition-gated.
+    // AN OPEN POPUP'S TWO FACES GO WITH THEM, and only they: the item under
+    // the pointer is lit by `hovered_item` with no in-window term in the
+    // painter, and the armed item by `pressed_item` with no release to follow,
+    // so both would outlive the pointer that named them — a flick out of the
+    // window whose last on-surface motion was still over an item leaves it lit
+    // until a RETURN motion recomputes. One call clears both
+    // (clear_dropdown_pointer_state); the MENU ITSELF STAYS UP, because leaving
+    // the window is not a dismissal.
     // THE MENU ROW'S MODE ENDS HERE TOO (the armed bit, AppState::Dropdown::
     // menu_row_armed): once a menu has been opened from row 1 the anchors open on
     // hover alone, and a pointer that has left the window has left the visit, so
@@ -1058,7 +1066,7 @@ int main(int argc, char** argv) {
         input_handler.hide_shift_tooltip();
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
-        input_handler.clear_dropdown_press();
+        input_handler.clear_dropdown_pointer_state();
         input_handler.disarm_menu_row();
     });
 

@@ -262,18 +262,27 @@ public:
     // passes the cue its own gesture wears — Zoom for the strip drag (both entries
     // are Zoom zones), Pan for the alt-pan — the same "read the drag's own record"
     // the live trim cue uses, and the platform STAMPS it as the remembered kind on
-    // the path that CREATED THE LOCK PROXY. Only there: a degraded compositor and
-    // a failed proxy creation hide nothing and restore nothing, and their gesture
-    // keeps running on real coordinates with the loop tail deriving normally, so a
-    // stamp would be a cue nobody asked for.
+    // the path that CREATED THE LOCK PROXY. Only there, and neither other exit
+    // stamps or restores anything: a DEGRADED compositor returns before the
+    // hide and never touches the cursor at all, while a FAILED PROXY CREATION
+    // hides and immediately un-hides again (the hide is issued ahead of the
+    // request — see below — and that arm's apply_cursor_kind puts back whatever
+    // kind was showing, a transient pair the body states at the site). Both
+    // keep their gesture running on real coordinates with the loop tail
+    // deriving normally, so a stamp would be a cue nobody asked for.
     //
     // THE CREATED PROXY IS TREATED AS A LIVE LOCK, AND THAT IS OPTIMISTIC BY
     // RULING (architect 2026-08-03). Activation is ASYNCHRONOUS — the protocol's
     // zwp_locked_pointer_v1.locked event announces it, and our listener for that
-    // event deliberately does nothing — so everything after the creation (the
-    // hide, the stamp, pointer_captured_, the unknown span) rides the lock REQUEST
-    // rather than a granted lock. On labwc, the supported compositor, a lock
-    // requested while our surface holds pointer focus activates promptly, and
+    // event deliberately does nothing — so the stamp, pointer_captured_ and
+    // the unknown span, which all follow the creation, ride the lock REQUEST
+    // rather than a granted lock. THE HIDE IS THE SAME OPTIMISM ONE STEP
+    // EARLIER: it is issued BEFORE the request, so the cursor is already gone
+    // when the gesture's first relative motion arrives rather than a round trip
+    // later, which is what makes the creation-failure arm an undo rather than
+    // an omission.
+    // On labwc, the supported compositor, a lock requested while our surface
+    // holds pointer focus activates promptly, and
     // mid-press on our surface that focus is structurally ours; properly-coded
     // compositors are assumed equivalent. One that DEFERS or DECLINES the lock is
     // an unsupported environment — adversarial usage, the category a hand-broken

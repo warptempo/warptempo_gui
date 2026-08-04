@@ -3108,7 +3108,8 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
 //
 // THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than four
 // inline writes. Leaving the window is NOT a dismissal — the popup stays up, as
-// clear_dropdown_press beside it states — and a menu still standing is still the
+// clear_dropdown_pointer_state beside it states (only the popup's
+// POINTER-DERIVED faces go) — and a menu still standing is still the
 // mode, so re-entering over the other anchor must SWITCH rather than find a cold
 // row (and the row-1 hover close, which re-arms, must not be resurrecting a mode
 // something else meant to end). The same answer serves the two press callers for
@@ -3122,16 +3123,34 @@ void GuiInputHandler::disarm_menu_row() {
     app.dropdown.menu_row_armed = false;
 }
 
-// THE ARMED ITEM'S DROP, with no release to follow (the pointer-leave edge): no
-// release will arrive, so the face would otherwise stay lit under a pointer that
-// is gone. The menu itself STAYS OPEN — leaving the window is not a dismissal.
-// THE PRESS CLAIM GOES WITH IT, above the face's own transition gate: this is
-// the button-LOST edge, so a re-entry that still reports the button down must
-// not resurrect an arm no release will ever be attributed to. Coming back takes
-// a fresh press, exactly as it did before the arm followed the pointer.
-void GuiInputHandler::clear_dropdown_press() {
+// THE POPUP'S POINTER-DERIVED STATE, DROPPED WITH NO EVENT TO FOLLOW (the
+// pointer-leave edge). BOTH FACES GO, and that is one function rather than two
+// because BOTH are answers to "where is the pointer" and the pointer is gone:
+//   * the ARMED item, with no release to follow — none will arrive, so the
+//     pressed face would otherwise stay lit under a pointer that has left;
+//   * the HOVERED item, with no motion to follow — the painter lights an item
+//     whenever `hovered_item` names it, with no pointer_in_window term of its
+//     own, so a flick out of the window whose last on-surface motion was still
+//     over an item leaves that item lit until a RETURN motion recomputes it.
+//     Nothing else clears it: recompute_dropdown_hover needs a motion event,
+//     and close_dropdown's struct reset needs a dismissal this edge is not.
+// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and so
+// does the row's armed mode (the leave hook calls disarm_menu_row for that, and
+// its no-menu-open gate owns the question).
+// THE PRESS CLAIM GOES ABOVE THE TRANSITION GATE: this is the button-LOST edge,
+// so a re-entry that still reports the button down must not resurrect an arm no
+// release will ever be attributed to. Coming back takes a fresh press, exactly
+// as it did before the arm followed the pointer.
+// ONE DAMAGE PAIR FOR BOTH FACES — the strip plus the popup's whole published
+// box, recompute_dropdown_hover's own shape, which is what lets a frame that
+// drops a hover on one item and an arm on another erase both with no per-item
+// arithmetic. It is transition-gated like the roster clears beside it; with the
+// menu closed both indices are already -1 (the struct reset) and this is a
+// compare, which is also why the zero rect is never handed to the damage.
+void GuiInputHandler::clear_dropdown_pointer_state() {
     app.dropdown.press_began_on_item = false;
-    if (app.dropdown.pressed_item < 0) return;
+    if (app.dropdown.hovered_item < 0 && app.dropdown.pressed_item < 0) return;
+    app.dropdown.hovered_item = -1;
     app.dropdown.pressed_item = -1;
     viewport.invalidate_top_strip();
     viewport.invalidate_rect(app.dropdown.rect);
