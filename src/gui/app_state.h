@@ -732,7 +732,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
 // Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
-// then row 4's eleven view / mode / action buttons. It exists ONCE, here, because it indexes
+// then row 4's twelve view / mode / action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -773,15 +773,21 @@ enum class RedesignButton {
     // Row 3, the tabs.
     TabA, TabB,
     // Row 4, the icon row, in painted order: the two view radio pairs, the
-    // phase-reset clipboard pair, the three mode/editor buttons, then the two
-    // render-entry buttons. (THE ZOOM PAIR LEFT 2026-08-02 — the architect's
-    // no-duplicate-commands ruling, its two commands now living in the
-    // Navigation dropdown; the `-` / `=` KEYS are untouched.)
+    // phase-reset clipboard pair, the three mode/editor buttons, the two
+    // render-entry buttons, then the history mode's own. (THE ZOOM PAIR LEFT
+    // 2026-08-02 — the architect's no-duplicate-commands ruling, its two
+    // commands now living in the Navigation dropdown; the `-` / `=` KEYS are
+    // untouched.)
     IconS, IconT, IconW, IconP,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
-    IconListen, IconCommit
+    IconListen, IconCommit,
+    // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
+    // landed with the commit act: bare `/`, in its own group past a separator,
+    // lit while the mode stands. Its chord toggles, so the same click that
+    // opened the view closes it.
+    IconHistory
 };
-inline constexpr int kRedesignButtonCount = 23;
+inline constexpr int kRedesignButtonCount = 24;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -845,6 +851,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconFollow:
         case RedesignButton::IconListen:
         case RedesignButton::IconCommit:
+        case RedesignButton::IconHistory:
             break;
     }
     return false;
@@ -1052,6 +1059,13 @@ enum class DialogTrigger {
     // persists on the next ordinary save). No dismiss-without-ack path:
     // acknowledging is the only way past the prompt.
     ENV_HASH_MISMATCH,
+    // THE HISTORY MODE'S COMMIT ACT (GuiPrompt::open_history_commit_confirm,
+    // 2026-08-04) — the fourth prompt, and the only one guarding a route that
+    // writes outside this session: `y` writes the live sidecars into the
+    // projects repository and commits and pushes them, Esc abandons with
+    // nothing done. It is a confirmation rather than a choice, so it wears the
+    // paste prompt's own response pair.
+    HISTORY_COMMIT,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom row's
@@ -1976,8 +1990,9 @@ struct AppState {
     // a popup from ever standing together — the same shape that keeps a popup
     // and an editor apart.
     //
-    // THE ONE ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
-    // own act, not an exception carved out of the allowlist's reasoning. In the
+    // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
+    // own act, not an exception carved out of the allowlist's reasoning (the
+    // second is Ctrl+Alt+R, further down, on the same reasoning). In the
     // mode that editor's subject CHANGES: it opens prefilled with the viewed
     // commit's full SHA, takes any spelling git can resolve in its place, and on
     // Enter adopts THAT COMMIT's three sidecars into the live session 1:1
@@ -1994,14 +2009,50 @@ struct AppState {
     // and the mode's bottom-strip line yields its cell to the editor for the
     // life of the edit.
     //
-    // WHY THE FROZEN NOW SIDE CANNOT GO STALE. GuiHistoryDiff captures the three
-    // sidecar texts once at init() and measures every commit against them. That
-    // would be a real hazard in an authoring session — the answer would drift
-    // from what is on screen — and it is not one here BY CONSTRUCTION: the two
-    // gates above refuse every route that could change those bytes for the whole
-    // life of the session, and the one route that changes them anyway (the
-    // adopt) closes the mode first. The mode's entry re-inits, so each visit
-    // measures against the state at that visit.
+    // THE OTHER ADMITTED MUTATOR IS Ctrl+Alt+R, AND IT WRITES OUTSIDE THIS
+    // SESSION (architect 2026-08-04): while the mode stands that chord is not a
+    // render but THE COMMIT ACT — the mode bit selecting the command exactly as
+    // the iteration bit selects the sweep, one route with the selection inside
+    // it (handle_render_dispatch_keys). It asks first, through the product's
+    // fourth prompt, and on `y` writes the live authoring state as the three
+    // sidecars into the piece's directory in the projects repository, commits
+    // them pathspec-scoped under `Update <id>` and pushes
+    // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
+    // git route, and its only writer outside the user's own save). Ctrl+Alt+-
+    // Shift+R is NOT admitted, so the miscellaneous render stays a consumed
+    // nothing here and the Render button drops its shift line with it; the
+    // button itself wears the commit icon and the label "Commit" while the mode
+    // stands, and reaches the act through its ordinary chord.
+    //
+    // THE MODE STAYS OPEN ACROSS THE ACT (architect's ruling) and the session
+    // RE-INITS in place: the walk re-heads at the new checkpoint, the index
+    // returns to 0, and the lane shows an EMPTY diff — which is the visual
+    // confirmation that what is in memory is now what is committed. Nothing
+    // about the live authoring state changes, which is why this mutator, unlike
+    // the adopt, does not have to close the mode.
+    //
+    // WHY THE FROZEN NOW SIDE CANNOT GO STALE — as a statement about the
+    // AUTHORED state, which is what the flags describe. GuiHistoryDiff captures
+    // the three sidecar texts once at init() and measures every commit against
+    // them. That would be a real hazard in an authoring session — the answer
+    // would drift from what is on screen — and it is not one here BY
+    // CONSTRUCTION: the two gates above refuse every route that could change the
+    // markers or the engine settings for the whole life of the session, and the
+    // one route that changes them anyway (the adopt) closes the mode first. The
+    // mode's entry re-inits, so each visit measures against the state at that
+    // visit.
+    //
+    // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view band, and
+    // the commit act is the one route that has to care. Both allowlists admit
+    // routes that move it: zoom, the paged scroll, the overview toggle and
+    // playback's follow chase move viewport_start_sample or zoom_level, the
+    // pointer's pan / strip / ruler drags move both, and the mode's OWN
+    // diff-flag click lands the playhead — every one of them a per-tab key the
+    // settings writer persists. So after any of them the frozen text is a stale
+    // snapshot of bytes a Ctrl+S would write differently. That is invisible in
+    // the diff (the mode displays only `scale=`) and would be a LIE in a
+    // checkpoint, so the act rebuilds the now side fresh at commit time rather
+    // than committing the frozen one.
     //
     // PER-SESSION SCRATCH: never persisted, never stashed, cleared WHOLE on
     // exit (session and all, so the next entry pays a fresh commit walk).
@@ -2749,6 +2800,15 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconFollow:
         case RedesignButton::IconListen:
         case RedesignButton::IconCommit:
+        // THE HISTORY BUTTON MIRRORS NOTHING EITHER, and its gates are worth
+        // naming because the temptation to mirror them is real: `/` refuses
+        // while audio is loading or absent (on_key's own blank-state return,
+        // above every dispatch) and the mode refuses to open when the git walk
+        // finds no history — and that second answer is NOT KNOWABLE PER FRAME.
+        // It costs subprocesses to ask, the row repaints on every hover, and the
+        // refusal is already a consumed no-op with its own stderr line. So the
+        // button joins the row's arm on the row's own terms.
+        case RedesignButton::IconHistory:
             return true;
         case RedesignButton::Save:
         case RedesignButton::Undo:
@@ -2809,6 +2869,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconP:      return a.active_markers_view == 'P';
         case RedesignButton::IconFollow: return a.follow_mode;
         case RedesignButton::IconIter:   return a.iteration_mode_enabled;
+        // The iteration button's pattern exactly: a TOGGLE reading the live bit
+        // its own chord flips, so the lamp and the mode cannot drift.
+        case RedesignButton::IconHistory: return a.history_mode.active;
         case RedesignButton::Quit:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
@@ -2915,14 +2978,29 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
         case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
         case RedesignButton::IconCommit: return {"Commit render (')", nullptr};
+        // HELP's own vocabulary for the mode ("Checking history"), one line: the
+        // key toggles and there is no shifted twin.
+        case RedesignButton::IconHistory: return {"History (/)", nullptr};
     }
     return {nullptr, nullptr};
 }
 
-// THE RENDER BUTTON'S ITERATION FACE — the ONE row on this whole surface whose
-// text follows STATE rather than being a constant (architect 2026-08-02). With
-// iteration mode on, Ctrl+Alt+R IS the sweep, so the button says the sweep: its
-// LABEL reads "Render Iterations" and its hint is the matching ONE-LINE form.
+// THE RENDER BUTTON'S TWO STATE FACES — the ONE row on this whole surface whose
+// text follows STATE rather than being a constant (architect 2026-08-02, joined
+// by the history face 2026-08-04). Ctrl+Alt+R is a chord whose MEANING is
+// selected by a mode bit, and the button says whichever command it currently is:
+//
+//   HISTORY MODE STANDING → "Commit", and the vcs-commit icon with it: the chord
+//   commits the live state into the projects repository as a checkpoint. It is
+//   ranked FIRST because it is the outer mode — the history mode's own allowlist
+//   is what admits the chord at all, and it admits it as the commit act whether
+//   or not iteration mode happens to have been left on underneath (nothing can
+//   toggle that bit while the mode stands, `i` not being on the allowlist).
+//   Its hint is the matching ONE-LINE form: Ctrl+Alt+Shift+R is not admitted by
+//   the mode's allowlist, so a shift press there does nothing at all.
+//
+//   ITERATION MODE ON → "Render Iterations", the sweep, and its own one-line
+//   hint.
 //
 // THE CAPITAL I IS DELIBERATE AND SCOPED TO THIS STRING (architect 2026-08-03,
 // his explicit instruction): every other multi-word GUI label in the product
@@ -2939,8 +3017,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // BOTH STRINGS LIVE HERE, beside the constant table, so the label the button
 // paints and the name its hint gives cannot drift into two different words.
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
+inline constexpr const char* kRenderCommitLabel     = "Commit";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
+    if (b == RedesignButton::Render && a.history_mode.active) {
+        return {"Commit (Ctrl+Alt+R)", nullptr};
+    }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return {"Render Iterations (Ctrl+Alt+R)", nullptr};
     }
@@ -2954,6 +3036,9 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // with a tooltip keeps it in both modes, and a button with a label keeps one.
 inline const char* redesign_button_label(const AppState& a, RedesignButton b,
                                          const char* table_label) {
+    if (b == RedesignButton::Render && a.history_mode.active) {
+        return kRenderCommitLabel;
+    }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return kRenderIterationsLabel;
     }

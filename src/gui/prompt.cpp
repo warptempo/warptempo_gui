@@ -1,6 +1,7 @@
 #include "prompt.h"
 
 #include "env_fingerprint.h"
+#include "input_handler.h"
 
 #include <utility>
 
@@ -12,7 +13,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
     case DialogTrigger::ENV_HASH_MISMATCH:
-        // All three are dispatched directly by activate_response, outside
+    case DialogTrigger::HISTORY_COMMIT:
+        // All four are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -83,6 +85,27 @@ void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     viewport.invalidate_all();
 }
 
+// The history mode's commit confirmation. Same shape as the paste confirm — one
+// question, `y` or Esc — because it is the same kind of thing: an act that runs
+// past the point of easy undo and should be asked about once. What is new is
+// where the effect lands: outside this session, in the projects repository.
+// The text names both halves of what will happen, the message and the
+// destination, and nothing about either is editable here.
+void GuiPrompt::open_history_commit_confirm(const std::string& commit_title,
+                                            const std::string& repo) {
+    // A modal surface is opening: the shared modal stop, same rule as every
+    // other prompt open (stop_playback_for_modal_open's declaration owns the
+    // decision table).
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.prompt.active          = true;
+    app.prompt.text =
+        "Commit \"" + commit_title + "\" to " + repo + "?";
+    app.prompt.response_keys   = {'y', '\x1b'};
+    app.prompt.response_labels = {"[Y]es", "[Esc]"};
+    app.prompt.trigger         = DialogTrigger::HISTORY_COMMIT;
+    viewport.invalidate_all();
+}
+
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
 // response. On a Save failure, the prompt mutates in place to a
@@ -133,6 +156,29 @@ void GuiPrompt::activate_response(char k) {
         }
         if (k == '\x1b') {
             cancel_paste_confirmation();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::HISTORY_COMMIT) {
+        // THE PROMPT COMES DOWN BEFORE THE ACT RUNS — the paste confirm's own
+        // order, and it matters more here: the act shells out to git and can
+        // take a moment, and it re-inits the history session at its tail, so
+        // running it under a prompt still marked active would leave the strip
+        // painting a question that has already been answered.
+        if (k == 'y') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input) input->run_history_commit();
+            return;
+        }
+        // ABANDON: nothing has been written at this point — the act does not
+        // begin until `y` — so there is no state to unwind and Esc is a plain
+        // dismissal.
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
             return;
         }
         return;

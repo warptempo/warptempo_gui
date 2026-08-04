@@ -321,7 +321,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // bar, plus its own 1px margin-bottom); lane 1 is the TOOLBAR row (the flat
 // ground carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
-// its border-bottom); lane 3 is the ICON row (the eleven view/mode/action
+// its border-bottom); lane 3 is the ICON row (the twelve view/mode/action
 // buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
 // double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
@@ -820,6 +820,12 @@ int main(int argc, char** argv) {
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
+    // And the same back-wire for the prompt (constructed before the input
+    // handler, which holds it by reference). ONE reader: the history mode's
+    // commit confirmation, whose `y` runs GuiInputHandler::run_history_commit —
+    // the act's GUI half lives with the mode's other machinery, and the prompt
+    // owns only the question.
+    prompt.input = &input_handler;
 
     // Viewport worker kick: FOLLOW-SCROLL during playback is the one caller
     // that requests the new waveform immediately rather than waiting for the

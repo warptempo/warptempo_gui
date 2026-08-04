@@ -874,8 +874,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // (THE ZOOM PAIR SAT HERE, in its own separator-flanked group, from
     // 2026-08-01 until 2026-08-02: the architect ruled out duplicate commands on
     // the GUI when the Navigation dropdown gave `-` and `=` a home there, so the
-    // two buttons and their icons were deleted whole. The row is back to eleven
-    // buttons in four groups; the keys are untouched.)
+    // two buttons and their icons were deleted whole, taking the row back to
+    // eleven buttons in four groups; the keys are untouched. The twelfth and
+    // fifth arrived 2026-08-04 at the row's other end — the history button.)
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -887,7 +888,28 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconFollow, IconRowLead::Gap,   nullptr, icons::Icon::GoJump},
     {RedesignButton::IconListen, IconRowLead::Separator, nullptr, icons::Icon::PreviewRenderOn},
     {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
+    // THE HISTORY MODE'S BUTTON (2026-08-04) — the row's twelfth, and a GROUP OF
+    // ITS OWN: the architect asked for "a separation there and then another
+    // button", and this row's vocabulary for a group boundary is exactly one
+    // thing, IconRowLead::Separator (4px, the 1px line, 4px). It reads the same
+    // way the four existing boundaries do rather than inventing a second kind of
+    // gap that would have to be explained.
+    {RedesignButton::IconHistory, IconRowLead::Separator, nullptr, icons::Icon::VcsDiff},
 };
+
+// THE TOOLBAR'S ICON, by state — redesign_button_label's sibling (app_state.h,
+// which owns the label and the tooltip halves of the same fact and the reasoning
+// for both). It lives HERE because the constant icons do: kToolbarButtons is the
+// painter's roster half, and app_state.h carries no icon vocabulary at all.
+// Exactly one button overrides its own: Render, which is the COMMIT ACT while
+// the history mode stands and wears the commit icon to say so.
+icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
+                                 icons::Icon table_icon) {
+    if (b == RedesignButton::Render && app.history_mode.active) {
+        return icons::Icon::VcsCommit;
+    }
+    return table_icon;
+}
 
 // -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
 //
@@ -1482,7 +1504,8 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
         // The icon fills its own square, vertically centered in the button box,
         // in ITS OWN color (the icon table owns that — media-record is red where
         // the other three are the label white).
-        icons::draw(cr, def.icon, static_cast<double>(x + pad_left),
+        icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
+                    static_cast<double>(x + pad_left),
                     static_cast<double>(btn_y + (btn_h - icon_px) / 2),
                     static_cast<double>(icon_px), keep, ground);
 
@@ -1756,9 +1779,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, three vertical separators, and eleven 32x32 buttons in four
+    // width, four vertical separators, and twelve 32x32 buttons in five
     // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
-    // the bpm / iteration / follow modes, and the listen / commit render pair.
+    // the bpm / iteration / follow modes, the listen / commit render pair, and
+    // the history mode's own button (2026-08-04).
     // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
     // the Navigation dropdown is those two commands' pointer home now.)
     //

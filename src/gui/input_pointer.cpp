@@ -153,6 +153,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
     {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
     {RedesignButton::IconCommit, GuiKeys::Apostrophe, false, false, false, false, true}, // bare '
+    // THE HISTORY MODE (2026-08-04), the row's twelfth and the table's
+    // twenty-second: bare `/`, a TOGGLE like follow and iteration — its chord
+    // opens the mode and closes it, and the button dispatches on both edges
+    // because the icon row's band claim sits ABOVE the mode's pointer gate (the
+    // rows' presses are covered by the KEYBOARD gate instead, which admits `/`
+    // through handle_history_mode_key one line before the allowlist).
+    {RedesignButton::IconHistory, GuiKeys::Slash, false, false, false, false, true}, // bare /
 };
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
@@ -2670,7 +2677,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs and row 4's eleven — the stash is
+// four, row 3's two tabs and row 4's twelve — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;

@@ -274,6 +274,35 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.marker_stems.clear();
 }
 
+// ENTER THE MODE ON A FRESH SESSION — the one entry owner, the mirror of
+// close_history_mode. Everything about a visit is built here and nowhere else:
+// a new commit walk, and a NOW SIDE CAPTURED AT THIS INSTANT, which is what
+// makes the deltas describe the state the user is actually looking at.
+//
+// TWO CALLERS, and the second is why this is a function rather than eight lines
+// inside `/`: the commit act re-enters the mode on the checkpoint it has just
+// made (the mode stays open across the act by the architect's ruling), and it
+// must re-enter it in EXACTLY the shape a keypress does — same walk, same index,
+// same cleared focus, same lane-stash drop across the edge — or the two entries
+// would be two subtly different modes.
+//
+// UNAVAILABLE IS A CONSUMED NO-OP: init() has already put its own one line on
+// stderr naming the reason, and that is the whole story — no new UI surface, no
+// red flash, and above all no half-open mode. The existing mode state, if any,
+// is left untouched, because the fresh session is built beside it and only moved
+// in once it is known good.
+bool GuiInputHandler::open_history_mode_fresh() {
+    AppState::HistoryMode fresh;
+    if (!fresh.session.init(app)) return false;
+    fresh.active = true;
+    fresh.index  = 0;      // the newest commit
+    fresh.focus  = -1;
+    app.history_mode = std::move(fresh);
+    drop_lane_stash_across_history_edge();
+    viewport.invalidate_all();
+    return true;
+}
+
 // `/`, `,` and `.` — the mode's whole keyboard surface, all three BARE-EXACT.
 // Returns true when the press was consumed.
 //
@@ -303,20 +332,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         }
         // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
         // the visit must measure against the state the user is looking at.
-        AppState::HistoryMode fresh;
-        if (!fresh.session.init(app)) {
-            // UNAVAILABLE IS A CONSUMED NO-OP. init() has already put its own
-            // one line on stderr naming the reason, and that is the whole
-            // story — no new UI surface, no red flash, and above all no
-            // half-open mode.
-            return true;
-        }
-        fresh.active = true;
-        fresh.index  = 0;      // the newest commit
-        fresh.focus  = -1;
-        app.history_mode = std::move(fresh);
-        drop_lane_stash_across_history_edge();
-        viewport.invalidate_all();
+        // UNAVAILABLE IS A CONSUMED NO-OP — the entry owner reports it and this
+        // arm has nothing to add.
+        open_history_mode_fresh();
         return true;
     }
 
@@ -384,6 +402,23 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             commit button reaches it here, like every other
 //                             redesigned button, by synthesizing this same bare
 //                             chord.
+//   - Ctrl+Alt+R (no shift) → THE COMMIT ACT, the mode's second admitted mutator
+//                             (2026-08-04) and admitted on the same reasoning as
+//                             `'`: in the mode that chord is not a render at all
+//                             but the act of committing the live state into the
+//                             projects repository as a checkpoint. THE MODE BIT
+//                             SELECTS THE COMMAND — the iteration bit's own
+//                             precedent — so there is ONE route and the
+//                             selection sits inside it, at the chord's arm in
+//                             handle_render_dispatch_keys; nothing is dispatched
+//                             from here. The Render button reaches it by
+//                             synthesizing this same chord, and wears the commit
+//                             icon and label while the mode stands.
+//                             Ctrl+Alt+SHIFT+R IS DELIBERATELY NOT ADMITTED: a
+//                             miscellaneous render is an authoring act with no
+//                             meaning in this mode, so it stays a consumed
+//                             nothing here and the button's hint drops its shift
+//                             line to match.
 //   - Ctrl+S                → the save. It writes the LIVE state, which is
 //                             exactly the now side the diff is measured against,
 //                             so it cannot make the display disagree with disk.
@@ -425,10 +460,88 @@ bool GuiInputHandler::history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     const bool is_commit = (key == GuiKeys::Apostrophe && bare);
+    const bool is_commit_act = (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
-             is_commit || is_save || is_ctrl_q);
+             is_commit || is_commit_act || is_save || is_ctrl_q);
+}
+
+// -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
+//
+// The act itself is commit_history_checkpoint (history_diff.h): the three
+// writes, the pathspec-scoped commit, the push, and every stderr line about
+// them. What lives here is the question in front of it and the re-entry behind
+// it.
+
+// ASK FIRST. One caller: Ctrl+Alt+R's own arm while the mode stands.
+//
+// THE QUESTION NAMES THE DEED, not a rephrasing of it — the commit message comes
+// from the act's own owner, so the prompt cannot advertise a title the commit
+// does not write. The message is not editable and is not asked about (the
+// architect's ruling: it is derived from the piece, not chosen), so this is a
+// confirmation and its answers are `y` and Esc.
+//
+// The guards are the act's preconditions restated as "there is something to ask
+// about": no mode, or a session that never resolved a piece directory, and there
+// is no commit to offer. Neither is reachable from the one call site (the chord
+// is admitted only while the mode stands, and an available session always
+// carries both strings), which is why they are silent.
+void GuiInputHandler::open_history_commit_confirmation() {
+    if (!app.history_mode.active) return;
+    const std::string& dir = app.history_mode.session.project_directory();
+    if (dir.empty() || app.history_mode.session.sidecar_base_name().empty()) {
+        return;
+    }
+    prompt.open_history_commit_confirm(history_checkpoint_title(dir),
+                                       app.projects_repo);
+}
+
+// THEN DO IT — the prompt's `y`, and the only caller.
+//
+// THE BYTES ARE REBUILT FRESH, NEVER THE SESSION'S FROZEN NOW SIDE, and this is
+// the one place in the mode where the difference between them is real. The
+// frozen side is honest about AUTHORED state — the mode's gates refuse every
+// route that could change a marker or an engine setting — but the settings file
+// also carries the per-tab VIEW BAND, and both allowlists admit routes that move
+// it: zoom, the paged scroll, the overview toggle and playback's follow chase,
+// the pointer's pan / strip / ruler drags, and the mode's own diff-flag click,
+// which lands the playhead. Committing the frozen text
+// would therefore write a checkpoint whose view band is a stale copy of one the
+// user has since moved — invisible in the diff (which displays only `scale=`)
+// and wrong on disk. Rebuilding costs one serialization and is exactly what a
+// Ctrl+S at this instant would write.
+//
+// AND IT IS WHAT MAKES THE CONFIRMATION TRUE: the re-init below measures the new
+// checkpoint against a now side built from the same unchanged state one moment
+// later, so the lane comes back EMPTY. Committing the frozen bytes after a zoom
+// would have left the fresh now side disagreeing with them, and the empty diff —
+// the whole visual point of staying in the mode — would show a settings delta
+// instead.
+//
+// THE MODE STAYS OPEN (architect's ruling) and re-enters through the entry
+// owner, so the walk re-heads at the new commit and the index returns to 0. A
+// re-entry that finds no history is not a state this can produce — the commit
+// just landed on the branch the walk reads — so its only honest answer is to
+// close the mode, which init() has already explained on stderr.
+void GuiInputHandler::run_history_commit() {
+    if (!app.history_mode.active) return;
+    const std::string dir  = app.history_mode.session.project_directory();
+    const std::string base = app.history_mode.session.sidecar_base_name();
+    if (dir.empty() || base.empty()) return;
+
+    const GuiHistoryCommitOutcome outcome =
+        commit_history_checkpoint(dir, base, build_history_now_side(app));
+
+    // A CHECKPOINT EXISTS IN BOTH SURVIVING ARMS — pushed or not — and that is
+    // exactly why the walk reads the local branch: an unpushed checkpoint is
+    // still history, and the user must be able to see that it landed. Every
+    // other outcome leaves the walk as it was, so the mode is left alone.
+    if (outcome != GuiHistoryCommitOutcome::Committed &&
+        outcome != GuiHistoryCommitOutcome::CommittedNotPushed) {
+        return;
+    }
+    if (!open_history_mode_fresh()) close_history_mode();
 }
 
 // THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is
@@ -949,16 +1062,34 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
     //
-    // ITERATION MODE RE-AIMS THIS CHORD (architect 2026-08-02): with the mode
+    // TWO MODE BITS RE-AIM THIS CHORD, and they are the same idea twice: the
+    // command is selected by a mode, inside this one route, so no surface that
+    // reaches the chord needs to know which command it currently is.
+    //
+    // THE HISTORY MODE COMES FIRST (architect 2026-08-04) because it is the
+    // outer mode: while it stands, Ctrl+Alt+R is THE COMMIT ACT — write the live
+    // state into the projects repository as a checkpoint — and the mode's own
+    // keyboard allowlist is what admits the chord here at all. It outranks the
+    // iteration bit unconditionally, including in the state where the mode was
+    // opened with iteration mode already on (nothing can toggle that bit while
+    // the mode stands, `i` not being on the allowlist). The act confirms through
+    // a prompt before it touches anything; run_history_commit owns the sequence.
+    //
+    // ITERATION MODE RE-AIMS IT OTHERWISE (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
     // under renders/, the same refusals — and there is no second chord for it.
-    // The single render below is the mode-OFF meaning, unchanged. Target view
-    // needs no clause of its own: mode-off-in-target is an invariant (the S->T
-    // toggle wipes iteration mode through wipe_iter_state), so a target-view
-    // press always takes the single-render arm exactly as it always did.
+    // The single render below is the both-modes-off meaning, unchanged. Target
+    // view needs no clause of its own: mode-off-in-target is an invariant (the
+    // S->T toggle wipes iteration mode through wipe_iter_state), so a
+    // target-view press always takes the single-render arm exactly as it always
+    // did.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
+        if (app.history_mode.active) {
+            open_history_commit_confirmation();
+            return true;
+        }
         if (app.iteration_mode_enabled) {
             run_iteration_sweep_render();
             return true;
@@ -1039,6 +1170,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // button's face follows the same bit (its hint drops the shift line in
     // iteration mode; redesign_button_tooltip, app_state.h), so nothing
     // advertises a press this arm swallows.
+    //
+    // WHILE THE HISTORY MODE STANDS THIS CHORD NEVER ARRIVES — the mode's
+    // keyboard allowlist admits Ctrl+Alt+R and not its shifted twin, so the
+    // press is consumed a gate above and this arm is not reached from either
+    // surface. The Render button's hint drops its shift line there too, by the
+    // same rule and at the same table.
     if (ctrl && alt && shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;

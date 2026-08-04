@@ -37,6 +37,11 @@ enum class Icon {
     EditUndo,            // Undo
     EditRedo,            // Redo
     MediaRecord,         // Render
+    // Render's OTHER face: while the history mode stands, Ctrl+Alt+R commits
+    // the checkpoint instead of rendering, so the button wears the commit icon
+    // and the "Commit" label (the swap's owner is redesign_button_label /
+    // redesign_button_icon; the mode is AppState::HistoryMode).
+    VcsCommit,           // Render, while the history mode stands
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
     EditCopy,            // Copy phase resets
@@ -46,6 +51,7 @@ enum class Icon {
     GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Commit a render as the baseline
+    VcsDiff,             // The history mode (`/`)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable
     // one (the slot's contract is at the tab painter).
@@ -56,7 +62,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 13;
+inline constexpr int kIconCount = 15;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

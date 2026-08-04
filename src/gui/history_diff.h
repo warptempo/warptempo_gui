@@ -18,21 +18,38 @@ struct AppState;
 // those files, what would change if the committed state were compared against
 // what is authored in memory right now.
 //
-// THE MATCH IS BY FILE NAME, NEVER BY FOLDER. No directory name appears
-// anywhere in this module: the source's sidecar base name is resolved against
-// the COMMITTED TREE of origin/main, and whichever directory holds files by
-// that name is the project's home, wherever it sits and whatever it is called.
-// Exactly one directory may carry them — zero or several is UNAVAILABLE — and
-// the commit walk uses a basename pathspec at any depth, so a corpus that was
-// renamed at some point in the walked range is followed with no knowledge of
-// what it used to be called. Each commit's blobs are then read at the paths
-// THAT commit's own tree gives, which is the same idea applied per era.
+// THE MATCH IS BY FILE NAME WITHIN `projects/` (architect 2026-08-04). The
+// repository layout convention is `<repo>/projects/<piece>/`, so that ONE
+// folder name is the module's only geography and everything below it is found
+// by NAME: the source's sidecar base name is resolved against the COMMITTED
+// TREE of the checked-out branch, and whichever directory under `projects/`
+// holds files by that name is the piece's home, whatever it is called and
+// however deeply it nests. Exactly one directory may carry them — zero or
+// several is UNAVAILABLE — and the commit walk uses a `projects/`-rooted
+// basename pathspec, so a piece renamed at some point in the walked range is
+// still followed with no knowledge of what its folder used to be called. Each
+// commit's blobs are then read at the paths THAT commit's own tree gives, the
+// same idea applied per era. (The narrowing RETIRED a tree-wide match, and with
+// it the pre-`projects/` era's commits: they are legacy-format checkpoints that
+// refuse adopt anyway, and a foreign copy of a sidecar name elsewhere in the
+// tree can no longer make the match ambiguous.)
+//
+// THE BRANCH IS THE LOCAL ONE, `HEAD`, not `origin/main` — because this module
+// WRITES checkpoints now (the commit act below) and a checkpoint whose push
+// failed must still be visible history. `origin/main` would hide it until the
+// next successful push, which is exactly the moment the user most needs to see
+// that the commit exists. One spelling for all three uses — the tip listing,
+// the walk, and the push's destination — so "the branch" cannot mean two
+// things.
 //
 // WHICH REPOSITORY IS THE PROJECTS HOME is the `projects_repo` setting's
 // answer, not this module's assumption. init() compares it against the local
 // clone's own `origin` remote, normalized to bare host/path on both sides, and
 // refuses on a mismatch: the clone is the transport, and a rebound setting
-// must never quietly produce a confident answer out of the wrong history.
+// must never quietly produce a confident answer out of the wrong history. The
+// guard asks WHICH REPOSITORY THIS CLONE IS, never how fresh it is — it reads
+// the remote's URL and no ref at all — so moving the walk from `origin/main` to
+// the local branch left it untouched and means exactly what it always did.
 //
 // The diff runs THEN -> NOW, and the "now" side is the LIVE IN-MEMORY STATE
 // serialized through the save writers' own string halves — byte-identical to
@@ -47,11 +64,17 @@ struct AppState;
 // authoring after init keeps seeing the init-moment answer. The mode's entry
 // is the natural re-init point.
 //
-// READ-ONLY BY CONSTRUCTION: the only git subcommands this feature ever runs
-// are `log`, `show`, `ls-tree`, `rev-parse` and `remote get-url`, through an
-// argv exec with no shell anywhere (the committed directory names carry spaces,
-// so shell quoting would be a hazard rather than a convenience). Nothing here
-// writes a file, a ref, or the index.
+// READ-ONLY BY CONSTRUCTION WITH ONE FENCED EXCEPTION. Every route in this
+// module but the commit act runs only `log`, `show`, `ls-tree`, `rev-parse` and
+// `remote get-url` and writes no file, no ref and no index entry. THE COMMIT ACT
+// (commit_history_checkpoint, below) is the one writer in the product's whole
+// git surface: it writes the three sidecars into the piece's directory in the
+// working tree and runs `add`, `commit` and `push` — through a SEPARATE
+// subprocess entry point (run_git_mutate in the .cpp), so which calls mutate
+// stays answerable by reading the call sites rather than by trusting a runtime
+// guard. Both entry points use an argv exec with no shell anywhere (the
+// committed directory names carry spaces, so shell quoting would be a hazard
+// rather than a convenience).
 
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
@@ -218,10 +241,12 @@ public:
     const GuiHistoryCommitDelta* delta_at(std::size_t index);
 
     // What init() matched: the source's sidecar base name, and the committed
-    // DIRECTORY holding its sidecars on origin/main (e.g. "projects/550 - 1").
-    // Empty when unavailable — and also empty, legitimately, when the sidecars
-    // sit at the repository root, which is why available() is the thing to
-    // test rather than this string.
+    // DIRECTORY holding its sidecars on the branch's tip tree (e.g.
+    // "projects/550 - 1"). Both are empty when unavailable, and available() is
+    // the thing to test. The directory is ALWAYS under `projects/` and
+    // therefore never empty on an available session — the match narrowed to
+    // that folder in 2026-08-04, which is also what lets the commit act write
+    // its checkpoint into a directory this string names.
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
 
@@ -237,3 +262,49 @@ private:
     // optionals sized once at init, so no element ever moves.
     std::vector<std::optional<GuiHistoryCommitDelta>> cache_;
 };
+
+// -- THE COMMIT ACT — the product's one mutating git route ------------------
+//
+// What the mode reads, it can now also WRITE: while the history mode stands,
+// Ctrl+Alt+R commits the live authoring state into the piece's directory in the
+// projects repository (the mode bit selects the command, exactly as the
+// iteration bit selects the sweep). The GUI half — the confirmation prompt, the
+// stderr register, the session re-init that turns the freshly written checkpoint
+// into an empty diff — lives at GuiInputHandler::run_history_commit;
+// what lives here is the act itself.
+
+// The commit message this act writes, and the one the prompt shows: `Update
+// <id>`, where the id is the piece directory's own leaf name ("projects/550 - 1"
+// -> "Update 550 - 1"). ONE OWNER for both readers, so the prompt cannot ask
+// about a title the commit does not use.
+std::string history_checkpoint_title(const std::string& project_directory);
+
+// HOW FAR THE ACT GOT. The two failures are distinguished because the user's
+// next move differs: nothing reached the repository on a write failure, while a
+// commit failure leaves three written files sitting in the working tree, visible
+// to `git status` and committable by hand. NothingToCommit is neither: the bytes
+// already ARE the newest checkpoint (committing twice), so no commit exists to
+// make and nothing was left behind. CommittedNotPushed is a SUCCESS for the
+// caller's purposes — the checkpoint exists, and the walk (which reads the local
+// branch for exactly this reason) shows it — with the push to retry.
+enum class GuiHistoryCommitOutcome {
+    WriteFailed,
+    NothingToCommit,
+    CommitFailed,
+    CommittedNotPushed,
+    Committed,
+};
+
+// WRITE THE THREE SIDECARS AND COMMIT THEM. `project_directory` and `base_name`
+// are the session's own match (so the destination is the CURRENT era's spelling,
+// the directory the branch tip carries the sidecars in) and `bytes` is what the
+// three files are to contain. Every step states its own failure on stderr in one
+// line, and this returns how far it got; it prints its own success line too, so
+// the caller reports nothing.
+//
+// IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
+// mode at all, so there is nothing to bootstrap from here — the first checkpoint
+// of a new piece stays a manual act.
+GuiHistoryCommitOutcome commit_history_checkpoint(
+    const std::string& project_directory, const std::string& base_name,
+    const GuiHistoryNowSide& bytes);

@@ -31,6 +31,24 @@ constexpr const char* kRepoRoot = "/home/b/.warptempo/warptempo_gui";
 // The architect's ruled depth: the newest 20 commits touching the sidecars.
 constexpr int kCommitDepth = 20;
 
+// THE CORPUS FOLDER — the one directory name this module knows (architect
+// 2026-08-04). The repository layout convention is `<repo>/projects/<piece>/`;
+// everything below this prefix is still matched by NAME, never by folder, so a
+// piece may be renamed or nested freely. The trailing slash is part of the
+// constant so the prefix test cannot accidentally match a sibling called
+// `projects_old/`.
+constexpr std::string_view kProjectsPrefix = "projects/";
+
+// WHICH BRANCH THE HISTORY IS. The LOCAL one, not `origin/main`: the commit act
+// makes this product a producer of checkpoints, and one whose push failed must
+// still be visible history rather than hidden until the next successful push.
+// `HEAD` is the spelling because it needs no name — it is whatever this clone
+// has checked out — and the same word serves the tip listing, the walk and the
+// push destination, so the three cannot come to mean different things. The
+// projects_repo guard is unaffected either way: it asks which REPOSITORY this
+// clone is, not how fresh it is.
+constexpr const char* kBranchRef = "HEAD";
+
 // The three sidecars a source carries, in no significant order. A directory
 // matches if it holds ANY of them under the source's base name — the
 // architect's checkpoints are complete sets, but a partial one should still be
@@ -60,11 +78,14 @@ constexpr std::string_view kScaleKeyPrefix = "scale=";
 
 // Run `git -C <repo> <args...>` and capture its stdout.
 //
-// THE ONLY SUBCOMMANDS THIS FEATURE EVER PASSES ARE `log`, `show`, `ls-tree`,
-// `rev-parse` AND `remote get-url` (rev-parse joined 2026-08-04 with the
-// adopt-from-commit path's spelling resolution) — the recheck reads history and
-// never writes it, and that constraint is meant to stay checkable by reading the
-// call sites below rather than by trusting a runtime guard.
+// THE ONLY SUBCOMMANDS THIS ENTRY POINT EVER PASSES ARE `log`, `show`,
+// `ls-tree`, `rev-parse`, `status` AND `remote get-url` (rev-parse joined
+// 2026-08-04 with the adopt-from-commit path's spelling resolution, status the
+// same day with the commit act's pre-flight probe) — all of them reads, and that
+// constraint is meant to stay checkable by reading the call sites below rather
+// than by trusting a runtime guard. THE MUTATING SUBCOMMANDS HAVE THEIR OWN
+// ENTRY POINT, run_git_mutate directly below, which is the whole point of there
+// being two: the fence is which function a call site names.
 //
 // argv exec, NEVER system() and never a shell: the committed directory names
 // carry spaces ("550 - 1") and so do the sidecar base names, and every one of
@@ -146,6 +167,117 @@ bool run_git_capture(const std::vector<std::string>& args, std::string& out) {
     }
 
     return !out.empty();
+}
+
+// Run `git -C <repo> <args...>` for a MUTATING subcommand, and hand back the
+// first line git said about it.
+//
+// THE MUTATING INVENTORY IS `add`, `commit` AND `push` — the commit act's three
+// steps, in that order — AND THAT ACT IS THIS FUNCTION'S ONLY CALLER. Nothing
+// else in the product runs a git subcommand that changes a file, a ref or the
+// index.
+//
+// SUCCESS IS NOT DECIDED HERE, which is the one real difference from the capture
+// helper above. That helper's "ran and produced output" reading is WRONG for
+// these: a failed push produces plenty of output and a successful one may
+// produce none, and the exit status is not obtainable either — main() sets
+// SIGCHLD to SIG_IGN, so waitpid normally fails with ECHILD (the same regime the
+// capture helper documents). So this reports only that the child was STARTED,
+// and the caller decides the outcome by OBSERVING THE REPOSITORY afterwards:
+// HEAD moved for the commit, the remote-tracking ref caught up for the push.
+// That is a question about the repository rather than about the child, and it
+// is answerable with the plumbing we have.
+//
+// STDOUT AND STDERR SHARE ONE PIPE, so `first_line` is git's own first non-empty
+// line whichever stream it chose (`commit` reports on stdout, `push` on stderr).
+// STDIN IS /dev/null: a GUI must never sit blocked forever behind a credential
+// prompt, and the push's call site pairs this with ssh's batch mode for the same
+// reason — a non-interactive failure that says so in one line is the honest
+// alternative to a frozen window.
+bool run_git_mutate(const std::vector<std::string>& args,
+                    std::string&                    first_line) {
+    first_line.clear();
+
+    std::vector<std::string> full;
+    full.reserve(args.size() + 3);
+    full.emplace_back("git");
+    full.emplace_back("-C");
+    full.emplace_back(kRepoRoot);
+    for (const std::string& a : args) full.push_back(a);
+
+    std::vector<char*> argv;
+    argv.reserve(full.size() + 1);
+    for (std::string& s : full) argv.push_back(const_cast<char*>(s.c_str()));
+    argv.push_back(nullptr);
+
+    int fds[2];
+    if (pipe(fds) != 0) return false;
+
+    const pid_t pid = fork();
+    if (pid < 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return false;
+    }
+    if (pid == 0) {
+        // Child: BOTH output streams to the pipe, stdin to /dev/null, then exec.
+        close(fds[0]);
+        if (dup2(fds[1], STDOUT_FILENO) < 0) _exit(127);
+        if (dup2(fds[1], STDERR_FILENO) < 0) _exit(127);
+        close(fds[1]);
+        const int devnull = open("/dev/null", O_RDONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDIN_FILENO);
+            close(devnull);
+        }
+        execvp("git", argv.data());
+        _exit(127);
+    }
+
+    close(fds[1]);
+    std::string out;
+    char        buf[4096];
+    for (;;) {
+        const ssize_t n = read(fds[0], buf, sizeof(buf));
+        if (n > 0) {
+            out.append(buf, static_cast<std::size_t>(n));
+            continue;
+        }
+        if (n == 0) break;
+        if (errno == EINTR) continue;
+        break;
+    }
+    close(fds[0]);
+
+    // Reap where the disposition allows it; the status is deliberately unread
+    // (see above), and under SIG_IGN this simply fails with ECHILD.
+    int   status = 0;
+    pid_t w      = 0;
+    do {
+        w = waitpid(pid, &status, 0);
+    } while (w < 0 && errno == EINTR);
+    (void)w;
+    (void)status;
+
+    // The first non-empty line, trailing whitespace off. Spelled out here rather
+    // than through the text helpers below so the two subprocess entry points
+    // stay adjacent — the fence reads better than four saved lines would.
+    for (std::size_t i = 0; i <= out.size();) {
+        const std::size_t nl  = out.find('\n', i);
+        const std::size_t end = (nl == std::string::npos) ? out.size() : nl;
+        std::string       line = out.substr(i, end - i);
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' ||
+                                 line.back() == '\t')) {
+            line.pop_back();
+        }
+        if (!line.empty()) {
+            first_line = std::move(line);
+            break;
+        }
+        if (nl == std::string::npos) break;
+        i = nl + 1;
+    }
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,27 +486,34 @@ void pair_changes_by_frame(std::vector<Entry>&  removed,
 // filename match over the committed tree
 // ---------------------------------------------------------------------------
 
-// THE MATCH IS BY FILE NAME, NOT BY FOLDER. The recheck does not know where in
-// the tree the corpus lives, and deliberately so: it looks for the committed
-// file whose BASENAME is one of this source's three sidecars, wherever that
-// file sits. No directory name is hardcoded anywhere in this module, which is
-// what makes it survive a corpus rename — past, or future — with no era
-// knowledge to keep current.
+// THE MATCH IS BY FILE NAME WITHIN `projects/`. One folder name is known
+// (kProjectsPrefix, the repository's layout convention) and nothing below it is:
+// the recheck looks for the committed file whose BASENAME is one of this
+// source's three sidecars, wherever under that folder it sits. So a piece's
+// directory may be renamed or nested with no era knowledge to keep current,
+// while a sidecar name that happens to occur elsewhere in the tree — an
+// unrelated copy, a pre-`projects/` era — can no longer make the match
+// ambiguous or drag legacy commits into the walk.
 
-// The directory part of a committed path, or "" for a file at the repo root
-// (a legal place for a sidecar to sit, and its own distinct directory).
+// The directory part of a committed path. Every path this module considers has
+// passed the `projects/` prefix test, so there is always a separator and the
+// answer is never empty — the repo-root case the tree-wide match had to model
+// went with that match.
 std::string directory_of(const std::string& path) {
     const std::size_t slash = path.rfind('/');
     return (slash == std::string::npos) ? std::string()
                                         : path.substr(0, slash);
 }
 
-std::string display_directory(const std::string& dir) {
-    return dir.empty() ? std::string("(repository root)") : dir;
-}
-
-// The committed paths in a NUL-separated `ls-tree -z --name-only` listing
-// whose BASENAME is `<base_name>.<one of the three extensions>`.
+// The committed paths in a NUL-separated `ls-tree -z --name-only` listing that
+// sit UNDER `projects/` and whose BASENAME is
+// `<base_name>.<one of the three extensions>`.
+//
+// The folder test is a plain prefix compare and it is the ONLY geography here:
+// everything past it is the basename rule. Both callers take it — init's tip
+// listing and each commit's own tree — so "the corpus lives under projects/" is
+// one rule read in one place rather than a claim the walk and the per-commit
+// resolution could come to disagree about.
 //
 // The listing is NUL-separated rather than newline-separated on purpose: git
 // quotes paths containing unusual bytes when it writes them one per line
@@ -388,6 +527,11 @@ std::vector<std::string> sidecar_paths_in_listing(const std::string& listing,
     std::vector<std::string> hits;
     for (const std::string& path : split_on(listing, '\0')) {
         if (path.empty()) continue;
+        if (path.size() <= kProjectsPrefix.size() ||
+            std::string_view(path).substr(0, kProjectsPrefix.size()) !=
+                kProjectsPrefix) {
+            continue;
+        }
         const std::size_t slash = path.rfind('/');
         const std::string leaf =
             (slash == std::string::npos) ? path : path.substr(slash + 1);
@@ -419,7 +563,7 @@ bool sole_directory_of(const std::vector<std::string>& paths,
     }
 
     if (dirs.empty()) {
-        reason = "No committed file on origin/main is named '" + base_name +
+        reason = "No file committed under 'projects/' is named '" + base_name +
                  ".warpmarkers' or its two siblings";
         return false;
     }
@@ -428,7 +572,7 @@ bool sole_directory_of(const std::vector<std::string>& paths,
         std::string list;
         for (std::size_t i = 0; i < dirs.size(); ++i) {
             if (i != 0) list += ", ";
-            list += "'" + display_directory(dirs[i]) + "'";
+            list += "'" + dirs[i] + "'";
         }
         reason = "Sidecars named '" + base_name +
                  ".*' are committed in more than one directory: " + list;
@@ -685,6 +829,12 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // the wrong piece of work. Both spellings are normalized to bare host/path
     // first, so a scheme, an scp-style remote or a trailing `.git` never makes
     // a false mismatch.
+    //
+    // IT ASKS WHICH REPOSITORY, NEVER HOW FRESH: the question is answered from
+    // the remote's URL and no ref at all, which is why moving the walk off
+    // `origin/main` and onto the local branch (kBranchRef) left this untouched.
+    // A clone that has not fetched in a year is still THIS repository, and a
+    // checkpoint this product commits and fails to push is still its history.
     std::string remote_raw;
     if (!run_git_capture({"remote", "get-url", "origin"}, remote_raw)) {
         return unavailable("The clone at " + std::string(kRepoRoot) +
@@ -718,14 +868,15 @@ bool GuiHistoryDiff::init(const AppState& app) {
     }
 
     // THE MATCH IS RESOLVED AGAINST THE COMMITTED TREE, not the working
-    // directory: history is what this mode reads, so what is committed on
-    // origin/main is the thing that decides whether there is any history to
-    // read. A sidecar sitting on disk but never committed is correctly no
-    // match, and one committed but since deleted from the checkout still is.
+    // directory: history is what this mode reads, so what is committed on the
+    // branch is the thing that decides whether there is any history to read. A
+    // sidecar sitting on disk but never committed is correctly no match, and one
+    // committed but since deleted from the checkout still is. (The branch is the
+    // LOCAL one — kBranchRef's paragraph owns why.)
     std::string tip_listing;
-    if (!run_git_capture({"ls-tree", "-r", "-z", "--name-only", "origin/main"},
+    if (!run_git_capture({"ls-tree", "-r", "-z", "--name-only", kBranchRef},
                          tip_listing)) {
-        return unavailable("Could not read the origin/main tree at " +
+        return unavailable("Could not read the committed tree at " +
                            std::string(kRepoRoot));
     }
     std::string reason;
@@ -734,22 +885,26 @@ bool GuiHistoryDiff::init(const AppState& app) {
         return unavailable(std::move(reason));
     }
 
-    // The commit walk is FOLDER- AND ERA-AGNOSTIC: one `:(glob)**/<base>.<ext>`
-    // pathspec per sidecar, matching the basename at ANY depth — including the
-    // repository root, since `**` matches zero path components as well as many
-    // (verified against a root-level file: the glob pathspec returns exactly
-    // the commit list the plain path does). So a commit that moved the corpus
-    // is followed with no --follow and no knowledge of what the directory used
-    // to be called, which is the whole point of matching by name.
+    // The commit walk is ERA-AGNOSTIC BELOW `projects/`: one
+    // `:(glob)projects/**/<base>.<ext>` pathspec per sidecar, matching the
+    // basename at any depth under that folder — including directly inside it,
+    // since `**` matches zero path components as well as many. So a commit that
+    // renamed or re-nested the piece's directory is followed with no --follow
+    // and no knowledge of what it used to be called, which is the whole point of
+    // matching by name; what the folder term adds is that a same-named file
+    // OUTSIDE the corpus cannot pull commits into the walk that carry no
+    // checkpoint of this piece at all.
     std::vector<std::string> log_args{"log", "-n",
                                       std::to_string(kCommitDepth),
-                                      "--format=%H", "origin/main", "--"};
+                                      "--format=%H", kBranchRef, "--"};
     for (const char* ext : kSidecarExtensions) {
-        log_args.push_back(std::string(":(glob)**/") + base_name_ + ext);
+        log_args.push_back(std::string(":(glob)") +
+                           std::string(kProjectsPrefix) + "**/" + base_name_ +
+                           ext);
     }
     std::string log_out;
     if (!run_git_capture(log_args, log_out)) {
-        return unavailable("No commit on origin/main touches '" + base_name_ +
+        return unavailable("No commit touches 'projects/**/" + base_name_ +
                            ".*'");
     }
 
@@ -757,7 +912,7 @@ bool GuiHistoryDiff::init(const AppState& app) {
         if (!sha.empty()) commits_.push_back(std::move(sha));
     }
     if (commits_.empty()) {
-        return unavailable("No commit on origin/main touches '" + base_name_ +
+        return unavailable("No commit touches 'projects/**/" + base_name_ +
                            ".*'");
     }
 
@@ -875,4 +1030,175 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
 
     cache_[index] = std::move(d);
     return &*cache_[index];
+}
+
+// ---------------------------------------------------------------------------
+// THE COMMIT ACT — the product's one mutating git route
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// A spelling's object name, or "" when it does not resolve. `--verify` is what
+// makes a missing ref an error rather than an echo of the argument, which is how
+// the push check below asks "does this remote-tracking ref exist yet".
+std::string resolved_object_name(const std::string& spelling) {
+    std::string out;
+    if (!run_git_capture({"rev-parse", "--verify", spelling}, out)) return {};
+    return trim_trailing_ws(out);
+}
+
+std::string short_sha(const std::string& sha) {
+    return (sha.size() >= 7) ? sha.substr(0, 7) : sha;
+}
+
+}  // namespace
+
+std::string history_checkpoint_title(const std::string& project_directory) {
+    const std::size_t slash = project_directory.rfind('/');
+    const std::string id    = (slash == std::string::npos)
+                                  ? project_directory
+                                  : project_directory.substr(slash + 1);
+    return "Update " + id;
+}
+
+// THE ACT, in order: write the three sidecars into the piece's directory in the
+// working tree, stage exactly those three paths, commit them under `Update
+// <id>`, push. Every step is fenced to those three paths and to this one
+// function.
+//
+// WHAT THE COMMIT CANNOT CARRY, and why the pathspec is not a nicety: `git
+// commit -- <paths>` builds its tree from HEAD plus the named paths and ignores
+// everything else the index holds, so foreign staged work in the repository — a
+// source edit mid-session, anything at all — can never ride along on a
+// checkpoint. The `git add` in front of it exists for one case the pathspec
+// commit cannot cover alone: a sidecar the piece's directory did not previously
+// carry is UNTRACKED, and a pathspec naming an untracked file is an error rather
+// than an addition.
+//
+// WHAT REMAINS AFTER A FAILURE. The three files are written first and are NEVER
+// rolled back: a commit that fails leaves them in the working tree — staged, if
+// the `add` got that far — where `git status` shows them and a hand commit can
+// still land them, and a WRITE that fails part-way leaves the files it had
+// already written standing beside the one it could not. That is the honest shape: the bytes are the user's own state,
+// not a temporary, and a failed act that swept them away would destroy the only
+// copy of what the user asked to keep. It is also why the write failure and the
+// commit failure are different outcomes.
+//
+// THE IDENTITY IS THE MACHINE'S. Author and committer come from the clone's own
+// git config; this program embeds no name, no address and no credential, and the
+// push carries none either (the remote's own ssh key or credential helper is the
+// whole story). The push runs ssh in BATCH MODE so a key that would prompt fails
+// in one line instead of blocking the GUI on a passphrase nothing can type.
+GuiHistoryCommitOutcome commit_history_checkpoint(
+    const std::string& project_directory, const std::string& base_name,
+    const GuiHistoryNowSide& bytes) {
+    const std::string title = history_checkpoint_title(project_directory);
+
+    // kSidecarExtensions order, which is what pairs each text with its path.
+    const std::string* texts[3] = {&bytes.warpmarkers_text,
+                                   &bytes.phaseresetmarkers_text,
+                                   &bytes.settings_text};
+    std::vector<std::string> paths;
+    paths.reserve(3);
+    for (std::size_t e = 0; e < 3; ++e) {
+        paths.push_back(project_directory + "/" + base_name +
+                        kSidecarExtensions[e]);
+    }
+
+    // (a) The bytes. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
+    // rename — so a checkpoint is never half-written, and into a directory that
+    // MUST ALREADY EXIST: nothing here creates one (a piece with no committed
+    // history cannot open the mode at all, so its first checkpoint is a manual
+    // act by design), and a missing directory simply fails the open below.
+    for (std::size_t e = 0; e < 3; ++e) {
+        const std::string absolute =
+            std::string(kRepoRoot) + "/" + paths[e];
+        if (!atomic_write_string_to_path(absolute, *texts[e])) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Commit failed: could not write '%s'\n",
+                         paths[e].c_str());
+            return GuiHistoryCommitOutcome::WriteFailed;
+        }
+    }
+
+    // THE ONE EXPECTED NON-FAILURE, named before it can be mistaken for one: if
+    // the bytes just written match what HEAD already carries, `git status` sees
+    // nothing and `git commit` would refuse with a message whose first line is
+    // "On branch main" — true and useless. This is the state a user reaches by
+    // committing twice, and the mode's own empty diff already says so. An
+    // unrunnable git reads the same as an empty answer here, which is the
+    // capture helper's standing convention and harmless: every read before this
+    // line just succeeded, and a commit attempted past a git that cannot run
+    // could only fail too.
+    std::vector<std::string> status_args{"status", "--porcelain", "--"};
+    for (const std::string& p : paths) status_args.push_back(p);
+    std::string status_out;
+    if (!run_git_capture(status_args, status_out)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Nothing to commit: the checkpoint already "
+                     "carries these bytes\n");
+        return GuiHistoryCommitOutcome::NothingToCommit;
+    }
+
+    const std::string before = resolved_object_name(kBranchRef);
+
+    // (b) Stage, then commit — both pathspec-scoped to the same three paths.
+    std::string              git_line;
+    std::vector<std::string> add_args{"add", "--"};
+    for (const std::string& p : paths) add_args.push_back(p);
+    if (!run_git_mutate(add_args, git_line)) {
+        std::fprintf(stderr, "warptempo_gui: Commit failed: could not run git\n");
+        return GuiHistoryCommitOutcome::CommitFailed;
+    }
+
+    std::vector<std::string> commit_args{"commit", "-m", title, "--"};
+    for (const std::string& p : paths) commit_args.push_back(p);
+    if (!run_git_mutate(commit_args, git_line)) {
+        std::fprintf(stderr, "warptempo_gui: Commit failed: could not run git\n");
+        return GuiHistoryCommitOutcome::CommitFailed;
+    }
+
+    // THE VERDICT IS THE REPOSITORY'S, not the child's: HEAD moved or it did
+    // not, which needs no exit status and cannot be fooled by output.
+    const std::string after = resolved_object_name(kBranchRef);
+    if (after.empty() || after == before) {
+        std::fprintf(stderr, "warptempo_gui: Commit failed: %s\n",
+                     git_line.empty() ? "git reported nothing"
+                                      : git_line.c_str());
+        return GuiHistoryCommitOutcome::CommitFailed;
+    }
+
+    // (c) The push, and the same kind of verdict: a push updates the LOCAL
+    // remote-tracking ref as its last act, so `refs/remotes/origin/<branch>`
+    // catching up to the new commit is the observation that it landed. The
+    // branch NAME is needed only for that ref — the push itself sends `HEAD`,
+    // the same branch every read in this module already walks — and a detached
+    // HEAD, which has no name and no such ref, simply reports the push as
+    // unlanded rather than guessing.
+    std::string branch;
+    {
+        std::string raw;
+        if (run_git_capture({"rev-parse", "--abbrev-ref", kBranchRef}, raw)) {
+            branch = trim_trailing_ws(raw);
+        }
+    }
+    std::string push_line;
+    run_git_mutate({"-c", "core.sshCommand=ssh -o BatchMode=yes", "push",
+                    "origin", kBranchRef},
+                   push_line);
+    const bool pushed =
+        !branch.empty() && branch != "HEAD" &&
+        resolved_object_name("refs/remotes/origin/" + branch) == after;
+
+    if (pushed) {
+        std::fprintf(stderr, "warptempo_gui: Committed and pushed %s \"%s\"\n",
+                     short_sha(after).c_str(), title.c_str());
+        return GuiHistoryCommitOutcome::Committed;
+    }
+    std::fprintf(stderr, "warptempo_gui: Committed %s \"%s\"\n",
+                 short_sha(after).c_str(), title.c_str());
+    std::fprintf(stderr, "warptempo_gui: Push failed: %s\n",
+                 push_line.empty() ? "git reported nothing"
+                                   : push_line.c_str());
+    return GuiHistoryCommitOutcome::CommittedNotPushed;
 }

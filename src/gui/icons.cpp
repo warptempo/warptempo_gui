@@ -190,6 +190,55 @@ constexpr IconPath kUnlockPaths[] = {
      "9h10v6h-10v-6"},
 };
 
+// -- THE TWO VCS ICONS (2026-08-04) --------------------------------------------
+//
+// vcs-commit is the RENDER BUTTON's face while the history mode stands (the
+// chord commits a checkpoint there instead of rendering) and vcs-diff is the
+// history button's own, the icon row's twelfth. Same rules as every entry above:
+// `d` verbatim from the committed file, the fill hard-coded to what that file
+// resolves to.
+//
+// BOTH FILES WRAP THEIR PATHS DIFFERENTLY AND IT MAKES NO DIFFERENCE HERE:
+// vcs-diff carries `class="ColorScheme-Text" fill="currentColor"` on each path
+// element, vcs-commit carries the identical pair ONCE on a `<g>` that encloses
+// all three of its paths. A group attribute is inherited by the children and
+// nothing else, so both resolve to the same #fcfcfc per path — the `<g>` is a
+// spelling, not a transform, and there is nothing about it to model (the one
+// transform this table does model is dialog-ok-apply's, above).
+constexpr IconPath kVcsCommitPaths[] = {
+    {kIconText, "m10 4h1v5h-1z"},
+    {kIconText, "m10 14h1v5h-1z"},
+    {kIconText,
+     "m10.5 8a3.5 3.5 0 0 0 -3.5 3.5 3.5 3.5 0 0 0 3.5 3.5 3.5 3.5 0 0 0 "
+     "3.5-3.5 3.5 3.5 0 0 0 -3.5-3.5zm0 1a2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1 "
+     "-2.5 2.5 2.5 2.5 0 0 1 -2.5-2.5 2.5 2.5 0 0 1 2.5-2.5z"},
+};
+
+constexpr IconPath kVcsDiffPaths[] = {
+    {kIconText,
+     "m5.5 4a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 "
+     "2.5-2.5 2.5 2.5 0 0 0-2.5-2.5zm0 1a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 "
+     "1-1.5 1.5 1.5 1.5 0 0 1-1.5-1.5 1.5 1.5 0 0 1 1.5-1.5z"},
+    {kIconText,
+     "m5 8v6a2 2 0 0 0 1.9511719 2 2 2 0 0 0 0.0488281 0h4v-1h-4a1 1 0 0 "
+     "1-1-1v-6z"},
+    {kIconText,
+     "m8.5 11.792969-0.7070312 0.707031 0.3535156 0.353516 2.6464846 "
+     "2.646484-2.6464846 2.646484-0.3535156 0.353516 0.7070312 0.707031 "
+     "0.3535156-0.353515 3.3535154-3.353516-3.3535154-3.353516-0.3535156-0.353515z"},
+    {kIconText,
+     "m15.5 18a2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5 2.5 2.5 0 0 0-2.5 "
+     "2.5 2.5 2.5 0 0 0 2.5 2.5zm0-1a1.5 1.5 0 0 1-1.5-1.5 1.5 1.5 0 0 1 "
+     "1.5-1.5 1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1-1.5 1.5z"},
+    {kIconText,
+     "m16 14v-6.0000002a2 2 0 0 0-1.951172-2 2 2 0 0 0-0.04883 "
+     "0h-3.9999981v1h4.0000001a1 1 0 0 1 1 1v6.0000002z"},
+    {kIconText,
+     "M 12.5 2.7929688 L 12.146484 3.1464844 L 8.7929688 6.5 L 12.146484 "
+     "9.8535156 L 12.5 10.207031 L 13.207031 9.5 L 12.853516 9.1464844 L "
+     "10.207031 6.5 L 12.853516 3.8535156 L 13.207031 3.5 L 12.5 2.7929688 z "},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -203,6 +252,8 @@ constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
 constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
+constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
+constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -218,6 +269,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;
+        case Icon::VcsCommit:           return kVcsCommit;
+        case Icon::VcsDiff:             return kVcsDiff;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

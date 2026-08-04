@@ -896,7 +896,7 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the eleven view/mode/action buttons). Measured
+// tabs (row 4 of the redesign: the twelve view/mode/action buttons). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //

@@ -452,6 +452,11 @@ struct GuiInputHandler {
     // handle_active_audio_view_toggle chokepoint; the friendship lets it
     // reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
+    // The history mode's commit confirmation is answered inside the prompt's own
+    // response dispatch, and `y` runs the act — a private method here, beside
+    // the rest of the mode's machinery; the friendship lets the prompt reach it
+    // through its back-pointer, the same arrangement as the two above.
+    friend struct GuiPrompt;
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
@@ -507,7 +512,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
-    // the view bar's three, row 2's four, row 3's two tabs and row 4's eleven
+    // the view bar's three, row 2's four, row 3's two tabs and row 4's twelve
     // (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
@@ -1544,13 +1549,29 @@ private:
     //     lane-focus act or as a refusal), false for the navigation gestures the
     //     mode lets through untouched.
     //   * close_history_mode is the ONE exit owner; every closer calls it.
+    //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
+    //     whole of it: a new session, a new commit walk, a now side captured at
+    //     this instant. Two callers — `/` and the commit act's tail, which
+    //     re-enters on the checkpoint it just made. False (with init's own
+    //     stderr line already printed) when there is no history to show; the
+    //     mode is then left exactly as it was.
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published geometry at both mode edges, where its entries change
     //     domain. Its own comment carries the argument.
+    // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
+    // the diff module (commit_history_checkpoint, history_diff.h):
+    //   * open_history_commit_confirmation raises the fourth prompt, and is
+    //     reached from ONE place — Ctrl+Alt+R's own arm, which the mode bit
+    //     re-aims (handle_render_dispatch_keys).
+    //   * run_history_commit is the prompt's `y`: rebuild the bytes, commit
+    //     them, re-enter the mode on the new checkpoint.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
+    bool open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
     bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods);
     void close_history_mode();
+    void open_history_commit_confirmation();
+    void run_history_commit();
 };
