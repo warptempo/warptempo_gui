@@ -1061,9 +1061,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // THE ARM DOES NOT STAY HERE: from this press until the button
                 // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
                 // so the slide of "press, slide, release on what you meant" is
-                // literally the arm moving, and the release acts on wherever it
-                // ended. The bit is what tells that walk the held button belongs
-                // to this popup's gesture — it has a SECOND producer since
+                // literally the FACE arm moving — but the release does not act
+                // on wherever it ended: it DERIVES the acted-on item from its
+                // own coordinates under the claim (finish_dropdown_release),
+                // which the arm only paints. The bit is what tells that walk the
+                // held button belongs to this popup's gesture — it has a SECOND
+                // producer since
                 // 2026-08-03, the anchor press that opened the menu, whose drag
                 // into the box is the same gesture arriving from outside — and it
                 // is set OUTSIDE the transition test below, which is about
@@ -1152,8 +1155,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // is the platform's button state AND this bit), the
                     // separator / the chrome / the box's outside / this very
                     // button arm nothing because none of them is an item, and
-                    // the release acts on whatever is armed
-                    // (finish_dropdown_release).
+                    // the release derives the acted-on item from its own
+                    // coordinates under the claim rather than reading the
+                    // recorded arm (finish_dropdown_release).
                     //
                     // ITS VALUE IS THE TOGGLE'S OUTCOME READ BACK, never
                     // predicted: the toggle's other half CLOSES the menu whose
@@ -2969,12 +2973,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     if (!app.dropdown.open()) return false;
     // THE CLAIM IS THE GATE, NOT THE ARM. Only a press this popup owns can
     // activate anything, so with no claim nothing is derived and the recorded arm
-    // answers — which is -1 in every reachable unclaimed state, the arm having
-    // exactly one writer that raises it (the item press, which also sets the
-    // claim) and being dropped together with the claim at the pointer-leave /
-    // capability-loss edge and by every close's struct reset. Deriving there
-    // instead would be the one behavior change this round refuses: a held button
-    // this popup never saw must not fire an item it happens to come up over.
+    // answers — which is -1 in every reachable unclaimed state. Not because the
+    // item press is the arm's only raising writer: recompute_dropdown_hover can
+    // also raise it, from -1, for either press origin (the item press or the
+    // anchor press whose drag lands on an item). The true producer invariant is
+    // this: the item press raises the arm while SETTING the claim; the recompute
+    // may raise the arm only while the claim AND the platform's held bit are both
+    // live; and every clearer of the claim (the pointer-leave / capability-loss
+    // edge, every close's struct reset) drops the arm with it. So an unclaimed
+    // press can never observe a raised arm — the recompute that could have raised
+    // one needs the claim to run at all. Deriving here without the claim would be
+    // the one behavior change this round refuses: a held button this popup never
+    // saw must not fire an item it happens to come up over.
     const int armed = app.dropdown.press_began_on_item
                           ? dropdown_item_at(x, y)
                           : app.dropdown.pressed_item;
