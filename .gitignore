@@ -20,22 +20,8 @@ docs/welcome_back_template.md
 # tools
 tools/build/
 
-# bungee
-adapters/bungee/build/
-adapters/bungee/bungee/
-
-# rubberband
-adapters/rubberband/build/
-
-# stretch
-adapters/stretch/build/
-adapters/stretch/signalsmith-*/
-
-# soundTouch
-adapters/soundtouch/build/
-
-# midi
-adapters/midi/midifile
-adapters/midi/midi_adapter
-adapters/midi/build/
+# projects
+projects/*/*.peaks
+projects/*/*.wav
+projects/*/*.fingerprint
 
