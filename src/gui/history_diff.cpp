@@ -1675,17 +1675,46 @@ enum class GuiHistoryPathStatus {
 // yield the literal "HEAD" and turn the ordinary detached act — which proceeds
 // and simply publishes nothing — into a spurious mismatch failure.
 //
-// EVERY OTHER SHAPE FAILS CLOSED BY CONSTRUCTION. The unborn header cuts to "No",
-// which matches no captured branch, so an unborn repository ends the act instead
-// of running it — already the outcome there (the mode cannot open on a piece with
-// no committed history, and the tip reads below fail anyway), and the safe
-// direction for any future header decoration this parse has not seen.
+// THE UNBORN FORM IS CUT TO ITS REAL NAME, past the fixed `No commits yet on `
+// prefix `git status` always uses for it — verified live, including a slashed/
+// dotted name (`No commits yet on feat/a.b.c` parses whole). No further cut is
+// applied to the tail: an unborn branch carries no upstream, so `...` cannot
+// appear, and `check-ref-format` still refuses a space in the name, so the
+// whole remainder is unambiguously the name even if some future git prints a
+// trailing decoration this parse has not seen — the safe direction (a
+// misparsed decoration folds into the name, not out of it).
+//
+// EVERY OTHER SHAPE FAILS CLOSED BY CONSTRUCTION, and so does this one, only
+// not by returning a name that matches nothing — by returning the TRUE name of
+// a branch that cannot be the one this act captured. `current_branch_name`
+// (its declaration owns the read) resolves an unborn HEAD to "" exactly as it
+// does a detached one — `rev-parse --abbrev-ref HEAD` exits nonzero there, so
+// `git_output` reports no answer — so the mode can only ever CAPTURE a real,
+// committed branch name at act start (an unborn HEAD is never "the captured
+// branch" going in, and the mode cannot open on one either: no committed
+// history to diff against). The unborn OtherBranch case this parse now names
+// correctly is therefore reachable only by a MID-ACT EXTERNAL SWITCH onto an
+// orphan branch after the act's own capture — the same external-terminal
+// threat model the mismatch check above exists for — and ordinarily that
+// orphan's name cannot equal the captured branch's own, because getting there
+// means deleting the captured branch's commit history first, which git
+// refuses while it is the one checked out. The one way around that (checking
+// out elsewhere, deleting the captured branch, then recreating it as an
+// orphan under the identical name, then switching back) is possible but is an
+// act of destroying the captured branch's history outright, not a mere
+// checkout — at that point the mismatch this function reports is no longer
+// the risk worth naming.
 std::string branch_of_status_header(const std::string& header) {
     // Past the `##` the caller has already proved is there, plus its separator.
     std::size_t start = 2;
     while (start < header.size() && header[start] == ' ') ++start;
     const std::string rest = trim_trailing_ws(header.substr(start));
     if (rest == "HEAD (no branch)") return {};  // detached: no name, as captured
+
+    static const std::string kUnbornPrefix = "No commits yet on ";
+    if (rest.compare(0, kUnbornPrefix.size(), kUnbornPrefix) == 0) {
+        return rest.substr(kUnbornPrefix.size());  // unborn: the whole tail
+    }
 
     std::size_t end         = rest.find("...");
     const std::size_t space = rest.find(' ');
