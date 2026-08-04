@@ -2314,8 +2314,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // derived from it would not be a stale cue but a WRONG one — and the platform
 // DROPS it, unrecorded, for as long as it has no real position
 // (GuiPlatform::set_cursor_kind; the span outlasts the lock and ends at the
-// compositor's next absolute event). What comes back at the restore is therefore
-// the last kind derived from a real position, the cue the gesture began under.
+// compositor's next absolute event). What comes back at the restore is the kind
+// the GESTURE ITSELF STAMPED when the capture began — Zoom for the strip drag,
+// Pan for the alt-pan, the cue it wears by identity — and the drop above is what
+// protects it: nothing named from a virtual position is ever recorded over the
+// stamp (the full story at GuiPlatform::begin_pointer_capture).
 // Without a capture — the two optional protocols absent — nothing is virtual and
 // nothing is dropped: the pointer is where the GUI thinks it is, the cursor was
 // never hidden, and the loop's next tail is the ordinary end-of-gesture
@@ -2402,7 +2405,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.strip_drag = StripDragState{};
         // Reappear the cursor at the anchor-stem column (y frozen at the press
         // row) — the restore x override the drag set each event — as the kind
-        // that was showing when the capture began.
+        // this drag STAMPED at capture begin (Zoom), which is not necessarily the
+        // kind that was showing when the press landed.
         end_strip_pointer_capture();
         return;
     }
@@ -2505,9 +2509,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // A FORCE-END MID-CAPTURE ends the capture through the two navigation arms
 // below, and the owner's next re-resolve then reads coordinates that are still
 // the drag's VIRTUAL travel — which is why the platform drops a kind named while
-// it has no real position (GuiPlatform::set_cursor_kind). The restored
-// pre-capture cue stands until the pointer moves; nothing here needs to test
-// for it.
+// it has no real position (GuiPlatform::set_cursor_kind). What the release put
+// back is the cue the GESTURE STAMPED at capture begin (Zoom or Pan), and it
+// stands until the pointer moves; nothing here needs to test for it.
 void GuiInputHandler::finalize_active_drags() {
     // Editor text-selection drag: FINALIZE (collapse a no-motion anchor to a
     // caret), the same act its release performs — selection-only, nothing to

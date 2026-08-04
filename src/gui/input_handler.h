@@ -367,7 +367,7 @@ struct GuiInputHandler {
     // Zoom zones), Pan for the alt-pan. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
-    // reasoning, and why the stamp rides the granted-lock path only, are at
+    // reasoning, and why the stamp rides the lock-REQUEST path only, are at
     // GuiPlatform::begin_pointer_capture. It is the same shape as the live trim
     // cue: read the gesture's own record, never the pointer's position.
     std::function<void(GuiCursorKind)> begin_strip_pointer_capture =

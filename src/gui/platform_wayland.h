@@ -252,20 +252,37 @@ public:
     // finalizer — no cancel path exists) may call it unconditionally.
     //
     // THE RESTORE KIND IS A PARAMETER BECAUSE THE GESTURE IS THE ONLY THING THAT
-    // KNOWS IT. Under a granted lock the cursor is hidden and every kind the GUI
-    // names is about a place the pointer is not, so the release hands back a
-    // REMEMBERED kind (apply_cursor_kind) — and inferring that from whatever was
-    // remembered at press time is exactly what cannot be relied on: the cursor is
-    // resolved once per RUN-LOOP ITERATION, and a single dispatch batch can carry
-    // the motion (or the modifier edge) that selects the gesture's zone AND the
-    // press that begins the capture, with no re-derivation in between. So the
-    // caller passes the cue its own gesture wears — Zoom for the strip drag (both
-    // entries are Zoom zones), Pan for the alt-pan — the same "read the drag's own
-    // record" the live trim cue uses, and the platform STAMPS it as the remembered
-    // kind on the path that actually locked. Only there: a degraded compositor
-    // hides nothing and restores nothing, and its gesture keeps running on real
-    // coordinates with the loop tail deriving normally, so a stamp would be a cue
-    // nobody asked for.
+    // KNOWS IT. Under a lock the cursor is hidden and every kind the GUI names is
+    // about a place the pointer is not, so the release hands back a REMEMBERED
+    // kind (apply_cursor_kind) — and inferring that from whatever was remembered
+    // at press time is exactly what cannot be relied on: the cursor is resolved
+    // once per RUN-LOOP ITERATION, and a single dispatch batch can carry the
+    // motion (or the modifier edge) that selects the gesture's zone AND the press
+    // that begins the capture, with no re-derivation in between. So the caller
+    // passes the cue its own gesture wears — Zoom for the strip drag (both entries
+    // are Zoom zones), Pan for the alt-pan — the same "read the drag's own record"
+    // the live trim cue uses, and the platform STAMPS it as the remembered kind on
+    // the path that CREATED THE LOCK PROXY. Only there: a degraded compositor and
+    // a failed proxy creation hide nothing and restore nothing, and their gesture
+    // keeps running on real coordinates with the loop tail deriving normally, so a
+    // stamp would be a cue nobody asked for.
+    //
+    // THE CREATED PROXY IS TREATED AS A LIVE LOCK, AND THAT IS OPTIMISTIC BY
+    // RULING (architect 2026-08-03). Activation is ASYNCHRONOUS — the protocol's
+    // zwp_locked_pointer_v1.locked event announces it, and our listener for that
+    // event deliberately does nothing — so everything after the creation (the
+    // hide, the stamp, pointer_captured_, the unknown span) rides the lock REQUEST
+    // rather than a granted lock. On labwc, the supported compositor, a lock
+    // requested while our surface holds pointer focus activates promptly, and
+    // mid-press on our surface that focus is structurally ours; properly-coded
+    // compositors are assumed equivalent. One that DEFERS or DECLINES the lock is
+    // an unsupported environment — adversarial usage, the category a hand-broken
+    // sidecar is in — and the pending/active split that would cover it was
+    // rejected for costing the real target a visible-cursor round trip at every
+    // capture start. WHAT WOULD DEGRADE THERE, recorded rather than defended: the
+    // drag still runs on the relative stream, the cursor stays hidden over our
+    // surface, and the release restores the stamped cue wherever the pointer
+    // really is, corrected at the compositor's next absolute event.
     void begin_pointer_capture(GuiCursorKind restore_kind);
     void end_pointer_capture();
 
@@ -305,10 +322,11 @@ public:
     // Remembering those answers is what would make the restore a lie, since the
     // restore hands back the REMEMBERED kind: dropping them keeps the remembered
     // kind the last one derived from a real position OR THE KIND THE GESTURE
-    // STAMPED at capture begin, whichever is later — and for a granted capture it
-    // is always the stamp, which is the cue the gesture wears and the cue the
-    // restore position sits in (the full statement is at begin_pointer_capture's
-    // restore_kind parameter; the drop is what keeps the stamp standing).
+    // STAMPED at capture begin, whichever is later — and for a capture that
+    // stamped (the lock-proxy path) it is always the stamp, which is the cue the
+    // gesture wears and the cue the restore position sits in (the full statement
+    // is at begin_pointer_capture's restore_kind parameter, including why a
+    // created proxy is treated as a live lock; the drop keeps the stamp standing).
     // THE SPAN OUTLASTS THE LOCK by design, so a force-end that ends the capture
     // and then re-derives from the remembered (still virtual) coordinates is
     // dropped too, rather than replacing a stale cue with a confidently wrong one.
@@ -548,7 +566,8 @@ private:
 
     // "THE POSITION WE HAVE IS NOT THE POINTER'S." ONE FACT, ONE OWNER, and the
     // whole reason set_cursor_kind can ignore a write (the rule is stated at that
-    // method's declaration). It goes TRUE when a lock is taken — from that moment
+    // method's declaration). It goes TRUE when a lock is REQUESTED — the proxy is
+    // taken for a live lock by ruling, see begin_pointer_capture — from that moment
     // pointer_x_/pointer_y_ carry the unbounded VIRTUAL travel, a point the
     // pointer does not occupy — and stays true PAST the unlock, because the
     // restore only tells the compositor where to put the cursor; where it ended
@@ -557,15 +576,16 @@ private:
     // wl_pointer.motion), which is exactly the event that re-establishes the
     // truth — and the re-derivation follows in that same loop iteration, at the
     // tail hook that owns the cursor (set_loop_settled_hook).
-    // WHAT SURVIVES THE SPAN is not an inference: the same granted-lock path that
+    // WHAT SURVIVES THE SPAN is not an inference: the same lock-request path that
     // sets this STAMPS the gesture's own cue as the remembered kind (the
     // restore_kind parameter at begin_pointer_capture), so the release restores a
     // fact the gesture supplied while the position was still real, rather than
     // whatever the last dispatch batch happened to leave behind.
-    // ONLY A REAL CAPTURE SETS IT: the degraded compositor (no pointer-constraints
-    // or no relative-pointer) never locks, so its "captured" gestures run on
-    // ordinary absolute motion with the position true throughout and every cursor
-    // write landing normally. That is what lets the GUI's ONE per-iteration
+    // ONLY A REQUESTED LOCK SETS IT — treated as a live one by ruling, with the
+    // scope and the accepted degradation at begin_pointer_capture: the degraded
+    // compositor (no pointer-constraints or no relative-pointer) never asks for a
+    // lock at all, so its "captured" gestures run on ordinary absolute motion with
+    // the position true throughout and every cursor write landing normally. That is what lets the GUI's ONE per-iteration
     // re-resolve serve the captured and the degraded path alike, with nothing in
     // the GUI testing which case it is in.
     // The clear is guarded on !pointer_captured_ so a stray absolute event mid-
@@ -669,13 +689,17 @@ private:
 
     // The kind last asked for. THE ONE PLACE the current cursor is recorded —
     // every applier reads it and none takes a kind as an argument, so a re-apply
-    // on an enter or a capture release cannot restore a different cursor than
-    // the one that was showing. It outlived the custom-buffer cursor it was
-    // written for and is load-bearing for those two platform-side edges, which
-    // know nothing about where the pointer is in the GUI's terms.
+    // on an enter or a capture release restores exactly what this field last
+    // recorded. That is NOT "whatever was showing": a capture STAMPS this field
+    // with the gesture's own cue and then hides the cursor, so the release
+    // deliberately hands back a kind (Zoom, Pan) that may never have been on
+    // screen before the drag. It outlived the custom-buffer cursor it was written
+    // for and is load-bearing for those two platform-side edges, which know
+    // nothing about where the pointer is in the GUI's terms.
     // TWO WRITERS: set_cursor_kind (the GUI's answer for a REAL position) and
-    // begin_pointer_capture's stamp on the granted-lock path (the gesture's own
-    // cue, written for the release that will hand it back). Nothing else.
+    // begin_pointer_capture's stamp on the lock-request path (the gesture's own
+    // cue, written for the release that will hand it back; why a requested lock
+    // counts is at that contract). Nothing else.
     GuiCursorKind cursor_kind_ = GuiCursorKind::Arrow;
 
     // Key repeat (last-key-wins, timerfd-tick-piggyback).

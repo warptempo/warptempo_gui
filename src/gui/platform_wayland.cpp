@@ -1192,7 +1192,7 @@ void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     // restores THAT. The span and the accepted cost are at
     // pointer_position_unknown_'s declaration; the GUI needs no
     // knowledge of it, which is what lets its one per-iteration refresh run the
-    // same way whether or not the compositor granted a capture.
+    // same way whether or not a capture is live.
     if (pointer_position_unknown_) return;
     // APPLY ONLY ON A CHANGE. The GUI calls this once per run-loop iteration —
     // its cursor has ONE owner and that owner runs at the loop boundary — so an
@@ -2574,7 +2574,9 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     // is the absence of one, and routing it through the owner would need a third
     // enumerator whose only job is to mean "no cursor". cursor_kind_ keeps
     // naming what will come BACK at the release — the stamp below writes it once
-    // the lock is granted.
+    // the lock PROXY exists (activation is asynchronous and deliberately not
+    // waited for; the ruling is at the header contract), which is also why the
+    // hide can precede the request: the request is expected to be granted.
     wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, nullptr, 0, 0);
 
     // Lock the pointer at its current position. NULL region = surface input
@@ -2588,7 +2590,11 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
         // still false here, so the applier's capture guard lets this through,
         // and the cursor comes back as whatever kind was showing — NOT the
         // gesture's restore kind, which is deliberately not stamped until the
-        // lock exists. Nothing was locked, so nothing is virtual: the gesture
+        // lock proxy exists. This arm is a CREATION failure — the compositor
+        // never got the request — and is a different thing from a compositor
+        // that takes the request and defers or declines the activation, which
+        // this code does not detect at all (the ruling on that is at the header
+        // contract). Nothing was requested, so nothing is virtual: the gesture
         // runs on real coordinates and the loop tail owns the cue from here,
         // exactly as on the degraded returns above.
         apply_cursor_kind();
@@ -2616,9 +2622,11 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     // From here the GUI's pointer position is the virtual travel, so the kinds it
     // names are about a place the pointer is not: they stop being recorded until
     // the compositor next tells us where the pointer really is (the contract is at
-    // the field). Set beside pointer_captured_ and only on the path that actually
-    // locked — the degraded and lock-failed returns above leave it false, which is
-    // what keeps those gestures on the ordinary cursor path.
+    // the field). Set beside pointer_captured_ and only on the path that CREATED
+    // THE LOCK PROXY — the degraded and creation-failed returns above leave it
+    // false, which is what keeps those gestures on the ordinary cursor path. That
+    // the proxy is taken for a live lock, without waiting for the asynchronous
+    // `locked` event, is the ruling recorded at the header contract.
     pointer_position_unknown_ = true;
 }
 
@@ -2666,8 +2674,9 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     pointer_captured_ = false;
 
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
-    // For a granted capture that kind is the one the GESTURE ITSELF STAMPED at
-    // begin_pointer_capture: Zoom for the strip drag, Pan for the alt-pan, the
+    // For a capture that stamped (the lock-proxy path) that kind is the one the
+    // GESTURE ITSELF STAMPED at begin_pointer_capture: Zoom for the strip drag,
+    // Pan for the alt-pan, the
     // cue the gesture wears by identity rather than one inferred from what was
     // on screen when the press landed. That is the whole reason it is stamped —
     // the cursor is re-derived once per RUN-LOOP ITERATION, so the batch that
@@ -2726,8 +2735,15 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
 }
 
 void GuiPlatform::on_locked_pointer_locked() {
-    // The lock activated. Nothing to do — the cursor was hidden and the virtual
-    // position seeded at begin_pointer_capture.
+    // The lock activated — and there is deliberately nothing to do, because the
+    // capture never waited for this event: begin_pointer_capture hid the cursor,
+    // seeded the virtual position and stamped the restore kind the moment the
+    // lock PROXY was created. Treating the request as granted is the optimistic
+    // model, ruled 2026-08-03; its scope (labwc and properly-coded compositors,
+    // a deferring or declining one being an unsupported environment) and the
+    // degradation it accepts are recorded once at begin_pointer_capture's
+    // contract. The listener stays installed for its other half —
+    // on_locked_pointer_unlocked, which is live and releases.
 }
 
 void GuiPlatform::on_locked_pointer_unlocked() {
