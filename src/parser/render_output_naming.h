@@ -57,9 +57,10 @@ std::string render_staging_path(const std::string& final_path);
 // editor at commit (the colliding state is GUI-uncommittable), and the GUI
 // loader and the warptempo_cli loader at load (a hand-edited sidecar composing
 // the output onto the source is adversarial — refused first-error, stderr-only,
-// in both products so a file set is loadable in both or neither). The Shift+.
-// render-commit adopt needs no check of its own: entry sidecars are trusted,
-// written once from an already-checked live store. Separately, the render
+// in both products so a file set is loadable in both or neither). The `'`
+// load-in-place needs no check of its own: entry sidecars are trusted, written
+// once from an already-checked live store (comment retold to the current
+// gesture and naming, architect approval 2026-08-04). Separately, the render
 // worker is the breach backstop — its own inode-level check, not this
 // predicate: it composes batch-folder paths too and covers write-time races
 // only the worker can see, keeping its own exists-gated check.
