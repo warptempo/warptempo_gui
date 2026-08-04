@@ -268,7 +268,7 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Cancelled;
     };
 
-    auto remove_created_commit_sidecars =
+    auto remove_created_load_in_place_sidecars =
         [](const std::vector<std::string>& paths) {
             for (const std::string& path : paths) {
                 std::error_code ec;
@@ -300,7 +300,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // "render error" and never "render warning". The bool parameter that used to
     // select between those two WORDS is deleted (architect 2026-07-30) — both
     // callers passed true, so it selected a word and never a behavior.
-    auto publish_commit_critical_batch_sidecars =
+    auto publish_load_in_place_critical_batch_sidecars =
         [&]() -> LoadInPlaceCriticalSidecars {
             LoadInPlaceCriticalSidecars result;
             if (!batch_render || req.output_buffer) return result;
@@ -348,7 +348,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // source carries, so the `'` load-in-place (load_render_entry_in_place)
             // applies it with plain load semantics.
             {
-                // The commit tab (named by active_tab_view) seeds the
+                // The dispatch tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
                 // This file is written ONCE here and never touched again: the
@@ -546,9 +546,9 @@ RenderOutcome do_render(const RenderRequest& req,
             "warptempo_gui: Render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
         LoadInPlaceCriticalSidecars sidecars =
-            publish_commit_critical_batch_sidecars();
+            publish_load_in_place_critical_batch_sidecars();
         if (!sidecars.ok) {
-            remove_created_commit_sidecars(sidecars.created_paths);
+            remove_created_load_in_place_sidecars(sidecars.created_paths);
             cleanup_all();
             return RenderOutcome::Failed;
         }
@@ -562,7 +562,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
     // artifacts: .fingerprint is warning-only. Sweep batch wavs are
-    // committable artifact sets: wav plus source-domain .warpmarkers,
+    // loadable-in-place artifact sets: wav plus source-domain .warpmarkers,
     // source-domain .phaseresetmarkers (including the empty-file form), and
     // .settings. Those load-in-place-critical sidecars must publish before the wav
     // is reported as successful. .fingerprint is written last of all: it is
@@ -574,9 +574,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
         LoadInPlaceCriticalSidecars sidecars =
-            publish_commit_critical_batch_sidecars();
+            publish_load_in_place_critical_batch_sidecars();
         if (!sidecars.ok) {
-            remove_created_commit_sidecars(sidecars.created_paths);
+            remove_created_load_in_place_sidecars(sidecars.created_paths);
             remove_newly_published_wav();
             cleanup_all();
             return RenderOutcome::Failed;

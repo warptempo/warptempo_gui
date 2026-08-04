@@ -343,7 +343,7 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     //
     // Session keys are BARE-EXACT (the strict-modifier rule): a modified
     // Escape / Return / KpEnter has no binding, so it must not cancel or commit
-    // an edit — Ctrl+Enter in particular must not commit the settings, commit,
+    // an edit — Ctrl+Enter in particular must not commit the settings, load,
     // flag, or bpm editor, and the bpm commit dispatches a render batch. Escape
     // and Return produce sub-0x20 codepoints, so neither can reappear as a
     // printable below.

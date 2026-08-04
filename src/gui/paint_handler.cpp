@@ -275,7 +275,7 @@ static void render_bottom_strip_editor(cairo_t* cr,
     //    here. The architect's sentence is about the INVALID submission and the
     //    DIMENSIONS, and the reason it stops there is structural — the flag
     //    editor's fill is the edited MARKER'S OWN CLASS COLOUR, it is that
-    //    marker's flag unrolled; a settings, commit or BPM editor edits no
+    //    marker's flag unrolled; a settings, load or BPM editor edits no
     //    marker and has no class, so kMarkerFlagFill here would be a purple that
     //    names nothing, on a row whose ground is its own sampled surface. Red is
     //    different in kind: it is a STATE, not an identity, and every editor in
@@ -1846,7 +1846,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
     // width, four vertical separators, and twelve 32x32 buttons in five
     // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
-    // the bpm / iteration / follow modes, the listen / commit render pair, and
+    // the bpm / iteration / follow modes, the listen / load-in-place pair, and
     // the history mode's own button (2026-08-04).
     // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
     // the Navigation dropdown is those two commands' pointer home now.)
@@ -1943,7 +1943,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
         // rule above, scoped to that mode alone — while the view stands, copy,
         // paste, bpm, iteration, follow and listen are consumed acts and say so,
-        // while the S/T + W/P radios, the commit opener and the history button
+        // while the S/T + W/P radios, the load-in-place opener and the history
+        // button
         // itself stay live. Which is which is DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
         // partition is inventoried); nothing here decides membership.
@@ -3824,7 +3825,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    sec.c_x, baseline, band_y, band_h);
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
-        // "no renders to commit", ...). It used to ride the two-row status line
+        // "No renders to load in place", ...). It used to ride the two-row
+        // status line
         // as an appendix; with one line and one span it takes its
         // place in the chain, directly above the readout. Cleared by the next
         // key press, which is also what opens every editor above it, so the two

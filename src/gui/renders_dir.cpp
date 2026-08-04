@@ -88,7 +88,8 @@ GuiRendersDir::enumerate_render_entries() {
 // The entry's <basename>.settings path, beside its wav. The .settings snapshot
 // is frozen at dispatch (the dispatch writer writes it once, seeding the
 // queue/dispatch-moment tab/zoom/viewport/playhead/W-P) and never rewritten;
-// the `'` commit reads it to inherit that queue-moment recipe wholesale.
+// the `'` load-in-place reads it to inherit that queue-moment recipe
+// wholesale.
 std::filesystem::path GuiRendersDir::settings_path(
         const AppState::RenderEntry& e) {
     return e.batch_folder / (e.basename + ".settings");

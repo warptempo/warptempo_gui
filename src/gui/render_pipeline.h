@@ -23,7 +23,7 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 
 // Authoring-state snapshot captured at dispatch time. Sole consumer: the
 // per-entry `.settings` writer inside do_render, which composes the
-// standard whole-file schema from these fields (the commit tab's trim and
+// standard whole-file schema from these fields (the dispatch tab's trim and
 // identity plus the session prefs) so the `'` load-in-place
 // (load_render_entry_in_place) can apply the entry with plain load
 // semantics. The
@@ -32,7 +32,7 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // sidecar, and keeping the block self-contained keeps the writer trivial.
 struct AuthoringSnapshot {
     char    active_tab        = 'A';
-    // The commit tab's trim pair, always a full ordered pair (the unset state
+    // The dispatch tab's trim pair, always a full ordered pair (the unset state
     // and its has-bits died 2026-07-30).
     int64_t trim_begin_frame  = 0;     // source frames
     int64_t trim_end_frame    = 0;     // source frames

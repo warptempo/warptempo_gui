@@ -2944,7 +2944,8 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
 // nothing — the two reasons that can make it so are at the flag's declaration,
 // input_pointer.cpp), and main.cpp's staleness comparator.
 //
-// MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen, Commit —
+// MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen,
+// Load-in-place —
 // each is an action that completes, with no state to stay lit for — and BPM,
 // whose editor is a transient modal SESSION rather than a resting mode (it
 // cannot rest open, and `m` never reaches dispatch while it is up), so lighting

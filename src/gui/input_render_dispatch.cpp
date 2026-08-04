@@ -323,8 +323,8 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 batch_.label.c_str(), batch_.rendered, total);
         }
         // A finished batch just leaves its artifacts on disk; nothing
-        // auto-opens. The user presses `l` to listen or `'` to commit an
-        // entry by name.
+        // auto-opens. The user presses `l` to listen or `'` to load an
+        // entry in place by name.
         batch_.active = false;
         batch_.reqs.clear();
         batch_.reqs.shrink_to_fit();
@@ -382,7 +382,7 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
     // maybe_dispatch_pending here.
 }
 
-// Human-readable provenance descriptor for a committed BPM cell,
+// Human-readable provenance descriptor for a BPM cell,
 // e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats is an
 // integer; bpm is a double printed in plain shortest round-trip form
 // ("220" stays "220", "220.5" stays "220.5"); the two timestamps are the
@@ -390,7 +390,8 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // end when the span reaches the store-final marker's section) in display
 // seconds (frame / sample_rate, converted by the caller), formatted via the shared
 // mm:ss.mmm formatter. Stored verbatim in the cell's per-entry .settings
-// bpm= field and promoted into the source .settings on commit.
+// bpm= field and promoted into the source .settings on the cell's
+// load-in-place.
 // DATA, NOT DISPLAY: no paint site reads this string — it is a sidecar value
 // that also feeds the render fingerprint (render_cache.cpp's EngineField::Bpm
 // arm), so its " bpm " stays lowercase where the display label capitalizes.
@@ -501,8 +502,8 @@ bool GuiInputHandler::render_bpm_sweep() {
     const int next_index = max_renders_batch_index(queue_root).max_index + 1;
 
     // FILENAME TOKEN, therefore DATA and lowercase: it names the on-disk
-    // batch folder `<N>_bpm/`, which the `l` listen and `'` commit routes
-    // reach by name. The display label below is the separate, capitalized
+    // batch folder `<N>_bpm/`, which the `l` listen and `'` load-in-place
+    // routes reach by name. The display label below is the separate, capitalized
     // "BPM" — the case ruling reaches every PROSE surface, the terminal
     // included since the 2026-08-02 pass, so the split here is prose versus
     // DATA rather than display versus stderr.

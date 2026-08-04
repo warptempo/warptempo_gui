@@ -608,7 +608,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
-    const bool is_commit = (key == GuiKeys::Apostrophe && bare);
+    const bool is_load_in_place = (key == GuiKeys::Apostrophe && bare);
     const bool is_commit_act = (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
@@ -627,7 +627,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc ||
-             is_commit || is_commit_act || is_save || is_ctrl_q);
+             is_load_in_place || is_commit_act || is_save || is_ctrl_q);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -880,7 +880,7 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // The load editor's bare-Tab entry-name autocomplete
     // (handle_load_editor_key intercepts it before handle_key), the sibling
     // of the settings editor's value autocomplete.
-    const bool is_commit_autocomplete =
+    const bool is_load_editor_autocomplete =
         (text_editor::is_active(app.load_editor) &&
          key == GuiKeys::Tab && !ctrl && !shift && !alt);
     const bool is_save =
@@ -888,7 +888,7 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     return !(is_editor_key ||
-             is_settings_autocomplete || is_commit_autocomplete ||
+             is_settings_autocomplete || is_load_editor_autocomplete ||
              is_save || is_ctrl_q);
 }
 
@@ -1152,7 +1152,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // delta live in the one integer-cents domain, so the sum is
             // plain integer addition and the cell sidecar's N.NN spelling
             // re-parses to exactly this value — render-entry promotion
-            // (the `'` commit) stays closed under the grammar by type AND
+            // (the `'` load-in-place) stays closed under the grammar by type AND
             // by VOCABULARY: the cell values a sweep can write are exactly
             // the values the strict sidecar parse accepts.
             cell_warp_markers[mi].tempo_cents =

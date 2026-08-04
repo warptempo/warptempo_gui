@@ -754,8 +754,9 @@ int main(int argc, char** argv) {
         return 1;
     }
     // Shared process-local render cache for target-view reuse, archival
-    // reuse/publish rungs, and committed-render survival after the renders
-    // folder is wiped. init() creates the per-process cache directory under
+    // reuse/publish rungs, and the loaded-in-place render's survival after
+    // the renders folder is wiped. init() creates the per-process cache
+    // directory under
     // the user cache home and sweeps dead-PID orphan directories; shutdown(),
     // after the event loop, removes this process's directory. Constructed
     // before target_render, which holds it by reference. A failed init() leaves
