@@ -74,8 +74,9 @@ constexpr const char* kBranchRef = "HEAD";
 // The three sidecars a source carries, in no significant order. A directory
 // matches if it holds ANY of them under the source's base name — the
 // architect's checkpoints are complete sets, but a partial one should still be
-// found rather than silently missed, and a file the directory lacks is simply
-// the empty-then-side case the diff already handles.
+// FOUND rather than silently missed: the match answers where the piece lives,
+// and the strict load gate is what then refuses a partial commit, at walk
+// entry and at the `'` act alike.
 constexpr const char* kSidecarExtensions[] = {
     ".warpmarkers", ".phaseresetmarkers", ".settings"};
 
@@ -1095,9 +1096,11 @@ bool clone_is_projects_home(const std::string& projects_repo,
 //
 // `ambiguous` is a REFUSAL, not a variant of "carries none": this commit's tree
 // holds the base name in several directories and none of them is the one HEAD
-// matched, so which piece the blobs belong to has no answer. All three paths are
-// empty in that state, and both consumers say so rather than showing or
-// loading in place a guess.
+// matched, so which piece the blobs belong to has no answer. All three paths
+// are empty in that state and read_commit_sidecars refuses on it — which the
+// walk's load gate counts as ineligibility (an ambiguous commit never enters
+// the walk) and the `'` act prints as its own refusal, the arm a pasted
+// spelling naming a commit outside the walk keeps live.
 struct GuiHistoryCommitPaths {
     std::string path[3];
     long long   size[3] = {-1, -1, -1};
@@ -1123,10 +1126,10 @@ struct GuiHistoryCommitPaths {
 // commit's tree carries the base name there, that is the answer whatever else it
 // carries. Failing that, a SINGLE candidate directory is unambiguous and is taken
 // (which is every ordinary pre-rename era: the piece sat somewhere else and
-// nowhere else). Anything left is genuinely ambiguous and REFUSES — the display
-// paints no delta for that commit and names the state in the corner, and a
-// load-in-place
-// of it is refused with its own line.
+// nowhere else). Anything left is genuinely ambiguous and REFUSES, through
+// read_commit_sidecars: the walk's load gate drops such a commit at entry —
+// it is never shown at all — and the `'` act, whose pasted spelling can name
+// a commit outside the walk, refuses it with its own line.
 GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
                                            const std::string& base_name,
                                            const std::string& head_directory) {
@@ -1175,29 +1178,16 @@ GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
 // pathspec, so nothing about it globs or follows a rename; the path came from
 // this commit's own tree, so it is already the spelling that commit uses.
 //
-// FALSE MEANS THE READ DID NOT HAPPEN — git could not be run, or ran and failed.
-// An EMPTY path is not that case: the commit carries no such file, `out` is empty
-// and this is true, which is the "no bytes on the then side" answer the diff
-// wants. The two are separated because the LOAD-IN-PLACE cannot tell an
-// invented empty
-// file from a real one and must never stage the first (see read_commit_sidecars).
+// FALSE MEANS THE READ DID NOT HAPPEN — git could not be run, or ran and
+// failed. Every caller (read_commit_sidecars' blob reads, the commit act's
+// byte confirmation) hands in a path its commit's own tree listed, so there is
+// no empty-path case: a missing file is decided BEFORE this read, never read
+// as empty bytes. (The lenient everything-added reading the display side once
+// had died with the walk's load gate, 2026-08-04.)
 bool read_snapshot_at(const std::string& sha, const std::string& path,
                       std::string& out) {
     out.clear();
-    if (path.empty()) return true;
     return run_git_capture({"show", sha + ":" + path}, out) == GitCapture::Ran;
-}
-
-// The lenient reading, for the DISPLAY side alone: a failed read is empty bytes
-// and the commit reads as everything-added. Deliberate — a diff is a picture and
-// a wrong one costs a keystroke to step away from and back, while the
-// load-in-place is a
-// whole-state replace and gets the strict path.
-std::string read_snapshot_or_empty(const std::string& sha,
-                                   const std::string& path) {
-    std::string out;
-    read_snapshot_at(sha, path, out);
-    return out;
 }
 
 }  // namespace
@@ -1287,6 +1277,145 @@ bool read_commit_sidecars(const std::string&        spelling,
                      std::to_string(paths.size[e]);
             return false;
         }
+    }
+    return true;
+}
+
+namespace {
+
+// Removes its directory tree when it falls out of scope, on EVERY exit — the
+// refusals, the success, and a throw the allocations below could raise. Its
+// one user is the strict whole-set load's scratch staging
+// (load_commit_sidecars_strict), where the same guarantee written by hand
+// would be one `remove_all` per refusal arm and a leaked directory the first
+// time an arm was added without one.
+struct ScratchDirGuard {
+    std::filesystem::path dir;
+    explicit ScratchDirGuard(std::filesystem::path d) : dir(std::move(d)) {}
+    ScratchDirGuard(const ScratchDirGuard&)            = delete;
+    ScratchDirGuard& operator=(const ScratchDirGuard&) = delete;
+    ~ScratchDirGuard() {
+        if (dir.empty()) return;
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
+};
+
+}  // namespace
+
+// The gate's contract and the reason it is ONE predicate live at the header
+// declaration. The body is the `'` act's own validation sequence, moved here
+// whole when the walk became load-gated (2026-08-04) so both askers run the
+// same bytes.
+bool load_commit_sidecars_strict(const std::string&    spelling,
+                                 const std::string&    base_name,
+                                 const std::string&    head_directory,
+                                 GuiHistoryCommitLoad& out,
+                                 std::string&          reason) {
+    out = GuiHistoryCommitLoad{};
+    reason.clear();
+
+    if (!read_commit_sidecars(spelling, base_name, head_directory,
+                              out.sidecars, reason)) {
+        return false;
+    }
+    const GuiHistoryCommitSidecars& snap = out.sidecars;
+
+    // A PARTIAL COMMIT IS A REFUSAL: a load-in-place is a whole-state replace,
+    // and inheriting two files from the commit and the third from nowhere
+    // would compose a state no checkpoint ever was. (For the walk the same
+    // refusal is simple ineligibility: a checkpoint that cannot be loaded is
+    // not stepped to.)
+    auto missing = [&](const char* ext) {
+        reason = "commit " + snap.sha + " carries no '" + base_name + ext + "'";
+        return false;
+    };
+    if (snap.warpmarkers.path.empty())       return missing(".warpmarkers");
+    if (snap.phaseresetmarkers.path.empty()) return missing(".phaseresetmarkers");
+    if (snap.settings.path.empty())          return missing(".settings");
+
+    // THE COMMITTED BYTES REACH THE LOADERS THROUGH A SCRATCH DIRECTORY,
+    // because all three whole-file entry points take a PATH and open the file
+    // themselves (read_settings_file, GuiWarpMarkers::load,
+    // GuiPhaseResetMarkers::load) and all three live in the FROZEN parser, so
+    // there is no string-shaped entry to hand a blob to. The alternative — a
+    // GUI-side scanner over the strings — would be a SECOND GRAMMAR beside the
+    // strict one, which is precisely what this gate exists to avoid; staging
+    // the bytes is the cheap way to keep the loaders themselves as the only
+    // judges.
+    //
+    // THE DIRECTORY IS THE CALL'S OWN SCRATCH: the system temp dir, one
+    // per-process per-commit subdirectory, removed on every exit by the guard.
+    // NEVER the repository (the walk and the `'` act only ever read it) and
+    // NEVER beside the source (the working sidecars are the user's, and a read
+    // must not write near them).
+    std::error_code   ec;
+    const std::string leaf = "warptempo_gui-load-in-place-" +
+                             std::to_string(static_cast<long>(::getpid())) +
+                             "-" + snap.sha.substr(0, 7);
+    const std::filesystem::path scratch =
+        std::filesystem::temp_directory_path(ec) / leaf;
+    if (ec) {
+        reason = "no temporary directory available: " + ec.message();
+        return false;
+    }
+    ScratchDirGuard guard(scratch);
+    std::filesystem::create_directories(scratch, ec);
+    if (ec) {
+        reason = "could not create '" + scratch.string() + "': " + ec.message();
+        return false;
+    }
+
+    // Staged under the sidecar's own leaf name, so the loaders see exactly the
+    // filename shape they see beside a source. The reason on failure names the
+    // COMMITTED path, never the scratch one: the scratch is an implementation
+    // detail of this call and nothing the user can act on.
+    auto stage = [&](const GuiHistorySidecarBlob& blob, const char* ext,
+                     std::filesystem::path& out_path) {
+        out_path = scratch / (base_name + ext);
+        if (atomic_write_string_to_path(out_path.string(), blob.text)) {
+            return true;
+        }
+        reason = "could not stage '" + blob.path + "' from commit " + snap.sha;
+        return false;
+    };
+    std::filesystem::path settings_file, warp_file, phase_reset_file;
+    if (!stage(snap.settings, ".settings", settings_file))       return false;
+    if (!stage(snap.warpmarkers, ".warpmarkers", warp_file))     return false;
+    if (!stage(snap.phaseresetmarkers, ".phaseresetmarkers",
+               phase_reset_file))                                return false;
+
+    // The three STRICT WHOLE-FILE LOADERS are the judges, in the render-entry
+    // load-in-place's own order, each refusal naming the committed path and
+    // the SHA. First error only, by construction: every arm returns.
+    auto settings = read_settings_file(settings_file.string());
+    if (!settings) {
+        reason = "invalid settings in '" + snap.settings.path + "' at commit " +
+                 snap.sha + ": " + settings.error();
+        return false;
+    }
+    out.settings = std::move(*settings);
+
+    {
+        GuiWarpMarkers m;
+        auto r = m.load(warp_file.string());
+        if (!r) {
+            reason = "invalid warp markers in '" + snap.warpmarkers.path +
+                     "' at commit " + snap.sha + ": " + r.error();
+            return false;
+        }
+        out.warp_markers = m.markers();
+    }
+    {
+        GuiPhaseResetMarkers t;
+        auto r = t.load(phase_reset_file.string());
+        if (!r) {
+            reason = "invalid phase reset markers in '" +
+                     snap.phaseresetmarkers.path + "' at commit " + snap.sha +
+                     ": " + r.error();
+            return false;
+        }
+        out.phase_reset_markers = t.markers();
     }
     return true;
 }
@@ -1439,12 +1568,49 @@ bool GuiHistoryDiff::init(const AppState& app) {
                            ".*'");
     }
 
+    std::vector<std::string> candidates;
     for (std::string& sha : split_lines(log_out)) {
-        if (!sha.empty()) commits_.push_back(std::move(sha));
+        if (!sha.empty()) candidates.push_back(std::move(sha));
     }
-    if (commits_.empty()) {
+    if (candidates.empty()) {
         return unavailable("No commit touches 'projects/**/" + base_name_ +
                            ".*'");
+    }
+
+    // THE LOAD GATE (architect 2026-08-04): each candidate's eligibility is
+    // the load-in-place gate itself — load_commit_sidecars_strict, the exact
+    // resolution + staging + three strict loaders the `'` act runs, one
+    // predicate — so every commit the walk carries is one the act can load.
+    // Anything else (a missing sidecar, a parse refusal, an ambiguous
+    // per-commit path resolution) leaves the walk here, counted; the parsed
+    // stores the gate produced are discarded, but each eligible commit's
+    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides, so no
+    // delta ever runs git again. Eager on purpose: the cost is bounded (at
+    // most kCommitDepth strict loads of three tiny files each, staged through
+    // the temp dir) and paying it at entry is what lets `n/N`, the clamps and
+    // the corner all read one settled eligible list for the session.
+    int hidden = 0;
+    for (const std::string& sha : candidates) {
+        GuiHistoryCommitLoad load;
+        std::string          why;
+        if (!load_commit_sidecars_strict(sha, base_name_, project_directory_,
+                                         load, why)) {
+            ++hidden;
+            continue;
+        }
+        commits_.push_back(std::move(load.sidecars));
+    }
+    if (commits_.empty()) {
+        return unavailable(
+            "None of the " + std::to_string(hidden) +
+            " commit(s) touching 'projects/**/" + base_name_ +
+            ".*' passes the strict sidecar load");
+    }
+    if (hidden > 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: History hid %d commit(s) whose sidecars "
+                     "refuse the strict load\n",
+                     hidden);
     }
 
     // The now side is captured once, here: every delta this session hands out
@@ -1458,78 +1624,47 @@ bool GuiHistoryDiff::init(const AppState& app) {
 const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     static const std::string kNone;
     if (index >= commits_.size()) return kNone;
-    return commits_[index];
+    return commits_[index].sha;
 }
 
 const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
     if (!available_ || index >= commits_.size()) return nullptr;
     if (cache_[index].has_value()) return &*cache_[index];
 
-    GuiHistoryCommitDelta d;
-    d.sha = commits_[index];
+    // THE THEN SIDE IS THE SNAPSHOT THE LOAD GATE ALREADY READ at init: walk
+    // membership required reading (and strictly loading) all three sidecars,
+    // so the walk carries each member's texts and a delta runs no git at all.
+    const GuiHistoryCommitSidecars& snap = commits_[index];
+    GuiHistoryCommitDelta           d;
+    d.sha = snap.sha;
 
-    // One tree listing for this commit, then the three blobs out of it — the
-    // paths are whatever THIS commit calls them, so a corpus rename anywhere
-    // in the walked range costs nothing here.
-    //
-    // AN AMBIGUOUS COMMIT IS AN EMPTY DELTA that says so. Its tree carries the
-    // base name in directories none of which is the one this session matched, so
-    // there is no honest THEN side to diff against — showing the whole session as
-    // "added" would be a confident lie about a commit that may belong to another
-    // piece entirely. The delta is cached like any other (the answer will not
-    // change), the lane paints nothing for it, and the corner names the state.
-    const GuiHistoryCommitPaths paths =
-        resolve_commit_paths(d.sha, base_name_, project_directory_);
-    if (paths.ambiguous) {
-        d.ambiguous = true;
-        std::fprintf(stderr,
-                     "warptempo_gui: History at %s carries '%s.*' in more than "
-                     "one directory; no delta is shown for it\n",
-                     short_sha(d.sha).c_str(), base_name_.c_str());
-        cache_[index] = std::move(d);
-        return &*cache_[index];
-    }
-    const std::string then_warp = read_snapshot_or_empty(d.sha, paths.path[0]);
-    const std::string then_phase_reset =
-        read_snapshot_or_empty(d.sha, paths.path[1]);
-    const std::string then_settings =
-        read_snapshot_or_empty(d.sha, paths.path[2]);
-
-    const LineDiff warp_diff = diff_lines(then_warp, now_.warpmarkers_text);
+    const LineDiff warp_diff =
+        diff_lines(snap.warpmarkers.text, now_.warpmarkers_text);
     const LineDiff phase_reset_diff =
-        diff_lines(then_phase_reset, now_.phaseresetmarkers_text);
+        diff_lines(snap.phaseresetmarkers.text, now_.phaseresetmarkers_text);
     const LineDiff settings_diff =
-        diff_lines(then_settings, now_.settings_text);
+        diff_lines(snap.settings.text, now_.settings_text);
 
-    d.warp_lines.added          = static_cast<int>(warp_diff.added.size());
-    d.warp_lines.removed        = static_cast<int>(warp_diff.removed.size());
-    d.phase_reset_lines.added   = static_cast<int>(phase_reset_diff.added.size());
-    d.phase_reset_lines.removed = static_cast<int>(phase_reset_diff.removed.size());
-    d.settings_lines.added      = static_cast<int>(settings_diff.added.size());
-    d.settings_lines.removed    = static_cast<int>(settings_diff.removed.size());
-
-    // A line that yields no frame drops out of the typed lists entirely —
-    // legacy timestamp spellings, hand-edit damage. The load-in-place is where
-    // full parsing gates; a view just shows less.
+    // EVERY LINE HERE PARSES: the then side passed the strict whole-set load
+    // at init (that is what walk membership means) and the now side is the
+    // writers' own output, so the extraction's boolean below is the parse's
+    // own optional shape, not a leniency arm — there is no unparseable line
+    // to drop and no counter for one (both died with the gate, 2026-08-04).
     for (const std::string& line : warp_diff.added) {
         GuiHistoryWarpEntry e;
         if (extract_warp_entry(line, e)) d.warp_added.push_back(std::move(e));
-        else ++d.warp_lines.dropped;
     }
     for (const std::string& line : warp_diff.removed) {
         GuiHistoryWarpEntry e;
         if (extract_warp_entry(line, e)) d.warp_removed.push_back(std::move(e));
-        else ++d.warp_lines.dropped;
     }
     for (const std::string& line : phase_reset_diff.added) {
         GuiHistoryPhaseResetEntry e;
         if (extract_phase_reset_entry(line, e)) d.phase_reset_added.push_back(e);
-        else ++d.phase_reset_lines.dropped;
     }
     for (const std::string& line : phase_reset_diff.removed) {
         GuiHistoryPhaseResetEntry e;
         if (extract_phase_reset_entry(line, e)) d.phase_reset_removed.push_back(e);
-        else ++d.phase_reset_lines.dropped;
     }
 
     pair_changes_by_frame(
@@ -1554,26 +1689,20 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
             return c;
         });
 
-    d.then_scale_token = scale_token_of(then_settings);
+    d.then_scale_token = scale_token_of(snap.settings.text);
     d.now_scale_token  = scale_token_of(now_.settings_text);
     d.scale_changed    = (d.then_scale_token != d.now_scale_token);
 
-    // One line per commit view, at most. The degraded arm is separate because
-    // it says something different: not "some lines were unreadable" but "this
-    // file was too large to diff line by line and reads as replaced whole".
+    // One line per commit view, at most. The degraded arm is an ALLOCATION
+    // guard, not a format leniency: a loader-clean sidecar past the DP caps is
+    // still diffed, coarsely, as replaced whole — unreachable on any real
+    // corpus file (tens to a few hundred lines).
     if (warp_diff.degraded || phase_reset_diff.degraded ||
         settings_diff.degraded) {
         std::fprintf(stderr,
                      "warptempo_gui: History diff at %s exceeded the line cap; "
                      "the affected sidecar reads as replaced whole\n",
                      d.sha.c_str());
-    }
-    const int dropped = d.warp_lines.dropped + d.phase_reset_lines.dropped;
-    if (dropped > 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: History diff at %s dropped %d unparseable "
-                     "line(s)\n",
-                     d.sha.c_str(), dropped);
     }
 
     cache_[index] = std::move(d);

@@ -1970,6 +1970,16 @@ struct AppState {
     // marker stands exactly where it stood. The bottom strip's modal span
     // carries the commit's position, its short SHA and its `scale=` value.
     //
+    // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
+    // load-in-place gate itself — each candidate commit's three sidecars must
+    // pass the strict whole-set load (load_commit_sidecars_strict,
+    // history_diff.h, the `'` act's own validation, one predicate) at init —
+    // so every checkpoint the mode can step to is one `'` can load.
+    // Ineligible commits leave the walk at entry, one stderr line counting
+    // them, and the corner's n/N counts the ELIGIBLE list. The diff model's
+    // old leniencies (unparseable lines dropped, a missing file read as an
+    // empty side, the per-commit Ambiguous display) died with the gate.
+    //
     // WHAT OPENS IT: bare `/`, and nothing else. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
     // refusal for free — a prompt, any of the four editors, an open dropdown,

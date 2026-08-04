@@ -76,24 +76,6 @@ bool spawn_audio_player(const std::string& player,
     return rc == 0;
 }
 
-// Removes its directory tree when it falls out of scope, on EVERY exit — the
-// refusals, the success, and a throw the allocations below could raise. Its one
-// user is the load-in-place-from-a-commit path's session scratch
-// (load_history_commit_in_place),
-// where the same guarantee written by hand would be one `remove_all` per refusal
-// arm and a leaked directory the first time an arm was added without one.
-struct ScratchDirGuard {
-    std::filesystem::path dir;
-    explicit ScratchDirGuard(std::filesystem::path d) : dir(std::move(d)) {}
-    ScratchDirGuard(const ScratchDirGuard&)            = delete;
-    ScratchDirGuard& operator=(const ScratchDirGuard&) = delete;
-    ~ScratchDirGuard() {
-        if (dir.empty()) return;
-        std::error_code ec;
-        std::filesystem::remove_all(dir, ec);
-    }
-};
-
 }  // namespace
 
 // The lane model's one predicate — see the declaration for the two readers and
@@ -1716,22 +1698,21 @@ bool GuiInputHandler::load_render_entry_in_place(
 // THAT commit carried become the live session, in memory, and the disk is never
 // touched — not the corpus, not the working sidecars, not renders/.
 //
-// WHAT RESOLVES: read_commit_sidecars (history_diff.h) runs the rev-parse and
-// reads the three blobs out of that commit's own tree by base name, so a commit
-// from before a corpus rename reads with no era knowledge. The base name is the
-// mode's session's, which is why this route is gated on the mode standing.
-//
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
-// contract load_render_entry_in_place states and this path mirrors: an unresolvable
-// spelling, a commit missing ANY of the three sidecars, and a sidecar that the
-// STRICT WHOLE-FILE LOADERS refuse. That last one is the point rather than a
-// side effect: a commit from the legacy MM:SS.mmm era, or one carrying a
-// settings key this build no longer knows, fails HERE and changes nothing —
-// exactly the parse-gating the architect ruled, and the reason no second, looser
-// grammar is written anywhere on this path. Each refusal is one stderr line
-// naming its cause with the committed path and the SHA, first-error-only by
-// construction (every arm returns), and the caller keeps the editor open with
-// its red flash.
+// contract load_render_entry_in_place states and this path mirrors: ONE call,
+// load_commit_sidecars_strict (history_diff.h), which is the resolution, the
+// missing-sidecar refusals, the scratch staging and the three STRICT
+// WHOLE-FILE LOADERS in one predicate — the same predicate that is WALK
+// MEMBERSHIP since 2026-08-04, so the prefilled spelling (a walk member's own
+// SHA) always passes and a refusal can only come from a PASTED spelling naming
+// a commit outside the walk: an unresolvable spelling, a partial checkpoint,
+// an ambiguous per-commit path resolution, or a sidecar the loaders refuse (a
+// commit from the legacy MM:SS.mmm era, a settings key this build no longer
+// knows). That strictness is the point rather than a side effect — exactly the
+// parse-gating the architect ruled, and the reason no second, looser grammar
+// is written anywhere on this path. A refusal is one stderr line naming its
+// cause with the committed path and the SHA (first error only — the gate's own
+// contract), and the caller keeps the editor open with its red flash.
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
 // stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
@@ -1775,133 +1756,25 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     const std::string base_name =
         app.history_mode.session.sidecar_base_name();
 
-    GuiHistoryCommitSidecars snap;
-    std::string              reason;
-    // The session's matched directory goes with the spelling: it is what settles
-    // a commit whose tree carries this base name in more than one place (an older
-    // era's copy of another piece), and an unsettleable one refuses rather than
-    // acting on a guess.
-    if (!read_commit_sidecars(spelling, base_name,
-                              app.history_mode.session.project_directory(),
-                              snap, reason)) {
+    // THE WHOLE VALIDATION IS THE ONE SHARED GATE. The session's matched
+    // directory goes with the spelling: it is what settles a commit whose tree
+    // carries this base name in more than one place (an older era's copy of
+    // another piece), and an unsettleable one refuses rather than acting on a
+    // guess.
+    GuiHistoryCommitLoad loaded;
+    std::string          reason;
+    if (!load_commit_sidecars_strict(
+            spelling, base_name, app.history_mode.session.project_directory(),
+            loaded, reason)) {
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
         return false;
     }
-
-    // A PARTIAL COMMIT IS A REFUSAL. The mode's DISPLAY treats a sidecar the
-    // commit lacks as "everything added" — the natural line-diff answer — but a
-    // load-in-place is a whole-state replace, and inheriting two files from
-    // the commit
-    // and the third from nowhere would compose a state no checkpoint ever was.
-    auto missing = [&](const char* ext) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: commit %s carries no '%s%s'\n",
-            snap.sha.c_str(), base_name.c_str(), ext);
-        return false;
-    };
-    if (snap.warpmarkers.path.empty())       return missing(".warpmarkers");
-    if (snap.phaseresetmarkers.path.empty()) return missing(".phaseresetmarkers");
-    if (snap.settings.path.empty())          return missing(".settings");
-
-    // THE COMMITTED BYTES REACH THE LOADERS THROUGH A SCRATCH DIRECTORY, because
-    // all three whole-file entry points take a PATH and open the file themselves
-    // (read_settings_file, GuiWarpMarkers::load, GuiPhaseResetMarkers::load) and
-    // all three live in the FROZEN parser, so there is no string-shaped entry to
-    // hand a blob to. The alternative — a GUI-side scanner over the strings —
-    // would be a SECOND GRAMMAR beside the strict one, which is precisely what
-    // this gate exists to avoid; staging the bytes is the cheap way to keep the
-    // loaders themselves as the only judges.
-    //
-    // THE DIRECTORY IS THE SESSION'S OWN SCRATCH: the system temp dir, one
-    // per-process per-commit subdirectory, removed on every exit by the guard.
-    // NEVER the repository (this feature only ever reads it) and NEVER beside the
-    // source (the working sidecars are the user's, and a read must not write
-    // near them).
-    std::error_code   ec;
-    const std::string leaf = "warptempo_gui-load-in-place-" +
-                             std::to_string(static_cast<long>(::getpid())) +
-                             "-" + snap.sha.substr(0, 7);
-    const std::filesystem::path scratch =
-        std::filesystem::temp_directory_path(ec) / leaf;
-    if (ec) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: no temporary directory "
-            "available: %s\n", ec.message().c_str());
-        return false;
-    }
-    ScratchDirGuard guard(scratch);
-    std::filesystem::create_directories(scratch, ec);
-    if (ec) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: could not create '%s': %s\n",
-            scratch.string().c_str(), ec.message().c_str());
-        return false;
-    }
-
-    // Staged under the sidecar's own leaf name, so the loaders see exactly the
-    // filename shape they see beside a source. The stderr on failure names the
-    // COMMITTED path, never the scratch one: the scratch is an implementation
-    // detail of this call and nothing the user can act on.
-    auto stage = [&](const GuiHistorySidecarBlob& blob, const char* ext,
-                     std::filesystem::path& out_path) {
-        out_path = scratch / (base_name + ext);
-        if (atomic_write_string_to_path(out_path.string(), blob.text)) {
-            return true;
-        }
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: could not stage '%s' "
-            "from commit %s\n", blob.path.c_str(), snap.sha.c_str());
-        return false;
-    };
-    std::filesystem::path settings_file, warp_file, phase_reset_file;
-    if (!stage(snap.settings, ".settings", settings_file))       return false;
-    if (!stage(snap.warpmarkers, ".warpmarkers", warp_file))     return false;
-    if (!stage(snap.phaseresetmarkers, ".phaseresetmarkers",
-               phase_reset_file))                                return false;
-
-    // -- Read + validate every input BEFORE touching a store. The three loaders
-    //    and their order are the render-entry load-in-place's, and the
-    //    refusal text carries
-    //    the SHA the render-entry load-in-place has no need of.
-    const auto settings = read_settings_file(settings_file.string());
-    if (!settings) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: invalid settings in '%s' "
-            "at commit %s: %s\n",
-            snap.settings.path.c_str(), snap.sha.c_str(),
-            settings.error().c_str());
-        return false;
-    }
-
-    std::vector<GuiWarpMarker>       src_warp;
-    std::vector<GuiPhaseResetMarker> src_phase_resets;
-    {
-        GuiWarpMarkers m;
-        auto r = m.load(warp_file.string());
-        if (!r) {
-            std::fprintf(stderr,
-                "warptempo_gui: Load in place refused: invalid warp markers "
-                "in '%s' at commit %s: %s\n",
-                snap.warpmarkers.path.c_str(), snap.sha.c_str(),
-                r.error().c_str());
-            return false;
-        }
-        src_warp = m.markers();
-    }
-    {
-        GuiPhaseResetMarkers t;
-        auto r = t.load(phase_reset_file.string());
-        if (!r) {
-            std::fprintf(stderr,
-                "warptempo_gui: Load in place refused: invalid phase reset "
-                "markers in '%s' at commit %s: %s\n",
-                snap.phaseresetmarkers.path.c_str(), snap.sha.c_str(),
-                r.error().c_str());
-            return false;
-        }
-        src_phase_resets = t.markers();
-    }
+    const std::string sha = loaded.sidecars.sha;
+    const SettingsFile& settings = loaded.settings;
+    std::vector<GuiWarpMarker>       src_warp = std::move(loaded.warp_markers);
+    std::vector<GuiPhaseResetMarker> src_phase_resets =
+        std::move(loaded.phase_reset_markers);
 
     // Every input is in hand and valid; nothing below refuses.
 
@@ -1919,7 +1792,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // function read its base name from, which is why that read is at the top.
     close_history_mode();
 
-    const char load_tab = settings->active_tab_view;
+    const char load_tab = settings.active_tab_view;
 
     std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
@@ -1957,9 +1830,9 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // prefs VALUES ONLY through the one routine a source load also calls — the
     // render-entry load-in-place's two steps, unchanged, so a commit loads in
     // place 1:1 with a load of the same three files.
-    app.tab_a = view_state_from_settings_tab(settings->tab_a);
-    app.tab_b = view_state_from_settings_tab(settings->tab_b);
-    apply_settings_engine_and_prefs(app, *settings);
+    app.tab_a = view_state_from_settings_tab(settings.tab_a);
+    app.tab_b = view_state_from_settings_tab(settings.tab_b);
+    apply_settings_engine_and_prefs(app, settings);
 
     // Clamp both loaded-in-place bands' playheads into the live domain (the shared
     // chokepoint), mirroring the source load's tab-snapshot clamp at the same
@@ -2011,7 +1884,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     std::fprintf(stderr,
         "warptempo_gui: load-in-place: Loaded the sidecar state of commit "
         "%s in place\n",
-        snap.sha.c_str());
+        sha.c_str());
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "phaseresetmarkers.h"
+#include "settings_file.h"
+#include "warpmarkers.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -63,8 +67,19 @@ struct AppState;
 // what a Ctrl+S would land at this instant, built with no file existing
 // anywhere and no disk touched. So an ADDED entry is one the session has and
 // the commit did not; a REMOVED entry is one the commit had and the session
-// dropped. A commit missing the file entirely reads as "everything added",
-// which is the natural line-diff answer and needs no special case.
+// dropped.
+//
+// THE WALK IS LOAD-GATED (architect 2026-08-04): membership in the walk is THE
+// LOAD-IN-PLACE GATE ITSELF — load_commit_sidecars_strict below, the exact
+// resolution + scratch staging + three strict frozen loaders the `'` act runs,
+// ONE predicate with no relaxed variant — so every checkpoint the mode can step
+// to is one it can load. A candidate that refuses (a missing sidecar, a parse
+// refusal, an ambiguous per-commit path resolution) leaves the walk at init,
+// counted on one stderr line. That is what makes both sides of every diff
+// loader-clean text with all three files present: there is no missing-file
+// case, no unparseable line, and no legacy leniency arm anywhere in the diff
+// model — the architect's no-legacy rule (the program never imports leniently;
+// an old-format checkpoint is hand-edited, never tolerated).
 //
 // THE NOW SIDE IS FROZEN AT init(): the three strings are captured once and
 // every cached delta is measured against them, so a session that keeps
@@ -121,30 +136,14 @@ struct GuiHistoryPhaseResetChange {
     bool    now_disabled  = false;
 };
 
-// Raw per-file line accounting, kept beside the typed lists so a later round
-// can surface "N unpaintable" if it ever wants to: `added`/`removed` are what
-// the line diff produced before any typing, `dropped` is how many of those the
-// typed lists could not accept (legacy spellings, hand-edit damage).
-struct GuiHistoryLineCounts {
-    int added   = 0;
-    int removed = 0;
-    int dropped = 0;
-};
-
-// One commit's whole answer.
+// One commit's whole answer. Every commit that gets one is a walk member, and
+// walk membership is the strict whole-set load (the gate at the file head), so
+// the lists below are typed out of loader-clean text on both sides — there is
+// no per-commit "no answer" state and no line accounting beside them (the
+// Ambiguous display machinery and the dropped-line counters died with the
+// gate, 2026-08-04: an ambiguous or unparseable commit never enters the walk).
 struct GuiHistoryCommitDelta {
     std::string sha;
-
-    // THIS COMMIT HAS NO ANSWER, and says so instead of guessing one. Its tree
-    // carries the sidecar base name in several directories and none of them is
-    // the one this session matched on the branch tip — an older era's
-    // `projects/B/song.*` beside today's `projects/A/song.*`, which the walk's
-    // basename pathspec pulls into one list. Every list below is EMPTY in that
-    // state (the lane paints nothing) and the bottom-strip line names it; a
-    // load-in-place of such a commit refuses in read_commit_sidecars.
-    // Ambiguity is not a property of the piece, only of the commit: its
-    // neighbours in the same walk resolve normally.
-    bool ambiguous = false;
 
     std::vector<GuiHistoryWarpEntry>  warp_added;
     std::vector<GuiHistoryWarpEntry>  warp_removed;
@@ -164,10 +163,6 @@ struct GuiHistoryCommitDelta {
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
-
-    GuiHistoryLineCounts warp_lines;
-    GuiHistoryLineCounts phase_reset_lines;
-    GuiHistoryLineCounts settings_lines;
 };
 
 // The three files' exact current bytes — what Ctrl+S would write at this
@@ -230,9 +225,9 @@ struct GuiHistoryCommitSidecars {
 //
 // A resolved commit that carries none of the three is NOT a failure here — every
 // blob comes back with an empty path and the CALLER decides what a missing
-// sidecar means (the load-in-place refuses on one; the display path treats it
-// as
-// "everything added").
+// sidecar means. In practice the one caller is load_commit_sidecars_strict
+// below, which refuses on any missing file — for the `'` act and the walk's
+// membership gate alike.
 //
 // EVERY BLOB IT DOES RETURN IS WHOLE. A `git show` that could not run yields an
 // empty string, and an empty sidecar is a valid file both marker loaders accept,
@@ -250,19 +245,64 @@ bool read_commit_sidecars(const std::string&         spelling,
                           GuiHistoryCommitSidecars&  out,
                           std::string&               reason);
 
-// The session object: the commit list resolved once at init, each commit's
-// snapshot and delta computed lazily on first request and cached thereafter,
-// so stepping back over a commit already visited costs nothing.
+// One commit's three sidecars READ AND PARSED WHOLE — what the strict gate
+// below produced when it passed. The parsed halves are what the `'` act
+// applies; the raw sidecars are what the walk keeps as each member's then
+// side, so a delta costs no further git.
+struct GuiHistoryCommitLoad {
+    GuiHistoryCommitSidecars         sidecars;
+    SettingsFile                     settings;
+    std::vector<GuiWarpMarker>       warp_markers;
+    std::vector<GuiPhaseResetMarker> phase_reset_markers;
+};
+
+// THE STRICT WHOLE-SET LOAD — the load-in-place gate, and since 2026-08-04 THE
+// WALK'S MEMBERSHIP TEST, one predicate for both askers by the architect's
+// ruling (no second predicate, no relaxed variant anywhere).
+//
+// The sequence is the `'` act's own validation, whole: read_commit_sidecars
+// resolves the spelling and reads the three blobs out of that commit's own
+// tree (size-cross-checked); a commit missing ANY of the three refuses (a
+// partial checkpoint can neither be loaded in place nor walked to); the bytes
+// are then staged through an RAII scratch directory and judged by the three
+// STRICT WHOLE-FILE LOADERS themselves — read_settings_file,
+// GuiWarpMarkers::load, GuiPhaseResetMarkers::load, all frozen-parser entry
+// points that take a PATH — because a GUI-side scanner over the strings would
+// be a SECOND GRAMMAR beside the strict one, which is precisely what this gate
+// exists to avoid. Staging the bytes is the cheap way to keep the loaders
+// themselves as the only judges.
+//
+// False with `reason` set (one line naming the cause; the committed path and
+// the SHA where they apply, never the scratch path — the scratch is an
+// implementation detail nothing outside this call can act on). The `'` act
+// prints the reason; the walk's init counts refusals silently and reports one
+// total. Nothing here writes anywhere but the scratch, which is removed on
+// every exit.
+bool load_commit_sidecars_strict(const std::string&    spelling,
+                                 const std::string&    base_name,
+                                 const std::string&    head_directory,
+                                 GuiHistoryCommitLoad& out,
+                                 std::string&          reason);
+
+// The session object: the commit list resolved AND LOAD-GATED once at init —
+// each member's three sidecar snapshots are read there by the gate and kept —
+// with each commit's delta computed lazily on first request and cached
+// thereafter, so stepping back over a commit already visited costs nothing and
+// no delta ever runs git at all.
 class GuiHistoryDiff {
 public:
     // Check the projects-home guard, locate the loaded source's sidecars in
-    // the committed tree, and resolve the commit list. Returns available().
-    // Every failure path is UNAVAILABLE with one stderr line and no further
-    // git work: the repo root missing, no `origin` remote, a `projects_repo`
-    // that is empty or that names a different repository than this clone's
-    // FETCH url or than any of its effective PUSH urls, no committed file
-    // bearing this source's sidecar names, more than one directory bearing
-    // them, or no commit touching any of them.
+    // the committed tree, resolve the commit list, and GATE each candidate
+    // through the strict whole-set load (load_commit_sidecars_strict): an
+    // ineligible candidate leaves the walk here, and one stderr line counts
+    // the hidden ones when any survive. Returns available(). Every failure
+    // path is UNAVAILABLE with one stderr line and no further git work: the
+    // repo root missing, no `origin` remote, a `projects_repo` that is empty
+    // or that names a different repository than this clone's FETCH url or
+    // than any of its effective PUSH urls, no committed file bearing this
+    // source's sidecar names, more than one directory bearing them, no commit
+    // touching any of them, or every touching commit refusing the strict
+    // load.
     bool init(const AppState& app);
 
     bool               available() const { return available_; }
@@ -290,12 +330,14 @@ public:
     const std::string& project_directory() const { return project_directory_; }
 
 private:
-    bool                     available_ = false;
-    std::string              unavailable_reason_;
-    std::string              base_name_;
-    std::string              project_directory_;
-    GuiHistoryNowSide        now_;
-    std::vector<std::string> commits_;
+    bool              available_ = false;
+    std::string       unavailable_reason_;
+    std::string       base_name_;
+    std::string       project_directory_;
+    GuiHistoryNowSide now_;
+    // The eligible commits, newest first, each carrying the three sidecar
+    // snapshots the load gate read at init — the walk's then sides.
+    std::vector<GuiHistoryCommitSidecars> commits_;
 
     // One slot per commit, filled on first request. A deque-free vector of
     // optionals sized once at init, so no element ever moves.
