@@ -25,3 +25,4 @@ projects/*/*.peaks
 projects/*/*.wav
 projects/*/*.fingerprint
 projects/*/renders/
+projects/*/sheet/
