@@ -296,10 +296,11 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // chords.
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `,` / `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag
-//     cycle, the one shift-carrying shape), bare Home / End and bare `c`. The
-//     definition carries the derivation. handle_history_mode_key consumes
-//     exactly these, one line ABOVE the allowlist, which is why a face
-//     derivation has to ask this first.
+//     cycle, the one shift-carrying shape), Ctrl+Tab (the compare toggle, the
+//     one ctrl-carrying shape), bare Home / End and bare `c`. The definition
+//     carries the derivation. handle_history_mode_key consumes exactly these,
+//     one line ABOVE the allowlist, which is why a face derivation has to ask
+//     this first.
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
 //     shape: true when the press is not admitted while the mode stands. Its
 //     admitted membership is enumerated at the definition.
@@ -1397,9 +1398,12 @@ private:
     // - Pan: the waveform, EITHER half, ALT-exact — the captured grab-pan, which
     //   arms anywhere inside the waveform, so the cue covers the full height.
     // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip drag;
-    //   and the RULER band, plain — the SAME gesture through the same hoisted
-    //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
-    //   share a cursor.
+    //   the RULER band, plain — the SAME gesture through the same hoisted arm
+    //   (arm_strip_drag_at's two entries), which is why the two surfaces share a
+    //   cursor; and, WHILE THE `h` HISTORY VIEW STANDS, the TRIM BAR band, plain
+    //   — a different zoom gesture (it frames the viewed checkpoint's diff span,
+    //   which that band is displaying) wearing the same cue for the same reason
+    //   a cue exists at all.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which
     //   moves BOTH bounds together, and the only trim gesture that does.
     // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the two routes
@@ -1417,6 +1421,11 @@ private:
     // NOTHING — the bar's outside on a trimmed-in window, or a ctrl click the
     // STRICTLY-INSIDE guard would consume — shows the Arrow, and the cue cannot
     // drift from the gesture because there is no second copy to drift.
+    // ALL THREE ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
+    // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
+    // so those three cues go while it stands, and it gives the band a plain
+    // FRAMING press of its own, so the plain zone answers Zoom there instead of
+    // asking the router at all.
     // THE MODIFIER ARMS OUTRANK THE PLAIN ZONES ON THE WAVEFORM, exactly as the
     // press path ranks them: alt or ctrl held means the pan or the zoom drag, not
     // the scrub. SHIFT IS NOT IN THE MAP over the waveform — it forms a region,
@@ -1616,8 +1625,12 @@ private:
     //     navigation band back (the snapshot's own record is at
     //     AppState::HistoryMode).
     //   * frame_viewed_commit_diff_span frames the viewed checkpoint's whole
-    //     delta, at the two edges that drop the lane stash — the entry and each
-    //     `,` / `.` step. Its own comment carries the recipe and the span rule.
+    //     delta. Since 2026-08-05 it is an ON-DEMAND ACT with ONE caller — the
+    //     plain trim-bar click, the mode's analog of the regular views' span-
+    //     framing double-click — rather than an edge effect. Its own comment
+    //     carries the recipe and the span rule.
+    //   * frame_history_view_whole_song is what the EDGES do instead: entry,
+    //     each `,` / `.` step and each compare switch open at FULL ZOOM OUT.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
@@ -1630,11 +1643,12 @@ private:
     //     their indices name — at every mode edge, entry, exit and commit step.
     //     Its own comment carries the argument.
     //   * set_history_compare is the ONE switch owner for the two compare
-    //     readings (2026-08-05), and its two callers are row 3's repurposed
-    //     tabs — the mode's only pointer surface outside the waveform and the
-    //     lane. A switch is a MODE EDGE with the `,` / `.` step's own shape,
-    //     and the owner is idempotent, which is what makes a press on the
-    //     already-shown reading a consumed nothing at its call sites.
+    //     readings (2026-08-05): row 3's repurposed tabs SELECT through it —
+    //     the mode's only pointer surface outside the waveform and the lane —
+    //     and Ctrl+Tab TOGGLES through it. A switch is a MODE EDGE with the
+    //     `,` / `.` step's own shape, and the owner is idempotent, which is what
+    //     makes a press on the already-shown reading a consumed nothing at its
+    //     call sites.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * open_history_commit_confirmation raises the fourth prompt, and is
@@ -1646,6 +1660,7 @@ private:
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();
     void frame_viewed_commit_diff_span();
+    void frame_history_view_whole_song();
     void drop_lane_stash_across_history_edge();
     void set_history_compare(GuiHistoryCompare compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,

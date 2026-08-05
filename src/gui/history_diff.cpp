@@ -1724,7 +1724,7 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
-    // corner's `Scale: [-] a [+] b` says the same kind of thing in both.
+    // corner's `Scale: [-]a [+]b` says the same kind of thing in both.
     d.then_scale_token = scale_token_of(then_settings);
     d.now_scale_token  = scale_token_of(now_settings);
     d.scale_changed    = (d.then_scale_token != d.now_scale_token);

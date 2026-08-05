@@ -8,6 +8,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>
+#include <string>
 #include <vector>
 
 class GuiWaveformWorker;
@@ -78,6 +79,27 @@ constexpr const char* kLoadEditorPrefix   = "Load: ./renders/";
 // one trailing space, and the branch that selects it is the only place the
 // two ever differ.
 constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
+
+// THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
+// DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
+// original `[+] <payload>`). Defined in waveform_cache.cpp beside its first
+// caller and declared here for its SECOND (2026-08-05): the bottom strip's
+// corner line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
+// another surface, so the two cannot spell the sign differently.
+//   * a WARP payload is the tempo token, so this reads `[+]1.05` live and
+//     `[+]#1.05` disabled;
+//   * a PHASE RESET has no payload — its frame is its whole identity — so it
+//     reads the bare `[-]` / `[+]`, with the `#` disable spelling as its one
+//     payload when the bit is set (`[+]#`). That is what makes the phase-reset
+//     column's CHANGED pair say anything at all: a same-frame change there IS a
+//     disable toggle, so `[-]#` beside `[+]` is the toggle in the file's own
+//     spelling, where `[-]` beside `[+]` would carry no information;
+//   * the CORNER passes disabled=false and the `scale=` token, the payload arm
+//     alone.
+// ASCII by construction: the signs are literals and every token comes from a
+// sidecar grammar that is ASCII-only.
+std::string history_diff_label(const char* sign, bool disabled,
+                               const std::string& token);
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //

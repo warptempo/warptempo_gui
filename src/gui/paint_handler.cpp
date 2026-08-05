@@ -1665,9 +1665,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // 2026-08-04 for the `h` history view, which greyed both tabs because
         // their chord was consumed; the architect then made the view REPURPOSE
         // the pair as the compare selector, so the tabs are live in the one
-        // state that ever dimmed them (the hand exception is at
-        // history_mode_disables_button, input_pointer.cpp) and redesign_button_-
-        // enabled answers true for them everywhere. The dim machinery went with
+        // state that ever dimmed them — derived, since Ctrl+Tab is that
+        // selector's own chord and the mode claims it (history_mode_owns_key)
+        // — and redesign_button_enabled answers true for them everywhere. The dim machinery went with
         // its producer rather than sitting here unreachable; the product's one
         // disabled blend is unchanged and still the rule on rows 2 and 4.
         const bool hovered = face.hovered;
@@ -3789,11 +3789,20 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // all: the mode's keyboard allowlist admits no opener but `'`.
         //
         // THE SHAPE: the commit's position in the walk and its short SHA, then
-        // the scale. `Scale: <token>` when the two sides agree; `Scale: [-] <then
-        // token> [+] <now token>` when they do not, in the lane's own sign
-        // vocabulary. A side carrying no `scale=` line at all has an EMPTY token
-        // and shows as nothing after its sign; when BOTH are empty the Scale
-        // segment is omitted whole rather than printing a bare label.
+        // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
+        // sign vocabulary and through the lane's own spelling owner
+        // (history_diff_label), so the corner and the flags cannot come to
+        // bracket differently.
+        //
+        // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect
+        // 2026-08-05, superseding the arc's unchanged-token report): a value
+        // that both sides agree on is not a difference, and this view shows
+        // differences. So there is no unchanged arm at all, and the both-sides-
+        // empty case is covered by the same test rather than by one of its own.
+        // A side carrying no `scale=` line has an EMPTY token and shows as its
+        // bracket with nothing after it — unreachable while `scale` is a
+        // required settings key and every walk member is strict-load clean, and
+        // kept as the least-surprising shape rather than a refusal.
         //
         // THE POSITION/SHA LEAD-IN IS THE PLANNER'S CHOICE, flagged for the
         // architect's live pass — it is one `if` and one `+=`, deliberately
@@ -3822,19 +3831,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // load (history_diff.h's gate, 2026-08-04), so every commit this line
         // can name has a real delta — the old `Ambiguous` token died with the
         // display machinery it named.
-        if (d && !(d->then_scale_token.empty() &&
-                   d->now_scale_token.empty())) {
+        if (d && d->scale_changed) {
             if (!line.empty()) line += ' ';
-            line += "Scale:";
-            if (d->scale_changed) {
-                line += " [-] ";
-                line += d->then_scale_token;
-                line += " [+] ";
-                line += d->now_scale_token;
-            } else {
-                line += ' ';
-                line += d->now_scale_token;
-            }
+            line += "Scale: ";
+            line += history_diff_label("[-]", /*disabled=*/false,
+                                       d->then_scale_token);
+            line += ' ';
+            line += history_diff_label("[+]", /*disabled=*/false,
+                                       d->now_scale_token);
         }
         show_row_text(cr, font, sec.c_x, baseline, line, kRedesignLabel);
     } else if (!app.queue_progress_text.empty()) {

@@ -698,40 +698,22 @@ uint64_t hash_selection(const std::set<int>& s,
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).
 
-namespace {
-
-// ONE DIFF FLAG'S LABEL, both columns, both sides. The shape is: the bracketed
-// SIGN, then — when the line has a payload at all — one space and that payload
-// VERBATIM, with the line's own `#` disable spelling in front of it.
+// ONE DIFF FLAG'S LABEL, both columns, both sides — and, since 2026-08-05, the
+// bottom strip's `Scale:` segment too. The contract and the shapes it produces
+// are at the declaration (paint_handler.h); what the body says is the whole
+// spelling: THE SIGN, THEN THE PAYLOAD DIRECTLY AGAINST IT.
 //
-// A WARP line's payload is its tempo token, so this reads `[+] 1.05` live and
-// `[+] #1.05` disabled. A PHASE RESET line has no payload — its frame is its
-// whole identity, and the frame is the column the flag stands on — so it reads
-// the bare `[-]` / `[+]`, with the disable spelling as its ONE payload when the
-// bit is set: `[+] #`.
-//
-// THAT LAST CASE IS THE DISABLE RULE APPLIED TO THE PHASE-RESET COLUMN RATHER
-// THAN AN EXTRA FORM, and it is what makes that column's CHANGED pair say
-// anything: a phase-reset same-frame change IS a disable toggle and nothing else
-// (the model pairs it for exactly that reason, history_diff.h), so a pair
-// spelled `[-]` beside `[+]` would be a double-width flag carrying no
-// information at all. With the prefix it reads `[-] #` beside `[+]`, which is
-// the toggle, in the file's own spelling.
-//
-// ASCII by construction: the two signs are literals and the tokens come from
-// sidecar grammars that are ASCII-only.
+// NO SPACE AFTER THE BRACKET (architect 2026-08-05, superseding the arc's
+// original `[+] <payload>`), which is why the empty-payload case needs no arm of
+// its own any more: a phase reset with its bit clear appends nothing and rests
+// at the bare sign.
 std::string history_diff_label(const char* sign, bool disabled,
                                const std::string& token) {
     std::string out(sign);
-    if (disabled || !token.empty()) {
-        out += ' ';
-        if (disabled) out += '#';
-        out += token;
-    }
+    if (disabled) out += '#';
+    out += token;
     return out;
 }
-
-} // namespace
 
 void GuiPaintHandler::rebuild_history_diff_flags() {
     std::vector<HistoryDiffFlag>& out = app.history_mode.flags;

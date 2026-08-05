@@ -2154,15 +2154,17 @@ struct AppState {
         // ITS SELECTOR IS ROW 3'S TAB PAIR, which stops being the A/B tabs while
         // the view stands and becomes this bit's radio: tab A reads "Iterative",
         // tab B "Cumulative", the selected face marks the live reading and a
-        // press on the other switches. THERE IS NO HOTKEY, by the architect's
-        // explicit ruling — the keyboard tab switches stay consumed in the mode,
-        // so the surface is repurposed while the keys are not (the partition's
-        // hand exception is at history_mode_disables_button, input_pointer.cpp).
+        // press on the other switches. ITS HOTKEY IS CTRL+TAB — the tabs' own
+        // chord, following the surface (architect 2026-08-05, superseding his
+        // same-day "there is no hotkey for the pair"): in the mode that chord
+        // TOGGLES the reading through the one switch owner instead of switching
+        // tabs, which is the mode-bit-selects-the-command shape Ctrl+Alt+R
+        // already has. Ctrl+Shift+Tab stays the consumed paired march.
         //
         // A SWITCH IS A MODE EDGE, exactly like a `,` / `.` step, and one owner
         // does all of it (GuiInputHandler::set_history_compare): clear the mode
-        // focus, drop the lane's published content, re-frame on the new delta's
-        // span, damage the window.
+        // focus, drop the lane's published content, reset the viewport to full
+        // zoom out, damage the window.
         //
         // EVERY READER OF THE DISPLAYED DELTA PASSES IT, re-derived by grep on
         // delta_at 2026-08-05: the flag cache's rebuild (waveform_cache.cpp),
@@ -3035,9 +3037,10 @@ bool history_mode_disables_button(const AppState::HistoryMode& mode,
 //     so the vector is total over the roster and the comparator needs no
 //     membership test. (The tabs answer true in EVERY state since 2026-08-05:
 //     the history view, which greyed them for one day, repurposes the pair as
-//     its compare selector instead, and the hand exception that says so is in
-//     history_mode_disables_button — so the mode line at the top of this body
-//     never fires for them either, and row 3 has no disabled face at all.)
+//     its compare selector instead, and the chord it gave that selector —
+//     Ctrl+Tab, the mode's own compare toggle — is what makes the derived
+//     partition call them LIVE, so the mode line at the top of this body never
+//     fires for them either, and row 3 has no disabled face at all.)
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
 // swallows the PRESS at the pointer path's own modal gate, and a modal that
 // greyed the chrome under it would be a fourth face nobody asked for.

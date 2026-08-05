@@ -334,17 +334,17 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // (its first line — the same lockout that keeps a popup and this mode mutually
 // exclusive). One named site, not a policy invented here.
 //
-// AND SINCE 2026-08-05 THE TWO TABS ARE A SECOND HAND ENTRY, for the mirror
-// reason: their chord IS consumed (Ctrl+Tab is not on the allowlist and never
-// will be — views yes, tabs no) and yet the BUTTONS are live, because the view
-// REPURPOSES the surface. While it stands row 3 is the compare selector —
-// "Iterative" and "Cumulative", the two readings of a checkpoint — and its
-// presses are routed mode-locally at the tab row's own band claim, never through
-// a chord. So the derivation would answer for a key the surface no longer
-// dispatches, and the hand exception is what keeps face and act agreeing. The
-// KEYBOARD is untouched: Ctrl+Tab and the Ctrl+Shift+Tab march stay consumed,
-// and the lock slots go with the tabs' old meaning (the painter draws no padlock
-// and publishes no lock rect in the mode).
+// THE TWO TABS NEEDED A SECOND HAND ENTRY FOR ONE DAY AND NO LONGER DO
+// (2026-08-05). While it stands row 3 is the COMPARE SELECTOR — "Iterative" and
+// "Cumulative", the two readings of a checkpoint — with a mode-local press route
+// at the tab row's own band claim; the pair shipped with no hotkey at all, so
+// their chord was consumed while their buttons were live and only a hand entry
+// could say so. Ctrl+Tab BECAME the compare toggle later that day, claimed by
+// the mode's own vocabulary (history_mode_owns_key), so the derivation now
+// answers LIVE for them on its own and the exception is gone. Ctrl+Shift+Tab is
+// still the consumed paired march, and the lock slots still go with the tabs'
+// old meaning (the painter draws no padlock and publishes no lock rect in the
+// mode).
 //
 // THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
 // never sees the mode's own vocabulary — handle_history_mode_key consumes it one
@@ -352,10 +352,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // grey out THE VERY BUTTON THAT LEAVES THE VIEW. history_mode_owns_key is that
 // line's own predicate, shared rather than re-spelled, and its membership is
 // re-derived at its own definition.
-// THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW (2026-08-05, the
-// diff-flag cycle, Home/End and `c`): none of the new shapes is a roster chord —
-// the table's only Tab entries are the tabs' Ctrl+Tab, which the predicate's
-// ctrl test excludes, and nothing in it dispatches bare Tab, Home, End or `c`.
+// THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW, either time (2026-08-05
+// — first the diff-flag cycle, Home/End and `c`, then the compare toggle). None
+// of the bare shapes is a roster chord (nothing in kToolbarChords dispatches
+// bare Tab, Home, End or `c`), and the ONE new roster chord — the tabs' Ctrl+Tab
+// — was already answered LIVE by the hand entry the claim replaced.
 //
 // ONE ENTRY IS A FUNCTION OF THE SESSION, not of the chord alone (2026-08-05),
 // which is why this takes the mode rather than only a button: the allowlist
@@ -379,10 +380,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   the viewed commit in place), and the history button itself (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
-//   and BOTH TABS since 2026-08-05 — the second hand entry above, live as the
-//   COMPARE SELECTOR rather than as tabs, with their padlocks not drawn at all
-//   (the mode's tabs are not tabs, so there is no lock state to show and no lock
-//   rect published for bare `o` to be refused through).
+//   and BOTH TABS since 2026-08-05 — live as the COMPARE SELECTOR rather than as
+//   tabs (Ctrl+Tab, the mode's own compare toggle, so they come out of the walk
+//   like any other admitted chord), with their padlocks not drawn at all (the
+//   mode's tabs are not tabs, so there is no lock state to show and no lock rect
+//   published for bare `o` to be refused through).
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
@@ -402,11 +404,6 @@ bool history_mode_disables_button(const AppState::HistoryMode& mode,
     if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
         return true;
     }
-    // THE COMPARE SELECTOR (2026-08-05). Their chord is consumed and their
-    // buttons are live, which no derivation from the chord can say — the
-    // surface's meaning changed, not the key's. Above the walk so the table's
-    // Ctrl+Tab entries are never asked about.
-    if (b == RedesignButton::TabA || b == RedesignButton::TabB) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -779,19 +776,26 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
     // bound-set clicks). The presses gate on the top strip first and so does this.
     const GuiRect trim_bar_row = top_trim_row_area(app);
-    // THE `h` HISTORY MODE REFUSES THIS BAND AND ONLY THIS BAND, which is why it
-    // enters the map HERE rather than as a fourth blanket return above. The mode
-    // is PER-ZONE exactly as read-only is: the Pan, the Zoom (both entries) and
-    // the Scrub stay live under it — they are its navigation vocabulary — while
-    // all three TRIM gestures are consumed no-ops, so all three trim cues must
-    // go. Emptying the band here is the whole change: the plain arm falls past
-    // its endcap/bridge branch to the Arrow, the ctrl arm to the waveform's own
-    // Zoom-or-Arrow question, and the ctrl+shift arm to the Arrow it already
-    // returns everywhere else.
     const bool in_trim_bar = inside_top &&
-                             !app.history_mode.active &&
                              y >= trim_bar_row.y &&
                              y < trim_bar_row.y + trim_bar_row.h;
+    // THE `h` HISTORY MODE CONSUMES THIS BAND'S THREE TRIM GESTURES AND ONLY
+    // THOSE, which is why the mode enters the map HERE rather than as a fourth
+    // blanket return above. The mode is PER-ZONE exactly as read-only is: the
+    // Pan, the Zoom (both entries) and the Scrub stay live under it — they are
+    // its navigation vocabulary — while the endcap/bridge drags and the two ctrl
+    // bound-set clicks are consumed no-ops, so their three cues must go. This
+    // term is what takes them: the ctrl arm falls to the waveform's own
+    // Zoom-or-Arrow question and the ctrl+shift arm to the Arrow it already
+    // returns everywhere else.
+    // THE PLAIN ARM IS THE EXCEPTION SINCE 2026-08-05, and it is not a hole in
+    // the rule but the rule applied to a NEW gesture: a plain press on this band
+    // in the mode zooms to the viewed checkpoint's diff span, so the band shows
+    // the ZOOM cue — the ruler's own cue for its own zoom gesture, one band
+    // further up — and cue and gesture agree there exactly as they do outside
+    // the mode.
+    const bool trim_write_gestures_live =
+        in_trim_bar && !app.history_mode.active;
 
     // ALT-EXACT: the captured grab-pan, whose press arms on `inside_waveform`
     // alone — either half, no band split. Alt claims nothing at all in the top
@@ -807,7 +811,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // other top-strip claim is the marker membership toggle, which is not a drag
     // and has no cue.
     if (mods.ctrl && !mods.alt && !mods.shift) {
-        if (in_trim_bar)
+        if (trim_write_gestures_live)
             return trim_bound_click_frame(/*is_begin=*/true, x)
                        ? GuiCursorKind::TrimBoundBegin : GuiCursorKind::Arrow;
         return inside_waveform ? GuiCursorKind::Zoom : GuiCursorKind::Arrow;
@@ -816,7 +820,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // END bound set, the begin set's mirror — so it takes the END cap's cue there
     // and the Arrow everywhere else.
     if (mods.ctrl && mods.shift && !mods.alt) {
-        if (in_trim_bar)
+        if (trim_write_gestures_live)
             return trim_bound_click_frame(/*is_begin=*/false, x)
                        ? GuiCursorKind::TrimBoundEnd : GuiCursorKind::Arrow;
         return GuiCursorKind::Arrow;
@@ -857,6 +861,13 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // will not run. The band's span-framing double-click DOES survive
         // read-only, but it is not what this cursor names.
         if (in_trim_bar) {
+            // IN THE `h` HISTORY MODE THIS BAND IS A ZOOM (2026-08-05): the
+            // plain press frames the viewed checkpoint's diff span — the span
+            // the bar is displaying — so it takes the ruler's cue for the
+            // ruler's own zoom gesture, over the WHOLE band, which is exactly
+            // the surface the press claims. Above the read-only return because
+            // framing is navigation and the lock does not refuse it.
+            if (app.history_mode.active) return GuiCursorKind::Zoom;
             if (active_view_state(app).read_only) return GuiCursorKind::Arrow;
             switch (hit_test_trim_endcap(app, audio, x, y)) {
                 case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
@@ -1338,11 +1349,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (mods.ctrl || mods.alt) return;               // strict no-op
             // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` VIEW STANDS
             // (architect 2026-08-05), so its presses are routed HERE and never
-            // reach the chord table below: the tabs' chord is Ctrl+Tab, which
-            // the mode consumes and always will, while the SURFACE has a
-            // mode-local meaning — pick the reading the lane shows.
+            // reach the chord table below: these two SELECT a reading, which is
+            // not what a chord dispatch would do — the tabs' chord, Ctrl+Tab,
+            // became the mode's TOGGLE the same day and would flip away from
+            // whichever half was clicked.
             //
-            // ONE SWITCH OWNER for both halves (set_history_compare), and it is
+            // ONE SWITCH OWNER for all three routes — these two halves and that
+            // keyboard toggle (set_history_compare) — and it is
             // IDEMPOTENT, which is where the live tabs' radio rule comes from:
             // a press on the reading already shown is a consumed no-op because
             // the owner returns, not because this site tests for it.
@@ -3281,8 +3294,14 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //   * a PLAIN press in the RULER band — the strip drag's other entry.
 //   * a PLAIN press in the waveform's LOWER HALF — the scrub.
 //
-// THE ACTS, all three PLAIN and all three pure navigation (2026-08-05, when the
-// waveform's upper half joined the marker lane):
+// THE ACTS, all four PLAIN and all four pure navigation (2026-08-05, when the
+// waveform's upper half joined the marker lane and the trim bar gained its
+// framing click):
+//   * a press anywhere on the TRIM BAR band ZOOMS TO THE VIEWED CHECKPOINT'S
+//     DIFF SPAN — the span that band is already displaying — through the
+//     framing act the mode's edges stopped running when they went to full zoom
+//     out (frame_viewed_commit_diff_span, input_key_dispatch.cpp). It moves the
+//     viewport and nothing else.
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses. It
@@ -3306,9 +3325,11 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     so a second click is simply another placement press.
 //
 // EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks and their drag arm,
-// the empty-lane marker drop, the trim bar's three routes, and every unbound
-// modifier combination (a modified press over the lane or a stem included: only
-// the bare arm reaches these acts).
+// the empty-lane marker drop, the trim bar's three WRITING routes (the endcap
+// and bridge drags and the two ctrl bound-set clicks, all of which the framing
+// click above replaced rather than joined), and every unbound modifier
+// combination (a modified press over the lane or a stem included: only the bare
+// arm reaches these acts).
 bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
                                                 int x, int y,
                                                 GuiInputState mods) {
@@ -3331,12 +3352,31 @@ bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
     if (ctrl && !shift && !alt) return !inside_waveform;
     if (ctrl || shift || alt)   return true;
 
-    // Plain from here. The two bands are tested by y alone, exactly as their own
-    // claims test them: both lie inside the top strip, which spans the full
-    // window width.
+    // Plain from here. The top-strip bands are tested by y alone, exactly as
+    // their own claims test them: each lies inside the top strip, which spans
+    // the full window width.
     {
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) return false;
+    }
+    // THE TRIM BAR ZOOMS TO THE DIFF SPAN (architect 2026-08-05) — the mode's
+    // fourth plain act and its analog of the regular views' span-framing
+    // double-click, taken on ONE click here because every other gesture on this
+    // band is a consumed no-op in the mode, so there is no first click for a
+    // double to build on. The band is showing that span already (paint_trim's
+    // display-only substitution while the view stands), which is what makes the
+    // gesture read as "zoom to what the bar shows" — and the empty-delta case
+    // falls to the framer's whole-song arm, which is harmless where the edges
+    // have already left the view. The WHOLE band, endcaps included: those
+    // endcaps are painted geometry with no gesture in here, so splitting the
+    // band would be a distinction nothing acts on. Read-only does not refuse it
+    // — framing is navigation, exactly as the pan and the zoom above are.
+    {
+        const GuiRect trim_bar = top_trim_row_area(app);
+        if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
+            frame_viewed_commit_diff_span();
+            return true;
+        }
     }
     if (inside_waveform && waveform_lower_half(area, y)) return false;
 

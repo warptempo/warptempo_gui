@@ -1319,9 +1319,9 @@ void render_history_diff_flags(
     // from the lane's nine-glyph budget, because THESE LABELS ARE NOT CAPPED.
     // The live lane truncates because a marker label is free text the user types
     // and a runaway one would swamp its neighbours; a diff flag's label is the
-    // SIDECAR'S OWN TOKEN with a four-byte sign prefix, and cutting it would
-    // throw away the one thing the flag exists to show — a `[-] chorus=1.05`
-    // capped at nine budgeted bytes reads `[-] choru...`, which names neither
+    // SIDECAR'S OWN TOKEN with a three-byte sign prefix, and cutting it would
+    // throw away the one thing the flag exists to show — a `[-]chorus=1.05`
+    // capped at nine budgeted bytes reads `[-]choru...`, which names neither
     // the label nor the value. So the text prints whole and the bound follows
     // it: one byte per em is the same over-estimate marker_flag_max_width_px
     // makes (no ASCII glyph on this face advances a full em at these sizes), and
