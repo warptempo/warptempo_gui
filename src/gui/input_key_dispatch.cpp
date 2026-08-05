@@ -618,12 +618,15 @@ void GuiInputHandler::set_history_compare(GuiHistoryCompare compare) {
 // is decided HERE — one line above the allowlist — rather than in it. Spelling
 // the membership twice is exactly how that face would come to lie about the
 // button that opens the view.
-// THE ONE BUTTON CHORD IN HERE IS CTRL+TAB, and it arrived with the compare
-// toggle (2026-08-05). The roster's ONLY Tab entries are the two TABS' Ctrl+Tab
-// (kToolbarChords, re-derived by reading the table), and in the mode those
-// buttons ARE the compare selector — so the partition did not move: the pair was
-// already answered LIVE by hand, and this claim now says the same thing by
-// derivation, which is what let the hand entry go. Nothing in the roster
+// THREE OF THESE SHAPES ARE ALSO BUTTON CHORDS, re-derived by reading
+// kToolbarChords rather than remembered: CTRL+TAB, which arrived with the
+// compare toggle (2026-08-05) — the roster's only Tab entries are the two TABS',
+// and in the mode those buttons ARE the compare selector, so the partition did
+// not move when this claim arrived: the pair was already answered LIVE by hand,
+// and the derivation now says the same thing, which is what let the hand entry
+// go — and BARE `,` / BARE `.`, the walk's own two buttons (2026-08-05), which
+// are the roster's first RESTING-DISABLED entries: their enabled bit is the mode
+// itself, so they dispatch these keys only from in here. Nothing in the roster
 // dispatches bare Tab, Home, End or `c`.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
@@ -680,6 +683,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // `,` steps OLDER (further back in the walk, index+1), `.` steps NEWER
     // (index-1). Each CLAMPS at its wall as a consumed no-op — the walk has
     // ends, and running off one must not wrap or refuse loudly.
+    // THE ICON ROW'S TWO ARROW BUTTONS ARE THESE KEYS (2026-08-05,
+    // RedesignButton::IconHistoryOlder / IconHistoryNewer): they dispatch the
+    // bare chords through on_key like every other button, so this is the one
+    // body and a click at a wall is the same consumed nothing a key press is.
     if (key == GuiKeys::Comma || key == GuiKeys::Period) {
         const std::size_t count = app.history_mode.session.commit_count();
         const std::size_t here  = app.history_mode.index;

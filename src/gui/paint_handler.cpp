@@ -876,7 +876,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // the GUI when the Navigation dropdown gave `-` and `=` a home there, so the
     // two buttons and their icons were deleted whole, taking the row back to
     // eleven buttons in four groups; the keys are untouched. The twelfth and
-    // fifth arrived 2026-08-04 at the row's other end — the history button.)
+    // fifth arrived 2026-08-04 at the row's other end — the history button —
+    // and its group took the thirteenth and fourteenth 2026-08-05, the walk's
+    // older / newer steps, leaving the row at FOURTEEN buttons in five groups.)
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -896,6 +898,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     // way the four existing boundaries do rather than inventing a second kind of
     // gap that would have to be explained.
     {RedesignButton::IconHistory, IconRowLead::Separator, nullptr, icons::Icon::VcsDiff},
+    // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
+    // button's group rather than opening a sixth: they are the same mode's
+    // controls, and the row's one group boundary already said where that mode
+    // starts. So they take the ordinary 2px Gap, and the group reads History |
+    // Older | Newer left to right, the arrows pointing the way each one walks.
+    // Being LAST IN THE WALK is what makes this a pure append: the layout is a
+    // single left-to-right accumulation with no right float and no total-width
+    // term, so no existing button's rect, separator or damage band moves by a
+    // pixel.
+    {RedesignButton::IconHistoryOlder,
+     IconRowLead::Gap, nullptr, icons::Icon::GoPrevious},
+    {RedesignButton::IconHistoryNewer,
+     IconRowLead::Gap, nullptr, icons::Icon::GoNext},
 };
 
 // THE TOOLBAR'S ICON, by state — redesign_button_label's sibling (app_state.h,
@@ -1848,10 +1863,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, four vertical separators, and twelve 32x32 buttons in five
+    // width, four vertical separators, and fourteen 32x32 buttons in five
     // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
     // the bpm / iteration / follow modes, the listen / load-in-place pair, and
-    // the history mode's own button (2026-08-04).
+    // the history group: the mode's own button (2026-08-04) plus the walk's
+    // older / newer arrows (2026-08-05).
     // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
     // the Navigation dropdown is those two commands' pointer home now.)
     //
@@ -1880,11 +1896,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // presses here always dispatch and the CHORDS' OWN refusals answer (the
     // read-only gate blocks the authoring ones, loading blocks everything),
     // inherited through on_key rather than mirrored — the standing
-    // chord-dispatch ruling doing exactly the work it exists for. THE ONE RULED
-    // EXCEPTION, and it is a MODE rather than a refusal: the `h` history view
-    // greys the buttons it consumes (architect 2026-08-04, at the face code
-    // below) — a whole mode saying what it will not do, which the per-press
-    // refusals above cannot express.
+    // chord-dispatch ruling doing exactly the work it exists for. THE TWO RULED
+    // EXCEPTIONS ARE BOTH THE `h` HISTORY VIEW'S, and both are a MODE rather
+    // than a refusal, which is what the per-press refusals above cannot express:
+    // while the view stands it greys the buttons it consumes (architect
+    // 2026-08-04, at the face code below), and INVERSELY the walk's two arrow
+    // buttons rest DISABLED and light only in there (architect 2026-08-05) —
+    // their keys, bare `,` and bare `.`, are bound nowhere else in the product.
+    // Both live at redesign_button_enabled, so this row's painter needs no arm
+    // of its own for either.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -1947,11 +1967,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
         // rule above, scoped to that mode alone — while the view stands, copy,
         // paste, bpm, iteration, follow and listen are consumed acts and say so,
-        // while the S/T + W/P radios, the load-in-place opener and the history
-        // button
-        // itself stay live. Which is which is DERIVED from the mode's own gates
+        // while the S/T + W/P radios, the load-in-place opener, the history
+        // button itself and the walk's two arrows stay live. Which is which is
+        // DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
         // partition is inventoried); nothing here decides membership.
+        //
+        // THE SAME FACE, WORN AT REST, IS THE WALK'S TWO ARROWS OUTSIDE THE
+        // VIEW (architect 2026-08-05): the mode-scoped exception inverted, for
+        // the two buttons whose keys exist only inside it. Same blend, same
+        // pointer-dead press and same absent tooltip, decided at the same one
+        // predicate — so the row still has exactly one dead face, in two
+        // states of one mode rather than in two mechanisms.
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
         // one disabled blend, row 2's rule applied to this row's glyph, letter

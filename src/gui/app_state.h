@@ -732,7 +732,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
 // Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
-// then row 4's twelve view / mode / action buttons. It exists ONCE, here, because it indexes
+// then row 4's fourteen view / mode / action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -787,9 +787,17 @@ enum class RedesignButton {
     // landed with the commit act: bare `h`, in its own group past a separator,
     // lit while the mode stands. Its chord toggles, so the same click that
     // opened the view closes it.
-    IconHistory
+    IconHistory,
+    // THE WALK'S TWO STEPS (2026-08-05), sharing that group: OLDER (bare `,`)
+    // and NEWER (bare `.`), so the checkpoint walk is drivable with the mouse
+    // alone. They are the roster's FIRST buttons whose RESTING state is
+    // DISABLED — outside the history view their keys are bound to nothing at
+    // all, so a live face would advertise an act that does not exist — and the
+    // exception is spelled at redesign_button_enabled below, beside the
+    // history mode's own.
+    IconHistoryOlder, IconHistoryNewer
 };
-inline constexpr int kRedesignButtonCount = 24;
+inline constexpr int kRedesignButtonCount = 26;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -854,6 +862,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         case RedesignButton::IconHistory:
+        case RedesignButton::IconHistoryOlder:
+        case RedesignButton::IconHistoryNewer:
             break;
     }
     return false;
@@ -3070,8 +3080,13 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. Their presses always dispatch and the
-        // CHORDS' OWN refusals answer: the read-only gate blocks the authoring
+        // 1 and 3 by their face scope. (TWO of row 4's fourteen are the ruled
+        // exception, and they are the arm below this one: the walk's older /
+        // newer steps rest disabled because their keys are bound only inside the
+        // history view. The rule stated here is still the row's — the exception
+        // is named where it lives, not counted into this arm.) Their presses
+        // always dispatch and the CHORDS' OWN refusals answer: the read-only
+        // gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
         // guards. Inherited through on_key, never mirrored here — which is why
         // these are a plain `return true` and not a second copy of those gates.
@@ -3116,6 +3131,32 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // button joins the row's arm on the row's own terms.
         case RedesignButton::IconHistory:
             return true;
+        // THE WALK'S TWO STEPS ARE THE ROW'S SECOND FACE EXCEPTION, and the
+        // only one that is not mode-SCOPED but mode-INVERTED (architect
+        // 2026-08-05): they REST DISABLED and come alive inside the history
+        // view. Every other button on this row mirrors nothing because its
+        // chord always means something and its own refusals answer; bare `,`
+        // and bare `.` are bound in exactly one place in the product
+        // (handle_history_mode_key, the only reader of either key),
+        // so outside the view there is no act to refuse, and a live face would
+        // promise one. The bit is the mode itself, which is why this arm is a
+        // plain read of it rather than a mirror of any gate.
+        //
+        // THE MODE LINE AT THE TOP OF THIS BODY NEVER FIRES FOR THEM: their
+        // chords are the view's OWN vocabulary (history_mode_owns_key admits
+        // bare `,` and `.`), which the derived partition asks first, so
+        // history_mode_disables_button answers LIVE and this arm decides.
+        //
+        // THEY DO NOT GREY AT THE WALK'S WALLS, deliberately: stepping past
+        // the oldest or newest checkpoint is a consumed no-op on the keyboard
+        // (handle_history_mode_key returns having done nothing), and a click at
+        // a wall is the same consumed nothing. Two states are what this button
+        // has to say — the view is open or it is not — and a third that tracked
+        // the walk index would repaint the row on every step to report
+        // something the walk itself already shows (the `n/N` corner readout).
+        case RedesignButton::IconHistoryOlder:
+        case RedesignButton::IconHistoryNewer:
+            return a.history_mode.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -3205,6 +3246,14 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
+        // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
+        // like follow and iteration: each is a step that completes, with no
+        // state to stay lit for. WHERE the walk stands is the corner readout's
+        // `n/N`, which says it in numbers; a lit arrow could only mean "you
+        // pressed this", which the click face already says for as long as it is
+        // true.
+        case RedesignButton::IconHistoryOlder:
+        case RedesignButton::IconHistoryNewer:
             break;
     }
     return false;
@@ -3303,6 +3352,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
         case RedesignButton::IconHistory: return {"History (h)", nullptr};
+        // THE WALK'S TWO STEPS, in HELP's own words for the walk ("older" /
+        // "newer" checkpoints). They are the roster's only tooltips a user
+        // cannot normally reach: the hint is refused on a disabled button (the
+        // painter's own gate) and these two rest disabled, so the hover text
+        // appears exactly inside the history view, where the click acts.
+        case RedesignButton::IconHistoryOlder: return {"Older (,)", nullptr};
+        case RedesignButton::IconHistoryNewer: return {"Newer (.)", nullptr};
     }
     return {nullptr, nullptr};
 }

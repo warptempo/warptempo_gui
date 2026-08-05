@@ -239,6 +239,36 @@ constexpr IconPath kVcsDiffPaths[] = {
      "10.207031 6.5 L 12.853516 3.8535156 L 13.207031 3.5 L 12.5 2.7929688 z "},
 };
 
+// -- THE WALK'S TWO CHEVRONS (2026-08-05) --------------------------------------
+//
+// go-previous and go-next, the icon row's older / newer checkpoint buttons.
+// Transcribed verbatim like every entry above, from the committed
+// go-previous.svg / go-next.svg, and both resolve to the scheme's #fcfcfc.
+//
+// EACH IS ONE OUTLINE PATH, not a stroked line: Breeze draws the chevron as a
+// closed shape whose two limbs are one unit thick at the viewBox's own scale,
+// exactly as go-jump's does (they are the same drawing, go-jump's carrying its
+// destination dot as a second subpath). So the line weight scales with
+// gui_scale like every other geometry in this table, with no stroke width to
+// set and nothing that could fatten at 200%.
+//
+// THEY ARE MIRROR IMAGES and their `d` strings are NOT mirrors of each other:
+// each file walks its own outline from its own start point, so neither is
+// derived from the other here — both are copied, which is what keeps a diff
+// against the files a transcription bug and nothing else.
+constexpr IconPath kGoPreviousPaths[] = {
+    {kIconText,
+     "m14.292969 3l-6.125 6.125-1.875 1.875 1.875 1.875 6.125 "
+     "6.125.707031-.707031-6.125-6.125-1.167969-1.167969 1.167969-1.167969 "
+     "6.125-6.125-.707031-.707031"},
+};
+
+constexpr IconPath kGoNextPaths[] = {
+    {kIconText,
+     "m7.707031 3l-.707031.707031 6.125 6.125 1.167969 1.167969-1.167969 "
+     "1.167969-6.125 6.125.707031.707031 6.125-6.125 1.875-1.875-1.875-1.875-6.125-6.125"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -254,6 +284,8 @@ constexpr IconDef kLock               {22.0, kLockPaths,                1};
 constexpr IconDef kUnlock             {22.0, kUnlockPaths,              1};
 constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
 constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
+constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
+constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -271,6 +303,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::Unlock:              return kUnlock;
         case Icon::VcsCommit:           return kVcsCommit;
         case Icon::VcsDiff:             return kVcsDiff;
+        case Icon::GoPrevious:          return kGoPrevious;
+        case Icon::GoNext:              return kGoNext;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

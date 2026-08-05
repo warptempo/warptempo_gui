@@ -53,6 +53,14 @@ enum class Icon {
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
+    // THE WALK'S TWO ARROWS (2026-08-05), the history group's other pair: the
+    // checkpoint walk's older (`,`) and newer (`.`) steps. Breeze's own
+    // go-previous / go-next chevrons — go-jump's own construction minus its
+    // destination dot, ONE closed outline per file whose limbs are one viewBox
+    // unit thick, so the weight rides the icon's scale like every other
+    // geometry here and there is no stroke to set.
+    GoPrevious,          // Older checkpoint (`,`)
+    GoNext,              // Newer checkpoint (`.`)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable
     // one (the slot's contract is at the tab painter).
@@ -63,7 +71,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 15;
+inline constexpr int kIconCount = 17;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

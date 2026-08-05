@@ -161,6 +161,19 @@ constexpr ToolbarChord kToolbarChords[] = {
     // rows' presses are covered by the KEYBOARD gate instead, which admits `h`
     // through handle_history_mode_key one line before the allowlist).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
+    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-third and
+    // twenty-fourth: bare `,` steps OLDER and bare `.` NEWER, through the same
+    // dispatch and therefore through handle_history_mode_key's own arm — walls
+    // clamped as consumed no-ops there, exactly as the keys behave. Neither is
+    // a radio and neither is a toggle: they are momentary steps, so both flags
+    // read like copy's and paste's, and only the CLICK face is set. Outside the
+    // view they never dispatch at all, their enabled bit being the mode
+    // (redesign_button_enabled), which is the one thing that makes the pair
+    // safe to leave in a table whose keys are otherwise always bound.
+    {RedesignButton::IconHistoryOlder,
+     GuiKeys::Comma,  false, false, false, false, true},                             // bare ,
+    {RedesignButton::IconHistoryNewer,
+     GuiKeys::Period, false, false, false, false, true},                             // bare .
 };
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
@@ -384,7 +397,16 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   tabs (Ctrl+Tab, the mode's own compare toggle, so they come out of the walk
 //   like any other admitted chord), with their padlocks not drawn at all (the
 //   mode's tabs are not tabs, so there is no lock state to show and no lock rect
-//   published for bare `o` to be refused through).
+//   published for bare `o` to be refused through),
+//   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
+//   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
+//   them with nothing hand-listed. They are the roster's two RESTING-DISABLED
+//   buttons, which is the OTHER predicate's fact rather than this one's: their
+//   keys are bound nowhere outside the view, so redesign_button_enabled greys
+//   them there and this function is what says they act in here. They never
+//   grey at a walk WALL either — a step past the oldest or newest checkpoint
+//   is a consumed no-op, which is the same nothing every other refusal in this
+//   partition is.
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
@@ -2849,7 +2871,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs and row 4's twelve — the stash is
+// four, row 3's two tabs and row 4's fourteen — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;

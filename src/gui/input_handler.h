@@ -551,7 +551,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
-    // the view bar's three, row 2's four, row 3's two tabs and row 4's twelve
+    // the view bar's three, row 2's four, row 3's two tabs and row 4's fourteen
     // (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
