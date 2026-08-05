@@ -1620,8 +1620,9 @@ private:
     //     already printed) when there is no history to show; the mode is then
     //     left exactly as it was.
     //   * drop_lane_stash_across_history_edge empties the marker lane's
-    //     published geometry at both mode edges, where its entries change
-    //     domain. Its own comment carries the argument.
+    //     published content — the two pointer stashes and the diff-flag list
+    //     their indices name — at every mode edge, entry, exit and commit step.
+    //     Its own comment carries the argument.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * open_history_commit_confirmation raises the fourth prompt, and is

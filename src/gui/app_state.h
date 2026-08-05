@@ -2173,6 +2173,17 @@ struct AppState {
         // publishes for these same items). `focus` and every hit rect's
         // marker_index index INTO THIS VECTOR, so all three move together or not
         // at all.
+        //
+        // IT IS PAINT-CACHE OUTPUT, so it carries the once-per-tick cadence of
+        // its producer, and IT IS DROPPED AT EVERY MODE EDGE alongside the two
+        // stashes for exactly that reason — a `,` / `.` step would otherwise
+        // leave the LEAVING commit's flags standing for the keyboard to cycle
+        // (drop_lane_stash_across_history_edge, input_key_dispatch.cpp, owns the
+        // argument). Its READERS, re-derived by grep 2026-08-05: the producer
+        // itself and the lane painter it feeds (waveform_cache.cpp), the mode's
+        // Tab cycle and its bare `c` (handle_history_mode_key), and the focus
+        // click's shared body (focus_history_diff_flag). Every one of them reads
+        // an EMPTY list as "nothing there" — the cold answer the drop relies on.
         std::vector<HistoryDiffFlag> flags;
 
         // WHICH SESSION THIS IS — a counter the ONE entry owner

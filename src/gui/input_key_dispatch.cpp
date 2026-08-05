@@ -241,8 +241,9 @@ void GuiInputHandler::close_history_mode() {
     viewport.invalidate_all();
 }
 
-// DROP THE LANE'S PUBLISHED GEOMETRY AT EVERY MODE EDGE — both stashes, at the
-// entry, the exit and each commit step.
+// DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
+// it, at the entry, the exit and each commit step: the two pointer stashes and
+// the diff-flag LIST their indices name.
 //
 // The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK
 // by the flag cache's rebuild, so they legitimately run one frame behind a
@@ -255,11 +256,29 @@ void GuiInputHandler::close_history_mode() {
 // landing on whatever store marker happens to share a diff flag's ordinal, or
 // none at all.
 //
+// THE LIST ITSELF IS THE SAME ARGUMENT WIDENED (2026-08-05): app.history_mode.-
+// flags is paint-cache OUTPUT, rebuilt only by that same once-per-tick pass, so
+// between an edge and the next tick it still holds the LEAVING commit's flags —
+// and the keyboard reaches it directly, with no stash in between. Key events
+// arrive in BATCHES (the compositor's pending queue drains whole before the
+// tick, the same batching the mode's session counter already argues from), so a
+// `,` and a Tab delivered together would cycle the old commit's list: the
+// playhead lands on a flag that is no longer shown, and the ordinal it stored
+// then brightens whatever flag the NEW commit has at that ordinal once the
+// rebuild lands — focus and playhead describing different flags, which is
+// exactly what `focus` indexes the painted list to prevent.
+//
 // Clearing is the whole fix and it is the lane's own rule applied: nothing is
-// clickable that is not drawn, and for that one frame the answer to every lane
-// hit is "nothing", which is the correct cold answer rather than a wrong warm
-// one. The cost is the same frame's stems, absent instead of stale — and the
-// edge's own full-window damage is already repainting.
+// clickable OR NAVIGABLE that is not drawn, and for that one frame the answer to
+// every lane hit and every cycle step is "nothing", which is the correct cold
+// answer rather than a wrong warm one. The cost is the same frame's stems,
+// absent instead of stale — and the edge's own full-window damage is already
+// repainting.
+//
+// A SYNCHRONOUS FLAG REBUILD AT THE STEP EDGE (the view switch's own answer,
+// below) WAS DELIBERATELY NOT CHOSEN: it is heavier than a one-tick window
+// warrants, and the empty answer is already this gap's ruled shape on the
+// pointer side.
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
 // (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist), and
@@ -267,8 +286,9 @@ void GuiInputHandler::close_history_mode() {
 // only DAMAGES (invalidate_all) and leaves republication to the next tick, which
 // is what opens the frame this function closes. A view switch ends in
 // kick_waveform_sync, and that route rebuilds the flag cache INLINE at its tail
-// — the same call that republishes both stashes — so the new view's rects are
-// already standing when the press returns and there is no frame to protect.
+// — the same call that republishes all three, the list included — so the new
+// view's flags and rects are already standing when the press returns and there
+// is no frame to protect.
 // Nor is there a domain change to protect against: on both sides of a view
 // switch `marker_index` indexes app.history_mode.flags, the mode owning the lane
 // throughout. Dropping anyway would be worse than redundant if it ran after the
@@ -279,6 +299,7 @@ void GuiInputHandler::close_history_mode() {
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.flag_hit_rects.clear();
     app.marker_stems.clear();
+    app.history_mode.flags.clear();
 }
 
 // ENTER THE MODE ON A FRESH SESSION — the one entry owner, the mirror of
@@ -423,11 +444,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // flag — and the playhead it landed stays where it is, which is the
         // navigation the click was.
         app.history_mode.focus = -1;
-        // The lane's published geometry describes the commit that is leaving —
-        // same domain as the one arriving, so no index can be misread, but the
-        // FRAMES behind those rects are the old commit's until the next tick
-        // republishes. Dropping it makes the intervening frame answer "nothing"
-        // instead of landing the playhead on a flag that is no longer shown.
+        // The lane's published content — the diff-flag list and the two pointer
+        // stashes over it — describes the commit that is LEAVING, and stays that
+        // way until the next tick republishes. Same domain on both sides, so no
+        // index can be misread, but the FRAMES behind them are the old commit's:
+        // dropping all three makes the intervening frame answer "nothing" to a
+        // lane press and to a Tab step alike, instead of landing the playhead on
+        // a flag that is no longer shown.
         drop_lane_stash_across_history_edge();
         viewport.invalidate_all();
         return true;
@@ -454,8 +477,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // walk direction and does nothing at all with none ahead, so a Tab on the
     // last flag is a consumed no-op here too. With NO focus standing Tab takes
     // the FIRST flag and Shift+Tab the LAST, which is the same rule read from
-    // outside the list. An empty list — an empty delta, or an active column
-    // whose half of the delta is empty — is a consumed no-op.
+    // outside the list. An empty list is a consumed no-op, in all three of its
+    // shapes: an empty delta, an active column whose half of the delta is empty,
+    // and the ONE-TICK GAP after a `,` / `.` step, where the list has been
+    // dropped and not yet rebuilt (drop_lane_stash_across_history_edge owns that
+    // argument) — so a step and a Tab arriving in one key batch cycle nothing
+    // rather than the leaving commit's flags.
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
         const int n = static_cast<int>(app.history_mode.flags.size());
         if (n == 0) return true;
