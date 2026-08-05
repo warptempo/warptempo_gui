@@ -1749,16 +1749,26 @@ struct AppState {
     // roster had. A row-5 marker flag's WIDTH is derived from its shaped label,
     // so no consumer can re-derive the box without repeating a HarfBuzz pass;
     // the pixels' own painter is the only honest owner of the geometry. Both
-    // vectors are written by ONE producer (the flag-cache rebuild's
-    // render_flags / render_phase_reset_flags call — grep them: there is
-    // exactly one call site each) against the DISPLAYED basis those pixels were
+    // vectors are written by ONE producer PER FRAME — the flag-cache rebuild,
+    // whose THREE mutually exclusive lane painters (re-derived by grep
+    // 2026-08-05: render_flags, render_phase_reset_flags and, while the `h`
+    // history mode stands, render_history_diff_flags, one call site each) each
+    // clear both stashes first — against the DISPLAYED basis those pixels were
     // painted with, so a click during an async publish window tests the flag it
     // can see rather than the one the live viewport would put there.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
-    // carries one entry per ENABLED marker only — a disabled marker has no stem
-    // ever, expressed as an absent entry (MarkerStem, render.h).
+    // carries one entry per DRAWN stem, which on the two LIVE columns means one
+    // per ENABLED marker — a disabled marker has no stem ever, expressed as an
+    // absent entry (MarkerStem, render.h) — and in the history mode means one
+    // per diff flag, that lane's classes all stemming. Consumers read the stash
+    // rather than re-deciding, so "drawn" and "grabbable" stay one fact in both.
+    //
+    // THE INDEX DOMAIN FOLLOWS THE PAINTER: `marker_index` is a store index on
+    // the live columns and an index into history_mode.flags in the mode. The
+    // mode EDGES are what that costs — drop_lane_stash_across_history_edge
+    // (input_key_dispatch.cpp) carries the argument and empties both.
     //
     // Cold (before the first rebuild) both are empty, so nothing is clickable
     // and no stem paints — the same "visible iff hit-testable" property the
@@ -2115,10 +2125,12 @@ struct AppState {
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
         //
-        // EVERY SETTER (re-derived by grep 2026-08-05): a plain click on a diff
-        // flag, and the mode's own bare Tab / Shift+Tab / IsoLeftTab cycle —
-        // both set it and land the playhead on that flag's frame, and nothing
-        // else writes it true.
+        // EVERY SETTER (re-derived by grep 2026-08-05): the mode's own focus
+        // CLICK on either of a diff flag's two pointer surfaces — its box in the
+        // lane and its STEM in the waveform's upper half, one shared body
+        // (focus_history_diff_flag) — and the mode's own bare Tab / Shift+Tab /
+        // IsoLeftTab cycle. Each sets it and lands the playhead on that flag's
+        // frame, and nothing else writes it true.
         //
         // EVERY CLEARER, the whole list, and all but the last clear for ONE
         // reason: the value is an ordinal into the PAINTED list, so anything
@@ -2135,10 +2147,14 @@ struct AppState {
         //     what makes the 1/2/3 selectors, the view bar and the icon row's
         //     radios inherit it by composition.
         //   - entry and exit (the whole-struct reset at both owners)
-        //   - bare HOME / END (2026-08-05), and this one is the exception to the
-        //     reason above: the list is untouched, but the playhead jumps to an
-        //     end of the song, LEAVING the focused flag — so the focus goes with
-        //     it, the mode's analog of the live arms' selection clear.
+        //   - bare HOME / END (2026-08-05) and the WAVEFORM PLACEMENT PRESS (the
+        //     plain upper-half press that hits no stem, same day), and these are
+        //     the exception to the reason above: the list is untouched, but the
+        //     playhead moves to a spot nothing marks — an end of the song, or the
+        //     pressed column — LEAVING the focused flag, so the focus goes with
+        //     it, the mode's analog of the live arms' selection clear. The
+        //     press's clear runs ahead of its own gutter return, exactly where
+        //     the live body's deselect runs.
         // The playhead a click or a cycle step landed is NOT taken back by any
         // of the list-rebuilding clearers: that landing was navigation, and it
         // stays where the user put it.
@@ -3259,19 +3275,28 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// THE MARKER STEM AS A POINTER TARGET (architect 2026-08-01, at the row-5 live
-// test): a press within kMarkerStemGrabPx of an ENABLED marker's stem column,
-// IN THE WAVEFORM'S UPPER HALF, is that marker's click. Returns the marker index
-// or -1.
+// THE STEM AS A POINTER TARGET (architect 2026-08-01, at the row-5 live test): a
+// press within kMarkerStemGrabPx of a PAINTED stem's column, IN THE WAVEFORM'S
+// UPPER HALF, is that item's click. Returns the stash's own index — a marker
+// index on the live columns, a history diff-flag ordinal while the `h` mode
+// stands — or -1.
 //
-// THE CALLER GATES IT PLAIN-EXACT (architect 2026-08-01, second pass) — stated
-// here because it bounds what this function is for, and spelled at the one call
-// site (on_button_press, input_pointer.cpp): SHIFT and CTRL bind to the FLAG
-// ALONE. Both modifiers already own a waveform gesture at the very pixels a stem
-// stands on (ctrl = the strip drag, shift = the region former), so a modified
-// press near a stem is not a marker hit at all and falls through to the waveform
-// underneath. This function is unchanged and unconditional; only its one caller
-// decides when to ask.
+// TWO CALL SITES (2026-08-05), each the plain upper-half press of its own lane's
+// vocabulary: on_button_press (input_pointer.cpp), where a stem is the marker's
+// second surface and routes through its flag's click bodies, and
+// handle_history_mode_press, where a diff flag's stem routes through that flag's
+// focus click. Neither restates the geometry; this function is the one owner of
+// the half test, the tolerance and the arbitration.
+//
+// THE CALLERS GATE IT PLAIN-EXACT (architect 2026-08-01, second pass) — stated
+// here because it bounds what this function is for, and spelled at each call
+// site: SHIFT and CTRL bind to the FLAG ALONE. Both modifiers already own a
+// waveform gesture at the very pixels a stem stands on (ctrl = the strip drag,
+// shift = the region former), so a modified press near a stem is not a hit at
+// all and falls through to the waveform underneath — in the history mode a
+// modified press never reaches this at all, its allowlist having claimed both
+// modifiers above. This function is unchanged and unconditional; only its
+// callers decide when to ask.
 //
 // UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
 // plain waveform press already splits by half — upper is playhead placement +
@@ -3287,7 +3312,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // IT READS THE PAINTER'S STASH (AppState::marker_stems), so the grabbable stem
 // is the DRAWN stem by construction — same column, same displayed basis — and a
 // DISABLED marker, which publishes no stem entry at all, is not grabbable for
-// the same reason it is not visible. One fact, not two.
+// the same reason it is not visible. One fact, not two. THE STASH ANSWERS FOR
+// THE HISTORY LANE TOO, by that same construction: whichever diff classes that
+// painter stems are exactly the ones a press can claim, with no second predicate
+// deciding.
 //
 // NEAREST WINS, TIES TO LATER-IN-STORE. The stash is in paint order, so a tie
 // resolving to the later entry is the same "topmost = last painted" rule

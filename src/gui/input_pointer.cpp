@@ -2410,24 +2410,24 @@ void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
     app.region_drag.press_y      = y;
 }
 
-void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
-                                                    int y, bool was_playing,
-                                                    int64_t playhead_at_entry) {
-    // The waveform-upper-half placement press body, shared by the plain waveform
-    // press and the empty flag/triangle-lane parity press. The clear runs
-    // FIRST, before the gutter early-return, so an inert-gutter click (no column
-    // to seat a playhead) still deselects.
+int64_t GuiInputHandler::place_playhead_at_click_column(
+        int click_rel_x, bool was_playing, int64_t playhead_at_entry) {
+    // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
+    // with no selection and no region in it, so the `h` history mode can seat a
+    // playhead by exactly the arithmetic and exactly the playback regime the
+    // live press uses (the mode's own arm is in handle_history_mode_press; it
+    // arms no drag). Returns the seated frame, or -1 in the gutter.
     const GuiRect area = waveform_area(app);
-    selection.clear_selection();
-    if (click_rel_x < 0 || click_rel_x >= area.w) return;
-    // Clamp the click column's frame into the live domain ONCE and pass that
-    // same clamped value to both the playhead move and the region arm:
+    if (click_rel_x < 0 || click_rel_x >= area.w) return -1;
+    // Clamp the click column's frame into the live domain ONCE and hand that
+    // same clamped value back to the caller, which passes it to the region arm:
     // move_playhead_to clamps internally, but the region former stored the raw
     // value. At a fractional flush-right zoom the painter-quantized wall
     // (q = nearbyint(spp*W)/W) differs from the click conversion's
     // current_samples_per_pixel, so the last visible column's frame can compute
     // to domain_total — one past [0, domain_total-1], which the display-state
-    // validator would clear wholesale — so both formers clamp.
+    // validator would clear wholesale — so both formers clamp. The clamp also
+    // makes -1 a sentinel no seated frame can collide with.
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
@@ -2438,6 +2438,20 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     // two producer classes (the other being any viewport pan); the inventory and
     // the clearing rule live at the flag's declaration, app_state.h.
     if (was_playing) app.follow_overridden_for_session = true;
+    return sample;
+}
+
+void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
+                                                    int y, bool was_playing,
+                                                    int64_t playhead_at_entry) {
+    // The waveform-upper-half placement press body, shared by the plain waveform
+    // press and the empty flag/triangle-lane parity press. The clear runs
+    // FIRST, before the shared body's gutter early-return, so an inert-gutter
+    // click (no column to seat a playhead) still deselects.
+    selection.clear_selection();
+    const int64_t sample = place_playhead_at_click_column(
+        click_rel_x, was_playing, playhead_at_entry);
+    if (sample < 0) return;
     arm_region_drag_at(sample, x, y);
 }
 
@@ -3186,8 +3200,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
 // and it re-arms on the line after its call to this. It is the only site in the
 // tree that writes that bit true outside toggle_dropdown's open.
-// THE `h` HISTORY MODE's POINTER ALLOWLIST, and its one act. True = the press is
-// CONSUMED here (refused outright, or handled as the mode's lane-focus click);
+// THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
+// CONSUMED here (refused outright, or handled as one of the mode's own acts);
 // false = the press is one of the navigation gestures the mode leaves alone, and
 // on_button_press proceeds with it untouched.
 //
@@ -3203,18 +3217,34 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //   * a PLAIN press in the RULER band — the strip drag's other entry.
 //   * a PLAIN press in the waveform's LOWER HALF — the scrub.
 //
-// THE ONE ACT: a PLAIN press in the MARKER LANE is the mode's own focus click.
-// On a diff flag it takes the mode's focus (at most one, painted in its class's
-// selected pair) and LANDS THE PLAYHEAD on that flag's authored frame — pure
-// navigation, through the same owner every marker land uses, and it touches
-// NOTHING else: no store selection, no live focus, no auto-select, no region.
-// On empty lane it clears the focus and lands nothing. A modified press over the
-// lane is a consumed nothing like every other unlisted press, since only the
-// bare arm reaches here.
+// THE ACTS, all three PLAIN and all three pure navigation (2026-08-05, when the
+// waveform's upper half joined the marker lane):
+//   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
+//     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
+//     flag's authored frame, through the same owner every marker land uses. It
+//     touches NOTHING else: no store selection, no live focus, no auto-select,
+//     no region, no playback stop. On empty lane it clears the focus and lands
+//     nothing.
+//   * a press within the stem grab tolerance of a PAINTED DIFF FLAG'S STEM, in
+//     the waveform's upper half, IS THAT FLAG'S CLICK — the same body at a
+//     different pixel, so it inherits that minimalism whole. It is asked BEFORE
+//     the placement press below, the live press's own order between the two
+//     surfaces.
+//   * every other PLAIN press in the waveform's UPPER HALF LANDS THE PLAYHEAD at
+//     its column, the live placement press's recipe and playback regime through
+//     the one shared body (place_playhead_at_click_column) — but ARMING NOTHING:
+//     the region former stays out of the mode, which is what keeps "the pointer
+//     allowlist admits no region former" true for the bare-Esc reasoning and
+//     leaves the mode with no drag of its own to end. It clears the mode focus,
+//     the analog of the live body's deselect (the playhead is leaving the flag),
+//     and dissolves a resting region exactly where the live arm does. There is
+//     no waveform double-click surface to inherit (DoubleClickSurface has none),
+//     so a second click is simply another placement press.
 //
 // EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks and their drag arm,
-// the empty-lane marker drop, the trim bar's three routes, the upper-half
-// placement press and its region arm, and every unbound modifier combination.
+// the empty-lane marker drop, the trim bar's three routes, and every unbound
+// modifier combination (a modified press over the lane or a stem included: only
+// the bare arm reaches these acts).
 bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
                                                 int x, int y,
                                                 GuiInputState mods) {
@@ -3255,26 +3285,77 @@ bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
         // rect it is painted as. A cold stash answers -1, which is the
         // empty-lane answer and is correct: nothing is clickable that is not
         // drawn.
-        const int hit = hit_test_flag(app, audio, x, y);
-        const int was = app.history_mode.focus;
-        app.history_mode.focus =
-            (hit >= 0 &&
-             hit < static_cast<int>(app.history_mode.flags.size())) ? hit : -1;
-        if (app.history_mode.focus >= 0) {
-            land_playhead_on_source_frame(
-                app, audio, viewport,
-                app.history_mode.flags[
-                    static_cast<std::size_t>(app.history_mode.focus)].time_frame);
+        focus_history_diff_flag(hit_test_flag(app, audio, x, y));
+        return true;
+    }
+
+    // THE WAVEFORM'S UPPER HALF, reached by elimination: the lower half returned
+    // to the scrub above and the marker lane returned just now, so what is left
+    // inside the waveform band is the surface the live placement press owns.
+    if (inside_waveform) {
+        // THE STEM CLAIM FIRST — the live press's own order between the two
+        // surfaces of one item (on_button_press resolves the stem beside the
+        // flag hit, ahead of every branch that consumes it). hit_test_marker_stem
+        // is unchanged and needs to be: it reads the painter's stash, which the
+        // mode's own lane pass publishes for the diff flags (render_history_diff_-
+        // flags, the sole producer while the mode stands), so `marker_index` is
+        // an index into app.history_mode.flags exactly as the flag rects' is, a
+        // changed pair carries the ONE stem its one ordinal names, and the
+        // clickable stems are the DRAWN stems by construction — no second
+        // predicate decides which diff classes stem. The half test and the
+        // grab tolerance come from that owner too.
+        const int stem_hit = hit_test_marker_stem(app, x, y);
+        if (stem_hit >= 0) {
+            focus_history_diff_flag(stem_hit);
+            return true;
         }
-        // A DISCRETE COMMAND: full-window damage when the focus actually moved
-        // (the flag's colour swaps and its stem stays put), and none when it did
-        // not — a re-click on the focused flag re-lands a playhead that is
-        // already there, and the land owner is itself idempotent.
-        if (was != app.history_mode.focus) viewport.invalidate_all();
+        // THE PLACEMENT PRESS. The focus clear runs FIRST, ahead of the shared
+        // body's own gutter return, exactly where the live body's deselect runs
+        // — this is that deselect's mode analog, and the clearer inventory at
+        // AppState::HistoryMode::focus carries the reason.
+        if (app.history_mode.focus != -1) {
+            app.history_mode.focus = -1;
+            // A DISCRETE COMMAND, so full-window damage for the face swap — the
+            // same shape the focus click emits on a move.
+            viewport.invalidate_all();
+        }
+        // The live recipe whole: the clamped column frame, the cursor write, the
+        // live session's reseek and the follow override. NOT the region arm —
+        // this press is complete at the press, so no motion after it can extend
+        // anything.
+        const int64_t sample = place_playhead_at_click_column(
+            x - area.x, playback.is_playing(), app.playhead_cursor_sample);
+        // The live press dissolves a resting region at mouse-down, inside the
+        // arm it does not have here — and past the gutter return, as there:
+        // a click with no column to seat a playhead at commits nothing. (The
+        // clear-site list is at clear_region_highlight, input_handler.h.)
+        if (sample >= 0) clear_region_highlight(app, viewport);
         return true;
     }
 
     return true;
+}
+
+// THE MODE'S FOCUS CLICK, one body for its two pointer surfaces — the diff
+// flag's box in the marker lane and its STEM in the waveform's upper half. `hit`
+// is an index into app.history_mode.flags (-1, or anything the list no longer
+// holds, being the empty-lane answer: clear the focus and land nothing).
+void GuiInputHandler::focus_history_diff_flag(int hit) {
+    const int was = app.history_mode.focus;
+    app.history_mode.focus =
+        (hit >= 0 &&
+         hit < static_cast<int>(app.history_mode.flags.size())) ? hit : -1;
+    if (app.history_mode.focus >= 0) {
+        land_playhead_on_source_frame(
+            app, audio, viewport,
+            app.history_mode.flags[
+                static_cast<std::size_t>(app.history_mode.focus)].time_frame);
+    }
+    // A DISCRETE COMMAND: full-window damage when the focus actually moved
+    // (the flag's colour swaps and its stem stays put), and none when it did
+    // not — a re-click on the focused flag re-lands a playhead that is
+    // already there, and the land owner is itself idempotent.
+    if (was != app.history_mode.focus) viewport.invalidate_all();
 }
 
 void GuiInputHandler::close_dropdown() {

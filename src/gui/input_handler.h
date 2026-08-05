@@ -155,7 +155,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // EVERYTHING THAT MOVES THE PLAYHEAD OR REPLACES THE SELECTION TAKES THE SPAN
 // WITH IT, unconditionally — never gated on whether the playhead actually moved.
 // The scratch belongs to the gesture that drew it; a command that means something
-// else invalidates it. CALL SITES, BY CLASS (re-derived by grep 2026-07-30; other
+// else invalidates it. CALL SITES, BY CLASS (re-derived by grep 2026-08-05; other
 // sites state their own class and point here):
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
 //     family plus `c`, through its own clear tail), `c`'s OWN up-front clear
@@ -200,6 +200,15 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     is what the span was for. It also LANDS the playhead on the committed trim
 //     start there (architect 2026-07-30), so it is a playhead-moving command like
 //     the rest of this list;
+//   * THE `h` HISTORY MODE's OWN CURSOR-MOVING ROUTES (2026-08-05, added when
+//     the re-grep for this retell found the class absent): the three keyboard
+//     arms — the diff-flag Tab cycle, the absolute Home/End and `c` — and, on
+//     the pointer, THE MODE'S PLACEMENT PRESS (the plain upper-half waveform
+//     press that hits no diff stem), which clears past its own gutter return
+//     exactly where the live press's arm clears. They are the live arms' region
+//     regime read against the mode's data. THE MODE'S FOCUS CLICK IS NOT ONE OF
+//     THEM — on either surface, the flag box or the stem — and that exemption is
+//     recorded at its body: it is the mode's minimal navigation act;
 //   * BARE ESC, the one route that clears a span and NOTHING ELSE (architect
 //     2026-07-30, live-test refinement): no playhead move, no selection change,
 //     no trim write. It is ranked under the editors and prompts and over the
@@ -754,23 +763,33 @@ struct GuiInputHandler {
     // behavior bit-for-bit. Esc mid-drag does nothing for either arm (no cancel).
     void arm_region_drag_preserving(int64_t anchor_frame, int x, int y);
 
-    // The waveform-upper-half placement press BODY, shared by the plain waveform
-    // press and the empty flag/triangle-lane parity press (architect
-    // 2026-07-23): clear the marker selection, drop the playhead at the clicked
-    // column, reseek a live scanner to it (keeping the session alive, follow
-    // overridden), and arm the region drag (which dissolves any resting highlight
-    // at mouse-down). `click_rel_x` is x - waveform_area.x; the gutter
-    // (click_rel_x outside [0, area.w)) still deselects but seats no playhead and
-    // arms no drag. `was_playing` / `playhead_at_entry` are the snapshot the
-    // caller captures AT PRESS ENTRY, ahead of every branch. Neither is a
-    // pre-stop reading any more: the playback stops are claim-keyed and sit at
-    // the branches that claim a gesture, and both presses reaching this body are
-    // stop-free ones, so no stop stands between the capture and either reader.
-    // What each parameter really predates is a write of its own —
+    // THE PLACEMENT PRESS'S PLAYHEAD HALF, and the whole of what the live press
+    // and the `h` history mode's own placement press have in common: drop the
+    // playhead at the clicked column, reseek a live scanner to it (keeping the
+    // session alive) and override follow for that session. NO selection, NO
+    // region, NO drag arm — each caller owns those, which is what lets the mode
+    // reuse this recipe without inheriting a region former it must not have.
+    // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
+    // [0, area.w)) seats nothing and returns -1, a value no seated frame can
+    // take (the clamp's floor is 0). `was_playing` / `playhead_at_entry` are the
+    // snapshot the caller captures AT PRESS ENTRY, ahead of every branch.
+    // Neither is a pre-stop reading: the playback stops are claim-keyed and sit
+    // at the branches that claim a gesture, and every press reaching this body
+    // is a stop-free one, so no stop stands between the capture and either
+    // reader. What each parameter really predates is a write of its own —
     // playhead_at_entry predates move_playhead_to's cursor write, and
     // was_playing predates the stop that reseek_keeping_alive may run internally
     // on an out-of-range position — and together they fire the reseek only on a
     // real move of a live session.
+    int64_t place_playhead_at_click_column(int click_rel_x, bool was_playing,
+                                           int64_t playhead_at_entry);
+
+    // The waveform-upper-half placement press BODY, shared by the plain waveform
+    // press and the empty flag/triangle-lane parity press (architect
+    // 2026-07-23): clear the marker selection, run the body above, and arm the
+    // region drag (which dissolves any resting highlight at mouse-down). The
+    // clear runs ahead of the body's gutter return, so an inert-gutter click
+    // still deselects but seats no playhead and arms no drag.
     void place_playhead_and_arm_region(int click_rel_x, int x, int y,
                                        bool was_playing,
                                        int64_t playhead_at_entry);
@@ -1575,9 +1594,13 @@ private:
     //     both are pure functions of key+mods and the face derivation has no
     //     press in hand. Declarations above the class.
     //   * handle_history_mode_press is the pointer half, and it both refuses and
-    //     acts: true when the press was consumed (either as the mode's own
-    //     lane-focus act or as a refusal), false for the navigation gestures the
-    //     mode lets through untouched.
+    //     acts: true when the press was consumed (as one of the mode's own acts
+    //     or as a refusal), false for the navigation gestures the mode lets
+    //     through untouched. Its own comment carries the admitted list and the
+    //     three acts.
+    //   * focus_history_diff_flag is the focus click's body, shared by its two
+    //     surfaces — the flag box in the lane and the flag's STEM in the
+    //     waveform's upper half — so the two cannot answer differently.
     //   * close_history_mode is the ONE exit owner; every closer calls it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
@@ -1600,6 +1623,7 @@ private:
     void drop_lane_stash_across_history_edge();
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods);
+    void focus_history_diff_flag(int hit);
     void close_history_mode();
     void open_history_commit_confirmation();
     void run_history_commit();
