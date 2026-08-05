@@ -771,8 +771,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         land_playhead_on_source_frame(
             app, audio, viewport,
             app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
-        // The live cycle recenters on its stop at the current zoom, follow mode
-        // not gating it; this does the same, reading the flag it just landed on.
+        // THE LIVE FAMILY'S LANDING, MIRRORED (architect 2026-08-05): the live
+        // cycle sets the WORKING ZOOM and recenters on its stop, follow mode
+        // not gating it, so a Tab walk reads its stops at the authoring zoom;
+        // this does the same over the diff-flag list, reading the flag it just
+        // landed on. Both calls are needed and in this order: apply_zoom_change
+        // centers on the resting cursor when the level actually moves and
+        // early-returns when it does not, and the explicit recentre is what
+        // frames the stop in that second case.
+        viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
         // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every arm
         // above either returned or picked a different index), so the full-window
@@ -844,7 +851,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //   - Space (bare)          → the audition. Playback is RUNNING state, not
 //                             authored state; the frozen now side cannot see it.
 //   - = / - (bare)          → zoom in / out
-//   - 0 (bare)              → the overview toggle
+//   - 0 (bare)              → the overview: full zoom out, or a centre on the
+//                             playhead once already there
 //   - PageUp/PageDown       → the paged viewport scroll
 //     (bare)                  — the three above are PURE VIEWPORT MOVES, which
 //                             is the mode's navigation vocabulary: the delta is
@@ -1130,7 +1138,7 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it: zoom, the paged scroll, the overview toggle and playback's follow chase,
+// it: zoom, the paged scroll, the overview command and playback's follow chase,
 // the pointer's pan / strip / ruler drags, and the mode's own diff-flag click,
 // which lands the playhead. Committing the frozen text
 // would therefore write a checkpoint whose view band is a stale copy of one the

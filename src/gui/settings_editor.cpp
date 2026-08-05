@@ -325,6 +325,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // History-less, like all trim. The timestamp invalidate also rides
             // applied() below; raising it twice costs nothing — the damage list
             // coalesces by containment, so the identical rect is dropped.
+            // THE TAIL ALSO PARKS THE PLAYHEAD at the committed trim start and
+            // clears a resting region (architect 2026-08-05 — every trim write
+            // does, the membership stated at the head of input_trim.cpp). It
+            // moves the cursor from inside a modal editor, which is accepted
+            // for uniformity: a typed commit is a commit, and the editor lives
+            // on the bottom strip while the move is out on the waveform. The
+            // INACTIVE-band arm below stays out of the rule — it writes a
+            // PARKED pair, not the live window, and moves nothing visible.
             input->commit_trim_mutation();
             // THE SETTER'S DESELECT after the bound commit + auto_clear
             // (architect 2026-07-30). Past every refusal (read-only tab, the

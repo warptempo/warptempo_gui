@@ -48,6 +48,37 @@
 //   `x` KEEPS ITS DEGENERATE REFUSAL (an inverse-mapped pair coming out
 //     end <= begin writes NOTHING), which is a refusal for the same
 //     no-undo reason the bound-set clicks have one.
+// EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
+// 2026-08-05, generalizing `x`'s own 2026-07-30 land to the whole family — the
+// one authoritative statement of the rule; other sites state their own class
+// and point here). ONE OWNER, park_playhead_at_trim_start (below), which reads
+// the COMMITTED begin out of the store and lands through
+// land_playhead_on_marker's placement basis with NO viewport move. THE
+// MEMBERSHIP, re-derived by grepping the routes that write a trim bound:
+//   * `x` (handle_trim_x) — the PRECEDENT, unchanged in effect;
+//   * the CTRL / CTRL+SHIFT bound-set clicks (set_trim_bound_at_click);
+//   * the ENDCAP / BRIDGE drag, AT ITS RELEASE ONLY (commit_trim_drag): the
+//     motion arm deliberately parks nothing, a per-frame playhead chase being
+//     a cursor fighting the gesture that is moving it;
+//   * the SETTINGS EDITOR's `:trim_*=` ACTIVE-tab commits (settings_editor.cpp),
+//     which move the cursor from inside a modal editor — accepted for
+//     uniformity: a typed commit is a commit, and the editor's own surface is
+//     the bottom strip, not the waveform. The INACTIVE-band arm parks nothing:
+//     it writes a PARKED pair, not the live window;
+//   * the CROSSED / COINCIDENT RESETS, with no arm of their own — a reset IS a
+//     trim write, to the full window, so reading the committed begin parks the
+//     playhead at frame 0 by construction;
+//   * `Shift+X`, the maximizer (handle_trim_clear_both), inside its already-full
+//     identity guard, so a refused maximize moves nothing.
+// The first five reach it through the shared commit tail (commit_trim_mutation);
+// Shift+X, which is a non-caller of that tail by design, calls the park itself.
+// EVERY REFUSAL STAYS A REFUSAL: the strictly-inside consumed no-op, `x`'s
+// degenerate-result refusal and Shift+X's identity guard all return above the
+// park, so nothing moves. The move rides each route's EXISTING regime — the
+// trim-mutation playback stop and the setter's deselect are unchanged and stay
+// where they are — and adds the region clear every playhead-moving command
+// takes (the clear-site rule at clear_region_highlight, input_handler.h).
+//
 // The zero floor is subsumed by the walls but remains the reason the floor
 // exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
@@ -134,6 +165,28 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     }
 }
 
+// EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START — the contract and
+// the reset argument are at the declaration (input_handler.h); the per-route
+// inventory is in this file's header block.
+void GuiInputHandler::park_playhead_at_trim_start() {
+    // The two-step placement basis and the DIRECT cursor write are
+    // land_playhead_on_marker's (input_pointer.cpp, where the rule lives):
+    // source frame -> active domain -> live-domain clamp, and NO viewport move.
+    // THE COMMITTED BEGIN, read out of the store rather than from a caller's
+    // local: the commit tail's auto_clear_crossed_trim is entitled to have
+    // rewritten the pair, and reading the store is what makes a reset park at
+    // the full window's own start (frame 0) with no second arm.
+    app.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+        app, audio);
+    // A PLAYHEAD-MOVING COMMAND TAKES A RESTING SPAN WITH IT (the clear-site
+    // rule at clear_region_highlight, input_handler.h). For `x` this is also
+    // the CONSUMPTION of the span it just read; for every other trim write it
+    // is the ordinary navigation clear. The helper's own !active guard makes
+    // the common no-region path free and a second call idempotent.
+    clear_region_highlight(app, viewport);
+}
+
 // The shared trim commit tail — contract, the four callers and the one
 // deliberate non-caller at the declaration (input_handler.h).
 void GuiInputHandler::commit_trim_mutation() {
@@ -141,6 +194,11 @@ void GuiInputHandler::commit_trim_mutation() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
+    // THE PARK IS LAST, past the invalidations on purpose: both raised rects
+    // are position-fixed and consumed at the next paint, so raising them ahead
+    // of the cursor write is what repaints the new value (the placement `x`
+    // has used since 2026-07-30, now shared by every setter).
+    park_playhead_at_trim_start();
 }
 
 // Shift+X IS THE MAXIMIZER (architect 2026-07-30): it writes the FULL window
@@ -165,6 +223,14 @@ void GuiInputHandler::handle_trim_clear_both() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
+        // AND THE PLAYHEAD PARKS AT THE NEW TRIM START (architect 2026-08-05):
+        // the maximizer writes the full window, whose start is frame 0, so this
+        // is where a Shift+X leaves the cursor. INSIDE the identity guard like
+        // the stop above, so a refused maximize moves nothing. Shift+X is not a
+        // SETTER — it still deselects nothing — but the park rides every trim
+        // WRITE, which this is; the two rules have different memberships and
+        // that difference is deliberate.
+        park_playhead_at_trim_start();
     }
 }
 
@@ -178,7 +244,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // existing bounds (the new span simply replaces them; x re-trims even over an
 // existing trim) — and the highlight is CONSUMED: x CLEARS the region at its tail
 // (architect 2026-07-30, with the trim-window highlight sync retired — the span's
-// whole job was aiming this gesture, and nothing re-publishes one). THE SELECTION
+// whole job was aiming this gesture, and nothing re-publishes one; the clear is
+// the SHARED tail's since 2026-08-05, where it is the ordinary
+// playhead-moving-command clear and here doubles as the consumption). THE SELECTION
 // IS CLEARED TOO: x is a trim SETTER, and every setter deselects (architect
 // 2026-07-29).
 // x GAINS A REFUSAL for the degenerate shape: a DEGENERATE RESULT (the
@@ -213,9 +281,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // span came from, so it covers a narrow span over
 // stretched audio whose inverse-mapped endpoints land on one source frame. The
 // shared trim commit tail (commit_trim_mutation —
-// auto_clear_crossed_trim then the repaint/trigger) mirrors the other trim
-// commits; the playhead is
-// untouched (trim gestures never move it).
+// auto_clear_crossed_trim, the repaint/trigger, then the playhead park and the
+// region clear) is the other trim commits' tail verbatim: this route's own
+// 2026-07-30 land is now the rule every trim write takes.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     // No live region → silent no-op: x is set-only, and the maximize is Shift+X's
@@ -255,38 +323,20 @@ void GuiInputHandler::handle_trim_x() {
     playback_lifecycle.stop_playback_if_playing();
     app.trim.begin_frame = begin;
     app.trim.end_frame   = end;
+    // THE PLAYHEAD LAND AND THE SPAN'S CONSUMPTION ARE BOTH THE COMMIT TAIL'S
+    // NOW (architect 2026-08-05, generalizing this route's own 2026-07-30
+    // rule to every trim write): commit_trim_mutation ends in
+    // park_playhead_at_trim_start, which seats the cursor on the committed
+    // BEGIN — so what the user hears next is the window they just made, from
+    // its start — and clears the region, which for `x` alone is the CONSUMPTION
+    // the architect ruled ("the scratch existed to aim this gesture"). Both
+    // sit past every refusal above by construction (the no-region and
+    // degenerate returns are far above), so a refused `x` moves no playhead and
+    // eats no span.
     commit_trim_mutation();
     // THE SETTER'S DESELECT (architect 2026-07-29): every trim setter empties the
-    // selection as it commits. Then CONSUME THE SPAN (architect 2026-07-30): the
-    // scratch region existed to aim this gesture and its job is done — the trim
-    // bar and its endcaps show the result from here on, and nothing re-publishes a
-    // highlight. ONE clear, at the tail, past every refusal above.
+    // selection as it commits. Past every refusal above, like the tail's park.
     selection.clear_selection();
-    clear_region_highlight(app, viewport);
-    // AND THE PLAYHEAD LANDS ON THE TRIM START (architect 2026-07-30, live-test
-    // refinement — the resting half of the drag's carry: "so on trim X move
-    // playhead to trim start"). The drag walked the cursor along the span's
-    // moving end; the commit seats it at the window's BEGIN, so what the user
-    // hears next is the window they just made, from its start.
-    // THE COMMITTED BEGIN, read back out of the store rather than reused from the
-    // local: `begin` above is pre-tail, and the shared commit tail
-    // (commit_trim_mutation's auto_clear_crossed_trim) is entitled to rewrite
-    // the pair. It cannot fire
-    // here — the degenerate refusal upstream guarantees end > begin — so this is
-    // the same value either way, and reading the store is what keeps that true if
-    // the tail ever gains an arm.
-    // The two-step placement basis and the DIRECT cursor write are
-    // land_playhead_on_marker's (input_pointer.cpp, where the rule lives): source
-    // frame -> active domain -> live-domain clamp, and NO viewport move, so a
-    // trim start offscreen leaves the view exactly where the user left it.
-    // PAST EVERY REFUSAL by construction (the no-region and degenerate returns
-    // are far above), so a refused `x` moves no playhead. The waveform +
-    // timestamp invalidates raised above cover this write: both are
-    // position-fixed rects consumed at the next paint, so raising them ahead of
-    // the write repaints the new value.
-    app.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        source_frame_to_active_domain(app, audio, app.trim.begin_frame),
-        app, audio);
 }
 
 // Shift+X MAXIMIZES the trim to the full window (architect 2026-07-25 for the
@@ -366,7 +416,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
                                           : app.trim.end_frame;
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
     app.trim_drag.orig_end_frame   = app.trim.end_frame;
-    // No pre-drag playhead capture: trim drags never touch the playhead.
+    // No pre-drag playhead capture and nothing to restore: the drag moves the
+    // playhead exactly once, at its RELEASE, through the commit tail's park
+    // (this file's header block), and pointer gestures have no cancel.
     // Grab anchor: each arm captures exactly what its motion path consumes —
     // the pair path reads anchor_active_frame (active-domain, for the rigid
     // both-bounds delta); the single-bound path reads anchor_frame (source-
@@ -463,9 +515,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
-            // Trim drags never move the playhead — the gesture is
-            // playhead-independent. Motion updates the bounds and
-            // repaints; the playhead stays where it is.
+            // MID-GESTURE THE PLAYHEAD DOES NOT MOVE: the park at the new
+            // trim start is the RELEASE's, run once by the commit tail, so a
+            // cursor chase never fights the drag that is moving the bounds.
+            // Motion updates the bounds and repaints; the playhead waits.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
             // THE DRAG IS A SETTER, so it DESELECTS (architect 2026-07-29) —
@@ -572,10 +625,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (field != new_frame) {
         field = new_frame;
         app.trim_drag.moved = true;
-        // Trim drags never move the playhead — the gesture is playhead-
-        // independent (a recorded difference from the marker drag, which
-        // tracks its grabbed marker). Motion updates the bound and
-        // repaints; the playhead stays where it is.
+        // MID-GESTURE THE PLAYHEAD DOES NOT MOVE (the pair arm's twin above;
+        // a recorded difference from the marker drag, which tracks its grabbed
+        // marker): the park at the new trim start is the RELEASE's. Motion
+        // updates the bound and repaints; the playhead waits.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         // THE DRAG IS A SETTER, so it DESELECTS (the pair arm's twin above) —
@@ -688,13 +741,16 @@ void GuiInputHandler::commit_trim_drag() {
                 moved = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
                                                     moved, app.trim);
             }
-            // Trim drags never move the playhead, so the
-            // commit snaps the bounds only — there is no playhead pin/sync here.
+            // The snap is the BOUNDS' alone — there is no playhead pin or
+            // sync here. The park at the committed trim start comes after,
+            // from the shared commit tail below, so it reads snapped values.
         }
         // The release is the commit: a bound released on or across its
         // partner RESETS the pair to the song edges (crossed/equal cannot rest;
-        // ruling at auto_clear_crossed_trim). The playhead was never touched by
-        // the gesture.
+        // ruling at auto_clear_crossed_trim). THIS IS ALSO THE GESTURE'S ONE
+        // PLAYHEAD MOVE: the tail below parks the cursor at the committed trim
+        // start (the rule and its membership are in this file's header), and a
+        // reset lands it at frame 0 because that is the full window's start.
         //
         // UNCHANGED BY THE 2026-08-02 PARTNER CLAMP, deliberately. The clamp
         // narrowed what the single-bound arm can hand this tail — ON the partner
@@ -710,8 +766,10 @@ void GuiInputHandler::commit_trim_drag() {
         // then in the moved case that reaches here — each is stated at every
         // accepted mutation rather than inferred from gesture order). There is
         // nothing to restore from in any case — the drag carries no snapshot at
-        // all since 2026-07-29. The region is untouched: the release publishes no
-        // highlight, that coupling having retired 2026-07-30.
+        // all since 2026-07-29. A resting region goes with the playhead park in
+        // the tail above, the clear every playhead-moving command takes; the
+        // release still publishes no highlight of its own, that coupling having
+        // retired 2026-07-30.
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
@@ -900,7 +958,8 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     marker lane — is not claimed and falls through to the caller's ruler /
 //     flag handling. Both bounds are
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
-//     like every trim gesture, never moves the playhead), so it always arms as
+//     like every trim gesture, moves the playhead only at its release, through
+//     the commit tail's park), so it always arms as
 //     Begin structurally.
 // BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE, which is what lets the
 // pointer CURSOR promise exactly what this router claims: the zone map calls the
@@ -938,7 +997,8 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     }
     // Bridge (pair) drag. The pair has no grabbed-bound notion — both bounds are
     // the subject, so it always arms as Begin structurally (there is no
-    // nearer-bound pick, and the gesture never moves the playhead).
+    // nearer-bound pick, and the gesture moves the playhead only at its
+    // release, through the commit tail's park).
     if (point_in_trim_bridge_span(app, audio, mouse_x, mouse_y)) {
         arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
                               mouse_x, mouse_y);

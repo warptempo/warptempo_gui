@@ -428,8 +428,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                step. Pure navigation, same family as
     //                              the playhead-step and Home/End entries.
     //   - =/- (no mods)          → zoom in/out
-    //   - 0 (no mods)            → working zoom ↔ full zoom-out toggle
-    //                              (run_zoom_toggle_command)
+    //   - 0 (no mods)            → full zoom-out, else center on the playhead
+    //                              (run_overview_command)
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
@@ -744,15 +744,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare 0 toggles between the working zoom and full zoom-out
-    // (run_zoom_toggle_command). The trim-bar double-click deliberately
+    // Bare 0 goes to FULL ZOOM OUT, and centers on the playhead once it is
+    // already there (run_overview_command — architect 2026-08-05, no longer a
+    // toggle). The trim-bar double-click deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the region
-    // / trim / whole-song span, never the working zoom); the key keeps the plain
-    // toggle. C remains the direct working-zoom-and-center gesture. DIGITS 1, 2
+    // / trim / whole-song span); C remains the direct working-zoom-and-center
+    // gesture, and the Tab family now lands at the working zoom too, so `0` is
+    // the one command that reaches the whole song. DIGITS 1, 2
     // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
     // beside bare `t`, the axis handler they compose); 4..9 are unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
-        run_zoom_toggle_command();
+        run_overview_command();
         return;
     }
 
@@ -899,7 +901,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // architect 2026-07-30 / 2026-07-29; a DEGENERATE inverse-mapped span refuses
     // instead of writing a pair the crossed-commit reset would throw away), and
     // with no region it is a silent no-op. Shift+X writes [0, total-1]
-    // (handle_trim_shift_x). The playhead plays no part. Trim's pointer routes
+    // (handle_trim_shift_x). The playhead is an OUTPUT of both, never an input:
+    // every trim WRITE parks it at the new trim start (architect 2026-08-05 —
+    // the rule and its membership at the head of input_trim.cpp), and a refused
+    // press moves nothing. Trim's pointer routes
     // are the PLAIN trim-bar press (single via an endcap hit, pair via a bridge
     // press strictly between the two bound columns); trim is outside the
     // selection system, so there is no Delete arm. Plain Ctrl+x is cut
@@ -1038,7 +1043,24 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // The select above establishes the focused marker; the shared jump tail
     // moves the playhead onto it and recenters. Byte-identical to the `c`
     // gesture's marker jump.
-    jump_playhead_to_focused_marker();
+    // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
+    // the jump returns false having touched neither playhead nor viewport, and
+    // the zoom below must not fire either — a Tab in an empty collection stays
+    // the consumed nothing it has always been.
+    if (!jump_playhead_to_focused_marker()) return;
+
+    // THE CYCLE LANDS AT WORKING ZOOM (architect 2026-08-05): a Tab walk reads
+    // the markers at the authoring zoom, so every step sets kWorkingZoomLevel —
+    // the same level `c` snaps to, and the whole Tab family reaches it through
+    // this one function (bare Tab, Shift+Tab, IsoLeftTab, and the
+    // Ctrl+Shift+Tab lockstep march, which calls this twice, once per tab).
+    // AFTER the jump, not before: apply_zoom_change recenters on the resting
+    // cursor, which the jump has just seated on the focused marker, so this one
+    // call is the final centering and no third viewport write is needed. Once
+    // the walk is at the working zoom the call early-returns on the unchanged
+    // level (the jump's own recenter having already framed the stop), so only
+    // the first step of a walk pays a second synchronous plate render.
+    viewport.apply_zoom_change(kWorkingZoomLevel);
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {
@@ -1087,8 +1109,12 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // this one shared tail.
     clear_region_highlight(app, viewport);
 
-    // Center the viewport on the focused marker at the current zoom — Tab
-    // leaves the zoom level alone. This recenter is unconditional: follow
+    // Center the viewport on the focused marker at the current zoom. THE ZOOM
+    // IS THE CALLER'S: both callers set the working zoom after this returns —
+    // `c` by its own snap, the Tab family through cycle_marker_focus's step
+    // (architect 2026-08-05) — so this tail frames the stop at whatever level
+    // it was called at and the caller's apply_zoom_change re-centers if the
+    // level moves. This recenter is unconditional: follow
     // mode does not gate the cycle (architect 2026-07-19, reversing the
     // earlier follow-only rule). center_viewport_on_playhead is the SOLE
     // viewport write in this path: it reads the cursor we just set and
@@ -1103,20 +1129,34 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     return true;
 }
 
-void GuiInputHandler::run_zoom_toggle_command() {
-    // The bare `0` key toggle: at the working zoom → full zoom-out (the per-file
-    // effective ceiling, whole song visible); anywhere else → the working zoom,
-    // centered on the playhead via apply_zoom_change. The trim-bar DOUBLE-CLICK
-    // deliberately DIVERGES from this (see run_span_framing_command): the
-    // toggle here returns any non-working level to the working zoom, whereas the
-    // double-click zooms to the region / trim / whole-song span.
+void GuiInputHandler::run_overview_command() {
+    // The bare `0` key: FULL ZOOM OUT FIRST, CENTER ONLY WHEN ALREADY THERE
+    // (architect 2026-08-05, REPLACING the working-zoom toggle this used to be —
+    // `0` no longer returns anywhere, so the old two-way shape and its name are
+    // gone; there was never a stashed return level to delete, the toggle's other
+    // end having been the fixed kWorkingZoomLevel). Below the per-file effective
+    // ceiling → jump to it, the whole song in the window, playhead untouched.
+    // ALREADY at it → center the viewport on the playhead at that level.
+    // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
+    // run_span_framing_command): it zooms to the region / trim / whole-song
+    // SPAN, where this one command only ever reaches the whole song.
+    //
+    // THE SECOND ARM IS STRUCTURALLY A NO-OP ON EVERY ORDINARY FILE, and is
+    // written out anyway because the rule is stated as two arms: at the
+    // effective ceiling samples_visible == total by the fit-level solve, so
+    // clamp_viewport_start's `visible >= total` branch parks the start at 0 and
+    // there is no pan room to center within (the degenerate short-file case,
+    // where the ceiling saturates at kMinZoom and visible EXCEEDS total, takes
+    // the same branch). It is reachable only where a rounding residue leaves
+    // visible one frame short of total; center_viewport_on_playhead's own
+    // moved-guard makes the common case free.
     //
     // BARE `0` IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
     // 2026-07-29 clear+collapse as OVERSCOPED): it touches neither the selection
     // nor the region nor the playhead — only the zoom level and, through
     // apply_zoom_change, the viewport start. A selection span's endpoints are
     // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
-    // survive the overview toggle exactly as they survive `=` / `-` and the wheel.
+    // survive the overview exactly as they survive `=` / `-` and the wheel.
     // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
     // zoom framing on the span-READ side, not with the collapse+land verbs. It does
     // not stop a live audition either — the pure-viewport-move class of the keyboard
@@ -1125,16 +1165,22 @@ void GuiInputHandler::run_zoom_toggle_command() {
     // it on its own: a clear that left a 2+ selection standing would rest it
     // SPANLESS, the hybrid third form the architect rejected (that state draws no
     // playhead cue at all), so the two are one decision.
-    // The centering below reads the RESTING cursor (apply_zoom_change takes the
-    // scanner while playing and the cursor otherwise). With a selection the cursor
-    // already rests on the focus — every focus-changing route lands it — so nothing
-    // here needed the land that used to precede it.
-    if (app.zoom_level == kWorkingZoomLevel) {
-        viewport.apply_zoom_change(effective_max_zoom_level(
-            waveform_area(app).w, live_total_frames(app, audio),
-            audio.sample_rate()));
+    // Both arms read the RESTING cursor (apply_zoom_change and
+    // center_viewport_on_playhead both take the scanner while playing and the
+    // cursor otherwise). With a selection the cursor already rests on the focus —
+    // every focus-changing route lands it — so nothing here needed the land that
+    // used to precede it.
+    //
+    // `>=` rather than `==`, matching Viewport::zoom_out's own ceiling test: the
+    // clamp chokepoint keeps the live level at or under the ceiling, and a level
+    // resting exactly on it is what "already full out" means either way.
+    const double full_out = effective_max_zoom_level(
+        waveform_area(app).w, live_total_frames(app, audio),
+        audio.sample_rate());
+    if (app.zoom_level >= full_out) {
+        viewport.center_viewport_on_playhead();
     } else {
-        viewport.apply_zoom_change(kWorkingZoomLevel);
+        viewport.apply_zoom_change(full_out);
     }
 }
 
@@ -1204,9 +1250,9 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 }
 
 void GuiInputHandler::run_span_framing_command() {
-    // The trim-bar double-click ZOOMS TO A SPAN, split from
-    // run_zoom_toggle_command so the bare `0` key keeps its working-zoom toggle
-    // and `c` keeps its marker-jump working zoom. It only ever FRAMES a span,
+    // The trim-bar double-click ZOOMS TO A SPAN, its own route beside the bare
+    // `0` overview (run_overview_command) and `c`'s marker-jump working zoom.
+    // It only ever FRAMES a span,
     // never the fine working zoom. Span priority: a live region wins (over a
     // trim); else a proper trim SUB-WINDOW; else the whole song
     // (full zoom-out — which is also where the FULL trim window lands, it being

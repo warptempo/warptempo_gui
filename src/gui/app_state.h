@@ -2132,7 +2132,7 @@ struct AppState {
     //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
-    // routes that move it: zoom, the paged scroll, the overview toggle and
+    // routes that move it: zoom, the paged scroll, the overview command and
     // playback's follow chase move viewport_start_sample or zoom_level, the
     // pointer's pan / strip / ruler drags move both, the mode's OWN diff-flag
     // click lands the playhead, and since 2026-08-04 the admitted VIEW SWITCHES

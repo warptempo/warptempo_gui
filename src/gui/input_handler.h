@@ -194,12 +194,17 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     map under any resting highlight. That tail CLEARS THE SELECTION beside the
 //     region. The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, whose active-tab arms
-//     take the setter's plain deselect and touch no region;
-//   * `x` ITSELF, which READS the span and then clears it (input_trim.cpp): the
-//     one CONSUMER, at its tail past every refusal, because the trim it just set
-//     is what the span was for. It also LANDS the playhead on the committed trim
-//     start there (architect 2026-07-30), so it is a playhead-moving command like
-//     the rest of this list;
+//     clear through the TRIM class below instead;
+//   * EVERY TRIM WRITE, through the ONE park owner at the shared commit tail
+//     (park_playhead_at_trim_start, input_trim.cpp — architect 2026-08-05):
+//     each of these parks the playhead at the new trim start and is therefore a
+//     playhead-moving command like the rest of this list. The membership is
+//     stated once, at the head of input_trim.cpp, and is `x`, the ctrl /
+//     ctrl+shift bound-set clicks, the endcap/bridge drag AT ITS RELEASE, the
+//     settings editor's active-tab `:trim_*=` commits, the crossed/coincident
+//     resets, and `Shift+X` inside its identity guard. `x` is the special one:
+//     for it the clear is also the CONSUMPTION of the span it just read, the
+//     trim it set being what the span was for;
 //   * THE `h` HISTORY MODE's OWN CURSOR-MOVING ROUTES (2026-08-05, added when
 //     the re-grep for this retell found the class absent): the three keyboard
 //     arms — the diff-flag Tab cycle, the absolute Home/End and `c` — and, on
@@ -223,7 +228,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // PREVIEW gesture (click inside a span to audition it, the span resting
 // untouched), SPACE (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
-// pans, and the bare `0` overview toggle). The remaining pre-existing clear sites (file
+// pans, and the bare `0` overview). The remaining pre-existing clear sites (file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the
 // reset with a domain flip or a full-window repaint rather than this exact damage
 // shape; so does the kick validator's live-domain reclamp.
@@ -1006,15 +1011,23 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. Always
-    // recenters the viewport on it at the current zoom — follow mode does not
-    // gate the cycle. Mode-aware: reads from phaseresetmarkers in 'P' mode,
-    // warpmarkers otherwise.
+    // playback and move the playhead onto the newly focused marker, recenter,
+    // AND SET THE WORKING ZOOM (kWorkingZoomLevel — architect 2026-08-05, so a
+    // Tab walk reads the markers at the authoring zoom; the same level `c`
+    // snaps to). The recenter is unconditional — follow mode does not gate the
+    // cycle. A step that focuses nothing does nothing at all, zoom included.
+    // The WHOLE Tab family reaches the zoom through here: the three bare chords
+    // and the Ctrl+Shift+Tab lockstep march, which calls this once per tab.
+    // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
+    // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
+    // this rule, over its own list (handle_history_mode_key).
     void cycle_marker_focus(bool forward);
 
     // Jump the playhead directly onto the currently focused marker
     // (app.last_selected_marker), stopping playback and recentering the
-    // viewport on it at the current zoom. Returns true when a marker was
+    // viewport on it AT THE LEVEL IT IS CALLED AT — the zoom belongs to the
+    // caller, and both callers set the working zoom right after this returns.
+    // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
     // Tab family) and the `c` gesture, both of which recenter the viewport; a
@@ -1024,13 +1037,13 @@ private:
     // nudge/drag re-lands it on the focused marker as that marker moves.
     bool jump_playhead_to_focused_marker();
 
-    // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the
-    // per-file effective ceiling, whole song visible); anywhere else → the
-    // working zoom (kWorkingZoomLevel), centered on the playhead via
-    // apply_zoom_change. A PURE VIEWPORT MOVE (architect 2026-07-30): it writes
-    // neither the selection nor the region nor the playhead — the rationale is at
-    // the definition.
-    void run_zoom_toggle_command();
+    // The bare `0` key: FULL ZOOM OUT FIRST, CENTER ONLY WHEN ALREADY THERE
+    // (architect 2026-08-05, replacing the working-zoom toggle). Below the
+    // per-file effective ceiling → jump to it (whole song visible); already at
+    // it → center the viewport on the playhead at that level. A PURE VIEWPORT
+    // MOVE (architect 2026-07-30): it writes neither the selection nor the
+    // region nor the playhead — the rationale is at the definition.
+    void run_overview_command();
 
     // THE SPAN-FRAMING command, run by the TRIM BAR LANE's DOUBLE-CLICK:
     // ZOOM TO A SPAN, never the working zoom. Span priority — a live region
@@ -1226,20 +1239,36 @@ private:
     // invalidations, so the repaint shows the reset state.
     void auto_clear_crossed_trim();
 
+    // EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
+    // 2026-08-05, generalizing `x`'s own 2026-07-30 land). Reads the COMMITTED
+    // begin out of the store — never a caller's local — so a crossed pair that
+    // the commit tail has just RESET to the full window parks the playhead at
+    // frame 0, which is that window's start: a reset is a trim write like any
+    // other and needs no arm of its own. Lands through
+    // land_playhead_on_marker's placement basis (source frame → active domain →
+    // live-domain clamp) with NO viewport move, so a trim start offscreen
+    // leaves the view where the user left it, and CLEARS A RESTING REGION,
+    // this being a playhead-moving command (the clear-site rule at
+    // clear_region_highlight). Callers own the refusals above it: a route that
+    // writes no bound must not call this. The full per-route inventory is at
+    // the head of input_trim.cpp.
+    void park_playhead_at_trim_start();
+
     // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
-    // trim-SETTING commit runs the same four acts in the same order
-    // (auto_clear_crossed_trim, then the waveform + timestamp repaints, then
-    // the target-render trigger), and this member is their one spelling. FOUR
+    // trim-SETTING commit runs the same acts in the same order
+    // (auto_clear_crossed_trim, the waveform + timestamp repaints, the
+    // target-render trigger, then the playhead park above), and this member is
+    // their one spelling. FOUR
     // CALLERS — `x`'s set-from-region (handle_trim_x), the drag release
     // (commit_trim_drag) and the bound-set click (set_trim_bound_at_click), all
     // input_trim.cpp, plus the settings editor's `:trim_*=` active-tab arm
     // (settings_editor.cpp, reaching it through the friendship above; its
     // timestamp repaint rides applied() as well, harmlessly twice).
-    // Callers own everything around it: their refusals, the playback stop, the
-    // setter's deselect and any playhead/region tail, which differ per route by
+    // Callers own everything around it: their refusals, the playback stop and
+    // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
     // handle_trim_clear_both (the Shift+X maximizer resets rather than
-    // auto-clears — a non-setter).
+    // auto-clears — a non-setter), which calls the park directly instead.
     void commit_trim_mutation();
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim
