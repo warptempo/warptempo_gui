@@ -441,7 +441,7 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
 // row_5_lane_3_marker_green_{unselected,selected}.png and
 // row_5_lane_3_marker_red_{unselected,selected}.png (all four 56x17). They paint
-// the `/` history mode's marker lane, where a GREEN flag is a line the session
+// the `h` history mode's marker lane, where a GREEN flag is a line the session
 // has and the shown commit did not (added) and a RED flag one the commit had and
 // the session dropped (removed). Each crop is read the same way the live marker
 // crops above are: column 0 is the 1px LEFT BORDER (#131516 in all four, the
@@ -1961,7 +1961,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 
-// ONE PREPARED DIFF FLAG for the `/` history mode's lane, in the ORDER it is
+// ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
 // commit's delta into these; this file only paints what it is handed, so the
 // diff model's types never reach the renderer.

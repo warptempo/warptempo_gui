@@ -72,7 +72,7 @@ constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // `<batch_dir>/<basename>` relative to renders/ — renders directly after the
 // trailing slash, so the prefix carries no trailing space.
 constexpr const char* kLoadEditorPrefix   = "Load: ./renders/";
-// THE SAME EDITOR'S OTHER SUBJECT: in the `/` history mode it takes a COMMIT
+// THE SAME EDITOR'S OTHER SUBJECT: in the `h` history mode it takes a COMMIT
 // SPELLING (load_history_commit_in_place), so the renders/ path lead-in
 // would be a false statement about what is being loaded in place. One label,
 // one trailing space, and the branch that selects it is the only place the
@@ -261,7 +261,7 @@ struct FlagCache {
     // suppressed frame after the editor closed — and keep the drawn box while it
     // opened. Contract at render_flags' editing_marker_index (render.h).
     int       fp_editing_flag_target      = -1;
-    // THE HISTORY MODE'S FOUR INPUTS (the `/` view — AppState::HistoryMode).
+    // THE HISTORY MODE'S FOUR INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
@@ -367,7 +367,7 @@ struct GuiPaintHandler {
     //     and fp_editing_flag_target (the open editor's marker, whose box this
     //     pass SKIPS);
     //   - THE HISTORY MODE, four (2026-08-04): fp_history_active,
-    //     fp_history_index, fp_history_focus and fp_history_generation — the `/`
+    //     fp_history_index, fp_history_focus and fp_history_generation — the `h`
     //     view replaces the lane's whole content, so these decide it as
     //     completely as the five marker-driven fields decide the live one, and
     //     the generation is what distinguishes two SESSIONS that agree on the

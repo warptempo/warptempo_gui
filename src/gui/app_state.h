@@ -746,7 +746,7 @@ struct TrimBarPressSeed {
 // on_key. What they do NOT take is the two row-2-only faces — no click face, and
 // no disabled face of their own — which is stated at each face's site rather
 // than modelled here (row 4 takes the click face but not the disabled one; the
-// `/` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
+// `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). Row 1's SETTINGS
 // and NAVIGATION are the roster's TWO non-chord entries: each press TOGGLES ITS
 // OWN DROPDOWN, which no keyboard chord does, and both are spelled at the menu
@@ -784,7 +784,7 @@ enum class RedesignButton {
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconLoadInPlace,
     // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
-    // landed with the commit act: bare `/`, in its own group past a separator,
+    // landed with the commit act: bare `h`, in its own group past a separator,
     // lit while the mode stands. Its chord toggles, so the same click that
     // opened the view closes it.
     IconHistory
@@ -1980,7 +1980,7 @@ struct AppState {
     // old leniencies (unparseable lines dropped, a missing file read as an
     // empty side, the per-commit Ambiguous display) died with the gate.
     //
-    // WHAT OPENS IT: bare `/`, and nothing else. The key reaches the toggle only
+    // WHAT OPENS IT: bare `h`, and nothing else. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
     // refusal for free — a prompt, any of the four editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
@@ -1988,13 +1988,14 @@ struct AppState {
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
     // its own reason on stderr and the mode simply does not open.
     //
-    // WHAT CLOSES IT, the whole list: bare `/` again; EITHER LOAD-IN-PLACE —
+    // WHAT CLOSES IT, the whole list: bare `h` again; EITHER LOAD-IN-PLACE —
     // the `'` editor's render-entry load-in-place and, since 2026-08-04, its
     // load-in-place-from-a-commit
     // (both rewrite the very state the frozen now side was measured against);
     // Ctrl+Q and the WM close, trivially, the process going with it. ESC IS NOT
     // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
-    // that function owns `/`, `,` and `.` alone, so no Esc reaches it. A RESIZE
+    // Escape is not in that function's vocabulary at all (the membership is
+    // re-derived at history_mode_owns_key), so no Esc reaches it. A RESIZE
     // does NOT close it: the delta is re-laid-out against the new geometry by
     // the flag cache's own rebuild, exactly as live flags are.
     //
@@ -2002,8 +2003,8 @@ struct AppState {
     // The bare-Esc inventory is still the six enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
     // so the two bindings that can be live in here run — the REGION CLEAR (a
-    // span formed before `/`, since the pointer allowlist admits no region
-    // former) and the RENDER / BATCH CANCEL (a render launched before `/`).
+    // span formed before `h`, since the pointer allowlist admits no region
+    // former) and the RENDER / BATCH CANCEL (a render launched before `h`).
     // Neither touches authored state, which is why admitting it costs the frozen
     // now side nothing. With neither standing, Esc is a consumed nothing.
     //
@@ -2046,7 +2047,7 @@ struct AppState {
     // that editor up: the mode's two gates stop being reached — the
     // keyboard-modal editor gate sits above them in on_key, and any pointer
     // press outside the editor's own text-drag reach is the editor's to swallow
-    // — so `/`, `,` and `.` TYPE into the buffer rather than stepping the walk,
+    // — so `h`, `,` and `.` TYPE into the buffer rather than stepping the walk,
     // and the mode's bottom-strip line yields its cell to the editor for the
     // life of the edit.
     //
@@ -2112,12 +2113,17 @@ struct AppState {
         // newer (-1), each clamping at its wall as a consumed no-op.
         std::size_t index  = 0;
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
-        // NOT a marker index and touches no selection — a plain click on a diff
-        // flag sets it and lands the playhead on that flag's frame.
+        // NOT a marker index and touches no selection.
         //
-        // EVERY CLEARER, the whole list, and they all clear for ONE reason: the
-        // value is an ordinal into the PAINTED list, so anything that rebuilds
-        // that list would otherwise leave the highlight on an unrelated flag.
+        // EVERY SETTER (re-derived by grep 2026-08-05): a plain click on a diff
+        // flag, and the mode's own bare Tab / Shift+Tab / IsoLeftTab cycle —
+        // both set it and land the playhead on that flag's frame, and nothing
+        // else writes it true.
+        //
+        // EVERY CLEARER, the whole list, and all but the last clear for ONE
+        // reason: the value is an ordinal into the PAINTED list, so anything
+        // that rebuilds that list would otherwise leave the highlight on an
+        // unrelated flag.
         //   - a click on empty lane (the deliberate clear)
         //   - each `,` / `.` step (handle_history_mode_key)
         //   - each VIEW SWITCH, both axes (2026-08-04, when `t` / `p` / 1 / 2 /
@@ -2129,8 +2135,13 @@ struct AppState {
         //     what makes the 1/2/3 selectors, the view bar and the icon row's
         //     radios inherit it by composition.
         //   - entry and exit (the whole-struct reset at both owners)
-        // The playhead a click landed is NOT taken back by any of them: that
-        // landing was navigation, and it stays where the user put it.
+        //   - bare HOME / END (2026-08-05), and this one is the exception to the
+        //     reason above: the list is untouched, but the playhead jumps to an
+        //     end of the song, LEAVING the focused flag — so the focus goes with
+        //     it, the mode's analog of the live arms' selection clear.
+        // The playhead a click or a cycle step landed is NOT taken back by any
+        // of the list-rebuilding clearers: that landing was navigation, and it
+        // stays where the user put it.
         int         focus  = -1;
         // The commit's delta resolved into painted order, published by the flag
         // cache's rebuild (the sole producer, beside the hit rects and stems it
@@ -2817,7 +2828,7 @@ inline bool history_step_actionable(const AppState& a,
     return !((tt == 'B') ? a.tab_b.read_only : a.tab_a.read_only);
 }
 
-// WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `/` HISTORY VIEW? True for exactly
+// WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `h` HISTORY VIEW? True for exactly
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
 // beside the chord table it walks) asks history_mode_key_blocked about each
@@ -2866,7 +2877,7 @@ bool history_mode_disables_button(RedesignButton b);
 // every id that is not one of row 2's four.
 inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
                                     RedesignButton b) {
-    // THE `/` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
+    // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
     // the ones that stay lit are exactly the ones that still work. It is ranked
@@ -2919,7 +2930,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         // THE HISTORY BUTTON MIRRORS NOTHING EITHER, and its gates are worth
-        // naming because the temptation to mirror them is real: `/` refuses
+        // naming because the temptation to mirror them is real: `h` refuses
         // while audio is loading or absent (on_key's own blank-state return,
         // above every dispatch) and the mode refuses to open when the git walk
         // finds no history — and that second answer is NOT KNOWABLE PER FRAME.
@@ -3100,7 +3111,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Load render in place (')", nullptr};
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
-        case RedesignButton::IconHistory: return {"History (/)", nullptr};
+        case RedesignButton::IconHistory: return {"History (h)", nullptr};
     }
     return {nullptr, nullptr};
 }

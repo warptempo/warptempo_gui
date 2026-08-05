@@ -155,12 +155,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconLoadInPlace,
      GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // THE HISTORY MODE (2026-08-04), the row's twelfth and the table's
-    // twenty-second: bare `/`, a TOGGLE like follow and iteration — its chord
+    // twenty-second: bare `h`, a TOGGLE like follow and iteration — its chord
     // opens the mode and closes it, and the button dispatches on both edges
     // because the icon row's band claim sits ABOVE the mode's pointer gate (the
-    // rows' presses are covered by the KEYBOARD gate instead, which admits `/`
+    // rows' presses are covered by the KEYBOARD gate instead, which admits `h`
     // through handle_history_mode_key one line before the allowlist).
-    {RedesignButton::IconHistory, GuiKeys::Slash, false, false, false, false, true}, // bare /
+    {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
 };
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
@@ -312,7 +312,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
-// THE `/` HISTORY VIEW'S DEAD SET — the roster's ONE mode-scoped disabled-face
+// THE `h` HISTORY VIEW'S DEAD SET — the roster's ONE mode-scoped disabled-face
 // partition, and THE AUTHORITATIVE INVENTORY of it (every other site carries a
 // pointer here). The architect's principle, 2026-08-04: while the view stands,
 // EVERY BUTTON WHOSE ACT THE VIEW CONSUMES WEARS ITS ROW'S DISABLED FACE and
@@ -335,20 +335,25 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // exclusive). One named site, not a policy invented here.
 //
 // THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
-// never sees `/`, `,` or `.` — handle_history_mode_key consumes them one line
-// above it — so asking the allowlist alone would call bare `/` blocked and grey
-// out THE VERY BUTTON THAT LEAVES THE VIEW. history_mode_owns_key is that line's
-// own predicate, shared rather than re-spelled.
+// never sees the mode's own vocabulary — handle_history_mode_key consumes it one
+// line above — so asking the allowlist alone would call bare `h` blocked and
+// grey out THE VERY BUTTON THAT LEAVES THE VIEW. history_mode_owns_key is that
+// line's own predicate, shared rather than re-spelled, and its membership is
+// re-derived at its own definition.
+// THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW (2026-08-05, the
+// diff-flag cycle, Home/End and `c`): none of the new shapes is a roster chord —
+// the table's only Tab entries are the tabs' Ctrl+Tab, which the predicate's
+// ctrl test excludes, and nothing in it dispatches bare Tab, Home, End or `c`.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
-// 2026-08-04):
+// 2026-08-04, re-verified 2026-08-05):
 //   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
 //   which in this mode IS the save-and-commit checkpoint act and wears the
 //   "Save and Commit" face),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads
-//   the viewed commit in place), and the history button itself (bare `/`, the
+//   the viewed commit in place), and the history button itself (bare `h`, the
 //   mode's own key,
 //   selected while it stands).
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); BOTH TABS (Ctrl+Tab), the lock
@@ -500,7 +505,7 @@ bool history_mode_disables_button(RedesignButton b) {
 // index to an authored frame is the marker-shaped half; the two-step placement
 // basis and the damage are the frame-shaped half, hoisted into
 // land_playhead_on_source_frame so a caller holding a frame that belongs to NO
-// store entry — the `/` history mode's diff flags, whose removed lines exist in
+// store entry — the `h` history mode's diff flags, whose removed lines exist in
 // no store at all — lands through the identical expression instead of a second
 // copy of it. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
@@ -743,7 +748,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
     // bound-set clicks). The presses gate on the top strip first and so does this.
     const GuiRect trim_bar_row = top_trim_row_area(app);
-    // THE `/` HISTORY MODE REFUSES THIS BAND AND ONLY THIS BAND, which is why it
+    // THE `h` HISTORY MODE REFUSES THIS BAND AND ONLY THIS BAND, which is why it
     // enters the map HERE rather than as a fourth blanket return above. The mode
     // is PER-ZONE exactly as read-only is: the Pan, the Zoom (both entries) and
     // the Scrub stay live under it — they are its navigation vocabulary — while
@@ -1365,7 +1370,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
 
-    // THE `/` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
+    // THE `h` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
     // and the second and last of the mode's two gates.
     //
     // PLACED BELOW THE FOUR REDESIGNED ROWS' BAND CLAIMS ON PURPOSE. Those rows
@@ -2978,7 +2983,7 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         // be harmless — every one of these chords refuses on its own — but it
         // would leave the disabled face lying about what a click does. Rows 1, 3
         // and 4 have no disabled face of their own, so the predicate is simply
-        // true there — EXCEPT while the `/` history view stands, which greys
+        // true there — EXCEPT while the `h` history view stands, which greys
         // every button whose act it consumes across all four rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
         // row-4 press (history_mode_disables_button, above).
@@ -3181,7 +3186,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
 // and it re-arms on the line after its call to this. It is the only site in the
 // tree that writes that bit true outside toggle_dropdown's open.
-// THE `/` HISTORY MODE's POINTER ALLOWLIST, and its one act. True = the press is
+// THE `h` HISTORY MODE's POINTER ALLOWLIST, and its one act. True = the press is
 // CONSUMED here (refused outright, or handled as the mode's lane-focus click);
 // false = the press is one of the navigation gestures the mode leaves alone, and
 // on_button_press proceeds with it untouched.
@@ -3282,7 +3287,7 @@ void GuiInputHandler::close_dropdown() {
 }
 
 void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
-    // A POPUP AND THE `/` HISTORY MODE ARE NEVER UP TOGETHER, and this is the
+    // A POPUP AND THE `h` HISTORY MODE ARE NEVER UP TOGETHER, and this is the
     // half of that rule the mode cannot enforce from its own gates: the mode
     // refuses to OPEN while a popup stands (the entry sits below on_key's
     // dropdown gate), and this line refuses the popup while the MODE stands. The

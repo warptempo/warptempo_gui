@@ -1214,7 +1214,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // itself once its menu is down. They are written as a disjunction because
         // row 1 has exactly two faces and both ask for the SAME pill: were they to
         // coincide, nothing would need to win.
-        // THE ROW'S THIRD FACE, AND IT EXISTS ONLY IN THE `/` HISTORY VIEW
+        // THE ROW'S THIRD FACE, AND IT EXISTS ONLY IN THE `h` HISTORY VIEW
         // (architect 2026-08-04): while that view stands the two MENU ANCHORS
         // are dead — toggle_dropdown refuses every open — so Settings and
         // Navigation wear the disabled face and Quit does not. Built from the
@@ -1560,7 +1560,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // shape — flanked by 1px side borders. The inactive tab is a flat fill, rest
     // or hover; there is no selected-hover face and no click face anywhere in
     // this row (a tab press is a chord, never a refusal), and the ONE disabled
-    // face it has is mode-scoped: the `/` history view's, built below.
+    // face it has is mode-scoped: the `h` history view's, built below.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
@@ -1637,7 +1637,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             GuiRect{x, lane.y, tab_w, content_h});
         const bool selected = face.selected;
 
-        // THE ROW'S DISABLED FACE, WHICH EXISTS ONLY IN THE `/` HISTORY VIEW
+        // THE ROW'S DISABLED FACE, WHICH EXISTS ONLY IN THE `h` HISTORY VIEW
         // (architect 2026-08-04). Both tabs go dead there — Ctrl+Tab is not on
         // the mode's allowlist and neither is the lock's bare `o` — so the whole
         // tab surface, lock slot included, is one dead object; the partition and
@@ -1877,7 +1877,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // read-only gate blocks the authoring ones, loading blocks everything),
     // inherited through on_key rather than mirrored — the standing
     // chord-dispatch ruling doing exactly the work it exists for. THE ONE RULED
-    // EXCEPTION, and it is a MODE rather than a refusal: the `/` history view
+    // EXCEPTION, and it is a MODE rather than a refusal: the `h` history view
     // greys the buttons it consumes (architect 2026-08-04, at the face code
     // below) — a whole mode saying what it will not do, which the per-press
     // refusals above cannot express.
@@ -1939,7 +1939,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         AppState::RedesignButtonFace& face = publish_button_face(
             app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
 
-        // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `/` history view
+        // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `h` history view
         // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
         // rule above, scoped to that mode alone — while the view stands, copy,
         // paste, bpm, iteration, follow and listen are consumed acts and say so,
@@ -3732,7 +3732,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    kLoadEditorHistoryPrefix,
                                    sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
-        // THE `/` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
+        // THE `h` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
         // three bottom-strip editors paint in. It ranks directly under the
         // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and the
         // in-mode load editor above, and over the queue status, the remaining

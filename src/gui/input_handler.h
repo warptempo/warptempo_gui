@@ -234,7 +234,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // The same land with the store lookup taken off the front: place the playhead on
 // an authored SOURCE frame directly, through the identical two-step basis and
 // the identical damage. It exists for the ONE caller holding a frame that
-// belongs to no store entry — the `/` history mode's focus click, whose removed
+// belongs to no store entry — the `h` history mode's focus click, whose removed
 // diff flags name frames the session no longer has — and land_playhead_on_marker
 // is its other caller, so the marker route and the frame route cannot drift.
 // Same contract otherwise: pure playhead write, no region, no selection,
@@ -278,16 +278,19 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// THE `/` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
+// THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
 // is stated at AppState::HistoryMode). They are free rather than members because
 // each has a SECOND reader that holds no press and no handler: the redesign
 // roster's mode-scoped disabled-face partition
 // (history_mode_disables_button, app_state.h) asks both of them about a table of
 // chords.
-//   * history_mode_owns_key — the mode's own three keys, bare-exact: `/`, `,`,
-//     `.`. handle_history_mode_key consumes exactly these, one line ABOVE the
-//     allowlist, which is why a face derivation has to ask this first.
+//   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
+//     `,` / `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag
+//     cycle, the one shift-carrying shape), bare Home / End and bare `c`. The
+//     definition carries the derivation. handle_history_mode_key consumes
+//     exactly these, one line ABOVE the allowlist, which is why a face
+//     derivation has to ask this first.
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
 //     shape: true when the press is not admitted while the mode stands. Its
 //     admitted membership is enumerated at the definition.
@@ -1095,7 +1098,7 @@ private:
     // recipe in place as the new authoring baseline through
     // load_render_entry_in_place.
     //
-    // THE `/` HISTORY MODE GIVES THE SAME EDITOR A SECOND SUBJECT (2026-08-04):
+    // THE `h` HISTORY MODE GIVES THE SAME EDITOR A SECOND SUBJECT (2026-08-04):
     // while the mode stands it takes a COMMIT SPELLING, opens prefilled with the
     // viewed commit's SHA, and loads it in place through
     // load_history_commit_in_place. The mode is
@@ -1132,7 +1135,7 @@ private:
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
     // source — apply the three sidecars commit `spelling` carried (whatever
-    // `git rev-parse` resolves: the SHA the `'` editor prefilled in the `/`
+    // `git rev-parse` resolves: the SHA the `'` editor prefilled in the `h`
     // mode, a short SHA, a branch) as the new authoring baseline, in memory,
     // with the disk untouched. Validate-before-mutate like its sibling: the
     // resolve, the three-sidecar presence and all three STRICT whole-file parses
@@ -1551,14 +1554,16 @@ private:
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
-    // THE `/` HISTORY MODE's three entry points (bodies in
+    // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The
     // mode itself — what it shows, what opens and closes it, what it refuses and
     // why its frozen diff cannot go stale — is stated ONCE at
     // AppState::HistoryMode (app_state.h); each body states only its own
     // membership.
-    //   * handle_history_mode_key owns `/`, `,` and `.`, all bare-exact, and
-    //     returns true when it consumed the press. Its position in on_key IS its
+    //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
+    //     the toggle, the walk, the diff-flag cycle, the absolute Home/End and
+    //     `c` — and returns true when it consumed the press. The membership is
+    //     re-derived at history_mode_owns_key; its position in on_key IS its
     //     entry-gate list.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
@@ -1566,7 +1571,7 @@ private:
     //     through their synthesized chords, so it covers them too — and since
     //     2026-08-04 it also DECIDES THEIR FACES (history_mode_disables_button,
     //     app_state.h). It is a FREE function beside this class, with
-    //     history_mode_owns_key (the three keys' shape), for that second reader:
+    //     history_mode_owns_key (that vocabulary's shape), for that second reader:
     //     both are pure functions of key+mods and the face derivation has no
     //     press in hand. Declarations above the class.
     //   * handle_history_mode_press is the pointer half, and it both refuses and
@@ -1576,7 +1581,7 @@ private:
     //   * close_history_mode is the ONE exit owner; every closer calls it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
-    //     this instant. Two callers — `/` and the commit act's tail, which
+    //     this instant. Two callers — `h` and the commit act's tail, which
     //     re-enters on the checkpoint it just made. False (with init's own
     //     stderr line already printed) when there is no history to show; the
     //     mode is then left exactly as it was.

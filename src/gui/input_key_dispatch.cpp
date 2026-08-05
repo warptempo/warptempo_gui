@@ -212,7 +212,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q);
 }
 
-// -- THE HISTORY MODE'S THREE KEYS AND ITS ONE KEYBOARD ALLOWLIST -----------
+// -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------
 //
 // The mode itself, what opens and closes it and why the frozen now side is safe
 // are all stated ONCE, at AppState::HistoryMode (app_state.h). What lives here
@@ -220,7 +220,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 
 // Leave the mode, clearing it WHOLE — the commit walk with it, so the next entry
 // re-inits and measures against the state at THAT moment. The one exit owner:
-// bare `/`, the load-in-place, and any future closer call this rather than clearing
+// bare `h`, the load-in-place, and any future closer call this rather than clearing
 // fields themselves. Idempotent, so a closer may fire with the mode already down.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
@@ -228,7 +228,7 @@ void GuiInputHandler::close_history_mode() {
     // counts VISITS rather than describing one: letting it fall back to zero
     // would let a close-then-open pair reissue a number the flag cache has
     // already seen, which is the very collision the counter exists to prevent
-    // (a `/` off and a `/` on delivered in one dispatch batch reach the paint as
+    // (an `h` off and an `h` on delivered in one dispatch batch reach the paint as
     // a single edge, with no intervening rebuild to notice `active` blinking).
     const unsigned long long generation = app.history_mode.generation;
     app.history_mode = AppState::HistoryMode{};
@@ -287,7 +287,7 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // makes the deltas describe the state the user is actually looking at.
 //
 // TWO CALLERS, and the second is why this is a function rather than eight lines
-// inside `/`: the commit act re-enters the mode on the checkpoint it has just
+// inside `h`: the commit act re-enters the mode on the checkpoint it has just
 // made (the mode stays open across the act by the architect's ruling), and it
 // must re-enter it in EXACTLY the shape a keypress does — same walk, same index,
 // same cleared focus, same lane-stash drop across the edge — or the two entries
@@ -319,7 +319,14 @@ bool GuiInputHandler::open_history_mode_fresh() {
     return true;
 }
 
-// `/`, `,` and `.` — the mode's whole keyboard surface, all three BARE-EXACT.
+// THE MODE'S OWN KEYBOARD SURFACE — the whole membership, re-derived from the
+// arms below (2026-08-05):
+//   * bare `h`             — the toggle, the ONE shape bound outside the mode;
+//   * bare `,` / `.`       — the walk;
+//   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
+//     IsoLeftTab exactly as the live cycle is;
+//   * bare Home / End      — the ABSOLUTE ends of the song;
+//   * bare `c`             — working zoom, centered on the mode's own focus.
 // Returns true when the press was consumed.
 //
 // THE ENTRY GATES ARE POSITIONAL, NOT RE-TESTED, and that is the point: this is
@@ -329,32 +336,43 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // the open dropdown (dropdown_key_blocked: every chord but Ctrl+Q is inert while
 // a popup is up), loading-or-absent audio (returns), the editor text drag, the
 // keyboard-modal editor gate (keyboard_modal_editor_active + modal_editor_key_-
-// blocked, and a printable `/` is a PrintableKey, so it is not merely dropped
+// blocked, and a printable `h` is a PrintableKey, so it is not merely dropped
 // but TYPED — the editor's own handler consumes it and returns above this
 // point), and the drag-modal gate (any live pointer gesture swallows every key
-// but Ctrl+Q). `,` and `.` inherit the identical list.
+// but Ctrl+Q). Every other key above inherits the identical list.
 //
-// ONLY `/` IS BOUND OUTSIDE THE MODE. `,` and `.` fall through to the ordinary
-// dispatch when it is down, where they remain the unbound no-ops they have
-// always been.
+// ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
+// check and every other arm below it, so with the mode down `,`, `.`, Tab,
+// Home/End and `c` fall through to the ordinary dispatch and behave exactly as
+// they always have.
 //
-// THE THREE KEYS' SHAPE IS ITS OWN PREDICATE (history_mode_owns_key) because it
-// has a SECOND reader: the redesign roster's mode-scoped disabled-face partition
+// THE SHAPE IS ITS OWN PREDICATE (history_mode_owns_key) because it has a SECOND
+// reader: the redesign roster's mode-scoped disabled-face partition
 // (history_mode_disables_button, input_pointer.cpp) asks "would this button's
-// chord act in the mode", and the answer for the history button's own bare `/`
+// chord act in the mode", and the answer for the history button's own bare `h`
 // is decided HERE — one line above the allowlist — rather than in it. Spelling
 // the membership twice is exactly how that face would come to lie about the
-// button that opens the view.
+// button that opens the view. NO BUTTON CHORD IS ANY OF THE OTHER SHAPES (the
+// roster's Tab entries are the tabs' Ctrl+Tab, which the ctrl test below
+// excludes; nothing dispatches bare Tab, Home, End or `c`), so growing this
+// predicate moved no face.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
-    if (mods.ctrl || mods.shift || mods.alt) return false;
-    return key == GuiKeys::Slash || key == GuiKeys::Comma ||
-           key == GuiKeys::Period;
+    if (mods.ctrl || mods.alt) return false;
+    // THE CYCLE IS THE ONE SHIFT-CARRYING SHAPE, and it is admitted in the live
+    // cycle's own three spellings: bare Tab forward, Shift+Tab back, and
+    // IsoLeftTab back shift-agnostically (the compositor delivers that keysym
+    // for Shift+Tab on most layouts, and the live arm accepts it either way).
+    if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
+    if (mods.shift) return false;
+    return key == GuiKeys::H || key == GuiKeys::Comma ||
+           key == GuiKeys::Period || key == GuiKeys::Home ||
+           key == GuiKeys::End || key == GuiKeys::C;
 }
 
 bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (!history_mode_owns_key(key, mods)) return false;
 
-    if (key == GuiKeys::Slash) {
+    if (key == GuiKeys::H) {
         if (app.history_mode.active) {
             close_history_mode();
             return true;
@@ -396,6 +414,111 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // instead of landing the playhead on a flag that is no longer shown.
         drop_lane_stash_across_history_edge();
         viewport.invalidate_all();
+        return true;
+    }
+
+    // THE ARMS BELOW ARE THE MODE'S OWN RE-EXPRESSIONS of three live commands
+    // (architect 2026-08-05). Each is the live arm's gesture read against the
+    // mode's own data — the diff-flag list and the mode's own focus — never the
+    // live-marker machinery, which navigates by markers the lane is not showing.
+    // THEY KEEP THE LIVE ARMS' PLAYBACK AND REGION REGIMES: a keyboard command
+    // that commits a new cursor position stops a live audition and dissolves a
+    // resting region (the keyboard stop rule at stop_playback_if_playing, whose
+    // cursor-moving navigation class names Home/End and the Tab family; the
+    // clear-site set at clear_region_highlight). That is where they part from
+    // the mode's diff-flag CLICK, which deliberately touches neither — a pointer
+    // route with its own recorded regime.
+
+    // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local. Tab
+    // steps to the next flag, Shift+Tab and IsoLeftTab to the previous, in the
+    // list's own order: rebuild_history_diff_flags leaves `flags` sorted
+    // ASCENDING BY time_frame, so list order IS reading order and no second
+    // ordering is derived here (the hit stash indexes this same list).
+    // NO WRAP, mirroring the live cycle: it lands on the nearest stop in the
+    // walk direction and does nothing at all with none ahead, so a Tab on the
+    // last flag is a consumed no-op here too. With NO focus standing Tab takes
+    // the FIRST flag and Shift+Tab the LAST, which is the same rule read from
+    // outside the list. An empty list — an empty delta, or an active column
+    // whose half of the delta is empty — is a consumed no-op.
+    if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
+        const int n = static_cast<int>(app.history_mode.flags.size());
+        if (n == 0) return true;
+        const bool forward = (key == GuiKeys::Tab && !mods.shift);
+        const int here = app.history_mode.focus;
+        int there = -1;
+        if (here < 0 || here >= n) {
+            there = forward ? 0 : n - 1;
+        } else if (forward) {
+            if (here + 1 >= n) return true;   // last already
+            there = here + 1;
+        } else {
+            if (here == 0) return true;       // first already
+            there = here - 1;
+        }
+        playback_lifecycle.stop_playback_if_playing();
+        app.history_mode.focus = there;
+        clear_region_highlight(app, viewport);
+        land_playhead_on_source_frame(
+            app, audio, viewport,
+            app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
+        // The live cycle recenters on its stop at the current zoom, follow mode
+        // not gating it; this does the same, reading the flag it just landed on.
+        viewport.center_viewport_on_playhead();
+        // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every arm
+        // above either returned or picked a different index), so the full-window
+        // damage the mode's focus click emits on a move is unconditional.
+        viewport.invalidate_all();
+        return true;
+    }
+
+    // BARE HOME / END — THE ABSOLUTE ENDS OF THE SONG, deliberately NOT the trim
+    // bounds the live arms jump to (architect 2026-08-05). The view reviews the
+    // WHOLE piece: a checkpoint's delta is laid out across every authored frame,
+    // trimmed window or not, so an End that stopped at a trim bound would hide
+    // the flags past it. With a full trim window the two answers coincide
+    // (trim_window_is_full), so the difference shows only under a set trim.
+    if (key == GuiKeys::Home || key == GuiKeys::End) {
+        playback_lifecycle.stop_playback_if_playing();
+        // THE MODE ANALOG OF THE LIVE ARMS' SELECTION CLEAR: the playhead is
+        // leaving the focused flag for a spot nothing marks, so the focus goes
+        // with it — otherwise the flag would keep claiming to be the playhead at
+        // its own position. Full-window damage for the face swap, as the mode's
+        // click emits on a focus move.
+        if (app.history_mode.focus != -1) {
+            app.history_mode.focus = -1;
+            viewport.invalidate_all();
+        }
+        clear_region_highlight(app, viewport);
+        // The ACTIVE domain's own ends: live_total_frames is what the displayed
+        // timeline runs to in either view, and it is the same total the
+        // full-window trim range resolves to.
+        const int64_t live_total = live_total_frames(app, audio);
+        viewport.move_playhead_to(key == GuiKeys::Home ? 0 : live_total - 1);
+        return true;
+    }
+
+    // BARE `c` — the live arm's recipe with the MODE's focus in place of the
+    // live marker's: working zoom, centered on the playhead, and with a focus
+    // standing the playhead re-lands on that flag first (idempotent when it is
+    // already there, which after a click or a Tab step it is). The live arm's
+    // repair_last_selected / jump_playhead_to_focused_marker pair is
+    // deliberately NOT run: it walks the live stores, which the lane is not
+    // showing. The region clear is unconditional and up front, exactly as the
+    // live arm does it — the no-focus path never reaches a land's own tail.
+    if (key == GuiKeys::C) {
+        clear_region_highlight(app, viewport);
+        const int focus = app.history_mode.focus;
+        if (focus >= 0 && focus < static_cast<int>(app.history_mode.flags.size())) {
+            // The live arm's stop lives inside its jump, so it stops only when
+            // something is focused; this keeps that shape.
+            playback_lifecycle.stop_playback_if_playing();
+            land_playhead_on_source_frame(
+                app, audio, viewport,
+                app.history_mode.flags[
+                    static_cast<std::size_t>(focus)].time_frame);
+        }
+        viewport.apply_zoom_change(kWorkingZoomLevel);
+        viewport.center_viewport_on_playhead();
         return true;
     }
 
@@ -457,7 +580,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             the modal note below). The S->T tail's target
 //                             PREVIEW render is derived data, not authoring
 //                             state, and the mode already tolerates one: a
-//                             render live from before `/` runs on, and the
+//                             render live from before `h` runs on, and the
 //                             load-in-place's own tail triggers one from inside the
 //                             mode. The synchronous plate
 //                             rebuild each switch ends in is load-bearing rather
@@ -519,47 +642,58 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             on_key's dispatch point (input_handler.cpp), and
 //                             this line only lets the two that can be live in
 //                             this mode run — the REGION CLEAR (a span formed
-//                             before `/`; the mode's pointer allowlist admits no
+//                             before `h`; the mode's pointer allowlist admits no
 //                             region former, so nothing in here can make a new
 //                             one) and the RENDER / BATCH CANCEL (a render
-//                             launched before `/`, whose progress line the mode's
+//                             launched before `h`, whose progress line the mode's
 //                             corner outranks). Both sit BELOW this gate in
 //                             on_key and neither mutates authored state, so the
 //                             frozen now side is untouched — the same argument
 //                             the read-only allowlist admits Esc on.
 //                             IT CANNOT CLOSE THE VIEW, structurally rather than
 //                             by refusal: the toggle is handle_history_mode_key's
-//                             and that function owns `/`, `,` and `.` alone
+//                             and that function owns `h`, `,` and `.` alone
 //                             (history_mode_owns_key), so no Esc reaches it. The
-//                             view's exits are unchanged, and `/` is still the
+//                             view's exits are unchanged, and `h` is still the
 //                             key that leaves. With no region resting and no
 //                             render running a bare Esc is a consumed nothing,
 //                             which is what it is everywhere else too.
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
-// modality owns — `/`, `,` and `.` included, which TYPE into the buffer instead
+// modality owns — `h`, `,` and `.` included, which TYPE into the buffer instead
 // of stepping the walk underneath it (they are printable, so the editor consumes
 // them and returns above this line), exactly as they do under any other editor.
-// `/`, `,` and `.` never reach here — handle_history_mode_key consumes them one
-// line above.
+//
+// WHAT THE MODE CLAIMS ONE LINE ABOVE THIS GATE, and so never reaches it:
+// handle_history_mode_key's own vocabulary — bare `h` (the toggle), bare `,` and
+// `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE), bare
+// Home / End (the ABSOLUTE ends of the song, not the trim bounds) and bare `c`
+// (working zoom centered on the mode's own focus). The last three families
+// joined on 2026-08-05, and they are claimed rather than admitted for one
+// reason: each is a MODE-LOCAL re-expression, reading the diff-flag list and the
+// mode's focus instead of the live stores the ordinary arm would walk. That
+// function's declaration comment carries the membership; this gate never sees
+// any of it.
 //
 // WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: the PLAYHEAD
-// steps and Home/End (they move the cursor, and in the marker lane the very same
-// press nudges a marker), `c` and `f` (a jump onto a live marker's focus, and a
-// session-state toggle), BOTH TAB CYCLES and the A/B tab switches (Tab,
-// Shift+Tab, Ctrl+Tab, Ctrl+Shift+Tab), and `o`.
+// steps (they move the cursor, and in the marker lane the very same press nudges
+// a marker), `f` (a session-state toggle), Ctrl+Shift+Tab (the paired-tab march)
+// and the A/B tab switches (Ctrl+Tab), and `o`.
 //
 // VIEWS ARE ADMITTED, TABS ARE NOT, and the line between them is not arbitrary:
 // a view switch re-reads THE SAME piece — the same three sidecar texts the now
 // side was frozen from, the same delta, another column of it — while an A/B tab
 // switch swaps the per-tab band (viewport, zoom, playhead, trim, read_only) the
-// session was measured with, and `c` and Tab both navigate by LIVE MARKERS,
-// which the mode is not showing. The architect admitted views on 2026-08-04 and
-// nothing else with them. THE TAB CYCLES STAY CONSUMED and that is ratified
-// rather than pending (same day): a tab switch swaps the very per-tab band the
-// session was measured with, and the tabs now WEAR the refusal — see the face
-// paragraph below.
+// session was measured with. The architect admitted views on 2026-08-04 and
+// nothing else with them. THE TAB SWITCHES STAY CONSUMED — Ctrl+Tab and the
+// Ctrl+Shift+Tab march both — and the tabs WEAR the refusal (see the face
+// paragraph below). The 2026-08-04 ratification also covered the BARE cycle, on
+// the argument that Tab and `c` navigate by LIVE MARKERS; the architect
+// SUPERSEDED that half on 2026-08-05 by giving the mode its own Tab and its own
+// `c`, which navigate by the diff flags instead — so nothing walks a live marker
+// in here and the argument's premise is gone, while the tab-band argument, which
+// was never about markers, stands untouched.
 //
 // THE REDESIGNED BUTTONS AND THE NAVIGATION MENU'S ITEMS PASS THROUGH HERE
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
@@ -854,7 +988,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
     // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
-    // (mirroring the dispatch arm), all requiring no ctrl/alt.
+    // (mirroring the dispatch arm), all requiring no ctrl/alt. The `h` history
+    // mode's diff-flag cycle takes the same three shapes and inherits this line
+    // unchanged, which is the eligibility it wants: fast walking of the flags
+    // instead of the markers.
     if (!mods.ctrl && !mods.alt &&
         (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab))
         return true;
@@ -1528,7 +1665,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     // tab is the tab the entry was dispatched from; its view-state band carries
     // the recipe trim that shaped this render.
 
-    // THE `/` HISTORY MODE ENDS HERE, on the first line past the last refusal
+    // THE `h` HISTORY MODE ENDS HERE, on the first line past the last refusal
     // and before the first store write. It is the one route in the product that
     // replaces the authored state the mode's frozen now side was measured
     // against, so leaving the mode standing would leave every flag in the lane
@@ -1688,7 +1825,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     return true;
 }
 
-// -- Load-in-place from a COMMIT (the `'` editor in the `/` history mode) --
+// -- Load-in-place from a COMMIT (the `'` editor in the `h` history mode) --
 //
 // WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
 // history as its source instead of a render entry. `spelling` is whatever the
@@ -1741,7 +1878,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // band pull, the three caller-side side effects, the coincidence auto-select and
 // the target preview trigger. Note that the prefs apply includes
 // `projects_repo`, 1:1 with a load: a commit whose settings named a different
-// projects home installs that answer too, and the next `/` reads it.
+// projects home installs that answer too, and the next `h` reads it.
 //
 // AND THE MODE CLOSES, at the first line past the last refusal — the placement
 // load_render_entry_in_place states and for its reason: this is the other route that
@@ -1894,7 +2031,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // playback only when the modal actually opens (after every guard), so a
 // refused open leaves a listening session running.
 //
-// THE `/` HISTORY MODE CHANGES WHAT THIS EDITOR IS FOR, and the whole change is
+// THE `h` HISTORY MODE CHANGES WHAT THIS EDITOR IS FOR, and the whole change is
 // this one branch plus the routing at load_editor_commit: in the mode the
 // editor takes a COMMIT SPELLING and opens PREFILLED with the viewed commit's
 // full SHA (load_history_commit_in_place). Both of the renders-side guards
@@ -1993,7 +2130,7 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // the loop never takes a step for any name the product writes.
 void GuiInputHandler::load_editor_autocomplete() {
     if (!text_editor::is_active(app.load_editor)) return;
-    // IN THE `/` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
+    // IN THE `h` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
     // pending is a commit spelling, and the entry identifiers below name renders
     // this route never reads. A bare Tab is a consumed no-op there rather than a
     // completion out of the wrong vocabulary.
@@ -2046,7 +2183,7 @@ void GuiInputHandler::load_editor_autocomplete() {
 // identifier matching nothing is a typo, not a fault, and the flash is the whole
 // answer (architect 2026-08-02).
 //
-// IN THE `/` HISTORY MODE THE SUBJECT IS A COMMIT, not a render entry: the
+// IN THE `h` HISTORY MODE THE SUBJECT IS A COMMIT, not a render entry: the
 // pending goes to load_history_commit_in_place, which owns every refusal on
 // that route
 // and names each one on stderr. The two routes share this function's SHAPE

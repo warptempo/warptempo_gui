@@ -386,22 +386,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE `/` HISTORY MODE — its three keys, then its allowlist. Placed HERE,
+    // THE `h` HISTORY MODE — its own keys, then its allowlist. Placed HERE,
     // directly under the drag-modal gate and directly over the read-only one,
     // and the position carries two facts rather than being a convenience.
     //
     // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt, an open
     // dropdown, loading-or-absent audio, the editor text drag, any of the four
     // keyboard-modal editors and any live pointer gesture all swallow the press
-    // above this line, so `/` cannot open the mode in any of those states and no
+    // above this line, so `h` cannot open the mode in any of those states and no
     // predicate is re-tested here to say so. The full statement is at
     // handle_history_mode_key.
     //
     // (2) THE READ-ONLY BIT IS IRRELEVANT TO THE MODE, and being above that gate
     // is what makes it so: the mode gates by itself, in both tabs and both
-    // views, so `/`, `,` and `.` never meet the read-only allowlist and need no
-    // entry in it. A locked tab reads history exactly as a writable one does —
-    // it is a viewer either way.
+    // views, so the mode's whole vocabulary never meets the read-only allowlist
+    // and needs no entry in it. A locked tab reads history exactly as a writable
+    // one does — it is a viewer either way. (The read-only allowlist happens to
+    // admit the same navigation shapes anyway, but that is its own answer for
+    // its own reason, not a dependency of this one.)
     if (handle_history_mode_key(key, mods)) return;
     if (app.history_mode.active && history_mode_key_blocked(key, mods)) return;
 
@@ -627,11 +629,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
-    // THE `/` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
+    // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
     // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) — the
     // only two of the six reachable in there — run inside the view. It gained no
     // binding of its own, and Esc cannot close it: the view's toggle is
-    // handle_history_mode_key's `/`, which no Esc reaches.
+    // handle_history_mode_key's `h`, which no Esc reaches.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
     // NO drop-to-span, and no collapse of anything but the span itself. A 2+
     // selection and a singleton are
@@ -923,7 +925,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare `'` opens the load prompt in the bottom strip: load a chosen
-    // render in place as the new authoring baseline by NAME — or, while the `/`
+    // render in place as the new authoring baseline by NAME — or, while the `h`
     // history mode stands, a COMMIT by its SHA, the editor's other subject
     // (open_load_editor's own branch; the mode admits this one key through
     // history_mode_key_blocked above). TWO PRODUCERS, ONE ROUTE: this key and

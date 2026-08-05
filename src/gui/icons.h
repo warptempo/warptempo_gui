@@ -52,7 +52,7 @@ enum class Icon {
     GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
-    VcsDiff,             // The history mode (`/`)
+    VcsDiff,             // The history mode (`h`)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable
     // one (the slot's contract is at the tab painter).
