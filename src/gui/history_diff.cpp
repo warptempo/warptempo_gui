@@ -1457,7 +1457,9 @@ bool GuiHistoryDiff::init(const AppState& app) {
     base_name_.clear();
     project_directory_.clear();
     commits_.clear();
-    cache_.clear();
+    for (std::vector<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
+        c.clear();
+    }
 
     // Every failure arm lands here: one stderr line, and the whole session
     // left in its documented empty shape whatever step got as far as filling
@@ -1584,8 +1586,9 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // Anything else (a missing sidecar, a parse refusal, an ambiguous
     // per-commit path resolution) leaves the walk here, counted; the parsed
     // stores the gate produced are discarded, but each eligible commit's
-    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides, so no
-    // delta ever runs git again. Eager on purpose: the cost is bounded (at
+    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides in the
+    // cumulative reading and BOTH sides in the iterative one, so no delta ever
+    // runs git again. Eager on purpose: the cost is bounded (at
     // most kCommitDepth strict loads of three tiny files each, staged through
     // the temp dir) and paying it at entry is what lets `n/N`, the clamps and
     // the corner all read one settled eligible list for the session.
@@ -1616,7 +1619,9 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // The now side is captured once, here: every delta this session hands out
     // is measured against these exact bytes.
     now_ = build_history_now_side(app);
-    cache_.resize(commits_.size());
+    for (std::vector<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
+        c.resize(commits_.size());
+    }
     available_ = true;
     return true;
 }
@@ -1646,23 +1651,32 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     return commits_[index].sha;
 }
 
-const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
-    if (!available_ || index >= commits_.size()) return nullptr;
-    if (cache_[index].has_value()) return &*cache_[index];
+namespace {
 
-    // THE THEN SIDE IS THE SNAPSHOT THE LOAD GATE ALREADY READ at init: walk
-    // membership required reading (and strictly loading) all three sidecars,
-    // so the walk carries each member's texts and a delta runs no git at all.
-    const GuiHistoryCommitSidecars& snap = commits_[index];
-    GuiHistoryCommitDelta           d;
-    d.sha = snap.sha;
+// THE TYPED LINE DIFF OF ONE PAIR OF SIDES — the whole delta computation, taken
+// off the walk position so that BOTH compare readings run the identical
+// mechanism over different texts (GuiHistoryCompare, history_diff.h). The
+// cumulative reading hands it the viewed commit's snapshots and the frozen now
+// side; the iterative reading hands it the walk parent's snapshots and the
+// viewed commit's own. Nothing here knows which it is, which is what makes the
+// two readings the same answer to two questions rather than two answers.
+//
+// `sha` is always the VIEWED commit's, in both readings: the delta names the
+// checkpoint it describes, never the side it was measured against.
+GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
+                                           const std::string& then_warp,
+                                           const std::string& then_phase_reset,
+                                           const std::string& then_settings,
+                                           const std::string& now_warp,
+                                           const std::string& now_phase_reset,
+                                           const std::string& now_settings) {
+    GuiHistoryCommitDelta d;
+    d.sha = sha;
 
-    const LineDiff warp_diff =
-        diff_lines(snap.warpmarkers.text, now_.warpmarkers_text);
+    const LineDiff warp_diff = diff_lines(then_warp, now_warp);
     const LineDiff phase_reset_diff =
-        diff_lines(snap.phaseresetmarkers.text, now_.phaseresetmarkers_text);
-    const LineDiff settings_diff =
-        diff_lines(snap.settings.text, now_.settings_text);
+        diff_lines(then_phase_reset, now_phase_reset);
+    const LineDiff settings_diff = diff_lines(then_settings, now_settings);
 
     // EVERY LINE HERE PARSES: the then side passed the strict whole-set load
     // at init (that is what walk membership means) and the now side is the
@@ -1708,8 +1722,11 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
             return c;
         });
 
-    d.then_scale_token = scale_token_of(snap.settings.text);
-    d.now_scale_token  = scale_token_of(now_.settings_text);
+    // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
+    // whichever side is older in this reading, now whichever is newer, so the
+    // corner's `Scale: [-] a [+] b` says the same kind of thing in both.
+    d.then_scale_token = scale_token_of(then_settings);
+    d.now_scale_token  = scale_token_of(now_settings);
     d.scale_changed    = (d.then_scale_token != d.now_scale_token);
 
     // One line per commit view, at most. The degraded arm is an ALLOCATION
@@ -1724,8 +1741,57 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(std::size_t index) {
                      d.sha.c_str());
     }
 
-    cache_[index] = std::move(d);
-    return &*cache_[index];
+    return d;
+}
+
+} // namespace
+
+const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
+    std::size_t index, GuiHistoryCompare compare) {
+    if (!available_ || index >= commits_.size()) return nullptr;
+    std::vector<std::optional<GuiHistoryCommitDelta>>& slots =
+        cache_[static_cast<std::size_t>(compare)];
+    if (slots[index].has_value()) return &*slots[index];
+
+    // THE THEN SIDE IS A SNAPSHOT THE LOAD GATE ALREADY READ at init in both
+    // readings: walk membership required reading (and strictly loading) all
+    // three sidecars, so the walk carries every member's texts and a delta runs
+    // no git at all, whichever pair of sides it takes.
+    const GuiHistoryCommitSidecars& snap = commits_[index];
+
+    if (compare == GuiHistoryCompare::Cumulative) {
+        slots[index] = compute_commit_delta(
+            snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
+            snap.settings.text, now_.warpmarkers_text,
+            now_.phaseresetmarkers_text, now_.settings_text);
+        return &*slots[index];
+    }
+
+    // ITERATIVE: THEN is the WALK PARENT (the next-older eligible member, the
+    // list being newest-first) and NOW is the viewed checkpoint itself, so the
+    // delta is what this commit introduced.
+    //
+    // THE OLDEST MEMBER HAS NO PARENT IN THE WALK and gets an EMPTY delta
+    // structurally — no diff is run at all, rather than one against an invented
+    // empty side, which would read every line of the oldest checkpoint as newly
+    // added. Ruled acceptable (architect 2026-08-05): a review is about the
+    // recent commits, and with the walk capped the oldest member's real parent
+    // is off the end of the list on any long history anyway. The parent may also
+    // span commits the LOAD GATE hid, which is the walk's own honesty — the
+    // nearest checkpoint the mode can show is the only one whose delta has two
+    // reachable sides (the file head's compare-mode block owns both rulings).
+    if (index + 1 >= commits_.size()) {
+        GuiHistoryCommitDelta empty;
+        empty.sha    = snap.sha;
+        slots[index] = std::move(empty);
+        return &*slots[index];
+    }
+    const GuiHistoryCommitSidecars& parent = commits_[index + 1];
+    slots[index] = compute_commit_delta(
+        snap.sha, parent.warpmarkers.text, parent.phaseresetmarkers.text,
+        parent.settings.text, snap.warpmarkers.text,
+        snap.phaseresetmarkers.text, snap.settings.text);
+    return &*slots[index];
 }
 
 // ---------------------------------------------------------------------------

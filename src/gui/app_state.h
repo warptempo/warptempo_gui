@@ -1732,6 +1732,12 @@ struct AppState {
     // "clickable" are still one fact — they are now both simply always true,
     // and the click TOGGLES rather than only releasing.
     //
+    // WITH ONE STATE'S EXCEPTION since 2026-08-05: while the `h` history view
+    // stands the tabs are not tabs but the COMPARE SELECTOR, so no padlock is
+    // drawn, no slot is reserved and this stays ZERO — the press path's lock
+    // branch is then unreachable through the rect's own emptiness rather than
+    // through a mode test, and "visible" and "clickable" stay one fact.
+    //
     // It is still zeroed at the top of every paint run: a cold frame, a
     // degenerate lane or a row that never painted must not strand a target.
     //
@@ -2034,15 +2040,20 @@ struct AppState {
     //
     // AND THE ROSTER WEARS THOSE REFUSALS (architect 2026-08-04): every
     // redesigned button whose act this mode consumes takes its row's DISABLED
-    // face and ignores the pointer, so Undo, Redo, both tabs, copy, paste, bpm,
-    // iteration, follow, listen and the two menu anchors grey out while Quit,
-    // the view bar, Save, the Commit-faced Render, the S/T + W/P radios, the
-    // load-in-place opener and the history button stay lit. The partition is
+    // face and ignores the pointer, so Undo, Redo, copy, paste, bpm, iteration,
+    // follow, listen and the two menu anchors grey out while Quit, the view bar,
+    // Save, the Commit-faced Render, the S/T + W/P radios, the load-in-place
+    // opener and the history button stay lit. The partition is
     // DERIVED
     // from the two gates above (plus the anchors' toggle_dropdown lockout) and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp
     // — and it is read live from `active` below, so leaving the mode restores
     // every face on the next frame with nothing latched.
+    //
+    // ROW 3'S TWO TABS ARE THE EXCEPTION, and a repurposing rather than a
+    // refusal (architect 2026-08-05): their chord stays consumed like every
+    // other tab switch, and the SURFACE becomes the compare selector — see
+    // `compare` below.
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
@@ -2131,6 +2142,35 @@ struct AppState {
         // Index into the commit walk, 0 = newest. `,` steps older (+1), `.`
         // newer (-1), each clamping at its wall as a consumed no-op.
         std::size_t index  = 0;
+        // WHICH READING THE LANE SHOWS (architect 2026-08-05), the two compare
+        // modes' bit. GuiHistoryCompare (history_diff.h) owns the pair's
+        // definitions; what lives here is the session's own state.
+        //
+        // ITERATIVE IS THE DEFAULT AT EVERY ENTRY — the plain member initializer
+        // below, applied by the whole-struct machinery at both edges, so a visit
+        // never inherits the last visit's reading and there is nothing to reset
+        // by hand.
+        //
+        // ITS SELECTOR IS ROW 3'S TAB PAIR, which stops being the A/B tabs while
+        // the view stands and becomes this bit's radio: tab A reads "Iterative",
+        // tab B "Cumulative", the selected face marks the live reading and a
+        // press on the other switches. THERE IS NO HOTKEY, by the architect's
+        // explicit ruling — the keyboard tab switches stay consumed in the mode,
+        // so the surface is repurposed while the keys are not (the partition's
+        // hand exception is at history_mode_disables_button, input_pointer.cpp).
+        //
+        // A SWITCH IS A MODE EDGE, exactly like a `,` / `.` step, and one owner
+        // does all of it (GuiInputHandler::set_history_compare): clear the mode
+        // focus, drop the lane's published content, re-frame on the new delta's
+        // span, damage the window.
+        //
+        // EVERY READER OF THE DISPLAYED DELTA PASSES IT, re-derived by grep on
+        // delta_at 2026-08-05: the flag cache's rebuild (waveform_cache.cpp),
+        // frame_viewed_commit_diff_span, GuiPaintHandler::paint_trim's diff-span
+        // substitution and the bottom strip's corner line. The ONE reader that
+        // deliberately does NOT is head_delta_empty below, which names
+        // Cumulative explicitly and says why.
+        GuiHistoryCompare compare = GuiHistoryCompare::Iterative;
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
         //
@@ -2147,6 +2187,9 @@ struct AppState {
         // unrelated flag.
         //   - a click on empty lane (the deliberate clear)
         //   - each `,` / `.` step (handle_history_mode_key)
+        //   - each COMPARE SWITCH (2026-08-05, set_history_compare): the two
+        //     readings are two different lists, so it is the step's own reason
+        //     at a different edge
         //   - each VIEW SWITCH, both axes (2026-08-04, when `t` / `p` / 1 / 2 /
         //     3 joined the keyboard allowlist): the lane paints only the ACTIVE
         //     COLUMN's half of a commit's delta, so W and P are different lists,
@@ -2190,10 +2233,10 @@ struct AppState {
         // (open_history_mode_fresh) bumps on every entry, and the reason the
         // flag cache can tell one visit from the next.
         //
-        // (active, index, focus) is not enough, and the gap is not a corner:
+        // (active, index, focus, compare) is not enough, and the gap is not a corner:
         // A CLOSE AND A REOPEN THE PAINT NEVER SEES BETWEEN. Two sessions of the
-        // same piece land on index 0 with focus -1 and `active` true — the
-        // ordinary shape both times — and the paint consults this fingerprint
+        // same piece land on index 0 with focus -1, the iterative reading and
+        // `active` true — the ordinary shape both times — and the paint consults this fingerprint
         // once per frame, so a close and an open delivered in one dispatch batch
         // (an `h` off and an `h` on; or, since 2026-08-05, THE COMMIT ACT's own
         // close followed by the user reopening the view) reach it as a single
@@ -2231,6 +2274,15 @@ struct AppState {
         // checkpoint, so stepping back to an older one must not offer to
         // "re-commit" it.
         //
+        // AND IT READS THE CUMULATIVE DELTA ALWAYS, never `compare` (architect
+        // 2026-08-05, the field's one deliberate non-reader of the bit): the act
+        // commits THE LIVE STATE, so "is there anything to checkpoint" is
+        // live-vs-newest whatever the lane happens to be displaying. The
+        // iterative reading of index 0 answers a different question entirely
+        // (what the newest checkpoint changed against the one before it), and it
+        // can be empty while the session differs or non-empty while it does not
+        // — either would grey or light the act against the wrong fact.
+        //
         // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
         // 2026-08-05): the delta's vocabulary is the two marker columns plus
         // `scale`, so a session whose only drift is the invisible settings
@@ -2262,7 +2314,8 @@ struct AppState {
         // and W/P he switched to — those switches are how both halves of a
         // delta get read, and undoing them would undo the reading); the A/B TAB,
         // which cannot move at all while the view stands (both tab switches are
-        // consumed, and both tab buttons wear the disabled face); and trim,
+        // consumed, and since 2026-08-05 the two tab BUTTONS do not even show the
+        // A/B pair — they are the compare selector in here); and trim,
         // read_only and the selection, none of which the mode touches.
         //
         // THE TRIO IS ACTIVE-DOMAIN STATE, NOT AUTHORED STATE — in 'T' the three
@@ -2980,8 +3033,11 @@ bool history_mode_disables_button(const AppState::HistoryMode& mode,
 //   * Row 1's Quit and row 3's tabs answer true HERE: Quit keeps its two faces
 //     by ruling, and a tab has no disabled face of its own. Their entries exist
 //     so the vector is total over the roster and the comparator needs no
-//     membership test. (Both tabs still go dead in the history view — through
-//     the mode line at the top of the body, not through these arms.)
+//     membership test. (The tabs answer true in EVERY state since 2026-08-05:
+//     the history view, which greyed them for one day, repurposes the pair as
+//     its compare selector instead, and the hand exception that says so is in
+//     history_mode_disables_button — so the mode line at the top of this body
+//     never fires for them either, and row 3 has no disabled face at all.)
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
 // swallows the PRESS at the pointer path's own modal gate, and a modal that
 // greyed the chrome under it would be a fourth face nobody asked for.
@@ -3095,6 +3151,20 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
 // cannot rest open, and `m` never reaches dispatch while it is up), so lighting
 // it would advertise a mode this product does not have.
 inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
+    // ROW 3'S TABS ARE THE COMPARE SELECTOR WHILE THE `h` VIEW STANDS
+    // (architect 2026-08-05) — the Render-button hijack applied to a whole row:
+    // the surface is repurposed, not duplicated, so the selected face marks the
+    // live READING rather than the live tab. Ranked first for the same reason
+    // the Render label's history arm is: the view is the outer mode, and the
+    // A/B tab it hides cannot move in here anyway (both tab chords are consumed).
+    if (a.history_mode.active) {
+        if (b == RedesignButton::TabA) {
+            return a.history_mode.compare == GuiHistoryCompare::Iterative;
+        }
+        if (b == RedesignButton::TabB) {
+            return a.history_mode.compare == GuiHistoryCompare::Cumulative;
+        }
+    }
     switch (b) {
         // THE VIEW BAR READS THE LIVE COMBINATION — both axes at once, which is
         // what an ABSOLUTE selector reports — so a button lights however the
@@ -3275,8 +3345,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // paints and the name its hint gives cannot drift into two different words.
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
 inline constexpr const char* kRenderCommitLabel     = "Save and Commit";
+// ROW 3'S TWO STATE LABELS — the tab pair's, while the `h` view stands and the
+// tabs are the COMPARE SELECTOR instead (architect 2026-08-05). Sentence case,
+// the ordinary convention: these are ordinary one-word labels and not the
+// Render row's two named title-case exceptions. They live beside the render
+// pair for the same reason that pair lives beside the constant table — one
+// place where a stateful button's word is written.
+inline constexpr const char* kCompareIterativeLabel  = "Iterative";
+inline constexpr const char* kCompareCumulativeLabel = "Cumulative";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
+    // THE COMPARE TABS CARRY NO TOOLTIP, on the view bar's own reasoning
+    // (row 1's three): their labels ARE the thing a hint would name, there is no
+    // chord to advertise (the pair is deliberately hotkey-less), and the live
+    // tabs' "Tab A (Ctrl+Tab)" would be a lie about both the act and the key.
+    if (a.history_mode.active &&
+        (b == RedesignButton::TabA || b == RedesignButton::TabB)) {
+        return {nullptr, nullptr};
+    }
     if (b == RedesignButton::Render && a.history_mode.active) {
         return {"Save and Commit (Ctrl+Alt+R)", nullptr};
     }
@@ -3286,13 +3372,25 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     return redesign_button_tooltip(b);
 }
 
-// The toolbar's LABEL, by the same bit and for the same reason. The constant
-// per-button labels live with the painter's roster half (kToolbarButtons,
-// paint_handler.cpp); this answers only "does this button override its own",
-// which exactly one does. MEMBERSHIP IS UNCHANGED by either override: a button
-// with a tooltip keeps it in both modes, and a button with a label keeps one.
+// A BUTTON'S LABEL, by the same bits and for the same reason. The constant
+// per-button labels live with the painters' roster halves (kToolbarButtons and
+// kTabs, paint_handler.cpp); this answers only "does this button override its
+// own", which THREE now do — the Render button on two different mode bits, and
+// row 3's two tabs on the history view's. LABEL MEMBERSHIP IS UNCHANGED by any
+// override: a button with a label keeps one in every mode. (The TOOLTIP
+// override's membership does move, once: the compare tabs drop theirs, on the
+// view bar's own reasoning — the sibling function above states it at its site.)
 inline const char* redesign_button_label(const AppState& a, RedesignButton b,
                                          const char* table_label) {
+    // THE TABS ARE THE COMPARE SELECTOR IN THE `h` VIEW, so they say which
+    // reading they select rather than which tab they are. The A slot takes
+    // Iterative because it is the default; the shaped-run layout each painter
+    // does absorbs the width change (both labels are wider than "A"/"B", and the
+    // tab's width has always been max(minimum, shaped + 2*pad)).
+    if (a.history_mode.active) {
+        if (b == RedesignButton::TabA) return kCompareIterativeLabel;
+        if (b == RedesignButton::TabB) return kCompareCumulativeLabel;
+    }
     if (b == RedesignButton::Render && a.history_mode.active) {
         return kRenderCommitLabel;
     }
@@ -3318,7 +3416,10 @@ static_assert(
 // NO HOVER FACE (only the inactive one lights). Kept beside the predicate it
 // extends and consulted only by the hover recompute, so "a disabled button
 // never sets hovered" and "the selected tab never sets hovered" are one line
-// each at one site rather than a condition smeared over the painter.
+// each at one site rather than a condition smeared over the painter. The tab
+// carve-out reads the SELECTED BIT rather than active_tab_view, which is what
+// carries it into the `h` view's compare selector for free: there the lit tab is
+// the live READING, and it is still the one with no hover face.
 //
 // ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and that asymmetry with
 // the tabs is the crops': both ship a selected-hover state (the accent outline
@@ -3343,8 +3444,12 @@ inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
     // mechanism per behaviour is the shape to keep.
     if (a.dropdown.open()) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
-    if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
-    if (b == RedesignButton::TabB) return a.active_tab_view != 'B';
+    // THE CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
+    // carries it into the history view for free: in there the pair selects the
+    // COMPARE READING and the lit one is still the one with no hover face.
+    if (b == RedesignButton::TabA || b == RedesignButton::TabB) {
+        return !redesign_button_selected(a, b);
+    }
     return true;
 }
 

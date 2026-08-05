@@ -737,8 +737,13 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     std::vector<HistoryDiffFlag>& out = app.history_mode.flags;
     out.clear();
 
-    const GuiHistoryCommitDelta* d =
-        app.history_mode.session.delta_at(app.history_mode.index);
+    // THE DISPLAYED DELTA IS THE SESSION'S COMPARE READING (the compare bit's
+    // own record, AppState::HistoryMode): iterative against the walk parent, or
+    // cumulative against the frozen live now side. The lane's shapes, colours
+    // and text are identical either way — green is the newer side in both — so
+    // nothing below this line knows which reading it is drawing.
+    const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
+        app.history_mode.index, app.history_mode.compare);
     if (!d) return;
 
     // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
@@ -854,15 +859,18 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
          app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
             ? app.top_flag_editor.target : -1;
 
-    // THE HISTORY MODE'S FOUR INPUTS (contract at the FlagCache fields). The
+    // THE HISTORY MODE'S FIVE INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
     // SESSION is showing it: two visits open in the same shape and a close plus
     // a reopen can reach this check as one edge, so without it the new session's
-    // lane would keep blitting the old session's flags.
+    // lane would keep blitting the old session's flags. THE COMPARE READING is
+    // the one that is about the shown commit but not about WHICH commit: one
+    // index has two deltas, and a switch moves no other field here.
     const bool               history_active = app.history_mode.active;
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
     const unsigned long long history_generation = app.history_mode.generation;
+    const GuiHistoryCompare  history_compare    = app.history_mode.compare;
 
     const bool matches =
         flag_cache.surface &&
@@ -882,7 +890,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_active          == history_active &&
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
-        flag_cache.fp_history_generation      == history_generation;
+        flag_cache.fp_history_generation      == history_generation &&
+        flag_cache.fp_history_compare         == history_compare;
 
     if (matches) return;
 
@@ -1047,6 +1056,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;
     flag_cache.fp_history_generation      = history_generation;
+    flag_cache.fp_history_compare         = history_compare;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

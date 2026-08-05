@@ -261,27 +261,37 @@ struct FlagCache {
     // suppressed frame after the editor closed — and keep the drawn box while it
     // opened. Contract at render_flags' editing_marker_index (render.h).
     int       fp_editing_flag_target      = -1;
-    // THE HISTORY MODE'S FOUR INPUTS (the `h` view — AppState::HistoryMode).
+    // THE HISTORY MODE'S FIVE INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
-    // commit is shown (`,` / `.` step it), which diff flag holds the mode's
+    // commit is shown (`,` / `.` step it), WHICH READING of it is shown (the two
+    // compare modes, the tabs switching them), which diff flag holds the mode's
     // focus (a colour swap, exactly as the live selection hash is a field for
     // the live lane), and WHICH SESSION those are indices into.
     //
-    // THE SESSION GENERATION IS THE FOURTH BECAUSE THE OTHER THREE REPEAT. The
-    // delta of a given commit is fixed for a session's lifetime, but a session is
-    // not: every visit opens on index 0 with a cleared focus, so two sessions of
-    // the same piece are indistinguishable in the first three fields — and a
+    // THE SESSION GENERATION IS ONE OF THEM BECAUSE THE OTHERS REPEAT. The
+    // delta of a given commit is fixed for a session's lifetime, but a session
+    // is not: every visit opens on index 0 with a cleared focus and the
+    // iterative reading, so two sessions of the same piece are
+    // indistinguishable in the other four fields — and a
     // close and a reopen delivered in one dispatch batch reach this fingerprint
     // as a single edge, with `active` never observed false. The counter (bumped
     // by open_history_mode_fresh, the one entry owner, and carried across a
     // close) is what makes every visit its own fingerprint, so the previous
     // session's diff flags cannot be blitted on over the new one's.
+    //
+    // AND THE COMPARE READING IS THE FIFTH (2026-08-05): one commit has TWO
+    // deltas — against its walk parent, and against the frozen live now side —
+    // and every other field can be identical across a switch (same session, same
+    // index, focus cleared to the same -1). Without it the lane would keep
+    // blitting the reading the user just switched away from, and the two would
+    // cross-blit freely as he switched back and forth.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
     unsigned long long fp_history_generation = 0;
+    GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
 
     void destroy_surface() {
         if (surface) {
@@ -353,7 +363,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (17 fields, RE-DERIVED 2026-08-04 off the compare in
+    // (18 fields, RE-DERIVED 2026-08-05 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -366,12 +376,15 @@ struct GuiPaintHandler {
     //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
     //     and fp_editing_flag_target (the open editor's marker, whose box this
     //     pass SKIPS);
-    //   - THE HISTORY MODE, four (2026-08-04): fp_history_active,
-    //     fp_history_index, fp_history_focus and fp_history_generation — the `h`
-    //     view replaces the lane's whole content, so these decide it as
-    //     completely as the five marker-driven fields decide the live one, and
-    //     the generation is what distinguishes two SESSIONS that agree on the
-    //     other three (a close and a reopen this pass never sees between).
+    //   - THE HISTORY MODE, FIVE (four 2026-08-04, the fifth 2026-08-05):
+    //     fp_history_active, fp_history_index, fp_history_focus,
+    //     fp_history_generation and fp_history_compare — the `h` view replaces
+    //     the lane's whole content, so these decide it as completely as the five
+    //     marker-driven fields decide the live one; the generation is what
+    //     distinguishes two SESSIONS that agree on the others (a close and a
+    //     reopen this pass never sees between), and the compare bit what
+    //     distinguishes ONE COMMIT'S TWO DELTAS (iterative against the walk
+    //     parent, cumulative against the frozen now side).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a

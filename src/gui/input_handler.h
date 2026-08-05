@@ -1629,6 +1629,12 @@ private:
     //     published content — the two pointer stashes and the diff-flag list
     //     their indices name — at every mode edge, entry, exit and commit step.
     //     Its own comment carries the argument.
+    //   * set_history_compare is the ONE switch owner for the two compare
+    //     readings (2026-08-05), and its two callers are row 3's repurposed
+    //     tabs — the mode's only pointer surface outside the waveform and the
+    //     lane. A switch is a MODE EDGE with the `,` / `.` step's own shape,
+    //     and the owner is idempotent, which is what makes a press on the
+    //     already-shown reading a consumed nothing at its call sites.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * open_history_commit_confirmation raises the fourth prompt, and is
@@ -1641,6 +1647,7 @@ private:
     bool open_history_mode_fresh();
     void frame_viewed_commit_diff_span();
     void drop_lane_stash_across_history_edge();
+    void set_history_compare(GuiHistoryCompare compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods);
     void focus_history_diff_flag(int hit);

@@ -303,8 +303,10 @@ void GuiInputHandler::close_history_mode() {
 }
 
 // DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
-// it, at the entry, the exit and each commit step: the two pointer stashes and
-// the diff-flag LIST their indices name.
+// it, at the entry, the exit, each commit step and each COMPARE SWITCH (the
+// fourth edge, 2026-08-05: the two readings are two different lists, so a switch
+// replaces the lane's content exactly as a step does): the two pointer stashes
+// and the diff-flag LIST their indices name.
 //
 // The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK
 // by the flag cache's rebuild, so they legitimately run one frame behind a
@@ -408,11 +410,20 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // answer. It is not a reachable state — an available session always carries
     // at least one eligible commit (init() is UNAVAILABLE when none survives the
     // load gate), so index 0 always resolves.
-    const GuiHistoryCommitDelta* head = fresh.session.delta_at(0);
+    //
+    // CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
+    // compare mode rather than passing the session's bit: the act commits the
+    // LIVE state, so the question is live-vs-newest whatever reading the lane
+    // shows. (The field's own comment, AppState::HistoryMode::head_delta_empty,
+    // owns the reasoning; the fresh session's bit is Iterative at this point in
+    // any case, so reading it here would answer a different question.)
+    const GuiHistoryCommitDelta* head =
+        fresh.session.delta_at(0, GuiHistoryCompare::Cumulative);
     fresh.head_delta_empty = (head != nullptr && head->is_empty());
     // EVERY ENTRY IS A NEW GENERATION. The flag cache identifies the mode's
-    // content by (active, index, focus) plus this, and two sessions of the same
-    // piece open in the same shape — index 0, focus -1, `active` true — so a
+    // content by (active, index, focus, compare) plus this, and two sessions of
+    // the same piece open in the same shape — index 0, focus -1, iterative,
+    // `active` true — so a
     // close and a reopen the paint never sees between would otherwise be
     // indistinguishable from no change at all, leaving the previous session's
     // diff flags on screen. The bump is HERE rather than at the call site
@@ -440,10 +451,16 @@ bool GuiInputHandler::open_history_mode_fresh() {
 }
 
 // FRAME THE VIEWED COMMIT'S DIFF SPAN (architect 2026-08-05). The view opens on
-// a checkpoint's differences and re-frames on each `,` / `.` step, so stepping
-// away and back always resets the reading position while the user's own pans and
-// zooms BETWEEN steps are free and un-fought — the framing runs at those two
-// edges only, never per tick and never per paint.
+// a checkpoint's differences and re-frames on each `,` / `.` step and on each
+// COMPARE SWITCH, so stepping (or switching reading) away and back always resets
+// the reading position while the user's own pans and zooms BETWEEN edges are
+// free and un-fought — the framing runs at those THREE edges only, never per
+// tick and never per paint.
+//
+// THE SPAN IS THE DISPLAYED DELTA'S, so it follows the compare bit like every
+// other reader: the two readings of one checkpoint generally differ in extent,
+// and a switch that left the viewport framed on the other reading's span would
+// be showing one answer at the other's magnification.
 //
 // THE RECIPE IS THE TRIM-BAR DOUBLE-CLICK'S, through its own framing core
 // frame_span_into_view: the deterministic zoom-TO-span with the 2.5%-per-side
@@ -472,8 +489,8 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
     if (!app.history_mode.active) return;
     if (audio.total_frames() <= 0) return;
 
-    const GuiHistoryCommitDelta* d =
-        app.history_mode.session.delta_at(app.history_mode.index);
+    const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
+        app.history_mode.index, app.history_mode.compare);
     int64_t lo = 0, hi = 0;
     if (!d || !d->frame_span(lo, hi)) {
         frame_span_into_view(app, audio, viewport, 0,
@@ -484,6 +501,39 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
                          source_frame_to_active_domain(app, audio, lo),
                          source_frame_to_active_domain(app, audio, hi),
                          /*margin=*/true);
+}
+
+// SWITCH THE COMPARE READING — the ONE owner (architect 2026-08-05), and its
+// callers are row 3's two repurposed tabs (the tab row's band claim,
+// input_pointer.cpp). There is NO keyboard route by the architect's explicit
+// ruling: the A/B tab chords stay consumed in the mode, so the surface is
+// repurposed while the keys are not.
+//
+// A SWITCH IS A MODE EDGE, with the `,` / `.` step's shape exactly — the same
+// four acts in the same order, for the same reasons, because the same thing is
+// true of it: the lane is about to show a DIFFERENT LIST.
+//   * the mode focus clears — it indexes the painted list, so carrying it would
+//     light an unrelated flag; the playhead it landed stays where it is, the
+//     step's own rule;
+//   * the lane's published content is dropped — the two pointer stashes and the
+//     diff-flag list they index describe the reading that is LEAVING, and stay
+//     that way until the next tick republishes;
+//   * the arriving reading's own span is framed, in this same press;
+//   * full-window damage, a discrete command.
+//
+// IDEMPOTENT AT THE TOP, which is where its callers' radio rule comes from: a
+// press on the tab already lit changes nothing, frames nothing and damages
+// nothing, so the press is a consumed nothing without either call site testing
+// for it. The `!active` guard is the same defensive shape frame_viewed_commit_-
+// diff_span carries — the callers are gated by the mode already.
+void GuiInputHandler::set_history_compare(GuiHistoryCompare compare) {
+    if (!app.history_mode.active) return;
+    if (app.history_mode.compare == compare) return;
+    app.history_mode.compare = compare;
+    app.history_mode.focus   = -1;
+    drop_lane_stash_across_history_edge();
+    frame_viewed_commit_diff_span();
+    viewport.invalidate_all();
 }
 
 // THE MODE'S OWN KEYBOARD SURFACE — the whole membership, re-derived from the
@@ -880,8 +930,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // switch swaps the per-tab band (viewport, zoom, playhead, trim, read_only) the
 // session was measured with. The architect admitted views on 2026-08-04 and
 // nothing else with them. THE TAB SWITCHES STAY CONSUMED — Ctrl+Tab and the
-// Ctrl+Shift+Tab march both — and the tabs WEAR the refusal (see the face
-// paragraph below). The 2026-08-04 ratification also covered the BARE cycle, on
+// Ctrl+Shift+Tab march both — and since 2026-08-05 the tab SURFACE has stopped
+// wearing that refusal, because it has stopped being the tabs: while the view
+// stands row 3 is the COMPARE SELECTOR, live, with a mode-local press route and
+// no chord at all (AppState::HistoryMode::compare). The keyboard is untouched by
+// that — nothing here admits Ctrl+Tab, and no new binding was added for the pair
+// — so this gate's answer for the tab chords is the same as it ever was; only
+// the face derivation carries a hand exception for it (history_mode_disables_-
+// button). The 2026-08-04 ratification also covered the BARE cycle, on
 // the argument that Tab and `c` navigate by LIVE MARKERS; the architect
 // SUPERSEDED that half on 2026-08-05 by giving the mode its own Tab and its own
 // `c`, which navigate by the diff flags instead — so nothing walks a live marker

@@ -1559,13 +1559,28 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // row ground itself — so it reads as an opening rather than as a filled
     // shape — flanked by 1px side borders. The inactive tab is a flat fill, rest
     // or hover; there is no selected-hover face and no click face anywhere in
-    // this row (a tab press is a chord, never a refusal), and the ONE disabled
-    // face it has is mode-scoped: the `h` history view's, built below.
+    // this row (a tab press is a chord, never a refusal), and this row has NO
+    // disabled face at all.
+    //
+    // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` HISTORY VIEW STANDS
+    // (architect 2026-08-05), which is a REPURPOSING of the surface, not a state
+    // of the tabs: the labels read "Iterative" and "Cumulative", the selected
+    // face marks the live reading (redesign_button_selected's own history arm),
+    // a press on the other switches (the tab row's band claim, input_pointer.cpp)
+    // and THE LOCK SLOTS ARE GONE WHOLE — no padlock drawn, no rect published,
+    // no width reserved, because a lock is TAB state and these are not tabs. It
+    // is why the row's own former disabled face (the mode's, 2026-08-04) is
+    // retired with this arc: the tabs are live in the view now, and every other
+    // state of this row is the ordinary one. ONE NAME for that state, read once
+    // here and consulted by the three places it changes: the width, the label
+    // and the lock.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
     // where nothing is drawn — the same write-it-every-run rule the floating
-    // surfaces and the flag editor's box follow.
+    // surfaces and the flag editor's box follow. In the compare view it stays
+    // zero for the whole run, no lock being drawn at all.
+    const bool compare_selector = app.history_mode.active;
     app.tab_lock_rect = GuiRect{0, 0, 0, 0};
     const GuiRect lane = top_tab_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1610,19 +1625,28 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // THE WALK: tabs flush from the lane's left edge, adjacent, margin zero. A
     // tab's width is the LARGER of its two paddings around the shaped label and
     // the minimum — and nothing else, so it is identical selected or not (the
-    // side borders draw inside the box). With one-glyph labels the minimum is
-    // what binds, which makes both tabs exactly the same width and the row
-    // regular by construction.
+    // side borders draw inside the box). With the A/B labels the minimum is what
+    // binds, which makes both tabs exactly the same width and the row regular by
+    // construction; with the compare view's two words the shaped run binds and
+    // the tabs differ in width, which is what a label-sized tab bar does and the
+    // reason nothing in this walk assumes they match.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(font, def.label);
+        // THE LABEL IS THE OVERRIDE OWNER'S (redesign_button_label, app_state.h,
+        // which also answers for the Render button's two mode labels), so the
+        // table's constant and the history view's compare word are one lookup
+        // and cannot drift into two spellings.
+        const text_shape::ShapedRun run = text_shape::shape_text_run(
+            font, redesign_button_label(app, def.id, def.label));
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
-        // THE FIELD, then THE SLOT. The field is what it always was; the slot is
-        // reserved on every tab in every state, so both tabs stay identical in
-        // width by construction and locking one shoves nothing.
+        // THE FIELD, then THE SLOT. The field is what it always was — the shaped
+        // label auto-sizes it, so the compare labels widen the tabs and nothing
+        // else moves. The slot is reserved on every tab in every state SO LONG AS
+        // THE TABS ARE TABS, which is what keeps both identical in width and
+        // makes locking one shove nothing; in the compare view there is no lock,
+        // so there is no slot either and the tab is its field.
         const int field_w = std::max(min_w, label_w + 2 * pad);
-        const int tab_w   = field_w + slot_w;
+        const int tab_w   = field_w + (compare_selector ? 0 : slot_w);
 
         // THE STASH IS WHAT THE DRIFT COMPARATOR READS (main.cpp's per-tick
         // enabled/selected sweep), so publishing `selected` is load-bearing,
@@ -1637,40 +1661,21 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             GuiRect{x, lane.y, tab_w, content_h});
         const bool selected = face.selected;
 
-        // THE ROW'S DISABLED FACE, WHICH EXISTS ONLY IN THE `h` HISTORY VIEW
-        // (architect 2026-08-04). Both tabs go dead there — Ctrl+Tab is not on
-        // the mode's allowlist and neither is the lock's bare `o` — so the whole
-        // tab surface, lock slot included, is one dead object; the partition and
-        // its derivation are at history_mode_disables_button (input_pointer.cpp).
-        //
-        // BUILT FROM THE ROW'S OWN CONVENTIONS, sampling nothing new: EVERY ink
-        // and edge this tab paints retains kRedesignDisabledMix of itself over
-        // the row ground — the product's one disabled blend, already the rule
-        // for row 2's ink and for this row's own unlocked padlock, here applied
-        // to the whole surface on the view bar's precedent (a surface-wide
-        // variant that is not the enabled bit). The SELECTED tab therefore keeps
-        // its accent trim and side borders, muted rather than removed: which tab
-        // is active is state the view must not hide, and a mixed accent still
-        // reads plainly against this ground. The tab's INTERIOR is the row
-        // ground, so it mixes to itself and does not move — the dim is entirely
-        // in the ink, which is why the row still looks like a tab row.
-        //
-        // SCALE-INDEPENDENT BY CONSTRUCTION: every term here is a colour mix,
-        // and gui_scale moves only geometry (scaled_px / the radius). The face
-        // is the same at 100% and at 200%; the glyphs and boxes scale exactly as
-        // they do in the live faces.
-        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
-        // HOVER IS GATED ON THE LIVE BIT, not trusted: the recompute refuses to
-        // hover a disabled button, but a tab can go dead UNDER a resting hover
-        // with no pointer event to refresh it (row 2's outline carries the same
-        // guard). One name, used everywhere below.
-        const bool hovered = face.hovered && face.enabled;
-        // The face this tab actually wears, dim included — the fill for an
-        // inactive tab, and the ground every ink below mixes toward.
-        const GuiColor tab_face = mix_color(
+        // THE ROW HAS NO DISABLED FACE AGAIN (2026-08-05). It grew one on
+        // 2026-08-04 for the `h` history view, which greyed both tabs because
+        // their chord was consumed; the architect then made the view REPURPOSE
+        // the pair as the compare selector, so the tabs are live in the one
+        // state that ever dimmed them (the hand exception is at
+        // history_mode_disables_button, input_pointer.cpp) and redesign_button_-
+        // enabled answers true for them everywhere. The dim machinery went with
+        // its producer rather than sitting here unreachable; the product's one
+        // disabled blend is unchanged and still the rule on rows 2 and 4.
+        const bool hovered = face.hovered;
+        // The face this tab wears — the fill for an inactive tab, and the ground
+        // every ink below sits on.
+        const GuiColor tab_face =
             selected ? kRedesignTabGround
-                     : (hovered ? kRedesignTabHover : kRedesignTabRest),
-            kRedesignTabGround, keep);
+                     : (hovered ? kRedesignTabHover : kRedesignTabRest);
 
         if (selected) {
             sel_x = x;
@@ -1690,9 +1695,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                                            static_cast<double>(tab_w),
                                            static_cast<double>(content_h),
                                            radius);
-            const GuiColor trim_c =
-                mix_color(kRedesignAccent, kRedesignTabGround, keep);
-            cairo_set_source_rgb(cr, trim_c.r, trim_c.g, trim_c.b);
+            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                 kRedesignAccent.b);
             cairo_fill(cr);
             cairo_restore(cr);
 
@@ -1715,9 +1719,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                 //    every row down to the border, which is what the crop shows.
                 const double half = static_cast<double>(line_w) * 0.5;
                 cairo_set_line_width(cr, static_cast<double>(line_w));
-                const GuiColor side_c =
-                    mix_color(kRedesignTabLine, kRedesignTabGround, keep);
-                cairo_set_source_rgb(cr, side_c.r, side_c.g, side_c.b);
+                cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                     kRedesignTabLine.b);
                 redesign_rounded_top_rect_path(
                     cr, x + half, lane.y + half,
                     static_cast<double>(tab_w - line_w),
@@ -1730,8 +1733,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // The inactive tab: a flat fill, square corners, no borders. Hovered
             // it takes the lighter blue-grey PLUS a 1px edge across its own
             // bottom row — the hover face recolors that row, which is the crop's
-            // whole difference from rest. Dead, `tab_face` is the rest fill dim
-            // (a hover cannot stand on it) and the edge below is unreachable.
+            // whole difference from rest.
             cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
             cairo_rectangle(cr, x, lane.y, tab_w, content_h);
             cairo_fill(cr);
@@ -1745,17 +1747,17 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             }
         }
 
-        // The label is the SAME white in every LIVE state (dead, it takes the
-        // row's dim over the face it sits on), CENTERED on both axes:
-        // horizontally in the tab box (the padding is the width FLOOR's term,
-        // not an anchor — at the minimum width a left-padded label would hug the
-        // border instead of sitting in the middle), vertically by the shared
+        // The label is the SAME white in every state, CENTERED on both axes:
+        // horizontally in the tab's FIELD (the padding is the width FLOOR's
+        // term, not an anchor — at the minimum width a left-padded label would
+        // hug the border instead of sitting in the middle; the field is the
+        // whole tab when there is no lock slot), vertically by the shared
         // extents-solved baseline. Rounded to the pixel grid like every other
         // integer-domain conversion, so the glyphs stay crisp; the halving makes
         // a 1px bias unavoidable at odd leftovers and nearbyint's banker's
         // rounding is the project's one answer for that.
-        const GuiColor tab_label_c = mix_color(kRedesignLabel, tab_face, keep);
-        cairo_set_source_rgb(cr, tab_label_c.r, tab_label_c.g, tab_label_c.b);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
         text_shape::show_shaped_run(
             cr, run,
             static_cast<double>(x) +
@@ -1765,8 +1767,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                               static_cast<double>(content_h)));
 
         // THE LOCK, drawn last so it sits over whatever face the tab wears, and
-        // drawn ALWAYS — on both tabs, in both states, in its own reserved slot
-        // (the geometry and its two measured numbers are at kTabLockBoxPx).
+        // drawn on both tabs in both lock states, in its own reserved slot (the
+        // geometry and its two measured numbers are at kTabLockBoxPx) — WHENEVER
+        // THE TABS ARE TABS, which is every state but the compare view below.
         //
         // TWO STATES, ONE CONTROL. LOCKED is the closed padlock at the icon
         // table's own kIconText white: full colour, because a read-only tab is
@@ -1787,21 +1790,22 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // contract is at AppState::tab_lock_rect) — the click is bare `o`, which
         // is defined on the active tab alone.
         //
-        // THE SLOT GOES DEAD WITH ITS TAB in the history view: its click is bare
-        // `o`, which the mode's allowlist blocks, so the pair stops being a
-        // control and becomes a state display. The CLOSED padlock joins the open
-        // one at the row's dim (they read as one object, as they must when
-        // neither can be pressed), and WHICH lock it is — closed or open — is
-        // the state cue that survives; the open one is not dimmed twice, since
-        // the disabled mix it already wears is the same mix.
-        {
+        // THE SLOT IS GONE WHOLE IN THE `h` COMPARE VIEW (architect 2026-08-05,
+        // superseding the 2026-08-04 dead-slot face): a padlock reports a TAB's
+        // read-only bit, and in there the pair is not tabs but the compare
+        // selector, so there is no such bit to report and nothing to dim. Not
+        // drawn, not reserved in the width above, and no rect published — the
+        // press path's lock branch is therefore unreachable in the mode without
+        // testing for it, and bare `o` (still blocked by the allowlist) has no
+        // pointer affordance left to lie about.
+        if (!compare_selector) {
             const ViewState& vs = (def.letter == 'B') ? app.tab_b : app.tab_a;
             const int lx = x + tab_w - lock_mar - lock_box;
             const int ly = lane.y + (content_h - lock_box) / 2;
             if (vs.read_only) {
                 icons::draw(cr, icons::Icon::Lock,
                             static_cast<double>(lx), static_cast<double>(ly),
-                            static_cast<double>(lock_box), keep, tab_face);
+                            static_cast<double>(lock_box), 1.0, tab_face);
             } else {
                 icons::draw(cr, icons::Icon::Unlock,
                             static_cast<double>(lx), static_cast<double>(ly),
@@ -3241,8 +3245,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     int64_t bar_begin_frame = app.trim.begin_frame;
     int64_t bar_end_frame   = app.trim.end_frame;
     if (app.history_mode.active) {
-        const GuiHistoryCommitDelta* d =
-            app.history_mode.session.delta_at(app.history_mode.index);
+        const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
+            app.history_mode.index, app.history_mode.compare);
         int64_t lo = 0, hi = 0;
         if (d && d->frame_span(lo, hi)) {
             bar_begin_frame = lo;
@@ -3812,8 +3816,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                 line += sha.substr(0, 7);
             }
         }
-        const GuiHistoryCommitDelta* d =
-            app.history_mode.session.delta_at(app.history_mode.index);
+        const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
+            app.history_mode.index, app.history_mode.compare);
         // No unavailable-delta arm: walk membership is the strict whole-set
         // load (history_diff.h's gate, 2026-08-04), so every commit this line
         // can name has a real delta — the old `Ambiguous` token died with the

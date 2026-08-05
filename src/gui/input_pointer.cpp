@@ -334,6 +334,18 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // (its first line — the same lockout that keeps a popup and this mode mutually
 // exclusive). One named site, not a policy invented here.
 //
+// AND SINCE 2026-08-05 THE TWO TABS ARE A SECOND HAND ENTRY, for the mirror
+// reason: their chord IS consumed (Ctrl+Tab is not on the allowlist and never
+// will be — views yes, tabs no) and yet the BUTTONS are live, because the view
+// REPURPOSES the surface. While it stands row 3 is the compare selector —
+// "Iterative" and "Cumulative", the two readings of a checkpoint — and its
+// presses are routed mode-locally at the tab row's own band claim, never through
+// a chord. So the derivation would answer for a key the surface no longer
+// dispatches, and the hand exception is what keeps face and act agreeing. The
+// KEYBOARD is untouched: Ctrl+Tab and the Ctrl+Shift+Tab march stay consumed,
+// and the lock slots go with the tabs' old meaning (the painter draws no padlock
+// and publishes no lock rect in the mode).
+//
 // THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
 // never sees the mode's own vocabulary — handle_history_mode_key consumes it one
 // line above — so asking the allowlist alone would call bare `h` blocked and
@@ -366,11 +378,13 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   switches), the load-editor opener (bare `'`, which in this mode loads
 //   the viewed commit in place), and the history button itself (bare `h`, the
 //   mode's own key,
-//   selected while it stands).
-//   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); BOTH TABS (Ctrl+Tab), the lock
-//   slots with them — the active tab's padlock dispatches bare `o`, blocked, and
-//   the inactive tab's whole box is the Ctrl+Tab press, so the tab surface is
-//   dead as one object; copy phase (Ctrl+P), paste phase (Ctrl+Alt+P), the BPM
+//   selected while it stands),
+//   and BOTH TABS since 2026-08-05 — the second hand entry above, live as the
+//   COMPARE SELECTOR rather than as tabs, with their padlocks not drawn at all
+//   (the mode's tabs are not tabs, so there is no lock state to show and no lock
+//   rect published for bare `o` to be refused through).
+//   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); copy phase (Ctrl+P), paste
+//   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
 //   (bare `l`); and the two menu anchors, Settings and Navigation.
 //
@@ -388,6 +402,11 @@ bool history_mode_disables_button(const AppState::HistoryMode& mode,
     if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
         return true;
     }
+    // THE COMPARE SELECTOR (2026-08-05). Their chord is consumed and their
+    // buttons are live, which no derivation from the chord can say — the
+    // surface's meaning changed, not the key's. Above the walk so the table's
+    // Ctrl+Tab entries are never asked about.
+    if (b == RedesignButton::TabA || b == RedesignButton::TabB) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -1317,6 +1336,39 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect tab_row = top_tab_row_area(app);
         if (rect_contains(tab_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
+            // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` VIEW STANDS
+            // (architect 2026-08-05), so its presses are routed HERE and never
+            // reach the chord table below: the tabs' chord is Ctrl+Tab, which
+            // the mode consumes and always will, while the SURFACE has a
+            // mode-local meaning — pick the reading the lane shows.
+            //
+            // ONE SWITCH OWNER for both halves (set_history_compare), and it is
+            // IDEMPOTENT, which is where the live tabs' radio rule comes from:
+            // a press on the reading already shown is a consumed no-op because
+            // the owner returns, not because this site tests for it.
+            //
+            // THE READ-ONLY LOCK DOES NOT APPLY, deliberately: the gate that
+            // refuses on a locked tab is on_key's, and nothing here dispatches a
+            // key. A lock means hands off the piece's authored state, and the
+            // compare mode is neither authored nor per-tab — refusing it would
+            // stop a locked session from READING its own history, which is the
+            // one thing the view is for. The padlock itself is not even drawn in
+            // here (paint_tab_row), so there is no second target to test for.
+            //
+            // Shift-exact, like every other non-shift-admitting button on these
+            // rows: a shift press is a consumed nothing rather than the plain
+            // act.
+            if (app.history_mode.active) {
+                if (button == GuiMouseButton::Left && !mods.shift) {
+                    if (redesign_button_hit(app, RedesignButton::TabA, x, y)) {
+                        set_history_compare(GuiHistoryCompare::Iterative);
+                    } else if (redesign_button_hit(app, RedesignButton::TabB,
+                                                   x, y)) {
+                        set_history_compare(GuiHistoryCompare::Cumulative);
+                    }
+                }
+                return;
+            }
             if (button == GuiMouseButton::Left) {
                 // THE ACTIVE TAB'S PADLOCK IS A SECOND TARGET INSIDE ITS TAB,
                 // and the row's only one — spelled here rather than in the chord

@@ -4,6 +4,7 @@
 #include "settings_file.h"
 #include "warpmarkers.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -62,12 +63,15 @@ struct AppState;
 // remote URLs and no ref at all — so moving the walk from `origin/main` to
 // the local branch left it untouched and means exactly what it always did.
 //
-// The diff runs THEN -> NOW, and the "now" side is the LIVE IN-MEMORY STATE
-// serialized through the save writers' own string halves — byte-identical to
-// what a Ctrl+S would land at this instant, built with no file existing
-// anywhere and no disk touched. So an ADDED entry is one the session has and
-// the commit did not; a REMOVED entry is one the commit had and the session
-// dropped.
+// The diff runs THEN -> NOW, older side to newer side, and WHICH TWO SIDES is
+// the compare mode's answer (GuiHistoryCompare below). In the CUMULATIVE
+// reading the now side is the LIVE IN-MEMORY STATE serialized through the save
+// writers' own string halves — byte-identical to what a Ctrl+S would land at
+// this instant, built with no file existing anywhere and no disk touched — so an
+// ADDED entry is one the session has and the commit did not, and a REMOVED entry
+// is one the commit had and the session dropped. In the ITERATIVE reading both
+// sides are committed snapshots, the viewed checkpoint and its walk parent, and
+// added/removed read the same way one commit later.
 //
 // THE WALK IS LOAD-GATED (architect 2026-08-04): membership in the walk is THE
 // LOAD-IN-PLACE GATE ITSELF — load_commit_sidecars_strict below, the exact
@@ -97,6 +101,40 @@ struct AppState;
 // guard. Both entry points use an argv exec with no shell anywhere (the
 // committed directory names carry spaces, so shell quoting would be a hazard
 // rather than a convenience).
+
+// THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
+// against two different "other sides", and the view offers both — the row-3
+// tabs select which while it stands (kdenlive-redesign.md's tab record; there
+// is deliberately NO hotkey for the pair).
+//
+//   ITERATIVE — the viewed checkpoint against its WALK PARENT, the next-older
+//   eligible member. It answers "what did THIS commit change?", which is the
+//   question a history walk usually asks. It is the DEFAULT at every entry.
+//
+//   CUMULATIVE — the viewed checkpoint against the frozen live now side, the
+//   reading the mode shipped with. It answers "how does what I have now differ
+//   from that checkpoint?", which is what a restore or a load-in-place is about.
+//
+// THE COLOR GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
+// the now side of the diff: green `[+]` is what the newer side has, red `[-]`
+// what the older side had and the newer dropped. In cumulative the newer side is
+// the session; in iterative it is the viewed checkpoint itself.
+//
+// THE OLDEST WALK MEMBER HAS NO PARENT IN THE WALK, so its iterative delta is
+// EMPTY — structurally, with no diff run at all. Ruled acceptable (architect):
+// the recent commits are what a checkpoint review is about, and the walk is
+// capped at kCommitDepth anyway, so the oldest member's "parent" would be off
+// the end of the list even on a long history.
+//
+// THE WALK PARENT MAY SPAN COMMITS THE LOAD GATE HID, and that is the walk's own
+// honesty rather than a defect here: walk membership is the strict whole-set
+// load (the gate at the file head), so an ineligible commit is not steppable, not
+// loadable and not shown — and a delta against the nearest checkpoint the mode
+// CAN show is the only delta whose two sides are both things the user can reach.
+enum class GuiHistoryCompare {
+    Iterative,
+    Cumulative,
+};
 
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
@@ -170,8 +208,11 @@ struct GuiHistoryCommitDelta {
     // here is a term here too, at the one place a reader is already looking.
     //
     // ITS READER IS THE COMMIT ACT'S FACE (AppState::HistoryMode::head_delta_-
-    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint, to
-    // decide whether there is anything to commit at all. The vocabulary is
+    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint AND
+    // ALWAYS IN THE CUMULATIVE READING, to decide whether there is anything to
+    // commit at all — the act commits the LIVE state, so "nothing to
+    // checkpoint" is live-vs-newest whatever the lane happens to be
+    // displaying. The vocabulary is
     // exactly this struct's — the two marker columns and `scale` — which is why
     // a settings-only drift the mode never displays reads as empty here too (the
     // asymmetry is recorded at the field and in github-recheck.md).
@@ -324,8 +365,8 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
 // The session object: the commit list resolved AND LOAD-GATED once at init —
 // each member's three sidecar snapshots are read there by the gate and kept —
 // with each commit's delta computed lazily on first request and cached
-// thereafter, so stepping back over a commit already visited costs nothing and
-// no delta ever runs git at all.
+// thereafter PER (INDEX, COMPARE), so stepping back over a commit already
+// visited costs nothing in either reading and no delta ever runs git at all.
 class GuiHistoryDiff {
 public:
     // Check the projects-home guard, locate the loaded source's sidecars in
@@ -350,11 +391,20 @@ public:
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
 
-    // The commit's delta, computed on first call and cached. Returns nullptr
-    // for an out-of-range index or an unavailable session. The returned
-    // pointer stays valid for the session's lifetime (the cache never
-    // reallocates its elements).
-    const GuiHistoryCommitDelta* delta_at(std::size_t index);
+    // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
+    // computed on first call and cached per (index, compare) — the two answers
+    // are independent and each is asked repeatedly, so one cache slot per pair
+    // is what keeps a compare switch as free as a step back. Returns nullptr
+    // for an out-of-range index or an unavailable session. The returned pointer
+    // stays valid for the session's lifetime (the cache never reallocates its
+    // elements).
+    //
+    // THE OLDEST MEMBER'S ITERATIVE ANSWER IS A REAL, EMPTY DELTA, not nullptr:
+    // it carries the commit's own sha and no entries, so every reader treats it
+    // as "nothing changed here" through the paths it already has rather than
+    // through an unavailable arm.
+    const GuiHistoryCommitDelta* delta_at(std::size_t         index,
+                                          GuiHistoryCompare   compare);
 
     // What init() matched: the source's sidecar base name, and the committed
     // DIRECTORY holding its sidecars on the branch's tip tree (e.g.
@@ -376,9 +426,12 @@ private:
     // snapshots the load gate read at init — the walk's then sides.
     std::vector<GuiHistoryCommitSidecars> commits_;
 
-    // One slot per commit, filled on first request. A deque-free vector of
-    // optionals sized once at init, so no element ever moves.
-    std::vector<std::optional<GuiHistoryCommitDelta>> cache_;
+    // One slot per (commit, compare mode), filled on first request. A
+    // deque-free vector of optionals per reading, both sized once at init, so
+    // no element ever moves and delta_at's returned pointer stays good for the
+    // session. Indexed by the enum's own value, which is what makes adding a
+    // third reading a one-line change here.
+    std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
 // -- THE COMMIT ACT — the product's one mutating git route ------------------
