@@ -24,4 +24,4 @@ tools/build/
 projects/*/*.peaks
 projects/*/*.wav
 projects/*/*.fingerprint
-
+projects/*/renders/
