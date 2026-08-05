@@ -1611,7 +1611,13 @@ private:
     //   * focus_history_diff_flag is the focus click's body, shared by its two
     //     surfaces — the flag box in the lane and the flag's STEM in the
     //     waveform's upper half — so the two cannot answer differently.
-    //   * close_history_mode is the ONE exit owner; every closer calls it.
+    //   * close_history_mode is the ONE exit owner; every closer calls it, and
+    //     since 2026-08-05 it is also the ONE site that puts the editor's parked
+    //     navigation band back (the snapshot's own record is at
+    //     AppState::HistoryMode).
+    //   * frame_viewed_commit_diff_span frames the viewed checkpoint's whole
+    //     delta, at the two edges that drop the lane stash — the entry and each
+    //     `,` / `.` step. Its own comment carries the recipe and the span rule.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
@@ -1633,6 +1639,7 @@ private:
     //     repository. Its body owns the partition.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();
+    void frame_viewed_commit_diff_span();
     void drop_lane_stash_across_history_edge();
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods);

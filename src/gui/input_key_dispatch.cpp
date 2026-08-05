@@ -220,8 +220,20 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 
 // Leave the mode, clearing it WHOLE — the commit walk with it, so the next entry
 // re-inits and measures against the state at THAT moment. The one exit owner:
-// bare `h`, the load-in-place, and any future closer call this rather than clearing
-// fields themselves. Idempotent, so a closer may fire with the mode already down.
+// bare `h`, either load-in-place, the commit act's landed verdicts, and any
+// future closer call this rather than clearing fields themselves. Idempotent, so
+// a closer may fire with the mode already down.
+//
+// IT ALSO PUTS THE EDITOR'S NAVIGATION BAND BACK (architect 2026-08-05): the
+// view is a VIEWER, so the pans, zooms and playhead landings a review made are
+// the review's, not the session's. THE ONE RESTORE SITE, serving all four
+// closers — the two load-in-places need no exemption from it, and get none:
+// each calls this on the first line past its last refusal and then APPLIES THE
+// LOADED FILE'S OWN BAND some seventy lines later (the tab_a / tab_b replace,
+// the live-band pull, the clamps), so the restore below is simply overwritten by
+// the state the user asked for. It is not wasted either — it is what keeps the
+// close idempotent and single-shaped, and a load that ever grew an early return
+// past this point would leave a restored band rather than the review's.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
@@ -231,13 +243,62 @@ void GuiInputHandler::close_history_mode() {
     // (an `h` off and an `h` on delivered in one dispatch batch reach the paint as
     // a single edge, with no intervening rebuild to notice `active` blinking).
     const unsigned long long generation = app.history_mode.generation;
+    // The parked band, read out BEFORE the reset destroys it and applied AFTER,
+    // with the mode already down: the applies below end in a synchronous
+    // waveform rebuild, and a rebuild that ran while `active` still stood would
+    // republish the leaving session's diff flags and hit rects over the very
+    // frame this exit is clearing.
+    const double  entry_zoom = app.history_mode.entry_zoom_level;
+    const char    entry_view = app.history_mode.entry_audio_view;
+    int64_t restore_ph = app.history_mode.entry_playhead_cursor_sample;
+    int64_t restore_vp = app.history_mode.entry_viewport_start_sample;
+
     app.history_mode = AppState::HistoryMode{};
     app.history_mode.generation = generation;
     drop_lane_stash_across_history_edge();
+
+    // THE RESTORE. Bit-exact whenever the audio view is the one the snapshot was
+    // taken in — the ordinary visit, and the only shape reachable without a view
+    // switch. When the view HAS flipped the snapshot's two frame-shaped values
+    // are in the other domain, and translating them through the live warp map is
+    // what the `t` toggle does to the band it carries across; the zoom LEVEL is
+    // carried untranslated there too, so it is here. A parity of two flips lands
+    // back on the exact arm, having translated nothing.
+    if (audio.total_frames() > 0) {
+        if (entry_view != app.active_audio_view) {
+            const std::vector<WarpFrameMapSegment>& map =
+                target_view_warp_frame_map_cached(
+                    app, audio.sample_rate(),
+                    static_cast<long>(audio.total_frames())).warp_frame_map;
+            auto flip = [&](int64_t v) {
+                const double d = static_cast<double>(v < 0 ? 0 : v);
+                return static_cast<int64_t>(std::nearbyint(
+                    entry_view == 'S' ? map_source_to_target(d, map)
+                                      : map_target_to_source(d, map)));
+            };
+            restore_ph = flip(restore_ph);
+            restore_vp = flip(restore_vp);
+        }
+        // PLAYHEAD FIRST, VIEWPORT SECOND, and the order is what makes the
+        // restore exact: move_playhead_to scrolls the viewport when its
+        // destination falls outside the current window (a playhead parked
+        // offscreen at entry does exactly that), and apply_zoom_to_start then
+        // sets the level and the start EXPLICITLY over the top of it. Both are
+        // the family's own clamp chokepoints — clamp_playhead_to_live_domain and
+        // clamp_zoom_level + clamp_viewport_start — so a domain or a window that
+        // changed while the view stood (a resize, a `t` into another total)
+        // yields a clamped-valid rest rather than a stale raw one, and both are
+        // idempotent no-ops when nothing moved.
+        viewport.move_playhead_to(restore_ph);
+        viewport.apply_zoom_to_start(entry_zoom, restore_vp);
+    }
+
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
     // with it, and the bottom strip's modal span gives its line back. Narrow
-    // damage would have to know all three, and none of them is worth a rect.
+    // damage would have to know all three, and none of them is worth a rect. It
+    // covers the restore's own damage too, which is why the applies above emit
+    // theirs and nothing here has to widen for them.
     viewport.invalidate_all();
 }
 
@@ -278,7 +339,14 @@ void GuiInputHandler::close_history_mode() {
 // A SYNCHRONOUS FLAG REBUILD AT THE STEP EDGE (the view switch's own answer,
 // below) WAS DELIBERATELY NOT CHOSEN: it is heavier than a one-tick window
 // warrants, and the empty answer is already this gap's ruled shape on the
-// pointer side.
+// pointer side. THE PER-DIFF FRAMING OFTEN CLOSES THE GAP ANYWAY, as a side
+// effect rather than a promise (2026-08-05): frame_viewed_commit_diff_span runs
+// on the line after each of these calls at the entry and the step, and a framing
+// that MOVES ends in apply_zoom_to_start's own synchronous rebuild, which
+// republishes all three for the arriving commit inside the same press. A framing
+// that does not move (the framer is idempotent) leaves the gap exactly as
+// described, so every reader above still has to answer "nothing" correctly — the
+// empty answer stays the contract, not the exception.
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
 // (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist), and
@@ -350,10 +418,72 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // diff flags on screen. The bump is HERE rather than at the call site
     // because this is the one entry owner, so a second caller inherits it.
     fresh.generation = app.history_mode.generation + 1;
+    // THE EDITOR'S BAND, PARKED (architect 2026-08-05) — read off the LIVE
+    // fields here, above every write this entry makes, so it is the state the
+    // user pressed `h` in and nothing the visit does can reach it. The audio
+    // view rides along because the trio is ACTIVE-domain state; the field block
+    // at AppState::HistoryMode owns the rule and close_history_mode owns the
+    // restore.
+    fresh.entry_viewport_start_sample  = app.viewport_start_sample;
+    fresh.entry_zoom_level             = app.zoom_level;
+    fresh.entry_playhead_cursor_sample = app.playhead_cursor_sample;
+    fresh.entry_audio_view             = app.active_audio_view;
     app.history_mode = std::move(fresh);
     drop_lane_stash_across_history_edge();
+    // OPEN FRAMED ON THE CHECKPOINT'S OWN DIFFERENCES — after the drop, so the
+    // synchronous rebuild the framing may kick republishes the ARRIVING commit's
+    // flags rather than being erased by the drop, and after the session is moved
+    // in, since the framer reads the walk position through it.
+    frame_viewed_commit_diff_span();
     viewport.invalidate_all();
     return true;
+}
+
+// FRAME THE VIEWED COMMIT'S DIFF SPAN (architect 2026-08-05). The view opens on
+// a checkpoint's differences and re-frames on each `,` / `.` step, so stepping
+// away and back always resets the reading position while the user's own pans and
+// zooms BETWEEN steps are free and un-fought — the framing runs at those two
+// edges only, never per tick and never per paint.
+//
+// THE RECIPE IS THE TRIM-BAR DOUBLE-CLICK'S, through its own framing core
+// frame_span_into_view: the deterministic zoom-TO-span with the 2.5%-per-side
+// margin, NOT the undo/redo restore's scroll-if-it-fits-else-frame variant (that
+// one lives in undo.cpp's group tail and only ever zooms out as a fallback). The
+// empty-delta arm reproduces the double-click's own whole-song arm verbatim —
+// [0, total] with NO margin — which the framer's centering plus the wall clamp
+// degenerate to the effective ceiling at start 0.
+//
+// THE SPAN IS THE WHOLE DELTA'S, in source frames, from the delta itself
+// (GuiHistoryCommitDelta::frame_span owns both of those choices) and converted
+// into the ACTIVE domain through source_frame_to_active_domain — the wrapper
+// whose target-view arm is nearbyint(map_source_to_target(...)), which is
+// frame_to_paint_sample's own formula, so the framed span is exactly the span
+// the lane paints its diff flags across in either view.
+//
+// IT MOVES THE VIEWPORT AND NOTHING ELSE: no playhead, no focus, no selection.
+// A step already leaves the playhead where the user put it, and framing is a
+// reading act, not a navigation one.
+//
+// A ONE-FRAME SPAN (a single changed marker — the common case) is not a special
+// case: the framer clamps its degenerate zero-width span to 1.0 before the log2
+// and the fit level saturates at kMinZoom, so it rests at the deepest zoom
+// centred on that frame.
+void GuiInputHandler::frame_viewed_commit_diff_span() {
+    if (!app.history_mode.active) return;
+    if (audio.total_frames() <= 0) return;
+
+    const GuiHistoryCommitDelta* d =
+        app.history_mode.session.delta_at(app.history_mode.index);
+    int64_t lo = 0, hi = 0;
+    if (!d || !d->frame_span(lo, hi)) {
+        frame_span_into_view(app, audio, viewport, 0,
+                             live_total_frames(app, audio), /*margin=*/false);
+        return;
+    }
+    frame_span_into_view(app, audio, viewport,
+                         source_frame_to_active_domain(app, audio, lo),
+                         source_frame_to_active_domain(app, audio, hi),
+                         /*margin=*/true);
 }
 
 // THE MODE'S OWN KEYBOARD SURFACE — the whole membership, re-derived from the
@@ -452,6 +582,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // lane press and to a Tab step alike, instead of landing the playhead on
         // a flag that is no longer shown.
         drop_lane_stash_across_history_edge();
+        // RE-FRAME ON THE ARRIVING COMMIT'S OWN DIFFERENCES, in this same press
+        // — so a step away and back always resets the reading position, and the
+        // pans and zooms the user made on the commit he is leaving stay his own
+        // business for as long as he stays on it. Below the drop for the reason
+        // the entry states.
+        frame_viewed_commit_diff_span();
         viewport.invalidate_all();
         return true;
     }

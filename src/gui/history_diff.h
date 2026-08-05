@@ -181,6 +181,25 @@ struct GuiHistoryCommitDelta {
                phase_reset_removed.empty() && phase_reset_changed.empty() &&
                !scale_changed;
     }
+
+    // WHERE THE DELTA LIES — [lo, hi] over ALL SIX entry vectors, in SOURCE
+    // frames (the domain every sidecar line is authored in). Returns false when
+    // no entry carries a frame at all, which is both the empty delta and the
+    // `scale`-only one: a scale change has no frame, so it contributes no term
+    // and cannot be framed. Both callers read that as "the whole song".
+    //
+    // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: its
+    // readers describe the CHECKPOINT, not the lane. The history view opens
+    // framed on this span and re-frames at each `,` / `.` step
+    // (GuiInputHandler::frame_viewed_commit_diff_span), and the trim bar
+    // displays it for as long as the view stands (GuiPaintHandler::paint_trim)
+    // — and a span that shrank when the user pressed `p` would make a view
+    // switch, whose whole purpose is reviewing the OTHER half of this same
+    // delta, move the viewport out from under him. It also reads the delta
+    // directly rather than AppState::HistoryMode::flags, which is paint-cache
+    // output on a once-per-tick cadence and deliberately EMPTY for a frame
+    // after every mode edge.
+    bool frame_span(int64_t& lo, int64_t& hi) const;
 };
 
 // The three files' exact current bytes — what Ctrl+S would write at this

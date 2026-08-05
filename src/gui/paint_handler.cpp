@@ -3170,7 +3170,12 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
 // trim_endcap_rect inside the two renderers, so paint stays column-coherent with
 // hit_test_trim_endcap / route_trim_bar_press, which read exactly that basis
-// (paint == hit by shared owners). Deliberately NOT the member
+// (paint == hit by shared owners). The ONE state where paint and hit describe
+// different bounds is the `h` HISTORY VIEW, where this pass substitutes the
+// viewed commit's diff span for the authored pair (the block below owns that
+// ruling): coherence is moot there because the view consumes every press that
+// reaches either hit test, so no gesture can act on the substituted columns.
+// Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
 // resize item-only-promotion window — trim must ride the ITEM basis the
@@ -3210,13 +3215,52 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     const std::vector<WarpFrameMapSegment>* map_arg =
         dmap.empty() ? nullptr : &dmap;
 
+    // THE SOURCE-FRAME PAIR THE BAR DISPLAYS. Ordinarily the authored trim
+    // window; while the `h` HISTORY VIEW stands, the VIEWED COMMIT'S DIFF SPAN
+    // instead (architect 2026-08-05 — the view is a viewer, and the bar is the
+    // one lane wide enough to say at a glance where in the piece a checkpoint's
+    // changes lie). An empty delta shows the full window, the span's own
+    // "nothing to frame" answer, which is also what the authored trim rests at
+    // by default.
+    //
+    // DISPLAY-ONLY, AND ONLY HERE: app.trim is not read, not written and not
+    // shadowed — this is one substitution at the one paint site, above the
+    // displayed_trim_ms mapping below, so the substituted frames ride the target
+    // view's display map exactly as the authored pair does. Nothing consumes the
+    // painted pair for BEHAVIOR while the view stands: the trim bar's three
+    // press routes and its span-framing double-click are all consumed by the
+    // pointer allowlist (handle_history_mode_press), which is also why
+    // pointer_cursor_kind empties the band's cues in the mode, and the endcap /
+    // bridge hit tests are reachable only from those presses.
+    //
+    // THE ONE RECORDED INCOHERENCE: playback still uses the REAL trim range, so
+    // an audition inside the view starts and stops at the authored window while
+    // the bar above it shows the diff span. Deliberate — the mode changes no
+    // authored state and no playable range, and the two owners of that range
+    // (playback and navigation) are not display sites.
+    int64_t bar_begin_frame = app.trim.begin_frame;
+    int64_t bar_end_frame   = app.trim.end_frame;
+    if (app.history_mode.active) {
+        const GuiHistoryCommitDelta* d =
+            app.history_mode.session.delta_at(app.history_mode.index);
+        int64_t lo = 0, hi = 0;
+        if (d && d->frame_span(lo, hi)) {
+            bar_begin_frame = lo;
+            bar_end_frame   = hi;
+        } else {
+            const TrimState full = full_trim_window(audio.total_frames());
+            bar_begin_frame = full.begin_frame;
+            bar_end_frame   = full.end_frame;
+        }
+    }
+
     // Per-bound displayed-domain positions through the shared mapping owner
     // (displayed_trim_ms returns an integral-valued double; the int64 round
     // trip through TrimRange is exact, so trim_bound_column sees the same
     // value the hit sites pass). Both bounds are always meaningful.
     TrimRange trim{
-        static_cast<int64_t>(displayed_trim_ms(app.trim.begin_frame, map_arg)),
-        static_cast<int64_t>(displayed_trim_ms(app.trim.end_frame, map_arg))};
+        static_cast<int64_t>(displayed_trim_ms(bar_begin_frame, map_arg)),
+        static_cast<int64_t>(displayed_trim_ms(bar_end_frame, map_arg))};
 
     // Waveform rect for the renderers: real screen origin/height, width =
     // basis.area_w (the committed item width — the column-mapping denominator

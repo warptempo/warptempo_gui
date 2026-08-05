@@ -1621,6 +1621,25 @@ bool GuiHistoryDiff::init(const AppState& app) {
     return true;
 }
 
+bool GuiHistoryCommitDelta::frame_span(int64_t& lo, int64_t& hi) const {
+    bool have = false;
+    auto take = [&](int64_t f) {
+        if (!have) { lo = f; hi = f; have = true; return; }
+        if (f < lo) lo = f;
+        if (f > hi) hi = f;
+    };
+    // All six vectors, both columns, all three kinds — the membership is the
+    // struct's own, re-derived from its fields rather than inherited from
+    // is_empty's list, which is the same set for a different question.
+    for (const GuiHistoryWarpEntry&  e : warp_added)          take(e.frame);
+    for (const GuiHistoryWarpEntry&  e : warp_removed)        take(e.frame);
+    for (const GuiHistoryWarpChange& c : warp_changed)        take(c.frame);
+    for (const GuiHistoryPhaseResetEntry&  e : phase_reset_added)   take(e.frame);
+    for (const GuiHistoryPhaseResetEntry&  e : phase_reset_removed) take(e.frame);
+    for (const GuiHistoryPhaseResetChange& c : phase_reset_changed) take(c.frame);
+    return have;
+}
+
 const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     static const std::string kNone;
     if (index >= commits_.size()) return kNone;

@@ -2248,6 +2248,37 @@ struct AppState {
         // disabled face from the SAME decision — never two spellings of it.
         bool head_delta_empty = false;
 
+        // THE EDITOR'S NAVIGATION BAND, PARKED FOR THE VISIT (architect
+        // 2026-08-05 — "the view is a VIEWER"). The mode navigates freely, and
+        // before this it navigated the LIVE band: whatever pan, zoom and
+        // playhead the review left behind was what the editor came back to.
+        // These four fields are the way back — snapshotted at the ONE entry
+        // owner (open_history_mode_fresh) and restored at the ONE exit owner
+        // (close_history_mode), so a visit costs the editor nothing.
+        //
+        // WHAT IS AND IS NOT IN THE SNAPSHOT. In: the trio the mode's own
+        // vocabulary moves — the viewport start, the zoom level and the resting
+        // playhead. Out: the ACTIVE VIEWS, deliberately (the user keeps the S/T
+        // and W/P he switched to — those switches are how both halves of a
+        // delta get read, and undoing them would undo the reading); the A/B TAB,
+        // which cannot move at all while the view stands (both tab switches are
+        // consumed, and both tab buttons wear the disabled face); and trim,
+        // read_only and the selection, none of which the mode touches.
+        //
+        // THE TRIO IS ACTIVE-DOMAIN STATE, NOT AUTHORED STATE — in 'T' the three
+        // fields carry TARGET frames (AppState::active_audio_view states it) —
+        // so the snapshot carries the VIEW IT WAS TAKEN IN beside them. The
+        // restore is bit-exact whenever the audio view has not moved, which is
+        // every visit that switches no view and every visit whose switches
+        // cancel out; when it HAS moved, the two frame-shaped values translate
+        // through the live warp map in the flip's own direction, exactly as the
+        // `t` toggle translates the band it carries across (the zoom LEVEL rides
+        // untranslated there too). The restore's site owns that reasoning.
+        int64_t entry_viewport_start_sample = 0;
+        double  entry_zoom_level            = kWorkingZoomLevel;
+        int64_t entry_playhead_cursor_sample = 0;
+        char    entry_audio_view            = 'S';
+
         GuiHistoryDiff session;
     };
     HistoryMode history_mode;
