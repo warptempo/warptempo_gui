@@ -2002,7 +2002,11 @@ struct AppState {
     // the `'` editor's render-entry load-in-place and, since 2026-08-04, its
     // load-in-place-from-a-commit
     // (both rewrite the very state the frozen now side was measured against);
-    // Ctrl+Q and the WM close, trivially, the process going with it. ESC IS NOT
+    // THE COMMIT ACT, when it ends with the checkpoint in the repository
+    // (architect 2026-08-05, superseding the act's in-place re-entry — the
+    // partition and its principle are at run_history_commit,
+    // input_key_dispatch.cpp); Ctrl+Q and the WM close, trivially, the process
+    // going with it. ESC IS NOT
     // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
     // Escape is not in that function's vocabulary at all (the membership is
     // re-derived at history_mode_owns_key), so no Esc reaches it. A RESIZE
@@ -2079,14 +2083,19 @@ struct AppState {
     // Shift+R is NOT admitted, so the miscellaneous render stays a consumed
     // nothing here and the Render button drops its shift line with it; the
     // button itself wears the commit icon and the label "Save and Commit" while
-    // the mode stands, and reaches the act through its ordinary chord.
+    // the mode stands, and reaches the act through its ordinary chord. THE
+    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
+    // chord is a consumed no-op and that button greys (head_delta_empty, below,
+    // owns the bit and the one decision both readers take it from).
     //
-    // THE MODE STAYS OPEN ACROSS THE ACT (architect's ruling) and the session
-    // RE-INITS in place: the walk re-heads at the new checkpoint, the index
-    // returns to 0, and the lane shows an EMPTY diff — which is the visual
-    // confirmation that what is in memory is now what is committed. Nothing
-    // about the live authoring state changes, which is why this mutator, unlike
-    // the load-in-place, does not have to close the mode.
+    // THE ACT CLOSES THE VIEW when the checkpoint reaches the repository
+    // (architect 2026-08-05, superseding his 2026-08-04 "the mode stays open"
+    // and the in-place re-entry that showed the empty diff): the view exists to
+    // ask what differs from a checkpoint, and an act that just made the answer
+    // "nothing" has finished the question. It is a PARTITION, not a blanket
+    // close — an ending where nothing landed leaves the view exactly as it was,
+    // like every other refusal in the product — and run_history_commit
+    // (input_key_dispatch.cpp) owns it against the act's own verdicts.
     //
     // WHY THE FROZEN NOW SIDE CANNOT GO STALE — as a statement about the
     // AUTHORED state, which is what the flags describe. GuiHistoryDiff captures
@@ -2170,22 +2179,63 @@ struct AppState {
         // (open_history_mode_fresh) bumps on every entry, and the reason the
         // flag cache can tell one visit from the next.
         //
-        // (active, index, focus) is not enough, and the gap is not a corner: the
-        // COMMIT ACT re-enters in place, replacing the whole session while
-        // `active` never goes false — new walk, new commit list, an empty delta
-        // where a full one stood — and lands on index 0 with focus -1, which is
-        // exactly the ordinary shape it was already in. Every other fingerprint
-        // input (the marker generations, the viewport) is unchanged too, because
-        // the commit changed nothing in memory. So the cached surface MATCHED and
-        // the pre-commit diff flags kept being blitted over a session that no
-        // longer had them — visible, unclickable (the hit stashes were cleared),
-        // and contradicting the empty-diff confirmation the act exists to show.
+        // (active, index, focus) is not enough, and the gap is not a corner:
+        // A CLOSE AND A REOPEN THE PAINT NEVER SEES BETWEEN. Two sessions of the
+        // same piece land on index 0 with focus -1 and `active` true — the
+        // ordinary shape both times — and the paint consults this fingerprint
+        // once per frame, so a close and an open delivered in one dispatch batch
+        // (an `h` off and an `h` on; or, since 2026-08-05, THE COMMIT ACT's own
+        // close followed by the user reopening the view) reach it as a single
+        // edge with `active` never observed false. Every other fingerprint input
+        // (the marker generations, the viewport) can be unchanged across it too,
+        // since neither closing nor committing touches memory. Without the
+        // counter the cached surface MATCHES and the previous session's diff
+        // flags keep being blitted over a session that no longer has them —
+        // visible, unclickable (the hit stashes are cleared at every mode edge),
+        // and contradicting the very delta the new session was opened to show.
         // Damage cannot fix that: invalidate_all schedules a repaint, and the
-        // repaint is what consults this fingerprint.
+        // repaint is what consults this fingerprint. Which is also why the
+        // counter SURVIVES the close reset (close_history_mode states that half).
         //
         // It never wraps in any real session and is never persisted; it is only
         // ever compared for equality.
         unsigned long long generation = 0;
+
+        // IS THERE ANYTHING TO CHECKPOINT? — the HEAD DELTA's emptiness, and
+        // the one term that greys the Save-and-Commit act (architect
+        // 2026-08-05). The head delta is index 0's, the NEWEST eligible
+        // checkpoint, measured against the frozen now side; empty means the
+        // session and that checkpoint carry the same authoring content
+        // (GuiHistoryCommitDelta::is_empty, history_diff.h, owns the terms).
+        //
+        // COMPUTED ONCE, AT THE ONE ENTRY OWNER (open_history_mode_fresh), and
+        // STATIC FOR THE SESSION'S LIFE BY CONSTRUCTION: both sides are fixed
+        // for the visit — the now side is frozen at init(), and the mode's
+        // allowlists admit no authoring route at all — so nothing in here can
+        // change the answer. It is cleared by the whole-struct reset at close,
+        // like every other field but the generation.
+        //
+        // IT READS INDEX 0 ALWAYS, never the walk position: `,` and `.` step
+        // what is DISPLAYED, while the act always commits on top of the newest
+        // checkpoint, so stepping back to an older one must not offer to
+        // "re-commit" it.
+        //
+        // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
+        // 2026-08-05): the delta's vocabulary is the two marker columns plus
+        // `scale`, so a session whose only drift is the invisible settings
+        // bookkeeping — the per-tab view band the mode's own navigation moves —
+        // reads EMPTY and greys the act, even though a byte-level commit would
+        // land. Deliberate: a checkpoint is about authoring content, the same
+        // reasoning that makes `scale` the only settings key this mode
+        // displays. Ctrl+S stays live for the disk save, and the act's own
+        // NothingToCommit arm remains the byte-level backstop for the state
+        // where the bit says there IS something and the repository disagrees.
+        //
+        // ONE READER, TWO CONSUMERS: history_mode_key_blocked (input_key_-
+        // dispatch.cpp) makes its Ctrl+Alt+R admission conditional on this, so
+        // the chord is a consumed no-op and the Render button takes its row's
+        // disabled face from the SAME decision — never two spellings of it.
+        bool head_delta_empty = false;
 
         GuiHistoryDiff session;
     };
@@ -2852,7 +2902,14 @@ inline bool history_step_actionable(const AppState& a,
 // that have none, and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
-bool history_mode_disables_button(RedesignButton b);
+//
+// IT TAKES THE MODE ITSELF because the gate it asks does: one of that gate's
+// admissions is conditional on the session (the commit act's, on
+// head_delta_empty), so both readers must hand it the SAME state or the face
+// and the key would answer differently. The caller passes the struct and
+// restates none of its terms.
+bool history_mode_disables_button(const AppState::HistoryMode& mode,
+                                  RedesignButton b);
 
 // THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
 // (row 2's third face, and every row's while the history view stands) and for
@@ -2905,7 +2962,10 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     // predicate exists to prevent. Whose act is consumed is DERIVED from the
     // mode's own gates (history_mode_disables_button, above), so this line
     // cannot fall out of step with the allowlist.
-    if (a.history_mode.active && history_mode_disables_button(b)) return false;
+    if (a.history_mode.active &&
+        history_mode_disables_button(a.history_mode, b)) {
+        return false;
+    }
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows

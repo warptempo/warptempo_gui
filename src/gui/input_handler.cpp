@@ -405,7 +405,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // admit the same navigation shapes anyway, but that is its own answer for
     // its own reason, not a dependency of this one.)
     if (handle_history_mode_key(key, mods)) return;
-    if (app.history_mode.active && history_mode_key_blocked(key, mods)) return;
+    if (app.history_mode.active &&
+        history_mode_key_blocked(key, mods, app.history_mode)) {
+        return;
+    }
 
     // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
     // out every authoring chord while admitting navigation, playback,

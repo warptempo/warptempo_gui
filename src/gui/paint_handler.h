@@ -271,13 +271,13 @@ struct FlagCache {
     //
     // THE SESSION GENERATION IS THE FOURTH BECAUSE THE OTHER THREE REPEAT. The
     // delta of a given commit is fixed for a session's lifetime, but a session is
-    // not: the commit act re-enters the mode IN PLACE — a new walk over a new
-    // newest commit — and lands on the same index 0 with the same cleared focus
-    // while `active` never goes false, so the first three fields cannot see the
-    // change at all. The counter (bumped by open_history_mode_fresh, the one entry
-    // owner, and carried across a close) is what makes every visit its own
-    // fingerprint, and it is what makes the post-commit empty diff actually
-    // appear instead of the pre-commit flags being blitted on forever.
+    // not: every visit opens on index 0 with a cleared focus, so two sessions of
+    // the same piece are indistinguishable in the first three fields — and a
+    // close and a reopen delivered in one dispatch batch reach this fingerprint
+    // as a single edge, with `active` never observed false. The counter (bumped
+    // by open_history_mode_fresh, the one entry owner, and carried across a
+    // close) is what makes every visit its own fingerprint, so the previous
+    // session's diff flags cannot be blitted on over the new one's.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
@@ -371,7 +371,7 @@ struct GuiPaintHandler {
     //     view replaces the lane's whole content, so these decide it as
     //     completely as the five marker-driven fields decide the live one, and
     //     the generation is what distinguishes two SESSIONS that agree on the
-    //     other three (the commit act's in-place re-entry).
+    //     other three (a close and a reopen this pass never sees between).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a

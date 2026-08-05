@@ -303,8 +303,17 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
 //     shape: true when the press is not admitted while the mode stands. Its
 //     admitted membership is enumerated at the definition.
+//
+// THE SECOND TAKES THE SESSION, THE FIRST DOES NOT, and the asymmetry is the
+// membership's own: the mode's keys are a fixed keymap, while one allowlist
+// admission is conditional on the session it is asked about (the commit act's,
+// on head_delta_empty — a view whose newest checkpoint already carries the
+// session's authoring content has nothing to commit). Both readers hand it the
+// same `app.history_mode` and neither restates a term of it, which is what
+// keeps the key and the face one decision.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
-bool history_mode_key_blocked(GuiKey key, GuiInputState mods);
+bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
+                              const AppState::HistoryMode& mode);
 
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3):
@@ -1591,8 +1600,9 @@ private:
     //     2026-08-04 it also DECIDES THEIR FACES (history_mode_disables_button,
     //     app_state.h). It is a FREE function beside this class, with
     //     history_mode_owns_key (that vocabulary's shape), for that second reader:
-    //     both are pure functions of key+mods and the face derivation has no
-    //     press in hand. Declarations above the class.
+    //     both are pure, the face derivation having no press and no handler in
+    //     hand. Declarations above the class, where the one conditional
+    //     admission — and why only this one takes the session — is stated.
     //   * handle_history_mode_press is the pointer half, and it both refuses and
     //     acts: true when the press was consumed (as one of the mode's own acts
     //     or as a refusal), false for the navigation gestures the mode lets
@@ -1604,10 +1614,11 @@ private:
     //   * close_history_mode is the ONE exit owner; every closer calls it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
-    //     this instant. Two callers — `h` and the commit act's tail, which
-    //     re-enters on the checkpoint it just made. False (with init's own
-    //     stderr line already printed) when there is no history to show; the
-    //     mode is then left exactly as it was.
+    //     this instant, and the head delta measured once. ONE CALLER since
+    //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
+    //     it began closing the view instead. False (with init's own stderr line
+    //     already printed) when there is no history to show; the mode is then
+    //     left exactly as it was.
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published geometry at both mode edges, where its entries change
     //     domain. Its own comment carries the argument.
@@ -1616,8 +1627,9 @@ private:
     //   * open_history_commit_confirmation raises the fourth prompt, and is
     //     reached from ONE place — Ctrl+Alt+R's own arm, which the mode bit
     //     re-aims (handle_render_dispatch_keys).
-    //   * run_history_commit is the prompt's `y`: rebuild the bytes, commit
-    //     them, re-enter the mode on the new checkpoint.
+    //   * run_history_commit is the prompt's `y`: save, rebuild the bytes,
+    //     commit them, and close the view when the checkpoint reached the
+    //     repository. Its body owns the partition.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();

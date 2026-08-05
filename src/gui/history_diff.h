@@ -163,6 +163,24 @@ struct GuiHistoryCommitDelta {
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
+
+    // NOTHING DIFFERS — the whole delta in one word, and the ONE predicate for
+    // it. It lives on the type rather than at a consumer so that "empty" cannot
+    // come to mean two things: every member above is a term, so a member added
+    // here is a term here too, at the one place a reader is already looking.
+    //
+    // ITS READER IS THE COMMIT ACT'S FACE (AppState::HistoryMode::head_delta_-
+    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint, to
+    // decide whether there is anything to commit at all. The vocabulary is
+    // exactly this struct's — the two marker columns and `scale` — which is why
+    // a settings-only drift the mode never displays reads as empty here too (the
+    // asymmetry is recorded at the field and in github-recheck.md).
+    bool is_empty() const {
+        return warp_added.empty() && warp_removed.empty() &&
+               warp_changed.empty() && phase_reset_added.empty() &&
+               phase_reset_removed.empty() && phase_reset_changed.empty() &&
+               !scale_changed;
+    }
 };
 
 // The three files' exact current bytes — what Ctrl+S would write at this
@@ -352,9 +370,9 @@ private:
 // iteration bit selects the sweep). The GUI half — the confirmation prompt, THE
 // ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and Commit", and a
 // failed save refuses it before this module is reached at all), the stderr
-// register, the session re-init that turns the freshly written checkpoint into
-// an empty diff — lives at GuiInputHandler::run_history_commit;
-// what lives here is the act itself.
+// register, and the CLOSE that ends the view once the checkpoint is in the
+// repository (2026-08-05, superseding the in-place re-entry) — lives at
+// GuiInputHandler::run_history_commit; what lives here is the act itself.
 
 // The commit message this act writes, and the one the prompt shows: `Update
 // <id>`, where the id is the piece directory's own leaf name ("projects/550 - 1"

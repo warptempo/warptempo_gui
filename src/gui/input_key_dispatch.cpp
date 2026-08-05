@@ -286,12 +286,14 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // a new commit walk, and a NOW SIDE CAPTURED AT THIS INSTANT, which is what
 // makes the deltas describe the state the user is actually looking at.
 //
-// TWO CALLERS, and the second is why this is a function rather than eight lines
-// inside `h`: the commit act re-enters the mode on the checkpoint it has just
-// made (the mode stays open across the act by the architect's ruling), and it
-// must re-enter it in EXACTLY the shape a keypress does — same walk, same index,
-// same cleared focus, same lane-stash drop across the edge — or the two entries
-// would be two subtly different modes.
+// ONE CALLER since 2026-08-05 — bare `h`, the toggle's open arm. The second was
+// the commit act, which re-entered the mode in place on the checkpoint it had
+// just made; the architect's ruling that day made the act CLOSE the view
+// instead, so the re-entry is gone. This stays a function rather than eight
+// lines inside the toggle because it is the ENTRY OWNER: everything a visit is
+// made of is here, so a future entry inherits the whole shape — walk, index,
+// cleared focus, head delta, generation bump, lane-stash drop — instead of
+// reproducing part of it.
 //
 // UNAVAILABLE IS A CONSUMED NO-OP: init() has already put its own one line on
 // stderr naming the reason, and that is the whole story — no new UI surface, no
@@ -304,14 +306,28 @@ bool GuiInputHandler::open_history_mode_fresh() {
     fresh.active = true;
     fresh.index  = 0;      // the newest commit
     fresh.focus  = -1;
-    // EVERY ENTRY IS A NEW GENERATION, including the in-place one the commit act
-    // makes. The flag cache identifies the mode's content by (active, index,
-    // focus) plus this, and without it a re-entry that lands on the same index
-    // with the same focus — which the commit act's re-entry always does, and
-    // which `active` never going false cannot betray — is indistinguishable from
-    // no change at all, leaving the previous session's diff flags on screen.
-    // The bump is HERE rather than at the two call sites because this is the one
-    // entry owner, so a third caller inherits it.
+    // THE HEAD DELTA, MEASURED ONCE — index 0, the newest checkpoint, against
+    // the now side init() just froze. It answers "is there anything to
+    // checkpoint", and the answer is static for the visit by construction: both
+    // sides are fixed for the session's life (the field's own comment,
+    // AppState::HistoryMode, owns the full reasoning and the recorded
+    // asymmetry). Measuring it here costs nothing extra — the lane's first paint
+    // asks for this very delta, and delta_at caches it.
+    //
+    // A MISSING DELTA READS AS "SOMETHING DIFFERS", which is the safe fallback:
+    // it leaves the act reachable and lets the act's own NothingToCommit arm
+    // answer. It is not a reachable state — an available session always carries
+    // at least one eligible commit (init() is UNAVAILABLE when none survives the
+    // load gate), so index 0 always resolves.
+    const GuiHistoryCommitDelta* head = fresh.session.delta_at(0);
+    fresh.head_delta_empty = (head != nullptr && head->is_empty());
+    // EVERY ENTRY IS A NEW GENERATION. The flag cache identifies the mode's
+    // content by (active, index, focus) plus this, and two sessions of the same
+    // piece open in the same shape — index 0, focus -1, `active` true — so a
+    // close and a reopen the paint never sees between would otherwise be
+    // indistinguishable from no change at all, leaving the previous session's
+    // diff flags on screen. The bump is HERE rather than at the call site
+    // because this is the one entry owner, so a second caller inherits it.
     fresh.generation = app.history_mode.generation + 1;
     app.history_mode = std::move(fresh);
     drop_lane_stash_across_history_edge();
@@ -626,6 +642,20 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             from here. The Render button reaches it by
 //                             synthesizing this same chord, and wears the commit
 //                             icon and label while the mode stands.
+//                             THIS IS THE ONE ADMISSION CONDITIONAL ON THE
+//                             SESSION (architect 2026-08-05): with the HEAD
+//                             DELTA EMPTY — the newest checkpoint already
+//                             carrying this session's authoring content — there
+//                             is nothing to checkpoint, so the chord drops here
+//                             as a consumed no-op and the Render button takes
+//                             its row's disabled face from this same line. The
+//                             bit is measured once at entry and cannot change
+//                             while the mode stands (AppState::HistoryMode::-
+//                             head_delta_empty owns it, the asymmetry included:
+//                             "no changes" is the delta's vocabulary, the two
+//                             marker columns plus `scale`, so a settings-only
+//                             drift greys the act too). Ctrl+S is unaffected —
+//                             saving to disk is its own act.
 //                             Ctrl+Alt+SHIFT+R IS DELIBERATELY NOT ADMITTED: a
 //                             miscellaneous render is an authoring act with no
 //                             meaning in this mode, so it stays a consumed
@@ -710,10 +740,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
 //
-// THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is a
-// pure function of key+mods (it always was), and the face derivation asks it
-// about a table of chords with no press in hand.
-bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
+// THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
+// pure, and the face derivation asks it about a table of chords with no press
+// and no handler in hand. IT TAKES THE SESSION alongside key+mods because ONE
+// admission is conditional on it (the commit act's, on head_delta_empty), and
+// both readers hand it the same `app.history_mode` — the condition is decided
+// HERE and restated at neither caller, which is what keeps the key that refuses
+// and the face that greys one decision rather than two spellings of one.
+bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
+                              const AppState::HistoryMode& mode) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -725,7 +760,11 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     const bool is_load_in_place = (key == GuiKeys::Apostrophe && bare);
-    const bool is_commit_act = (ctrl && alt && !shift && key == GuiKeys::R);
+    // The act is admitted only while there is something to checkpoint: with the
+    // head delta empty this chord is not admitted at all, which is both the
+    // key's refusal and the Render button's grey.
+    const bool is_commit_act =
+        (ctrl && alt && !shift && key == GuiKeys::R && !mode.head_delta_empty);
     const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
@@ -751,8 +790,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
 // The act itself is commit_history_checkpoint (history_diff.h): the three
 // writes, the pathspec-scoped commit, the push, and every stderr line about
 // them. What lives here is the question in front of it, THE SAVE in front of
-// that (2026-08-04 — the act is "Save and Commit" now), and the re-entry behind
-// it.
+// that (2026-08-04 — the act is "Save and Commit" now), and the CLOSE behind it
+// (2026-08-05).
 
 // ASK FIRST. One caller: Ctrl+Alt+R's own arm while the mode stands.
 //
@@ -768,7 +807,11 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods) {
 // about": no mode, or a session that never resolved a piece directory, and there
 // is no commit to offer. Neither is reachable from the one call site (the chord
 // is admitted only while the mode stands, and an available session always
-// carries both strings), which is why they are silent.
+// carries both strings), which is why they are silent. The admission narrowed
+// on 2026-08-05 without moving that reachability: a head delta that is empty
+// drops the chord at the allowlist, ABOVE the render route, so nothing can raise
+// this prompt over a session with nothing to checkpoint — a refusal this
+// function therefore never has to spell.
 void GuiInputHandler::open_history_commit_confirmation() {
     if (!app.history_mode.active) return;
     const std::string& dir = app.history_mode.session.project_directory();
@@ -794,18 +837,17 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // and wrong on disk. Rebuilding costs one serialization and is exactly what a
 // Ctrl+S at this instant would write.
 //
-// AND IT IS WHAT MAKES THE CONFIRMATION TRUE: the re-init below measures the new
-// checkpoint against a now side built from the same unchanged state one moment
-// later, so the lane comes back EMPTY. Committing the frozen bytes after a zoom
-// would have left the fresh now side disagreeing with them, and the empty diff —
-// the whole visual point of staying in the mode — would show a settings delta
-// instead.
+// AND IT IS WHAT KEEPS THE CHECKPOINT HONEST: what lands is exactly what a
+// Ctrl+S at this instant would write, view band and all, rather than a snapshot
+// the user has since navigated away from — invisible in the diff (which displays
+// only `scale=`) and wrong on disk.
 //
-// THE MODE STAYS OPEN (architect's ruling) and re-enters through the entry
-// owner, so the walk re-heads at the new commit and the index returns to 0. A
-// re-entry that finds no history is not a state this can produce — the commit
-// just landed on the branch the walk reads — so its only honest answer is to
-// close the mode, which init() has already explained on stderr.
+// THE ACT CLOSES THE VIEW (architect 2026-08-05, superseding his own 2026-08-04
+// "the mode stays open" and the in-place re-entry that showed an empty diff as
+// the confirmation). The view asks one question — what differs between this
+// session and a checkpoint — and an act that has just made the answer "nothing"
+// has answered it; leaving the user inside an empty view to press `h` is
+// ceremony. The tail below owns the partition.
 //
 // THE ACT SAVES FIRST (architect 2026-08-04): the checkpoint is what you see,
 // SAVED and published, one sentence. Before this the act wrote and committed the
@@ -865,19 +907,34 @@ void GuiInputHandler::run_history_commit() {
     const GuiHistoryCommitOutcome outcome = commit_history_checkpoint(
         dir, base, app.projects_repo, build_history_now_side(app));
 
-    // A CHECKPOINT EXISTS IN BOTH SURVIVING ARMS — pushed or not — and that is
-    // exactly why the walk reads the local branch: an unpushed checkpoint is
-    // still history, and the user must be able to see that it landed. Every
-    // other outcome leaves the walk as it was, so the mode is left alone. (Both
-    // arms also cover the act's RETRY shape, where the checkpoint was already
-    // committed by an earlier attempt whose transport died over it and only the
-    // push was outstanding; re-heading the walk at a commit it already heads at
-    // is a no-op the empty diff confirms exactly as it does a fresh one.)
-    if (outcome != GuiHistoryCommitOutcome::Committed &&
-        outcome != GuiHistoryCommitOutcome::CommittedNotPushed) {
-        return;
+    // THE PARTITION, and its principle: THE VIEW CLOSES IFF THE ACT ENDS WITH
+    // THE CHECKPOINT IN THE REPOSITORY. Read against the act's five verdicts
+    // (GuiHistoryCommitOutcome, history_diff.h — re-derived here rather than
+    // inherited):
+    //   CLOSES — Committed (made and published), CommittedNotPushed (made; the
+    //   commit exists locally and the act's own stderr line says exactly that,
+    //   so nothing is hidden by leaving), and NothingToCommit (the newest
+    //   checkpoint ALREADY carries these bytes — the byte-level twin of the
+    //   grey, reached when the head-delta bit said there was something and the
+    //   repository disagreed; the state the user wanted is committed either
+    //   way, which is what the close is about).
+    //   STAYS OPEN — WriteFailed and CommitFailed, plus the failed save above
+    //   and this body's two silent guards. Nothing landed, so nothing is
+    //   finished: leaving the view exactly as it was is every refusal's shape in
+    //   this product, and the act is one Ctrl+Alt+R away from being retried
+    //   against the state still on screen.
+    // (An unavailable repository is CommitFailed's — the pre-flight that could
+    // not read `git status` — so it takes the stays-open arm with the rest.)
+    //
+    // WHY CLOSING IS THE WHOLE TAIL: the session was measured against a
+    // checkpoint list this act has just added to, so nothing about it describes
+    // the repository any more. Closing states that in one line, and the next `h`
+    // builds a session that does — walk, now side and head delta together.
+    if (outcome == GuiHistoryCommitOutcome::Committed ||
+        outcome == GuiHistoryCommitOutcome::CommittedNotPushed ||
+        outcome == GuiHistoryCommitOutcome::NothingToCommit) {
+        close_history_mode();
     }
-    if (!open_history_mode_fresh()) close_history_mode();
 }
 
 // THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is

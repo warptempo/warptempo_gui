@@ -171,9 +171,9 @@ void GuiPrompt::activate_response(char k) {
     if (trigger == DialogTrigger::HISTORY_COMMIT) {
         // THE PROMPT COMES DOWN BEFORE THE ACT RUNS — the paste confirm's own
         // order, and it matters more here: the act shells out to git and can
-        // take a moment, and it re-inits the history session at its tail, so
-        // running it under a prompt still marked active would leave the strip
-        // painting a question that has already been answered.
+        // take a moment, and it closes the history view at its tail, so running
+        // it under a prompt still marked active would leave the strip painting a
+        // question that has already been answered.
         if (k == 'y') {
             app.prompt.active = false;
             viewport.invalidate_all();

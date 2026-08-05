@@ -856,9 +856,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // THE HISTORY MODE'S FOUR INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
-    // SESSION is showing it: the commit act re-enters the mode in place, leaving
-    // the other three exactly as they were, and without this the freshly
-    // committed session's empty lane would keep blitting the old session's flags.
+    // SESSION is showing it: two visits open in the same shape and a close plus
+    // a reopen can reach this check as one edge, so without it the new session's
+    // lane would keep blitting the old session's flags.
     const bool               history_active = app.history_mode.active;
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;

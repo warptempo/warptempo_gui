@@ -345,12 +345,23 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // the table's only Tab entries are the tabs' Ctrl+Tab, which the predicate's
 // ctrl test excludes, and nothing in it dispatches bare Tab, Home, End or `c`.
 //
+// ONE ENTRY IS A FUNCTION OF THE SESSION, not of the chord alone (2026-08-05),
+// which is why this takes the mode rather than only a button: the allowlist
+// admits Ctrl+Alt+R only while there is something to checkpoint, so the
+// Save-and-Commit-faced Render GREYS when the session's authoring content
+// already matches the newest checkpoint (AppState::HistoryMode::head_delta_-
+// empty). The derivation carries that for free — this function restates no
+// term of it — and the answer is stable for a whole visit, the bit being
+// measured once at entry.
+//
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
 //   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
 //   which in this mode IS the save-and-commit checkpoint act and wears the
-//   "Save and Commit" face),
+//   "Save and Commit" face — LIVE ONLY WITH A NON-EMPTY HEAD DELTA, the one
+//   session-dependent entry here, and greyed rather than relabelled when the
+//   session matches the newest checkpoint),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads
 //   the viewed commit in place), and the history button itself (bare `h`, the
@@ -372,7 +383,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // row 4's never-grey rule still answers for it (the `'` button stays lit on a
 // locked tab, in the view as out of it). Only the VIEW's own consumption greys
 // anything here.
-bool history_mode_disables_button(RedesignButton b) {
+bool history_mode_disables_button(const AppState::HistoryMode& mode,
+                                  RedesignButton b) {
     if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
         return true;
     }
@@ -383,7 +395,7 @@ bool history_mode_disables_button(RedesignButton b) {
         chord.shift = tc.shift;
         chord.alt   = tc.alt;
         if (history_mode_owns_key(tc.key, chord)) return false;
-        return history_mode_key_blocked(tc.key, chord);
+        return history_mode_key_blocked(tc.key, chord, mode);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
     // (the table plus the two anchors is the whole roster) and stated rather
