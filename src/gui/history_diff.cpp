@@ -1586,8 +1586,9 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // Anything else (a missing sidecar, a parse refusal, an ambiguous
     // per-commit path resolution) leaves the walk here, counted; the parsed
     // stores the gate produced are discarded, but each eligible commit's
-    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides in the
-    // cumulative reading and BOTH sides in the iterative one, so no delta ever
+    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides in both
+    // readings, and the NEW sides too in the iterative one wherever its forward
+    // partner is a commit rather than the live state, so no delta ever
     // runs git again. Eager on purpose: the cost is bounded (at
     // most kCommitDepth strict loads of three tiny files each, staged through
     // the temp dir) and paying it at entry is what lets `n/N`, the clamps and
@@ -1657,12 +1658,14 @@ namespace {
 // off the walk position so that BOTH compare readings run the identical
 // mechanism over different texts (GuiHistoryCompare, history_diff.h). The
 // cumulative reading hands it the viewed commit's snapshots and the frozen now
-// side; the iterative reading hands it the walk parent's snapshots and the
-// viewed commit's own. Nothing here knows which it is, which is what makes the
-// two readings the same answer to two questions rather than two answers.
+// side; the iterative reading hands it the viewed commit's snapshots and THE
+// NEXT-NEWER ITEM's — the member one newer, or that same frozen now side at the
+// newest index. Nothing here knows which it is, which is what makes the two
+// readings the same answer to two questions rather than two answers.
 //
-// `sha` is always the VIEWED commit's, in both readings: the delta names the
-// checkpoint it describes, never the side it was measured against.
+// `sha` is always the VIEWED commit's, in both readings: the delta NAMES the
+// checkpoint it describes, whichever side of the comparison that checkpoint
+// happens to be (the old side in iterative, the old side in cumulative too).
 GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
                                            const std::string& then_warp,
                                            const std::string& then_phase_reset,
@@ -1767,30 +1770,40 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
         return &*slots[index];
     }
 
-    // ITERATIVE: THEN is the WALK PARENT (the next-older eligible member, the
-    // list being newest-first) and NOW is the viewed checkpoint itself, so the
-    // delta is what this commit introduced.
+    // ITERATIVE COMPARES FORWARD, TOWARD NOW (architect 2026-08-05, superseding
+    // the walk-parent pairing of earlier the same day): THEN is the viewed
+    // checkpoint and NOW is THE NEXT-NEWER ITEM, so the delta is what happened
+    // AFTER this checkpoint, one step at a time.
     //
-    // THE OLDEST MEMBER HAS NO PARENT IN THE WALK and gets an EMPTY delta
-    // structurally — no diff is run at all, rather than one against an invented
-    // empty side, which would read every line of the oldest checkpoint as newly
-    // added. Ruled acceptable (architect 2026-08-05): a review is about the
-    // recent commits, and with the walk capped the oldest member's real parent
-    // is off the end of the list on any long history anyway. The parent may also
-    // span commits the LOAD GATE hid, which is the walk's own honesty — the
-    // nearest checkpoint the mode can show is the only one whose delta has two
-    // reachable sides (the file head's compare-mode block owns both rulings).
-    if (index + 1 >= commits_.size()) {
-        GuiHistoryCommitDelta empty;
-        empty.sha    = snap.sha;
-        slots[index] = std::move(empty);
+    // THE NEXT-NEWER ITEM IS THE LIVE STATE AT INDEX 0 and the member one newer
+    // otherwise (the list is newest-first, so that is index - 1). So EVERY index
+    // has a forward partner and there is no empty-delta arm here at all — the
+    // walk's oldest end is an ordinary index, and its newest end is where the
+    // session is.
+    //
+    // WHICH MAKES INDEX 0'S TWO READINGS THE SAME DELTA, deliberately: both are
+    // the newest checkpoint against the live now side, so a session freshly
+    // loaded right after a commit reads BLANK in both. They are still cached in
+    // their own slots — one delta computed twice — rather than aliased, because
+    // the coincidence is a property of the pairing, not a rule any reader should
+    // have to know.
+    //
+    // Between COMMITTED neighbours the pairing may span commits the LOAD GATE
+    // hid, which is the walk's own honesty: the nearest checkpoint the mode can
+    // show is the only one whose delta has two reachable sides (the file head's
+    // compare-mode block owns the ruling).
+    if (index == 0) {
+        slots[index] = compute_commit_delta(
+            snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
+            snap.settings.text, now_.warpmarkers_text,
+            now_.phaseresetmarkers_text, now_.settings_text);
         return &*slots[index];
     }
-    const GuiHistoryCommitSidecars& parent = commits_[index + 1];
+    const GuiHistoryCommitSidecars& newer = commits_[index - 1];
     slots[index] = compute_commit_delta(
-        snap.sha, parent.warpmarkers.text, parent.phaseresetmarkers.text,
-        parent.settings.text, snap.warpmarkers.text,
-        snap.phaseresetmarkers.text, snap.settings.text);
+        snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
+        snap.settings.text, newer.warpmarkers.text,
+        newer.phaseresetmarkers.text, newer.settings.text);
     return &*slots[index];
 }
 

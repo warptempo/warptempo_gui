@@ -69,9 +69,10 @@ struct AppState;
 // writers' own string halves — byte-identical to what a Ctrl+S would land at
 // this instant, built with no file existing anywhere and no disk touched — so an
 // ADDED entry is one the session has and the commit did not, and a REMOVED entry
-// is one the commit had and the session dropped. In the ITERATIVE reading both
-// sides are committed snapshots, the viewed checkpoint and its walk parent, and
-// added/removed read the same way one commit later.
+// is one the commit had and the session dropped. In the ITERATIVE reading the
+// viewed checkpoint is the OLD side and the NEXT-NEWER item is the new one — the
+// next eligible walk member, or the same live now side at the newest index — and
+// added/removed read the same way one step forward.
 //
 // THE WALK IS LOAD-GATED (architect 2026-08-04): membership in the walk is THE
 // LOAD-IN-PLACE GATE ITSELF — load_commit_sidecars_strict below, the exact
@@ -104,12 +105,16 @@ struct AppState;
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
 // against two different "other sides", and the view offers both — the row-3
-// tabs select which while it stands (kdenlive-redesign.md's tab record; there
-// is deliberately NO hotkey for the pair).
+// tabs select which while it stands, and Ctrl+Tab toggles the pair
+// (kdenlive-redesign.md's tab record).
 //
-//   ITERATIVE — the viewed checkpoint against its WALK PARENT, the next-older
-//   eligible member. It answers "what did THIS commit change?", which is the
-//   question a history walk usually asks. It is the DEFAULT at every entry.
+//   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
+//   ITEM as the new one. It compares FORWARD, toward now: the next-newer
+//   ELIGIBLE WALK MEMBER for every index but the newest, and — at the newest
+//   index, which has no committed successor — THE FROZEN LIVE NOW SIDE. So it
+//   answers "what happened after this checkpoint", one step at a time, which is
+//   the question a walk backwards through the history is asking at each stop. It
+//   is the DEFAULT at every entry.
 //
 //   CUMULATIVE — the viewed checkpoint against the frozen live now side, the
 //   reading the mode shipped with. It answers "how does what I have now differ
@@ -118,19 +123,29 @@ struct AppState;
 // THE COLOR GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
 // the now side of the diff: green `[+]` is what the newer side has, red `[-]`
 // what the older side had and the newer dropped. In cumulative the newer side is
-// the session; in iterative it is the viewed checkpoint itself.
+// the session; in iterative it is the next step forward — the newer checkpoint,
+// or the session itself at the newest index.
 //
-// THE OLDEST WALK MEMBER HAS NO PARENT IN THE WALK, so its iterative delta is
-// EMPTY — structurally, with no diff run at all. Ruled acceptable (architect):
-// the recent commits are what a checkpoint review is about, and the walk is
-// capped at kCommitDepth anyway, so the oldest member's "parent" would be off
-// the end of the list even on a long history.
+// THE TWO READINGS COINCIDE AT THE NEWEST INDEX, deliberately and by
+// construction (architect 2026-08-05, superseding his walk-parent pairing of
+// earlier the same day): both are the newest checkpoint against the live state
+// there, so a session freshly loaded right after a commit shows a BLANK lane in
+// BOTH readings — which is the architect's stated purpose for the forward
+// direction. Neither the lane nor any reader needs to know; they are simply the
+// same delta, computed and cached twice.
 //
-// THE WALK PARENT MAY SPAN COMMITS THE LOAD GATE HID, and that is the walk's own
-// honesty rather than a defect here: walk membership is the strict whole-set
-// load (the gate at the file head), so an ineligible commit is not steppable, not
-// loadable and not shown — and a delta against the nearest checkpoint the mode
-// CAN show is the only delta whose two sides are both things the user can reach.
+// EVERY INDEX HAS A FORWARD PARTNER, so there is no empty-delta special case and
+// no "the end of the walk has nothing to compare against" arm anywhere: the
+// walk's newest end is where the live state is, and the walk's OLDEST end is a
+// perfectly ordinary index whose partner is the member one newer.
+//
+// THE NEXT-NEWER MEMBER MAY SPAN COMMITS THE LOAD GATE HID, and that is the
+// walk's own honesty rather than a defect here: walk membership is the strict
+// whole-set load (the gate at the file head), so an ineligible commit is not
+// steppable, not loadable and not shown — and a delta against the nearest
+// checkpoint the mode CAN show is the only delta whose two sides are both things
+// the user can reach. (It applies between COMMITTED neighbours only; the newest
+// index's partner is the live state, which nothing can hide.)
 enum class GuiHistoryCompare {
     Iterative,
     Cumulative,
@@ -399,10 +414,10 @@ public:
     // stays valid for the session's lifetime (the cache never reallocates its
     // elements).
     //
-    // THE OLDEST MEMBER'S ITERATIVE ANSWER IS A REAL, EMPTY DELTA, not nullptr:
-    // it carries the commit's own sha and no entries, so every reader treats it
-    // as "nothing changed here" through the paths it already has rather than
-    // through an unavailable arm.
+    // EVERY INDEX ANSWERS IN BOTH READINGS — no index is a special case, the
+    // iterative reading's forward partner being the next-newer walk member or,
+    // at the newest index, the live now side. The two readings COINCIDE at that
+    // newest index and are cached separately there, one delta computed twice.
     const GuiHistoryCommitDelta* delta_at(std::size_t         index,
                                           GuiHistoryCompare   compare);
 

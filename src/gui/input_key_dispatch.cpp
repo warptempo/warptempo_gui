@@ -415,9 +415,11 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
     // compare mode rather than passing the session's bit: the act commits the
     // LIVE state, so the question is live-vs-newest whatever reading the lane
-    // shows. (The field's own comment, AppState::HistoryMode::head_delta_empty,
-    // owns the reasoning; the fresh session's bit is Iterative at this point in
-    // any case, so reading it here would answer a different question.)
+    // shows. Since the iterative reading turned FORWARD (architect 2026-08-05)
+    // the two coincide at index 0, so the name currently picks the same delta
+    // the bit would — kept explicit anyway, the coincidence being a property of
+    // the pairing and not of this question (the field's own comment,
+    // AppState::HistoryMode::head_delta_empty, owns the reasoning).
     const GuiHistoryCommitDelta* head =
         fresh.session.delta_at(0, GuiHistoryCompare::Cumulative);
     fresh.head_delta_empty = (head != nullptr && head->is_empty());

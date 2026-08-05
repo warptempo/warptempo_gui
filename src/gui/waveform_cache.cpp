@@ -720,10 +720,11 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     out.clear();
 
     // THE DISPLAYED DELTA IS THE SESSION'S COMPARE READING (the compare bit's
-    // own record, AppState::HistoryMode): iterative against the walk parent, or
-    // cumulative against the frozen live now side. The lane's shapes, colours
-    // and text are identical either way — green is the newer side in both — so
-    // nothing below this line knows which reading it is drawing.
+    // own record, AppState::HistoryMode): iterative forward against the
+    // next-newer item, or cumulative against the frozen live now side. The
+    // lane's shapes, colours and text are identical either way — green is the
+    // newer side in both — so nothing below this line knows which reading it is
+    // drawing, nor that the two coincide at the newest index.
     const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
         app.history_mode.index, app.history_mode.compare);
     if (!d) return;

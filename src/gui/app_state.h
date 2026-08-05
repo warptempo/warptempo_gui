@@ -2164,7 +2164,9 @@ struct AppState {
         // ITS SELECTOR IS ROW 3'S TAB PAIR, which stops being the A/B tabs while
         // the view stands and becomes this bit's radio: tab A reads "Iterative",
         // tab B "Cumulative", the selected face marks the live reading and a
-        // press on the other switches. ITS HOTKEY IS CTRL+TAB — the tabs' own
+        // press on the other switches; at the NEWEST index the two readings
+        // coincide, so the switch there redraws the same lane and only the lit
+        // tab moves. ITS HOTKEY IS CTRL+TAB — the tabs' own
         // chord, following the surface (architect 2026-08-05, superseding his
         // same-day "there is no hotkey for the pair"): in the mode that chord
         // TOGGLES the reading through the one switch owner instead of switching
@@ -2286,14 +2288,18 @@ struct AppState {
         // checkpoint, so stepping back to an older one must not offer to
         // "re-commit" it.
         //
-        // AND IT READS THE CUMULATIVE DELTA ALWAYS, never `compare` (architect
-        // 2026-08-05, the field's one deliberate non-reader of the bit): the act
-        // commits THE LIVE STATE, so "is there anything to checkpoint" is
-        // live-vs-newest whatever the lane happens to be displaying. The
-        // iterative reading of index 0 answers a different question entirely
-        // (what the newest checkpoint changed against the one before it), and it
-        // can be empty while the session differs or non-empty while it does not
-        // — either would grey or light the act against the wrong fact.
+        // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never `compare` (the
+        // field's one deliberate non-reader of the bit): the act commits THE
+        // LIVE STATE, so "is there anything to checkpoint" is live-vs-newest
+        // whatever the lane happens to be displaying.
+        //
+        // SINCE THE ITERATIVE READING TURNED FORWARD (architect 2026-08-05) the
+        // two readings COINCIDE at index 0 — both are the newest checkpoint
+        // against the live now side — so the explicit naming currently picks the
+        // same delta the bit would. It is KEPT explicit anyway, because the
+        // coincidence is a property of the pairing rather than of this question:
+        // what this field asks is live-vs-newest by definition, and spelling it
+        // is what keeps that true if the pairing ever moves again.
         //
         // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
         // 2026-08-05): the delta's vocabulary is the two marker columns plus

@@ -303,12 +303,14 @@ struct FlagCache {
     // close) is what makes every visit its own fingerprint, so the previous
     // session's diff flags cannot be blitted on over the new one's.
     //
-    // AND THE COMPARE READING IS THE FIFTH (2026-08-05): one commit has TWO
-    // deltas — against its walk parent, and against the frozen live now side —
-    // and every other field can be identical across a switch (same session, same
-    // index, focus cleared to the same -1). Without it the lane would keep
-    // blitting the reading the user just switched away from, and the two would
-    // cross-blit freely as he switched back and forth.
+    // AND THE COMPARE READING IS THE FIFTH (2026-08-05): a commit has TWO
+    // deltas — forward against the next-newer item, and against the frozen live
+    // now side — and every other field can be identical across a switch (same
+    // session, same index, focus cleared to the same -1). Without it the lane
+    // would keep blitting the reading the user just switched away from, and the
+    // two would cross-blit freely as he switched back and forth. (At the NEWEST
+    // index the two deltas coincide, so a switch there redraws the same lane;
+    // this field does not know that and does not need to.)
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
@@ -405,8 +407,8 @@ struct GuiPaintHandler {
     //     marker-driven fields decide the live one; the generation is what
     //     distinguishes two SESSIONS that agree on the others (a close and a
     //     reopen this pass never sees between), and the compare bit what
-    //     distinguishes ONE COMMIT'S TWO DELTAS (iterative against the walk
-    //     parent, cumulative against the frozen now side).
+    //     distinguishes A COMMIT'S TWO DELTAS (iterative forward against the
+    //     next-newer item, cumulative against the frozen now side).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a
