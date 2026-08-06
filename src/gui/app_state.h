@@ -605,22 +605,25 @@ struct TrimDragState {
 // (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
 // drifted column each event, and the Ableton edge trick REBINDS the anchor to
 // the nearest visible pixel when a pan pushes its column offscreen (the focus
-// pins to the edge it hits and becomes that edge's content). The DRAG is
-// navigation-class: never touches the playhead or selection, allowed in
-// read-only, does not toggle or override follow. THE CLICK IS NOT (architect
-// 2026-08-05): a press-release that never crosses the slack lands the playhead on
-// the anchor column and carries the placement press's surroundings — the
-// deselect and the region dissolve — through jump_playhead_to_strip_anchor
-// (input_pointer.cpp, which owns the recipe and the per-surface split). Cleared
+// pins to the edge it hits and becomes that edge's content). IT IS NO LONGER
+// NAVIGATION-CLASS (architect 2026-08-06, experimental): THE PRESS LANDS THE
+// PLAYHEAD on the anchor column and carries the placement press's surroundings —
+// the deselect and the region dissolve — through jump_playhead_to_strip_anchor
+// (input_pointer.cpp, run from the arm, which owns the recipe and the
+// per-surface split), so EVERY zoom motion moves the playhead and empties the
+// selection, not merely the presses that stay clicks (the day-old release-side
+// click is superseded). Read-only still allows it, and the drag itself still
+// neither toggles follow nor moves the playhead again — it suppresses the chase
+// like every other pan. Cleared
 // on button release / button-lost, by the force-end
 // finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
 // pan continuously, and pointer gestures have no cancel).
 struct StripDragState {
     bool   active    = false;
-    // True once any motion event has applied a change. It is the CLICK/DRAG
-    // discriminator at the release: set, the terminating event finalizes (one
-    // final apply + synchronous rebuild); unset, the release is the strip-drag
-    // click and jumps the playhead to the anchor.
+    // True once any motion event has applied a change. At the terminating event
+    // it decides only whether to FINALIZE (one final apply + synchronous
+    // rebuild): unset, the end commits nothing at all — the gesture's playhead
+    // jump happened at the press — and merely erases the anchor stem.
     bool   moved     = false;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan

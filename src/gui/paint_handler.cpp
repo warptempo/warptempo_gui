@@ -3435,9 +3435,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // rather than the stem appearing only once the drag crosses the slack. The arm
 // owes the first frame's damage (arm_strip_drag_at); it vanishes the moment the
 // drag ends (release / button loss / the force-end finalizer clear strip_drag
-// before the next paint; Esc no longer ends a gesture at all), and on the
-// motionless release the click that ends it lands the playhead on this very
-// column. The anchor column is recomputed
+// before the next paint; Esc no longer ends a gesture at all). Since 2026-08-06
+// the PLAYHEAD stands on this same column for the whole gesture too — the press
+// lands it there before arming — so the stem marks a pivot the cursor is already
+// sitting on. The anchor column is recomputed
 // each frame from the persisted anchor_sample against the DISPLAYED viewport
 // (wf_cache.fp_*), the same basis paint_region_ground and paint_playheads use,
 // so the stem stays locked to the blitted plate while the worker rebuilds. The
