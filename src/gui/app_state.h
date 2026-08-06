@@ -605,26 +605,16 @@ struct TrimDragState {
 // (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
 // drifted column each event, and the Ableton edge trick REBINDS the anchor to
 // the nearest visible pixel when a pan pushes its column offscreen (the focus
-// pins to the edge it hits and becomes that edge's content). IT IS NO LONGER
-// NAVIGATION-CLASS (architect 2026-08-06, experimental): THE PRESS LANDS THE
-// PLAYHEAD on the anchor column and carries the placement press's surroundings —
-// the deselect and the region dissolve — through jump_playhead_to_strip_anchor
-// (input_pointer.cpp, run from the arm, which owns the recipe and the
-// per-surface split), so EVERY zoom motion moves the playhead and empties the
-// selection, not merely the presses that stay clicks (the day-old release-side
-// click is superseded). Read-only still allows it. The DRAG moves the playhead
-// again in exactly one case — an EDGE REBIND of the anchor takes the cursor with
-// it (the anchor field below), the cursor write alone and none of the press's
-// surroundings — and it suppresses the chase like every other pan. Cleared
-// on button release / button-lost, by the force-end
+// pins to the edge it hits and becomes that edge's content). Navigation-class:
+// never touches the playhead or selection, allowed in read-only, does not toggle
+// or override follow. Cleared on button release / button-lost, by the force-end
 // finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
 // pan continuously, and pointer gestures have no cancel).
 struct StripDragState {
     bool   active    = false;
-    // True once any motion event has applied a change. At the terminating event
-    // it decides only whether to FINALIZE (one final apply + synchronous
-    // rebuild): unset, the end commits nothing at all — the gesture's playhead
-    // jump happened at the press — and merely erases the anchor stem.
+    // True once any motion event has applied a change. A motionless
+    // press-release must commit nothing, so the terminating event finalizes
+    // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
@@ -639,11 +629,6 @@ struct StripDragState {
     // the press at the press, but REBINDABLE: when a pan drives its column off
     // the effective waveform width, the edge trick pins it to the nearest
     // onscreen pixel and rewrites this to that pixel's frame.
-    // THE PLAYHEAD IS BOUND TO THIS VALUE FOR THE GESTURE'S WHOLE LIFE (architect
-    // 2026-08-06): the press seats the cursor on it and EVERY REBIND RE-SEATS the
-    // cursor on the new value (apply_strip_drag_at's step 7, the one writer of
-    // this field after the press). Stem and playhead are one thing — they were
-    // free to split for the half-day the press jump stood without this.
     double anchor_sample = 0.0;
 };
 
@@ -2242,12 +2227,14 @@ struct AppState {
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
         //
-        // EVERY SETTER (re-derived by grep 2026-08-05): the mode's own focus
-        // CLICK on either of a diff flag's two pointer surfaces — its box in the
-        // lane and its STEM in the waveform's upper half, one shared body
-        // (focus_history_diff_flag) — and the mode's own bare Tab / Shift+Tab /
-        // IsoLeftTab cycle. Each sets it and lands the playhead on that flag's
-        // frame, and nothing else writes it true.
+        // EVERY SETTER (re-derived by grep 2026-08-06): the mode's own PLAIN
+        // focus CLICK on either of a diff flag's two pointer surfaces — its box
+        // in the lane and its STEM in the waveform's upper half, one shared body
+        // (focus_history_diff_flag); the LANE's two MODIFIED clicks, which focus
+        // the flag they select (select_history_diff_flags_modified — the lane
+        // alone since the symmetry ruling of 2026-08-06); and the mode's own
+        // bare Tab / Shift+Tab / IsoLeftTab cycle. Each sets it and lands the
+        // playhead on that flag's frame, and nothing else writes it true.
         //
         // EVERY CLEARER, the whole list, and all but the last clear for ONE
         // reason: the value is an ordinal into the PAINTED list, so anything
@@ -2299,9 +2286,11 @@ struct AppState {
         // frame order (the list is frame-sorted) and the paint reads membership
         // in one lookup.
         //
-        // EVERY SETTER: the two MODIFIED diff-flag clicks, on either of the
-        // flag's two pointer surfaces (select_history_diff_flags_modified,
-        // input_pointer.cpp). Nothing else writes a member — the Tab cycle and
+        // EVERY SETTER: the two MODIFIED diff-flag clicks, IN THE MARKER LANE
+        // and nowhere else (select_history_diff_flags_modified,
+        // input_pointer.cpp — the flag's stem answers plain clicks only since
+        // the symmetry ruling of 2026-08-06, waveform modifiers being gesture
+        // vocabulary in every view). Nothing else writes a member — the Tab cycle and
         // the plain click both leave it EMPTY, the live cycle's own
         // replace-with-a-singleton shape.
         //
@@ -3699,17 +3688,18 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // focus click. Neither restates the geometry; this function is the one owner of
 // the half test, the tolerance and the arbitration.
 //
-// THE CALLERS GATE IT PLAIN-EXACT (architect 2026-08-01, second pass) — stated
-// here because it bounds what this function is for, and spelled at each call
-// site: SHIFT and CTRL bind to the FLAG ALONE. Both modifiers already own a
-// waveform gesture at the very pixels a stem stands on (ctrl = the strip drag,
-// shift = the placement press since 2026-08-05), so a modified press near a stem
-// is not a hit at all and falls through to the waveform underneath — EXCEPT in
-// the `h` history view, whose own modified arm asks this function on purpose:
-// there a shift or ctrl press on a diff flag's stem is that flag's SELECTION
-// click (the multi-select pair), and only a press that hits no stem falls
-// through. This function is unchanged and unconditional; only its callers decide
-// when to ask.
+// BOTH CALLERS GATE IT PLAIN-EXACT, WITH NO EXCEPTION ANYWHERE (architect
+// 2026-08-01, made UNIVERSAL by the symmetry ruling of 2026-08-06) — stated here
+// because it bounds what this function is for, and spelled at each call site:
+// SHIFT and CTRL bind to the FLAG BOX ALONE, in the marker lane, in every view.
+// Both modifiers already own a waveform gesture at the very pixels a stem stands
+// on (ctrl = the strip drag, shift = the placement press since 2026-08-05), so a
+// modified press near a stem is not a hit at all and falls through to the
+// waveform underneath. The `h` history view's own modified arm asked this
+// function for one day — its stem-based multi-select — and that arm is DELETED:
+// waveform modifiers are gesture vocabulary and selection is lane vocabulary, in
+// both views alike. This function is unchanged and unconditional; only its
+// callers decide when to ask.
 //
 // UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
 // plain waveform press already splits by half — upper is playhead placement +

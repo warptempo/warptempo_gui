@@ -178,14 +178,6 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     view's own full-height press): dissolves any resting highlight at
 //     mouse-down, before the gesture is known to be a click or a fresh region
 //     drag — all three share this exact dissolve shape;
-//   * THE STRIP-DRAG PRESS, both entries (jump_playhead_to_strip_anchor, run
-//     from arm_strip_drag_at; 2026-08-06, when the jump moved off the motionless
-//     release onto the mousedown): it lands the playhead at the anchor column, so
-//     it takes the span with it like any other playhead move — EVERY zoom motion
-//     now, not only the presses that stay clicks. It spells the clear itself
-//     rather than inheriting the region arm's, arming the strip drag instead —
-//     one call, past the gutter return, on both surfaces (the live views and the
-//     `h` view alike);
 //   * MARKER CLICKS, all three (the plain single-select and both multi-select
 //     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
 //     carried died with the extent owner, so every marker click clears;
@@ -734,10 +726,10 @@ struct GuiInputHandler {
     // popup.
     // Arm the dual-axis strip drag — ONE body shared by the gesture's TWO
     // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
-    // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05) and owes its
-    // damage, and since 2026-08-06 it also RUNS THE PLAYHEAD JUMP
-    // (jump_playhead_to_strip_anchor) before arming — so every zoom motion
-    // deselects, dissolves a resting region and seats the cursor at its anchor.
+    // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05, the one
+    // surviving piece of the rolled-back strip-drag playhead arc) and owes that
+    // first frame's damage; the gesture itself stays NAVIGATION-CLASS, touching
+    // neither playhead nor selection.
     void arm_strip_drag_at(int x, int y);
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
 
@@ -827,30 +819,6 @@ struct GuiInputHandler {
     // real move of a live session.
     int64_t place_playhead_at_click_column(int click_rel_x, bool was_playing,
                                            int64_t playhead_at_entry);
-
-    // THE SEAT ITSELF, hoisted out of the column body above for its second
-    // caller: the STRIP-DRAG CLICK, which arrives holding the frame it wants (the
-    // drag's own anchor_sample) and has no column to convert. Clamps `raw_frame`
-    // into the live domain, writes the cursor, reseeks a live session on a real
-    // move and overrides follow — the whole playback regime, in one place, so the
-    // two entries cannot drift. Returns the clamped seated frame (always >= 0;
-    // the gutter sentinel is the column body's, that being where a gutter can be
-    // recognized).
-    int64_t place_playhead_at_frame(int64_t raw_frame, bool was_playing,
-                                    int64_t playhead_at_entry);
-
-    // THE STRIP-DRAG PRESS'S PLAYHEAD JUMP (architect 2026-08-06, experimental,
-    // superseding the previous day's release-side click): EVERY press on either
-    // zoom entry lands the playhead at the anchor column, the pivot the headless
-    // stem marks — all zoom motions, not only the ones that stay clicks. `sd` is
-    // the state the arm has just built. The frame is the drag's own
-    // anchor_sample, never re-derived; the seat and its surroundings are the
-    // placement press's, per surface (the full account is at the definition).
-    // ONE CALLER, arm_strip_drag_at — so both entries, and no end of the gesture
-    // calls it at all. BY VALUE deliberately: the caller hands in the live
-    // app.strip_drag, and a copy is what keeps this body's reads independent of
-    // anything it calls.
-    void jump_playhead_to_strip_anchor(StripDragState sd);
 
     // The waveform placement press BODY, shared by the plain UPPER-HALF waveform
     // press, the SHIFT-exact waveform press at either height (2026-08-05) and
@@ -1500,10 +1468,7 @@ private:
     // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip drag;
     //   and the RULER band, plain — the SAME gesture through the same hoisted
     //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
-    //   share a cursor. The cue covers the gesture WHOLE, the playhead jump its
-    //   press carries since 2026-08-06 included: the zoom is what the press aims
-    //   at, whether or not it goes on to drag, so one arm keeps one promise.
-    //   The `h` view's trim-bar framing wore this cue for the
+    //   share a cursor. The `h` view's trim-bar framing wore this cue for the
     //   day it was a single click and does not now: the act is a DOUBLE-click,
     //   and a double-click carries no cursor promise anywhere in the product.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which
@@ -1730,8 +1695,11 @@ private:
     //     waveform's upper half — so the two cannot answer differently. It
     //     clears the mode's multi-selection: a plain click replaces it.
     //   * select_history_diff_flags_modified is the SHIFT and CTRL clicks' body,
-    //     over those same two surfaces — the range extend and the membership
-    //     toggle, both then focusing the clicked flag and landing on it.
+    //     over the MARKER LANE ALONE — the range extend and the membership
+    //     toggle, both then focusing the clicked flag and landing on it. The
+    //     flag's stem is a PLAIN surface only (architect 2026-08-06, the
+    //     symmetry ruling: over the waveform a modifier names a gesture, not a
+    //     selection, in this view exactly as in the regular ones).
     //   * close_history_mode is the ONE exit owner; every closer calls it, and
     //     since 2026-08-05 it is also the ONE site that puts the editor's parked
     //     navigation band back (the snapshot's own record is at

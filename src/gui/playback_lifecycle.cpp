@@ -304,12 +304,12 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // against the bound buffer's [domain_begin(), domain_end()). `sample` is a
 // paint-domain coordinate, the same domain
 // playback's public API speaks in every view. ONE call site (re-derived by grep
-// 2026-08-05): `place_playhead_at_frame`, input_pointer.cpp — the placement
-// press's seat, always with playback alive at call time. That one body serves
-// the plain upper-half waveform press, the shift-exact press at either height,
-// the empty flag/triangle-lane parity press, the `h` view's own press and the
-// STRIP-DRAG CLICK, the parity press being stop-free by the claim-keyed stop
-// design precisely so this reseek can reach a live session. Keep-alive is
+// 2026-08-06): `place_playhead_at_click_column`, input_pointer.cpp — the
+// placement press's seat, always with playback alive at call time. That one body
+// serves the plain upper-half waveform press, the shift-exact press at either
+// height, the empty flag/triangle-lane parity press and the `h` view's own
+// press, the parity press being stop-free by the claim-keyed stop design
+// precisely so this reseek can reach a live session. Keep-alive is
 // exactly those presses' point
 // (reposition the running audition under the freshly-placed cursor without a
 // restart glitch). The
