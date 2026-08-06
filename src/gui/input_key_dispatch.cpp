@@ -95,7 +95,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // admitted even though several of them write app state, and it is the standard
 // an allowlist entry is judged against.
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
-// deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gesture
+// deeper owner refusal: undo/redo (the whole Ctrl+Z family — Ctrl+Z /
+// Ctrl+Shift+Z and the stay-put Ctrl+Alt+Z / Ctrl+Alt+Shift+Z), the trim gesture
 // (x), Delete, and every propagate command all drop at this gate.
 // Ctrl+S (save) is likewise NOT on the allowlist: read-only means no save, so
 // it drops here like the authoring chords. Gesture-owned state changed in a
@@ -195,8 +196,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
-    // drop at this gate. The old design admitted them because an undo entry
+    // The Ctrl+Z FAMILY — all four shapes, the stay-put Ctrl+Alt+Z and
+    // Ctrl+Alt+Shift+Z included — is NOT on the allowlist: every one of them
+    // drops at this gate, the alt pair structurally (no predicate here admits a
+    // ctrl+alt combination at all) and for the identical reason, alt suppressing
+    // only the restore's viewport writes and leaving it exactly as much of an
+    // authoring mutation. The old design admitted them because an undo entry
     // may target the OTHER (writable) tab, deferring the real decision to
     // do_undo / do_redo's per-entry target-tab peek. Under the gate-block,
     // undoing from a read-only tab first requires switching to the writable
@@ -1178,6 +1183,11 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && bare);
     const bool is_esc = (key == GuiKeys::Escape && bare);
+    // The Ctrl+Z FAMILY has no entry here and needs none — the mode is a viewer,
+    // so all FOUR shapes are consumed, the stay-put Ctrl+Alt+Z / Ctrl+Alt+Shift+Z
+    // (2026-08-06) exactly like the plain pair. Worth stating only because this
+    // list DOES admit one ctrl+alt chord (is_commit_act): admission is per-shape,
+    // never per-modifier, so the alt pair cannot ride in behind it.
     return !(is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc ||
@@ -1705,9 +1715,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // and the position nudge in the marker lane, Up/Down the
     // tempo cent step; the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family), bare PageUp/PageDown, bare Equal/Minus zoom,
-    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
-    // repeating Ctrl chords — the Ctrl+Shift+Tab march plus Ctrl+Z / Ctrl+Shift+Z
-    // (undo / redo), each a continuous step gesture like the cycle, not a
+    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
+    // repeating Ctrl chords, re-derived 2026-08-06 — the Ctrl+Shift+Tab march
+    // plus the WHOLE Ctrl+Z family (Ctrl+Z / Ctrl+Shift+Z undo / redo and the
+    // stay-put Ctrl+Alt+Z / Ctrl+Alt+Shift+Z, one condition below covering all
+    // four), each a continuous step gesture like the cycle, not a
     // one-shot command (Ctrl+Tab stays one-shot in BOTH its meanings — the A/B
     // switch outside the `h` history view and the compare toggle inside it, each
     // a two-state switch a hold could only flap). Every
@@ -1734,15 +1746,20 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Ctrl+Shift+Tab exactly (the lockstep marker march) repeats too.
     if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
         return true;
-    // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
-    // 2026-07-23): stepping through history is a continuous step gesture
-    // like the marker march — each fire is a full command (touched-set
-    // selection, offscreen-only recenter, the sync re-warp where the entry
-    // demands it), costs bounded like the tempo step. The single condition
-    // covers both: shift distinguishes undo from redo, and repeat recomputes
-    // modifiers live, so a shift pressed mid-hold flips to redo — consistent
-    // with the platform's live-modifier rule.
-    if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
+    // THE WHOLE Ctrl+Z FAMILY — all FOUR shapes — repeats while held (architect
+    // 2026-07-23 for the plain pair, 2026-08-06 for the alt pair): stepping
+    // through history is a continuous step gesture like the marker march — each
+    // fire is a full command (touched-set selection, offscreen-only recenter, the
+    // sync re-warp where the entry demands it), costs bounded like the tempo step.
+    // The single condition covers all four rather than growing the set of
+    // repeating Ctrl chords, and it covers them for the same reason it covered
+    // two: repeat recomputes modifiers LIVE, so shift pressed mid-hold flips
+    // undo to redo and ALT pressed mid-hold flips the run to stay-put from that
+    // fire on — consistent with the platform's live-modifier rule, and exactly
+    // the behavior a held stay-put undo wants. The alt shapes are the SAME
+    // command with the viewport writes suppressed (undo.h), so nothing about
+    // their cost or their step-ness differs.
+    if (mods.ctrl && key == GuiKeys::Z)
         return true;
     return false;
 }

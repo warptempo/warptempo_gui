@@ -457,7 +457,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, the trim gesture (x), Delete, the
     // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
-    // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
+    // (the whole Ctrl+Z family — the plain pair and the stay-put Ctrl+Alt+Z /
+    // Ctrl+Alt+Shift+Z alike) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path; the surviving deeper checks each cover a
     // surface it cannot reach — do_undo / do_redo's target-tab peek (the
     // ACTIVE tab is writable but the top history entry targets the other,
@@ -783,12 +784,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Ctrl+Z undo / Ctrl+Shift+Z redo. Placed before the GuiKeys::S save
-    // handling so modifier dispatch reads left-to-right in the source.
-    // Both are silent no-ops when their respective stack is empty.
-    if (ctrl && !alt && key == GuiKeys::Z) {
-        if (shift) undo.do_redo();
-        else       undo.do_undo();
+    // THE Ctrl+Z FAMILY, FOUR SHAPES (architect 2026-08-06). Placed before the
+    // GuiKeys::S save handling so modifier dispatch reads left-to-right in the
+    // source. Every shape is a silent no-op when its stack is empty.
+    //   Ctrl+Z           undo
+    //   Ctrl+Shift+Z     redo
+    //   Ctrl+Alt+Z       undo, VIEWPORT HELD STILL
+    //   Ctrl+Alt+Shift+Z redo, VIEWPORT HELD STILL
+    // SHIFT picks the direction and ALT picks whether the restore is allowed to
+    // move the view — both are REAL bindings here, which is why this arm stays
+    // one of strict modifier validation's deliberately-untightened families
+    // (conventions.md) rather than four exact predicates. Alt was a plain NO-OP
+    // on this family until today (the arm read `ctrl && !alt`, so Ctrl+Alt+Z
+    // fell through to nothing), so these are two NEW chords, not a re-reading of
+    // an accepted-and-ignored modifier. The suppression itself — what stays and
+    // what is skipped, and why the cross-tab switch is kept — is at do_undo's
+    // declaration (undo.h); nothing about it is decided here.
+    if (ctrl && key == GuiKeys::Z) {
+        if (shift) undo.do_redo(alt);
+        else       undo.do_undo(alt);
         return;
     }
 
