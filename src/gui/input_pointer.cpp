@@ -3265,8 +3265,12 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses. It
 //     touches NOTHING else: no store selection, no live focus, no auto-select,
-//     no region, no playback stop. On empty lane it clears the focus and lands
-//     nothing.
+//     no playback stop. It DOES take a resting region with it since 2026-08-06
+//     (the no-region clause is dead — it predated the view's ability to form a
+//     region at all): a click that lands the playhead is a POINT command, the
+//     live clear-site rule's own shape. On empty lane it clears the focus, lands
+//     nothing, and still clears the region — the live marker click's
+//     unconditional clear.
 //   * a PLAIN press within the stem grab tolerance of a PAINTED DIFF FLAG'S
 //     STEM, in the waveform's upper half, IS THAT FLAG'S CLICK — the same body
 //     at a different pixel, so it inherits that minimalism whole. It is asked
@@ -3518,9 +3522,25 @@ bool GuiInputHandler::handle_history_mode_press(
 // model's own shape rather than a rule of the mode's: a plain click REPLACES the
 // selection with what it hit, so the focus alone is then a selection of one, and
 // the revert act's subject falls back to that focus with nothing to remember.
+//
+// AND IT CLEARS ANY RESTING REGION, UNCONDITIONALLY (architect 2026-08-06, from
+// his live pass: sweep a span in the view, then click a diff flag, and the span
+// used to stay). The old "it touches no region" minimalism was written when the
+// view could not FORM a region at all; the placement press gave it one the same
+// day the flag click was ruled, and this click lands the playhead, so the live
+// clear-site rule reaches it — a flag click is a POINT command and takes the
+// scratch with it. UNCONDITIONAL is the live marker click's own shape, not a
+// looser reading of it: all three live marker clicks clear whatever the land did
+// or did not move, so the EMPTY-LANE click (`hit` < 0, which lands nothing)
+// clears too, exactly as the live empty-lane press does through its region arm.
+// The rest of the minimalism STANDS: no store selection, no live focus, no
+// auto-select, no playback stop.
 void GuiInputHandler::focus_history_diff_flag(int hit) {
     const int was = app.history_mode.focus;
     const bool had_selection = !app.history_mode.selection.empty();
+    // clear_region_highlight owns its own damage and is a no-op with no span
+    // resting, so this needs no gate of its own.
+    clear_region_highlight(app, viewport);
     app.history_mode.selection.clear();
     app.history_mode.focus =
         (hit >= 0 &&
@@ -3570,6 +3590,13 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // such repair to run — its focus is where the playhead just landed, which the
 // removal did not take back.
 //
+// BOTH ALSO CLEAR ANY RESTING REGION (architect 2026-08-06), the plain click's
+// own rule at the same strength: a click that lands the playhead takes the
+// scratch span with it, and all three live marker clicks — the single-select and
+// this modified pair — clear unconditionally. PAST THE RANGE GUARD BELOW, so a
+// call that changes nothing clears nothing, which is where the live toggle's own
+// clear sits too (inside its hit gate).
+//
 // DAMAGE IS THE FOCUS CLICK'S: full-window, unconditional here, because either
 // arm changes at least one flag's face (ctrl always flips the clicked one's
 // membership; shift always writes a set containing it) — and where it would not,
@@ -3577,6 +3604,7 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (hit < 0 || hit >= n) return;
+    clear_region_highlight(app, viewport);
     std::set<int>& sel = app.history_mode.selection;
     if (extend) {
         const int anchor = (app.history_mode.focus >= 0 &&

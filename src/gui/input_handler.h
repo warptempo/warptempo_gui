@@ -214,14 +214,20 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     for it the clear is also the CONSUMPTION of the span it just read, the
 //     trim it set being what the span was for;
 //   * THE `h` HISTORY MODE's OWN CURSOR-MOVING ROUTES (2026-08-05, added when
-//     the re-grep for this retell found the class absent): the three keyboard
-//     arms — the diff-flag Tab cycle, the absolute Home/End and `c`. They are
-//     the live arms' region regime read against the mode's data. The MODE'S
-//     PLACEMENT PRESS clears through arm_region_drag_at with the live presses
-//     instead, that press being the live one whole since playback left the view.
-//     THE MODE'S FOCUS CLICK IS NOT ONE OF THEM — on either surface, the flag
-//     box or the stem — and that exemption is recorded at its body: it is the
-//     mode's minimal navigation act;
+//     the re-grep for this retell found the class absent; membership re-derived
+//     2026-08-06): the three keyboard arms — the diff-flag Tab cycle, the
+//     absolute Home/End and `c` — and, SINCE 2026-08-06, THE MODE'S FLAG CLICKS,
+//     BOTH BODIES: the plain focus click over either surface, the flag box or
+//     the stem (focus_history_diff_flag), and the lane's shift/ctrl selection
+//     pair (select_history_diff_flags_modified). All of them are the live arms'
+//     region regime read against the mode's data, and the flag clicks are the
+//     live MARKER CLICKS' class above, at the same UNCONDITIONAL strength — the
+//     empty-lane click, which lands nothing, clears too. Their day-old exemption
+//     was a fossil of the view having had no region to clear; the placement
+//     press gave it one, and the architect's live pass caught the gap. The
+//     MODE'S PLACEMENT PRESS clears through arm_region_drag_at with the live
+//     presses instead, that press being the live one whole since playback left
+//     the view;
 //   * THE `h` HISTORY MODE'S OWN EDGES (architect 2026-08-05, THE VIEW-LOCAL
 //     REGION RULE): the mode's EXIT (close_history_mode, the one exit owner) and
 //     each `,` / `.` STEP and COMPARE SWITCH (the switching-commits family,
