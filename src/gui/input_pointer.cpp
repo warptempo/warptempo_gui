@@ -1068,6 +1068,19 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 //
 // The anchor is the SONG position under the press column, which is what makes
 // the zoom pivot on the pixel the user grabbed.
+//
+// THE ANCHOR STEM PAINTS FROM THE PRESS (architect 2026-08-05, moving its start
+// off the slack crossing): the headless zoom stem stands at the press column for
+// the whole life of the gesture, so the press itself shows where the zoom will
+// pivot instead of the affordance appearing only once the drag is under way.
+// Same stem, same painter, no head — only its first frame moved, which is why
+// the arm now owes the damage (the paint gate is strip_drag.active alone;
+// paint_strip_drag_anchor, paint_handler.cpp).
+//
+// AND A PRESS-RELEASE THAT NEVER MOVES IS A PLAYHEAD JUMP to that column
+// (jump_playhead_to_strip_anchor, at the release), which is what the stem
+// promises when the drag never happens: the pivot the user aimed at becomes the
+// cursor. Both entries take it, on both surfaces (live and the `h` view).
 void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     const double spp = current_samples_per_pixel(app, audio);
     app.strip_drag = StripDragState{};
@@ -1085,6 +1098,11 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
     begin_strip_pointer_capture(GuiCursorKind::Zoom);
+    // THE PRESS OWES THE STEM'S FIRST FRAME. A press is a DISCRETE command, so
+    // the shape is full waveform-area damage rather than a narrow column (the
+    // rule and the per-site table are at playhead_pixel_x, app_state.h); every
+    // later frame of the stem rides the drag's own synchronous rebuild.
+    viewport.invalidate_waveform_area();
 }
 
 // The flag editor's guard-free close, shared by the left and right press arms
@@ -1764,10 +1782,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // dual-axis zoom+pan. Row 5 gave it a second entry on the RULER band
         // (arm_strip_drag_at, the zoom strip reborn), through the same hoisted
         // arm body, so the two cannot drift. The waveform strip-drag is
-        // navigation-class: allowed in read-only, never touches the playhead or
-        // selection — and a MOTIONLESS ctrl+waveform press-release commits
-        // nothing at all (the ctrl+waveform selection clear is RETIRED,
-        // architect 2026-07-23: ctrl is purely the zoom modifier on the waveform).
+        // navigation-class: allowed in read-only, and the DRAG touches neither
+        // playhead nor selection — but a MOTIONLESS ctrl+waveform press-release
+        // is the STRIP-DRAG CLICK since 2026-08-05 (architect), which lands the
+        // playhead on the anchor column and takes the placement press's
+        // surroundings with it, the store deselect included
+        // (jump_playhead_to_strip_anchor, at the release). That deselect is the
+        // placement recipe's, not the 2026-07-23 ctrl+waveform clear come back on
+        // its own; ctrl is still purely the zoom modifier here.
         // Ctrl-exact on a MARKERLESS top-strip spot is a strict no-op except
         // the trim bar's BEGIN bound set (the claim below).
         if (ctrl && !alt && !shift) {
@@ -1962,9 +1984,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // contends with nothing) and NAVIGATION-CLASS: allowed in read-only,
             // touching neither playhead nor selection.
             //
-            // A MOTIONLESS plain press-release is a CONSUMED NOTHING — the
-            // release body disarms without committing, exactly as the
-            // ctrl+waveform entry does. There is NO DOUBLE-CLICK SURFACE here:
+            // A MOTIONLESS plain press-release IS THE STRIP-DRAG CLICK — the
+            // playhead jumps to the anchor column, exactly as on the
+            // ctrl+waveform entry (one release body, one act; the ruling and the
+            // recipe are at jump_playhead_to_strip_anchor). There is NO
+            // DOUBLE-CLICK SURFACE here:
             // the span-framing double-click lives on the TRIM lane, and giving
             // the ruler one too would make two neighbouring bands answer the
             // same gesture differently.
@@ -2416,9 +2440,18 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     // live press uses (the mode's own arm is in handle_history_mode_press; it
     // clears the MODE's focus where the live body clears the store selection,
     // and arms the same drag). Returns the seated frame, or -1 in the gutter.
+    // The COLUMN half is all that lives here: the seat itself is the shared body
+    // below, which the strip-drag click reaches with a frame it already holds.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return -1;
-    // Clamp the click column's frame into the live domain ONCE and hand that
+    return place_playhead_at_frame(
+        playhead_frame_at_click_column(app, audio, click_rel_x),
+        was_playing, playhead_at_entry);
+}
+
+int64_t GuiInputHandler::place_playhead_at_frame(
+        int64_t raw_frame, bool was_playing, int64_t playhead_at_entry) {
+    // Clamp the incoming frame into the live domain ONCE and hand that
     // same clamped value back to the caller, which passes it to the region arm:
     // move_playhead_to clamps internally, but the region former stored the raw
     // value. At a fractional flush-right zoom the painter-quantized wall
@@ -2427,8 +2460,8 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     // to domain_total — one past [0, domain_total-1], which the display-state
     // validator would clear wholesale — so both formers clamp. The clamp also
     // makes -1 a sentinel no seated frame can collide with.
-    const int64_t sample = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+    const int64_t sample =
+        clamp_playhead_to_live_domain(raw_frame, app, audio);
     viewport.move_playhead_to(sample);
     if (was_playing && sample != playhead_at_entry)
         playback_lifecycle.reseek_keeping_alive(sample);
@@ -2454,6 +2487,68 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
         click_rel_x, was_playing, playhead_at_entry);
     if (sample < 0) return;
     arm_region_drag_at(sample, x, y);
+}
+
+// THE STRIP-DRAG CLICK: a press-release on either zoom entry that never crossed
+// the slack JUMPS THE PLAYHEAD to the anchor column (architect 2026-08-05).
+// `sd` is the drag's own state, COPIED by the release before it disarms, so the
+// gesture is already down when the playhead moves and nothing here can read a
+// half-live drag.
+//
+// THE FRAME IS THE DRAG'S OWN anchor_sample and is never re-derived: the anchor
+// is the song position the press captured through the arm's mapping, and it is
+// the position the stem was painted at all along, so the cursor lands exactly
+// where the affordance stood. (A motionless release cannot have taken the edge
+// rebind — that lives in apply_strip_drag_at, which only a moved drag reaches —
+// so the value is still the press's own.)
+//
+// THE SEAT IS THE PLACEMENT PRESS'S, through the one shared body: the live-domain
+// clamp, the cursor write, a live session's keep-alive reseek and the follow
+// override. The SURROUNDINGS are that press's too, per surface — outside the `h`
+// view the store deselect and the region dissolve, in the view the mode focus and
+// its diff-flag selection (the view touches no store selection by its own standing
+// rule). NO REGION IS ARMED on either surface: the button is already up, so there
+// is no drag to arm, and the dissolve is the click's own.
+//
+// THE GUTTER SEATS NOTHING, exactly as the placement press's does: the press
+// column is tested against the waveform's effective width (the ruler entry spans
+// the whole window and the ctrl entry admits the inert right gutter), and a press
+// out there clears its surface's selection and lands no playhead.
+//
+// A MOTIONLESS RELEASE IS THE ONLY CALLER. A force-end (Ctrl+Q, resize, WM close)
+// is not a click and jumps nothing — the standing rule that a force-end commits
+// what a live gesture produced and nothing a click would have.
+void GuiInputHandler::jump_playhead_to_strip_anchor(const StripDragState& sd) {
+    // THE STEM COMES DOWN WHATEVER ELSE THIS CLICK DOES, so the erase is owed
+    // here rather than left to the seat: the gutter arm below seats nothing and
+    // would otherwise leave the press's stem standing. Full waveform-area
+    // damage, the discrete command's shape (playhead_pixel_x, app_state.h); the
+    // seat's own damage coalesces into it.
+    viewport.invalidate_waveform_area();
+    // THE SURFACE'S OWN CLEAR RUNS FIRST, ahead of the gutter return, exactly
+    // where each placement press runs it: outside the view the store selection,
+    // in the view the mode's focus and its diff-flag selection through the one
+    // clearer that takes the pair.
+    if (app.history_mode.active) {
+        if (clear_history_mode_focus(app.history_mode)) {
+            // A DISCRETE COMMAND, so full-window damage for the face swap — the
+            // shape the mode's own placement press emits.
+            viewport.invalidate_all();
+        }
+    } else {
+        selection.clear_selection();
+    }
+    const GuiRect area = waveform_area(app);
+    const int click_rel_x = sd.press_x - area.x;
+    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    place_playhead_at_frame(
+        static_cast<int64_t>(std::nearbyint(sd.anchor_sample)),
+        playback.is_playing(), app.playhead_cursor_sample);
+    // The placement press dissolves a resting span through its region ARM; this
+    // click arms nothing, so it spells the same dissolve itself, on BOTH
+    // surfaces — a playhead-moving command takes the scratch with it (the
+    // clear-site list is at clear_region_highlight, input_handler.h).
+    clear_region_highlight(app, viewport);
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
@@ -2585,16 +2680,23 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // Terminating event: if the drag moved, run the final apply with
         // final=true and the one synchronous rebuild (resync + kick_waveform_sync,
         // inside apply_strip_drag_zoom's final path) so the rest state is exact. A
-        // motionless press-release finalizes nothing — and commits nothing
-        // either: the ctrl-waveform selection clear is RETIRED (architect
-        // 2026-07-23), the press being purely the strip drag. A drag that MOVED
-        // additionally clears any pending double-click candidate, so a drag can
-        // never supply the second click of one.
-        if (app.strip_drag.moved) {
+        // drag that MOVED additionally clears any pending double-click candidate,
+        // so a drag can never supply the second click of one.
+        //
+        // A MOTIONLESS PRESS-RELEASE IS A CLICK, and the click JUMPS THE PLAYHEAD
+        // to the anchor column (architect 2026-08-05, superseding the 2026-07-23
+        // "commits nothing at all" — the ctrl-waveform SELECTION clear it retired
+        // came back with the placement press's whole recipe, not on its own).
+        // The state is copied and the gesture DISARMED first, so the jump runs
+        // with no drag live — the paint gate (strip_drag.active) is already false
+        // when it emits the damage that takes the stem down.
+        const StripDragState sd = app.strip_drag;
+        if (sd.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
         }
         app.strip_drag = StripDragState{};
+        if (!sd.moved) jump_playhead_to_strip_anchor(sd);
         // Reappear the cursor at the anchor-stem column (y frozen at the press
         // row) — the restore x override the drag set each event — as the kind
         // this drag STAMPED at capture begin (Zoom), which is not necessarily the
@@ -2727,12 +2829,17 @@ void GuiInputHandler::finalize_active_drags() {
     if (app.strip_drag.active) {
         // Navigation gestures applied their motion continuously, so ending is just
         // ending: the one synchronous rebuild + predictor resync a moved drag's
-        // release performs, then the capture release (idempotent).
+        // release performs, then the capture release (idempotent). A FORCE-END IS
+        // NOT A CLICK, so an unmoved drag does NOT take the release's playhead
+        // jump (jump_playhead_to_strip_anchor) — it produced nothing, and there is
+        // nothing here to commit. It still owes the anchor stem's ERASE, which
+        // that jump would otherwise have carried.
         if (app.strip_drag.moved) {
             if (playback.is_playing()) playback.resync_predictor();
             viewport.kick_waveform_sync();
         }
         app.strip_drag = StripDragState{};
+        viewport.invalidate_waveform_area();
         end_strip_pointer_capture();
     }
     if (app.scroll_drag.active) {
@@ -3253,7 +3360,11 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     It clears the mode focus and its selection, the analog of the live body's
 //     deselect (the playhead is leaving the flag), which is why the SHIFT arm is
 //     not the "deliberately independent" former it was for one day — a press
-//     that lands the playhead cannot leave a flag claiming to be it. There is
+//     that lands the playhead cannot leave a flag claiming to be it. THAT IS THE
+//     ARCHITECT'S RULING NOW, ratified 2026-08-05 rather than left as the
+//     coder's reading: EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
+//     the live entries the store selection and this one the mode's pair — the
+//     family rule, stated in full at RegionState (app_state.h). There is
 //     no waveform double-click surface to inherit (DoubleClickSurface has none),
 //     so a second click is simply another placement press.
 //
@@ -4093,11 +4204,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.strip_drag.moved) {
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
             }
-            // A motionless press ends with NO click action (the ctrl-waveform
-            // selection clear is RETIRED — a motionless ctrl+waveform
-            // press-release commits nothing on the clean release either, so this
-            // abnormal end matches it for free).
+            // A motionless press ends with NO CLICK ACTION here, and that is a
+            // deliberate divergence from the clean release since 2026-08-05: the
+            // release's motionless arm is the STRIP-DRAG CLICK and jumps the
+            // playhead, but a LOST BUTTON is not a click — the same reasoning
+            // that makes this end seed no double-click candidate (below).
+            // It still owes the STEM'S ERASE, which the jump would otherwise have
+            // carried: full waveform-area damage, the discrete shape.
             app.strip_drag = StripDragState{};
+            viewport.invalidate_waveform_area();
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
             app.double_click = DoubleClickCandidate{};

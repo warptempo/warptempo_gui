@@ -27,7 +27,10 @@ struct Viewport {
           gui(gui_),
           playback(playback_) {}
 
-    // Trim helpers.
+    // Trim helpers — THE NAVIGATION RANGE, and since 2026-08-05 nothing else:
+    // the trim bounds Home/End jump to and the load-time playhead rests at.
+    // PLAYBACK NO LONGER READS THIS (playback_lifecycle.cpp owns the split: the
+    // song's end in source view, the bound preview buffer's in target).
     std::pair<int64_t, int64_t> trim_range() const;
     int64_t                     trim_begin_sample() const;
     int64_t                     trim_end_sample() const;

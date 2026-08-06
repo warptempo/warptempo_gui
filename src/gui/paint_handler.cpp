@@ -3429,11 +3429,15 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
 
 // Paints the strip-drag anchor stem (the Ableton pivot affordance) at the
-// drag's current anchor column, full waveform height. Live only mid-gesture:
-// gated on the drag being active AND past the moved threshold, so a bare press
-// shows nothing and it vanishes the moment the drag ends (release / button loss /
-// the force-end finalizer clear strip_drag before the next paint; Esc no longer
-// ends a gesture at all). The anchor column is recomputed
+// drag's current anchor column, full waveform height. Live for the WHOLE
+// gesture: gated on the drag being active and nothing else since 2026-08-05
+// (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
+// rather than the stem appearing only once the drag crosses the slack. The arm
+// owes the first frame's damage (arm_strip_drag_at); it vanishes the moment the
+// drag ends (release / button loss / the force-end finalizer clear strip_drag
+// before the next paint; Esc no longer ends a gesture at all), and on the
+// motionless release the click that ends it lands the playhead on this very
+// column. The anchor column is recomputed
 // each frame from the persisted anchor_sample against the DISPLAYED viewport
 // (wf_cache.fp_*), the same basis paint_region_ground and paint_playheads use,
 // so the stem stays locked to the blitted plate while the worker rebuilds. The
@@ -3441,7 +3445,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // warp map is walked. render_strip_anchor_stem clamps the column to the visible
 // edges — an edge-pinned anchor draws the clamp itself.
 void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
-    if (!app.strip_drag.active || !app.strip_drag.moved) return;
+    if (!app.strip_drag.active) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();

@@ -162,9 +162,17 @@ struct UndoEntry {
 //     and rests NO region, where it used to rest one);
 //   * the `h` HISTORY VIEW'S own press, full height (that view has no scrub since
 //     playback left it), which is the same recipe minus the store deselect.
-// The two live entries DESELECT at press, leaving the selection EMPTY throughout
-// the drag; the view's entry deselects nothing, the view touching no store
-// selection at all by its own standing rule.
+// EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS — the family rule,
+// stated here and pointed at from the sites (architect-RATIFIED 2026-08-05,
+// promoting what had been the coder's reading of the mode's arm into the
+// ruling). The two live entries DESELECT at press, leaving the STORE selection
+// EMPTY throughout the drag; the `h` view's entry clears THE MODE'S focus and
+// diff-flag selection instead, through the one clearer that takes the pair, and
+// touches no store selection at all by the view's own standing rule. So no
+// former anywhere leaves a selection standing beside the span it is drawing, and
+// the surface simply decides WHICH selection that is. Both of the view's
+// waveform arms take it: the plain press clears through the placement body, and
+// the shift press IS that press.
 // SO A REGION RESTS BESIDE AN EMPTY SELECTION, WITHOUT AN EXCEPTION THE EDITOR
 // CAN SEE, and what restores that is the VIEW-LOCAL RULE (architect 2026-08-05):
 // the view's spans are cleared at its EXIT and at every `,` / `.` step and
@@ -597,16 +605,22 @@ struct TrimDragState {
 // (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
 // drifted column each event, and the Ableton edge trick REBINDS the anchor to
 // the nearest visible pixel when a pan pushes its column offscreen (the focus
-// pins to the edge it hits and becomes that edge's content). Navigation-class:
-// never touches the playhead or selection, allowed in read-only, does not toggle
-// or override follow. Cleared on button release / button-lost, by the force-end
+// pins to the edge it hits and becomes that edge's content). The DRAG is
+// navigation-class: never touches the playhead or selection, allowed in
+// read-only, does not toggle or override follow. THE CLICK IS NOT (architect
+// 2026-08-05): a press-release that never crosses the slack lands the playhead on
+// the anchor column and carries the placement press's surroundings — the
+// deselect and the region dissolve — through jump_playhead_to_strip_anchor
+// (input_pointer.cpp, which owns the recipe and the per-surface split). Cleared
+// on button release / button-lost, by the force-end
 // finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
 // pan continuously, and pointer gestures have no cancel).
 struct StripDragState {
     bool   active    = false;
-    // True once any motion event has applied a change. A motionless
-    // press-release must commit nothing, so the terminating event finalizes
-    // (one final apply + synchronous rebuild) only when this is set.
+    // True once any motion event has applied a change. It is the CLICK/DRAG
+    // discriminator at the release: set, the terminating event finalizes (one
+    // final apply + synchronous rebuild); unset, the release is the strip-drag
+    // click and jumps the playhead to the anchor.
     bool   moved     = false;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan

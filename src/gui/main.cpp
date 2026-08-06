@@ -377,10 +377,13 @@ GuiRect bottom_row_content_area(const AppState& a) {
     return GuiRect{lane.x, lane.y + b, lane.w, lane.h - 2 * b};
 }
 
-// Resolve the SOURCE-view trim playback/navigation range from AppState's trim
+// Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair — one of the TWO range owners (Viewport::trim_range is the target-view
 // half), and the reason the full window behaves exactly as the old unset state
-// did everywhere downstream.
+// did everywhere downstream. PLAYBACK IS NO LONGER A CONSUMER (2026-08-05): the
+// source-view audition plays to the SONG's end and the target-view one to the
+// bound preview buffer's, both decided at playback_lifecycle.cpp, so what this
+// pair still bounds is Home/End, the load-time playhead and the span framing.
 //
 // THE FULL-WINDOW NORMALIZATION (architect 2026-07-30): the store's end bound
 // is an INCLUSIVE authored frame while this range's end is EXCLUSIVE, so a full
@@ -396,9 +399,9 @@ GuiRect bottom_row_content_area(const AppState& a) {
 // There is NO ordering clamp: the pair passes through as authored. Crossed or
 // equal bounds can no longer REST (the commit and load auto-resets reset such
 // pairs to the full window), but MID-GESTURE crossing stays free and this runs
-// per frame, so consumers (the Space gate's cursor-in-[begin,end) check,
-// Home/End via trim_range, the load-time playhead) still degrade to a no-op or
-// a per-side position and must not assume begin <= end.
+// per frame, so consumers (Home/End via trim_range, the load-time playhead, the
+// span framing) still degrade to a no-op or a per-side position and must not
+// assume begin <= end.
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames) {
     if (trim_window_is_full(a.trim.begin_frame, a.trim.end_frame,

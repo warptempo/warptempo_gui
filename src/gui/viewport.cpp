@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cmath>
 
+// THE NAVIGATION RANGE (contract at the declaration): Home/End's jump bounds and
+// the load-time playhead, and since 2026-08-05 no playback consumer at all.
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.active_audio_view == 'T') {

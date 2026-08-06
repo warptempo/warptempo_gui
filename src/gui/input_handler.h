@@ -178,6 +178,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     view's own full-height press): dissolves any resting highlight at
 //     mouse-down, before the gesture is known to be a click or a fresh region
 //     drag — all three share this exact dissolve shape;
+//   * THE STRIP-DRAG CLICK (jump_playhead_to_strip_anchor, 2026-08-05): a
+//     motionless press-release on either zoom entry lands the playhead at the
+//     anchor column, so it takes the span with it like any other playhead move.
+//     It spells the clear itself rather than inheriting the arm's, having no
+//     region drag to arm — one call, past the gutter return, on both surfaces
+//     (the live views and the `h` view alike);
 //   * MARKER CLICKS, all three (the plain single-select and both multi-select
 //     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
 //     carried died with the extent owner, so every marker click clears;
@@ -726,6 +732,9 @@ struct GuiInputHandler {
     // popup.
     // Arm the dual-axis strip drag — ONE body shared by the gesture's TWO
     // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
+    // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05) and owes its
+    // damage; a release that never moved is the strip-drag click
+    // (jump_playhead_to_strip_anchor).
     void arm_strip_drag_at(int x, int y);
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
 
@@ -815,6 +824,26 @@ struct GuiInputHandler {
     // real move of a live session.
     int64_t place_playhead_at_click_column(int click_rel_x, bool was_playing,
                                            int64_t playhead_at_entry);
+
+    // THE SEAT ITSELF, hoisted out of the column body above for its second
+    // caller: the STRIP-DRAG CLICK, which arrives holding the frame it wants (the
+    // drag's own anchor_sample) and has no column to convert. Clamps `raw_frame`
+    // into the live domain, writes the cursor, reseeks a live session on a real
+    // move and overrides follow — the whole playback regime, in one place, so the
+    // two entries cannot drift. Returns the clamped seated frame (always >= 0;
+    // the gutter sentinel is the column body's, that being where a gutter can be
+    // recognized).
+    int64_t place_playhead_at_frame(int64_t raw_frame, bool was_playing,
+                                    int64_t playhead_at_entry);
+
+    // THE STRIP-DRAG CLICK (architect 2026-08-05): a press-release on either zoom
+    // entry that never crossed the slack lands the playhead at the anchor column,
+    // the pivot the headless stem has been marking since the press. `sd` is the
+    // drag's COPIED state, taken by the release before it disarms. The frame is
+    // the drag's own anchor_sample, never re-derived; the seat and its
+    // surroundings are the placement press's, per surface (the full account is at
+    // the definition). ONE CALLER, on_button_release's motionless arm.
+    void jump_playhead_to_strip_anchor(const StripDragState& sd);
 
     // The waveform placement press BODY, shared by the plain UPPER-HALF waveform
     // press, the SHIFT-exact waveform press at either height (2026-08-05) and
@@ -1464,7 +1493,10 @@ private:
     // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip drag;
     //   and the RULER band, plain — the SAME gesture through the same hoisted
     //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
-    //   share a cursor. The `h` view's trim-bar framing wore this cue for the
+    //   share a cursor. The cue covers the gesture WHOLE, its 2026-08-05 click
+    //   included (a press-release that never drags jumps the playhead to the
+    //   anchor): one arm, one promise, and the zoom is what the press aims at
+    //   either way. The `h` view's trim-bar framing wore this cue for the
     //   day it was a single click and does not now: the act is a DOUBLE-click,
     //   and a double-click carries no cursor promise anywhere in the product.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which

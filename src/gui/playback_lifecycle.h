@@ -52,10 +52,13 @@ struct GuiPlaybackLifecycle {
     //     stands. One command, one answer; `0` adds no rule of its own.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: `x` and Shift+X, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
-    //     stop at their own commit point). BOTH views because a live audition is
-    //     playing out the very window the mutation replaces: it would keep running
-    //     against bounds the paint has stopped showing — the source-view case that
-    //     no render trigger covers.
+    //     stop at their own commit point). BOTH views, and the rule is unchanged
+    //     by the 2026-08-05 playback ungating — what narrowed is only the
+    //     rationale's source-view half: a TARGET audition is still playing out the
+    //     very window the mutation replaces, while a SOURCE one now runs to the
+    //     song's end and never ran against the bounds being moved. The stop stays
+    //     there because every trim write parks the playhead at the new trim start
+    //     (input_trim.cpp), which is a cursor-moving command by any other name.
     // Every stop in the rule is REFUSAL-GATED (the standing 2026-07-28 rule): it
     // sits past its route's refusals and immediately ahead of that route's first
     // write, so a press that writes nothing stops nothing.
@@ -127,9 +130,10 @@ struct GuiPlaybackLifecycle {
     // architect dropped it that day; Space now always toggles from the playhead.)
     // Delegates
     // to the same launch body as toggle_playback's play edge, so the standing
-    // gates apply identically: a frame outside the trim window / target buffer
-    // domain, or one leaving fewer than two playable frames of remainder, is a
-    // silent no-op — exactly Space's conventions. A live session never
+    // gates apply identically: a frame outside the active view's range — the
+    // SONG in source view, the target buffer's domain in target view — or one
+    // leaving fewer than two playable frames of remainder, is a silent no-op —
+    // exactly Space's conventions. A live session never
     // launches (defensive; the caller reaches here only with
     // playback stopped — a scrub act over a live session STOPS it and returns).
     void scrub_launch_at(int64_t frame);
@@ -143,10 +147,10 @@ struct GuiPlaybackLifecycle {
     // actually moving (the upper-half placement press, the ONE caller,
     // compares the sample against the entry playhead); this function
     // unconditionally reseeks when called. The scrub paths no longer come
-    // here — a scrub act only stops or launches (scrub_act_at). For target
-    // view, samples
-    // outside the target buffer's range fall back to playback.stop() —
-    // keep-alive intent is well-defined for in-range positions only.
+    // here — a scrub act only stops or launches (scrub_act_at). Samples outside
+    // the active view's range — the song in source view, the target buffer's
+    // domain in target view — fall back to playback.stop(): keep-alive intent is
+    // well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
 
     // Set follow mode to `desired`. Shared by the bare-`f` toggle (which passes

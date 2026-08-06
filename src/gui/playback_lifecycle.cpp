@@ -42,9 +42,11 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
     stop_playback_if_playing();
 }
 
-// Space-bar: start/stop playback. Playback runs from the cursor to
-// trim_end (or total_frames if no e= marker). Pressing space with the
-// cursor at or past trim-end is a silent no-op. THE CURSOR IS ALWAYS THE START
+// Space-bar: start/stop playback. Playback runs from the cursor to the active
+// view's end — the SONG's end in source view, the preview buffer's (which is the
+// trim window's) in target view; the split and its reasoning are at the launch
+// body. Pressing space with the cursor at or past that end is a silent no-op.
+// THE CURSOR IS ALWAYS THE START
 // (architect 2026-07-30): the region left-bound launch that used to divert
 // Space's play edge to scrub_launch_at is deleted with the SPAN FORM, so every
 // Space — span resting or not — launches from here. Space-to-stop just
@@ -180,11 +182,19 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     int64_t end;
     // NO LOOPING (architect 2026-07-30, "looping behavior is not that useful.
     // ok to remove all looping" — re-ruling the 2026-07-19 loop ruling dead).
-    // EVERY audition plays once from `start` to `end` — the trim window's end,
-    // or the natural end when the window is full — and stops there. The launch
+    // EVERY audition plays once from `start` to `end` and stops there. The launch
     // verdict, the per-view loop starts, the audio-callback wrap, the wrap
     // counter and its predictor resync are all gone with it; the natural-end
     // teardown is what remains and is what every session now takes.
+    //
+    // WHAT `end` IS SPLITS BY AUDIO VIEW (architect 2026-08-05): TARGET plays to
+    // the bound preview buffer's end, which IS the trim window — the preview
+    // render covers that window and nothing else exists to play. SOURCE PLAYS TO
+    // THE SONG'S END, the trim window not bounding it at all: source playback is
+    // the source file read directly, so the gating bought nothing there and only
+    // cost the user the audition past a trim bound he was aiming. The NAVIGATION
+    // range is untouched by this — Home/End still jump to the trim bounds
+    // (Viewport::trim_range, the shared owner both used to read here).
     if (app.active_audio_view == 'T') {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet.
@@ -211,30 +221,32 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
         start = launch_pos;
         end   = playback.domain_end();
     } else {
-        end = viewport.trim_end_sample();
+        // SOURCE VIEW: the song's end, whatever the trim window says (the ruling
+        // above). The paint domain here is source frames and the bound buffer is
+        // the source file itself, so this is both the domain's end and the
+        // buffer's; play() clamps its end bound to the bound total besides.
+        end = audio.total_frames();
         // A launch requires at least TWO playable frames of remainder: a
         // remainder of one (or less) no-ops silently, joining the "nothing
         // to audition" family. A one-frame session is an isolated impulse —
-        // the audible pop — so playing from the End landing spot (End lands
-        // the playhead at end - 1, where Space's cursor launch would start)
-        // is degenerate, and End+Space is a common slip of the hand this
-        // product caters to for non-adversarial use. The End landing frame
-        // (end - 1) therefore no-ops — for a scrub click there too — and a
-        // one-frame trim window (begin == end - 1) is launch-inert (its render
-        // still works: the trimmer's one-frame-fady-trim latitude is a RENDER
-        // latitude, not an audition one). Deliberate near-end plays stay
-        // admitted — End, then Left a few times, then Space plays — and
-        // start-of-play clicks are normal DAW behaviour, so no fade/ramp/
-        // declick machinery is added (considered and REJECTED by ruling).
+        // the audible pop — so playing from the End landing spot (with a full
+        // window End lands the playhead at end - 1, where Space's cursor launch
+        // would start) is degenerate, and End+Space is a common slip of the hand
+        // this product caters to for non-adversarial use. The last frame
+        // (end - 1) therefore no-ops — for a scrub click there too. Deliberate
+        // near-end plays stay admitted — End, then Left a few times, then Space
+        // plays — and start-of-play clicks are normal DAW behaviour, so no
+        // fade/ramp/declick machinery is added (considered and REJECTED by
+        // ruling). A one-frame SOURCE FILE is launch-inert by this gate (its
+        // render still works: the trimmer's one-frame-fady-trim latitude is a
+        // RENDER latitude, not an audition one).
         if (launch_pos >= end - 1) return false;
-        // A launch position outside the trim region (either side) is a silent
-        // no-op. At the FULL window trim_begin_sample() is 0, so this never
-        // bites. A crossed or equal pair cannot rest — every commit and load
-        // resets such a pair to the full window — so [begin, end) is
-        // well-formed whenever this runs; the two checks simply bound the launch
-        // to the resting trim window.
-        if (launch_pos < viewport.trim_begin_sample()) return false;
-        // The launch position is now guaranteed in [trim_begin, trim_end).
+        // THERE IS NO LOWER GATE BUT THE DOMAIN'S OWN (2026-08-05, with the trim
+        // ungating): the launch position no longer has a trim begin to be outside
+        // of, and every producer hands in a clamped live-domain position (the
+        // cursor for Space, the clamped clicked frame for the scrub), so a
+        // negative one has no producer at all — and play() floors a start below
+        // zero regardless. The old refusal's whole job was the trim window.
         start = launch_pos;
     }
     // Scanner launch = the validated launch position, in the paint domain
@@ -287,15 +299,18 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // Click-keep-alive: reseek a live playback session to `sample` without the
 // stop-and-restart visual glitch. Both arms mirror the launch body's
 // (launch_playback_from's)
-// range policy: source view against [trim_begin_sample(), trim_end_sample()),
-// target view against the bound buffer's [domain_begin(),
-// domain_end()). `sample` is a paint-domain coordinate, the same domain
-// playback's public API speaks in every view. ONE call site
-// (place_playhead_and_arm_region, input_pointer.cpp), always with playback
-// alive at call time; that shared placement body serves TWO presses — the
-// upper-half plain waveform press and the empty flag/triangle-lane parity
-// press, the latter stop-free by the claim-keyed stop design precisely so this
-// reseek can reach a live session. Keep-alive is exactly those presses' point
+// range policy: source view against [0, total_frames) — the SONG, the trim
+// window having stopped bounding source playback 2026-08-05 — and target view
+// against the bound buffer's [domain_begin(), domain_end()). `sample` is a
+// paint-domain coordinate, the same domain
+// playback's public API speaks in every view. ONE call site (re-derived by grep
+// 2026-08-05): `place_playhead_at_frame`, input_pointer.cpp — the placement
+// press's seat, always with playback alive at call time. That one body serves
+// the plain upper-half waveform press, the shift-exact press at either height,
+// the empty flag/triangle-lane parity press, the `h` view's own press and the
+// STRIP-DRAG CLICK, the parity press being stop-free by the claim-keyed stop
+// design precisely so this reseek can reach a live session. Keep-alive is
+// exactly those presses' point
 // (reposition the running audition under the freshly-placed cursor without a
 // restart glitch). The
 // scrub paths never come here: a scrub act over a LIVE session is a pure STOP
@@ -326,25 +341,22 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
         playback.play(sample, playback.domain_end());
         return;
     }
-    // Source view: enforce the trim window with in-range-only semantics,
-    // mirroring the two arms above. Equal or crossed trim bounds make
-    // [trim_begin, trim_end) empty; such a pair cannot REST any more (the
-    // commit reset returns it to the full window), but it exists freely
-    // mid-gesture, and
-    // whenever the window is empty every live reseek stops — the same sane
-    // degradation as Space's silent no-op. This
-    // guard also means play() below can never be reached with an empty range
-    // from this site, closing the play() early-return trap (end_sample <=
-    // start_sample returns early WITHOUT clearing the playing flag) at its
-    // only reseek exposure.
-    if (sample < viewport.trim_begin_sample() ||
-        sample >= viewport.trim_end_sample() - 1) {
+    // Source view: the range is the SONG, not the trim window (the launch body's
+    // ruling — source playback reads the source file directly, so nothing gates
+    // it). In-range-only semantics as in the target arm above: a reseek to the
+    // last frame (or past the domain) stops rather than playing a one-frame
+    // impulse, the same sane degradation as Space's silent no-op. This guard also
+    // means play() below can never be reached with an empty range from this site,
+    // closing the play() early-return trap (end_sample <= start_sample returns
+    // early WITHOUT clearing the playing flag) at its only reseek exposure.
+    const int64_t song_end = audio.total_frames();
+    if (sample < 0 || sample >= song_end - 1) {
         stop_playback_if_playing();
         return;
     }
     // The window is unchanged, only the resume point moves (see the target arm
     // above).
-    playback.play(sample, viewport.trim_end_sample());
+    playback.play(sample, song_end);
 }
 
 // Set follow mode (contract at the header declaration). Shared by the bare-`f`
