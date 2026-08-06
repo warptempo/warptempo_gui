@@ -650,8 +650,8 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // keeps the rule exceptionless.
 // NO REGION WORK: every caller has already cleared any resting scratch span
 // before reaching here, which is the whole of the argument (the "a region rests
-// only beside an EMPTY selection anyway" belt is narrower since 2026-08-05 —
-// the `h` view's former deselects nothing — and was never load-bearing here).
+// only beside an EMPTY selection anyway" belt holds too — the `h` view's spans
+// are view-local — but it was never load-bearing here).
 // Read-only allowed (selection and playhead are navigation). Bounds-safe by
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
@@ -820,15 +820,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     const bool in_trim_bar = inside_top &&
                              y >= trim_bar_row.y &&
                              y < trim_bar_row.y + trim_bar_row.h;
-    // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES AND ONLY THOSE,
-    // which is why the mode enters the map HERE rather than as a fourth blanket
-    // return above. The mode is PER-ZONE exactly as read-only is: the Pan, the
-    // Zoom (both entries) and the Scrub stay live under it — they are its
-    // navigation vocabulary — while the endcap/bridge drags and the two ctrl
-    // bound-set clicks are consumed no-ops, so their cues must go. This term is
-    // what takes them: the ctrl arm falls to the waveform's own Zoom-or-Arrow
-    // question and the ctrl+shift arm to the Arrow it already returns everywhere
-    // else; the plain arm takes the Arrow below.
+    // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES, which is why the
+    // mode enters the map HERE rather than as a fourth blanket return above. The
+    // mode is PER-ZONE exactly as read-only is: the Pan and the Zoom (both
+    // entries) stay live under it — they are its navigation vocabulary — while
+    // the endcap/bridge drags and the two ctrl bound-set clicks are consumed
+    // no-ops, so their cues must go. This term is what takes them: the ctrl arm
+    // falls to the waveform's own Zoom-or-Arrow question and the ctrl+shift arm
+    // to the Arrow it already returns everywhere else; the plain arm takes the
+    // Arrow below. THE SCRUB IS THE MODE'S SECOND ZONE-SCOPED CUE, taken at its
+    // own arm at the tail of this function (2026-08-05, when playback left the
+    // view whole).
     // THE MODE'S OWN TRIM-BAR ACT IS A DOUBLE-CLICK (architect 2026-08-05,
     // superseding the single click and the Zoom cue it wore for a day), so it
     // adds NO cue here: a double-click has no cursor promise anywhere in the
@@ -866,11 +868,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         return GuiCursorKind::Arrow;
     }
     // Every other combination — shift, and every mixed pair the press path
-    // discards at its strict-modifier gate — is unnamed. Shift's region former
-    // is the deliberate one: a real gesture with no themed cursor worth
-    // borrowing. THAT HOLDS IN THE `h` VIEW UNCHANGED, and needed no mode arm:
-    // the view's own lower-half shift former (2026-08-05) is the same gesture,
-    // and this line answers Arrow above every mode-scoped term below it.
+    // discards at its strict-modifier gate — is unnamed. Shift's waveform press
+    // is the deliberate one: it is the placement press (2026-08-05, when the
+    // region former's anchor moved to the click), and the placement press has no
+    // cue on either half. THAT HOLDS IN THE `h` VIEW UNCHANGED, and needed no
+    // mode arm: the view's own shift press is the same gesture, and this line
+    // answers Arrow above every mode-scoped term below it.
     if (mods.ctrl || mods.alt || mods.shift) return GuiCursorKind::Arrow;
 
     // PLAIN-EXACT from here, and the top strip splits by band exactly as the
@@ -921,9 +924,13 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         return GuiCursorKind::Arrow;
     }
     // THE WAVEFORM'S LOWER HALF: the audition scrub, through the press's own half
-    // expression. The upper half is the placement press and the region former,
-    // which carry no cue.
-    if (inside_waveform && waveform_lower_half(area, y))
+    // expression. The upper half is the placement press, which carries no cue.
+    // THE `h` HISTORY VIEW ANSWERS ARROW HERE (architect 2026-08-05): playback
+    // is removed from the view whole, so the lower half is the PLACEMENT press
+    // in there like the upper half — there is no scrub left to promise, and a
+    // crosshair over a surface that auditions nothing would be a cue that lies.
+    if (inside_waveform && waveform_lower_half(area, y) &&
+        !app.history_mode.active)
         return GuiCursorKind::Scrub;
     return GuiCursorKind::Arrow;
 }
@@ -2283,158 +2290,67 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Waveform-area press: marker-blind for SELECTION (it never SELECTS a
         // hit marker — the stem is not a grab target; hit_test_flag runs only
-        // for top-strip presses). The PLAIN press splits by HALF
-        // (architect 2026-07-23): the UPPER half keeps the placement press —
-        // CLEARS the selection (the deselect-all: a waveform click dismisses
-        // the marker selection, the Ableton behaviour), drops the playhead at
-        // the clicked column (no marker snap — the 3px marker-snap magnet
-        // already died with the retired plain-drag scrub), reseeks a live
-        // scanner to it, overrides follow, and arms the region drag — which
-        // also DISSOLVES any resting highlight at this mouse-down
-        // (arm_region_drag_at clears it), so the highlight vanishes on press
-        // whether the gesture becomes a click or a fresh drag. The LOWER half
-        // is the SCRUB surface (the branch below): the press runs one
-        // scrub act — stopping a live session, else starting a fresh SCANNER
-        // session from the clicked
-        // frame — arming nothing (the one-shot Ableton model) and
-        // touching nothing else. ONLY the plain press splits — a Shift press
-        // instead FORMS a region waveform-wide (the drop-and-span path below), never
-        // a plain press's playhead placement, and ctrl/alt already claimed
-        // their waveform-wide gestures above.
+        // for top-strip presses). ONLY THE PLAIN PRESS SPLITS BY HALF
+        // (architect 2026-07-23): the UPPER half is the placement press — CLEARS
+        // the selection (the deselect-all: a waveform click dismisses the marker
+        // selection, the Ableton behaviour), drops the playhead at the clicked
+        // column (no marker snap — the 3px marker-snap magnet already died with
+        // the retired plain-drag scrub), reseeks a live scanner to it, overrides
+        // follow, and arms the region drag — which also DISSOLVES any resting
+        // highlight at this mouse-down (arm_region_drag_at clears it), so the
+        // highlight vanishes on press whether the gesture becomes a click or a
+        // fresh drag. The LOWER half is the SCRUB surface (the branch below):
+        // the press runs one scrub act — stopping a live session, else starting
+        // a fresh SCANNER session from the clicked frame — arming nothing (the
+        // one-shot Ableton model) and touching nothing else.
+        //
+        // A SHIFT PRESS IS THAT SAME PLACEMENT PRESS, WAVEFORM-WIDE (architect
+        // 2026-08-05, THE FORMER'S RESHAPE): the region now ANCHORS AT THE
+        // CLICKED COLUMN rather than at the playhead or at the furthest selected
+        // marker, so shift's press does exactly what the plain upper-half press
+        // does — deselect, seat the playhead at the column, arm the drag from
+        // there — and the drag then extends the span with the moving endpoint
+        // carrying the cursor, which is what makes the PLAYHEAD LAND WHERE THE
+        // MOUSE RELEASES. A MOTIONLESS shift click-release lands the playhead at
+        // that column and rests NO region (the arm dissolved the old span at
+        // mouse-down and nothing rebuilt one — the min-size dissolve's shape
+        // reached by never forming a span at all), and a GUTTER press deselects
+        // and does nothing else, landing no playhead because there is no column.
+        // ONE RULE, BOTH HALVES, THE WHOLE WAVEFORM: shift's only remaining job
+        // is to reach the placement press on the LOWER half, where the plain
+        // press is the scrub. What died with the old anchoring is the whole of
+        // it — the playhead-anchor read, the furthest-selected-marker argmax and
+        // the one-act span it formed (form_region_span_to_click and its
+        // non-dissolving arm went with them).
+        // ctrl/alt already claimed their waveform-wide gestures above.
         {
             const int click_rel_x = x - area.x;
-            if (shift) {
-                // Waveform shift+click: the region former, ONE OF THE TWO LIVE
-                // formers (this and the plain upper-half drag; the `h` view's
-                // own lower-half former is the third and is not reachable here)
-                // and, like its sibling, it CLEARS THE SELECTION — which is what
-                // keeps "a region drawn in an ordinary view rests only beside an
-                // empty selection" structural
-                // (the inventory is at RegionState, app_state.h; architect
-                // 2026-07-23, replacing the reserved strict no-op). With NO markers
-                // selected it forms a region from the PLAYHEAD to the clicked
-                // column; with markers selected the selection DROPS and the
-                // region spans from the selected marker FURTHEST
-                // from the click to the click (one rule: furthest =
-                // argmax |pos - click| over the selection in active-domain
-                // frames, which covers the between-the-series case as the
-                // longest side). It moves NO playhead, stops NO playback,
-                // reseeks nothing, overrides no follow, seeds no double-click.
-                // Read-only allowed (the region is
-                // transient navigation; the drop's deselect is selection =
-                // navigation). ctrl/alt returned earlier, so this is
-                // shift-exact — a shift+modified combination never reaches here.
-                // The deselect runs FIRST, before the gutter early-return, so
-                // an inert-gutter shift+click (no column to form a region from)
-                // still drops the marker selection — every waveform click drops
-                // it, mirroring the plain branch's gutter clear.
+            if (!shift && waveform_lower_half(area, y)) {
+                // THE PLAIN LOWER HALF IS THE SCRUB SURFACE, and the half test
+                // is first on this path — before the deselect, because a scrub
+                // press must not deselect. waveform_lower_half is the SCRUB
+                // CURSOR's zone predicate too — one owner, so the cue and the
+                // gesture cannot disagree about where the surface starts. The
+                // press drives the SCANNER (not the cursor) — the scanner fields
+                // are meaningful only while active (the standing contract), and
+                // this gesture is exactly the launches-the-scanner-independently-
+                // of-the-cursor consumer that contract anticipated. Every scrub
+                // act is STOP-THEN-START-ON-THE-NEXT-CLICK (scrub_act_at, architect
+                // 2026-07-27): a click over a LIVE session just stops it, and the
+                // following click launches a fresh audition from the frame it lands
+                // on — never a positional seek inside an old session. A refused
+                // launch is a silent no-op, exactly Space's conventions. The scrub
+                // is ONE-SHOT per click (architect 2026-07-23, the Ableton model):
+                // the press arms NOTHING, a held press does nothing further, and
+                // motion over the surface is inert — each click pays at most one
+                // stop quiescence fence. It touches
+                // NOTHING else: no selection change, no region change, no cursor
+                // write, no follow override, no double-click seed, no drag
+                // arm. Read-only allowed (playback is navigation). The gutter
+                // (click_rel_x outside [0, area.w)) returns silently — no launch
+                // position exists there, unlike the placement press's
+                // deselect-then-return.
                 //
-                // NEW (architect 2026-07-24 second pass): the former now also
-                // ARMS a region drag anchored at the FAR endpoint (the playhead,
-                // or the drop's furthest-marker image). So the press is
-                // one-shot ONLY on a motionless release: the formed region rests
-                // exactly as today, and on the sliver rule whatever the deselect
-                // below left standing does; motion past the shared gate drags the
-                // CLICK-side endpoint live through the region-drag motion path,
-                // the far endpoint fixed, and Esc mid-drag does NOTHING AT ALL
-                // (pointer gestures have no cancel, 2026-07-29 — the rule at the
-                // drag-modal gate): the drag keeps extending and its release rests
-                // the span it grew. GUTTER presses arm
-                // NOTHING (there is no column to anchor a drag against).
-                if (click_rel_x < 0 || click_rel_x >= area.w) {
-                    selection.clear_selection();
-                    return;
-                }
-                // Region endpoints hold PLAYABLE live-domain frames only: the
-                // display-state validator (clamp_display_state_to_live_domain)
-                // defines an endpoint >= total as invalid and clears the whole
-                // highlight, and the forward map rounds unclamped, so an EOF
-                // item's image (a marker at total-1 under a fast map) can land
-                // one past the wall — clamping here through the land's own
-                // helper keeps every former inside the one region domain. The
-                // click_frame is clamped for the same conformance (the plain
-                // press path clamps it through move_playhead_to; the region
-                // former stored it raw).
-                const int64_t click_frame = clamp_playhead_to_live_domain(
-                    playhead_frame_at_click_column(app, audio, click_rel_x),
-                    app, audio);
-                int64_t endpoint = app.playhead_cursor_sample;
-                if (!app.selected_markers.empty()) {
-                    // Drop: the region's far endpoint is the selected marker
-                    // whose active-domain position is furthest from the click.
-                    // Stale indices are skipped defensively; if every index was
-                    // stale (degenerate) the playhead endpoint stands.
-                    int64_t best_dist = -1;
-                    for (int idx : app.selected_markers) {
-                        int64_t src_frame;
-                        if (app.active_markers_view == 'P') {
-                            const auto& tv = app.phaseresetmarkers.markers();
-                            if (idx < 0 || idx >= static_cast<int>(tv.size()))
-                                continue;
-                            src_frame = tv[idx].time_frame;
-                        } else {
-                            const auto& mv = app.warpmarkers.markers();
-                            if (idx < 0 || idx >= static_cast<int>(mv.size()))
-                                continue;
-                            src_frame = mv[idx].time_frame;
-                        }
-                        // Clamp the forward-map image into the live domain (see
-                        // the click_frame comment above): an EOF marker's image
-                        // can round to total, which the display-state validator
-                        // rejects — the land's own helper keeps this endpoint a
-                        // playable frame.
-                        const int64_t pos = clamp_playhead_to_live_domain(
-                            source_frame_to_active_domain(app, audio, src_frame),
-                            app, audio);
-                        const int64_t dist = pos > click_frame
-                                                 ? pos - click_frame
-                                                 : click_frame - pos;
-                        if (dist > best_dist) {
-                            best_dist = dist;
-                            endpoint  = pos;
-                        }
-                    }
-                    // Deselect — the selection drops and the span forms beside an
-                    // empty selection (the shift-click waveform former drops the
-                    // selection by explicit ruling, exactly as the plain drag's
-                    // press does). This also dissolves the shift-range anchor,
-                    // correct here: this shift interaction is on a DIFFERENT
-                    // surface (the waveform) than the marker range select, so no
-                    // range is being extended.
-                    selection.clear_selection();
-                }
-                // The span, the sliver refusal and the drag arm are the shared
-                // tail (form_region_span_to_click). The deselect above ran
-                // FIRST, so whatever it forms rests beside an EMPTY selection.
-                form_region_span_to_click(endpoint, click_frame, x, y);
-                return;
-            }
-            // THE HALF TEST, first thing on the plain path — before the
-            // deselect, because a scrub press must not deselect. Lower half of
-            // the waveform area (waveform_lower_half, which the SCRUB CURSOR's
-            // zone predicate reads too — one owner, so the cue and the gesture
-            // cannot disagree about where the surface starts) = the SCRUB
-            // surface: the press drives the SCANNER (not the cursor) — the
-            // scanner fields
-            // are meaningful only while active (the standing contract), and
-            // this gesture is exactly the launches-the-scanner-independently-
-            // of-the-cursor consumer that contract anticipated. Every scrub
-            // act is STOP-THEN-START-ON-THE-NEXT-CLICK (scrub_act_at, architect
-            // 2026-07-27): a click over a LIVE session just stops it, and the
-            // following click launches a fresh audition from the frame it lands
-            // on — never a positional seek inside an old session. A refused
-            // launch is a silent no-op, exactly Space's conventions. The scrub
-            // is ONE-SHOT per click (architect 2026-07-23, the Ableton model):
-            // the press arms NOTHING, a held press does nothing further, and
-            // motion over the surface is inert — each click pays at most one
-            // stop quiescence fence. It touches
-            // NOTHING else: no selection change, no region change, no cursor
-            // write, no follow override, no double-click seed, no drag
-            // arm. Read-only allowed (playback is navigation). The gutter
-            // (click_rel_x outside [0, area.w)) returns silently — no launch
-            // position exists there, unlike the upper half's
-            // deselect-then-return.
-            if (waveform_lower_half(area, y)) {
                 // The scrub press body (scrub_press_at): gutter no-op, clamped
                 // frame from the column, one scrub act (stop a live session,
                 // else launch), nothing armed. This is the LEFT button's entry
@@ -2444,12 +2360,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 scrub_press_at(click_rel_x);
                 return;
             }
-            // Upper half: the placement press body, shared verbatim with the
-            // empty flag/triangle-lane parity press
+            // Everything else on the waveform — the plain UPPER half and a
+            // SHIFT-exact press at either height — is the placement press body,
+            // shared verbatim with the empty flag/triangle-lane parity press
             // (place_playhead_and_arm_region): deselect-all, drop the playhead
             // at the clicked column, reseek a live session, override follow, arm
             // the region drag. The clear runs FIRST inside the helper, so an
-            // inert-gutter click still deselects.
+            // inert-gutter click still deselects. ctrl/alt returned earlier, so
+            // the shift arrival here is shift-exact — a shift+modified
+            // combination never reaches this branch.
             place_playhead_and_arm_region(click_rel_x, x, y,
                                           was_playing, playhead_at_entry);
         }
@@ -2489,81 +2408,14 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     clear_region_highlight(app, viewport);
 }
 
-void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
-                                                 int y) {
-    // The SHIFT-exact former's arm (labwc 2026-07-24 second pass). Same drag
-    // state as arm_region_drag_at — active, anchored at the FAR endpoint (the
-    // playhead, or the drop's furthest-marker image), press coordinates for
-    // the shared Chebyshev gate — but it does NOT dissolve app.region: the
-    // former has already left it exactly as it should REST for a motionless
-    // release (the freshly formed region, or on the sliver rule the pre-press
-    // region untouched), so preserving it keeps today's one-shot behaviour
-    // bit-for-bit. That no-dissolve-at-press property is this function's whole
-    // reason to exist; neither arm has a cancel to differ in — Esc mid-drag is a
-    // consumed no-op for both. Past the gate the SHARED region-drag motion
-    // handler re-establishes
-    // app.region from this anchor (it fixes a_frame = anchor_frame and tracks
-    // b_frame to the pointer column on each column change), so the click-side
-    // endpoint drags live while this far endpoint stays put — no motion or
-    // release handler change needed, the anchor semantic is identical to the plain
-    // drag's.
-    app.region_drag = RegionDragState{};
-    app.region_drag.active       = true;
-    app.region_drag.anchor_frame = anchor_frame;
-    app.region_drag.press_x      = x;
-    app.region_drag.press_y      = y;
-}
-
-void GuiInputHandler::form_region_span_to_click(int64_t endpoint,
-                                                int64_t click_frame,
-                                                int x, int y) {
-    // THE SHIFT FORMER'S TAIL, hoisted 2026-08-05 for its second caller — the
-    // `h` history view's LOWER-HALF shift press (handle_history_mode_press),
-    // which forms from the playhead exactly as the live former's
-    // empty-selection arm does. Everything ABOVE this body is the caller's: the
-    // gutter refusal, the far-endpoint choice and, in the live arm alone, the
-    // deselect. Both frames are active-domain and already clamped playable by
-    // their caller.
-    //
-    // Sliver rule (mirrors end_region_drag_min_size_check): a span narrower than
-    // the drag threshold — a click at the playhead, hand jitter — leaves no
-    // region window.
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
-    if (std::abs(static_cast<double>(endpoint - click_frame)) / spp
-            < kDragMovedThresholdPx) {
-        // Sliver: form NO region — app.region is untouched HERE, so a motionless
-        // release keeps whatever was standing (a pre-press scratch span rests
-        // bit-for-bit; neither caller touches a region before this point). An Esc
-        // mid-drag from here is a consumed no-op like everywhere else (no
-        // cancel), so the drag simply continues. ALSO ARM the drag anchored at
-        // the far endpoint so dragging out past the gate still grows a fresh
-        // region live from it (e.g. shift-click AT the playhead, then drag out).
-        arm_region_drag_preserving(endpoint, x, y);
-        return;
-    }
-    // RegionState endpoints are unordered — the painter and Space normalize
-    // lo/hi. Damage the waveform (the region paints as a direct overlay),
-    // matching the region-drag extend.
-    app.region.active     = true;
-    app.region.a_frame    = endpoint;
-    app.region.b_frame    = click_frame;
-    viewport.invalidate_waveform_area();
-    // ARM the drag anchored at the FAR endpoint, PRESERVING the just-formed
-    // region: a motionless release keeps it (the one-shot region, bit-for-bit),
-    // motion past the gate drags the click-side endpoint live (the motion
-    // handler fixes a_frame = anchor = endpoint and tracks b_frame to the
-    // pointer).
-    arm_region_drag_preserving(endpoint, x, y);
-}
-
 int64_t GuiInputHandler::place_playhead_at_click_column(
         int click_rel_x, bool was_playing, int64_t playhead_at_entry) {
     // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
     // with no selection and no region in it, so the `h` history mode can seat a
     // playhead by exactly the arithmetic and exactly the playback regime the
     // live press uses (the mode's own arm is in handle_history_mode_press; it
-    // arms no drag). Returns the seated frame, or -1 in the gutter.
+    // clears the MODE's focus where the live body clears the store selection,
+    // and arms the same drag). Returns the seated frame, or -1 in the gutter.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return -1;
     // Clamp the click column's frame into the live domain ONCE and hand that
@@ -2591,10 +2443,12 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
 void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
                                                     int y, bool was_playing,
                                                     int64_t playhead_at_entry) {
-    // The waveform-upper-half placement press body, shared by the plain waveform
-    // press and the empty flag/triangle-lane parity press. The clear runs
-    // FIRST, before the shared body's gutter early-return, so an inert-gutter
-    // click (no column to seat a playhead) still deselects.
+    // The waveform placement press body — THREE CALLERS, re-derived by grep:
+    // the plain UPPER-HALF waveform press, the SHIFT-exact waveform press at
+    // EITHER height (2026-08-05, when the former's anchor moved to the click and
+    // shift became this same press), and the empty flag/triangle-lane parity
+    // press. The clear runs FIRST, before the shared body's gutter early-return,
+    // so an inert-gutter click (no column to seat a playhead) still deselects.
     selection.clear_selection();
     const int64_t sample = place_playhead_at_click_column(
         click_rel_x, was_playing, playhead_at_entry);
@@ -2771,17 +2625,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // arm_region_drag_at), so a plain click leaves the region cleared and
         // there is nothing to do at release but disarm. A jitter drag that
         // crossed the gate but rests a sub-threshold sliver dissolves like a
-        // click (end_region_drag_min_size_check) — but ONLY a MOVED drag runs
-        // that check: the SHIFT-exact former's
-        // preserving arm (arm_region_drag_preserving) does NOT dissolve
-        // app.region, so a motionless shift-sliver press-release rests a legal
-        // narrow region (the pre-press span, NOT subject to the
-        // drag-rest minimum), and an
-        // unconditional min-size check would delete
-        // it. Capture `moved` BEFORE the state reset (the reset zeroes it). Plain
-        // path unaffected: a plain MOVED drag still checks; a plain motionless
-        // release left the region cleared at arm (arm_region_drag_at), so the
-        // check would early-return anyway — the gate changes nothing there.
+        // click (end_region_drag_min_size_check), and only a MOVED drag runs
+        // that check — a motionless release left the region cleared at arm
+        // (arm_region_drag_at, the one arm since 2026-08-05), so the check would
+        // early-return anyway and the gate is what says so without asking.
+        // Capture `moved` BEFORE the state reset (the reset zeroes it).
         const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
         if (moved) end_region_drag_min_size_check(app, audio, viewport);
@@ -3352,30 +3200,24 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // false = the press is one of the navigation gestures the mode leaves alone, and
 // on_button_press proceeds with it untouched.
 //
+// THE VIEW IS SILENT (architect 2026-08-05): NO PRESS IN HERE STARTS AUDIO. The
+// two scrub entries the mode used to pass through — the bare RIGHT press over
+// the whole waveform and the PLAIN press in the LOWER HALF — are consumed with
+// everything else, because the mode's full-song trim forces a full target
+// preview render for an audition the view never needed. Playback removal is
+// whole: Space left the keyboard allowlist in the same ruling, and the entry
+// owner stops a session that was already running.
+//
 // WHAT PASSES THROUGH, the whole list — the mode's navigation vocabulary, the
 // pointer half of what history_mode_key_blocked admits on the keyboard:
-//   * the RIGHT button, whole. Its one and only binding in the product is the
-//     full-height waveform scrub; the arm's own bare-exactness, its
-//     gesture-in-flight gate and its gutter no-op all still apply below.
 //   * ALT-exact over the waveform — the captured grab-pan.
 //   * CTRL-exact over the waveform — the dual-axis strip drag. Ctrl+Shift is NOT
 //     admitted anywhere: over the waveform it is already a no-op, and over the
 //     TRIM BAR it sets the end bound, which is a write.
 //   * a PLAIN press in the RULER band — the strip drag's other entry.
-//   * a PLAIN press in the waveform's LOWER HALF — the scrub.
 //
-// AND ONE ACT OF ITS OWN THAT IS NOT PLAIN: A SHIFT-EXACT PRESS IN THE
-// WAVEFORM'S LOWER HALF FORMS THE REGION (architect 2026-08-05), the live
-// former's empty-selection arm through the one hoisted tail — playhead to the
-// pressed column, the drag armed on the moving endpoint, listening scratch for
-// the scrub press beside it. It touches no selection of either kind, no focus,
-// no playhead at the press and no playback; its own site carries the full rule.
-// It is the ONE region former in here, and therefore the ONE drag the mode can
-// start — ended by the shared release and motion bodies, which need no mode arm.
-//
-// THE ACTS, all four PLAIN and all four pure navigation (2026-08-05, when the
-// waveform's upper half joined the marker lane and the trim bar gained its
-// framing gesture):
+// THE ACTS, all pure navigation (2026-08-05, when the waveform's upper half
+// joined the marker lane and the trim bar gained its framing gesture):
 //   * a DOUBLE-CLICK anywhere on the TRIM BAR band ZOOMS TO THE VIEWED
 //     CHECKPOINT'S DIFF SPAN — the span that band is already displaying —
 //     through the framing act the mode's edges stopped running when they went to
@@ -3393,33 +3235,43 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     different pixel, so it inherits that minimalism whole. It is asked BEFORE
 //     the placement press below, the live press's own order between the two
 //     surfaces.
-//   * every other PLAIN press in the waveform's UPPER HALF LANDS THE PLAYHEAD at
-//     its column, the live placement press's recipe and playback regime through
-//     the one shared body (place_playhead_at_click_column) — but ARMING NOTHING:
-//     the PLAIN press starts no region drag in here, so the upper half stays a
-//     press that is complete at the press. (The mode's one former is the
-//     SHIFT-exact lower-half press above, which is why the bare-Esc reasoning's
-//     old "nothing in here can make a region" clause was rewritten the day that
-//     former landed — Esc's region clear is reachable from inside now, and
-//     clearing scratch is all it does.) It clears the mode focus,
-//     the analog of the live body's deselect (the playhead is leaving the flag),
-//     and dissolves a resting region exactly where the live arm does. There is
+//   * every other press on the WAVEFORM — plain at EITHER HEIGHT, or SHIFT-exact
+//     at either height — LANDS THE PLAYHEAD at its column AND ARMS THE REGION
+//     DRAG: the regular views' placement press as the mode's analog (architect
+//     2026-08-05, when playback left the view and the lower half stopped being
+//     the scrub). It is the live recipe and the live playback regime through the
+//     two shared bodies (place_playhead_at_click_column then arm_region_drag_at),
+//     so a motionless release is just the placement (the arm dissolved the old
+//     span at mouse-down and nothing rebuilt one), and motion past the shared
+//     gate grows a region with the playhead riding the moving endpoint. The
+//     region is LISTENING SCRATCH no more — `x` is consumed in here, so a span
+//     drawn in the view is a reading mark, and it is VIEW-LOCAL: the exit, every
+//     `,` / `.` step and every compare switch clear it (the mode edges'
+//     own rule, close_history_mode and set_history_compare). SHIFT ADDS NOTHING
+//     but reaching the same press, exactly as it does outside; it is kept
+//     because the muscle memory is the live former's.
+//     It clears the mode focus and its selection, the analog of the live body's
+//     deselect (the playhead is leaving the flag), which is why the SHIFT arm is
+//     not the "deliberately independent" former it was for one day — a press
+//     that lands the playhead cannot leave a flag claiming to be it. There is
 //     no waveform double-click surface to inherit (DoubleClickSurface has none),
 //     so a second click is simply another placement press.
 //
-// EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks and their drag arm,
-// the empty-lane marker drop, the trim bar's three WRITING routes (the endcap
-// and bridge drags and the two ctrl bound-set clicks, none of which the framing
-// double-click above touches — it is the band's SECOND click, exactly as
-// outside), and every unbound modifier combination that is not one of the two
-// modified claims above (a modified press over the lane or a stem included:
-// only the bare arm reaches the plain acts, and only the shift-exact lower-half
-// press reaches the former).
+// EVERYTHING ELSE IS A CONSUMED NO-OP — the RIGHT button whole, the marker
+// clicks and their drag arm, the empty-lane marker drop, the trim bar's three
+// WRITING routes (the endcap and bridge drags and the two ctrl bound-set
+// clicks, none of which the framing double-click above touches — it is the
+// band's SECOND click, exactly as outside), and every unbound modifier
+// combination that is not one of the two modified flag claims above (a modified
+// press over the lane or a stem included: only the bare and shift-exact arms
+// reach the waveform's placement press).
 bool GuiInputHandler::handle_history_mode_press(
         GuiMouseButton button, int x, int y, GuiInputState mods,
         const DoubleClickCandidate& dc_at_press) {
-    if (button == GuiMouseButton::Right) return false;
-    if (button != GuiMouseButton::Left)  return true;
+    // THE RIGHT BUTTON IS CONSUMED WHOLE (architect 2026-08-05): its one binding
+    // in the product is the full-height waveform scrub, and no press in this
+    // view starts audio.
+    if (button != GuiMouseButton::Left) return true;
 
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -3448,11 +3300,10 @@ bool GuiInputHandler::handle_history_mode_press(
     // the WAVEFORM the claim is the STEM's alone, so a ctrl press that misses
     // every stem falls through to the arms below and arms the DUAL-AXIS STRIP
     // DRAG exactly as it always has (the mode's own pointer allowlist admits
-    // it), and a shift press that misses stays a consumed nothing in the UPPER
-    // half — the stem claim is upper-half-only by construction
-    // (hit_test_marker_stem's own half test), so "ignoring stems" is not a rule
-    // the lower-half former below has to spell; it simply cannot meet one.
-    // Nothing that used to act stopped
+    // it), and a shift press that misses falls through to the PLACEMENT PRESS
+    // below — a stem claim can only be met in the UPPER half anyway
+    // (hit_test_marker_stem's own half test), so the lower half meets the
+    // placement press directly. Nothing that used to act stopped
     // acting; the flags simply take precedence over the empty waveform beneath
     // their own stems, which is the live press's own order between the two
     // surfaces of one item.
@@ -3476,53 +3327,28 @@ bool GuiInputHandler::handle_history_mode_press(
         if (in_lane) return true;
     }
 
-    // SHIFT IN THE WAVEFORM'S LOWER HALF FORMS THE REGION (architect
-    // 2026-08-05) — the mode's fifth act, and the ONE gesture in here that
-    // writes any state the view does not own. It is the LIVE former's
-    // empty-selection arm exactly, through the same hoisted tail
-    // (form_region_span_to_click): anchored at the PLAYHEAD, extending to the
-    // pressed column, arming the drag on the moving click-side endpoint, so a
-    // motionless release rests the span and motion past the shared gate grows it
-    // live. The region is LISTENING SCRATCH in here — the scrub press previews
-    // it exactly as it does outside — which is why it is worth having in a
-    // viewer at all.
-    // THE HALF SPLIT IS THE MODE'S, not the live rule: outside, shift forms
-    // waveform-WIDE; in here the UPPER half is the diff flags' range select over
-    // their own surfaces and a consumed nothing off them, so the former takes
-    // the lower half alone.
-    // WHAT IT TOUCHES: the region and its drag, and nothing else. NO store
-    // selection (the mode's standing rule — this is the one former that does not
-    // deselect, the recorded exception at RegionState, app_state.h), NO
-    // mode-local selection or focus (deliberately independent: the diff-flag
-    // selection is the REVERT act's subject, and forming a listening span must
-    // not disturb what Ctrl+H would apply), no playhead at the press and no
-    // playback — the press's own shape live, too. Once the drag MOVES, the
-    // shared motion path carries the cursor on the moving endpoint for both
-    // callers alike, which is the same playhead the mode's placement press
-    // seats.
-    // GUTTER PRESSES FORM NOTHING (the live rule, minus its deselect — there is
-    // no column to anchor a span or a drag against).
-    if (shift && !ctrl && !alt && inside_waveform &&
-        waveform_lower_half(area, y)) {
-        const int click_rel_x = x - area.x;
-        if (click_rel_x < 0 || click_rel_x >= area.w) return true;
-        // The live former's own conversion: the click column's active-domain
-        // frame, clamped into the live domain so the endpoint stays inside the
-        // one region domain the display-state validator accepts.
-        const int64_t click_frame = clamp_playhead_to_live_domain(
-            playhead_frame_at_click_column(app, audio, click_rel_x),
-            app, audio);
-        form_region_span_to_click(app.playhead_cursor_sample, click_frame, x, y);
-        return true;
-    }
+    // A SHIFT-EXACT PRESS ON THE WAVEFORM IS THE PLACEMENT PRESS (architect
+    // 2026-08-05, the former's reshape read into the view): outside, shift now
+    // anchors the region AT THE CLICKED COLUMN, which makes it the placement
+    // press with a modifier on it — so in here it carries no body of its own and
+    // simply falls through to the waveform arm below, the mode's own press being
+    // that same shape already. In the UPPER half the two modified flag claims
+    // above have first refusal (a shift press that hits a diff stem is that
+    // flag's range select); off them, shift lands the playhead and arms the drag
+    // exactly as the plain press does.
+    const bool shift_placement_press =
+        shift && !ctrl && !alt && inside_waveform;
 
     if (alt && !ctrl && !shift) return !inside_waveform;
     if (ctrl && !shift && !alt) return !inside_waveform;
-    if (ctrl || shift || alt)   return true;
+    if ((ctrl || shift || alt) && !shift_placement_press) return true;
 
-    // Plain from here. The top-strip bands are tested by y alone, exactly as
-    // their own claims test them: each lies inside the top strip, which spans
-    // the full window width.
+    // PLAIN FROM HERE, plus the shift-exact waveform press above, which reaches
+    // only the waveform arm at the bottom: the top-strip bands are tested by y
+    // alone and the waveform starts where the top strip ends (waveform_area,
+    // main.cpp), so no shift press can land in one of them. Each band lies
+    // inside the top strip, which spans the full window width, exactly as their
+    // own claims test them.
     {
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) return false;
@@ -3563,8 +3389,6 @@ bool GuiInputHandler::handle_history_mode_press(
             return true;
         }
     }
-    if (inside_waveform && waveform_lower_half(area, y)) return false;
-
     const GuiRect lane = top_marker_row_area(app);
     if (y >= lane.y && y < lane.y + lane.h) {
         // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
@@ -3578,9 +3402,10 @@ bool GuiInputHandler::handle_history_mode_press(
         return true;
     }
 
-    // THE WAVEFORM'S UPPER HALF, reached by elimination: the lower half returned
-    // to the scrub above and the marker lane returned just now, so what is left
-    // inside the waveform band is the surface the live placement press owns.
+    // THE WAVEFORM, FULL HEIGHT, reached by elimination: the top-strip bands
+    // above all returned, so what is left is the surface the live placement
+    // press owns. Both halves take the same act since playback left the view —
+    // the lower half was the scrub's until 2026-08-05.
     if (inside_waveform) {
         // THE STEM CLAIM FIRST — the live press's own order between the two
         // surfaces of one item (on_button_press resolves the stem beside the
@@ -3593,10 +3418,15 @@ bool GuiInputHandler::handle_history_mode_press(
         // clickable stems are the DRAWN stems by construction — no second
         // predicate decides which diff classes stem. The half test and the
         // grab tolerance come from that owner too.
-        const int stem_hit = hit_test_marker_stem(app, x, y);
-        if (stem_hit >= 0) {
-            focus_history_diff_flag(stem_hit);
-            return true;
+        // PLAIN ONLY: a SHIFT press's stem claim is the RANGE SELECT's, already
+        // asked and missed at the top of this function, so asking again here
+        // would re-derive the same -1.
+        if (!shift) {
+            const int stem_hit = hit_test_marker_stem(app, x, y);
+            if (stem_hit >= 0) {
+                focus_history_diff_flag(stem_hit);
+                return true;
+            }
         }
         // THE PLACEMENT PRESS. The focus clear runs FIRST, ahead of the shared
         // body's own gutter return, exactly where the live body's deselect runs
@@ -3609,16 +3439,17 @@ bool GuiInputHandler::handle_history_mode_press(
             viewport.invalidate_all();
         }
         // The live recipe whole: the clamped column frame, the cursor write, the
-        // live session's reseek and the follow override. NOT the region arm —
-        // this press is complete at the press, so no motion after it can extend
-        // anything.
+        // live session's reseek and the follow override — AND the region arm
+        // (architect 2026-08-05), which is what makes this the regular views'
+        // press rather than a press that is complete at the press. The arm
+        // dissolves any resting highlight at mouse-down exactly as it does
+        // outside, so the live press's own region clear is inherited rather than
+        // spelled here (the clear-site list is at clear_region_highlight,
+        // input_handler.h), and past the gutter return as there: a click with no
+        // column to seat a playhead at commits nothing.
         const int64_t sample = place_playhead_at_click_column(
             x - area.x, playback.is_playing(), app.playhead_cursor_sample);
-        // The live press dissolves a resting region at mouse-down, inside the
-        // arm it does not have here — and past the gutter return, as there:
-        // a click with no column to seat a playhead at commits nothing. (The
-        // clear-site list is at clear_region_highlight, input_handler.h.)
-        if (sample >= 0) clear_region_highlight(app, viewport);
+        if (sample >= 0) arm_region_drag_at(sample, x, y);
         return true;
     }
 
@@ -4410,11 +4241,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // clean release would). Modifier changes mid-drag are ignored. A
         // sub-threshold sliver rest dissolves like a click, exactly as the
         // clean release branch does (end_region_drag_min_size_check) — and
-        // identically gated on `moved`: a
-        // MOTIONLESS lost button on the shift-exact preserving arm must not delete
-        // the legal narrow region it left resting. Capture `moved` before the
-        // reset zeroes it; plain path unaffected for the same reasons as the clean
-        // release branch.
+        // identically gated on `moved`, a motionless arm having left the region
+        // cleared at mouse-down. Capture `moved` before the reset zeroes it.
         if (!mods.primary_button_held) {
             const bool moved = app.region_drag.moved;
             app.region_drag = RegionDragState{};
@@ -4427,11 +4255,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Sub-threshold: the press has not yet become a drag. Below the shared
         // Chebyshev gate nothing extra happens — the press already did the
         // click and cleared any resting region at mouse-down. Once a drag,
-        // always a drag (moved never re-engages). `crossing` = this event is the
-        // transition to moved (captured before we set the flag); it force-installs
-        // the anchored span below, past the same-column short-circuit.
-        const bool crossing = !app.region_drag.moved;
-        if (crossing &&
+        // always a drag (moved never re-engages).
+        if (!app.region_drag.moved &&
             std::max(std::abs(mouse_x - app.region_drag.press_x),
                      std::abs(mouse_y - app.region_drag.press_y)) <
                 kDragMovedThresholdPx) {
@@ -4462,16 +4287,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Column-change gate: the span changes only when the far endpoint moves
         // to a new frame. A same-frame motion event (sub-pixel jitter within one
         // column) is a no-op — skip the repaint. The anchor is fixed for the
-        // gesture, so the far endpoint alone decides the span. The CROSSING event
-        // ALWAYS installs {anchor, pointer}, bypassing this short-circuit: the
-        // plain arm cleared the region
-        // (active == false) so it would proceed anyway, but the SHIFT-exact
-        // preserving arm leaves the OLD region active, and its stale b_frame can
-        // coincide with the first crossed column's frame — without the bypass the
-        // crossing marks moved yet returns before installing, resting the stale
-        // span indefinitely. The short-circuit's purpose (redundant-damage
-        // avoidance on same-column motion) survives for every LATER event.
-        if (!crossing && app.region.active && far_frame == app.region.b_frame)
+        // gesture, so the far endpoint alone decides the span. THE THRESHOLD-
+        // CROSSING EVENT NEEDS NO BYPASS OF THIS TEST (2026-08-05, when the
+        // non-dissolving arm died with the click-anchored former): every arm is
+        // arm_region_drag_at now, which clears the region AT MOUSE-DOWN, so at
+        // the crossing `app.region.active` is false and the install proceeds
+        // whatever column the pointer is over.
+        if (app.region.active && far_frame == app.region.b_frame)
             return;
         app.region.active     = true;
         app.region.a_frame    = app.region_drag.anchor_frame;
@@ -4481,24 +4303,25 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // a region selecting its contents — was tried and retired; do not
         // re-propose) — the press already deselected all and the drag
         // leaves the selection EMPTY throughout. That is the whole story for the
-        // two LIVE formers, this drag and the shift waveform press, both of
-        // which deselect at press — so a span drawn in an ordinary view rests
-        // beside an EMPTY selection. The `h` view's own former (2026-08-05)
-        // rides this same motion path and is the one exception, deselecting
-        // nothing (the inventory is at RegionState, app_state.h).
+        // LIVE formers, the plain upper-half press and the shift press at either
+        // height, both of which deselect at press — so a span drawn in an
+        // ordinary view rests beside an EMPTY selection. The `h` view's own
+        // press rides this same motion path and deselects nothing, which costs
+        // that invariant nothing since 2026-08-05: the view's regions are
+        // VIEW-LOCAL, cleared at its exit and at every step and compare switch,
+        // so a span formed in there can never rest in the editor (the inventory
+        // is at RegionState, app_state.h).
         //
         // THE DRAG CARRIES THE PLAYHEAD (architect 2026-07-30, live-test
         // refinement: "i'd prefer the playhead move along with the drag for
         // region highlight - more intuitive"). The cursor rides the MOVING
         // endpoint — far_frame, already clamped playable by the conversion above,
         // so the write needs no clamp of its own — while the anchor stays put as
-        // the span's other bound. BOTH ARMS ride this one motion path, and the
-        // press-time asymmetry between them is unchanged: the plain upper-half
-        // press placed the playhead at its click column, and EITHER SHIFT-exact
-        // former's press (the live one, and the `h` view's lower-half one that
-        // shares its tail) still moves NO playhead at all — its ruled shape — but
-        // once any of these presses becomes a drag the pointer carries the
-        // cursor from here on, in the view as outside it.
+        // the span's other bound. EVERY ARM rides this one motion path, and
+        // since the former's anchor moved to the clicked column (2026-08-05)
+        // they no longer differ at the press either: each seats the playhead at
+        // its click and the pointer carries the cursor from here on, in the view
+        // as outside it.
         // DIRECT CURSOR WRITE, not move_playhead_to: a keep-visible edge-align
         // would scroll the viewport out from under a live gesture, and the span's
         // endpoints are painted against the viewport the drag started in.

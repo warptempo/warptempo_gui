@@ -3052,9 +3052,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // close_history_mode), which is the whole window.
     // Selection::phase_overlay_subject deliberately does NOT mirror this gate:
     // that mirror is SELECTION state, and the mode is no more selection state
-    // than the geometry gates below are. Its third reader is SPACE's lead-in
-    // launch, and the mode admits playback whole — the view changes what is
-    // PAINTED, never what plays.
+    // than the geometry gates below are. The divergence has no visible
+    // consequence since playback left the view (2026-08-05): the mirror's other
+    // reader is Space's lead-in launch, and Space is a consumed no-op in here.
     if (app.history_mode.active) return out;
     // The multi-select suppression (architect 2026-07-23): the overlay depicts ONE
     // focused reset's lead-in, a single-focus authoring aid, so a MULTI-select
@@ -3065,17 +3065,14 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     //
     // NO REGION GATE HERE, and none is wanted — THE DERIVATION, recorded once at
     // this site with Selection::phase_overlay_subject's mirror pointing here:
-    // the two LIVE region formers DESELECT at press (the plain upper-half
-    // waveform drag and the shift waveform press — the inventory is at
-    // RegionState, app_state.h), so a region drawn in an ordinary view rests
-    // beside an EMPTY selection, and an empty selection carries no focused reset
-    // for this band to annotate. THE ONE EXCEPTION SINCE 2026-08-05 is the `h`
-    // view's own former, which deselects nothing — so a span drawn in there can
-    // outlive the close beside a live selection and coexist with a subject. The
-    // gate is still absent, deliberately: a scratch span and a lead-in ring
-    // annotate different things and neither hides the other. The old absolute
-    // was only ever the reason a gate would have been DEAD code; it was never a
-    // requirement of this band.
+    // the LIVE region former DESELECTS at press (the waveform placement press
+    // and the drag it arms — the inventory is at RegionState, app_state.h) and
+    // the `h` view's own spans are VIEW-LOCAL, cleared at its exit and at every
+    // step and compare switch, so a region rests beside an EMPTY selection out
+    // here and an empty selection carries no focused reset for this band to
+    // annotate. A gate would be DEAD code, which is why there is none — and it
+    // would be the wrong shape besides: a scratch span and a lead-in ring
+    // annotate different things and neither hides the other.
     if (app.selected_markers.size() >= 2) return out;
 
     // Paint sample: the exact expression render.cpp's file-local
@@ -3303,11 +3300,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // consumed but REPLACED there, framing the diff span — and it reads the
     // delta directly, never this painted pair, so it adds no consumer either.
     //
-    // THE ONE RECORDED INCOHERENCE: playback still uses the REAL trim range, so
-    // an audition inside the view starts and stops at the authored window while
-    // the bar above it shows the diff span. Deliberate — the mode changes no
-    // authored state and no playable range, and the two owners of that range
-    // (playback and navigation) are not display sites.
+    // THE INCOHERENCE THIS ONCE CARRIED IS GONE WITH PLAYBACK (2026-08-05): an
+    // audition inside the view used to start and stop at the AUTHORED window
+    // while the bar above it showed the diff span, and the view auditions
+    // nothing now — the substitution has no behavioural reader left at all. The
+    // range's owners (playback and navigation) still read the real trim and are
+    // still not display sites; nothing about that changed.
     int64_t bar_begin_frame = app.trim.begin_frame;
     int64_t bar_end_frame   = app.trim.end_frame;
     if (app.history_mode.active) {

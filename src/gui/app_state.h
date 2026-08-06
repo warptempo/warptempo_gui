@@ -148,26 +148,31 @@ struct UndoEntry {
 // marker and no longer publishes a highlight either; the trim setters still EMPTY
 // the selection as they commit (the setter-deselect rule).
 //
-// THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
-// `region.active = true`, and note that two of the three reach it through the one
-// shared tail form_region_span_to_click). THREE PRESSES ACTIVATE A REGION:
-//   * the plain upper-half waveform DRAG (paints it live, leaving the selection
-//     EMPTY throughout — the press's deselect-all is the committed act);
-//   * the waveform SHIFT+click region former (playhead-to-click with nothing
-//     selected, else furthest-selected-marker-to-click, DROPPING the selection),
-//     which also arms a drag on the far endpoint;
-//   * the `h` HISTORY VIEW'S SHIFT press in the waveform's LOWER HALF (architect
-//     2026-08-05 — playhead-to-click, the arm identical), the mode's listening
-//     scratch. It is THE ONE FORMER THAT DESELECTS NOTHING, because the view
-//     touches no store selection at all by its own standing rule.
-// SO A REGION RESTS BESIDE AN EMPTY SELECTION EXCEPT ON ONE ROUTE, and that
-// exception is this last former's alone: a span drawn inside the view rests
-// beside whatever store selection stood when `h` was pressed, and survives the
-// close (nothing clears the region at either mode edge). The consumers that
-// derived "nothing to clear" or "no region gate needed" from the old absolute
-// each state their own narrowed claim and point here; none of them WRITES
-// differently for it — what changed is that the state is reachable, not what any
-// of them does in it. Everything that used to write a region from somewhere else is DELETED with
+// THE FORMER — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
+// `region.active = true`: the drag's motion path is the ONE writer since
+// 2026-08-05, every entry reaching it through the one arm arm_region_drag_at).
+// THERE IS ONE FORMING GESTURE, THE PLACEMENT PRESS AND THE DRAG IT ARMS, in
+// three entries:
+//   * the PLAIN press in the waveform's UPPER half (the lower half is the scrub);
+//   * the SHIFT-exact press at EITHER height (architect 2026-08-05, THE FORMER'S
+//     RESHAPE: the region ANCHORS AT THE CLICKED COLUMN now, so shift IS the
+//     placement press — the playhead-anchor read and the furthest-selected-marker
+//     argmax it used to choose between are deleted, and so is the one-act span
+//     they formed. A motionless shift click-release therefore lands the playhead
+//     and rests NO region, where it used to rest one);
+//   * the `h` HISTORY VIEW'S own press, full height (that view has no scrub since
+//     playback left it), which is the same recipe minus the store deselect.
+// The two live entries DESELECT at press, leaving the selection EMPTY throughout
+// the drag; the view's entry deselects nothing, the view touching no store
+// selection at all by its own standing rule.
+// SO A REGION RESTS BESIDE AN EMPTY SELECTION, WITHOUT AN EXCEPTION THE EDITOR
+// CAN SEE, and what restores that is the VIEW-LOCAL RULE (architect 2026-08-05):
+// the view's spans are cleared at its EXIT and at every `,` / `.` step and
+// compare switch (close_history_mode and the two step owners,
+// input_key_dispatch.cpp), so nothing formed in there can rest in the editor.
+// The exception that survives is scoped to INSIDE the view, where the mode's own
+// flag selection and a region may coexist — which no consumer out here reads.
+// Everything that used to write a region from somewhere else is DELETED with
 // the span form: the selection-extent owner, the trim-window sync, the two
 // multi-delete demotions, and the whole three-value origin enum RegionState
 // carried. A region has ONE origin now — the user drew it.
@@ -181,14 +186,14 @@ struct UndoEntry {
 //
 // CLEARED wholesale on: file load, the A/B tab switch, the S/T audio-view switch
 // and the W/P marker-column switch (each flips the domain or the owning column out
-// from under the span), a plain UPPER-HALF waveform PRESS (the placement press
-// dissolves any resting highlight at mouse-down, before it knows whether the
-// gesture is a click or a fresh region drag — via arm_region_drag_at; a
-// SCRUB press leaves the region alone in either entry, the lower-half left one
-// and the bare right one, that gesture being the region's
-// PREVIEW gesture), and the kick validator's live-domain reclamp when a bound
-// falls outside a shrunken domain. The full clear-site enumeration lives at
-// clear_region_highlight's declaration (input_handler.h).
+// from under the span), EVERY WAVEFORM PLACEMENT PRESS (it dissolves any resting
+// highlight at mouse-down, before it knows whether the gesture is a click or a
+// fresh region drag — via arm_region_drag_at, all three entries; a SCRUB press
+// leaves the region alone in either entry, the lower-half left one and the bare
+// right one, that gesture being the region's PREVIEW gesture), the `h` view's
+// three edges (the view-local rule above), and the kick validator's live-domain
+// reclamp when a bound falls outside a shrunken domain. The full clear-site
+// enumeration lives at clear_region_highlight's declaration (input_handler.h).
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
@@ -421,14 +426,13 @@ struct UndoHistory {
 // viewport scroll and no playback reseek per motion. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. TWO presses arm this drag: the
-// plain upper-half waveform press (arm_region_drag_at — dissolves the resting
-// region at mouse-down, anchors at the CLICK column) and the SHIFT-exact former
-// (labwc 2026-07-24, arm_region_drag_preserving — PRESERVES the just-formed
-// region, anchors at the FAR endpoint = playhead / the drop's furthest marker),
-// which share every motion and release path unchanged (the anchor semantic is
-// identical: a_frame = anchor_frame fixed, b_frame tracks the pointer). Alt/Ctrl
-// no-op earlier. A completed drag rests the
+// press, so there is no release-time collapse. THREE PRESSES ARM THIS DRAG AND
+// ALL THREE ARM IT THE SAME WAY, through arm_region_drag_at — dissolve the
+// resting region at mouse-down, anchor at the CLICK column: the plain
+// upper-half waveform press, the SHIFT-exact waveform press at either height
+// (architect 2026-08-05, when the former's anchor moved to the click and its
+// non-dissolving twin died with the span it preserved) and the `h` history
+// view's own full-height press. Alt/Ctrl no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,
@@ -2057,9 +2061,8 @@ struct AppState {
     // The bare-Esc inventory is still the six enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
     // so the two bindings that can be live in here run — the REGION CLEAR (a
-    // span formed before `h`, or one formed INSIDE the view: since 2026-08-05
-    // the pointer allowlist has a region former of its own, the SHIFT-exact
-    // lower-half press) and the RENDER / BATCH CANCEL (a render launched
+    // span formed before `h`, or one formed INSIDE the view by its own placement
+    // press and drag) and the RENDER / BATCH CANCEL (a render launched
     // before `h`).
     // Neither touches authored state, which is why admitting it costs the frozen
     // now side nothing. With neither standing, Esc is a consumed nothing.
@@ -3677,11 +3680,13 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // here because it bounds what this function is for, and spelled at each call
 // site: SHIFT and CTRL bind to the FLAG ALONE. Both modifiers already own a
 // waveform gesture at the very pixels a stem stands on (ctrl = the strip drag,
-// shift = the region former), so a modified press near a stem is not a hit at
-// all and falls through to the waveform underneath — in the history mode a
-// modified press never reaches this at all, its allowlist having claimed both
-// modifiers above. This function is unchanged and unconditional; only its
-// callers decide when to ask.
+// shift = the placement press since 2026-08-05), so a modified press near a stem
+// is not a hit at all and falls through to the waveform underneath — EXCEPT in
+// the `h` history view, whose own modified arm asks this function on purpose:
+// there a shift or ctrl press on a diff flag's stem is that flag's SELECTION
+// click (the multi-select pair), and only a press that hits no stem falls
+// through. This function is unchanged and unconditional; only its callers decide
+// when to ask.
 //
 // UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
 // plain waveform press already splits by half — upper is playhead placement +

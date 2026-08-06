@@ -237,6 +237,17 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // past this point would leave a restored band rather than the review's.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
+    // THE VIEW'S REGIONS ARE VIEW-LOCAL (architect 2026-08-05): a span drawn in
+    // here marks a passage of the checkpoint being read, so it leaves with the
+    // view — the same rule the `,` / `.` step and the compare switch apply to
+    // their own edges. It is also what keeps "a region rests only beside an
+    // EMPTY selection" true for the EDITOR while the view's own press deselects
+    // nothing: nothing formed in here can reach the editor at all. The clear is
+    // unconditional and takes a span formed BEFORE `h` with it — accepted, and
+    // the honest half of a view-local rule, the two being indistinguishable once
+    // inside. Its damage is covered by this function's own full-window
+    // invalidate below.
+    clear_region_highlight(app, viewport);
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
     // counts VISITS rather than describing one: letting it fall back to zero
     // would let a close-then-open pair reissue a number the flag cache has
@@ -396,6 +407,16 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 bool GuiInputHandler::open_history_mode_fresh() {
     AppState::HistoryMode fresh;
     if (!fresh.session.init(app)) return false;
+    // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
+    // removal from the view): the mode consumes bare Space and both scrub
+    // presses, so a session still running from before `h` could not be stopped
+    // from inside — it would play on under a view that offers no transport at
+    // all. THE OWNER IS THIS ENTRY OWNER rather than the toggle's arm, for the
+    // reason everything else about a visit lives here: a future second entry
+    // inherits the whole shape. It is REFUSAL-GATED like every other stop in the
+    // product (the rule at stop_playback_if_playing) — below init()'s
+    // UNAVAILABLE return, so a mode that does not open silences nothing.
+    playback_lifecycle.stop_playback_if_playing();
     fresh.active = true;
     fresh.index  = 0;      // the newest commit
     fresh.focus  = -1;
@@ -563,6 +584,10 @@ void GuiInputHandler::frame_history_view_whole_song() {
 //   * the lane's published content is dropped — the two pointer stashes and the
 //     diff-flag list they index describe the reading that is LEAVING, and stay
 //     that way until the next tick republishes;
+//   * a resting REGION clears (2026-08-05, the view-local rule — planner-included
+//     on the step's own edge argument, the architect having named the exit and
+//     the step): a span drawn in here marks a passage of the delta being read,
+//     and the arriving reading is a different delta;
 //   * the viewport resets to FULL ZOOM OUT, in this same press — the step's own
 //     edge rule since 2026-08-05, and it applies here for the step's own reason:
 //     the arriving reading generally covers a different extent, so a viewport
@@ -583,6 +608,7 @@ void GuiInputHandler::set_history_compare(GuiHistoryCompare compare) {
     app.history_mode.compare = compare;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
+    clear_region_highlight(app, viewport);
     frame_history_view_whole_song();
     viewport.invalidate_all();
 }
@@ -720,6 +746,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // lane press and to a Tab step alike, instead of landing the playhead on
         // a flag that is no longer shown.
         drop_lane_stash_across_history_edge();
+        // AND THE REGION GOES WITH THE COMMIT (architect 2026-08-05, the
+        // view-local rule): a span drawn in here marks a passage of the
+        // checkpoint it was drawn against, and the step is leaving that
+        // checkpoint. Same reasoning as the focus clear above, on the same edge.
+        clear_region_highlight(app, viewport);
         // BACK TO FULL ZOOM OUT, in this same press — so a step away and back
         // always resets the reading position, and the pans and zooms the user
         // made on the commit he is leaving stay his own business for as long as
@@ -842,9 +873,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // refusals. True when the press is NOT admitted and should be dropped as a
 // consumed no-op.
 //
-// WHAT IS ADMITTED, the whole list:
-//   - Space (bare)          → the audition. Playback is RUNNING state, not
-//                             authored state; the frozen now side cannot see it.
+// WHAT IS ADMITTED, the whole list. SPACE IS NOT ON IT (architect 2026-08-05):
+// PLAYBACK IS REMOVED FROM THE VIEW WHOLE — it was slow, the mode's full-song
+// trim forcing a full target preview render, and buggy besides — so bare Space
+// is a consumed no-op in here, both pointer scrub entries are consumed at the
+// pointer gate, and the one entry owner stops a session that was already running
+// (open_history_mode_fresh), since a view that consumes Space could not otherwise
+// stop one.
 //   - = / - (bare)          → zoom in / out
 //   - 0 (bare)              → the overview: full zoom out, or, once already
 //                             there, THE MODE'S OWN `c` (run_center_command
@@ -1004,13 +1039,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             on_key's dispatch point (input_handler.cpp), and
 //                             this line only lets the two that can be live in
 //                             this mode run — the REGION CLEAR (a span formed
-//                             before `h`, or, since 2026-08-05, one formed
-//                             INSIDE the view by its own SHIFT-exact lower-half
-//                             former: the pointer allowlist admits a region
-//                             former now, so the clear is reachable from within,
-//                             which is fine — the region is scratch and its
-//                             clear has no side effects) and the RENDER / BATCH
-//                             CANCEL (a render
+//                             before `h`, or one formed INSIDE the view by its
+//                             own placement press and drag: the clear is
+//                             reachable from within, which is fine — the region
+//                             is scratch and its clear has no side effects) and
+//                             the RENDER / BATCH CANCEL (a render
 //                             launched before `h`, whose progress line the mode's
 //                             corner outranks). Both sit BELOW this gate in
 //                             on_key and neither mutates authored state, so the
@@ -1097,7 +1130,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
-    const bool is_play_pause = is_play_pause_key(key, mods);
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
@@ -1134,7 +1166,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && bare);
     const bool is_esc = (key == GuiKeys::Escape && bare);
-    return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
+    return !(is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc ||
              is_load_in_place || is_commit_act || is_revert_act ||

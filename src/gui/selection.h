@@ -42,8 +42,9 @@ struct Selection {
     // geometry gates (area size, samples-per-pixel, sub-pixel forward width,
     // offscreen refusal) are deliberately NOT here: they are not selection
     // state, and neither is the band's `h` HISTORY VIEW suppression (2026-08-05
-    // — the view paints no live marker surface, a display fact), which is why
-    // Space's lead-in still launches in there. Frame, not index: a reorder remap
+    // — the view paints no live marker surface, a display fact); the divergence
+    // is unobservable, Space being consumed in that view since playback left it.
+    // Frame, not index: a reorder remap
     // preserves frames, so a remap is
     // subject-stable. ONE DELIBERATE DIVERGENCE from the band during a live
     // phase-reset drag: the band reads the drag-proposed time

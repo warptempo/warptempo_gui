@@ -18,17 +18,17 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
     // HISTORY VIEW'S SUPPRESSION (2026-08-05) is excluded on the same test: the
     // view hides the ring because it paints no live marker surface, and that is
     // a display fact, not selection state. The divergence is deliberate and
-    // visible in the third reader — Space's lead-in audition still launches at
-    // cursor + kN/2 inside the view, playback being admitted there whole. The
+    // costs nothing observable, playback having left the view the same day —
+    // Space is a consumed no-op in there, so the mirror's other reader, the
+    // lead-in launch, cannot run. The
     // subject is the reset's FRAME, not its store index: a reorder remap
     // preserves frames (subject-stable), and two resets sharing one frame paint
     // the overlay at the same column, so a focus swap between them is not a
     // subject change.
-    // NO REGION GATE, on either side of the mirror, and none is wanted: the two
-    // LIVE formers deselect at press, so an ordinary span rests beside an empty
-    // selection and an empty selection has no focused reset to be a subject —
-    // while the `h` view's own former (2026-08-05) deselects nothing, so the two
-    // CAN coexist now. Neither answer changes here. The derivation is at the
+    // NO REGION GATE, on either side of the mirror, and none is wanted: the live
+    // former deselects at press and the `h` view's spans are view-local (cleared
+    // at its edges), so a span rests beside an empty selection and an empty
+    // selection has no focused reset to be a subject. The derivation is at the
     // band (paint_handler.cpp) and the former inventory at RegionState.
     if (app.active_markers_view != 'P') return std::nullopt;
     if (app.active_audio_view != 'T') return std::nullopt;
