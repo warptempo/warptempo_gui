@@ -269,6 +269,26 @@ constexpr IconPath kGoNextPaths[] = {
      "1.167969-6.125 6.125.707031.707031 6.125-6.125 1.875-1.875-1.875-1.875-6.125-6.125"},
 };
 
+// -- THE REVERT ACT'S GLYPH (2026-08-05) ---------------------------------------
+//
+// document-revert, the history group's fourth button: the checkpoint's own
+// differences applied backwards into the live state. Transcribed verbatim from
+// the committed document-revert.svg like every entry above, and it resolves to
+// the scheme's #fcfcfc.
+//
+// ONE PATH, and it is the FIRST committed file to use the SMOOTH CUBIC (`s`) —
+// twice, for the two lobes of the arrow's return curve. The interpreter grew
+// that command for this file rather than the string being flattened to plain
+// `c` here: a hand-computed reflection would put numbers in this table that are
+// in no file, which is exactly the transcription-bug-and-nothing-else property
+// the table's contract rests on.
+constexpr IconPath kDocumentRevertPaths[] = {
+    {kIconText,
+     "m4 3v16h11c1.662 0 3-1.338 3-3s-1.338-3-3-3h-1.292969l1.5-1.5-.707031-.707031-2.707031 "
+     "2.707031 2.707031 2.707031.707031-.707031-1.5-1.5h1.292969c1.108 0 2 .892 "
+     "2 2s-.892 2-2 2h-10v-14h8v4h4v4h1v-5l-4-4z"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -286,6 +306,7 @@ constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
 constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
+constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -305,6 +326,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::VcsDiff:             return kVcsDiff;
         case Icon::GoPrevious:          return kGoPrevious;
         case Icon::GoNext:              return kGoNext;
+        case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;
@@ -312,18 +334,21 @@ const IconDef& icon_def(Icon icon) {
 
 // -- The `d` interpreter ----------------------------------------------------
 //
-// THE SUBSET, and it is exactly what the four committed files use (verified by
-// reading them): M/m, L/l, H/h, V/v, C/c, A/a, Z/z, implicit command repetition
-// (a bare argument set repeats the previous command; after M/m the repeat is
-// L/l, per SVG), comma-or-whitespace separation with both optional, negative
-// numbers as their own separator ("5-5"), and leading-dot decimals chained
-// without separators (".207031.207031" is two numbers — a second '.' ends the
-// first). No exponent notation, no S/s, Q/q, T/t: absent from all four files,
-// so they have no producer here and the parser refuses them loudly rather than
-// guessing. Elliptical 'a' is implemented GENERALLY (endpoint->center
-// conversion plus a quarter-arc bezier split) even though media-record's four
-// arcs are circular: arcs recur in this icon set and a circle-only shortcut
-// would be a trap for the next icon.
+// THE SUBSET, and it is exactly what the committed files use (verified by
+// reading them): M/m, L/l, H/h, V/v, C/c, S/s, A/a, Z/z, implicit command
+// repetition (a bare argument set repeats the previous command; after M/m the
+// repeat is L/l, per SVG), comma-or-whitespace separation with both optional,
+// negative numbers as their own separator ("5-5"), and leading-dot decimals
+// chained without separators (".207031.207031" is two numbers — a second '.'
+// ends the first). S/s JOINED 2026-08-05 WITH ITS FIRST PRODUCER,
+// document-revert.svg, whose arrow lobes are smooth cubics; the alternative was
+// to flatten them into plain `c` in the table by hand, which would have put
+// numbers there that appear in no file. No exponent notation, no Q/q, T/t:
+// absent from every committed file, so they have no producer here and the
+// parser refuses them loudly rather than guessing. Elliptical 'a' is implemented
+// GENERALLY (endpoint->center conversion plus a quarter-arc bezier split) even
+// though media-record's four arcs are circular: arcs recur in this icon set and
+// a circle-only shortcut would be a trap for the next icon.
 struct PathCursor {
     const char* p;
     const char* end;
@@ -456,6 +481,14 @@ bool append_path(cairo_t* cr, const char* d) {
     double cur_x = 0.0, cur_y = 0.0;      // current point
     double start_x = 0.0, start_y = 0.0;  // current subpath's start (for Z)
     bool   have_start = false;
+    // THE SMOOTH CUBIC'S MEMORY, in ABSOLUTE coordinates: S/s takes its first
+    // control point by REFLECTING the previous cubic's second control point
+    // about the current point, and takes the current point itself when the
+    // previous command was not a cubic (SVG 8.3.6). Both halves need this pair,
+    // so every non-cubic arm below clears the flag rather than only the cubic
+    // arms setting it.
+    double last_c2x = 0.0, last_c2y = 0.0;
+    bool   prev_cubic = false;
 
     for (;;) {
         skip_separators(c);
@@ -483,22 +516,26 @@ bool append_path(cairo_t* cr, const char* d) {
                 cur_y = rel ? cur_y + b : b;
                 cairo_move_to(cr, cur_x, cur_y);
                 start_x = cur_x; start_y = cur_y; have_start = true;
+                prev_cubic = false;
                 break;
             case 'L': case 'l':
                 if (!parse_number(c, a) || !parse_number(c, b)) return false;
                 cur_x = rel ? cur_x + a : a;
                 cur_y = rel ? cur_y + b : b;
                 cairo_line_to(cr, cur_x, cur_y);
+                prev_cubic = false;
                 break;
             case 'H': case 'h':
                 if (!parse_number(c, a)) return false;
                 cur_x = rel ? cur_x + a : a;
                 cairo_line_to(cr, cur_x, cur_y);
+                prev_cubic = false;
                 break;
             case 'V': case 'v':
                 if (!parse_number(c, a)) return false;
                 cur_y = rel ? cur_y + a : a;
                 cairo_line_to(cr, cur_x, cur_y);
+                prev_cubic = false;
                 break;
             case 'C': case 'c': {
                 double x2 = 0.0, y2 = 0.0;
@@ -512,6 +549,29 @@ bool append_path(cairo_t* cr, const char* d) {
                 cairo_curve_to(cr, bx + c1x, by + c1y, bx + c2x, by + c2y,
                                ex, ey);
                 cur_x = ex; cur_y = ey;
+                last_c2x = bx + c2x; last_c2y = by + c2y;
+                prev_cubic = true;
+                break;
+            }
+            case 'S': case 's': {
+                // FOUR arguments: the SECOND control point and the endpoint.
+                // The first control point is the reflection of the previous
+                // cubic's second about the current point — and the current
+                // point itself when no cubic precedes, which is the same thing
+                // as a curve that starts straight.
+                double x2 = 0.0, y2 = 0.0;
+                if (!parse_number(c, c2x) || !parse_number(c, c2y) ||
+                    !parse_number(c, x2)  || !parse_number(c, y2))
+                    return false;
+                const double bx = rel ? cur_x : 0.0;
+                const double by = rel ? cur_y : 0.0;
+                const double r1x = prev_cubic ? 2.0 * cur_x - last_c2x : cur_x;
+                const double r1y = prev_cubic ? 2.0 * cur_y - last_c2y : cur_y;
+                const double ex = bx + x2, ey = by + y2;
+                cairo_curve_to(cr, r1x, r1y, bx + c2x, by + c2y, ex, ey);
+                cur_x = ex; cur_y = ey;
+                last_c2x = bx + c2x; last_c2y = by + c2y;
+                prev_cubic = true;
                 break;
             }
             case 'A': case 'a': {
@@ -526,11 +586,13 @@ bool append_path(cairo_t* cr, const char* d) {
                 const double y1 = rel ? cur_y + ey : ey;
                 arc_to(cr, cur_x, cur_y, rx, ry, rot, large, sweep, x1, y1);
                 cur_x = x1; cur_y = y1;
+                prev_cubic = false;
                 break;
             }
             case 'Z': case 'z':
                 cairo_close_path(cr);
                 if (have_start) { cur_x = start_x; cur_y = start_y; }
+                prev_cubic = false;
                 break;
             default:
                 return false;         // outside the subset

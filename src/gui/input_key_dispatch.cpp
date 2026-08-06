@@ -6,6 +6,7 @@
 #include "input_handler.h"
 
 #include "file_loader.h"     // apply_settings_engine_and_prefs (shared with load)
+#include "frame_format.h"    // format_authored_frame (the revert act's line)
 #include "history_diff.h"
 #include "paint_handler.h"
 #include "render.h"
@@ -555,9 +556,10 @@ void GuiInputHandler::frame_history_view_whole_song() {
 // A SWITCH IS A MODE EDGE, with the `,` / `.` step's shape exactly — the same
 // four acts in the same order, for the same reasons, because the same thing is
 // true of it: the lane is about to show a DIFFERENT LIST.
-//   * the mode focus clears — it indexes the painted list, so carrying it would
-//     light an unrelated flag; the playhead it landed stays where it is, the
-//     step's own rule;
+//   * the mode focus AND ITS SELECTION clear, through the one clearer that
+//     always takes the pair — both index the painted list, so carrying either
+//     would light an unrelated flag; the playhead it landed stays where it is,
+//     the step's own rule;
 //   * the lane's published content is dropped — the two pointer stashes and the
 //     diff-flag list they index describe the reading that is LEAVING, and stay
 //     that way until the next tick republishes;
@@ -579,7 +581,7 @@ void GuiInputHandler::set_history_compare(GuiHistoryCompare compare) {
     if (!app.history_mode.active) return;
     if (app.history_mode.compare == compare) return;
     app.history_mode.compare = compare;
-    app.history_mode.focus   = -1;
+    clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     frame_history_view_whole_song();
     viewport.invalidate_all();
@@ -704,11 +706,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
             there = here - 1;
         }
         app.history_mode.index = there;
-        // THE MODE FOCUS CLEARS ON EVERY STEP: it indexes into the list the
-        // step is about to replace, so carrying it would light an unrelated
+        // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
+        // clearer that always takes them together: both index into the list the
+        // step is about to replace, so carrying either would light an unrelated
         // flag — and the playhead it landed stays where it is, which is the
         // navigation the click was.
-        app.history_mode.focus = -1;
+        clear_history_mode_focus(app.history_mode);
         // The lane's published content — the diff-flag list and the two pointer
         // stashes over it — describes the commit that is LEAVING, and stays that
         // way until the next tick republishes. Same domain on both sides, so no
@@ -769,6 +772,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
             there = here - 1;
         }
         playback_lifecycle.stop_playback_if_playing();
+        // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
+        // shape: the set clears and the focus alone stands, which is the plain
+        // click's rest too. Ordered so the clearer cannot undo the focus it
+        // writes.
+        clear_history_mode_focus(app.history_mode);
         app.history_mode.focus = there;
         clear_region_highlight(app, viewport);
         land_playhead_on_source_frame(
@@ -800,12 +808,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Home || key == GuiKeys::End) {
         playback_lifecycle.stop_playback_if_playing();
         // THE MODE ANALOG OF THE LIVE ARMS' SELECTION CLEAR: the playhead is
-        // leaving the focused flag for a spot nothing marks, so the focus goes
-        // with it — otherwise the flag would keep claiming to be the playhead at
-        // its own position. Full-window damage for the face swap, as the mode's
-        // click emits on a focus move.
-        if (app.history_mode.focus != -1) {
-            app.history_mode.focus = -1;
+        // leaving the focused flag for a spot nothing marks, so the focus — and
+        // the selection with it, through the one clearer — goes with it;
+        // otherwise the flag would keep claiming to be the playhead at its own
+        // position. Full-window damage for the face swap, as the mode's click
+        // emits on a focus move.
+        if (clear_history_mode_focus(app.history_mode)) {
             viewport.invalidate_all();
         }
         clear_region_highlight(app, viewport);
@@ -961,6 +969,32 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             meaning in this mode, so it stays a consumed
 //                             nothing here and the button's hint drops its shift
 //                             line to match.
+//   - Ctrl+H (no shift/alt) → THE REVERT ACT, the mode's THIRD admitted mutator
+//                             (architect 2026-08-05) and admitted on the same
+//                             reasoning as the two above: in the mode it is not
+//                             an authoring chord that would leave the frozen now
+//                             side describing a state that no longer exists, but
+//                             the view's OWN act — it applies the SELECTED diff
+//                             flags backwards into the live store and then
+//                             CLOSES the view, so the mode never outlives the
+//                             state it was measured against.
+//                             IT IS THE SECOND ADMISSION CONDITIONAL ON THE
+//                             SESSION: with no diff flag selected and none
+//                             focused there is nothing to revert, so the chord
+//                             drops here as a consumed no-op and the Revert
+//                             button greys from this same line
+//                             (history_mode_revert_subject_standing, app_state.h
+//                             — one decision, both readers). Unlike the head
+//                             delta's, this bit MOVES DURING A VISIT: every
+//                             click that selects or clears changes it, and the
+//                             face follows per frame.
+//                             IT IS NOT DISPATCHED FROM HERE, and not from a
+//                             mode arm either: admitting it lets the press fall
+//                             through to on_key's ordinary body, which is what
+//                             puts it BELOW the read-only gate — a locked tab
+//                             refuses it exactly as it refuses `'` and
+//                             Ctrl+Alt+R (the lock means hands off the piece's
+//                             authored state, and this act writes it).
 //   - Ctrl+S                → the save. It writes the LIVE state, which is
 //                             exactly the now side the diff is measured against,
 //                             so it cannot make the display disagree with disk.
@@ -1049,11 +1083,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
-// and no handler in hand. IT TAKES THE SESSION alongside key+mods because ONE
-// admission is conditional on it (the commit act's, on head_delta_empty), and
-// both readers hand it the same `app.history_mode` — the condition is decided
-// HERE and restated at neither caller, which is what keeps the key that refuses
-// and the face that greys one decision rather than two spellings of one.
+// and no handler in hand. IT TAKES THE SESSION alongside key+mods because TWO
+// admissions are conditional on it (the commit act's, on head_delta_empty, and
+// the revert act's, on a subject standing), and both readers hand it the same
+// `app.history_mode` — each condition is decided HERE and restated at neither
+// caller, which is what keeps the key that refuses and the face that greys one
+// decision rather than two spellings of one.
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState::HistoryMode& mode) {
     const bool ctrl  = mods.ctrl;
@@ -1067,6 +1102,17 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     const bool is_load_in_place = (key == GuiKeys::Apostrophe && bare);
+    // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
+    // SECOND session-conditional admission: Ctrl+H is admitted only while there
+    // is a subject to revert — a selected diff flag, or the focused one — so
+    // with nothing selected the chord drops here as a consumed no-op and the
+    // Revert button takes its row's disabled face from this same line. Unlike
+    // the two mutators above it, this chord is NOT dispatched from a mode arm:
+    // it falls through to on_key's ordinary body, BELOW the read-only gate, so a
+    // locked tab refuses it exactly as it refuses `'` and Ctrl+Alt+R.
+    const bool is_revert_act =
+        (ctrl && !shift && !alt && key == GuiKeys::H &&
+         history_mode_revert_subject_standing(mode));
     // The act is admitted only while there is something to checkpoint: with the
     // head delta empty this chord is not admitted at all, which is both the
     // key's refusal and the Render button's grey.
@@ -1089,7 +1135,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     return !(is_play_pause || is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc ||
-             is_load_in_place || is_commit_act || is_save || is_ctrl_q);
+             is_load_in_place || is_commit_act || is_revert_act ||
+             is_save || is_ctrl_q);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -1244,6 +1291,196 @@ void GuiInputHandler::run_history_commit() {
         outcome == GuiHistoryCommitOutcome::NothingToCommit) {
         close_history_mode();
     }
+}
+
+// -- THE REVERT ACT --------------------------------------------------------
+//
+// CTRL+H, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05): apply the
+// SELECTED diff flags' INVERSES to the live store of the active column, then
+// close the view. The one caller is on_key's own Ctrl+H arm, which is reached
+// only while the mode stands, only past the read-only gate, and only with the
+// allowlist having admitted the chord — which it does only while a subject
+// stands (history_mode_revert_subject_standing, app_state.h, the one decision
+// the Revert button's grey reads too).
+//
+// IT IS FULLY MANUAL AND IT ALWAYS FORCES — the architect's explicit ruling, and
+// the reason there is not one coherence check in this body. The user may select
+// any subset of any commit's delta, in either compare reading, and the act
+// applies each member blindly: it may well produce a state that is not the
+// checkpoint's and not the session's, and that is the tool working as ruled
+// rather than a hole in it. The mitigation is the one every authoring act has —
+// ONE undo entry for the whole act, so Ctrl+Z takes back the lot.
+//
+// THE PER-CLASS INVERSE, read off the flag's own two bits:
+//   * ADDED ONLY (`[+]`, the newer side has this line and the older did not) →
+//     DELETE the live marker at that exact frame. None there is NOTHING
+//     HAPPENING for that flag — never a refusal, never a diagnostic.
+//   * REMOVED ONLY (`[-]`, the older side had it and the newer dropped it) →
+//     PUT THE THEN SIDE BACK at its frame, replacing any live occupant.
+//   * CHANGED (the double flag) → SET the live marker at that frame to the THEN
+//     side. Which is the SAME primitive as the removed arm — insert-or-replace —
+//     so the two share one body and the distinction never reaches the code.
+//
+// THE COLUMN IS THE ACTIVE ONE BY CONSTRUCTION: the lane paints only the active
+// column's half of a delta (rebuild_history_diff_flags), so every ordinal in the
+// subject names a flag of that column and the store to write is decided once,
+// here, rather than per flag.
+//
+// THE THEN SIDE TRAVELS AS TEXT AND IS JUDGED BY THE FROZEN PARSER. A warp
+// flag's then value is the sidecar's own payload token, verbatim, so this body
+// RECONSTITUTES THE LINE — `[#]<frame>|<token>` — and hands it to
+// parse_single_canonical_line, the loader's own per-line entry point. That is
+// what keeps pass markers, label definitions, label references and typed scales
+// working with no vocabulary of their own here: whatever the file could hold,
+// the line holds, and the ONE grammar that reads it is the parser's. The phase
+// reset column needs no such trip — frame plus the disable bit IS its line.
+void GuiInputHandler::run_history_revert() {
+    if (!app.history_mode.active) return;
+
+    // THE SUBJECT: the selected ordinals, else the focused one alone. Ordinals
+    // out of the list's range are dropped — the list is paint-cache output and
+    // a mode edge empties it, so "nothing there" is the standing cold answer
+    // every reader of it takes.
+    const std::vector<HistoryDiffFlag>& flags = app.history_mode.flags;
+    const int n = static_cast<int>(flags.size());
+    std::vector<int> subject;
+    if (!app.history_mode.selection.empty()) {
+        for (int idx : app.history_mode.selection) {
+            if (idx >= 0 && idx < n) subject.push_back(idx);
+        }
+    } else if (app.history_mode.focus >= 0 && app.history_mode.focus < n) {
+        subject.push_back(app.history_mode.focus);
+    }
+    if (subject.empty()) return;
+
+    // THE LOAD-IN-PLACE'S PLAYBACK REGIME, mirrored: a store rewrite under a
+    // live audition is what that mutator stops for, and this one rewrites the
+    // same stores. (The mode's own diff-flag CLICK deliberately stops nothing —
+    // it moves a cursor; this moves markers.)
+    playback_lifecycle.stop_playback_if_playing();
+
+    const bool phase = (app.active_markers_view == 'P');
+    // ONE SNAPSHOT FOR THE WHOLE ACT, taken before the first write — the shape
+    // every multi-marker single-store mutation in the product takes (the two
+    // delete-selected bodies, the two status toggles). The undo push is at the
+    // tail, after the last write, so a subject that changed nothing leaves no
+    // entry behind.
+    std::vector<GuiWarpMarker>       warp_pre =
+        phase ? std::vector<GuiWarpMarker>{} : app.warpmarkers.markers();
+    std::vector<GuiPhaseResetMarker> phase_pre =
+        phase ? app.phaseresetmarkers.markers()
+              : std::vector<GuiPhaseResetMarker>{};
+    bool changed = false;
+
+    for (int idx : subject) {
+        const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
+        if (phase) {
+            const auto& mv = app.phaseresetmarkers.markers();
+            int at = -1;
+            for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+                if (mv[static_cast<std::size_t>(i)].time_frame == f.time_frame) {
+                    at = i;
+                    break;
+                }
+            }
+            if (!f.removed) {
+                // Added only: delete the occupant. THE FIRST one at that frame —
+                // coincident markers are legal, and one flag is one LINE, so one
+                // flag takes one marker away. A second coincident added flag in
+                // the same subject takes the next.
+                if (at >= 0) {
+                    app.phaseresetmarkers.remove_marker(at);
+                    changed = true;
+                }
+                continue;
+            }
+            GuiPhaseResetMarker nm;
+            nm.time_frame = f.time_frame;
+            nm.disabled   = f.then_disabled;
+            if (at >= 0) {
+                GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(at);
+                if (m) *m = nm;
+            } else {
+                app.phaseresetmarkers.insert_marker(nm);
+            }
+            changed = true;
+            continue;
+        }
+
+        const auto& mv = app.warpmarkers.markers();
+        int at = -1;
+        for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+            if (mv[static_cast<std::size_t>(i)].time_frame == f.time_frame) {
+                at = i;
+                break;
+            }
+        }
+        if (!f.removed) {
+            if (at >= 0) {
+                app.warpmarkers.remove_marker(at);
+                changed = true;
+            }
+            continue;
+        }
+        // The sidecar line this flag's then side came off, rebuilt: the disable
+        // prefix, the canonical frame spelling (format_authored_frame, the one
+        // serializer), the '|' and the verbatim payload token.
+        std::string line;
+        if (f.then_disabled) line += '#';
+        line += format_authored_frame(f.time_frame);
+        line += '|';
+        line += f.then_token;
+        auto parsed = warpmarkers_internal::parse_single_canonical_line(line);
+        if (!parsed) {
+            // UNREACHABLE BY CONSTRUCTION and stated loudly rather than
+            // recovered from: every walk member is strict-load clean, so the
+            // token was sliced out of a line this very parser accepted and the
+            // frame re-spells canonically. One line, then on to the next flag —
+            // there is nothing to repair and nothing partial to undo.
+            std::fprintf(stderr,
+                "warptempo_gui: Revert skipped a warp line the parser refused: "
+                "'%s'\n", line.c_str());
+            continue;
+        }
+        // A FRESH GuiWarpMarker, not a patch of the occupant: the then side is a
+        // different marker, so it arrives with the session-only iteration and
+        // bpm scratch at its defaults exactly as a load would deliver it. (The
+        // at-most-one-bpm-owner invariant survives trivially — this never sets
+        // the bit.)
+        GuiWarpMarker nm;
+        static_cast<WarpMarker&>(nm) = *parsed;
+        if (at >= 0) {
+            GuiWarpMarker* m = app.warpmarkers.marker_mut(at);
+            if (m) *m = nm;
+        } else {
+            app.warpmarkers.insert_marker(std::move(nm));
+        }
+        changed = true;
+    }
+
+    if (changed) {
+        // THE LIVE SELECTION GOES, the wholesale-store-change convention (the
+        // load-in-place's own line, and the deletes'): it is a set of STORE
+        // indices, and this act inserts and removes under them.
+        selection.clear_selection();
+        if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
+        else       undo.push_undo_warp(std::move(warp_pre));
+        undo.recompute_dirty();
+        target_render.trigger();
+    }
+
+    // THEN THE VIEW CLOSES, and the order is the whole reasoning: this act has
+    // just rewritten the very state the session's frozen now side was measured
+    // against, so every flag in the lane now describes a state that no longer
+    // exists — the load-in-place's own argument, applied to a narrower write.
+    // Closing AFTER the mutations is what lets the exit owner's entry-band
+    // restore run over the finished state, and it is why the act needs no damage
+    // of its own: close_history_mode invalidates the window whole.
+    //
+    // IT CLOSES EVEN WHEN NOTHING CHANGED — a subject of added flags with no
+    // live markers under them, the always-force rule's own quiet case. The act
+    // ran and answered; leaving the view standing would say it had not.
+    close_history_mode();
 }
 
 // THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is

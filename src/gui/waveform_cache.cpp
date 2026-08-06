@@ -733,6 +733,11 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // the live lane walks: warp entries where warp flags paint, phase-reset
     // entries where phase resets paint. The other column's delta is not shown —
     // one lane, one column, and the mode is a view onto that lane.
+    // THE THEN SIDE'S VALUE RIDES ALONG WITH ITS LABEL (2026-08-05) on every
+    // flag that HAS a then side — the removed ones and the changed pairs — for
+    // the REVERT act, which restores exactly that value (the fields' contract is
+    // at HistoryDiffFlag, render.h). The label and the value come off the SAME
+    // delta entry here, so the flag cannot show one thing and restore another.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
@@ -741,6 +746,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added        = true;
             f.removed_text = history_diff_label("[-]", c.then_disabled, {});
             f.added_text   = history_diff_label("[+]", c.now_disabled, {});
+            f.then_disabled = c.then_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
@@ -748,6 +754,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame   = e.frame;
             f.removed      = true;
             f.removed_text = history_diff_label("[-]", e.disabled, {});
+            f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
@@ -767,6 +774,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
                 history_diff_label("[-]", c.then_disabled, c.then_tempo_token);
             f.added_text =
                 history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
+            f.then_token    = c.then_tempo_token;
+            f.then_disabled = c.then_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
@@ -775,6 +784,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed      = true;
             f.removed_text =
                 history_diff_label("[-]", e.disabled, e.tempo_token);
+            f.then_token    = e.tempo_token;
+            f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_added) {
@@ -842,18 +853,26 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
          app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
             ? app.top_flag_editor.target : -1;
 
-    // THE HISTORY MODE'S FIVE INPUTS (contract at the FlagCache fields). The
+    // THE HISTORY MODE'S SIX INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
     // SESSION is showing it: two visits open in the same shape and a close plus
     // a reopen can reach this check as one edge, so without it the new session's
     // lane would keep blitting the old session's flags. THE COMPARE READING is
     // the one that is about the shown commit but not about WHICH commit: one
-    // index has two deltas, and a switch moves no other field here.
+    // index has two deltas, and a switch moves no other field here. THE
+    // SELECTION HASH is the mode's own membership, through the LIVE lane's own
+    // hash owner rather than a second one — the focus rides into it as that
+    // function's second term, which is redundant beside the field above and
+    // costs nothing, and keeping one hash for both selection-shaped inputs is
+    // what that redundancy buys.
     const bool               history_active = app.history_mode.active;
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
     const unsigned long long history_generation = app.history_mode.generation;
     const GuiHistoryCompare  history_compare    = app.history_mode.compare;
+    const uint64_t           history_sel_hash   = hash_selection(
+                                 app.history_mode.selection,
+                                 app.history_mode.focus);
 
     const bool matches =
         flag_cache.surface &&
@@ -874,7 +893,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
         flag_cache.fp_history_generation      == history_generation &&
-        flag_cache.fp_history_compare         == history_compare;
+        flag_cache.fp_history_compare         == history_compare &&
+        flag_cache.fp_history_selection_hash  == history_sel_hash;
 
     if (matches) return;
 
@@ -981,6 +1001,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.history_mode.flags,
             vp_start, vp_end,
             history_focus,
+            app.history_mode.selection,
             &app.flag_hit_rects,
             &app.marker_stems,
             // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
@@ -1040,6 +1061,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_focus           = history_focus;
     flag_cache.fp_history_generation      = history_generation;
     flag_cache.fp_history_compare         = history_compare;
+    flag_cache.fp_history_selection_hash  = history_sel_hash;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

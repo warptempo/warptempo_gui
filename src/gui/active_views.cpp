@@ -189,11 +189,13 @@ void GuiActiveViews::toggle_active_markers_view() {
     // mode paints the ACTIVE column's half of a commit's delta, so W and P show
     // different flags at different ordinals. Placed before the kick below, which
     // rebuilds the flag cache — `focus` is one of that cache's fingerprint
-    // fields. Unconditional, and a no-op with the mode down (the field rests at
-    // -1 there). The propagate paste's tail reaches
-    // switch_active_markers_view_to directly rather than this toggle, and needs
-    // nothing: no route into it is admitted while the mode stands.
-    app.history_mode.focus = -1;
+    // fields. Unconditional, and a no-op with the mode down (the pair rests
+    // empty there). It goes through the ONE clearer, which takes the mode's
+    // multi-selection with the focus for the identical reason
+    // (clear_history_mode_focus, app_state.h). The propagate paste's tail
+    // reaches switch_active_markers_view_to directly rather than this toggle,
+    // and needs nothing: no route into it is admitted while the mode stands.
+    clear_history_mode_focus(app.history_mode);
     // SYNCHRONOUS REBUILD, the third member of the view-switch class (architect
     // 2026-07-30). `p` moves NO viewport and NO domain, so unlike its two
     // siblings the plate CONTENT is unchanged — but app.active_markers_view is a

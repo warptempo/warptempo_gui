@@ -736,7 +736,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
 // Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
-// then row 4's fourteen view / mode / action buttons. It exists ONCE, here, because it indexes
+// then row 4's fifteen view / mode / action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -792,16 +792,24 @@ enum class RedesignButton {
     // lit while the mode stands. Its chord toggles, so the same click that
     // opened the view closes it.
     IconHistory,
+    // THE REVERT ACT (2026-08-05), immediately right of the button that opens
+    // the view and left of the walk's two: Ctrl+H applies the SELECTED diff
+    // flags backwards into the live state and closes the view. It rests
+    // DISABLED with the walk pair below and for the same reason — its chord is
+    // bound only inside the view — and greys INSIDE it too whenever no diff
+    // flag is selected, which is the allowlist's own conditional admission
+    // arriving through the derived partition (redesign_button_enabled below).
+    IconRevert,
     // THE WALK'S TWO STEPS (2026-08-05), sharing that group: OLDER (bare `,`)
     // and NEWER (bare `.`), so the checkpoint walk is drivable with the mouse
-    // alone. They are the roster's FIRST buttons whose RESTING state is
+    // alone. They were the roster's FIRST buttons whose RESTING state is
     // DISABLED — outside the history view their keys are bound to nothing at
     // all, so a live face would advertise an act that does not exist — and the
     // exception is spelled at redesign_button_enabled below, beside the
-    // history mode's own.
+    // history mode's own. (Revert above joined them the same day.)
     IconHistoryOlder, IconHistoryNewer
 };
-inline constexpr int kRedesignButtonCount = 26;
+inline constexpr int kRedesignButtonCount = 27;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -866,6 +874,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         case RedesignButton::IconHistory:
+        case RedesignButton::IconRevert:
         case RedesignButton::IconHistoryOlder:
         case RedesignButton::IconHistoryNewer:
             break;
@@ -2230,7 +2239,36 @@ struct AppState {
         // The playhead a click or a cycle step landed is NOT taken back by any
         // of the list-rebuilding clearers: that landing was navigation, and it
         // stays where the user put it.
+        //
+        // THE FOCUS AND THE SELECTION SET BELOW CLEAR TOGETHER, ALWAYS, through
+        // the one owner clear_history_mode_focus (below this struct): the set is
+        // ordinals into the same painted list, so every reason above is its
+        // reason too, and a second clearer inventory to keep in step is exactly
+        // what that helper exists to prevent.
         int         focus  = -1;
+        // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
+        // `flags` beside the focus and the REVERT ACT's subject. It is the live
+        // selection model re-expressed mode-locally — shift-click takes the
+        // contiguous range from the focus, ctrl-click toggles one flag's
+        // membership, and a PLAIN click clears it, the focus alone then being a
+        // selection of one — and it touches the store selection no more than the
+        // focus does.
+        //
+        // WHY A SET AND NOT A SPAN: the ctrl toggle can leave any subset
+        // standing, and the act applies each member independently, so there is
+        // no contiguity to lean on. Ordered, so the act walks the subject in
+        // frame order (the list is frame-sorted) and the paint reads membership
+        // in one lookup.
+        //
+        // EVERY SETTER: the two MODIFIED diff-flag clicks, on either of the
+        // flag's two pointer surfaces (select_history_diff_flags_modified,
+        // input_pointer.cpp). Nothing else writes a member — the Tab cycle and
+        // the plain click both leave it EMPTY, the live cycle's own
+        // replace-with-a-singleton shape.
+        //
+        // EVERY CLEARER is the focus's, above, and they are the same line of
+        // code: clear_history_mode_focus clears the pair.
+        std::set<int> selection;
         // The commit's delta resolved into painted order, published by the flag
         // cache's rebuild (the sole producer, beside the hit rects and stems it
         // publishes for these same items). `focus` and every hit rect's
@@ -3013,6 +3051,42 @@ inline bool history_step_actionable(const AppState& a,
     return !((tt == 'B') ? a.tab_b.read_only : a.tab_a.read_only);
 }
 
+// DROP THE HISTORY VIEW'S OWN FOCUS AND SELECTION — the ONE clearer for the
+// pair (2026-08-05, with the multi-selection), and the reason there is no second
+// inventory to keep in step: the two are ordinals into the same painted list, so
+// every reason to drop one is a reason to drop the other. The clearer sites, and
+// why each of them clears, are enumerated ONCE at AppState::HistoryMode::focus;
+// each site here calls this and states only its own class.
+//
+// It RETURNS WHETHER ANYTHING WAS STANDING, because two of those sites damage
+// the window only when something actually changed (bare Home / End and the
+// waveform placement press — a face swap costs a repaint, and nothing swapping
+// costs none). Idempotent, and a no-op with the mode down: both fields already
+// rest empty there, the whole-struct reset at close_history_mode having put them
+// so.
+inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
+    const bool stood = (mode.focus != -1) || !mode.selection.empty();
+    mode.focus = -1;
+    mode.selection.clear();
+    return stood;
+}
+
+// IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
+// word (architect 2026-08-05): the selected diff flags, else the focused one
+// alone. Empty means Ctrl+H is a consumed no-op and the Revert button greys, and
+// that is ONE decision serving both readers, on the head-delta precedent
+// exactly: history_mode_key_blocked's admission is conditional on this, and the
+// button's face is derived from that admission rather than from a second
+// spelling of it.
+//
+// IT IS A PURE READ OF THE MODE, so the face answers per frame with nothing
+// latched: a click that selects lights the button on the next frame and a step
+// that clears greys it again, both through the clearer above.
+inline bool history_mode_revert_subject_standing(
+        const AppState::HistoryMode& mode) {
+    return !mode.selection.empty() || mode.focus >= 0;
+}
+
 // WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `h` HISTORY VIEW? True for exactly
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
@@ -3092,11 +3166,12 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. (TWO of row 4's fourteen are the ruled
+        // 1 and 3 by their face scope. (THREE of row 4's fifteen are the ruled
         // exception, and they are the arm below this one: the walk's older /
-        // newer steps rest disabled because their keys are bound only inside the
-        // history view. The rule stated here is still the row's — the exception
-        // is named where it lives, not counted into this arm.) Their presses
+        // newer steps and the revert act rest disabled because their keys are
+        // bound only inside the history view. The rule stated here is still the
+        // row's — the exception is named where it lives, not counted into this
+        // arm.) Their presses
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
@@ -3168,6 +3243,16 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // something the walk itself already shows (the `n/N` corner readout).
         case RedesignButton::IconHistoryOlder:
         case RedesignButton::IconHistoryNewer:
+        // THE REVERT BUTTON TAKES THE SAME INVERTED REST (2026-08-05) and for
+        // the same reason: Ctrl+H is bound inside the view and nowhere else, so
+        // outside it there is no act for a live face to promise. ITS IN-VIEW
+        // GREY IS NOT DECIDED HERE, though, and that is the point of leaving
+        // this arm a plain read of the mode: with no diff flag selected the
+        // view's allowlist stops admitting the chord, so the MODE LINE at the
+        // top of this body has already returned false through the derived
+        // partition — the same one decision that refuses the key. This arm is
+        // reached only when the act would act.
+        case RedesignButton::IconRevert:
             return a.history_mode.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
@@ -3258,6 +3343,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
+        // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
+        // it is an ACT, not a mode — it runs once and closes the view — so
+        // there is no bit for a lamp to read. What it has to say about state it
+        // says with its enabled face, which greys when nothing is selected.
+        case RedesignButton::IconRevert:
         // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
         // like follow and iteration: each is a step that completes, with no
         // state to stay lit for. WHERE the walk stands is the corner readout's
@@ -3371,6 +3461,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // appears exactly inside the history view, where the click acts.
         case RedesignButton::IconHistoryOlder: return {"Older (,)", nullptr};
         case RedesignButton::IconHistoryNewer: return {"Newer (.)", nullptr};
+        // THE REVERT ACT, the third tooltip reachable only inside the view — and
+        // the narrowest of the three, since the button is also greyed in there
+        // whenever nothing is selected. One line: the chord has no shifted twin.
+        case RedesignButton::IconRevert: return {"Revert (Ctrl+H)", nullptr};
     }
     return {nullptr, nullptr};
 }

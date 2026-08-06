@@ -561,7 +561,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
-    // the view bar's three, row 2's four, row 3's two tabs and row 4's fourteen
+    // the view bar's three, row 2's four, row 3's two tabs and row 4's fifteen
     // (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
@@ -1667,9 +1667,13 @@ private:
     //     four acts. It takes the press's DOUBLE-CLICK SNAPSHOT because one of
     //     those acts is a double-click (the trim bar's framing) and on_button_-
     //     press clears the shared field before this is reached.
-    //   * focus_history_diff_flag is the focus click's body, shared by its two
-    //     surfaces — the flag box in the lane and the flag's STEM in the
-    //     waveform's upper half — so the two cannot answer differently.
+    //   * focus_history_diff_flag is the PLAIN focus click's body, shared by its
+    //     two surfaces — the flag box in the lane and the flag's STEM in the
+    //     waveform's upper half — so the two cannot answer differently. It
+    //     clears the mode's multi-selection: a plain click replaces it.
+    //   * select_history_diff_flags_modified is the SHIFT and CTRL clicks' body,
+    //     over those same two surfaces — the range extend and the membership
+    //     toggle, both then focusing the clicked flag and landing on it.
     //   * close_history_mode is the ONE exit owner; every closer calls it, and
     //     since 2026-08-05 it is also the ONE site that puts the editor's parked
     //     navigation band back (the snapshot's own record is at
@@ -1707,6 +1711,14 @@ private:
     //   * run_history_commit is the prompt's `y`: save, rebuild the bytes,
     //     commit them, and close the view when the checkpoint reached the
     //     repository. Its body owns the partition.
+    // THE REVERT ACT is the odd one out and deliberately so:
+    //   * run_history_revert applies the SELECTED diff flags backwards into the
+    //     live store of the active column and then closes the view. Its chord,
+    //     Ctrl+H, is NOT part of the mode's own vocabulary — it is admitted by
+    //     the allowlist (conditionally, on a subject standing) and dispatched
+    //     from on_key's ordinary body BELOW the read-only gate, so a locked tab
+    //     refuses it exactly as it refuses `'` and Ctrl+Alt+R. Its body owns the
+    //     per-class inverse, the always-force rule and the one undo entry.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();
     void frame_viewed_commit_diff_span();
@@ -1717,7 +1729,9 @@ private:
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);
     void focus_history_diff_flag(int hit);
+    void select_history_diff_flags_modified(int hit, bool extend);
     void close_history_mode();
     void open_history_commit_confirmation();
     void run_history_commit();
+    void run_history_revert();
 };

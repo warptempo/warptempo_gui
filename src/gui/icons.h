@@ -61,6 +61,12 @@ enum class Icon {
     // geometry here and there is no stroke to set.
     GoPrevious,          // Older checkpoint (`,`)
     GoNext,              // Newer checkpoint (`.`)
+    // THE REVERT ACT'S GLYPH (2026-08-05), the history group's fourth: the
+    // selected diff flags applied backwards into the live state (`Ctrl+H`).
+    // Breeze's own document-revert — a page with an arrow curving back into it,
+    // which is the act — and the FIRST committed file whose `d` uses the smooth
+    // cubic (`s`), the one command the interpreter grew for it.
+    DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable
     // one (the slot's contract is at the tab painter).
@@ -71,7 +77,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 17;
+inline constexpr int kIconCount = 18;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

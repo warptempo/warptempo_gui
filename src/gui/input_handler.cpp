@@ -663,6 +663,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // load-editor opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
+    // CTRL+H — THE HISTORY VIEW'S REVERT ACT (architect 2026-08-05): apply the
+    // view's SELECTED diff flags backwards into the live store and close the
+    // view. Outside the mode the chord is UNBOUND, which is what the mode test
+    // says — there is no second meaning to select between, unlike Ctrl+Alt+R's.
+    //
+    // IT IS DISPATCHED HERE RATHER THAN CLAIMED BY handle_history_mode_key, and
+    // that placement is the whole gate story: this line sits BELOW the read-only
+    // gate, so a locked tab drops the press exactly as it drops `'` and
+    // Ctrl+Alt+R — the lock means hands off the piece's authored state, and this
+    // act writes markers. The mode's allowlist above admits the chord (and only
+    // while there is a subject to revert), which is what lets it reach here at
+    // all; the act's own body owns everything past that.
+    if (app.history_mode.active && ctrl && !shift && !alt && key == GuiKeys::H) {
+        run_history_revert();
+        return;
+    }
+
     // Space is the sole playback toggle, and it is modifier-strict — every
     // modified Space is unbound (is_play_pause_key owns that test). Return /
     // keypad Enter are NOT playback keys; they open the flag editor, handled
@@ -1629,9 +1646,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // happened must not clear anything) and far above the kick at the tail,
     // which is what rebuilds the flag cache — `focus` is one of that cache's
     // fingerprint fields, so it has to be settled before the rebuild reads it.
-    // Unconditional: with the mode down the field already rests at -1, the
-    // whole-struct reset at close_history_mode having put it there.
-    app.history_mode.focus = -1;
+    // Unconditional: with the mode down the pair already rests empty, the
+    // whole-struct reset at close_history_mode having put it there. It goes
+    // through the ONE clearer, which takes the mode's multi-selection with the
+    // focus for the identical reason (clear_history_mode_focus, app_state.h).
+    clear_history_mode_focus(app.history_mode);
 
     // The warp flag editor is a source-view-only authoring surface (the
     // home-view binding rule, 2026-07-22). The S -> T toggle would strand a

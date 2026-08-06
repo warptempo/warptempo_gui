@@ -877,8 +877,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // two buttons and their icons were deleted whole, taking the row back to
     // eleven buttons in four groups; the keys are untouched. The twelfth and
     // fifth arrived 2026-08-04 at the row's other end — the history button —
-    // and its group took the thirteenth and fourteenth 2026-08-05, the walk's
-    // older / newer steps, leaving the row at FOURTEEN buttons in five groups.)
+    // and its group took three more 2026-08-05, the revert act and the walk's
+    // older / newer steps, leaving the row at FIFTEEN buttons in five groups.)
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -898,15 +898,23 @@ constexpr IconRowDef kIconRowButtons[] = {
     // way the four existing boundaries do rather than inventing a second kind of
     // gap that would have to be explained.
     {RedesignButton::IconHistory, IconRowLead::Separator, nullptr, icons::Icon::VcsDiff},
+    // THE REVERT ACT (2026-08-05), immediately right of the button that opens
+    // the view and left of the walk's two — the architect's own order, and it
+    // reads as the group's shape: the view, what you can DO from inside it, then
+    // where you can step. Ordinary 2px Gap like the rest of the group.
+    // Unlike the two below it, this insertion is NOT a pure append — it shifts
+    // Older and Newer one button-width right — and that costs nothing: the
+    // layout is a single left-to-right accumulation recomputed each paint, with
+    // no rect or separator held anywhere, and the hit stash is republished by
+    // that same walk.
+    {RedesignButton::IconRevert,
+     IconRowLead::Gap, nullptr, icons::Icon::DocumentRevert},
     // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
     // button's group rather than opening a sixth: they are the same mode's
     // controls, and the row's one group boundary already said where that mode
     // starts. So they take the ordinary 2px Gap, and the group reads History |
-    // Older | Newer left to right, the arrows pointing the way each one walks.
-    // Being LAST IN THE WALK is what makes this a pure append: the layout is a
-    // single left-to-right accumulation with no right float and no total-width
-    // term, so no existing button's rect, separator or damage band moves by a
-    // pixel.
+    // Revert | Older | Newer left to right, the arrows pointing the way each one
+    // walks.
     {RedesignButton::IconHistoryOlder,
      IconRowLead::Gap, nullptr, icons::Icon::GoPrevious},
     {RedesignButton::IconHistoryNewer,
@@ -1863,11 +1871,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, four vertical separators, and fourteen 32x32 buttons in five
+    // width, four vertical separators, and fifteen 32x32 buttons in five
     // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
     // the bpm / iteration / follow modes, the listen / load-in-place pair, and
-    // the history group: the mode's own button (2026-08-04) plus the walk's
-    // older / newer arrows (2026-08-05).
+    // the history group: the mode's own button (2026-08-04) plus the revert act
+    // and the walk's older / newer arrows (2026-08-05).
     // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
     // the Navigation dropdown is those two commands' pointer home now.)
     //
@@ -1901,10 +1909,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // than a refusal, which is what the per-press refusals above cannot express:
     // while the view stands it greys the buttons it consumes (architect
     // 2026-08-04, at the face code below), and INVERSELY the walk's two arrow
-    // buttons rest DISABLED and light only in there (architect 2026-08-05) —
-    // their keys, bare `,` and bare `.`, are bound nowhere else in the product.
-    // Both live at redesign_button_enabled, so this row's painter needs no arm
-    // of its own for either.
+    // buttons AND THE REVERT BUTTON rest DISABLED and light only in there
+    // (architect 2026-08-05) — their keys, bare `,`, bare `.` and Ctrl+H, are
+    // bound nowhere else in the product. Revert is the one that carries BOTH
+    // exceptions at once: inside the view it greys again whenever no diff flag
+    // is selected, which is the first exception's own derivation (the view
+    // stops admitting its chord) rather than a third rule. All of it lives at
+    // redesign_button_enabled, so this row's painter needs no arm of its own.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -1968,17 +1979,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // rule above, scoped to that mode alone — while the view stands, copy,
         // paste, bpm, iteration, follow and listen are consumed acts and say so,
         // while the S/T + W/P radios, the load-in-place opener, the history
-        // button itself and the walk's two arrows stay live. Which is which is
-        // DERIVED from the mode's own gates
+        // button itself, the revert act and the walk's two arrows stay live.
+        // Which is which is DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
-        // partition is inventoried); nothing here decides membership.
+        // partition is inventoried); nothing here decides membership — which is
+        // also why REVERT can be dead in there on some frames and live on
+        // others: its chord is admitted only while a diff flag is selected, and
+        // the derivation reads that per frame like any other admission.
         //
-        // THE SAME FACE, WORN AT REST, IS THE WALK'S TWO ARROWS OUTSIDE THE
-        // VIEW (architect 2026-08-05): the mode-scoped exception inverted, for
-        // the two buttons whose keys exist only inside it. Same blend, same
-        // pointer-dead press and same absent tooltip, decided at the same one
-        // predicate — so the row still has exactly one dead face, in two
-        // states of one mode rather than in two mechanisms.
+        // THE SAME FACE, WORN AT REST, IS THE WALK'S TWO ARROWS AND THE REVERT
+        // BUTTON OUTSIDE THE VIEW (architect 2026-08-05): the mode-scoped
+        // exception inverted, for the three buttons whose keys exist only inside
+        // it. Same blend, same pointer-dead press and same absent tooltip,
+        // decided at the same one predicate — so the row still has exactly one
+        // dead face, in two states of one mode rather than in two mechanisms.
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
         // one disabled blend, row 2's rule applied to this row's glyph, letter

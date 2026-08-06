@@ -161,8 +161,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // rows' presses are covered by the KEYBOARD gate instead, which admits `h`
     // through handle_history_mode_key one line before the allowlist).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
-    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-third and
-    // twenty-fourth: bare `,` steps OLDER and bare `.` NEWER, through the same
+    // THE REVERT ACT (2026-08-05), the table's twenty-third: CTRL+H applies the
+    // view's SELECTED diff flags backwards into the live state and closes the
+    // view. Momentary like the two below — not a radio, not a toggle, click face
+    // only. It is the one entry here whose chord is NOT claimed by the mode's
+    // own vocabulary: it dispatches from on_key's ordinary body, BELOW the
+    // read-only gate, so a locked tab refuses the click exactly as it refuses
+    // the key (the load-in-place's precedent, `'`).
+    {RedesignButton::IconRevert, GuiKeys::H, true, false, false, false, true},       // Ctrl+H
+    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-fourth and
+    // twenty-fifth: bare `,` steps OLDER and bare `.` NEWER, through the same
     // dispatch and therefore through handle_history_mode_key's own arm — walls
     // clamped as consumed no-ops there, exactly as the keys behave. Neither is
     // a radio and neither is a toggle: they are momentary steps, so both flags
@@ -371,14 +379,17 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // bare Tab, Home, End or `c`), and the ONE new roster chord — the tabs' Ctrl+Tab
 // — was already answered LIVE by the hand entry the claim replaced.
 //
-// ONE ENTRY IS A FUNCTION OF THE SESSION, not of the chord alone (2026-08-05),
-// which is why this takes the mode rather than only a button: the allowlist
-// admits Ctrl+Alt+R only while there is something to checkpoint, so the
-// Save-and-Commit-faced Render GREYS when the session's authoring content
+// TWO ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
+// (2026-08-05), which is why this takes the mode rather than only a button. The
+// allowlist admits Ctrl+Alt+R only while there is something to checkpoint, so
+// the Save-and-Commit-faced Render GREYS when the session's authoring content
 // already matches the newest checkpoint (AppState::HistoryMode::head_delta_-
-// empty). The derivation carries that for free — this function restates no
-// term of it — and the answer is stable for a whole visit, the bit being
-// measured once at entry.
+// empty); and it admits CTRL+H only while a diff flag is selected, so the REVERT
+// button greys with an empty subject. The derivation carries both for free —
+// this function restates no term of either. They differ in cadence and that is
+// the honest difference: the head delta is measured once at entry and is static
+// for the visit, while the revert subject moves with every click, so Revert's
+// face changes within a visit and Render's does not.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
@@ -400,13 +411,20 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   published for bare `o` to be refused through),
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
-//   them with nothing hand-listed. They are the roster's two RESTING-DISABLED
-//   buttons, which is the OTHER predicate's fact rather than this one's: their
-//   keys are bound nowhere outside the view, so redesign_button_enabled greys
-//   them there and this function is what says they act in here. They never
-//   grey at a walk WALL either — a step past the oldest or newest checkpoint
-//   is a consumed no-op, which is the same nothing every other refusal in this
-//   partition is.
+//   them with nothing hand-listed. They are two of the roster's three
+//   RESTING-DISABLED buttons, which is the OTHER predicate's fact rather than
+//   this one's: their keys are bound nowhere outside the view, so
+//   redesign_button_enabled greys them there and this function is what says they
+//   act in here. They never grey at a walk WALL either — a step past the oldest
+//   or newest checkpoint is a consumed no-op, which is the same nothing every
+//   other refusal in this partition is.
+//   and THE REVERT ACT since 2026-08-05 (Ctrl+H) — the SECOND session-dependent
+//   entry, and the only button that is resting-disabled AND conditionally grey
+//   inside the view: the allowlist admits its chord only while a diff flag is
+//   selected (history_mode_revert_subject_standing), so this walk answers DEAD
+//   with an empty subject and LIVE the moment a click selects one. Both facts
+//   come from the same admission with nothing restated here, exactly as
+//   Render's head-delta grey does.
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
@@ -2885,7 +2903,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs and row 4's fourteen — the stash is
+// four, row 3's two tabs and row 4's fifteen — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
@@ -3385,6 +3403,46 @@ bool GuiInputHandler::handle_history_mode_press(
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
 
+    // THE MULTI-SELECTION'S TWO MODIFIED CLICKS (architect 2026-08-05), and they
+    // are asked FIRST because they are the only modified presses in this mode
+    // that hit an ITEM: shift takes the contiguous range from the focus, ctrl
+    // toggles one flag's membership, and both then focus the clicked flag and
+    // land the playhead on it — the live selection model re-expressed over the
+    // mode's own list, with the store selection as untouched as the plain
+    // click leaves it.
+    //
+    // THE PRECEDENCE, stated because it is the one thing this arm could get
+    // wrong: A FLAG SURFACE CLAIMS ONLY WHERE A FLAG IS ACTUALLY HIT. In the
+    // MARKER LANE the claim is unconditional — a modified lane press was a
+    // consumed nothing before this arm and still is when it hits no flag. Over
+    // the WAVEFORM the claim is the STEM's alone, so a ctrl press that misses
+    // every stem falls through to the arms below and arms the DUAL-AXIS STRIP
+    // DRAG exactly as it always has (the mode's own pointer allowlist admits
+    // it), and a shift press that misses stays the consumed nothing it was (the
+    // region former is not admitted in here). Nothing that used to act stopped
+    // acting; the flags simply take precedence over the empty waveform beneath
+    // their own stems, which is the live press's own order between the two
+    // surfaces of one item.
+    if ((shift != ctrl) && !alt) {
+        const GuiRect lane = top_marker_row_area(app);
+        const bool in_lane = (y >= lane.y && y < lane.y + lane.h);
+        int hit = -1;
+        if (in_lane) {
+            hit = hit_test_flag(app, audio, x, y);
+        } else if (inside_waveform) {
+            // The stem stash is the mode's own lane pass's, so the index is an
+            // ordinal into app.history_mode.flags and a cold stash answers -1 —
+            // the same "nothing is grabbable that is not drawn" rule the plain
+            // arm below leans on.
+            hit = hit_test_marker_stem(app, x, y);
+        }
+        if (hit >= 0) {
+            select_history_diff_flags_modified(hit, shift);
+            return true;
+        }
+        if (in_lane) return true;
+    }
+
     if (alt && !ctrl && !shift) return !inside_waveform;
     if (ctrl && !shift && !alt) return !inside_waveform;
     if (ctrl || shift || alt)   return true;
@@ -3470,9 +3528,9 @@ bool GuiInputHandler::handle_history_mode_press(
         // THE PLACEMENT PRESS. The focus clear runs FIRST, ahead of the shared
         // body's own gutter return, exactly where the live body's deselect runs
         // — this is that deselect's mode analog, and the clearer inventory at
-        // AppState::HistoryMode::focus carries the reason.
-        if (app.history_mode.focus != -1) {
-            app.history_mode.focus = -1;
+        // AppState::HistoryMode::focus carries the reason. It takes the SELECTION
+        // with it through the one clearer, the pair going together everywhere.
+        if (clear_history_mode_focus(app.history_mode)) {
             // A DISCRETE COMMAND, so full-window damage for the face swap — the
             // same shape the focus click emits on a move.
             viewport.invalidate_all();
@@ -3494,12 +3552,19 @@ bool GuiInputHandler::handle_history_mode_press(
     return true;
 }
 
-// THE MODE'S FOCUS CLICK, one body for its two pointer surfaces — the diff
+// THE MODE'S PLAIN FOCUS CLICK, one body for its two pointer surfaces — the diff
 // flag's box in the marker lane and its STEM in the waveform's upper half. `hit`
 // is an index into app.history_mode.flags (-1, or anything the list no longer
 // holds, being the empty-lane answer: clear the focus and land nothing).
+//
+// IT CLEARS THE MULTI-SELECTION (architect 2026-08-05), which is the live
+// model's own shape rather than a rule of the mode's: a plain click REPLACES the
+// selection with what it hit, so the focus alone is then a selection of one, and
+// the revert act's subject falls back to that focus with nothing to remember.
 void GuiInputHandler::focus_history_diff_flag(int hit) {
     const int was = app.history_mode.focus;
+    const bool had_selection = !app.history_mode.selection.empty();
+    app.history_mode.selection.clear();
     app.history_mode.focus =
         (hit >= 0 &&
          hit < static_cast<int>(app.history_mode.flags.size())) ? hit : -1;
@@ -3512,8 +3577,65 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
     // (the flag's colour swaps and its stem stays put), and none when it did
     // not — a re-click on the focused flag re-lands a playhead that is
-    // already there, and the land owner is itself idempotent.
-    if (was != app.history_mode.focus) viewport.invalidate_all();
+    // already there, and the land owner is itself idempotent. A DROPPED
+    // SELECTION is that same face swap over more flags, so it damages too.
+    if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
+}
+
+// THE MODE'S TWO MODIFIED CLICKS, one body — `extend` true for SHIFT, false for
+// CTRL — and `hit` is an ordinal into app.history_mode.flags that the caller has
+// already resolved from one of the flag's two pointer surfaces. It is the LIVE
+// selection model re-expressed over the mode's own list (selection-model.md):
+//
+//   SHIFT extends: the contiguous ordinal RANGE from the focus to the clicked
+//   flag, inclusive, REPLACING whatever stood — the list is frame-sorted, so an
+//   ordinal range IS the visible span between the two flags. With NO focus
+//   standing there is no anchor to span from, so it selects the clicked flag
+//   alone, which is what the live range press does from an empty selection.
+//
+//   CTRL toggles: the clicked flag's membership alone, everything else untouched
+//   — the one gesture that can leave an arbitrary subset standing, which is why
+//   the set is a set.
+//
+// BOTH THEN FOCUS THE CLICKED FLAG AND LAND THE PLAYHEAD ON IT, the live model's
+// "a modified press lands on the focus it sets" applied here, and both leave the
+// STORE selection exactly as untouched as the plain click does — the mode owns no
+// live marker.
+//
+// A CTRL PRESS THAT REMOVES THE LAST MEMBER therefore rests on the focus alone,
+// with that flag still lit and still the act's subject. That is the recorded
+// consequence rather than an oversight, and it is the SAME state a plain click
+// leaves ("focus = a selection of one"): the live column repairs its focus onto
+// another member when a toggle removes the focused one, and this mode has no
+// such repair to run — its focus is where the playhead just landed, which the
+// removal did not take back.
+//
+// DAMAGE IS THE FOCUS CLICK'S: full-window, unconditional here, because either
+// arm changes at least one flag's face (ctrl always flips the clicked one's
+// membership; shift always writes a set containing it) — and where it would not,
+// a repaint of the strip is the same cost the plain click pays.
+void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
+    const int n = static_cast<int>(app.history_mode.flags.size());
+    if (hit < 0 || hit >= n) return;
+    std::set<int>& sel = app.history_mode.selection;
+    if (extend) {
+        const int anchor = (app.history_mode.focus >= 0 &&
+                            app.history_mode.focus < n)
+                               ? app.history_mode.focus : hit;
+        const int lo = anchor < hit ? anchor : hit;
+        const int hi = anchor < hit ? hit    : anchor;
+        sel.clear();
+        for (int i = lo; i <= hi; ++i) sel.insert(i);
+    } else {
+        const auto it = sel.find(hit);
+        if (it != sel.end()) sel.erase(it);
+        else                 sel.insert(hit);
+    }
+    app.history_mode.focus = hit;
+    land_playhead_on_source_frame(
+        app, audio, viewport,
+        app.history_mode.flags[static_cast<std::size_t>(hit)].time_frame);
+    viewport.invalidate_all();
 }
 
 void GuiInputHandler::close_dropdown() {

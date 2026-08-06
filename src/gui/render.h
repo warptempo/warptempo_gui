@@ -896,7 +896,7 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the fourteen view/mode/action buttons). Measured
+// tabs (row 4 of the redesign: the fifteen view/mode/action buttons). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
@@ -1974,12 +1974,23 @@ void render_phase_reset_flags(cairo_t* cr,
 // The two halves are independent bools rather than an enum because the CHANGED
 // case is exactly "both": one double-width flag, the removed half left and red,
 // the added half right and green.
+// THE THEN SIDE'S VALUE RIDES ALONG (2026-08-05), for the REVERT act rather than
+// for the paint: `then_token` is the removed line's payload past the '|' —
+// VERBATIM, the same slice the label is built from — and `then_disabled` its
+// disable bit, both meaningful exactly when `removed` is set (an added-only flag
+// has no then side to restore). The act reconstitutes the sidecar LINE from them
+// and hands it to the frozen parser, so the value travels as text the loader
+// itself judges and no second grammar is written anywhere
+// (GuiInputHandler::run_history_revert). Phase resets carry no token — frame plus
+// the bit IS their whole line — so the field stays empty on that column.
 struct HistoryDiffFlag {
     int64_t     time_frame = 0;
     bool        removed    = false;   // the commit had this line
     bool        added      = false;   // the session has this line
     std::string removed_text;
     std::string added_text;
+    std::string then_token;
+    bool        then_disabled = false;
 };
 
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
@@ -1998,9 +2009,13 @@ struct HistoryDiffFlag {
 // half's face; it runs horizontally and so is never a divider.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
-// swaps that flag to its class's selected pair, both halves of a double flag
-// together. The STEM reads the class alone, never the focus, exactly as the live
-// lane's does — and a CHANGED pair stems RED, deferring to the old.
+// `selected` its OWN multi-selection (ordinals into the same list, 2026-08-05):
+// EITHER swaps that flag to its class's selected pair, both halves of a double
+// flag together. One face for both, deliberately — the focus is the selection's
+// singleton when the set is empty, and the revert act reads them the same way, so
+// a second brightness would be a distinction nothing acts on. The STEM reads the
+// class alone, never either of them, exactly as the live lane's does — and a
+// CHANGED pair stems RED, deferring to the old.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,
@@ -2009,6 +2024,7 @@ void render_history_diff_flags(cairo_t* cr,
                                long long viewport_start_sample,
                                long long viewport_end_sample,
                                int focus_index,
+                               const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);

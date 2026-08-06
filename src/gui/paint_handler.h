@@ -283,14 +283,15 @@ struct FlagCache {
     // suppressed frame after the editor closed — and keep the drawn box while it
     // opened. Contract at render_flags' editing_marker_index (render.h).
     int       fp_editing_flag_target      = -1;
-    // THE HISTORY MODE'S FIVE INPUTS (the `h` view — AppState::HistoryMode).
+    // THE HISTORY MODE'S SIX INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
     // commit is shown (`,` / `.` step it), WHICH READING of it is shown (the two
     // compare modes, the tabs switching them), which diff flag holds the mode's
-    // focus (a colour swap, exactly as the live selection hash is a field for
-    // the live lane), and WHICH SESSION those are indices into.
+    // focus and WHICH ARE SELECTED (colour swaps, exactly as the live selection
+    // hash is a field for the live lane), and WHICH SESSION those are indices
+    // into.
     //
     // THE SESSION GENERATION IS ONE OF THEM BECAUSE THE OTHERS REPEAT. The
     // delta of a given commit is fixed for a session's lifetime, but a session
@@ -311,11 +312,19 @@ struct FlagCache {
     // two would cross-blit freely as he switched back and forth. (At the NEWEST
     // index the two deltas coincide, so a switch there redraws the same lane;
     // this field does not know that and does not need to.)
+    //
+    // AND THE MULTI-SELECTION IS THE SIXTH (2026-08-05): the mode's own selected
+    // set brightens its flags exactly as the focus brightens one, so a click
+    // that changes membership changes what this surface must contain — the live
+    // lane's fp_selection_hash applied to the mode's own list. Hashed rather
+    // than counted, since a range replace can leave the size untouched while
+    // naming different flags.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
     unsigned long long fp_history_generation = 0;
     GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
+    uint64_t           fp_history_selection_hash = 0;
 
     void destroy_surface() {
         if (surface) {
@@ -387,7 +396,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (18 fields, RE-DERIVED 2026-08-05 off the compare in
+    // (19 fields, RE-DERIVED 2026-08-05 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -400,15 +409,19 @@ struct GuiPaintHandler {
     //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
     //     and fp_editing_flag_target (the open editor's marker, whose box this
     //     pass SKIPS);
-    //   - THE HISTORY MODE, FIVE (four 2026-08-04, the fifth 2026-08-05):
-    //     fp_history_active, fp_history_index, fp_history_focus,
-    //     fp_history_generation and fp_history_compare — the `h` view replaces
+    //   - THE HISTORY MODE, SIX (four 2026-08-04, the fifth and sixth
+    //     2026-08-05): fp_history_active, fp_history_index, fp_history_focus,
+    //     fp_history_generation, fp_history_compare and
+    //     fp_history_selection_hash — the `h` view replaces
     //     the lane's whole content, so these decide it as completely as the five
     //     marker-driven fields decide the live one; the generation is what
     //     distinguishes two SESSIONS that agree on the others (a close and a
-    //     reopen this pass never sees between), and the compare bit what
+    //     reopen this pass never sees between), the compare bit what
     //     distinguishes A COMMIT'S TWO DELTAS (iterative forward against the
-    //     next-newer item, cumulative against the frozen now side).
+    //     next-newer item, cumulative against the frozen now side), and the
+    //     selection hash what distinguishes two membership states of one shown
+    //     delta (the mode's multi-selection, whose members wear the focus's own
+    //     brightened face).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a
@@ -567,7 +580,7 @@ private:
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom) and the
-    // ICON ROW (top lane 3, row 4: the fourteen view/mode/action buttons, their
+    // ICON ROW (top lane 3, row 4: the fifteen view/mode/action buttons, their
     // separators and its border-bottom).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the

@@ -1284,6 +1284,7 @@ void render_history_diff_flags(
         long long viewport_start_sample,
         long long viewport_end_sample,
         int focus_index,
+        const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
         const std::vector<WarpFrameMapSegment>* warp_frame_map) {
@@ -1348,10 +1349,13 @@ void render_history_diff_flags(
         cull_width_px,
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
-            // THE MODE'S OWN FOCUS, not the live selection: one flag at most,
-            // and BOTH HALVES of a changed pair take their own class's selected
-            // pair together — a double flag is one item, so it lights as one.
-            const bool focused = (i == focus_index);
+            // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
+            // either lights the flag, and BOTH HALVES of a changed pair take
+            // their own class's selected pair together — a double flag is one
+            // item, so it lights as one. The two are ONE face by ruling (the
+            // declaration says why), so this is an OR rather than a ladder.
+            const bool focused =
+                (i == focus_index) || (selected.count(i) != 0);
 
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
