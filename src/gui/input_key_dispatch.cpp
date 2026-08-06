@@ -772,6 +772,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // clear-site set at clear_region_highlight). That is where they part from
     // the mode's diff-flag CLICK, which deliberately touches neither — a pointer
     // route with its own recorded regime.
+    // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
+    // (recorded at the arms 2026-08-06, where the docs had carried it alone):
+    // the entry owner stops any session running before `h` and nothing in the
+    // view can start one — bare Space and both scrub presses are consumed — so
+    // these calls are formalities. They stay because the REGIME is what these
+    // arms re-express: a mode-local command that commits a cursor position looks
+    // exactly like its live twin, and a future route that could audition in here
+    // would inherit the right shape instead of a missing call. The revert act's
+    // own stop carries the same note at its site.
 
     // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local. Tab
     // steps to the next flag, Shift+Tab and IsoLeftTab to the previous, in the
@@ -1038,8 +1047,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             cost). Admitting it adds NO seventh Esc place: the
 //                             bare-Esc inventory is still the six enumerated at
 //                             on_key's dispatch point (input_handler.cpp), and
-//                             this line only lets the two that can be live in
-//                             this mode run — the REGION CLEAR (a span formed
+//                             this line lets exactly the two that sit BELOW it
+//                             run — the REGION CLEAR (a span formed
 //                             before `h`, or one formed INSIDE the view by its
 //                             own placement press and drag: the clear is
 //                             reachable from within, which is fine — the region
@@ -1051,9 +1060,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             frozen now side is untouched — the same argument
 //                             the read-only allowlist admits Esc on.
 //                             IT CANNOT CLOSE THE VIEW, structurally rather than
-//                             by refusal: the toggle is handle_history_mode_key's
-//                             and that function owns `h`, `,` and `.` alone
-//                             (history_mode_owns_key), so no Esc reaches it. The
+//                             by refusal: the toggle is handle_history_mode_key's,
+//                             and that function's whole vocabulary
+//                             (history_mode_owns_key, whose declaration below
+//                             enumerates it) carries no Esc shape in any modifier
+//                             combination, so no Esc reaches it. The
 //                             view's exits are unchanged, and `h` is still the
 //                             key that leaves. With no region resting and no
 //                             render running a bare Esc is a consumed nothing,
@@ -1218,7 +1229,8 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it: zoom, the paged scroll, the overview command and playback's follow chase,
+// it (membership re-derived 2026-08-06): zoom, the paged scroll, the overview
+// command,
 // the pointer's pan / strip / ruler drags, and the mode's own cursor-moving acts
 // — the diff-flag click, the placement press and the keyboard's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the

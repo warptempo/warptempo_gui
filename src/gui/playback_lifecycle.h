@@ -73,9 +73,19 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens, by every site that opens one: the `;` settings editor
-    // (input_handler.cpp), the `'` load editor and the `m` bpm editor
-    // (input_key_dispatch.cpp), and the three prompt opens (prompt.cpp).
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-06 — EIGHT sites:
+    // the `;` settings editor (input_handler.cpp), the Settings DROPDOWN item's
+    // open of that same editor (input_pointer.cpp — a second door onto one
+    // surface, and the one route that reaches no key gate), the `'` load editor
+    // and the `m` bpm editor (input_key_dispatch.cpp), and the FOUR prompt opens
+    // (prompt.cpp: unsaved, error notice, env-hash mismatch, the history commit
+    // confirm).
+    // ONE MODAL OPEN IS NOT A CALLER, and it is a recorded exception rather than
+    // a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
+    // (PhaseResetPropagate::open_paste_confirmation) and stops through
+    // stop_playback_if_playing directly, which is mechanically this same stop —
+    // so the RULE holds for every modal surface even though this function's
+    // caller set is not literally every opener.
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
     // cannot restart until the surface closes.

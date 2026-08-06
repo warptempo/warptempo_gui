@@ -49,11 +49,13 @@ namespace {
 // per-TU clock copy.
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
-// RedesignButton, app_state.h): the KEYBOARD CHORD each row 2 button fires. The
+// RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
+// through 4 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. ONE roster entry is absent, and only one: row 1's SETTINGS,
-// whose action is a POPUP TOGGLE — not a chord at all, since no keyboard chord
-// opens or closes a dropdown. It is spelled at its own claim.
+// the same ids. TWO roster entries are absent (re-derived 2026-08-06 by walking
+// RedesignButton against the table below): row 1's SETTINGS and NAVIGATION
+// anchors, each of whose action is a POPUP TOGGLE — not a chord at all, since no
+// keyboard chord opens or closes a dropdown. Both are spelled at their own claim.
 //
 // The `shift` column is each button's OWN chord (only Redo's is set). It is not
 // the whole shift story: the two SHIFT-ADMITTING buttons OR a shift-exact press
@@ -183,6 +185,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconHistoryNewer,
      GuiKeys::Period, false, false, false, false, true},                             // bare .
 };
+
+// THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
+// every RedesignButton but the two menu anchors carries a chord here, so the
+// table's length plus those two IS the roster. The check is not bookkeeping —
+// history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
+// TO LIVE, so a roster entry added without its row here would silently wear a
+// live face in the `h` view while its press claimed nothing. This makes that
+// drift a build error instead.
+static_assert(std::size(kToolbarChords) + 2 ==
+                  static_cast<std::size_t>(kRedesignButtonCount),
+              "kToolbarChords must cover every RedesignButton except the "
+              "Settings and Navigation anchors");
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
 // painter's stash and nothing here re-shapes or re-measures, so the clickable
@@ -432,7 +446,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face:
 // Render is LIVE on Ctrl+Alt+R though its SHIFT twin is consumed in the mode —
-// the shift press stays swallowed by the render route's own refusal and the
+// and the shift press is swallowed by THE ALLOWLIST, not by the render route
+// (re-derived 2026-08-06: is_commit_act is shift-exact and nothing else in
+// history_mode_key_blocked matches Ctrl+Alt+Shift+R, so it drops there and never
+// reaches handle_render_dispatch_keys at all). The
 // tooltip already drops its shift line here, which is the honest pair. (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, it applies inside the view exactly as outside it, and
@@ -1540,8 +1557,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
     // view bar drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
-    // coverage true. The row's one non-chord pair, the Settings and Navigation
-    // anchors, is shut at toggle_dropdown instead.
+    // coverage true. TWO PRESS ROUTES IN THESE ROWS DISPATCH NO CHORD (re-derived
+    // 2026-08-06): the Settings and Navigation anchors, which have none and are
+    // shut at toggle_dropdown instead, and — WHILE THIS MODE STANDS — the A/B TAB
+    // PAIR, which the tab row's own band claim intercepts above and turns into
+    // set_history_compare directly (the compare selector, deliberately not a
+    // chord: the keyboard twin is Ctrl+Tab, claimed a line above the allowlist,
+    // and the pair's own chord is the A/B switch the mode consumes). Both
+    // exceptions are refusals or acts decided ABOVE this gate, so neither leaves
+    // the mode uncovered.
     // The double-click SNAPSHOT is handed in because the mode has a double-click
     // act of its own (the trim bar's framing) and this function's own field was
     // cleared at the top of the press; nothing else about the call is special.
@@ -3541,10 +3565,14 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
     // clear_region_highlight owns its own damage and is a no-op with no span
     // resting, so this needs no gate of its own.
     clear_region_highlight(app, viewport);
-    app.history_mode.selection.clear();
-    app.history_mode.focus =
-        (hit >= 0 &&
-         hit < static_cast<int>(app.history_mode.flags.size())) ? hit : -1;
+    // THROUGH THE ONE PAIR CLEARER (2026-08-06, closing the one route that
+    // cleared the pair inline): the EMPTY-LANE answer below is a clear of both
+    // fields, so it goes through the owner like every other clearer, and the
+    // hit arm simply re-seats the focus over it. The return is deliberately
+    // unread — the damage decision below is finer than "anything stood".
+    clear_history_mode_focus(app.history_mode);
+    if (hit >= 0 && hit < static_cast<int>(app.history_mode.flags.size()))
+        app.history_mode.focus = hit;
     if (app.history_mode.focus >= 0) {
         land_playhead_on_source_frame(
             app, audio, viewport,
@@ -4390,8 +4418,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // a region selecting its contents — was tried and retired; do not
         // re-propose) — the press already deselected all and the drag
         // leaves the selection EMPTY throughout. That is the whole story for the
-        // LIVE formers, the plain upper-half press and the shift press at either
-        // height, both of which deselect at press — so a span drawn in an
+        // three LIVE formers — the plain upper-half press, the shift press at
+        // either height and the empty flag/triangle-lane parity press — all of
+        // which deselect at press through the one placement body, so a span
+        // drawn in an
         // ordinary view rests beside an EMPTY selection. The `h` view's own
         // press rides this same motion path and deselects nothing, which costs
         // that invariant nothing since 2026-08-05: the view's regions are

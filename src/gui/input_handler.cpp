@@ -633,10 +633,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
-    // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) — the
-    // only two of the six reachable in there — run inside the view. It gained no
+    // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) run
+    // inside the view. Those two are what the ADMISSION buys, not the only rungs
+    // reachable in there (re-derived 2026-08-06): the view also opens the load
+    // editor on `'` and raises the commit-confirm prompt, so (a), (b) and (c) run
+    // in it too — but each of those gates sits ABOVE the allowlist in on_key, so
+    // the press never reaches the admission at all. It gained no
     // binding of its own, and Esc cannot close it: the view's toggle is
-    // handle_history_mode_key's `h`, which no Esc reaches.
+    // handle_history_mode_key's, whose whole vocabulary is enumerated at
+    // history_mode_owns_key (input_key_dispatch.cpp) and carries no Esc shape in
+    // any modifier combination, so no Esc reaches it.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
     // NO drop-to-span, and no collapse of anything but the span itself. A 2+
     // selection and a singleton are
@@ -1173,7 +1179,12 @@ void GuiInputHandler::run_center_command() {
         if (focus >= 0 &&
             focus < static_cast<int>(app.history_mode.flags.size())) {
             // The live arm's stop lives inside its jump, so it stops only when
-            // something is focused; this keeps that shape.
+            // something is focused; this keeps that shape. NO REACHABLE
+            // PRODUCER (recorded 2026-08-06): the entry owner stops any session
+            // running before `h` and nothing in the view can start one, so this
+            // is a formality kept for the regime's shape — the same note the
+            // mode's Tab cycle, its Home/End and the revert act carry at their
+            // own stops (input_key_dispatch.cpp).
             playback_lifecycle.stop_playback_if_playing();
             land_playhead_on_source_frame(
                 app, audio, viewport,

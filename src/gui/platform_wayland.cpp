@@ -2806,6 +2806,17 @@ void GuiPlatform::on_locked_pointer_unlocked() {
     // inactive). The gesture ends later through the normal button-release /
     // lost-button paths, where end_pointer_capture is a harmless idempotent
     // no-op.
+    //
+    // A NOTED RESIDUAL (2026-08-06): the tracked-position write-back that
+    // release_pointer_lock performs lives in its HINT arm, so this path leaves
+    // pointer_x_/pointer_y_ carrying the capture's virtual travel until the next
+    // absolute event re-seats them. There is no hint to follow here — the lock
+    // is already gone, so no warp happens and there is no destination to write —
+    // which is why the arm is where it is. The exposure is a click made after a
+    // compositor revoke and before any enter or motion, narrower than the defect
+    // the write-back closed and adversarial-compositor adjacent; recorded rather
+    // than patched, so a future reader does not read the write-back as
+    // unconditional.
     release_pointer_lock(/*apply_restore_hint=*/false);
 }
 

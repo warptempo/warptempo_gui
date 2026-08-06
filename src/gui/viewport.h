@@ -108,7 +108,10 @@ struct Viewport {
     //    off this list — the bare Left/Right tempo-image step and the pointer tempo
     //    DRAG. What remains: the bare Up/Down tempo step
     //    (adjust_tempo_cents, singleton AND group — the whole tempo surface now),
-    //    the settings engine-scale commit, undo/redo, and the load-in-place.
+    //    the settings engine-scale commit, undo/redo, and BOTH LOAD-IN-PLACE
+    //    BODIES (re-derived 2026-08-06: load_render_entry_in_place for `'` over a
+    //    render entry, and load_history_commit_in_place for the `h` view's commit
+    //    load — input_key_dispatch.cpp).
     //    Each kicks so
     //    displayed == live at the command boundary, leaving no
     //    divergence window for the displayed-basis gestures (phase / trim drags)

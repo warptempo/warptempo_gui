@@ -173,11 +173,14 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     jumps), and the
 //     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
 //     typed navigation-jump twin, no exemptions);
-//   * EVERY WAVEFORM PLACEMENT PRESS (arm_region_drag_at, input_pointer.cpp —
-//     the plain upper half, the shift-exact press at either height, and the `h`
-//     view's own full-height press): dissolves any resting highlight at
+//   * EVERY PLACEMENT PRESS (arm_region_drag_at, input_pointer.cpp — the plain
+//     upper half, the shift-exact press at either height, the empty
+//     flag/triangle-lane parity press, and the `h`
+//     view's own full-height press; membership re-derived 2026-08-06, the
+//     authoritative inventory being RegionState's in app_state.h): dissolves any
+//     resting highlight at
 //     mouse-down, before the gesture is known to be a click or a fresh region
-//     drag — all three share this exact dissolve shape;
+//     drag — all four share this exact dissolve shape;
 //   * MARKER CLICKS, all three (the plain single-select and both multi-select
 //     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
 //     carried died with the extent owner, so every marker click clears;
@@ -289,14 +292,15 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // order and SINGLE-SELECTS the first marker whose land value is EXACTLY the
 // resting playhead. Definition in input_pointer.cpp, beside the land whose
 // formula it reuses; that comment states the rule, the exactness, and the
-// first-in-store tie-break. FOUR CALL SITES (re-derived 2026-07-30 by grep), each
+// first-in-store tie-break. FIVE CALL SITES (re-derived 2026-08-06 by grep), each
 // stating only its own class and pointing there: the source load's tail
 // (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
-// the `'` render-entry LOAD-IN-PLACE's tail (load_render_entry_in_place,
-// input_key_dispatch.cpp — joined 2026-07-30 because the load-in-place is
-// specified 1:1 with a source load, and the
-// load has always run this). No match leaves the selection exactly as the caller
+// BOTH LOAD-IN-PLACE BODIES' tails (input_key_dispatch.cpp) — the `'`
+// render-entry load (load_render_entry_in_place, joined 2026-07-30) and the `h`
+// view's commit load (load_history_commit_in_place), each because a load-in-place
+// is specified 1:1 with a source load, and the
+// load has always run this. No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport);
@@ -338,10 +342,13 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     admitted membership is enumerated at the definition.
 //
 // THE SECOND TAKES THE SESSION, THE FIRST DOES NOT, and the asymmetry is the
-// membership's own: the mode's keys are a fixed keymap, while one allowlist
-// admission is conditional on the session it is asked about (the commit act's,
-// on head_delta_empty — a view whose newest checkpoint already carries the
-// session's authoring content has nothing to commit). Both readers hand it the
+// membership's own: the mode's keys are a fixed keymap, while TWO allowlist
+// admissions are conditional on the session they are asked about (re-derived
+// 2026-08-06) — the commit act's, on head_delta_empty (a view whose newest
+// checkpoint already carries the session's authoring content has nothing to
+// commit), and the revert act's, on a subject standing
+// (history_mode_revert_subject_standing — a selected diff flag, else the focused
+// one). Both readers hand it the
 // same `app.history_mode` and neither restates a term of it, which is what
 // keeps the key and the face one decision.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
@@ -797,10 +804,12 @@ struct GuiInputHandler {
     // `anchor_frame` is the active-domain frame the press just placed the
     // playhead at; (x, y) is the press position for the press-becomes-drag
     // threshold. Dissolves the resting region at mouse-down, so a motionless
-    // release rests nothing at all. THREE CALLERS, all of them placement
-    // presses: the plain UPPER-HALF waveform press, the SHIFT-exact waveform
-    // press at either height, and the `h` history view's own full-height plain
-    // press (the two live ones through place_playhead_and_arm_region). The plain
+    // release rests nothing at all. FOUR CALLERS, all of them placement
+    // presses (re-derived 2026-08-06): the plain UPPER-HALF waveform press, the
+    // SHIFT-exact waveform press at either height, the empty
+    // flag/triangle-lane parity press, and the `h` history view's own
+    // full-height plain press (the three live ones through
+    // place_playhead_and_arm_region). The plain
     // LOWER half is the scrub surface, whose press is a one-shot scrub act
     // arming nothing and leaving the region alone.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
@@ -1726,8 +1735,10 @@ private:
     //     left exactly as it was.
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published content — the two pointer stashes and the diff-flag list
-    //     their indices name — at every mode edge, entry, exit and commit step.
-    //     Its own comment carries the argument.
+    //     their indices name — at every mode edge: the entry, the exit, each
+    //     commit step and each COMPARE SWITCH (four call sites, re-derived by
+    //     grep 2026-08-06). Its own comment carries the argument and is the
+    //     authoritative statement of the edge set.
     //   * set_history_compare is the ONE switch owner for the two compare
     //     readings (2026-08-05): row 3's repurposed tabs SELECT through it —
     //     the mode's only pointer surface outside the waveform and the lane —

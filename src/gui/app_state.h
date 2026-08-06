@@ -150,9 +150,11 @@ struct UndoEntry {
 //
 // THE FORMER — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
 // `region.active = true`: the drag's motion path is the ONE writer since
-// 2026-08-05, every entry reaching it through the one arm arm_region_drag_at).
+// 2026-08-05, every entry reaching it through the one arm arm_region_drag_at, so
+// the inventory IS arm_region_drag_at's callers plus the callers of the body that
+// wraps it, place_playhead_and_arm_region).
 // THERE IS ONE FORMING GESTURE, THE PLACEMENT PRESS AND THE DRAG IT ARMS, in
-// three entries:
+// FOUR entries (re-derived 2026-08-06):
 //   * the PLAIN press in the waveform's UPPER half (the lower half is the scrub);
 //   * the SHIFT-exact press at EITHER height (architect 2026-08-05, THE FORMER'S
 //     RESHAPE: the region ANCHORS AT THE CLICKED COLUMN now, so shift IS the
@@ -160,12 +162,17 @@ struct UndoEntry {
 //     argmax it used to choose between are deleted, and so is the one-act span
 //     they formed. A motionless shift click-release therefore lands the playhead
 //     and rests NO region, where it used to rest one);
+//   * the EMPTY flag/triangle-lane PARITY press (architect 2026-07-23), which
+//     runs the same placement body — the lane works like the waveform upper half,
+//     drag included, the drag's motion path being y-agnostic once armed. PLAIN
+//     ONLY there: a shift press on the lane claims nothing;
 //   * the `h` HISTORY VIEW'S own press, full height (that view has no scrub since
 //     playback left it), which is the same recipe minus the store deselect.
 // EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS — the family rule,
 // stated here and pointed at from the sites (architect-RATIFIED 2026-08-05,
 // promoting what had been the coder's reading of the mode's arm into the
-// ruling). The two live entries DESELECT at press, leaving the STORE selection
+// ruling). The THREE live entries DESELECT at press — all three through the one
+// placement body — leaving the STORE selection
 // EMPTY throughout the drag; the `h` view's entry clears THE MODE'S focus and
 // diff-flag selection instead, through the one clearer that takes the pair, and
 // touches no store selection at all by the view's own standing rule. So no
@@ -196,7 +203,7 @@ struct UndoEntry {
 // and the W/P marker-column switch (each flips the domain or the owning column out
 // from under the span), EVERY WAVEFORM PLACEMENT PRESS (it dissolves any resting
 // highlight at mouse-down, before it knows whether the gesture is a click or a
-// fresh region drag — via arm_region_drag_at, all three entries; a SCRUB press
+// fresh region drag — via arm_region_drag_at, all FOUR entries; a SCRUB press
 // leaves the region alone in either entry, the lower-half left one and the bare
 // right one, that gesture being the region's PREVIEW gesture), the `h` view's
 // three edges (the view-local rule above), and the kick validator's live-domain
@@ -434,12 +441,15 @@ struct UndoHistory {
 // viewport scroll and no playback reseek per motion. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. THREE PRESSES ARM THIS DRAG AND
-// ALL THREE ARM IT THE SAME WAY, through arm_region_drag_at — dissolve the
-// resting region at mouse-down, anchor at the CLICK column: the plain
-// upper-half waveform press, the SHIFT-exact waveform press at either height
-// (architect 2026-08-05, when the former's anchor moved to the click and its
-// non-dissolving twin died with the span it preserved) and the `h` history
+// press, so there is no release-time collapse. FOUR PRESSES ARM THIS DRAG AND
+// ALL FOUR ARM IT THE SAME WAY, through arm_region_drag_at — dissolve the
+// resting region at mouse-down, anchor at the CLICK column (membership
+// re-derived 2026-08-06; the authoritative inventory is at RegionState): the
+// plain upper-half waveform press, the SHIFT-exact waveform press at either
+// height (architect 2026-08-05, when the former's anchor moved to the click and
+// its non-dissolving twin died with the span it preserved), the empty
+// flag/triangle-lane parity press (whose armed drag then extends normally, the
+// motion path being y-agnostic) and the `h` history
 // view's own full-height press. Alt/Ctrl no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
@@ -1288,8 +1298,14 @@ struct AppState {
     //     panning away during playback was impossible with follow on (the
     //     default). A pure keyboard ZOOM is deliberately NOT a producer: it
     //     centers on the scanner during playback, so it never leaves the chase.
-    //   * the upper-half PLACEMENT PRESS (input_pointer.cpp), which moves the
-    //     cursor and reseeks.
+    //   * the PLACEMENT PRESS (place_playhead_at_click_column, input_pointer.cpp
+    //     — the one body that writes this flag), which moves the cursor and
+    //     reseeks. FOUR PRESSES REACH IT (re-derived 2026-08-06, the membership
+    //     matching reseek_keeping_alive's own at playback_lifecycle.cpp): the
+    //     plain upper-half waveform press, the shift-exact press at either
+    //     height, the empty flag/triangle-lane parity press and the `h` view's
+    //     own full-height press — the last of which cannot actually produce,
+    //     playback being unreachable inside that view since 2026-08-05.
     // CLEARED at FOUR sites (re-derived 2026-07-30 by grepping every write, all in
     // playback_lifecycle.cpp): the ONE stop body, stop_playback_if_playing (both
     // stop edges — Space's and the tick's natural end — collapsed onto it, retiring
@@ -2161,16 +2177,19 @@ struct AppState {
     // them. That would be a real hazard in an authoring session — the answer
     // would drift from what is on screen — and it is not one here BY
     // CONSTRUCTION: the two gates above refuse every route that could change the
-    // markers or the engine settings for the whole life of the session, and the
-    // one route that changes them anyway (the load-in-place) closes the mode
-    // first. The
+    // markers or the engine settings for the whole life of the session EXCEPT
+    // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+Alt+R (the
+    // commit act) and Ctrl+H (the revert act; membership re-derived 2026-08-06)
+    // — and every one of those closes the view as it ends, so no session
+    // outlives a write to its own now side. The
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
-    // routes that move it: zoom, the paged scroll, the overview command and
-    // playback's follow chase move viewport_start_sample or zoom_level, the
+    // routes that move it (membership re-derived 2026-08-06): zoom, the paged
+    // scroll and the overview command move viewport_start_sample or zoom_level,
+    // the
     // pointer's pan / strip / ruler drags move both, the mode's OWN cursor-moving
     // acts land the playhead (the diff-flag click, the placement press, and the
     // keyboard's Tab cycle / Home / End / `c` — which `0` reaches too, from full
@@ -2254,8 +2273,11 @@ struct AppState {
         //     what makes the 1/2/3 selectors, the view bar and the icon row's
         //     radios inherit it by composition.
         //   - entry and exit (the whole-struct reset at both owners)
-        //   - bare HOME / END (2026-08-05) and the WAVEFORM PLACEMENT PRESS (the
-        //     plain upper-half press that hits no stem, same day), and these are
+        //   - bare HOME / END (2026-08-05) and the WAVEFORM PLACEMENT PRESS
+        //     (same day; re-derived 2026-08-06 — it is the WHOLE waveform at
+        //     EITHER height, plain or shift-exact, the plain arm falling to it
+        //     when no stem is hit and the shift arm ignoring stems outright under
+        //     the symmetry ruling), and these are
         //     the exception to the reason above: the list is untouched, but the
         //     playhead moves to a spot nothing marks — an end of the song, or the
         //     pressed column — LEAVING the focused flag, so the focus goes with
@@ -2270,7 +2292,14 @@ struct AppState {
         // the one owner clear_history_mode_focus (below this struct): the set is
         // ordinals into the same painted list, so every reason above is its
         // reason too, and a second clearer inventory to keep in step is exactly
-        // what that helper exists to prevent.
+        // what that helper exists to prevent. RE-DERIVED 2026-08-06 by grepping
+        // every writer of `history_mode.focus` and `history_mode.selection`:
+        // every CLEAR of the pair now runs through that owner (the empty-lane
+        // click's did so inline until that date, and was routed through it), and
+        // the two remaining direct writers are SETTERS rather than clearers —
+        // the plain focus click, which calls the owner and then re-seats the
+        // focus over it, and the modified lane pair, which writes a non-empty
+        // set and the focus it lands on.
         int         focus  = -1;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
         // `flags` beside the focus and the REVERT ACT's subject. It is the live
@@ -2350,9 +2379,15 @@ struct AppState {
         //
         // COMPUTED ONCE, AT THE ONE ENTRY OWNER (open_history_mode_fresh), and
         // STATIC FOR THE SESSION'S LIFE BY CONSTRUCTION: both sides are fixed
-        // for the visit — the now side is frozen at init(), and the mode's
-        // allowlists admit no authoring route at all — so nothing in here can
-        // change the answer. It is cleared by the whole-struct reset at close,
+        // for the visit — the now side is frozen at init(), and EVERY ROUTE THAT
+        // COULD CHANGE THE OTHER SIDE CLOSES THE VIEW. That is the honest
+        // derivation, re-stated 2026-08-06: the allowlist DOES admit an authoring
+        // chord — Ctrl+H, the revert act — so "no authoring route is admitted" is
+        // not what makes the bit safe. What makes it safe is that all THREE of
+        // the mode's mutators (`'`, Ctrl+Alt+R and Ctrl+H) end by closing the
+        // view, so no session outlives a write to its own now side. A FUTURE
+        // MUTATOR THAT DOES NOT CLOSE THE VIEW WOULD HAVE TO RECOMPUTE THIS BIT.
+        // It is cleared by the whole-struct reset at close,
         // like every other field but the generation.
         //
         // IT READS INDEX 0 ALWAYS, never the walk position: `,` and `.` step
@@ -3086,6 +3121,12 @@ inline bool history_step_actionable(const AppState& a,
 // why each of them clears, are enumerated ONCE at AppState::HistoryMode::focus;
 // each site here calls this and states only its own class.
 //
+// "ONE CLEARER" IS EXACT AS OF 2026-08-06, when the plain focus click's
+// empty-lane arm — which had cleared the pair inline — was routed through here;
+// re-derived by grepping every writer of the two fields. What remains outside is
+// SETTERS, not clearers: that same click re-seats the focus over this call, and
+// the modified lane pair writes a non-empty set with the focus it lands on.
+//
 // It RETURNS WHETHER ANYTHING WAS STANDING, because two of those sites damage
 // the window only when something actually changed (bare Home / End and the
 // waveform placement press — a face swap costs a repaint, and nothing swapping
@@ -3124,9 +3165,11 @@ inline bool history_mode_revert_subject_standing(
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
-// IT TAKES THE MODE ITSELF because the gate it asks does: one of that gate's
-// admissions is conditional on the session (the commit act's, on
-// head_delta_empty), so both readers must hand it the SAME state or the face
+// IT TAKES THE MODE ITSELF because the gate it asks does: TWO of that gate's
+// admissions are conditional on the session (re-derived 2026-08-06 — the commit
+// act's, on head_delta_empty, and the revert act's, on
+// history_mode_revert_subject_standing above), so both readers must hand it the
+// SAME state or the face
 // and the key would answer differently. The caller passes the struct and
 // restates none of its terms.
 bool history_mode_disables_button(const AppState::HistoryMode& mode,

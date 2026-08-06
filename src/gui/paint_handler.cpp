@@ -3304,8 +3304,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // audition inside the view used to start and stop at the AUTHORED window
     // while the bar above it showed the diff span, and the view auditions
     // nothing now — the substitution has no behavioural reader left at all. The
-    // range's owners (playback and navigation) still read the real trim and are
-    // still not display sites; nothing about that changed.
+    // range's two owners — NAVIGATION only since the same day's ungating
+    // (compute_trim_samples for source view, Viewport::trim_range for target;
+    // playback reads neither) — still read the real trim and are still not
+    // display sites; nothing about that changed.
     int64_t bar_begin_frame = app.trim.begin_frame;
     int64_t bar_end_frame   = app.trim.end_frame;
     if (app.history_mode.active) {

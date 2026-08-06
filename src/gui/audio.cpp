@@ -18,11 +18,16 @@
 
 namespace {
 
-// `.peaks` v6 format -------------------------------------------------------
+// `.peaks` format (v7) -----------------------------------------------------
+//
+// The layout below is version-independent — what the bumps have moved is the
+// RUNG COUNT the body header carries in num_levels, never the framing — so this
+// description holds for every version the reader has ever accepted; only the
+// version field's current value tracks kCacheVersion (below).
 //
 // 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently 6)
+//   off 8  | 2  | version (uint16, currently kCacheVersion = 7)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)

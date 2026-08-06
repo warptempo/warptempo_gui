@@ -464,7 +464,12 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
     if (!in.eof()) return false;
     if (lines.size() != 5) return false;
     if (lines[0] != kSidecarMagic) return false;
-    if (lines[1] != "sidecar_layout=1") return false;
+    // Composed from kSidecarVersion exactly as the writer composes it, so a
+    // future layout bump moves reader and writer together instead of silently
+    // accepting a file the writer no longer produces (the drift the hardcoded
+    // spelling here carried until 2026-08-06).
+    if (lines[1] != "sidecar_layout=" + std::to_string(kSidecarVersion))
+        return false;
 
     uint64_t recorded_size = 0;
     int64_t recorded_mtime = 0;
