@@ -782,15 +782,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         land_playhead_on_source_frame(
             app, audio, viewport,
             app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
-        // THE LIVE FAMILY'S LANDING, MIRRORED (architect 2026-08-05): the live
-        // cycle sets the WORKING ZOOM and recenters on its stop, follow mode
-        // not gating it, so a Tab walk reads its stops at the authoring zoom;
-        // this does the same over the diff-flag list, reading the flag it just
-        // landed on. Both calls are needed and in this order: apply_zoom_change
-        // centers on the resting cursor when the level actually moves and
-        // early-returns when it does not, and the explicit recentre is what
-        // frames the stop in that second case.
-        viewport.apply_zoom_change(kWorkingZoomLevel);
+        // THE LIVE FAMILY'S LANDING, MIRRORED: the live cycle recenters on its
+        // stop AT THE CURRENT ZOOM, follow mode not gating it, and this does the
+        // same over the diff-flag list, reading the flag it just landed on. The
+        // working-zoom snap both families carried for one commit is REVERTED
+        // (architect 2026-08-05, "no zoom on Tab", same day it landed) — a walk
+        // must not re-frame the view under the reader, in here least of all,
+        // where the whole delta is what is being read.
         viewport.center_viewport_on_playhead();
         // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every arm
         // above either returned or picked a different index), so the full-window
@@ -1006,9 +1004,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             on_key's dispatch point (input_handler.cpp), and
 //                             this line only lets the two that can be live in
 //                             this mode run — the REGION CLEAR (a span formed
-//                             before `h`; the mode's pointer allowlist admits no
-//                             region former, so nothing in here can make a new
-//                             one) and the RENDER / BATCH CANCEL (a render
+//                             before `h`, or, since 2026-08-05, one formed
+//                             INSIDE the view by its own SHIFT-exact lower-half
+//                             former: the pointer allowlist admits a region
+//                             former now, so the clear is reachable from within,
+//                             which is fine — the region is scratch and its
+//                             clear has no side effects) and the RENDER / BATCH
+//                             CANCEL (a render
 //                             launched before `h`, whose progress line the mode's
 //                             corner outranks). Both sit BELOW this gate in
 //                             on_key and neither mutates authored state, so the

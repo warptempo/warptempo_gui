@@ -267,10 +267,13 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
     // the focus — a PURE playhead write (land_playhead_on_marker), this gesture
-    // adding no region clear of its own. THERE IS NOTHING TO CLEAR: a region rests
-    // only beside an EMPTY selection (its two formers both deselect at press — the
-    // inventory is at RegionState, app_state.h) and Ctrl+N needs a focus, so no
-    // span can be standing when this runs.
+    // adding no region clear of its own. THERE IS ALL BUT NOTHING TO CLEAR: the
+    // two LIVE formers deselect at press and Ctrl+N needs a focus, so no span
+    // drawn in an ordinary view can be standing when this runs. The `h` view's
+    // own former (2026-08-05) is the one route that rests a span beside a live
+    // selection, so a span drawn in there and carried out of the view survives
+    // this land — accepted as scratch, not repaired here (the exception and its
+    // consumers are recorded at RegionState, app_state.h).
     // The land sits at THIS caller and not inside collapse_to_focused, because the
     // site that hands the lane a new focus is the site that owes it a land — and
     // not every caller does: the singleton tempo step has no focus change to land
@@ -562,10 +565,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // no repaint there; in target view the synchronous re-warp below repaints
     // the waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
-        // NO REGION WORK AT ALL HERE, and none is reachable: a region rests only
-        // beside an EMPTY selection (both of its formers deselect at press — the
-        // inventory is at RegionState, app_state.h) while a tempo step needs a
-        // selection. The #16 trim-highlight re-sync that stood here was deleted
+        // NO REGION WORK AT ALL HERE: the two LIVE formers deselect at press
+        // while a tempo step needs a selection, so no span drawn in an ordinary
+        // view can be standing. Since 2026-08-05 the `h` view's own former can
+        // rest one beside a live selection, and a step leaves it alone — this is
+        // a value edit, not a playhead move (the exception is recorded at
+        // RegionState, app_state.h). The #16 trim-highlight re-sync that stood here was deleted
         // 2026-07-29 and the highlight itself 2026-07-30.
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();

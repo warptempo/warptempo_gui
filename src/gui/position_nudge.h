@@ -36,8 +36,9 @@ struct GuiTargetRender;
 //     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, the
 //     zoom framing, and the undo/redo + paste
 //     restores (which DEFINE a group selection). `x` still READS a span — the
-//     trim-scratch region's, which since 2026-07-30 rests only beside an EMPTY
-//     selection; Space left this list the same day, its left-bound region launch
+//     trim-scratch region's, which since 2026-07-30 rests beside an EMPTY
+//     selection on every route but the `h` view's own former (2026-08-05 — that
+//     one deselects nothing; the record is at RegionState, app_state.h); Space left this list the same day, its left-bound region launch
 //     dropped for an unconditional play-from-the-playhead;
 //   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
 //     POSITIONAL: Ctrl+N and all horizontal movement. Ctrl+N is coupled because

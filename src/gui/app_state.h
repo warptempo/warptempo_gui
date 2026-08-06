@@ -36,11 +36,13 @@ class GuiAudio;
 // zoom-out saturates at the per-file effective ceiling
 // (effective_max_zoom_level), where full zoom-out rests at whole-song-visible.
 // There is no fit-file mode and no sentinel level. Bare-digit keys are unbound
-// for zoom: only `0` toggles between the working zoom and full zoom-out, and
-// `C` jumps to the working zoom centered on the playhead (or on the focused
-// marker). Smaller level = less file per window = more zoomed in. kMinZoom is
+// for zoom: `0` goes to full zoom-out and, pressed once already there, runs the
+// `c` command (it stopped being a two-way toggle 2026-08-05), and `c` jumps to
+// the working zoom centered on the playhead (or on the focused marker) — the
+// Tab family, which recenters on its stop, changes no zoom at all. Smaller
+// level = less file per window = more zoomed in. kMinZoom is
 // the deepest zoom-in the manual walk can reach (1.2 s); kWorkingZoomLevel is
-// the fine-tuning rest point every snap/toggle gesture lands on (2.4 s, one
+// the fine-tuning rest point the snap gestures land on (2.4 s, one
 // step shallower), where the working-zoom authoring-grid bit-exactness claims
 // hold.
 constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
@@ -147,16 +149,25 @@ struct UndoEntry {
 // the selection as they commit (the setter-deselect rule).
 //
 // THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
-// `region.active = true`). TWO CODE SITES ACTIVATE A REGION, and BOTH DESELECT AT
-// PRESS:
+// `region.active = true`, and note that two of the three reach it through the one
+// shared tail form_region_span_to_click). THREE PRESSES ACTIVATE A REGION:
 //   * the plain upper-half waveform DRAG (paints it live, leaving the selection
 //     EMPTY throughout — the press's deselect-all is the committed act);
 //   * the waveform SHIFT+click region former (playhead-to-click with nothing
 //     selected, else furthest-selected-marker-to-click, DROPPING the selection),
-//     which also arms a drag on the far endpoint.
-// SO A REGION RESTS ONLY BESIDE AN EMPTY SELECTION, structurally — there is no
-// route that rests one beside a live selection, and every consumer may rely on
-// it. Everything that used to write a region from somewhere else is DELETED with
+//     which also arms a drag on the far endpoint;
+//   * the `h` HISTORY VIEW'S SHIFT press in the waveform's LOWER HALF (architect
+//     2026-08-05 — playhead-to-click, the arm identical), the mode's listening
+//     scratch. It is THE ONE FORMER THAT DESELECTS NOTHING, because the view
+//     touches no store selection at all by its own standing rule.
+// SO A REGION RESTS BESIDE AN EMPTY SELECTION EXCEPT ON ONE ROUTE, and that
+// exception is this last former's alone: a span drawn inside the view rests
+// beside whatever store selection stood when `h` was pressed, and survives the
+// close (nothing clears the region at either mode edge). The consumers that
+// derived "nothing to clear" or "no region gate needed" from the old absolute
+// each state their own narrowed claim and point here; none of them WRITES
+// differently for it — what changed is that the state is reachable, not what any
+// of them does in it. Everything that used to write a region from somewhere else is DELETED with
 // the span form: the selection-extent owner, the trim-window sync, the two
 // multi-delete demotions, and the whole three-value origin enum RegionState
 // carried. A region has ONE origin now — the user drew it.
@@ -2046,8 +2057,10 @@ struct AppState {
     // The bare-Esc inventory is still the six enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
     // so the two bindings that can be live in here run — the REGION CLEAR (a
-    // span formed before `h`, since the pointer allowlist admits no region
-    // former) and the RENDER / BATCH CANCEL (a render launched before `h`).
+    // span formed before `h`, or one formed INSIDE the view: since 2026-08-05
+    // the pointer allowlist has a region former of its own, the SHIFT-exact
+    // lower-half press) and the RENDER / BATCH CANCEL (a render launched
+    // before `h`).
     // Neither touches authored state, which is why admitting it costs the frozen
     // now side nothing. With neither standing, Esc is a consumed nothing.
     //

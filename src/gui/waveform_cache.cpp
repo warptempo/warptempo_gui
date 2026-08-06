@@ -990,7 +990,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // active-column-only.
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
-        // marker paints, and this arm becomes the producer of the same two
+        // marker paints. (The lane is not the whole of that suppression — the
+        // phase-reset lead-in RING is a live-marker surface in the WAVEFORM, and
+        // it is gated at its own visibility owner, phase_reset_overlay_band in
+        // paint_handler.cpp, since 2026-08-05.) This arm becomes the producer of the same two
         // stashes the two marker arms below produce — with `marker_index`
         // carrying an index into app.history_mode.flags rather than into a
         // store, which is what lets hit_test_flag serve the mode's focus click

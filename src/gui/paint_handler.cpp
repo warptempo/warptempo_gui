@@ -3038,6 +3038,24 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return out;
     if (area.w <= 0 || area.h <= 0) return out;
+    // THE `h` HISTORY VIEW SUPPRESSES THE RING (architect 2026-08-05). The view
+    // paints the DELTA and no live marker surface at all — the lane's flags and
+    // its stems go through the lane's own producer ("the history mode owns the
+    // lane whole", waveform_cache.cpp) — and this ring is live-store display
+    // exactly as they are: what triggers it is app.last_selected_marker, the
+    // LIVE focus, which the mode neither reads nor clears, so a `h` pressed with
+    // a phase reset focused in P + target left the ring painting alone over the
+    // diff. It joins that suppressed inventory here, at the visibility owner
+    // rather than at the painter, so the one function still carries every gate.
+    // NO DAMAGE OWNER IS NEEDED for the appear/disappear: the mode's entry and
+    // exit each end in viewport.invalidate_all() (open_history_mode_fresh /
+    // close_history_mode), which is the whole window.
+    // Selection::phase_overlay_subject deliberately does NOT mirror this gate:
+    // that mirror is SELECTION state, and the mode is no more selection state
+    // than the geometry gates below are. Its third reader is SPACE's lead-in
+    // launch, and the mode admits playback whole — the view changes what is
+    // PAINTED, never what plays.
+    if (app.history_mode.active) return out;
     // The multi-select suppression (architect 2026-07-23): the overlay depicts ONE
     // focused reset's lead-in, a single-focus authoring aid, so a MULTI-select
     // (2+ members) suppresses it — the state is about a span of markers rather
@@ -3045,14 +3063,19 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // selection shows it as before; the multi-select builders all damage the
     // waveform, so the overlay's appear/disappear rides their damage.)
     //
-    // NO REGION GATE HERE, and none is needed — THE DERIVATION, recorded once at
+    // NO REGION GATE HERE, and none is wanted — THE DERIVATION, recorded once at
     // this site with Selection::phase_overlay_subject's mirror pointing here:
-    // every region former DESELECTS at press (the plain upper-half waveform drag
-    // and the shift waveform press are the only two — the inventory is at
-    // RegionState, app_state.h), so a region rests ONLY beside an EMPTY
-    // selection, and an empty selection carries no focused reset for this band
-    // to annotate. A region and a subject cannot coexist, so no region test
-    // could ever decide this band's visibility.
+    // the two LIVE region formers DESELECT at press (the plain upper-half
+    // waveform drag and the shift waveform press — the inventory is at
+    // RegionState, app_state.h), so a region drawn in an ordinary view rests
+    // beside an EMPTY selection, and an empty selection carries no focused reset
+    // for this band to annotate. THE ONE EXCEPTION SINCE 2026-08-05 is the `h`
+    // view's own former, which deselects nothing — so a span drawn in there can
+    // outlive the close beside a live selection and coexist with a subject. The
+    // gate is still absent, deliberately: a scratch span and a lead-in ring
+    // annotate different things and neither hides the other. The old absolute
+    // was only ever the reason a gate would have been DEAD code; it was never a
+    // requirement of this band.
     if (app.selected_markers.size() >= 2) return out;
 
     // Paint sample: the exact expression render.cpp's file-local

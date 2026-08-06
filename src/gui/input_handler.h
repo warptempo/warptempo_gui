@@ -143,14 +143,18 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // recolored ground repaints away. A no-op when no region is active.
 //
 // WHAT THE REGION IS, so the clear list reads as one rule: TRIM SCRATCH
-// (architect 2026-07-30 — the SPAN FORM retired). It is formed by exactly two
-// gestures, both of which DESELECT at press (the plain upper-half waveform drag
-// and the shift waveform press), previewed by the SCRUB press (either entry —
+// (architect 2026-07-30 — the SPAN FORM retired), and LISTENING scratch in the
+// `h` view, which has no trim to aim. It is formed by three gestures — the plain
+// upper-half waveform drag and the shift waveform press, both of which DESELECT
+// at press, plus the `h` view's own lower-half shift press (2026-08-05), which
+// deselects nothing — previewed by the SCRUB press (either entry —
 // the lower-half left one or the bare right one), and
-// CONSUMED by `x`. It is not a playhead form, not a selection visual, not a
+// CONSUMED by `x` (a live-view act; `x` is consumed in the view). It is not a
+// playhead form, not a selection visual, not a
 // trim-window display — the cursor playhead paints straight across it and the
-// singleton stem is never suppressed. So a span rests ONLY beside an EMPTY
-// selection, structurally (the former inventory is at RegionState, app_state.h).
+// singleton stem is never suppressed. So a span rests beside an EMPTY selection
+// on every route but that third former's (the inventory and the exception's
+// consequences are at RegionState, app_state.h).
 //
 // EVERYTHING THAT MOVES THE PLAYHEAD OR REPLACES THE SELECTION TAKES THE SPAN
 // WITH IT, unconditionally — never gated on whether the playhead actually moved.
@@ -783,6 +787,20 @@ struct GuiInputHandler {
     // behavior bit-for-bit. Esc mid-drag does nothing for either arm (no cancel).
     void arm_region_drag_preserving(int64_t anchor_frame, int x, int y);
 
+    // THE SHIFT FORMER'S SHARED TAIL (hoisted 2026-08-05): install the span
+    // between the far `endpoint` and the pressed column's `click_frame` — both
+    // active-domain frames the caller has already clamped playable — refusing a
+    // sub-threshold sliver, damaging the waveform, and arming the drag on the
+    // far endpoint through arm_region_drag_preserving either way, so the
+    // click-side endpoint keeps dragging live. TWO CALLERS: the LIVE waveform
+    // shift press (which chooses its endpoint and deselects first) and the `h`
+    // HISTORY VIEW'S LOWER-HALF shift press (which anchors at the playhead and
+    // touches no selection at all — handle_history_mode_press). It writes NO
+    // playhead and stops NO playback; the drag's own motion path carries the
+    // cursor once the gesture moves, for both callers alike.
+    void form_region_span_to_click(int64_t endpoint, int64_t click_frame,
+                                   int x, int y);
+
     // THE PLACEMENT PRESS'S PLAYHEAD HALF, and the whole of what the live press
     // and the `h` history mode's own placement press have in common: drop the
     // playhead at the clicked column, reseek a live scanner to it (keeping the
@@ -1016,13 +1034,14 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker, recenter,
-    // AND SET THE WORKING ZOOM (kWorkingZoomLevel — architect 2026-08-05, so a
-    // Tab walk reads the markers at the authoring zoom; the same level `c`
-    // snaps to). The recenter is unconditional — follow mode does not gate the
-    // cycle. A step that focuses nothing does nothing at all, zoom included.
-    // The WHOLE Tab family reaches the zoom through here: the three bare chords
-    // and the Ctrl+Shift+Tab lockstep march, which calls this once per tab.
+    // playback and move the playhead onto the newly focused marker, recenter —
+    // AT THE CURRENT ZOOM LEVEL, which the cycle never changes (architect
+    // 2026-08-05, "no zoom on Tab", reverting the same-day working-zoom landing
+    // this carried for one commit; `c` and `0`'s second arm remain the only
+    // routes to kWorkingZoomLevel). The recenter is unconditional — follow mode
+    // does not gate the cycle. A step that focuses nothing does nothing at all.
+    // The WHOLE Tab family comes through here: the three bare chords and the
+    // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
@@ -1031,7 +1050,8 @@ private:
     // Jump the playhead directly onto the currently focused marker
     // (app.last_selected_marker), stopping playback and recentering the
     // viewport on it AT THE LEVEL IT IS CALLED AT — the zoom belongs to the
-    // caller, and both callers set the working zoom right after this returns.
+    // caller, and the callers differ in it: `c` sets the working zoom right
+    // after this returns, the Tab family sets nothing (2026-08-05).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the

@@ -767,8 +767,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the region
     // / trim / whole-song span); C remains the DIRECT working-zoom-and-center
-    // gesture — `0` reaches it only from full out, and by calling it — and the
-    // Tab family lands at the working zoom too, so `0` is
+    // gesture — `0` reaches it only from full out, and by calling it — while
+    // the Tab family changes no zoom at all (2026-08-05), so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2
     // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
     // beside bare `t`, the axis handler they compose); 4..9 are unbound.
@@ -1060,26 +1060,21 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     else         selection.select_prev_marker();
 
     // The select above establishes the focused marker; the shared jump tail
-    // moves the playhead onto it and recenters. Byte-identical to the `c`
-    // gesture's marker jump.
+    // moves the playhead onto it and recenters AT THE CURRENT ZOOM. Byte-
+    // identical to the `c` gesture's marker jump — the zoom is what separates
+    // the two commands: `c` snaps to the working level, a Tab walk keeps
+    // whatever level the user is reading at.
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
-    // the jump returns false having touched neither playhead nor viewport, and
-    // the zoom below must not fire either — a Tab in an empty collection stays
-    // the consumed nothing it has always been.
-    if (!jump_playhead_to_focused_marker()) return;
-
-    // THE CYCLE LANDS AT WORKING ZOOM (architect 2026-08-05): a Tab walk reads
-    // the markers at the authoring zoom, so every step sets kWorkingZoomLevel —
-    // the same level `c` snaps to, and the whole Tab family reaches it through
-    // this one function (bare Tab, Shift+Tab, IsoLeftTab, and the
-    // Ctrl+Shift+Tab lockstep march, which calls this twice, once per tab).
-    // AFTER the jump, not before: apply_zoom_change recenters on the resting
-    // cursor, which the jump has just seated on the focused marker, so this one
-    // call is the final centering and no third viewport write is needed. Once
-    // the walk is at the working zoom the call early-returns on the unchanged
-    // level (the jump's own recenter having already framed the stop), so only
-    // the first step of a walk pays a second synchronous plate render.
-    viewport.apply_zoom_change(kWorkingZoomLevel);
+    // the jump returns false having touched neither playhead nor viewport — a
+    // Tab in an empty collection stays the consumed nothing it has always been.
+    //
+    // NO ZOOM ON TAB (architect 2026-08-05, reverting his own same-day ruling
+    // that had every step set kWorkingZoomLevel here): the walk is navigation
+    // and must not re-frame the view under the user, so the whole family — the
+    // three bare chords and the Ctrl+Shift+Tab lockstep march, which calls this
+    // once per tab — lands and recentres at the level it was pressed at. `c` and
+    // `0`'s second arm are untouched and remain the routes to the working zoom.
+    jump_playhead_to_focused_marker();
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {
@@ -1129,11 +1124,11 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     clear_region_highlight(app, viewport);
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
-    // IS THE CALLER'S: both callers set the working zoom after this returns —
-    // `c` by its own snap, the Tab family through cycle_marker_focus's step
-    // (architect 2026-08-05) — so this tail frames the stop at whatever level
-    // it was called at and the caller's apply_zoom_change re-centers if the
-    // level moves. This recenter is unconditional: follow
+    // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
+    // working zoom right after this returns, the Tab family sets nothing at all
+    // (architect 2026-08-05, "no zoom on Tab") — so this tail frames the stop at
+    // whatever level it was called at, and only `c`'s apply_zoom_change
+    // re-centers after it. This recenter is unconditional: follow
     // mode does not gate the cycle (architect 2026-07-19, reversing the
     // earlier follow-only rule). center_viewport_on_playhead is the SOLE
     // viewport write in this path: it reads the cursor we just set and
