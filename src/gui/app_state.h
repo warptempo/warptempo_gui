@@ -665,7 +665,11 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // MOVED records nothing and clears any candidate. Surfaces:
 //   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
 //                 (run_span_framing_command: a live region, else a proper trim
-//                 sub-window, else the whole song). Target unused; both axes'
+//                 sub-window, else the whole song) — and, while the `h` HISTORY
+//                 VIEW stands, the VIEWED CHECKPOINT'S DIFF SPAN instead
+//                 (frame_viewed_commit_diff_span, 2026-08-05: one gesture on one
+//                 band, two commands, the mode picking between them at the
+//                 press). Target unused; both axes'
 //                 slack compared. It REHOMED here from the deleted zoom lane
 //                 (architect 2026-07-31) and consumes AHEAD of the cap/bridge
 //                 drag arm, so the second click frames rather than grabs. The
@@ -714,9 +718,9 @@ struct DoubleClickCandidate {
 
 // THE TRIM-BAR FRAMING DOUBLE-CLICK'S FIRST HALF, recorded at the press because
 // only the RELEASE can tell a click from a drag. A plain trim-bar-lane press
-// (any spot in the band — endcap, bridge, or bare ground; read-only included,
-// the framing
-// being pure navigation) records this; the left release seeds the TrimBar
+// (any spot in the band — endcap, bridge, or bare ground; read-only included and
+// the `h` history view too, the framing
+// being pure navigation in both) records this; the left release seeds the TrimBar
 // candidate when the pointer is still within kDoubleClickSlackPx of the recorded
 // point and no trim drag went live. That slack IS the motionless test: it equals
 // kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
@@ -2134,8 +2138,10 @@ struct AppState {
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it: zoom, the paged scroll, the overview command and
     // playback's follow chase move viewport_start_sample or zoom_level, the
-    // pointer's pan / strip / ruler drags move both, the mode's OWN diff-flag
-    // click lands the playhead, and since 2026-08-04 the admitted VIEW SWITCHES
+    // pointer's pan / strip / ruler drags move both, the mode's OWN cursor-moving
+    // acts land the playhead (the diff-flag click, the placement press, and the
+    // keyboard's Tab cycle / Home / End / `c` — which `0` reaches too, from full
+    // zoom out), and since 2026-08-04 the admitted VIEW SWITCHES
     // move the two whole-file keys `active_audio_view=` and
     // `active_markers_view=` (`t` moving the per-tab band with them, the
     // playhead and viewport translating across the domain flip) — every one of

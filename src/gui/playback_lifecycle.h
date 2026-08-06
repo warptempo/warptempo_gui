@@ -44,8 +44,12 @@ struct GuiPlaybackLifecycle {
     //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the bare Up/Down tempo cent
     //     step edits values and leaves the selection and its span exactly as they
     //     stood, so the audition plays on under the edit.
-    //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`, PageUp/PageDown, the zoom
-    //     steps — they move the window onto the audio, not the audio.
+    //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
+    //     PageUp/PageDown, the zoom steps — they move the window onto the audio,
+    //     not the audio. `0`'s OTHER arm, taken with the zoom already at full
+    //     out, IS the `c` command (run_center_command) and stops exactly where
+    //     `c` does — inside the land onto the focused stop, so only when one
+    //     stands. One command, one answer; `0` adds no rule of its own.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: `x` and Shift+X, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
     //     stop at their own commit point). BOTH views because a live audition is

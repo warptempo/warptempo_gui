@@ -246,7 +246,7 @@ struct GuiHistoryCommitDelta {
     //
     // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: its
     // readers describe the CHECKPOINT, not the lane. The history view zooms to
-    // this span on a plain trim-bar click
+    // this span on a plain trim-bar DOUBLE-click
     // (GuiInputHandler::frame_viewed_commit_diff_span), and the trim bar
     // displays it for as long as the view stands (GuiPaintHandler::paint_trim)
     // — and a span that shrank when the user pressed `p` would make a view

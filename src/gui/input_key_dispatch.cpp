@@ -445,7 +445,8 @@ bool GuiInputHandler::open_history_mode_fresh() {
     app.history_mode = std::move(fresh);
     drop_lane_stash_across_history_edge();
     // OPEN AT FULL ZOOM OUT (architect 2026-08-05) — the whole song in the
-    // window, from which the trim-bar click frames the differences on demand.
+    // window, from which the trim bar's double-click frames the differences on
+    // demand.
     // After the drop, so the synchronous rebuild the framing may kick
     // republishes the ARRIVING commit's flags rather than being erased by it,
     // and after the session is moved in, since the framer is mode-gated.
@@ -458,12 +459,14 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // (architect 2026-08-05, superseding his own per-diff framing of earlier that
 // day). The three mode edges reset to FULL ZOOM OUT instead
 // (frame_history_view_whole_song, below); this is what the user asks for when he
-// wants the differences filling the window, and its ONE caller is THE PLAIN
-// TRIM-BAR CLICK — the mode's analog of the regular views' span-framing
-// double-click, single-click here because every other trim gesture on that band
-// is a consumed no-op in the mode, so there is nothing for a first click to mean.
-// The bar is showing the diff span while the view stands (paint_trim's display-
-// only substitution), so the gesture reads as "zoom to what the bar shows".
+// wants the differences filling the window, and its ONE caller is THE TRIM BAR'S
+// PLAIN DOUBLE-CLICK — the regular views' span-framing gesture exactly, on the
+// same band and through the same consume-before-arm machinery, with this act as
+// its command (architect 2026-08-05, superseding the single click this shipped
+// with earlier that day: the band behaves like a read-only tab's, where the trim
+// drags refuse and the framing double-click still navigates). The bar is showing
+// the diff span while the view stands (paint_trim's display-only substitution),
+// so the gesture reads as "zoom to what the bar shows".
 //
 // IT IS IDEMPOTENT, which is what makes repeated clicking harmless: the framing
 // ends in apply_zoom_to_start, whose current-vs-target compare no-ops when
@@ -516,11 +519,11 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
 
 // WHAT THE MODE'S THREE EDGES DO INSTEAD (architect 2026-08-05, SUPERSEDING the
 // same-day per-diff framing at those edges — the framing itself survives whole
-// as the trim-bar click's act above). Entry, each `,` / `.` step and each
+// as the trim-bar double-click's act above). Entry, each `,` / `.` step and each
 // COMPARE SWITCH reset the viewport to FULL ZOOM OUT: the whole song in the
 // window, which is the reading position a checkpoint review starts from — the
 // delta's flags are laid out across the piece, and where they SIT is as much of
-// the answer as what they say. From there the click frames them.
+// the answer as what they say. From there the double-click frames them.
 //
 // FULL ZOOM OUT IS SPELLED AS THE SPAN FRAMER'S WHOLE-SONG ARM, [0, total] with
 // NO margin, which the framer's centering plus the wall clamp degenerate to the
@@ -815,27 +818,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     }
 
     // BARE `c` — the live arm's recipe with the MODE's focus in place of the
-    // live marker's: working zoom, centered on the playhead, and with a focus
-    // standing the playhead re-lands on that flag first (idempotent when it is
-    // already there, which after a click or a Tab step it is). The live arm's
-    // repair_last_selected / jump_playhead_to_focused_marker pair is
-    // deliberately NOT run: it walks the live stores, which the lane is not
-    // showing. The region clear is unconditional and up front, exactly as the
-    // live arm does it — the no-focus path never reaches a land's own tail.
+    // live marker's, and the BODY IS NOT HERE: run_center_command owns both
+    // recipes and picks between them on the mode bit (2026-08-05, when `0`'s
+    // second arm became a third caller of the same command). This arm is the
+    // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
+    // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
-        clear_region_highlight(app, viewport);
-        const int focus = app.history_mode.focus;
-        if (focus >= 0 && focus < static_cast<int>(app.history_mode.flags.size())) {
-            // The live arm's stop lives inside its jump, so it stops only when
-            // something is focused; this keeps that shape.
-            playback_lifecycle.stop_playback_if_playing();
-            land_playhead_on_source_frame(
-                app, audio, viewport,
-                app.history_mode.flags[
-                    static_cast<std::size_t>(focus)].time_frame);
-        }
-        viewport.apply_zoom_change(kWorkingZoomLevel);
-        viewport.center_viewport_on_playhead();
+        run_center_command();
         return true;
     }
 
@@ -851,13 +840,22 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //   - Space (bare)          → the audition. Playback is RUNNING state, not
 //                             authored state; the frozen now side cannot see it.
 //   - = / - (bare)          → zoom in / out
-//   - 0 (bare)              → the overview: full zoom out, or a centre on the
-//                             playhead once already there
+//   - 0 (bare)              → the overview: full zoom out, or, once already
+//                             there, THE MODE'S OWN `c` (run_center_command
+//                             forks on the mode bit, so the second arm reads the
+//                             diff-flag focus like every other mode-local
+//                             re-expression — 2026-08-05). That arm is not a
+//                             pure viewport move: it is `c`, region clear, stop
+//                             and land included, admitted on exactly the reason
+//                             `c` itself is claimed one line above the gate.
 //   - PageUp/PageDown       → the paged viewport scroll
-//     (bare)                  — the three above are PURE VIEWPORT MOVES, which
-//                             is the mode's navigation vocabulary: the delta is
-//                             laid out on the viewport, so panning and zooming
-//                             it is reading it.
+//     (bare)                  — the three above are NAVIGATION, which is the
+//                             mode's whole vocabulary: the delta is laid out on
+//                             the viewport, so panning and zooming it is reading
+//                             it. Two of them are PURE viewport moves; `0`'s
+//                             second arm reaches the mode's own `c` and lands
+//                             the playhead, which the mode's diff-flag click and
+//                             Tab cycle already do.
 //   - t / p / 1 / 2 / 3     → THE VIEW SWITCHES (architect 2026-08-04, from his
 //     (bare)                  first real session with the mode). THE DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
@@ -1139,8 +1137,10 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
 // it: zoom, the paged scroll, the overview command and playback's follow chase,
-// the pointer's pan / strip / ruler drags, and the mode's own diff-flag click,
-// which lands the playhead. Committing the frozen text
+// the pointer's pan / strip / ruler drags, and the mode's own cursor-moving acts
+// — the diff-flag click, the placement press and the keyboard's Tab cycle,
+// Home/End and `c`, which `0` reaches too from full zoom out. Committing the
+// frozen text
 // would therefore write a checkpoint whose view band is a stale copy of one the
 // user has since moved — invisible in the diff (which displays only `scale=`)
 // and wrong on disk. Rebuilding costs one serialization and is exactly what a
@@ -3011,30 +3011,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.set_follow_mode(!app.follow_mode);
         break;
     case GuiKeys::C:
-        // Jump to the working zoom (kWorkingZoomLevel, the ideal warp-authoring
-        // zoom). When a marker is focused, first jump the playhead exactly onto
-        // it — the same jump the Tab family runs, after the same last-selected
-        // repair — then set the working zoom and center on it; with no focused
-        // marker, keep the plain working-zoom-and-center-on-playhead behavior.
-        // Clear the region here, unconditionally and up front: the no-focus arm
-        // never reaches jump_playhead_to_focused_marker's clear tail (that
-        // function early-returns with nothing focused), and a region drag clears
-        // the marker selection, so region-drag-then-`c` is exactly the no-focus
-        // path. HELP lists `c` in the clear set unconditionally. The focused arm
-        // then double-clears via the jump tail — a no-op, since the helper's
-        // !active guard returns immediately on the already-cleared region.
-        // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
-        // collapse-to-focus that stood here is deleted — it existed only to keep a
-        // group from resting SPANLESS, a state that no longer exists now the
-        // region is trim scratch rather than a group's playhead form. The jump
-        // below is a jump TO THE FOCUS and accepts a group's focus as-is; the
-        // always-visible cursor lands there, the other members keeping their
-        // brightened flags.
-        clear_region_highlight(app, viewport);
-        selection.repair_last_selected();
-        jump_playhead_to_focused_marker();
-        viewport.apply_zoom_change(kWorkingZoomLevel);
-        viewport.center_viewport_on_playhead();
+        // The center command, whose recipe and whose history-mode twin both live
+        // at its owner (run_center_command). This arm is unreachable while the
+        // mode stands — handle_history_mode_key claims `c` above this dispatch —
+        // so the owner's fork decides nothing for it; it is the third caller,
+        // `0`'s already-full-out arm, that the fork exists for.
+        run_center_command();
         break;
     case GuiKeys::Home:
         // Trim-bound jump, and a route OUT of the marker lane: the playhead is

@@ -3259,10 +3259,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // displayed_trim_ms mapping below, so the substituted frames ride the target
     // view's display map exactly as the authored pair does. Nothing consumes the
     // painted pair for BEHAVIOR while the view stands: the trim bar's three
-    // press routes and its span-framing double-click are all consumed by the
-    // pointer allowlist (handle_history_mode_press), which is also why
-    // pointer_cursor_kind empties the band's cues in the mode, and the endcap /
-    // bridge hit tests are reachable only from those presses.
+    // press routes are consumed by the pointer allowlist
+    // (handle_history_mode_press), which is also why pointer_cursor_kind empties
+    // the band's cues in the mode, and the endcap / bridge hit tests are
+    // reachable only from those presses. Its span-framing DOUBLE-CLICK is not
+    // consumed but REPLACED there, framing the diff span — and it reads the
+    // delta directly, never this painted pair, so it adds no consumer either.
     //
     // THE ONE RECORDED INCOHERENCE: playback still uses the REAL trim range, so
     // an audition inside the view starts and stops at the authored window while

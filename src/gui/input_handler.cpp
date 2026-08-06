@@ -428,7 +428,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                step. Pure navigation, same family as
     //                              the playhead-step and Home/End entries.
     //   - =/- (no mods)          → zoom in/out
-    //   - 0 (no mods)            → full zoom-out, else center on the playhead
+    //   - 0 (no mods)            → full zoom-out, else the `c` command
     //                              (run_overview_command)
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → focused-marker jump (when present) +
@@ -744,12 +744,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare 0 goes to FULL ZOOM OUT, and centers on the playhead once it is
-    // already there (run_overview_command — architect 2026-08-05, no longer a
-    // toggle). The trim-bar double-click deliberately
+    // Bare 0 goes to FULL ZOOM OUT, and runs the `c` command once it is already
+    // there (run_overview_command — architect 2026-08-05, no longer a toggle;
+    // the second arm was a bare center for one day). The trim-bar double-click
+    // deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the region
-    // / trim / whole-song span); C remains the direct working-zoom-and-center
-    // gesture, and the Tab family now lands at the working zoom too, so `0` is
+    // / trim / whole-song span); C remains the DIRECT working-zoom-and-center
+    // gesture — `0` reaches it only from full out, and by calling it — and the
+    // Tab family lands at the working zoom too, so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2
     // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
     // beside bare `t`, the axis handler they compose); 4..9 are unbound.
@@ -1129,29 +1131,92 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     return true;
 }
 
+void GuiInputHandler::run_center_command() {
+    // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
+    // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
+    // FORK LIVES. THREE CALLERS: the live `c` key arm (handle_plain_bare_keys),
+    // the history mode's own `c` arm (handle_history_mode_key, which must claim
+    // the key to keep it off the mode's allowlist) and, since 2026-08-05,
+    // run_overview_command's SECOND ARM — `0` pressed with the zoom already at
+    // full out runs exactly what `c` runs, so `0` twice is overview then working
+    // zoom on the focus.
+    //
+    // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
+    // decision for all three: the two key arms are each reachable in one mode
+    // only (the mode claims `c` above the live dispatch, so the live arm below
+    // never runs in the mode), and `0` is reachable in both — putting the
+    // question at `0` alone would leave the mode's own `c` answering it a second
+    // time in another spelling. One owner, one answer.
+    if (app.history_mode.active) {
+        // THE MODE'S RE-EXPRESSION: the live recipe read against the mode's own
+        // data. With a focus standing the playhead re-lands on that diff flag
+        // first (idempotent when it is already there, which after a click or a
+        // Tab step it is). The live arm's repair_last_selected /
+        // jump_playhead_to_focused_marker pair is deliberately NOT run: it walks
+        // the live stores, which the lane is not showing. The region clear is
+        // unconditional and up front, exactly as the live arm does it — the
+        // no-focus path never reaches a land's own tail.
+        clear_region_highlight(app, viewport);
+        const int focus = app.history_mode.focus;
+        if (focus >= 0 &&
+            focus < static_cast<int>(app.history_mode.flags.size())) {
+            // The live arm's stop lives inside its jump, so it stops only when
+            // something is focused; this keeps that shape.
+            playback_lifecycle.stop_playback_if_playing();
+            land_playhead_on_source_frame(
+                app, audio, viewport,
+                app.history_mode.flags[
+                    static_cast<std::size_t>(focus)].time_frame);
+        }
+        viewport.apply_zoom_change(kWorkingZoomLevel);
+        viewport.center_viewport_on_playhead();
+        return;
+    }
+
+    // THE LIVE RECIPE. Jump to the working zoom (kWorkingZoomLevel, the ideal
+    // warp-authoring zoom). When a marker is focused, first jump the playhead
+    // exactly onto it — the same jump the Tab family runs, after the same
+    // last-selected repair — then set the working zoom and center on it; with no
+    // focused marker, keep the plain working-zoom-and-center-on-playhead
+    // behavior.
+    // Clear the region here, unconditionally and up front: the no-focus arm
+    // never reaches jump_playhead_to_focused_marker's clear tail (that function
+    // early-returns with nothing focused), and a region drag clears the marker
+    // selection, so region-drag-then-`c` is exactly the no-focus path. HELP lists
+    // `c` in the clear set unconditionally. The focused arm then double-clears
+    // via the jump tail — a no-op, since the helper's !active guard returns
+    // immediately on the already-cleared region.
+    // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
+    // collapse-to-focus that stood here is deleted — it existed only to keep a
+    // group from resting SPANLESS, a state that no longer exists now the region
+    // is trim scratch rather than a group's playhead form. The jump below is a
+    // jump TO THE FOCUS and accepts a group's focus as-is; the always-visible
+    // cursor lands there, the other members keeping their brightened flags.
+    clear_region_highlight(app, viewport);
+    selection.repair_last_selected();
+    jump_playhead_to_focused_marker();
+    viewport.apply_zoom_change(kWorkingZoomLevel);
+    viewport.center_viewport_on_playhead();
+}
+
 void GuiInputHandler::run_overview_command() {
-    // The bare `0` key: FULL ZOOM OUT FIRST, CENTER ONLY WHEN ALREADY THERE
+    // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
     // (architect 2026-08-05, REPLACING the working-zoom toggle this used to be —
     // `0` no longer returns anywhere, so the old two-way shape and its name are
     // gone; there was never a stashed return level to delete, the toggle's other
     // end having been the fixed kWorkingZoomLevel). Below the per-file effective
     // ceiling → jump to it, the whole song in the window, playhead untouched.
-    // ALREADY at it → center the viewport on the playhead at that level.
+    // ALREADY at it → RUN THE `c` COMMAND (architect 2026-08-05, superseding the
+    // bare center that arm shipped with the same day): so `0` pressed twice is
+    // overview, then the working zoom on the focus — the round trip restored,
+    // with `c`'s own focus semantics rather than a second, weaker centering. The
+    // fork between the live `c` and the history mode's own lives inside
+    // run_center_command, its one owner.
     // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
     // run_span_framing_command): it zooms to the region / trim / whole-song
     // SPAN, where this one command only ever reaches the whole song.
     //
-    // THE SECOND ARM IS STRUCTURALLY A NO-OP ON EVERY ORDINARY FILE, and is
-    // written out anyway because the rule is stated as two arms: at the
-    // effective ceiling samples_visible == total by the fit-level solve, so
-    // clamp_viewport_start's `visible >= total` branch parks the start at 0 and
-    // there is no pan room to center within (the degenerate short-file case,
-    // where the ceiling saturates at kMinZoom and visible EXCEEDS total, takes
-    // the same branch). It is reachable only where a rounding residue leaves
-    // visible one frame short of total; center_viewport_on_playhead's own
-    // moved-guard makes the common case free.
-    //
-    // BARE `0` IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
+    // THE FIRST ARM IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
     // 2026-07-29 clear+collapse as OVERSCOPED): it touches neither the selection
     // nor the region nor the playhead — only the zoom level and, through
     // apply_zoom_change, the viewport start. A selection span's endpoints are
@@ -1162,14 +1227,18 @@ void GuiInputHandler::run_overview_command() {
     // not stop a live audition either — the pure-viewport-move class of the keyboard
     // stop rule (stop_playback_if_playing's declaration, playback_lifecycle.h).
     // THE REGION CLEAR DIED WITH THE COLLAPSE, NOT SEPARATELY — do not reintroduce
-    // it on its own: a clear that left a 2+ selection standing would rest it
+    // it on this arm: a clear that left a 2+ selection standing would rest it
     // SPANLESS, the hybrid third form the architect rejected (that state draws no
     // playhead cue at all), so the two are one decision.
+    // THE SECOND ARM IS `c`, SO IT CARRIES `c`'s REGIME, not this one's: the
+    // region clear, the focus repair, the land onto the focused marker and the
+    // stop that rides inside that land are all the center command's, stated at
+    // its owner. Nothing about them is decided here — this arm only chooses
+    // between the two commands.
     // Both arms read the RESTING cursor (apply_zoom_change and
     // center_viewport_on_playhead both take the scanner while playing and the
     // cursor otherwise). With a selection the cursor already rests on the focus —
-    // every focus-changing route lands it — so nothing here needed the land that
-    // used to precede it.
+    // every focus-changing route lands it.
     //
     // `>=` rather than `==`, matching Viewport::zoom_out's own ceiling test: the
     // clamp chokepoint keeps the live level at or under the ceiling, and a level
@@ -1178,7 +1247,7 @@ void GuiInputHandler::run_overview_command() {
         waveform_area(app).w, live_total_frames(app, audio),
         audio.sample_rate());
     if (app.zoom_level >= full_out) {
-        viewport.center_viewport_on_playhead();
+        run_center_command();
     } else {
         viewport.apply_zoom_change(full_out);
     }

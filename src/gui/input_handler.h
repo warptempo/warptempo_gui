@@ -159,8 +159,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // sites state their own class and point here):
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
 //     family plus `c`, through its own clear tail), `c`'s OWN up-front clear
-//     before that jump (input_key_dispatch.cpp — the no-focus arm never
-//     reaches the jump's tail, so `c` owns one of its own), the
+//     before that jump (run_center_command, input_handler.cpp — the no-focus arm
+//     never reaches the jump's tail, so `c` owns one of its own; both of that
+//     command's recipes clear, and since 2026-08-05 bare `0` AT FULL ZOOM OUT
+//     reaches this clear by running the command), the
 //     bare Left/Right waveform-lane playhead step, Home/End (the trim-bound
 //     jumps), and the
 //     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
@@ -228,7 +230,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // PREVIEW gesture (click inside a span to audition it, the span resting
 // untouched), SPACE (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
-// pans, and the bare `0` overview). The remaining pre-existing clear sites (file
+// pans, and bare `0`'s ZOOM-OUT ARM — its other arm, the one taken with the zoom
+// already at full out, IS the `c` command and clears in the list above; the two
+// arms sit on opposite sides of this line and the command they share is why).
+// The remaining pre-existing clear sites (file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the
 // reset with a domain flip or a full-window repaint rather than this exact damage
 // shape; so does the kick validator's live-domain reclamp.
@@ -1037,12 +1042,24 @@ private:
     // nudge/drag re-lands it on the focused marker as that marker moves.
     bool jump_playhead_to_focused_marker();
 
-    // The bare `0` key: FULL ZOOM OUT FIRST, CENTER ONLY WHEN ALREADY THERE
-    // (architect 2026-08-05, replacing the working-zoom toggle). Below the
-    // per-file effective ceiling → jump to it (whole song visible); already at
-    // it → center the viewport on the playhead at that level. A PURE VIEWPORT
-    // MOVE (architect 2026-07-30): it writes neither the selection nor the
-    // region nor the playhead — the rationale is at the definition.
+    // THE BARE `c` COMMAND, and the ONE owner of both its recipes: the working
+    // zoom centered on the playhead, with a focused stop re-landed under it
+    // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
+    // (repair_last_selected + jump_playhead_to_focused_marker), the history
+    // mode's re-expression walks its own diff-flag list and its own focus — so
+    // the three callers (the live `c` arm, the mode's `c` claim, and
+    // run_overview_command's already-full-out arm) share one decision instead of
+    // spelling it each. Rationale at the definition.
+    void run_center_command();
+
+    // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
+    // (architect 2026-08-05, replacing the working-zoom toggle; the second arm
+    // was a bare center for one day). Below the per-file effective ceiling →
+    // jump to it (whole song visible); already at it → run_center_command, so
+    // `0` twice is overview then working zoom on the focus. The FIRST arm is a
+    // PURE VIEWPORT MOVE (architect 2026-07-30): it writes neither the selection
+    // nor the region nor the playhead; the second carries `c`'s regime, stated
+    // at that command. The rationale is at the definition.
     void run_overview_command();
 
     // THE SPAN-FRAMING command, run by the TRIM BAR LANE's DOUBLE-CLICK:
@@ -1452,9 +1469,11 @@ private:
     // drift from the gesture because there is no second copy to drift.
     // ALL THREE ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
     // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
-    // so those three cues go while it stands, and it gives the band a plain
-    // FRAMING press of its own, so the plain zone answers Zoom there instead of
-    // asking the router at all.
+    // so those three cues go while it stands and the whole band answers Arrow
+    // there — the locked tab's own answer. The one gesture the view DOES give
+    // that band is a DOUBLE-click (its diff-span framing), and a double-click
+    // carries no cue anywhere in the product, the live band's own span framing
+    // included.
     // THE MODIFIER ARMS OUTRANK THE PLAIN ZONES ON THE WAVEFORM, exactly as the
     // press path ranks them: alt or ctrl held means the pan or the zoom drag, not
     // the scrub. SHIFT IS NOT IN THE MAP over the waveform — it forms a region,
@@ -1645,7 +1664,9 @@ private:
     //     acts: true when the press was consumed (as one of the mode's own acts
     //     or as a refusal), false for the navigation gestures the mode lets
     //     through untouched. Its own comment carries the admitted list and the
-    //     three acts.
+    //     four acts. It takes the press's DOUBLE-CLICK SNAPSHOT because one of
+    //     those acts is a double-click (the trim bar's framing) and on_button_-
+    //     press clears the shared field before this is reached.
     //   * focus_history_diff_flag is the focus click's body, shared by its two
     //     surfaces — the flag box in the lane and the flag's STEM in the
     //     waveform's upper half — so the two cannot answer differently.
@@ -1655,9 +1676,9 @@ private:
     //     AppState::HistoryMode).
     //   * frame_viewed_commit_diff_span frames the viewed checkpoint's whole
     //     delta. Since 2026-08-05 it is an ON-DEMAND ACT with ONE caller — the
-    //     plain trim-bar click, the mode's analog of the regular views' span-
-    //     framing double-click — rather than an edge effect. Its own comment
-    //     carries the recipe and the span rule.
+    //     trim bar's plain DOUBLE-CLICK, the regular views' span-framing gesture
+    //     with this act as its command — rather than an edge effect. Its own
+    //     comment carries the recipe and the span rule.
     //   * frame_history_view_whole_song is what the EDGES do instead: entry,
     //     each `,` / `.` step and each compare switch open at FULL ZOOM OUT.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
@@ -1693,7 +1714,8 @@ private:
     void drop_lane_stash_across_history_edge();
     void set_history_compare(GuiHistoryCompare compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
-                                   GuiInputState mods);
+                                   GuiInputState mods,
+                                   const DoubleClickCandidate& dc_at_press);
     void focus_history_diff_flag(int hit);
     void close_history_mode();
     void open_history_commit_confirmation();

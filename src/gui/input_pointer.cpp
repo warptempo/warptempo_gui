@@ -801,21 +801,20 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     const bool in_trim_bar = inside_top &&
                              y >= trim_bar_row.y &&
                              y < trim_bar_row.y + trim_bar_row.h;
-    // THE `h` HISTORY MODE CONSUMES THIS BAND'S THREE TRIM GESTURES AND ONLY
-    // THOSE, which is why the mode enters the map HERE rather than as a fourth
-    // blanket return above. The mode is PER-ZONE exactly as read-only is: the
-    // Pan, the Zoom (both entries) and the Scrub stay live under it — they are
-    // its navigation vocabulary — while the endcap/bridge drags and the two ctrl
-    // bound-set clicks are consumed no-ops, so their three cues must go. This
-    // term is what takes them: the ctrl arm falls to the waveform's own
-    // Zoom-or-Arrow question and the ctrl+shift arm to the Arrow it already
-    // returns everywhere else.
-    // THE PLAIN ARM IS THE EXCEPTION SINCE 2026-08-05, and it is not a hole in
-    // the rule but the rule applied to a NEW gesture: a plain press on this band
-    // in the mode zooms to the viewed checkpoint's diff span, so the band shows
-    // the ZOOM cue — the ruler's own cue for its own zoom gesture, one band
-    // further up — and cue and gesture agree there exactly as they do outside
-    // the mode.
+    // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES AND ONLY THOSE,
+    // which is why the mode enters the map HERE rather than as a fourth blanket
+    // return above. The mode is PER-ZONE exactly as read-only is: the Pan, the
+    // Zoom (both entries) and the Scrub stay live under it — they are its
+    // navigation vocabulary — while the endcap/bridge drags and the two ctrl
+    // bound-set clicks are consumed no-ops, so their cues must go. This term is
+    // what takes them: the ctrl arm falls to the waveform's own Zoom-or-Arrow
+    // question and the ctrl+shift arm to the Arrow it already returns everywhere
+    // else; the plain arm takes the Arrow below.
+    // THE MODE'S OWN TRIM-BAR ACT IS A DOUBLE-CLICK (architect 2026-08-05,
+    // superseding the single click and the Zoom cue it wore for a day), so it
+    // adds NO cue here: a double-click has no cursor promise anywhere in the
+    // product — the live band's span framing is one too, and the band shows the
+    // shapes of its drags, never that. The read-only model exactly.
     const bool trim_write_gestures_live =
         in_trim_bar && !app.history_mode.active;
 
@@ -883,13 +882,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // will not run. The band's span-framing double-click DOES survive
         // read-only, but it is not what this cursor names.
         if (in_trim_bar) {
-            // IN THE `h` HISTORY MODE THIS BAND IS A ZOOM (2026-08-05): the
-            // plain press frames the viewed checkpoint's diff span — the span
-            // the bar is displaying — so it takes the ruler's cue for the
-            // ruler's own zoom gesture, over the WHOLE band, which is exactly
-            // the surface the press claims. Above the read-only return because
-            // framing is navigation and the lock does not refuse it.
-            if (app.history_mode.active) return GuiCursorKind::Zoom;
+            // THE `h` HISTORY MODE ANSWERS EXACTLY AS A LOCKED TAB DOES, and for
+            // the same reason: the drags this band's shapes promise are consumed
+            // in there, and its one live gesture is a DOUBLE-click, which no cue
+            // in the product names. The Arrow, over the whole band.
+            if (app.history_mode.active) return GuiCursorKind::Arrow;
             if (active_view_state(app).read_only) return GuiCursorKind::Arrow;
             switch (hit_test_trim_endcap(app, audio, x, y)) {
                 case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
@@ -1070,6 +1067,23 @@ void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (rect_contains(app.flag_editor_box.box, x, y)) return;
     flag_editor.exit_top_flag_edit_no_commit();
+}
+
+// THE TRIM BAR'S DOUBLE-CLICK TEST, hoisted for its SECOND consumer: the live
+// band's span framing (in on_button_press below) and, since 2026-08-05, the
+// history mode's framing of the viewed checkpoint's diff span
+// (handle_history_mode_press). The two run different commands on the same
+// gesture, so the gesture itself is asked in one place — surface tag, window and
+// slack on both axes, exactly as the seed records them at the motionless
+// release. It takes the candidate SNAPSHOT rather than reading app.double_click,
+// because the press clears that field at its top: only the snapshot still holds
+// the previous click.
+static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
+                                     int x, int y) {
+    return dc.surface == DoubleClickSurface::TrimBar &&
+           monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+           std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+           std::abs(y - dc.press_y) <= kDoubleClickSlackPx;
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
@@ -1479,8 +1493,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // keep in step — and letting them through here is what keeps that single
     // coverage true. The row's one non-chord pair, the Settings and Navigation
     // anchors, is shut at toggle_dropdown instead.
+    // The double-click SNAPSHOT is handed in because the mode has a double-click
+    // act of its own (the trim bar's framing) and this function's own field was
+    // cleared at the top of the press; nothing else about the call is special.
     if (app.history_mode.active &&
-        handle_history_mode_press(button, x, y, mods)) {
+        handle_history_mode_press(button, x, y, mods, dc_at_press)) {
         return;
     }
 
@@ -1970,19 +1987,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // — no drag armed, no bound touched, playhead and selection
                 // untouched, allowed in read-only because it is pure navigation
                 // (all modal gates sit far above). The surface tag is what keeps
-                // a marker or editor candidate from consuming here. It DIVERGES
-                // from the bare `0` key, which toggles the working zoom;
-                // this frames the region, else a proper trim sub-window, else the
-                // whole song.
-                {
-                    const DoubleClickCandidate& dc = dc_at_press;
-                    if (dc.surface == DoubleClickSurface::TrimBar &&
-                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        run_span_framing_command();
-                        return;
-                    }
+                // a marker or editor candidate from consuming here, and the TEST
+                // is shared with the history mode's own trim-bar double-click
+                // (trim_bar_double_click_at) so the two cannot drift on the
+                // gesture while running different commands on it. It DIVERGES
+                // from the bare `0` key, which only ever reaches the whole song
+                // (and, from there, `c`); this frames the region, else a proper
+                // trim sub-window, else the whole song.
+                if (trim_bar_double_click_at(dc_at_press, x, y)) {
+                    run_span_framing_command();
+                    return;
                 }
                 // SEEDING is a RELEASE act (only the release knows the press
                 // stayed still), so the press records its point and the release
@@ -3318,12 +3332,13 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //
 // THE ACTS, all four PLAIN and all four pure navigation (2026-08-05, when the
 // waveform's upper half joined the marker lane and the trim bar gained its
-// framing click):
-//   * a press anywhere on the TRIM BAR band ZOOMS TO THE VIEWED CHECKPOINT'S
-//     DIFF SPAN — the span that band is already displaying — through the
-//     framing act the mode's edges stopped running when they went to full zoom
-//     out (frame_viewed_commit_diff_span, input_key_dispatch.cpp). It moves the
-//     viewport and nothing else.
+// framing gesture):
+//   * a DOUBLE-CLICK anywhere on the TRIM BAR band ZOOMS TO THE VIEWED
+//     CHECKPOINT'S DIFF SPAN — the span that band is already displaying —
+//     through the framing act the mode's edges stopped running when they went to
+//     full zoom out (frame_viewed_commit_diff_span, input_key_dispatch.cpp). It
+//     moves the viewport and nothing else, and a SINGLE click on that band stays
+//     the consumed nothing it is in a locked tab.
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses. It
@@ -3348,13 +3363,13 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //
 // EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks and their drag arm,
 // the empty-lane marker drop, the trim bar's three WRITING routes (the endcap
-// and bridge drags and the two ctrl bound-set clicks, all of which the framing
-// click above replaced rather than joined), and every unbound modifier
-// combination (a modified press over the lane or a stem included: only the bare
-// arm reaches these acts).
-bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
-                                                int x, int y,
-                                                GuiInputState mods) {
+// and bridge drags and the two ctrl bound-set clicks, none of which the framing
+// double-click above touches — it is the band's SECOND click, exactly as
+// outside), and every unbound modifier combination (a modified press over the
+// lane or a stem included: only the bare arm reaches these acts).
+bool GuiInputHandler::handle_history_mode_press(
+        GuiMouseButton button, int x, int y, GuiInputState mods,
+        const DoubleClickCandidate& dc_at_press) {
     if (button == GuiMouseButton::Right) return false;
     if (button != GuiMouseButton::Left)  return true;
 
@@ -3381,22 +3396,39 @@ bool GuiInputHandler::handle_history_mode_press(GuiMouseButton button,
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) return false;
     }
-    // THE TRIM BAR ZOOMS TO THE DIFF SPAN (architect 2026-08-05) — the mode's
-    // fourth plain act and its analog of the regular views' span-framing
-    // double-click, taken on ONE click here because every other gesture on this
-    // band is a consumed no-op in the mode, so there is no first click for a
-    // double to build on. The band is showing that span already (paint_trim's
-    // display-only substitution while the view stands), which is what makes the
-    // gesture read as "zoom to what the bar shows" — and the empty-delta case
-    // falls to the framer's whole-song arm, which is harmless where the edges
-    // have already left the view. The WHOLE band, endcaps included: those
-    // endcaps are painted geometry with no gesture in here, so splitting the
-    // band would be a distinction nothing acts on. Read-only does not refuse it
-    // — framing is navigation, exactly as the pan and the zoom above are.
+    // THE TRIM BAR'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
+    // SUPERSEDING the single click this act shipped with earlier that day): the
+    // mode's fourth plain act, and it is the REGULAR VIEWS' GESTURE EXACTLY —
+    // the read-only model, where the band's trim drags refuse while its
+    // span-framing double-click still navigates. So a SINGLE plain click here is
+    // the consumed nothing it is in a locked tab, and only the second click
+    // inside the window frames. The band is showing that span already
+    // (paint_trim's display-only substitution while the view stands), which is
+    // what makes the gesture read as "zoom to what the bar shows" — and the
+    // empty-delta case falls to the framer's whole-song arm, which is harmless
+    // where the edges have already left the view. The WHOLE band, endcaps
+    // included: those endcaps are painted geometry with no gesture in here, so
+    // splitting the band would be a distinction nothing acts on. Read-only does
+    // not refuse it — framing is navigation, exactly as the pan and the zoom
+    // above are.
+    //
+    // THE MACHINERY IS THE LIVE BAND'S, UNCHANGED: consume-before-arm through
+    // the shared test (trim_bar_double_click_at, which reads the snapshot the
+    // press took before clearing the field), then the seed RECORD for the
+    // release to resolve — TrimBarPressSeed, whose release-side owner needs no
+    // mode arm of its own, since it seeds on "the pointer never left the slack
+    // and no trim drag went live" and no trim drag can go live in here at all.
+    // Only the COMMAND differs: the viewed checkpoint's diff span instead of the
+    // region / trim / whole-song ladder.
     {
         const GuiRect trim_bar = top_trim_row_area(app);
         if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
-            frame_viewed_commit_diff_span();
+            if (trim_bar_double_click_at(dc_at_press, x, y)) {
+                frame_viewed_commit_diff_span();
+                return true;
+            }
+            app.trim_bar_press = TrimBarPressSeed{
+                .active = true, .press_x = x, .press_y = y};
             return true;
         }
     }
