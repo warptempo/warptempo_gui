@@ -2678,6 +2678,44 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
                 wl_fixed_from_double(restore_x),
                 wl_fixed_from_double(capture_restore_y_));
             if (wl_surface_) wl_surface_commit(wl_surface_);
+            // THE TRACKED POSITION FOLLOWS THE HINT — the fix for a click
+            // dispatched at the capture's unbounded VIRTUAL TRAVEL. Button
+            // events carry no coordinates in the protocol, so every delivery
+            // site hands the GUI pointer_x_/pointer_y_ — and through the lock
+            // those fields hold the virtual travel, a point the pointer does
+            // not occupy. The unlock warp does NOT come back as a
+            // wl_pointer.motion (the compositor warps its cursor and updates
+            // the seat's position without sending one), so without this write
+            // the stale travel survived until the user next physically moved
+            // the mouse, and a click made before that moved was routed at it.
+            // THE DEFECT THAT CLOSES: a ruler-band press arms the strip drag
+            // (arm_strip_drag_at), a drag UP to zoom walks the virtual position
+            // up out of the ruler and into row 4's icon band — one zoom level
+            // is 60 px, the bands are ~20-70 px apart — the release draws the
+            // cursor back on the ruler at the press row, and the NEXT click,
+            // made without moving, was delivered at the travel's end: over the
+            // W radio, whose chord is bare `p`. A single visible click in the
+            // ruler switched the marker view. Every roster button, and the
+            // bare-`e` synthesized click (which reads the same two fields), had
+            // the same exposure; the alt-pan's is wider still, since it sets no
+            // restore-x override and its raw travel can end anywhere.
+            // WHY THE HINT IS THE RIGHT VALUE: it is precisely where the cursor
+            // is DRAWN from here, so the tracked position and the pixels the
+            // user is aiming at now agree. It is an estimate, not an
+            // observation — which is why pointer_position_unknown_ is
+            // deliberately NOT cleared here (see its contract, and the tail of
+            // this function): the compositor is still the only authority on
+            // where the pointer came back, cursor kinds stay dropped until it
+            // says so, and the next absolute event overwrites this with the
+            // truth. The virtual pair moves with it so a second capture seeds
+            // from the drawn position rather than from the last travel.
+            // No motion is synthesized: this edge runs inside the GUI's own
+            // release handler, and re-entering it is not worth the hover
+            // refresh the next real motion delivers anyway.
+            virtual_pointer_x_ = restore_x;
+            virtual_pointer_y_ = capture_restore_y_;
+            pointer_x_ = static_cast<int>(std::nearbyint(restore_x));
+            pointer_y_ = static_cast<int>(std::nearbyint(capture_restore_y_));
         }
         zwp_locked_pointer_v1_destroy(locked_pointer_);
         locked_pointer_ = nullptr;
@@ -2709,7 +2747,12 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // pointer-capability loss releases it before this runs).
     // pointer_position_unknown_ deliberately STAYS SET past this point: the hint
     // above is a request, and only the compositor's next absolute event says
-    // where the pointer actually came back.
+    // where the pointer actually came back. THE COORDINATES AND THE FLAG PART
+    // COMPANY HERE, which is the whole shape of the fix above: the tracked
+    // position is written to the hint (the pixels the cursor is drawn on, the
+    // best estimate there is), while the flag keeps saying the estimate is not
+    // an observation — so cursor kinds stay dropped until the compositor speaks
+    // and no OTHER consumer is left holding a point the pointer never occupied.
     apply_cursor_kind();
 }
 

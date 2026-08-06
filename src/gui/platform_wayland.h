@@ -582,6 +582,14 @@ private:
     // it (the anchor stem's surface x), else at the raw drag-traveled
     // virtual_pointer_x_ (the compositor clamps an off-window hint on-screen at
     // unlock); y is always frozen at the press row (capture_restore_y_).
+    // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
+    // this pair and pointer_x_/pointer_y_ alike — so the travel does NOT outlive
+    // the lock in the coordinates. It has to: button events carry no
+    // coordinates in the protocol and are delivered at pointer_x_/pointer_y_,
+    // and the unlock warp comes back as no wl_pointer.motion, so a click made
+    // before the user next moved was routed at the travel's end. The full
+    // account of the defect (a ruler zoom drag, then a click that flipped the
+    // marker view from the icon row) is at release_pointer_lock.
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;
@@ -595,7 +603,17 @@ private:
     // pointer_x_/pointer_y_ carry the unbounded VIRTUAL travel, a point the
     // pointer does not occupy — and stays true PAST the unlock, because the
     // restore only tells the compositor where to put the cursor; where it ended
-    // up is not ours to know until the compositor says so. It goes false again at
+    // up is not ours to know until the compositor says so.
+    // WHAT THE UNLOCK DOES SETTLE IS THE COORDINATES, NOT THIS FLAG, and the two
+    // must not be read as one fact: release_pointer_lock writes
+    // pointer_x_/pointer_y_ (and the virtual pair) to the restore hint, so past
+    // the unlock they name the pixels the cursor is DRAWN on rather than the
+    // travel — an estimate, which is exactly why this flag stays set over it.
+    // The split is load-bearing: the kinds this flag guards can afford to wait
+    // for the compositor, and the BUTTON deliveries — which carry no
+    // coordinates of their own and so read those fields — cannot, having once
+    // routed a click at the travel's end (the account is at
+    // release_pointer_lock). It goes false again at
     // the next ABSOLUTE position the compositor delivers (wl_pointer.enter or
     // wl_pointer.motion), which is exactly the event that re-establishes the
     // truth — and the re-derivation follows in that same loop iteration, at the
