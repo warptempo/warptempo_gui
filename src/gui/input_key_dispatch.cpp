@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -1350,10 +1351,28 @@ void GuiInputHandler::run_history_commit() {
 //     DELETE the live marker at that exact frame. None there is NOTHING
 //     HAPPENING for that flag — never a refusal, never a diagnostic.
 //   * REMOVED ONLY (`[-]`, the older side had it and the newer dropped it) →
-//     PUT THE THEN SIDE BACK at its frame, replacing any live occupant.
+//     PUT THE THEN SIDE BACK at its frame, replacing a live occupant there or
+//     inserting fresh when there is none.
 //   * CHANGED (the double flag) → SET the live marker at that frame to the THEN
 //     side. Which is the SAME primitive as the removed arm — insert-or-replace —
 //     so the two share one body and the distinction never reaches the code.
+//
+// ONE FLAG IS ONE LINE, AND COINCIDENT LINES ARE LEGAL, so BOTH arms walk
+// coincidence rather than always answering with the first marker at the frame: a
+// subject carrying two flags at one frame must reach two DIFFERENT markers, or
+// two restores collapse into one (the second replacing what the first inserted)
+// and a delete eats a marker this very act put back. The rule is one sentence
+// for both arms — every arm consumes the NEXT PRE-ACT OCCUPANT at its frame, and
+// a marker this act inserted is never anyone's target — carried by one per-frame
+// skip counter (`skip` below, whose declaration owns the arithmetic).
+//
+// A WRITE THAT CHANGES NOTHING IS NOT A CHANGE: the replace arm compares the
+// occupant's CANONICAL LINE against the then side's and does nothing when they
+// are equal, so `changed` means "the state differed" rather than "a store call
+// happened". That case is reachable — the ITERATIVE reading's delta is between
+// two commits and blind to the live store, so a flag can name a change the live
+// state already carries — and it is exactly the case that must not push an undo
+// entry whose restore does nothing (nor re-trigger the target render).
 //
 // THE COLUMN IS THE ACTIVE ONE BY CONSTRUCTION: the lane paints only the active
 // column's half of a delta (rebuild_history_diff_flags), so every ordinal in the
@@ -1387,10 +1406,16 @@ void GuiInputHandler::run_history_revert() {
     }
     if (subject.empty()) return;
 
-    // THE LOAD-IN-PLACE'S PLAYBACK REGIME, mirrored: a store rewrite under a
-    // live audition is what that mutator stops for, and this one rewrites the
-    // same stores. (The mode's own diff-flag CLICK deliberately stops nothing —
-    // it moves a cursor; this moves markers.)
+    // THE MODE'S OWN STOP-UP-FRONT REGIME, unconditional and ahead of the loop —
+    // the shape its Tab cycle, its Home/End and its `c` all take, and the
+    // load-in-place's reason besides (a store rewrite under a live audition).
+    // NOT gated on anything this act finds: the stop is refusal-gated at its own
+    // owner, and in this mode it is a formality either way — the entry owner
+    // stops a session that was running before `h` and nothing in the view can
+    // start one (open_history_mode_fresh; bare Space and both scrub presses are
+    // consumed here). The doc says exactly this rather than folding the stop into
+    // the "only when something changed" claim below, which covers the three
+    // effects that do wait on a change.
     playback_lifecycle.stop_playback_if_playing();
 
     const bool phase = (app.active_markers_view == 'P');
@@ -1406,22 +1431,52 @@ void GuiInputHandler::run_history_revert() {
               : std::vector<GuiPhaseResetMarker>{};
     bool changed = false;
 
+    // THE ACT'S COINCIDENCE MEMORY, one counter per frame: how many markers at
+    // that frame the act must SKIP to reach the next PRE-ACT occupant. The store
+    // keeps a frame's markers contiguous and ascending, so the group is a run and
+    // the skip is an offset into it. Each arm's contribution follows from what it
+    // does to that run:
+    //   * INSERT lands at the group's FRONT (insert_marker's lower_bound), ahead
+    //     of every pre-act occupant → +1, so the markers this act restores are
+    //     never a later arm's target.
+    //   * REPLACE writes over the occupant it consumed, which stays where it is →
+    //     +1, so the next flag at that frame takes the NEXT occupant.
+    //   * DELETE erases its occupant and the rest of the run slides down into the
+    //     same index → +0.
+    // A no-op replace (the identical-line case) still consumes its occupant: one
+    // flag is one line, and the line is spoken for whether or not a byte moved.
+    std::unordered_map<int64_t, int> skip;
+    // The store index of the next pre-act occupant at `frame`, or -1 when the run
+    // is exhausted (which is "insert fresh" for a restore and "nothing happens"
+    // for a delete). Generic over the two marker types — the two columns' stores
+    // are one template and this walk is the same walk in both.
+    auto next_occupant = [](const auto& mv, int64_t frame, int skip_count) {
+        const int count = static_cast<int>(mv.size());
+        int i = 0;
+        while (i < count &&
+               mv[static_cast<std::size_t>(i)].time_frame < frame) {
+            ++i;
+        }
+        i += skip_count;
+        if (i < count &&
+            mv[static_cast<std::size_t>(i)].time_frame == frame) {
+            return i;
+        }
+        return -1;
+    };
+
     for (int idx : subject) {
         const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
         if (phase) {
             const auto& mv = app.phaseresetmarkers.markers();
-            int at = -1;
-            for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
-                if (mv[static_cast<std::size_t>(i)].time_frame == f.time_frame) {
-                    at = i;
-                    break;
-                }
-            }
+            int&       sk  = skip[f.time_frame];
+            const int  at  = next_occupant(mv, f.time_frame, sk);
             if (!f.removed) {
-                // Added only: delete the occupant. THE FIRST one at that frame —
-                // coincident markers are legal, and one flag is one LINE, so one
-                // flag takes one marker away. A second coincident added flag in
-                // the same subject takes the next.
+                // Added only: delete the occupant. ONE flag takes ONE marker
+                // away, and the one it takes is the next PRE-ACT occupant at the
+                // frame — a second coincident added flag in the same subject
+                // takes the one after it, and neither can take a marker a
+                // removed flag in the same subject just restored.
                 if (at >= 0) {
                     app.phaseresetmarkers.remove_marker(at);
                     changed = true;
@@ -1432,23 +1487,32 @@ void GuiInputHandler::run_history_revert() {
             nm.time_frame = f.time_frame;
             nm.disabled   = f.then_disabled;
             if (at >= 0) {
+                ++sk;
+                // IDENTICAL IS NOT A CHANGE — the canonical line the occupant
+                // would save as against the then side's, through the ONE
+                // serializer, which is the same line vocabulary the delta itself
+                // is computed in (history_diff.h). The frames are equal by
+                // construction, so for this column the compare is the disable
+                // bit; it is spelled as the line anyway, symmetrically with the
+                // warp arm below, whose payload has no such shortcut.
+                const auto& live = mv[static_cast<std::size_t>(at)];
+                if (format_phaseresetmarkers_text({live}) ==
+                    format_phaseresetmarkers_text({nm})) {
+                    continue;
+                }
                 GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(at);
                 if (m) *m = nm;
             } else {
                 app.phaseresetmarkers.insert_marker(nm);
+                ++sk;
             }
             changed = true;
             continue;
         }
 
         const auto& mv = app.warpmarkers.markers();
-        int at = -1;
-        for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
-            if (mv[static_cast<std::size_t>(i)].time_frame == f.time_frame) {
-                at = i;
-                break;
-            }
-        }
+        int&       sk  = skip[f.time_frame];
+        const int  at  = next_occupant(mv, f.time_frame, sk);
         if (!f.removed) {
             if (at >= 0) {
                 app.warpmarkers.remove_marker(at);
@@ -1484,14 +1548,33 @@ void GuiInputHandler::run_history_revert() {
         GuiWarpMarker nm;
         static_cast<WarpMarker&>(nm) = *parsed;
         if (at >= 0) {
+            ++sk;
+            // IDENTICAL IS NOT A CHANGE, the phase arm's rule in the column that
+            // needs it: the occupant's canonical line against the then side's,
+            // both through format_warpmarkers_text, so the compare reads exactly
+            // the seven serialized fields and IGNORES the session-only iter/bpm
+            // scratch — which is also why a no-op replace leaves that scratch
+            // standing instead of resetting it to a fresh marker's defaults.
+            const auto& live = mv[static_cast<std::size_t>(at)];
+            if (format_warpmarkers_text({live}) ==
+                format_warpmarkers_text({nm})) {
+                continue;
+            }
             GuiWarpMarker* m = app.warpmarkers.marker_mut(at);
             if (m) *m = nm;
         } else {
             app.warpmarkers.insert_marker(std::move(nm));
+            ++sk;
         }
         changed = true;
     }
 
+    // THE THREE EFFECTS THAT WAIT ON A CHANGE, and `changed` is "the state
+    // DIFFERED", not "a store call happened": a subject whose every member found
+    // the live state already carrying its then side leaves no undo entry, no
+    // dirty bit and no re-render behind, exactly as one that found nothing at all
+    // does. (The stop above is the one effect that does not wait — its own
+    // comment says why.)
     if (changed) {
         // THE LIVE SELECTION GOES, the wholesale-store-change convention (the
         // load-in-place's own line, and the deletes'): it is a set of STORE
