@@ -612,9 +612,10 @@ struct TrimDragState {
 // (input_pointer.cpp, run from the arm, which owns the recipe and the
 // per-surface split), so EVERY zoom motion moves the playhead and empties the
 // selection, not merely the presses that stay clicks (the day-old release-side
-// click is superseded). Read-only still allows it, and the drag itself still
-// neither toggles follow nor moves the playhead again — it suppresses the chase
-// like every other pan. Cleared
+// click is superseded). Read-only still allows it. The DRAG moves the playhead
+// again in exactly one case — an EDGE REBIND of the anchor takes the cursor with
+// it (the anchor field below), the cursor write alone and none of the press's
+// surroundings — and it suppresses the chase like every other pan. Cleared
 // on button release / button-lost, by the force-end
 // finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
 // pan continuously, and pointer gestures have no cancel).
@@ -638,6 +639,11 @@ struct StripDragState {
     // the press at the press, but REBINDABLE: when a pan drives its column off
     // the effective waveform width, the edge trick pins it to the nearest
     // onscreen pixel and rewrites this to that pixel's frame.
+    // THE PLAYHEAD IS BOUND TO THIS VALUE FOR THE GESTURE'S WHOLE LIFE (architect
+    // 2026-08-06): the press seats the cursor on it and EVERY REBIND RE-SEATS the
+    // cursor on the new value (apply_strip_drag_at's step 7, the one writer of
+    // this field after the press). Stem and playhead are one thing — they were
+    // free to split for the half-day the press jump stood without this.
     double anchor_sample = 0.0;
 };
 

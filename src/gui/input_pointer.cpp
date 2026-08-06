@@ -1026,7 +1026,15 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     double clamped_col = anchor_col;
     if (clamped_col < 0.0)     clamped_col = 0.0;
     if (clamped_col > col_max) clamped_col = col_max;
-    if (clamped_col != anchor_col) {
+    // THE REBIND IS THE ONE PLACE anchor_sample EVER MOVES after the press, and
+    // since 2026-08-06 THE PLAYHEAD FOLLOWS IT (the re-seat below, after the
+    // apply): the press seats the cursor on the anchor, so a rebind that moved
+    // the anchor without moving the cursor SPLIT the two — the architect's live
+    // pass caught exactly that (pan until the stem pins to an edge, reverse, and
+    // the stem rides the new anchor while the playhead sits at the pressed
+    // sample). Stem and playhead are ONE THING for the gesture's whole life.
+    const bool anchor_rebound = (clamped_col != anchor_col);
+    if (anchor_rebound) {
         sd.anchor_sample = vp + clamped_col * spp_old;
         anchor_col = clamped_col;
     }
@@ -1056,6 +1064,47 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // entry point skips.
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
+
+    // (7) THE PLAYHEAD FOLLOWS A REBOUND ANCHOR (architect 2026-08-06), and only
+    // a rebound one: a drag that never clamps is BYTE-IDENTICAL to before, this
+    // whole step being skipped.
+    //
+    // AFTER THE APPLY, deliberately. The rebind derives its frame against `vp` —
+    // the local post-pan viewport, which is not app.viewport_start_sample until
+    // the apply above writes it — so re-seating before it would hand
+    // move_playhead_to a STALE viewport to judge the frame against, and its
+    // offscreen branch could scroll the viewport the drag is in the middle of
+    // deciding. Run after, the anchor is at anchor_col of the viewport that now
+    // rests, so the seat is a pure cursor write: the scroll branch cannot engage
+    // and the drag's own viewport stands.
+    //
+    // THE BARE SEAT PIECE ONLY — the clamped cursor write plus a live session's
+    // keep-alive reseek, through the same one owner the press used
+    // (place_playhead_at_frame). NOT the press's surroundings: the deselect and
+    // the region dissolve are the gesture's ONE-TIME opening act and must not
+    // re-run per motion event. The follow override the seat also writes is
+    // already true here — apply_strip_drag_zoom sets it for every moved frame —
+    // so it is a same-value write, not a second producer.
+    //
+    // DAMAGE NEEDS NOTHING EXTRA: the seat's move_playhead_to emits full
+    // waveform-area damage, which coalesces into the synchronous full rebuild
+    // this same frame already ran (apply_strip_drag_zoom) — and CARRIES the
+    // frame on its own if that apply took its true-no-op early return, so the
+    // cursor can never lag the stem even there. The cadence rule's
+    // narrow-on-plate shape is the two per-frame SCANNER sites' alone; this is
+    // the cursor, riding a gesture that already pays a full render per pointer
+    // frame, and full-area damage is basis-proof by construction.
+    //
+    // A LIVE AUDITION FOLLOWS TOO, and that is the architect's instruction rather
+    // than a side effect: a pinned anchor rebinds on every pointer frame the pan
+    // continues, so the keep-alive reseek moves the running session with the
+    // cursor, exactly the placement press's own keep-alive shape at the drag's
+    // cadence (the seat fires it only when the frame actually changed).
+    if (anchor_rebound) {
+        place_playhead_at_frame(
+            static_cast<int64_t>(std::nearbyint(sd.anchor_sample)),
+            playback.is_playing(), app.playhead_cursor_sample);
+    }
 }
 
 // ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries. The gesture
@@ -2519,6 +2568,12 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
 // affordance stands. At the press the value cannot yet have taken the edge
 // rebind (that lives in apply_strip_drag_at, which only a moving drag reaches),
 // so this is the pressed pixel's own frame by construction.
+//
+// AND THE TWO STAY ONE THING FOR THE GESTURE'S WHOLE LIFE — that is the contract
+// this seat opens, not a property of the press alone: when the drag's edge trick
+// REBINDS the anchor, apply_strip_drag_at re-seats the cursor on the new value
+// (its step 7), so the playhead is on the stem at every frame. Without that half
+// the pair split the moment a pan pinned the anchor to a window edge.
 //
 // THE SEAT IS THE PLACEMENT PRESS'S, through the one shared body: the live-domain
 // clamp, the cursor write, a live session's keep-alive reseek and the follow
