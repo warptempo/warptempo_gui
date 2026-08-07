@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -165,6 +166,31 @@ enum class GuiHistoryCompare {
     Cumulative,
 };
 
+// WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
+// WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO STACK. Row 3
+// carries the product of the two axes as four tabs — Iterative / Cumulative /
+// Iterative (Local) / Cumulative (Local) — and this is the axis the two Local
+// ones select.
+//
+//   COMMIT — the checkpoint walk this mode was built on: the piece's committed
+//   sidecar history, matched by name under `projects/` (the file head owns the
+//   whole model). Its members cost git, its membership is the strict load gate,
+//   and it is the DEFAULT at every entry.
+//
+//   LOCAL — the undo stack, read with the SAME machinery over different states:
+//   each member is one undo entry's snapshots serialized through the save
+//   writers' own string halves, and the same compute_commit_delta types the
+//   difference. No git, no files, nothing on disk — the walk is what this
+//   session has done, in the vocabulary the commit walk already speaks.
+//
+// THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
+// them: the six entry vectors plus `scale`. Viewport, trim and the rest of the
+// GUI band never appear, because they were never undoable in the first place.
+enum class GuiHistoryWalkSource {
+    Commit,
+    Local,
+};
+
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
 // spelling, never a re-derivation through the typed value and back.
@@ -280,13 +306,58 @@ struct GuiHistoryNowSide {
     std::string settings_text;
 };
 
+// THE SETTINGS WRITER'S GUI HALF, CAPTURED — every non-engine key's value, held
+// by VALUE so it can outlive the read (NonEngineSettingsSnapshot borrows a
+// ViewState pair and six strings, which is a call-shaped type, not a storable
+// one). It is opaque here because its ViewState members belong to app_state.h,
+// which this header is included BY; the definition and the one overlay rule live
+// in the .cpp.
+//
+// IT EXISTS FOR THE LOCAL WALK. The commit walk's two sides are both files, but a
+// local delta compares two states of THIS session, and both of them have to be
+// spelled with the SAME GUI half or every navigation the view performs would show
+// up as a settings difference. So the capture happens once, at the mode's entry,
+// and both sides of every local delta are formatted through it.
+struct GuiHistoryGuiSide;
+
+// Capture it off the live state. The active tab's band takes the save path's
+// pre-write stash (viewport / zoom / playhead / trim) on a LOCAL copy, exactly
+// as the settings editor's autocomplete recall does, so the bytes match a save
+// while this const read mutates nothing.
+std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
+    const AppState& app);
+
+// One settings file's bytes: the captured GUI half plus whichever engine
+// settings the caller is describing. The live state's own text is this with
+// app.engine_settings; a local walk member's is this with that undo entry's.
+std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
+                                         const EngineSettings&    engine);
+
 // Serialize the live state through the three writers' own string halves
 // (format_warpmarkers_text / format_phaseresetmarkers_text /
-// format_settings_text). The settings half mirrors the save path's pre-write
-// active-tab stash onto LOCAL ViewState copies exactly as the settings
-// editor's autocomplete recall does, so the bytes match a save without this
-// const read mutating anything.
+// format_settings_text). The settings half goes through the two owners above,
+// so the now side and every local walk member are spelled by one rule.
 GuiHistoryNowSide build_history_now_side(const AppState& app);
+
+// THE TYPED LINE DIFF OF ONE PAIR OF SIDES — the whole delta computation, taken
+// off the walk position so that every reading of every walk runs the identical
+// mechanism over different texts. The commit walk's cumulative reading hands it
+// the viewed commit's snapshots and the frozen now side; its iterative reading
+// hands it that commit's and THE NEXT-NEWER ITEM's; the LOCAL walk hands it two
+// serialized undo states, or one of them and that same frozen now side. Nothing
+// in it knows which, which is what makes four readings one answer-maker rather
+// than four.
+//
+// `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
+// entry has no name, and the corner reads the emptiness rather than inventing
+// one (the local tabs show `n/N` alone).
+GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
+                                           const std::string& then_warp,
+                                           const std::string& then_phase_reset,
+                                           const std::string& then_settings,
+                                           const std::string& now_warp,
+                                           const std::string& now_phase_reset,
+                                           const std::string& now_settings);
 
 // ONE SIDECAR AS ONE COMMIT CARRIED IT. `path` is the committed path in THAT
 // commit's own tree and is EMPTY when the commit carries no file by that name —
@@ -532,6 +603,15 @@ public:
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
 
+    // THE FROZEN NOW SIDE, for the visit's OTHER walk. The local walk measures
+    // against the same three strings this session captured at init(), and it
+    // takes them from here rather than building a second set: one capture per
+    // visit is what makes "the two walks agree about now" structural instead of
+    // a coincidence of two calls made a microsecond apart. Empty until init()
+    // succeeds, which is also the only state a caller can reach it in — an
+    // unavailable session never opens the view.
+    const GuiHistoryNowSide& now_side() const { return now_; }
+
 private:
     // The bound store's walk, or an empty one. It ANSWERS EMPTY FOR A
     // GENERATION MISMATCH, which is the defensive half of the binding: a run
@@ -558,9 +638,107 @@ private:
     // match membership as the store delivers. A DEQUE per reading, because
     // push_back leaves every element already in it exactly where it is, which is
     // delta_at's pointer-stability contract under a growing walk. Indexed by the
-    // enum's own value, which is what makes adding a third reading a one-line
-    // change here.
+    // enum's own value.
+    //
+    // THE FOURTH READING DID NOT LAND HERE (2026-08-07), which retires this
+    // slot's old "adding a third reading is a one-line change" note: the two
+    // LOCAL tabs are the same two readings of ANOTHER WALK (GuiHistoryLocalWalk
+    // below), so what the view grew was a second source with its own two-slot
+    // cache — not a third compare mode. A genuine third READING would still be
+    // the one-line change the array shape suggests, in both classes.
     std::array<std::deque<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
+};
+
+// THE LOCAL WALK — THE SESSION'S OWN UNDO HISTORY, READ AS A WALK (architect
+// 2026-08-07: "the local history feature will be helpful for understanding
+// undo/redo history"). It is GuiHistoryDiff's formula over different states, and
+// deliberately nothing more: same members-newest-first indexing, same two
+// readings, same forward pairing, same delta type, same painter, same lane.
+//
+// A MEMBER IS ONE UNDO ENTRY'S STATE. With N = the undo stack's size, member
+// index i (newest first) is `undo_stack[N-1-i]`, and that entry's snapshots are
+// THE STATE BEFORE THE EVENT IT RECORDS. Serializing them through the save
+// writers' own string halves gives the same three loader-clean texts a commit
+// member carries, so the diff needs no second grammar and no second reader.
+//
+// WHICH MAKES THE ITERATIVE READING EXACTLY ONE EVENT. Index i pairs forward
+// with i−1 (the live now side at i = 0), and the state before event i−1 IS the
+// state after event i — so the delta at index i is EVENT i'S OWN CHANGE, which
+// is what "understanding undo/redo history" wants to see. The cumulative reading
+// is the same pairing the commit walk has: member i against the frozen live now
+// side, "how far back does this take me".
+//
+// THE STACK IS ALL BUT FROZEN WHILE THE VIEW STANDS, and the premise is derived
+// rather than hoped: every route that could push, pop or evict an undo entry is
+// either consumed by the mode's two allowlists or closes the view as part of
+// itself (AppState::HistoryMode owns that derivation — the same one that keeps
+// the frozen now side honest), WITH ONE ADMITTED PRODUCER — the S->T view
+// switch's iteration-bracket push. So the member count is captured at init and
+// the caches are plain vectors sized once, and the indexing is FROM THE BOTTOM,
+// which is what makes an append harmless: a captured position keeps naming the
+// entry it named, the new entry is simply not in the walk, and the frozen now
+// side is the state before it. A shrunken stack (no producer) answers no delta at
+// all rather than being trusted. member_at owns both terms and the one shape
+// neither catches.
+//
+// THE REDO STACK IS DELIBERATELY EXCLUDED. The walk is what is BEHIND you — the
+// commit walk's own shape — and redo is the branch you stepped off. Including it
+// would need a second index origin and a signed position, for a question
+// ("what would redo do") the undo stack's own members already answer one step at
+// a time.
+//
+// AN ENTRY THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
+// rather than a gap: an `affects_persistence == false` entry (the iteration
+// bracket's session-only snapshot) changes nothing any sidecar would carry, so
+// there is nothing for a delta to say about it — the same blank the commit walk
+// shows for a checkpoint whose content matches its neighbour.
+class GuiHistoryLocalWalk {
+public:
+    // BIND TO THE LIVE SESSION at the mode's entry: the undo stack's size is
+    // captured, the GUI half of the settings writer is captured (one snapshot
+    // for BOTH sides of every delta — the reason it is captured at all is at
+    // GuiHistoryGuiSide), and `now` is the visit's frozen now side, taken from
+    // GuiHistoryDiff::now_side() so the two walks measure against one capture.
+    //
+    // `app` IS RETAINED as the stack's owner. It outlives every visit (it is the
+    // one long-lived object in the program) and the entry it hands back is read
+    // only through the frozen count above.
+    void init(const AppState& app, const GuiHistoryNowSide& now);
+
+    // How many undo entries the walk carries — the `n/N` denominator on the two
+    // Local tabs, and fixed for the visit. Zero is an ordinary answer: a session
+    // that has authored nothing shows `0/0` and a blank lane, every step a
+    // clamped no-op, and the tabs are still selectable.
+    std::size_t entry_count() const { return count_; }
+
+    // The member's delta IN ONE OF THE TWO READINGS, computed on first call and
+    // cached per (index, compare) exactly as the commit walk's is. Returns
+    // nullptr for an out-of-range index, an uninitialized walk, or a stack whose
+    // size no longer matches the capture (the frozen-stack premise, checked
+    // rather than assumed). The returned pointer is stable for the visit: the
+    // caches are sized once at init and the stack cannot grow under them.
+    const GuiHistoryCommitDelta* delta_at(std::size_t       index,
+                                          GuiHistoryCompare compare);
+
+private:
+    // One member's three texts, serialized on first ask and kept. Lazy for the
+    // reason the commit walk's deltas are: a visit typically reads a handful of
+    // members out of a stack that may hold hundreds, and formatting all of them
+    // at `h` would be exactly the entry stall the prefetch arc removed.
+    struct Member {
+        bool        built = false;
+        std::string warpmarkers_text;
+        std::string phaseresetmarkers_text;
+        std::string settings_text;
+    };
+    const Member* member_at(std::size_t index);
+
+    const AppState*                          app_   = nullptr;
+    std::size_t                              count_ = 0;
+    std::shared_ptr<const GuiHistoryGuiSide> gui_;
+    GuiHistoryNowSide                        now_;
+    std::vector<Member>                      members_;
+    std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
 // -- THE COMMIT ACT — the product's one mutating git route ------------------

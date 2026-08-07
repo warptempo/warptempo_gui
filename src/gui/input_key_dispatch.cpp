@@ -428,6 +428,18 @@ bool GuiInputHandler::open_history_mode_fresh() {
     kick_history_prefetch_if_stale();
     AppState::HistoryMode fresh;
     if (!fresh.session.init(app, history_prefetch)) return false;
+    // THE SECOND WALK, BOUND TO THE SAME NOW SIDE (2026-08-07). It costs no git
+    // and no formatting here — the undo stack's size, the settings writer's GUI
+    // half and a copy of the three frozen strings — because every member text is
+    // serialized on first ask. It is bound BELOW the session's init for the one
+    // reason that matters: the now side it takes is the session's own capture,
+    // so the two walks cannot come to disagree about what "now" is.
+    //
+    // IT RIDES THE MODE, IT DOES NOT CARRY IT: entry is still gated on the
+    // COMMIT walk's availability alone, so a piece with no committed history
+    // cannot be opened to read its undo stack. That is deliberate — the view is
+    // the GitHub recheck, and the local tabs are a second reading inside it.
+    fresh.local.init(app, fresh.session.now_side());
     // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
     // removal from the view): the mode consumes bare Space and both scrub
     // presses, so a session still running from before `h` could not be stopped
@@ -607,10 +619,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // ends in apply_zoom_to_start, whose current-vs-target compare no-ops when
 // nothing moves.
 //
-// THE SPAN IS THE DISPLAYED DELTA'S, so it follows the compare bit like every
-// other reader: the two readings of one checkpoint generally differ in extent,
-// and a click that framed the other reading's span would be showing one answer
-// at the other's magnification.
+// THE SPAN IS THE DISPLAYED DELTA'S, through the one accessor that forks on the
+// (source, reading) pair, so it follows the tab like every other reader: two
+// readings of one member generally differ in extent, and so do the two walks, so
+// a click that framed another tab's span would be showing one answer at
+// another's magnification.
 //
 // THE RECIPE IS THE TRIM-BAR DOUBLE-CLICK'S, through its own framing core
 // frame_span_into_view: the deterministic zoom-TO-span with the 2.5%-per-side
@@ -639,8 +652,7 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
     if (!app.history_mode.active) return;
     if (audio.total_frames() <= 0) return;
 
-    const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
-        app.history_mode.index, app.history_mode.compare);
+    const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
     int64_t lo = 0, hi = 0;
     if (!d || !d->frame_span(lo, hi)) {
         frame_history_view_whole_song();
@@ -679,13 +691,19 @@ void GuiInputHandler::frame_history_view_whole_song() {
                          live_total_frames(app, audio), /*margin=*/false);
 }
 
-// SWITCH THE COMPARE READING — the ONE owner (architect 2026-08-05), and its
-// callers, re-derived by grep: row 3's two repurposed tabs (the tab row's band
-// claim, input_pointer.cpp), which SELECT, and the keyboard's Ctrl+Tab
-// (handle_history_mode_key), which TOGGLES. The key arrived after the surface,
-// superseding the pair's original "there is no hotkey" ruling, and it goes
-// through here rather than writing the bit so that the click and the key cannot
-// come to mean different things.
+// SWITCH WHAT THE LANE SHOWS — the ONE owner (architect 2026-08-05 for the two
+// compare readings, GENERALIZED 2026-08-07 to the (WALK SOURCE, READING) pair
+// row 3's four tabs select), and its callers, re-derived by grep: those four
+// repurposed tabs (the tab row's band claim, input_pointer.cpp), which SELECT
+// directly, and the keyboard's Ctrl+Tab (handle_history_mode_key), which CYCLES
+// them in row order. The key arrived after the surface, superseding the pair's
+// original "there is no hotkey" ruling, and it goes through here rather than
+// writing the fields so that the click and the key cannot come to mean different
+// things.
+//
+// SWITCHING SOURCE DOES NOT MOVE THE OTHER WALK'S POSITION — neither field is
+// touched here at all, which is what makes the two walks two places a visit can
+// come back to (AppState::HistoryMode's `source` owns that rule).
 //
 // A SWITCH IS A MODE EDGE, with the `,` / `.` step's shape exactly — the same
 // four acts in the same order, for the same reasons, because the same thing is
@@ -711,13 +729,18 @@ void GuiInputHandler::frame_history_view_whole_song() {
 // IDEMPOTENT AT THE TOP, which is where its callers' radio rule comes from: a
 // press on the tab already lit changes nothing, frames nothing and damages
 // nothing, so the press is a consumed nothing without either call site testing
-// for it — and it is what makes Ctrl+Tab's toggle safe to express as a plain
-// "the other one" without a live-reading test of its own. The `!active` guard is
+// for it — and it is what makes Ctrl+Tab's cycle safe to express as a plain
+// "the next one" without a live-reading test of its own. The `!active` guard is
 // the same defensive shape the two framers carry — the callers are gated by the
 // mode already.
-void GuiInputHandler::set_history_compare(GuiHistoryCompare compare) {
+void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
+                                          GuiHistoryCompare    compare) {
     if (!app.history_mode.active) return;
-    if (app.history_mode.compare == compare) return;
+    if (app.history_mode.source == source &&
+        app.history_mode.compare == compare) {
+        return;
+    }
+    app.history_mode.source  = source;
     app.history_mode.compare = compare;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
@@ -824,19 +847,42 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 
     if (!app.history_mode.active) return false;
 
-    // CTRL+TAB — THE COMPARE TOGGLE, the keyboard twin of the tab click
-    // (architect 2026-08-05, SUPERSEDING his own same-day "there is no hotkey
-    // for the pair": the surface was repurposed first and the key followed).
-    // It goes through the ONE switch owner, so the click and the key cannot
-    // diverge, and it is a TOGGLE rather than a pair of selectors because there
-    // are exactly two readings. Ctrl+Shift+Tab is untouched — it never reaches
-    // here (the predicate above is ctrl-exact) and stays the allowlist's consumed
-    // no-op, the paired march having no meaning in a view with one tab band.
+    // CTRL+TAB — THE TAB CYCLE, the keyboard twin of the tab click (architect
+    // 2026-08-05, SUPERSEDING his own same-day "there is no hotkey for the
+    // pair": the surface was repurposed first and the key followed; GROWN TO
+    // FOUR 2026-08-07 with the local walk, the natural generalization of a
+    // toggle over two). It steps FORWARD WITH WRAP IN ROW ORDER — Iterative,
+    // Cumulative, Iterative (Local), Cumulative (Local) — through the ONE switch
+    // owner, so the click and the key cannot diverge. Ctrl+Shift+Tab is
+    // untouched: it never reaches here (the predicate above is ctrl-exact) and
+    // stays the allowlist's consumed no-op, the paired march having no meaning in
+    // a view with one tab band.
+    //
+    // THE ROW ORDER IS SPELLED ONCE, as a table read by this cycle and by
+    // nothing else — the four tab BUTTONS name their own pair at the press site,
+    // which is what a direct selector does.
     if (mods.ctrl && key == GuiKeys::Tab) {
-        set_history_compare(
-            app.history_mode.compare == GuiHistoryCompare::Iterative
-                ? GuiHistoryCompare::Cumulative
-                : GuiHistoryCompare::Iterative);
+        struct Reading {
+            GuiHistoryWalkSource source;
+            GuiHistoryCompare    compare;
+        };
+        static constexpr Reading kRow[] = {
+            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Iterative},
+            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Cumulative},
+            {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Iterative},
+            {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Cumulative},
+        };
+        constexpr std::size_t kCount = std::size(kRow);
+        std::size_t here = 0;
+        for (std::size_t i = 0; i < kCount; ++i) {
+            if (kRow[i].source == app.history_mode.source &&
+                kRow[i].compare == app.history_mode.compare) {
+                here = i;
+                break;
+            }
+        }
+        const Reading& there = kRow[(here + 1) % kCount];
+        set_history_reading(there.source, there.compare);
         return true;
     }
 
@@ -847,9 +893,17 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // RedesignButton::IconHistoryOlder / IconHistoryNewer): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is.
+    //
+    // THE ACTIVE WALK'S POSITION, never a named one (2026-08-07): the step reads
+    // walk_count / walk_index and writes through set_walk_index, so the same body
+    // walks the committed history or the undo stack depending on which pair of
+    // tabs is lit, and each walk keeps the position the other one left alone. An
+    // EMPTY walk — a session that has authored nothing, on the Local tabs —
+    // clamps at both walls and every press is the same consumed nothing a wall
+    // is.
     if (key == GuiKeys::Comma || key == GuiKeys::Period) {
-        const std::size_t count = app.history_mode.session.commit_count();
-        const std::size_t here  = app.history_mode.index;
+        const std::size_t count = app.history_mode.walk_count();
+        const std::size_t here  = app.history_mode.walk_index();
         std::size_t there = here;
         if (key == GuiKeys::Comma) {
             if (here + 1 >= count) return true;   // oldest already
@@ -858,7 +912,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
             if (here == 0) return true;           // newest already
             there = here - 1;
         }
-        app.history_mode.index = there;
+        app.history_mode.set_walk_index(there);
         // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
         // clearer that always takes them together: both index into the list the
         // step is about to replace, so carrying either would light an unrelated
@@ -1107,6 +1161,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             load button reaches it here, like every other
 //                             redesigned button, by synthesizing this same bare
 //                             chord.
+//                             IT IS ADMITTED ON THE COMMIT TABS ALONE since
+//                             2026-08-07, which makes it a THIRD
+//                             session-conditional admission: the LOCAL walk's
+//                             members are undo entries, which no `'` can name or
+//                             load, so the chord is a consumed no-op and the
+//                             load-in-place button greys while a Local tab is
+//                             lit — one decision for the key and the face, the
+//                             shape the two below already have.
 //   - Ctrl+Alt+R (no shift) → THE COMMIT ACT, the mode's second admitted mutator
 //                             (2026-08-04) and admitted on the same reasoning as
 //                             `'`: in the mode that chord is not a render at all
@@ -1277,7 +1339,17 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
-    const bool is_load_in_place = (key == GuiKeys::Apostrophe && bare);
+    // THE LOAD-IN-PLACE IS THE COMMIT WALK'S ACT, so it is admitted on the
+    // COMMIT tabs alone (2026-08-07, with the local walk). There is no commit
+    // behind a Local tab to prefill the editor with or to load: the walk's
+    // members are undo entries, which have no name, no tree and no sidecars on
+    // disk. So the chord is a consumed no-op there and the icon row's
+    // load-in-place button greys — one decision, both readers, exactly as the
+    // two session-conditional admissions below work. (Putting a whole undo
+    // state back is the REVERT act's business, and Ctrl+H stays live here.)
+    const bool is_load_in_place =
+        (key == GuiKeys::Apostrophe && bare &&
+         mode.source == GuiHistoryWalkSource::Commit);
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
     // SECOND session-conditional admission: Ctrl+H is admitted only while there
     // is a subject to revert — a selected diff flag, or the focused one — so
@@ -3131,6 +3203,11 @@ void GuiInputHandler::open_load_editor() {
         // with the empty string, which opens an empty editor the user can paste
         // into — the honest cold answer, and unreachable in practice since the
         // mode only opens with a non-empty walk and every step clamps.
+        //
+        // IT NAMES THE COMMIT WALK OUTRIGHT, and needs no source fork: the
+        // chord and this button are admitted on the COMMIT tabs alone
+        // (history_mode_key_blocked, 2026-08-07), an undo entry having no
+        // spelling to prefill with and nothing on disk to load.
         prefill = app.history_mode.session.sha_at(app.history_mode.index);
     } else {
         // Running-render guard: the load-in-place wipes renders/, which would race a

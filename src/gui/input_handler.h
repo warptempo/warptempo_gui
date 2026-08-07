@@ -1786,13 +1786,14 @@ private:
     //     commit step and each COMPARE SWITCH (four call sites, re-derived by
     //     grep 2026-08-06). Its own comment carries the argument and is the
     //     authoritative statement of the edge set.
-    //   * set_history_compare is the ONE switch owner for the two compare
-    //     readings (2026-08-05): row 3's repurposed tabs SELECT through it —
-    //     the mode's only pointer surface outside the waveform and the lane —
-    //     and Ctrl+Tab TOGGLES through it. A switch is a MODE EDGE with the
-    //     `,` / `.` step's own shape, and the owner is idempotent, which is what
-    //     makes a press on the already-shown reading a consumed nothing at its
-    //     call sites.
+    //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
+    //     (2026-08-05 as the two compare readings' owner, generalized
+    //     2026-08-07 to the (walk source, reading) PAIR the four tabs select):
+    //     row 3's repurposed tabs SELECT through it — the mode's only pointer
+    //     surface outside the waveform and the lane — and Ctrl+Tab CYCLES the
+    //     four through it. A switch is a MODE EDGE with the `,` / `.` step's own
+    //     shape, and the owner is idempotent, which is what makes a press on the
+    //     already-shown tab a consumed nothing at its call sites.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * the COMMIT-TITLE EDITOR asks for the message (its cluster is declared
@@ -1818,7 +1819,8 @@ private:
     void frame_viewed_commit_diff_span();
     void frame_history_view_whole_song();
     void drop_lane_stash_across_history_edge();
-    void set_history_compare(GuiHistoryCompare compare);
+    void set_history_reading(GuiHistoryWalkSource source,
+                             GuiHistoryCompare    compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);

@@ -809,8 +809,14 @@ enum class RedesignButton {
     Quit, Navigation, Settings, ViewSW, ViewTP, ViewTW,
     // Row 2, the toolbar.
     Save, Undo, Redo, Render,
-    // Row 3, the tabs.
-    TabA, TabB,
+    // Row 3, the tabs — TWO of them as tabs, FOUR as the `h` view's compare
+    // selector (architect 2026-08-07, growing the 2026-08-05 pair). The extra
+    // pair exists ONLY in that view: outside it the row paints two tabs and
+    // these two publish a zero rect, which takes no click and shows no hover.
+    // They live in the roster rather than in a table of their own so they
+    // inherit the whole machinery unchanged — the painter's face publication,
+    // the hover recompute, the drift comparator, the press claim's hit test.
+    TabA, TabB, TabC, TabD,
     // Row 4, the icon row, in painted order: the two view radio pairs, the
     // phase-reset clipboard pair, the three mode/editor buttons, the two
     // render-entry buttons, then the history mode's own. (THE ZOOM PAIR LEFT
@@ -842,7 +848,7 @@ enum class RedesignButton {
     // history mode's own. (Revert above joined them the same day.)
     IconHistoryOlder, IconHistoryNewer
 };
-inline constexpr int kRedesignButtonCount = 27;
+inline constexpr int kRedesignButtonCount = 29;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -895,6 +901,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Render:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
+        case RedesignButton::TabC:
+        case RedesignButton::TabD:
         case RedesignButton::IconS:
         case RedesignButton::IconT:
         case RedesignButton::IconW:
@@ -913,6 +921,17 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
             break;
     }
     return false;
+}
+
+// WHICH BUTTONS ARE ROW 3'S — the two A/B tabs plus the two slots the `h`
+// view's compare selector adds (2026-08-07). Named once because FOUR places ask
+// it and all four are about the ROW rather than about any one slot: the hover
+// carve-out (the selected tab has no hover face), the tooltip override (the
+// compare selector carries none), the label override, and the press claim's
+// walk over the row's hit rects.
+inline constexpr bool redesign_button_is_tab(RedesignButton b) {
+    return b == RedesignButton::TabA || b == RedesignButton::TabB ||
+           b == RedesignButton::TabC || b == RedesignButton::TabD;
 }
 
 // THE MENU ROW'S DROPDOWNS — WHICH ONE IS UP. There is ONE popup state in the
@@ -2117,17 +2136,42 @@ struct AppState {
     // face and ignores the pointer, so Undo, Redo, copy, paste, bpm, iteration,
     // follow, listen and the two menu anchors grey out while Quit, the view bar,
     // Save, the Commit-faced Render, the S/T + W/P radios, the load-in-place
-    // opener and the history button stay lit. The partition is
+    // opener and the history button stay lit — the load-in-place opener ON THE
+    // COMMIT TABS, that one having become source-conditional in 2026-08-07 like
+    // the two acts above it. The partition is
     // DERIVED
     // from the two gates above (plus the anchors' toggle_dropdown lockout) and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp
     // — and it is read live from `active` below, so leaving the mode restores
     // every face on the next frame with nothing latched.
     //
-    // ROW 3'S TWO TABS ARE THE EXCEPTION, and a repurposing rather than a
-    // refusal (architect 2026-08-05): their chord stays consumed like every
-    // other tab switch, and the SURFACE becomes the compare selector — see
-    // `compare` below.
+    // ROW 3'S TABS ARE THE EXCEPTION, and a repurposing rather than a refusal
+    // (architect 2026-08-05): their chord stays consumed like every other tab
+    // switch, and the SURFACE becomes the reading selector — TWO slots then,
+    // FOUR since 2026-08-07, one per (walk source, reading) pair. See `source`
+    // and `compare` below.
+    //
+    // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
+    // "the local history feature will be helpful for understanding undo/redo
+    // history"): the COMMITTED history this mode was built on, and THE SESSION'S
+    // OWN UNDO STACK read through the identical delta machinery
+    // (GuiHistoryLocalWalk, history_diff.h, owns the model and the pairing
+    // derivation). The lane, the flags, the colours, the corner's `n/N`, the
+    // walk's `,` / `.`, the diff-flag cycle, the trim bar's span and its framing
+    // double-click are all SOURCE-AGNOSTIC — they read the displayed delta and
+    // the active walk's position, never a named walk. THREE surfaces are not,
+    // and each says why at its own site: the corner's SHA token (an undo entry
+    // has no name), the `'` LOAD-IN-PLACE (no commit to load — a consumed no-op
+    // and a greyed button on the Local tabs), and SAVE-AND-COMMIT, whose reach
+    // and grey stay the commit walk's because the act publishes into the
+    // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
+    // reads the painted flags' frames and then-side lines and knows nothing
+    // about where they came from, so selecting part of one undo event and
+    // putting just that part back is the feature working.
+    //
+    // ENTRY IS STILL GATED ON THE COMMIT WALK ALONE — the local walk RIDES the
+    // mode, it does not carry it — so a piece with no committed history cannot
+    // be opened to read its undo stack.
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
@@ -2214,6 +2258,14 @@ struct AppState {
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
+    // THE SAME DERIVATION FREEZES THE UNDO STACK, which is what the LOCAL walk
+    // rests on (2026-08-07): every route that could push, pop or evict an entry
+    // is an authoring route, so the two gates consume it or one of the three
+    // mutators closes the view as part of itself. The walk therefore captures
+    // the stack's size once and indexes it for the visit — and checks that size
+    // again on every read rather than trusting the derivation blindly, the
+    // premise being derived rather than enforced.
+    //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it (membership re-derived 2026-08-06): zoom, the paged
@@ -2236,9 +2288,31 @@ struct AppState {
     // exit (session and all, so the next entry pays a fresh commit walk).
     struct HistoryMode {
         bool        active = false;
-        // Index into the commit walk, 0 = newest. `,` steps older (+1), `.`
-        // newer (-1), each clamping at its wall as a consumed no-op.
+        // Index into the COMMIT walk, 0 = newest. `,` steps older (+1), `.`
+        // newer (-1), each clamping at its wall as a consumed no-op. It is the
+        // commit walk's alone since 2026-08-07 — the local walk keeps its own
+        // position in `local_index` below, and the two survive each other's
+        // visits within one session of the view.
         std::size_t index  = 0;
+        // WHICH WALK THE LANE IS READING (architect 2026-08-07) — the row-3 tab
+        // grid's other axis. GuiHistoryWalkSource (history_diff.h) owns the
+        // pair's definitions and the local walk's whole model; what lives here
+        // is the session's own state.
+        //
+        // COMMIT IS THE DEFAULT AT EVERY ENTRY, this plain member initializer
+        // applied by the whole-struct machinery at both edges exactly as the
+        // compare bit's is: a visit never inherits the last visit's tab.
+        //
+        // EACH SOURCE KEEPS ITS OWN POSITION across a switch, which is what makes
+        // the pair of walks two places rather than one place with a changing
+        // subject: read three checkpoints back, look at what your last two undo
+        // steps did, come back and you are still three checkpoints back.
+        GuiHistoryWalkSource source = GuiHistoryWalkSource::Commit;
+        // Index into the LOCAL walk, 0 = the newest undo entry. Same two steps,
+        // same clamps, same clearing edges — everything the walk does reads the
+        // ACTIVE source's position through walk_index() below rather than naming
+        // either field.
+        std::size_t local_index = 0;
         // WHICH READING THE LANE SHOWS (architect 2026-08-05), the two compare
         // modes' bit. GuiHistoryCompare (history_diff.h) owns the pair's
         // definitions; what lives here is the session's own state.
@@ -2261,16 +2335,22 @@ struct AppState {
         // already has. Ctrl+Shift+Tab stays the consumed paired march.
         //
         // A SWITCH IS A MODE EDGE, exactly like a `,` / `.` step, and one owner
-        // does all of it (GuiInputHandler::set_history_compare): clear the mode
+        // does all of it (GuiInputHandler::set_history_reading, the four-tab selector
+        // since 2026-08-07): clear the mode
         // focus, drop the lane's published content, reset the viewport to full
         // zoom out, damage the window.
         //
-        // EVERY READER OF THE DISPLAYED DELTA PASSES IT, re-derived by grep on
-        // delta_at 2026-08-05: the flag cache's rebuild (waveform_cache.cpp),
+        // EVERY READER OF THE DISPLAYED DELTA PASSES IT, and since 2026-08-07
+        // they do so THROUGH ONE ACCESSOR (displayed_delta() below) rather than
+        // by naming the pair: with two walk sources the reading is a (source,
+        // compare) PAIR, and four call sites spelling that fork is four places
+        // for a Local tab to keep showing commit flags. Its readers, re-derived
+        // by grep on delta_at: the flag cache's rebuild (waveform_cache.cpp),
         // frame_viewed_commit_diff_span, GuiPaintHandler::paint_trim's diff-span
         // substitution and the bottom strip's corner line. The ONE reader that
-        // deliberately does NOT is head_delta_empty below, which names
-        // Cumulative explicitly and says why.
+        // deliberately does NOT is head_delta_empty below, which names the
+        // COMMIT walk's index 0 and the Cumulative reading explicitly, and says
+        // why.
         GuiHistoryCompare compare = GuiHistoryCompare::Iterative;
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
@@ -2290,9 +2370,9 @@ struct AppState {
         // unrelated flag.
         //   - a click on empty lane (the deliberate clear)
         //   - each `,` / `.` step (handle_history_mode_key)
-        //   - each COMPARE SWITCH (2026-08-05, set_history_compare): the two
-        //     readings are two different lists, so it is the step's own reason
-        //     at a different edge
+        //   - each TAB SWITCH (2026-08-05, set_history_reading): the two
+        //     readings are two different lists, and since 2026-08-07 so are the
+        //     two walks, so it is the step's own reason at a different edge
         //   - each VIEW SWITCH, both axes (2026-08-04, when `t` / `p` / 1 / 2 /
         //     3 joined the keyboard allowlist): the lane paints only the ACTIVE
         //     COLUMN's half of a commit's delta, so W and P are different lists,
@@ -2424,6 +2504,16 @@ struct AppState {
         // checkpoint, so stepping back to an older one must not offer to
         // "re-commit" it.
         //
+        // AND IT READS THE COMMIT WALK ALWAYS, which the two LOCAL tabs of
+        // 2026-08-07 change nothing about: the act publishes a checkpoint into
+        // the repository, so "is there anything to checkpoint" is the live state
+        // against the newest COMMIT whatever walk the lane happens to be
+        // showing. Reading the undo stack here would grey the act on a session
+        // that had undone its way back to its own start while the repository
+        // still lacked every one of those changes. Its measurement site
+        // (measure_history_head_delta) therefore names `session` outright, and
+        // Save-and-Commit's reach and face are untouched by the source axis.
+        //
         // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never `compare` (the
         // field's one deliberate non-reader of the bit): the act commits THE
         // LIVE STATE, so "is there anything to checkpoint" is live-vs-newest
@@ -2502,7 +2592,55 @@ struct AppState {
         int64_t entry_playhead_cursor_sample = 0;
         char    entry_audio_view            = 'S';
 
-        GuiHistoryDiff session;
+        // THE TWO WALKS. `session` is the committed history (git, the strict
+        // load gate, the prefetch store); `local` is this session's own undo
+        // stack read through the same delta machinery. Both are bound at the ONE
+        // entry owner and both measure against the SAME frozen now side — the
+        // local walk takes it from the session rather than capturing a second
+        // one (GuiHistoryDiff::now_side).
+        GuiHistoryDiff      session;
+        GuiHistoryLocalWalk local;
+
+        // -- THE ACTIVE WALK, in three lines -------------------------------
+        //
+        // The three questions every walk-facing reader asks — how many members,
+        // where am I, and what does the lane show — answered once for the live
+        // source instead of forked at each site. What is NOT here is anything
+        // COMMIT-SPECIFIC by intent: the `'` editor's SHA prefill and the
+        // corner's short-SHA token name `session` and `index` outright, because
+        // an undo entry has no commit to load or to name.
+
+        // How many members the ACTIVE walk carries — the `n/N` denominator.
+        std::size_t walk_count() const {
+            return source == GuiHistoryWalkSource::Local
+                       ? local.entry_count()
+                       : session.commit_count();
+        }
+
+        // Where the ACTIVE walk stands. The setter is the only writer either
+        // position field has outside the entry reset, so a step cannot move the
+        // wrong walk.
+        std::size_t walk_index() const {
+            return source == GuiHistoryWalkSource::Local ? local_index : index;
+        }
+        void set_walk_index(std::size_t to) {
+            if (source == GuiHistoryWalkSource::Local) local_index = to;
+            else                                       index       = to;
+        }
+
+        // THE DELTA THE LANE SHOWS — the ONE accessor for it (architect
+        // 2026-08-07's four tabs made the reading a PAIR, and a pair spelled at
+        // four sites is four places to forget one of its halves). Non-const
+        // because both walks compute lazily and cache; the returned pointer is
+        // stable for the visit on either (each class's delta_at states its own
+        // contract). nullptr means "nothing to show" and every reader already
+        // draws that as the blank lane: an out-of-range index, an unavailable
+        // session, or an empty walk.
+        const GuiHistoryCommitDelta* displayed_delta() {
+            return source == GuiHistoryWalkSource::Local
+                       ? local.delta_at(local_index, compare)
+                       : session.delta_at(index, compare);
+        }
     };
     HistoryMode history_mode;
 
@@ -3358,6 +3496,11 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::ViewTW:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
+        // ROW 3'S SECOND PAIR (2026-08-07) joins its row's arm: the compare
+        // selector's Local half is live wherever it is drawn, and outside the
+        // `h` view it is not drawn at all.
+        case RedesignButton::TabC:
+        case RedesignButton::TabD:
         case RedesignButton::IconS:
         case RedesignButton::IconT:
         case RedesignButton::IconW:
@@ -3459,13 +3602,20 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     // live READING rather than the live tab. Ranked first for the same reason
     // the Render label's history arm is: the view is the outer mode, and the
     // A/B tab it hides cannot move in here anyway (both tab chords are consumed).
+    //
+    // FOUR SLOTS SINCE 2026-08-07, and the lit one is the live (SOURCE, READING)
+    // PAIR: the row is the product of the two axes in row order — Iterative,
+    // Cumulative, Iterative (Local), Cumulative (Local) — so exactly one is ever
+    // lit and the radio rule falls out of the pair being a pair.
     if (a.history_mode.active) {
-        if (b == RedesignButton::TabA) {
-            return a.history_mode.compare == GuiHistoryCompare::Iterative;
-        }
-        if (b == RedesignButton::TabB) {
-            return a.history_mode.compare == GuiHistoryCompare::Cumulative;
-        }
+        const bool local =
+            a.history_mode.source == GuiHistoryWalkSource::Local;
+        const bool iterative =
+            a.history_mode.compare == GuiHistoryCompare::Iterative;
+        if (b == RedesignButton::TabA) return !local &&  iterative;
+        if (b == RedesignButton::TabB) return !local && !iterative;
+        if (b == RedesignButton::TabC) return  local &&  iterative;
+        if (b == RedesignButton::TabD) return  local && !iterative;
     }
     switch (b) {
         // THE VIEW BAR READS THE LIVE COMBINATION — both axes at once, which is
@@ -3483,6 +3633,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                                                 a.active_markers_view == 'W';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
+        // THE LOCAL PAIR HAS NO OUT-OF-VIEW MEANING — there is no third or
+        // fourth tab in this product, only two more slots the compare selector
+        // uses. Outside the view they are not painted, and false is what the
+        // drift comparator reads for them there.
+        case RedesignButton::TabC:
+        case RedesignButton::TabD:       return false;
         case RedesignButton::IconS:      return a.active_audio_view   == 'S';
         case RedesignButton::IconT:      return a.active_audio_view   == 'T';
         case RedesignButton::IconW:      return a.active_markers_view == 'W';
@@ -3599,6 +3755,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // constant chord. The lock's key is `o`, which HELP carries.
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
+        // The compare selector's Local pair exists only inside the `h` view,
+        // where the whole row drops its tooltips (the override below); outside
+        // it there is no painted button to hover. So there is no text to write
+        // here, and null is that fact rather than an omission.
+        case RedesignButton::TabC:
+        case RedesignButton::TabD:       return {nullptr, nullptr};
         case RedesignButton::IconS:      return {"Source view (T)", nullptr};
         case RedesignButton::IconT:      return {"Target view (T)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
@@ -3678,16 +3840,24 @@ inline constexpr const char* kRenderCommitLabel     = "Save and Commit";
 // Render row's two named title-case exceptions. They live beside the render
 // pair for the same reason that pair lives beside the constant table — one
 // place where a stateful button's word is written.
+// FOUR OF THEM SINCE 2026-08-07, the row being the product of the two axes: the
+// two readings of the COMMIT walk, then the same two of the LOCAL one. The
+// "(Local)" suffix is what names the second walk on the surface — parenthesized
+// rather than prefixed so the two readings stay the first word a reader lands
+// on, and sentence case throughout like the pair it grew from.
 inline constexpr const char* kCompareIterativeLabel  = "Iterative";
 inline constexpr const char* kCompareCumulativeLabel = "Cumulative";
+inline constexpr const char* kCompareIterativeLocalLabel  = "Iterative (Local)";
+inline constexpr const char* kCompareCumulativeLocalLabel = "Cumulative (Local)";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
     // THE COMPARE TABS CARRY NO TOOLTIP, on the view bar's own reasoning
-    // (row 1's three): their labels ARE the thing a hint would name, there is no
-    // chord to advertise (the pair is deliberately hotkey-less), and the live
-    // tabs' "Tab A (Ctrl+Tab)" would be a lie about both the act and the key.
-    if (a.history_mode.active &&
-        (b == RedesignButton::TabA || b == RedesignButton::TabB)) {
+    // (row 1's three): their labels ARE the thing a hint would name, and the
+    // live tabs' "Tab A (Ctrl+Tab)" would be a lie about the act. The CHORD is
+    // no longer the reason it once was — Ctrl+Tab has selected in here since
+    // 2026-08-05 and CYCLES ALL FOUR since 2026-08-07 — but one chord shared by
+    // four buttons is not a per-button hint either, so the row stays silent.
+    if (a.history_mode.active && redesign_button_is_tab(b)) {
         return {nullptr, nullptr};
     }
     if (b == RedesignButton::Render && a.history_mode.active) {
@@ -3712,11 +3882,15 @@ inline const char* redesign_button_label(const AppState& a, RedesignButton b,
     // THE TABS ARE THE COMPARE SELECTOR IN THE `h` VIEW, so they say which
     // reading they select rather than which tab they are. The A slot takes
     // Iterative because it is the default; the shaped-run layout each painter
-    // does absorbs the width change (both labels are wider than "A"/"B", and the
-    // tab's width has always been max(minimum, shaped + 2*pad)).
+    // does absorbs the width change (every one of these labels is wider than
+    // "A"/"B", and the tab's width has always been max(minimum, shaped + 2*pad)).
+    // The order is the enum's, which is the painted one: the COMMIT walk's two
+    // readings, then the LOCAL walk's two.
     if (a.history_mode.active) {
         if (b == RedesignButton::TabA) return kCompareIterativeLabel;
         if (b == RedesignButton::TabB) return kCompareCumulativeLabel;
+        if (b == RedesignButton::TabC) return kCompareIterativeLocalLabel;
+        if (b == RedesignButton::TabD) return kCompareCumulativeLocalLabel;
     }
     if (b == RedesignButton::Render && a.history_mode.active) {
         return kRenderCommitLabel;
@@ -3772,9 +3946,11 @@ inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
     if (a.dropdown.open()) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
     // THE CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
-    // carries it into the history view for free: in there the pair selects the
-    // COMPARE READING and the lit one is still the one with no hover face.
-    if (b == RedesignButton::TabA || b == RedesignButton::TabB) {
+    // carries it into the history view for free: in there the row selects the
+    // (source, reading) PAIR and the lit one is still the one with no hover
+    // face. All FOUR slots take it — the two outside the view are unpainted
+    // there and unhoverable by their zero rect anyway.
+    if (redesign_button_is_tab(b)) {
         return !redesign_button_selected(a, b);
     }
     return true;

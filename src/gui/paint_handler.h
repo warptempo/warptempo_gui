@@ -331,6 +331,15 @@ struct FlagCache {
     // EMPTY lane, and the delta it must now draw appears with nothing else
     // changing. Counted rather than hashed: membership only ever appends, so the
     // size is the whole of what can differ.
+    //
+    // AND THE WALK SOURCE IS THE EIGHTH, ITS POSITION THE NINTH (2026-08-07,
+    // with the four tabs): the view reads TWO walks now, so which one is
+    // displayed is a content fact of its own — a switch between them can leave
+    // index, focus, generation, reading and count every one of them unchanged
+    // while the lane's whole content changes — and the LOCAL walk's `,` / `.`
+    // moves its own position field, which no other input here mirrors. The local
+    // walk's SIZE needs no field beside them: it is the undo stack's, captured at
+    // entry and frozen for the visit, unlike the commit walk's streaming one.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
@@ -338,6 +347,8 @@ struct FlagCache {
     GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
     uint64_t           fp_history_selection_hash = 0;
     std::size_t        fp_history_commit_count   = 0;
+    GuiHistoryWalkSource fp_history_source   = GuiHistoryWalkSource::Commit;
+    std::size_t        fp_history_local_index    = 0;
 
     void destroy_surface() {
         if (surface) {
@@ -422,20 +433,23 @@ struct GuiPaintHandler {
     //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
     //     and fp_editing_flag_target (the open editor's marker, whose box this
     //     pass SKIPS);
-    //   - THE HISTORY MODE, SEVEN (four 2026-08-04, the fifth and sixth
-    //     2026-08-05, the seventh 2026-08-07): fp_history_active,
-    //     fp_history_index, fp_history_focus,
+    //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
+    //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
+    //     fp_history_active, fp_history_index, fp_history_focus,
     //     fp_history_generation, fp_history_compare,
-    //     fp_history_selection_hash and fp_history_commit_count — the `h` view replaces
+    //     fp_history_selection_hash, fp_history_commit_count,
+    //     fp_history_source and fp_history_local_index — the `h` view replaces
     //     the lane's whole content, so these decide it as completely as the five
     //     marker-driven fields decide the live one; the generation is what
     //     distinguishes two SESSIONS that agree on the others (a close and a
     //     reopen this pass never sees between), the compare bit what
-    //     distinguishes A COMMIT'S TWO DELTAS (iterative forward against the
-    //     next-newer item, cumulative against the frozen now side), and the
-    //     selection hash what distinguishes two membership states of one shown
-    //     delta (the mode's multi-selection, whose members wear the focus's own
-    //     brightened face).
+    //     distinguishes ONE MEMBER'S TWO DELTAS (iterative forward against the
+    //     next-newer item, cumulative against the frozen now side), the SOURCE
+    //     what distinguishes THE TWO WALKS (the committed history and the
+    //     session's own undo stack, whose positions are two different fields),
+    //     and the selection hash what distinguishes two membership states of one
+    //     shown delta (the mode's multi-selection, whose members wear the focus's
+    //     own brightened face).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a

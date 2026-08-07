@@ -135,6 +135,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the already-selected half a consumed nothing rather than a switch away.
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
+    // THE COMPARE SELECTOR'S LOCAL PAIR (2026-08-07) carries the SAME chord and
+    // never dispatches it: these two slots exist only inside the `h` view, where
+    // the tab row's band claim routes every press to the switch owner above this
+    // table. Outside the view they are unpainted and their rect is empty, so no
+    // press can reach them at all. They are here because the table is TOTAL over
+    // the roster by static_assert below, and because that totality is what
+    // history_mode_disables_button's derivation rests on — Ctrl+Tab being the
+    // mode's own vocabulary is what answers LIVE for all four.
+    {RedesignButton::TabC,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
+    {RedesignButton::TabD,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     // Row 4 — the icon row. The four view buttons are radios on the same two
     // toggling chords the tabs' pair models; the rest are plain dispatches.
     {RedesignButton::IconS,      GuiKeys::T,   false, false, false, true,  true},   // bare t
@@ -1458,17 +1468,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (rect_contains(tab_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` VIEW STANDS
-            // (architect 2026-08-05), so its presses are routed HERE and never
-            // reach the chord table below: these two SELECT a reading, which is
-            // not what a chord dispatch would do — the tabs' chord, Ctrl+Tab,
-            // became the mode's TOGGLE the same day and would flip away from
-            // whichever half was clicked.
+            // (architect 2026-08-05, FOUR SLOTS since 2026-08-07), so its
+            // presses are routed HERE and never reach the chord table below:
+            // these SELECT a (walk source, reading) pair, which is not what a
+            // chord dispatch would do — the tabs' chord, Ctrl+Tab, became the
+            // mode's own CYCLE and would step past whichever slot was clicked.
             //
-            // ONE SWITCH OWNER for all three routes — these two halves and that
-            // keyboard toggle (set_history_compare) — and it is
+            // ONE SWITCH OWNER for all five routes — these four slots and that
+            // keyboard cycle (set_history_reading) — and it is
             // IDEMPOTENT, which is where the live tabs' radio rule comes from:
-            // a press on the reading already shown is a consumed no-op because
-            // the owner returns, not because this site tests for it.
+            // a press on the tab already lit is a consumed no-op because the
+            // owner returns, not because this site tests for it.
             //
             // THE READ-ONLY LOCK DOES NOT APPLY, deliberately: the gate that
             // refuses on a locked tab is on_key's, and nothing here dispatches a
@@ -1483,11 +1493,31 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // act.
             if (app.history_mode.active) {
                 if (button == GuiMouseButton::Left && !mods.shift) {
-                    if (redesign_button_hit(app, RedesignButton::TabA, x, y)) {
-                        set_history_compare(GuiHistoryCompare::Iterative);
-                    } else if (redesign_button_hit(app, RedesignButton::TabB,
-                                                   x, y)) {
-                        set_history_compare(GuiHistoryCompare::Cumulative);
+                    // THE ROW IS THE PRODUCT OF THE TWO AXES, in painted order,
+                    // and each slot names its own pair — which is what a DIRECT
+                    // selector is, against the keyboard's cycle. A press that
+                    // lands on no slot (the row's empty tail past the last tab)
+                    // falls out of the walk having claimed nothing, exactly as
+                    // it did with two.
+                    struct TabReading {
+                        RedesignButton       id;
+                        GuiHistoryWalkSource source;
+                        GuiHistoryCompare    compare;
+                    };
+                    static constexpr TabReading kTabReadings[] = {
+                        {RedesignButton::TabA, GuiHistoryWalkSource::Commit,
+                         GuiHistoryCompare::Iterative},
+                        {RedesignButton::TabB, GuiHistoryWalkSource::Commit,
+                         GuiHistoryCompare::Cumulative},
+                        {RedesignButton::TabC, GuiHistoryWalkSource::Local,
+                         GuiHistoryCompare::Iterative},
+                        {RedesignButton::TabD, GuiHistoryWalkSource::Local,
+                         GuiHistoryCompare::Cumulative},
+                    };
+                    for (const TabReading& t : kTabReadings) {
+                        if (!redesign_button_hit(app, t.id, x, y)) continue;
+                        set_history_reading(t.source, t.compare);
+                        break;
                     }
                 }
                 return;
@@ -1569,7 +1599,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // 2026-08-06): the Settings and Navigation anchors, which have none and are
     // shut at toggle_dropdown instead, and — WHILE THIS MODE STANDS — the A/B TAB
     // PAIR, which the tab row's own band claim intercepts above and turns into
-    // set_history_compare directly (the compare selector, deliberately not a
+    // set_history_reading directly (the compare selector, deliberately not a
     // chord: the keyboard twin is Ctrl+Tab, claimed a line above the allowlist,
     // and the pair's own chord is the A/B switch the mode consumes). Both
     // exceptions are refusals or acts decided ABOVE this gate, so neither leaves
@@ -3326,7 +3356,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     region is LISTENING SCRATCH no more — `x` is consumed in here, so a span
 //     drawn in the view is a reading mark, and it is VIEW-LOCAL: the exit, every
 //     `,` / `.` step and every compare switch clear it (the mode edges'
-//     own rule, close_history_mode and set_history_compare). SHIFT ADDS NOTHING
+//     own rule, close_history_mode and set_history_reading). SHIFT ADDS NOTHING
 //     but reaching the same press, exactly as it does outside; it is kept
 //     because the muscle memory is the live former's.
 //     It clears the mode focus and its selection, the analog of the live body's

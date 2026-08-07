@@ -729,14 +729,30 @@ constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
 // app.redesign_buttons; the letter is what the paint compares against
 // app.active_tab_view, so the selected tab is read LIVE every paint and there
 // is no second copy of "which tab is current" anywhere.
+//
+// FOUR ROWS SINCE 2026-08-07, TWO OF THEM COMPARE-ONLY: the `h` view's selector
+// is the product of two axes (walk source x reading), so the row grows two more
+// slots while it stands and drops back to the A/B pair when it does not. The
+// flag is what the walk below skips on, and a skipped slot still publishes an
+// EMPTY rect — nothing to hit, nothing to hover, and the tick comparator still
+// reading fresh bits for it.
+//
+// `letter` is the A/B tab's own, so the compare-only pair carries a placeholder
+// it can never reach: the lock slot is the letter's only reader and it is not
+// drawn in the compare view at all. `label` is likewise the NON-mode word, and
+// those two have none — they exist nowhere but in the view, where the override
+// (redesign_button_label) answers for all four.
 struct TabDef {
     RedesignButton id;
     char           letter;
     const char*    label;
+    bool           compare_only;
 };
 constexpr TabDef kTabs[] = {
-    {RedesignButton::TabA, 'A', "A"},
-    {RedesignButton::TabB, 'B', "B"},
+    {RedesignButton::TabA, 'A', "A", false},
+    {RedesignButton::TabB, 'B', "B", false},
+    {RedesignButton::TabC, 'A', "",  true},
+    {RedesignButton::TabD, 'B', "",  true},
 };
 
 // A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
@@ -1587,16 +1603,23 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     //
     // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` HISTORY VIEW STANDS
     // (architect 2026-08-05), which is a REPURPOSING of the surface, not a state
-    // of the tabs: the labels read "Iterative" and "Cumulative", the selected
-    // face marks the live reading (redesign_button_selected's own history arm),
-    // a press on the other switches (the tab row's band claim, input_pointer.cpp)
+    // of the tabs: the labels read the reading each slot selects, the selected
+    // face marks the live one (redesign_button_selected's own history arm), a
+    // press on another switches (the tab row's band claim, input_pointer.cpp)
     // and THE LOCK SLOTS ARE GONE WHOLE — no padlock drawn, no rect published,
     // no width reserved, because a lock is TAB state and these are not tabs. It
     // is why the row's own former disabled face (the mode's, 2026-08-04) is
     // retired with this arc: the tabs are live in the view now, and every other
     // state of this row is the ordinary one. ONE NAME for that state, read once
-    // here and consulted by the three places it changes: the width, the label
-    // and the lock.
+    // here and consulted by the four places it changes: the MEMBERSHIP (two
+    // slots or four), the width, the label and the lock.
+    //
+    // AND IT IS FOUR SLOTS SINCE 2026-08-07 (architect), the product of the two
+    // axes in row order: Iterative / Cumulative over the COMMIT walk, then the
+    // same two over the LOCAL one — the session's own undo history read through
+    // the same delta machinery. The extra pair is painted here and NOWHERE ELSE;
+    // outside the view the walk below publishes it as an empty rect and paints
+    // the A/B pair alone, exactly as it always did.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
@@ -1655,6 +1678,19 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // reason nothing in this walk assumes they match.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
+        // A SLOT THIS MODE DOES NOT HAVE PUBLISHES AN EMPTY RECT AND NOTHING
+        // ELSE (2026-08-07). Publishing rather than skipping outright is what
+        // keeps two other mechanisms honest: an empty rect contains no point, so
+        // the compare-only pair takes no click and no hover outside the view,
+        // and the tick's drift comparator (main.cpp) replays every roster entry's
+        // enabled/selected predicates against this stash — a slot left unwritten
+        // would disagree with it forever and repaint the whole top strip every
+        // tick.
+        if (def.compare_only && !compare_selector) {
+            publish_button_face(app, audio.total_frames(), def.id,
+                                GuiRect{0, 0, 0, 0});
+            continue;
+        }
         // THE LABEL IS THE OVERRIDE OWNER'S (redesign_button_label, app_state.h,
         // which also answers for the Render button's two mode labels), so the
         // table's constant and the history view's compare word are one lookup
@@ -3311,8 +3347,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     int64_t bar_begin_frame = app.trim.begin_frame;
     int64_t bar_end_frame   = app.trim.end_frame;
     if (app.history_mode.active) {
-        const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
-            app.history_mode.index, app.history_mode.compare);
+        // THROUGH THE DISPLAYED-DELTA OWNER (AppState::HistoryMode), so the bar
+        // follows the source axis as it always followed the reading one: on a
+        // Local tab it shows where in the piece that undo step happened.
+        const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
         int64_t lo = 0, hi = 0;
         if (d && d->frame_span(lo, hi)) {
             bar_begin_frame = lo;
@@ -3899,12 +3937,28 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // prompt branch above and the transient-message and readout branches
         // below: this is a passive report, not an editor, so it takes no caret,
         // no prefix face and no flash.
+        // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
+        // walk_index / walk_count, so a Local tab counts undo entries with the
+        // same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
+        // ALONE, and deliberately named rather than routed through an accessor:
+        // an undo entry has no commit, so the token simply does not appear on
+        // the Local tabs — the empty-sha test below is that fact rather than a
+        // second branch.
         std::string line;
-        const std::size_t count = app.history_mode.session.commit_count();
-        if (count > 0) {
-            line += std::to_string(app.history_mode.index + 1);
-            line += '/';
-            line += std::to_string(count);
+        const std::size_t count = app.history_mode.walk_count();
+        // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing
+        // at all: with the LOCAL tabs an empty walk is an ORDINARY state — a
+        // session that has authored nothing — and a blank corner beside a blank
+        // lane says only that the corner has stopped working. One spelling for
+        // both walks, so the commit side's own empty window (a visit opened
+        // before the prefetch has delivered member 0) reads `0/0` too, which is
+        // the same true statement.
+        line += std::to_string(count == 0 ? 0 : app.history_mode.walk_index() + 1);
+        line += '/';
+        line += std::to_string(count);
+        if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
+            // Empty for an out-of-range index, which is exactly the empty walk,
+            // so the count needs no test of its own here.
             const std::string& sha =
                 app.history_mode.session.sha_at(app.history_mode.index);
             if (!sha.empty()) {
@@ -3912,14 +3966,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                 line += sha.substr(0, 7);
             }
         }
-        const GuiHistoryCommitDelta* d = app.history_mode.session.delta_at(
-            app.history_mode.index, app.history_mode.compare);
+        const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
         // No unavailable-delta arm: walk membership is the strict whole-set
         // load (history_diff.h's gate, 2026-08-04), so every commit this line
         // can name has a real delta — the old `Ambiguous` token died with the
         // display machinery it named.
         if (d && d->scale_changed) {
-            if (!line.empty()) line += ' ';
+            // The position always precedes it now (`0/0` at worst), so the
+            // separator is unconditional.
+            line += ' ';
             line += "Scale: ";
             line += history_diff_label("[-]", /*disabled=*/false,
                                        d->then_scale_token);
