@@ -3282,9 +3282,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     }
     // SETTINGS: the editor's open is its own ordinary route, prefilled through
     // the one recall serializer.
+    // IT CAN REFUSE SINCE 2026-08-07, and this site says nothing about it: the
+    // editor is disabled on a read-only ACTIVE tab (it authors the engine
+    // settings), the refusal living at GuiSettingsEditor::open — the one
+    // chokepoint — together with the modal playback stop, which moved off this
+    // line to sit past that gate. So a locked tab's item click closes the menu
+    // and does nothing else: no editor, no stopped audition. THE ITEM IS NOT
+    // GREYED, deliberately — the never-grey rule for these items is the
+    // standing ruling, and their commands' own refusals answer, exactly as the
+    // Navigation menu's do.
     const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
     close_dropdown();
-    playback_lifecycle.stop_playback_for_modal_open();
     settings_editor.open_prefilled(key);
     return true;
 }

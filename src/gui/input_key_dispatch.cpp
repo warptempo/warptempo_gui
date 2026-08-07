@@ -234,17 +234,22 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // sweep, and in the `h` history view it is the Save-and-Commit act, which
     // reaches its dispatch through this gate and is therefore admitted with it.
     // Ctrl+Alt+Shift+R is the miscellaneous-render cell.
-    // ONE ADMITTED ROUTE WRITES A STORE, and it is worth naming rather than
-    // leaving to be rediscovered: the ITERATION SWEEP's success tail wipes every
+    // ONE ADMITTED ROUTE WRITES A STORE, and it is RATIFIED rather than merely
+    // tolerated (architect 2026-08-07, ruling on it as a named consequence of
+    // the reclassification): the ITERATION SWEEP's success tail wipes every
     // marker's iter bracket (wipe_iter_state) and pushes an undo entry for it.
     // The bit is global rather than per-tab, so a tab locked while iteration
-    // mode already stood can reach that write. It is admitted on EXACTLY the
-    // argument that admitted bare `t` while `t` still carried the same wipe:
-    // iter brackets are SESSION-ONLY — never serialized, affects_persistence
-    // false, excluded from the render recipe — so the write touches no authored
-    // content the lock is protecting, and a locked tab that renders a sweep ends
-    // it in the same bracketless state a writable one does. `i` itself is NOT
-    // admitted, so the mode cannot be entered or left by key in a locked tab.
+    // mode already stood can reach that write. THE ARCHITECT'S THREE REASONS:
+    // (1) iteration brackets are NEVER SAVED — session-only, affects_persistence
+    // false, excluded from the render recipe, so nothing the lock protects
+    // reaches disk; (2) the wipe MUTATES NO MARKER PERMANENTLY, clearing
+    // session-only fields and leaving every authored position, tempo and label
+    // exactly as it found them; and (3) the sweep LEAVES ITS OWN TRACE in the
+    // renders/ folder — the act is self-documenting output, not silent
+    // authoring, which is the property that makes it unlike everything the gate
+    // blocks. A locked tab that renders a sweep ends it in the same bracketless
+    // state a writable one does. `i` itself is NOT admitted, so the mode cannot
+    // be entered or left by key in a locked tab.
     const bool is_render =
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =

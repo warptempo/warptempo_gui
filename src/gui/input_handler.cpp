@@ -981,11 +981,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // routes subsequent keystrokes; opening here just primes the State.
     // The settings editor is a modal bottom-strip surface, so its open takes the
     // shared modal stop (stop_playback_for_modal_open — the decision table and
-    // the flag editor's exemption live at its declaration). This open has no
-    // guards to clear: `;` always opens the editor, so the stop and the open are
-    // adjacent unconditionally.
+    // the flag editor's exemption live at its declaration). THE STOP IS THE
+    // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
+    // refusal that day (a locked tab authors no engine settings), so the stop
+    // moved inside GuiSettingsEditor::open past that gate, the open_load_editor
+    // precedent. This key never meets that refusal anyway — `;` is off the
+    // read-only allowlist and drops far above — but the two openers share one
+    // owner rather than one of them keeping a private copy.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
-        playback_lifecycle.stop_playback_for_modal_open();
         settings_editor.open();
         return;
     }

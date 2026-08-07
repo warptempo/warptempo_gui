@@ -73,16 +73,23 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-07 — EIGHT sites:
-    // the `;` settings editor (input_handler.cpp), the Settings DROPDOWN item's
-    // open of that same editor (input_pointer.cpp — a second door onto one
-    // surface, and the one route that reaches no key gate), the `'` load editor,
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-07 — SEVEN sites:
+    // GuiSettingsEditor::open (settings_editor.cpp), the `'` load editor,
     // the `m` bpm editor and the history view's COMMIT-TITLE editor
     // (input_key_dispatch.cpp), and the THREE prompt opens
-    // (prompt.cpp: unsaved, error notice, env-hash mismatch). The count held
-    // across 2026-08-07 by coincidence: the commit-title editor replaced the
-    // history commit confirmation, so one caller left prompt.cpp as another
-    // arrived in input_key_dispatch.cpp.
+    // (prompt.cpp: unsaved, error notice, env-hash mismatch).
+    // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
+    // — the `;` key (input_handler.cpp) and the Settings DROPDOWN item
+    // (input_pointer.cpp), the one route onto that surface that reached no key
+    // gate — each carried their own call until the editor gained a READ-ONLY
+    // refusal at its opener (a locked tab authors no engine settings), at which
+    // point both stops moved INSIDE GuiSettingsEditor::open to sit past that
+    // gate. Two callers became one, and the refusal-gating rule below is why: a
+    // caller-side stop would have let the dropdown's now-refusable click kill an
+    // audition and open nothing.
+    // The count had held across the day's earlier change by coincidence: the
+    // commit-title editor replaced the history commit confirmation, so one
+    // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
     // ONE MODAL OPEN IS NOT A CALLER, and it is a recorded exception rather than
     // a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
     // (PhaseResetPropagate::open_paste_confirmation) and stops through

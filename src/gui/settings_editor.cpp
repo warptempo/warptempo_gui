@@ -52,6 +52,12 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // which is byte-identical to what a Ctrl+S writes; it leaves the cursor at
     // the line end and no-ops on an unrecallable key, so the bare `<key>=` is
     // the honest fallback rather than an error.
+    //
+    // IT CARRIES NO GATE OF ITS OWN and needs none: it delegates to open()
+    // WHOLE, so the read-only refusal (and the modal stop past it) are that one
+    // owner's, and the is_active test on the next line is what turns a refused
+    // open into this route's silent return — the seed never runs, so a locked
+    // tab's menu click changes nothing at all.
     if (key == nullptr) return;
     open();
     if (!text_editor::is_active(app.settings_editor)) return;
@@ -63,8 +69,43 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     viewport.invalidate_timestamp_area();
 }
 
+// THE ONE OPENER, and the ONE read-only decision for this whole surface.
+//
+// THE EDITOR IS DISABLED ON A READ-ONLY ACTIVE TAB (architect 2026-08-07): the
+// surface authors the ENGINE SETTINGS, which the lock protects by the ruling's
+// own vocabulary (read_only_key_blocked, input_key_dispatch.cpp — read-only
+// protects the authored musical content, the two marker stores and the engine
+// settings). The gate belongs HERE because this is the single chokepoint every
+// open passes: the bare `;` key (which the keyboard allowlist already refuses
+// one level up, and keeps refusing — this is not its defense) and the SETTINGS
+// DROPDOWN's six item clicks, which call open_prefilled and reach no other gate
+// at all. That second route was the hole: the menu opened the editor from a
+// locked tab and every engine key was then settable in it.
+//
+// IT IS A SILENT CONSUMED NO-OP, NOT A GREYED MENU ITEM, and that is a ruling
+// rather than an omission: the dropdown items' NEVER-GREY rule is the
+// architect's own standing one (they dispatch and their commands' own refusals
+// answer), so a face here would contradict it. A silent refusal is the
+// product's ordinary shape for a gesture that cannot act.
+//
+// WHAT THIS MAKES UNREACHABLE, recorded because it is a live rule and not a
+// dead one: the typed `tab_X_trim_*=` commits lost their read-only refusal the
+// same day (trim is band, not authored content) — on a locked ACTIVE tab that
+// relaxation is now unreachable, the SURFACE being gone rather than the rule.
+// The arm's deleted guard stays deleted: this opener is the one owner, and a
+// second check there would be both unreachable and wrong. Typing
+// `tab_B_trim_begin=` from an UNLOCKED active tab while B is locked stays legal
+// and is the case the relaxation still serves.
 void GuiSettingsEditor::open() {
+    if (active_view_state(app).read_only) return;
     if (text_editor::is_active(app.settings_editor)) return;
+    // THE MODAL PLAYBACK STOP IS THE OPENER'S, past every refusal above — the
+    // open_load_editor precedent exactly ("playback halts only when the modal
+    // actually opens, so a refused open leaves a listening session
+    // undisturbed"). It moved here from the two call sites with the gate: a
+    // caller-side stop would have made the dropdown's refusal kill a live
+    // audition and open nothing, which is not the consumed no-op this is.
+    playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",
