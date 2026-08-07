@@ -2337,23 +2337,29 @@ struct AppState {
         // never inherits the last visit's reading and there is nothing to reset
         // by hand.
         //
-        // ITS SELECTOR IS ROW 3'S TAB PAIR, which stops being the A/B tabs while
-        // the view stands and becomes this bit's radio: tab A reads "Iterative",
-        // tab B "Cumulative", the selected face marks the live reading and a
-        // press on the other switches; at the NEWEST index the two readings
-        // coincide, so the switch there redraws the same lane and only the lit
-        // tab moves. ITS HOTKEY IS CTRL+TAB — the tabs' own
+        // ITS SELECTOR IS ROW 3'S TABS, which stop being the A/B tabs while the
+        // view stands and become this bit's radio: with the COMMIT walk lit that
+        // is "Iterative (Remote)" and "Cumulative (Remote)" (the four-slot roster
+        // and its labels are at kCompareIterativeLabel), the selected face marks
+        // the live reading and a press on another switches; at the NEWEST index
+        // the two readings coincide, so the switch there redraws the same lane
+        // and only the lit tab moves. ITS HOTKEY IS CTRL+TAB — the tabs' own
         // chord, following the surface (architect 2026-08-05, superseding his
         // same-day "there is no hotkey for the pair"): in the mode that chord
-        // TOGGLES the reading through the one switch owner instead of switching
+        // CYCLES the readings through the one switch owner instead of switching
         // tabs, which is the mode-bit-selects-the-command shape Ctrl+Alt+R
-        // already has. Ctrl+Shift+Tab stays the consumed paired march.
+        // already has. CTRL+SHIFT+TAB IS THAT CYCLE'S MIRROR since 2026-08-07 —
+        // one tab LEFT with wrap, through the same owner — so the paired march
+        // is the mode's own reverse cycle in here rather than a consumed no-op
+        // (outside the view the march is untouched).
         //
         // A SWITCH IS A MODE EDGE, exactly like a `,` / `.` step, and one owner
         // does all of it (GuiInputHandler::set_history_reading, the four-tab selector
         // since 2026-08-07): clear the mode
         // focus, drop the lane's published content, reset the viewport to full
-        // zoom out, damage the window.
+        // zoom out, REPUBLISH THE LANE SYNCHRONOUSLY (2026-08-07 — the arriving
+        // reading's flags stand before the press returns, so the swap shows no
+        // blank frame), damage the window.
         //
         // EVERY READER OF THE DISPLAYED DELTA PASSES IT, and since 2026-08-07
         // they do so THROUGH ONE ACCESSOR (displayed_delta() below) rather than
@@ -2461,7 +2467,12 @@ struct AppState {
         // stashes for exactly that reason — a `,` / `.` step would otherwise
         // leave the LEAVING commit's flags standing for the keyboard to cycle
         // (drop_lane_stash_across_history_edge, input_key_dispatch.cpp, owns the
-        // argument). Its READERS, re-derived by grep 2026-08-05: the producer
+        // argument). SINCE 2026-08-07 the three LIVE edges run the producer
+        // again in the same press (republish_history_lane_now), so the drop and
+        // the refill are one atomic swap there and the lane never paints blank
+        // between two commits; the emptied state is still what the exit and the
+        // producer's own refusals leave, which is why every reader below still
+        // reads an empty list as "nothing there". Its READERS, re-derived by grep 2026-08-05: the producer
         // itself and the lane painter it feeds (waveform_cache.cpp), the mode's
         // Tab cycle and its bare `c` (handle_history_mode_key), and the focus
         // click's shared body (focus_history_diff_flag). Every one of them reads
@@ -3461,9 +3472,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 //     by ruling, and a tab has no disabled face of its own. Their entries exist
 //     so the vector is total over the roster and the comparator needs no
 //     membership test. (The tabs answer true in EVERY state since 2026-08-05:
-//     the history view, which greyed them for one day, repurposes the pair as
-//     its compare selector instead, and the chord it gave that selector —
-//     Ctrl+Tab, the mode's own compare toggle — is what makes the derived
+//     the history view, which greyed them for one day, repurposes the row as
+//     its reading selector instead, and the chord it gave that selector —
+//     Ctrl+Tab, the mode's own cycle — is what makes the derived
 //     partition call them LIVE, so the mode line at the top of this body never
 //     fires for them either, and row 3 has no disabled face at all.)
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
@@ -3631,12 +3642,14 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     // the surface is repurposed, not duplicated, so the selected face marks the
     // live READING rather than the live tab. Ranked first for the same reason
     // the Render label's history arm is: the view is the outer mode, and the
-    // A/B tab it hides cannot move in here anyway (both tab chords are consumed).
+    // A/B tab it hides cannot move in here anyway — neither tab chord switches
+    // one in the mode, both being the reading cycle's two directions there.
     //
     // FOUR SLOTS SINCE 2026-08-07, and the lit one is the live (SOURCE, READING)
-    // PAIR: the row is the product of the two axes in row order — Iterative,
-    // Cumulative, Iterative (Local), Cumulative (Local) — so exactly one is ever
-    // lit and the radio rule falls out of the pair being a pair.
+    // PAIR: the row is the product of the two axes in row order — Iterative
+    // (Remote), Cumulative (Remote), Iterative (Local), Cumulative (Local) — so
+    // exactly one is ever lit and the radio rule falls out of the pair being a
+    // pair.
     if (a.history_mode.active) {
         const bool local =
             a.history_mode.source == GuiHistoryWalkSource::Local;
@@ -3887,11 +3900,25 @@ inline constexpr const char* kRenderCommitLabel     = "Save and Commit";
 // place where a stateful button's word is written.
 // FOUR OF THEM SINCE 2026-08-07, the row being the product of the two axes: the
 // two readings of the COMMIT walk, then the same two of the LOCAL one. The
-// "(Local)" suffix is what names the second walk on the surface — parenthesized
+// parenthesized suffix is what names the walk on the surface — parenthesized
 // rather than prefixed so the two readings stay the first word a reader lands
 // on, and sentence case throughout like the pair it grew from.
-inline constexpr const char* kCompareIterativeLabel  = "Iterative";
-inline constexpr const char* kCompareCumulativeLabel = "Cumulative";
+//
+// BOTH PAIRS CARRY THEIR WALK (architect 2026-08-07, later the same day): the
+// commit pair went from bare "Iterative" / "Cumulative" to "(Remote)", so the
+// row names its source on all four slots instead of leaving one pair's source
+// implied by the other's suffix. The words are the SURFACE's, not the model's —
+// GuiHistoryWalkSource stays Commit | Local, the committed history being what a
+// remote publishes, and these two constant names stay the unsuffixed pair's.
+//
+// THE WIDTH IS ABSORBED, checked rather than assumed (the row is one
+// left-to-right accumulation of max(kTabMinWidthPx, shaped + 2*pad), no wrap and
+// no clip): shaped at the product's one size the four labels measure 126 + 151 +
+// 109 + 134 = 520 px at 100% and 259 + 305 + 223 + 269 = 1056 px at 200%, plus
+// eight paddings (10 px each, scaled) = 600 px and 1216 px of row 3 against the
+// 1920 px window. The suffix cost 25 px per label at 100% and 46 px at 200%.
+inline constexpr const char* kCompareIterativeLabel  = "Iterative (Remote)";
+inline constexpr const char* kCompareCumulativeLabel = "Cumulative (Remote)";
 inline constexpr const char* kCompareIterativeLocalLabel  = "Iterative (Local)";
 inline constexpr const char* kCompareCumulativeLocalLabel = "Cumulative (Local)";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,

@@ -334,8 +334,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // chords.
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `,` / `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag
-//     cycle, the one shift-carrying shape), Ctrl+Tab (the compare toggle, the
-//     one ctrl-carrying shape), bare Home / End and bare `c`. The definition
+//     cycle), Ctrl+Tab and Ctrl+Shift+Tab (the row-3 tab cycle, forward and
+//     reverse — the two ctrl-carrying shapes), bare Home / End and bare `c`. The definition
 //     carries the derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
 //     this first.
@@ -1786,6 +1786,12 @@ private:
     //     commit step and each COMPARE SWITCH (four call sites, re-derived by
     //     grep 2026-08-06). Its own comment carries the argument and is the
     //     authoritative statement of the edge set.
+    //   * republish_history_lane_now REFILLS it in the same press, at the THREE
+    //     LIVE edges (entry, step, reading switch — the exit has no lane of the
+    //     mode's to publish and is deliberately not a caller). It is the view
+    //     switch's own synchronous route, and it is what makes a walk step swap
+    //     the lane's content atomically instead of blanking it for a frame
+    //     (architect 2026-08-07). The drop's comment carries both arguments.
     //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
     //     2026-08-07 to the (walk source, reading) PAIR the four tabs select):
@@ -1819,6 +1825,7 @@ private:
     void frame_viewed_commit_diff_span();
     void frame_history_view_whole_song();
     void drop_lane_stash_across_history_edge();
+    void republish_history_lane_now();
     void set_history_reading(GuiHistoryWalkSource source,
                              GuiHistoryCompare    compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,

@@ -385,14 +385,15 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // exclusive). One named site, not a policy invented here.
 //
 // THE TWO TABS NEEDED A SECOND HAND ENTRY FOR ONE DAY AND NO LONGER DO
-// (2026-08-05). While it stands row 3 is the COMPARE SELECTOR — "Iterative" and
-// "Cumulative", the two readings of a checkpoint — with a mode-local press route
-// at the tab row's own band claim; the pair shipped with no hotkey at all, so
-// their chord was consumed while their buttons were live and only a hand entry
-// could say so. Ctrl+Tab BECAME the compare toggle later that day, claimed by
+// (2026-08-05). While it stands row 3 is the READING SELECTOR — four slots since
+// 2026-08-07, the two readings of each of the two walks — with a mode-local press
+// route at the tab row's own band claim; the pair shipped with no hotkey at all,
+// so their chord was consumed while their buttons were live and only a hand entry
+// could say so. Ctrl+Tab BECAME the cycle later that day, claimed by
 // the mode's own vocabulary (history_mode_owns_key), so the derivation now
-// answers LIVE for them on its own and the exception is gone. Ctrl+Shift+Tab is
-// still the consumed paired march, and the lock slots still go with the tabs'
+// answers LIVE for them on its own and the exception is gone. Ctrl+Shift+Tab
+// joined it as the REVERSE cycle on 2026-08-07 and changes nothing here — no
+// roster entry carries a shifted Tab — and the lock slots still go with the tabs'
 // old meaning (the painter draws no padlock and publishes no lock rect in the
 // mode).
 //
@@ -436,8 +437,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   the viewed commit in place), and the history button itself (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
-//   and BOTH TABS since 2026-08-05 — live as the COMPARE SELECTOR rather than as
-//   tabs (Ctrl+Tab, the mode's own compare toggle, so they come out of the walk
+//   and ALL FOUR TABS since 2026-08-05 — live as the READING SELECTOR rather than
+//   as tabs (Ctrl+Tab, the mode's own cycle, so they come out of the walk
 //   like any other admitted chord), with their padlocks not drawn at all (the
 //   mode's tabs are not tabs, so there is no lock state to show and no lock rect
 //   published for bare `o` to be refused through),
@@ -1474,8 +1475,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // chord dispatch would do — the tabs' chord, Ctrl+Tab, became the
             // mode's own CYCLE and would step past whichever slot was clicked.
             //
-            // ONE SWITCH OWNER for all five routes — these four slots and that
-            // keyboard cycle (set_history_reading) — and it is
+            // ONE SWITCH OWNER for all six routes — these four slots and the
+            // keyboard cycle's two directions (Ctrl+Tab forward, Ctrl+Shift+Tab
+            // back since 2026-08-07; set_history_reading) — and it is
             // IDEMPOTENT, which is where the live tabs' radio rule comes from:
             // a press on the tab already lit is a consumed no-op because the
             // owner returns, not because this site tests for it.

@@ -1615,9 +1615,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // slots or four), the width, the label and the lock.
     //
     // AND IT IS FOUR SLOTS SINCE 2026-08-07 (architect), the product of the two
-    // axes in row order: Iterative / Cumulative over the COMMIT walk, then the
-    // same two over the LOCAL one — the session's own undo history read through
-    // the same delta machinery. The extra pair is painted here and NOWHERE ELSE;
+    // axes in row order: the two readings over the COMMIT walk, labelled
+    // "(Remote)" since 2026-08-07, then the same two over the LOCAL one — the
+    // session's own undo history read through the same delta machinery. The extra pair is painted here and NOWHERE ELSE;
     // outside the view the walk below publishes it as an empty rect and paints
     // the A/B pair alone, exactly as it always did.
     //
