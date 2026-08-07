@@ -2467,11 +2467,12 @@ struct AppState {
         // stashes for exactly that reason — a `,` / `.` step would otherwise
         // leave the LEAVING commit's flags standing for the keyboard to cycle
         // (drop_lane_stash_across_history_edge, input_key_dispatch.cpp, owns the
-        // argument). SINCE 2026-08-07 the three LIVE edges run the producer
-        // again in the same press (republish_history_lane_now), so the drop and
-        // the refill are one atomic swap there and the lane never paints blank
-        // between two commits; the emptied state is still what the exit and the
-        // producer's own refusals leave, which is why every reader below still
+        // argument). SINCE 2026-08-07 every edge runs the producer again in the
+        // same press (republish_history_lane_now — the exit included, where what
+        // it publishes is the LIVE lane), so the drop and the refill are one
+        // atomic swap and the lane never paints blank between two contents; the
+        // emptied state is still what the producer's own refusals leave, which is
+        // why every reader below still
         // reads an empty list as "nothing there". Its READERS, re-derived by grep 2026-08-05: the producer
         // itself and the lane painter it feeds (waveform_cache.cpp), the mode's
         // Tab cycle and its bare `c` (handle_history_mode_key), and the focus

@@ -262,9 +262,11 @@ void GuiInputHandler::close_history_mode() {
     const unsigned long long generation = app.history_mode.generation;
     // The parked band, read out BEFORE the reset destroys it and applied AFTER,
     // with the mode already down: the applies below end in a synchronous
-    // waveform rebuild, and a rebuild that ran while `active` still stood would
+    // waveform rebuild — and this exit runs one unconditionally past them since
+    // 2026-08-07 — and a rebuild that ran while `active` still stood would
     // republish the leaving session's diff flags and hit rects over the very
-    // frame this exit is clearing.
+    // frame this exit is clearing. The reset's position above both is what makes
+    // every one of those rebuilds publish the LIVE lane.
     const double  entry_zoom = app.history_mode.entry_zoom_level;
     const char    entry_view = app.history_mode.entry_audio_view;
     int64_t restore_ph = app.history_mode.entry_playhead_cursor_sample;
@@ -310,20 +312,46 @@ void GuiInputHandler::close_history_mode() {
         viewport.apply_zoom_to_start(entry_zoom, restore_vp);
     }
 
+    // AND THE LIVE LANE IS REPUBLISHED IN THIS SAME PRESS (architect 2026-08-07,
+    // the FOURTH REPUBLISHING EDGE — so the close is symmetric with the three
+    // in-view ones, and the exit's own one-tick blank, recorded at the drop as
+    // that fix's remainder for a few hours, is closed). THE MODE IS ALREADY DOWN at this point (the
+    // whole-struct reset ran above), so the rebuild takes the flag cache's LIVE
+    // arm and publishes the session's own markers, their hit rects and their
+    // stems — exactly what the leaving view owes the editor.
+    //
+    // BELOW THE RESTORE, NEVER ABOVE IT: apply_zoom_to_start runs this same
+    // synchronous rebuild itself whenever the restore MOVES something, and a
+    // republication placed before it would be the one erased. Below, it is either
+    // the only one (a restore that moved nothing, which is precisely the case
+    // that used to blank) or a fingerprint-guarded no-op for the flag cache after
+    // the restore's own.
+    //
+    // THE TWO LOAD-IN-PLACE CLOSERS PAY A REDUNDANT REBUILD HERE and are
+    // deliberately not special-cased: each calls this closer on the first line
+    // past its last refusal and then applies the LOADED file's own band some
+    // seventy lines later, republishing over the top of this — the same
+    // "simply overwritten, and not wasted either" reasoning the restore above
+    // carries, at the same price of one plate render on a keypress that is
+    // already loading a file.
+    republish_history_lane_now();
+
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
     // with it, and the bottom strip's modal span gives its line back. Narrow
     // damage would have to know all three, and none of them is worth a rect. It
-    // covers the restore's own damage too, which is why the applies above emit
-    // theirs and nothing here has to widen for them.
+    // covers the restore's and the republication's own damage too, which is why
+    // both above emit theirs and nothing here has to widen for them.
     viewport.invalidate_all();
 
     // THE DEFERRED PREFETCH KICK, FLUSHED (2026-08-07): a re-warm that arrived
     // while this visit stood was parked rather than run, the visit being bound
     // to the store's generation, and this is the first moment nothing is reading
-    // it. Last, so it cannot interleave with the restore above — and through the
-    // one funnel, which reads the live source and setting rather than anything
-    // the parked bit carried.
+    // it. STILL LAST, which is the point of its position: it starts a background
+    // scan, so it must not interleave with the restore or the synchronous
+    // republication above it — those two own this press's frame, and the kick owns
+    // nothing but a worker. Through the one funnel, which reads the live source
+    // and setting rather than anything the parked bit carried.
     if (deferred_history_prefetch_kick_) kick_history_prefetch();
 }
 
@@ -361,38 +389,38 @@ void GuiInputHandler::close_history_mode() {
 // empty the answer to every lane hit and every cycle step is "nothing", which is
 // the correct cold answer rather than a wrong warm one. The cost is a frame's
 // stems, absent instead of stale — and the edge's own full-window damage is
-// already repainting. (At the three LIVE edges that span is now four lines rather
-// than a frame; the next paragraph is the whole of it.)
+// already repainting. (That span is now a handful of LINES rather than a frame at
+// every one of the four edges; the next paragraph is the whole of it.)
 //
-// A SYNCHRONOUS FLAG REBUILD AT THE THREE LIVE EDGES IS EXACTLY WHAT THEY DO
-// NOW (architect 2026-08-07), SUPERSEDING this site's own "heavier than a
-// one-tick window warrants" weighing — the window is VISIBLE. At full zoom out,
-// which is where the walk is read (the edges land there themselves) and where
-// the framing therefore moves nothing, no other route republished inside the
-// press: each `,` / `.` step and each reading switch painted a BLANK lane for a
-// frame before the arriving commit's flags landed, and a blank frame between two
-// contents is a flicker whatever removing it costs. The entry, the walk step and
-// the reading switch each call republish_history_lane_now (below) on the line
-// after their framing, so the new list, its hit rects and its stems are standing
-// when the press returns: the old content is replaced only once the new one is
-// ready, atomically inside the press, with no stale-hit window on either side of
-// the swap.
+// A SYNCHRONOUS FLAG REBUILD AT EVERY EDGE IS EXACTLY WHAT THEY DO NOW
+// (architect 2026-08-07), SUPERSEDING this site's own "heavier than a one-tick
+// window warrants" weighing — the window is VISIBLE. At full zoom out, which is
+// where the walk is read (the edges land there themselves) and where the framing
+// therefore moves nothing, no other route republished inside the press: each `,` /
+// `.` step and each reading switch painted a BLANK lane for a frame before the
+// arriving commit's flags landed, and a blank frame between two contents is a
+// flicker whatever removing it costs. All four edges now call
+// republish_history_lane_now (below) as their last act — the three in-view ones on
+// the line after their framing, the EXIT below its parked-band restore, where the
+// mode is already down and the rebuild publishes the LIVE lane the editor is
+// coming back to (that fourth call landed hours after the first three, closing
+// the one window this comment recorded as the fix's remainder). So the lane's old
+// content is replaced only once the new one is ready, atomically inside the press,
+// with no stale-hit window on either side of the swap, and the ENTER and LEAVE
+// edges are symmetric.
 //
-// THE DROP STAYS — as that rebuild's own pre-step, and as the COLD ANSWER for
-// the frames the rebuild cannot serve. maybe_rebuild_flag_cache refuses while
-// the audio is loading or absent and before the first plate has published, and
-// the EXIT (below) is not one of the three: it drops here and then restores the
-// editor's parked band, whose apply_zoom_to_start republishes the LIVE lane in
-// the same press only when that restore MOVES something — a visit that panned
-// nothing and left the playhead alone leaves the live lane empty until the next
-// tick, exactly as every edge used to. So what died is the ROUTINE one-tick
-// window at the three edges, not the empty answer itself: every reader above
-// still has to answer "nothing" correctly, and still does.
+// THE DROP STAYS — as that rebuild's own pre-step, and as the COLD ANSWER for the
+// frames the rebuild cannot serve: maybe_rebuild_flag_cache refuses while the
+// audio is loading or absent and before the first plate has published, and an
+// edge reached in any of those states leaves the emptied lane exactly as
+// described. So what died is the ROUTINE one-tick window, not the empty answer
+// itself: every reader above still has to answer "nothing" correctly, and still
+// does.
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
 // (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist): it
 // already ends in kick_waveform_sync, whose tail rebuilds the flag cache INLINE
-// — the same republication the three edges now reach for, arrived at as part of
+// — the same republication every edge now reaches for, arrived at as part of
 // the switch itself — so there is no frame to protect.
 // Nor is there a domain change to protect against: on both sides of a view
 // switch `marker_index` indexes app.history_mode.flags, the mode owning the lane
@@ -407,9 +435,18 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.history_mode.flags.clear();
 }
 
-// REPUBLISH THE LANE INSIDE THE PRESS — the last act of each of the three live
-// mode edges (architect 2026-08-07, the step flicker's fix; the drop above
+// REPUBLISH THE LANE INSIDE THE PRESS — the last act of ALL FOUR mode edges
+// (architect 2026-08-07, the step flicker's fix, extended to the exit the same
+// day: the entry, the walk step, the reading switch and the close; the drop above
 // carries the argument and the weighing this superseded).
+//
+// IT IS THE SAME CALL AT ALL FOUR, and WHICH lane it publishes falls out of where
+// each caller puts it rather than out of an argument here: the three in-view
+// edges call it with the mode standing, so the rebuild takes its history arm and
+// publishes the arriving delta's flags; the exit calls it with the mode already
+// down, so the rebuild takes a live-column arm and publishes the session's own
+// markers. One function, one route, and the flag cache's own arm selection is the
+// only thing that differs.
 //
 // IT IS THE VIEW SWITCH'S OWN ROUTE, unforked: Viewport::kick_waveform_sync
 // renders the plate synchronously, publishes the displayed fingerprint and
@@ -422,20 +459,25 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // keypress's cost — and the mode is asking no more of that route than the live
 // columns already do.
 //
-// THE ONE COST, recorded rather than inferred away: at an edge whose framing
-// MOVED, frame_span_into_view's apply_zoom_to_start has already kicked, so that
-// press renders the plate twice. The flag cache does not rebuild twice — it is
-// fingerprint-guarded, and the first kick already published the arriving
-// commit's lane — and the double render happens only where the user's press
-// asked for a viewport change as well. Skipping this call by testing whether the
-// framing moved would make the fix depend on an inference about another
-// function's internals; ONE SHAPE AT ALL THREE EDGES is worth one redundant
-// render at the ones that move.
+// THE ONE COST, recorded rather than inferred away: at an edge whose viewport
+// write MOVED something — the framing's apply_zoom_to_start in view, the parked
+// band's at the exit — that call has already kicked, so the press renders the
+// plate twice. The flag cache does not rebuild twice: it is fingerprint-guarded,
+// and the first kick already published the arriving lane. The double render
+// therefore lands only where the user's press asked for a viewport change as
+// well, and skipping this call by testing whether the write moved would make the
+// fix depend on an inference about another function's internals; ONE SHAPE AT
+// EVERY EDGE is worth one redundant render at the ones that move. The two
+// load-in-place closers pay theirs for a third reason, stated at the exit.
 //
-// THE ORDER IS FIXED at every caller: state write, focus clear, stash drop,
-// region clear, framing, THEN this. Everything the rebuild reads must already be
-// true, and the framing must have settled the viewport the flags are mapped
-// onto.
+// THE ORDER IS FIXED at every caller, and it is one rule in two spellings: this
+// call comes LAST of the acts that change what the lane should show. In view that
+// is state write, focus clear, stash drop, region clear, framing, THEN this; at
+// the exit it is the whole-struct reset, the stash drop, the parked-band restore,
+// THEN this. Everything the rebuild reads must already be true, and the viewport
+// the flags are mapped onto must already have settled — which at the exit means
+// strictly below apply_zoom_to_start, whose own kick this would otherwise
+// precede and waste.
 void GuiInputHandler::republish_history_lane_now() {
     viewport.kick_waveform_sync();
 }
@@ -858,11 +900,15 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // no meaning in a view with one tab band and was this gate's consumed no-op
     // until now; it is the mode's own reverse cycle instead, claimed here so it
     // never reaches the allowlist.
-    // ITS ISOLEFTTAB SPELLING IS CLAIMED WITH IT, and that is not belt and
-    // braces: xkb puts ISO_Left_Tab on the Tab key's shift level, so a layout
-    // delivering Ctrl+Shift+Tab as that keysym would otherwise fall through this
-    // predicate into the allowlist while the plain Tab spelling cycled. The mode
-    // reads the two spellings as one shape, exactly as its bare cycle does.
+    // ITS ISOLEFTTAB SPELLING IS CLAIMED WITH IT, and the reason is xkb's: that
+    // keysym lives on the Tab key's shift level, so a layout delivering
+    // Ctrl+Shift+Tab that way would otherwise fall through this predicate into the
+    // allowlist while the plain Tab spelling cycled. ON THIS DESKTOP IT IS BELT
+    // AND BRACES, and that is SETTLED rather than unknown (architect-confirmed
+    // 2026-08-07 by pressing it): labwc delivers the PLAIN Tab keysym under
+    // ctrl+shift, which is why the live paired march — bound on Tab alone — has
+    // always worked outside the view. The mode reads the two spellings as one
+    // shape anyway, exactly as its bare cycle does, and it costs a compare.
     if (mods.ctrl) {
         if (key == GuiKeys::Tab) return true;
         return mods.shift && key == GuiKeys::IsoLeftTab;
@@ -1075,11 +1121,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // the FIRST flag and Shift+Tab the LAST, which is the same rule read from
     // outside the list. An empty list is a consumed no-op, in all three of its
     // shapes: an empty delta, an active column whose half of the delta is empty,
-    // and the DROPPED-AND-NOT-YET-REBUILT list, whose window the three live mode
-    // edges closed on 2026-08-07 (they republish inside their own press) but
-    // which the exit and the rebuild's own refusals still leave open — the cold
-    // answer stays this arm's, and it is what a step and a Tab arriving in one
-    // key batch would have cycled the leaving commit's flags with
+    // and the DROPPED-AND-NOT-YET-REBUILT list, whose window every mode edge
+    // closed on 2026-08-07 by republishing inside its own press — the rebuild's
+    // own refusals (loading or absent audio, no plate yet) still leave it open, so
+    // the cold answer stays this arm's, and it is what a step and a Tab arriving in
+    // one key batch would have cycled the leaving commit's flags with
     // (drop_lane_stash_across_history_edge owns the whole argument).
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
         const int n = static_cast<int>(app.history_mode.flags.size());

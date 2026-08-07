@@ -1786,12 +1786,13 @@ private:
     //     commit step and each COMPARE SWITCH (four call sites, re-derived by
     //     grep 2026-08-06). Its own comment carries the argument and is the
     //     authoritative statement of the edge set.
-    //   * republish_history_lane_now REFILLS it in the same press, at the THREE
-    //     LIVE edges (entry, step, reading switch — the exit has no lane of the
-    //     mode's to publish and is deliberately not a caller). It is the view
-    //     switch's own synchronous route, and it is what makes a walk step swap
-    //     the lane's content atomically instead of blanking it for a frame
-    //     (architect 2026-08-07). The drop's comment carries both arguments.
+    //   * republish_history_lane_now REFILLS it in the same press, at ALL FOUR
+    //     edges (entry, step, reading switch, exit — the last one below its
+    //     parked-band restore, where the mode is down and the lane it publishes
+    //     is the LIVE one). It is the view switch's own synchronous route, and it
+    //     is what makes an edge swap the lane's content atomically instead of
+    //     blanking it for a frame (architect 2026-08-07). The drop's comment
+    //     carries both arguments.
     //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
     //     2026-08-07 to the (walk source, reading) PAIR the four tabs select):
