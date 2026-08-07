@@ -3680,9 +3680,14 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// Exactly two carry it, and both for that reason: Render (Ctrl+Alt+R renders
-// beside the source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell) and
-// Paste (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state).
+// FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
+// source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Paste
+// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state) and — since
+// 2026-08-07 — THE WALK'S TWO ARROWS, whose shifted twins are the walk's WALL
+// JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
+// bare `.` steps one newer and Shift+`.` goes to the newest
+// (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
+// dispatch them through the one press body like every other button).
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -3697,7 +3702,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // something, so "which buttons admit shift" and "which buttons advertise it"
 // are one fact by construction rather than two lists to keep in step.
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
-    return b == RedesignButton::Render || b == RedesignButton::IconPaste;
+    return b == RedesignButton::Render || b == RedesignButton::IconPaste ||
+           b == RedesignButton::IconHistoryOlder ||
+           b == RedesignButton::IconHistoryNewer;
 }
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
@@ -3719,7 +3726,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 //
 // The names follow HELP's vocabulary so the hint and the manual agree.
 //
-// `line2` is the SHIFT LINE and is non-null on exactly the two shift-admitting
+// `line2` is the SHIFT LINE and is non-null on exactly the shift-admitting
 // buttons, which is not a coincidence to be maintained: it is asserted against
 // redesign_button_shift_admits below, so the hint cannot advertise a shift press
 // that does nothing (or stay silent about one that does).
@@ -3744,7 +3751,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE SHIFT LINE NAMES THE OTHER FUNCTION (architect 2026-07-31), not
         // "for more": a hint that does not say what it gets you is not a hint.
         // It is also the standing no-gesture-hints preference's ONE ruled
-        // exception, scoped to exactly these two buttons.
+        // exception, scoped to exactly the shift-admitting buttons — this one,
+        // Paste, and the walk's two arrows since 2026-08-07.
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
         // THE PADLOCK GETS NO TOOLTIP OF ITS OWN, and the tab's does not
@@ -3778,15 +3786,22 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // key toggles and there is no shifted twin.
         case RedesignButton::IconHistory: return {"History (h)", nullptr};
         // THE WALK'S TWO STEPS, in HELP's own words for the walk ("older" /
-        // "newer" checkpoints). They are the roster's only tooltips a user
-        // cannot normally reach: the hint is refused on a disabled button (the
-        // painter's own gate) and these two rest disabled, so the hover text
-        // appears exactly inside the history view, where the click acts.
-        case RedesignButton::IconHistoryOlder: return {"Older (,)", nullptr};
-        case RedesignButton::IconHistoryNewer: return {"Newer (.)", nullptr};
-        // THE REVERT ACT, the third tooltip reachable only inside the view — and
-        // the narrowest of the three, since the button is also greyed in there
-        // whenever nothing is selected. One line: the chord has no shifted twin.
+        // "newer" checkpoints), in the TWO-LINE form since 2026-08-07: their
+        // shifted twins jump to the walk's walls, so the hint says so — the same
+        // rule the static_assert below states, met by two more buttons.
+        // THEY ARE HOVERABLE HINTS EVERYWHERE, including outside the history
+        // view where the pair rests disabled (architect 2026-08-07, kdenlive's
+        // own behavior: a disabled icon still explains itself). The hint is what
+        // tells a user what the greyed arrows would do and where they work; the
+        // dead FACE is untouched, and so is the inert press.
+        case RedesignButton::IconHistoryOlder:
+            return {"Older (,)", "Press Shift for oldest checkpoint."};
+        case RedesignButton::IconHistoryNewer:
+            return {"Newer (.)", "Press Shift for newest checkpoint."};
+        // THE REVERT ACT, one line: the chord has no shifted twin. It rests
+        // disabled outside the view like the two arrows, and is greyed inside it
+        // whenever nothing is selected — in all three states it shows this hint,
+        // per the same ruling.
         case RedesignButton::IconRevert: return {"Revert (Ctrl+H)", nullptr};
     }
     return {nullptr, nullptr};
@@ -3909,51 +3924,68 @@ static_assert(
         redesign_button_shift_admits(RedesignButton::Render) &&
     (redesign_button_tooltip(RedesignButton::IconPaste).line2 != nullptr) ==
         redesign_button_shift_admits(RedesignButton::IconPaste) &&
+    (redesign_button_tooltip(RedesignButton::IconHistoryOlder).line2 !=
+     nullptr) ==
+        redesign_button_shift_admits(RedesignButton::IconHistoryOlder) &&
+    (redesign_button_tooltip(RedesignButton::IconHistoryNewer).line2 !=
+     nullptr) ==
+        redesign_button_shift_admits(RedesignButton::IconHistoryNewer) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     (redesign_button_tooltip(RedesignButton::IconCopy).line2 == nullptr),
     "the shift hint and the shift binding must name the same buttons");
 
-// Hoverability = enabled, plus the tabs' one extra fact: THE SELECTED TAB HAS
-// NO HOVER FACE (only the inactive one lights). Kept beside the predicate it
-// extends and consulted only by the hover recompute, so "a disabled button
-// never sets hovered" and "the selected tab never sets hovered" are one line
-// each at one site rather than a condition smeared over the painter. The tab
-// carve-out reads the SELECTED BIT rather than active_tab_view, which is what
-// carries it into the `h` view's compare selector for free: there the lit tab is
-// the live READING, and it is still the one with no hover face.
+// THE HOVER ZONE — "the pointer is over this button in a way the surface
+// answers at all", which is hoverability WITHOUT the enabled term. It exists
+// because the two things a hover produces stopped agreeing on that one term
+// (architect 2026-08-07): the FACE still refuses on a disabled button, the
+// TOOLTIP no longer does. Everything else the two share — the open dropdown, the
+// selected tab — is stated once, here, so the hint and the pill can differ in
+// exactly the one way that was ruled and in no other.
+//
+// AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT. A lit
+// button beside an open menu would advertise a click the popup is about to
+// swallow (rows 2, 3 and 4, which it floats over) or a second lit button in a row
+// that shows one at a time (row 1) — and a HINT under an open menu is the
+// two-floating-surfaces rule, which this same term is what makes structural.
+//
+// ROW 1 HELD A BRIEF EXEMPTION and it is retired (architect 2026-08-03): the
+// row-1 close rule (on_motion, input_pointer.cpp) means a pointer can no
+// longer BE over a non-anchor row-1 button while a menu is up — the motion
+// that arrives there closes the menu first, and this predicate then answers
+// for a closed popup on that same frame — while an ANCHOR's pill is the
+// painter's own open condition (paint_menu_row), not this bit. So the
+// exemption named no case the close rule does not already own, and one
+// mechanism per behaviour is the shape to keep.
+//
+// THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
+// carries it into the history view for free: in there the row selects the
+// (source, reading) PAIR and the lit one is still the one with no hover face.
+// All FOUR slots take it — the two outside the view are unpainted there and
+// unreachable by their zero rect anyway. It sits in the ZONE rather than in
+// hoverability alone because the compare tabs carry no tooltip either way (their
+// null rows are membership), so no behaviour rests on the distinction and one
+// statement is better than two.
+inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
+    if (a.dropdown.open()) return false;
+    if (redesign_button_is_tab(b)) return !redesign_button_selected(a, b);
+    return true;
+}
+
+// Hoverability = the zone plus ENABLED: a disabled button never sets `hovered`
+// and therefore never wears a hover face. Consulted only by the hover recompute,
+// so the refusal is one line at one site rather than a condition smeared over
+// the painter.
 //
 // ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and that asymmetry with
 // the tabs is the crops': both ship a selected-hover state (the accent outline
-// over the selected fill) and row 3 does not. So the carve-out below names the
+// over the selected fill) and row 3 does not. So the zone's carve-out names the
 // tabs alone; the icon row's radios and the view bar's three are hoverable in
 // both states, and their already-selected press is refused in the ACTION (the
 // chord table's `radio` flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
-    // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT.
-    // A lit button beside an open menu would advertise a click the popup is about
-    // to swallow (rows 2, 3 and 4, which it floats over) or a second lit button in
-    // a row that shows one at a time (row 1).
-    //
-    // ROW 1 HELD A BRIEF EXEMPTION and it is retired (architect 2026-08-03): the
-    // row-1 close rule (on_motion, input_pointer.cpp) means a pointer can no
-    // longer BE over a non-anchor row-1 button while a menu is up — the motion
-    // that arrives there closes the menu first, and this predicate then answers
-    // for a closed popup on that same frame — while an ANCHOR's pill is the
-    // painter's own open condition (paint_menu_row), not this bit. So the
-    // exemption named no case the close rule does not already own, and one
-    // mechanism per behaviour is the shape to keep.
-    if (a.dropdown.open()) return false;
-    if (!redesign_button_enabled(a, total_frames, b)) return false;
-    // THE CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
-    // carries it into the history view for free: in there the row selects the
-    // (source, reading) PAIR and the lit one is still the one with no hover
-    // face. All FOUR slots take it — the two outside the view are unpainted
-    // there and unhoverable by their zero rect anyway.
-    if (redesign_button_is_tab(b)) {
-        return !redesign_button_selected(a, b);
-    }
-    return true;
+    return redesign_button_hover_zone(a, b) &&
+           redesign_button_enabled(a, total_frames, b);
 }
 
 // Snapshot the undo-tracked settings from `app` (engine_settings; trim is

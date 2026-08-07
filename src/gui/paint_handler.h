@@ -634,7 +634,8 @@ private:
     // on the OPEN EDGE rather than on which gestures can reach it: toggle_
     // dropdown's open path hides the tooltip outright (a press opens a menu, and
     // so does an armed row-1 hover), and while the popup stands NO roster button
-    // hovers (redesign_button_hoverable), so nothing can stamp a fresh dwell
+    // answers the pointer at all (redesign_button_hover_zone — the term the hint
+    // and the hover face still share), so nothing can stamp a fresh dwell
     // under it. Both PUBLISH the rect
     // they painted (AppState::redesign_tooltip.rect,
     // AppState::dropdown.rect + item_rects) — the dropdown's for its hit

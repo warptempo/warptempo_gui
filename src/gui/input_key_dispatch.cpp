@@ -804,14 +804,19 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // which is how most layouts deliver it) stays the consumed paired march it
     // has always been in here, dropping at the allowlist below.
     if (mods.ctrl) return key == GuiKeys::Tab && !mods.shift;
-    // THE CYCLE IS THE ONE SHIFT-CARRYING SHAPE, and it is admitted in the live
-    // cycle's own three spellings: bare Tab forward, Shift+Tab back, and
+    // THE CYCLE IS ONE OF TWO SHIFT-CARRYING SHAPES, and it is admitted in the
+    // live cycle's own three spellings: bare Tab forward, Shift+Tab back, and
     // IsoLeftTab back shift-agnostically (the compositor delivers that keysym
     // for Shift+Tab on most layouts, and the live arm accepts it either way).
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
+    // THE WALK IS THE OTHER (2026-08-07): bare `,` / `.` STEP and shift-exact
+    // `,` / `.` JUMP TO THE WALLS — oldest and newest. Both shapes are the
+    // walk's own vocabulary, so both are admitted here and the arm below reads
+    // the bit; every other combination stays the consumed no-op strict modifier
+    // validation makes it (ctrl and alt are already refused above).
+    if (key == GuiKeys::Comma || key == GuiKeys::Period) return true;
     if (mods.shift) return false;
-    return key == GuiKeys::H || key == GuiKeys::Comma ||
-           key == GuiKeys::Period || key == GuiKeys::Home ||
+    return key == GuiKeys::H || key == GuiKeys::Home ||
            key == GuiKeys::End || key == GuiKeys::C;
 }
 
@@ -889,10 +894,21 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // `,` steps OLDER (further back in the walk, index+1), `.` steps NEWER
     // (index-1). Each CLAMPS at its wall as a consumed no-op — the walk has
     // ends, and running off one must not wrap or refuse loudly.
+    // SHIFT JUMPS TO THE WALL INSTEAD OF STEPPING TOWARD IT (architect
+    // 2026-08-07): Shift+`,` goes to the OLDEST member and Shift+`.` to the
+    // NEWEST, the same key naming the same direction. A jump is the STEP'S OWN
+    // ACT — the same mode edge below, in the same order — so the two shapes
+    // differ in one expression and in nothing else; and standing at the wall it
+    // names, it is the step's own consumed nothing.
+    // ONLY THE BARE SHAPES REPEAT (repeat_eligible, below): a held absolute jump
+    // could only flap against the wall it is already on.
     // THE ICON ROW'S TWO ARROW BUTTONS ARE THESE KEYS (2026-08-05,
     // RedesignButton::IconHistoryOlder / IconHistoryNewer): they dispatch the
     // bare chords through on_key like every other button, so this is the one
-    // body and a click at a wall is the same consumed nothing a key press is.
+    // body and a click at a wall is the same consumed nothing a key press is —
+    // and since 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
+    // admits, app_state.h), so a shift-click reaches the jump through that same
+    // one route and their tooltips carry the shift line that names it.
     //
     // THE ACTIVE WALK'S POSITION, never a named one (2026-08-07): the step reads
     // walk_count / walk_index and writes through set_walk_index, so the same body
@@ -904,14 +920,21 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Comma || key == GuiKeys::Period) {
         const std::size_t count = app.history_mode.walk_count();
         const std::size_t here  = app.history_mode.walk_index();
-        std::size_t there = here;
-        if (key == GuiKeys::Comma) {
-            if (here + 1 >= count) return true;   // oldest already
-            there = here + 1;
-        } else {
-            if (here == 0) return true;           // newest already
-            there = here - 1;
-        }
+        // THE OLDEST INDEX, and the empty walk's answer with it: an empty walk
+        // has one address (0) and stands at it, so both keys resolve to `here`
+        // and fall out of the wall check below with nothing to do — no case of
+        // its own.
+        const std::size_t oldest = count == 0 ? 0 : count - 1;
+        std::size_t there;
+        if (key == GuiKeys::Comma)
+            there = mods.shift ? oldest : std::min(here + 1, oldest);
+        else
+            there = mods.shift ? 0 : (here == 0 ? 0 : here - 1);
+        // THE WALL IS ONE CHECK FOR BOTH SHAPES: a step that would run off the
+        // end and a jump made while already standing at that end are the same
+        // consumed no-op, with no edge and nothing moved. The walk has ends, and
+        // reaching one must not wrap or refuse loudly.
+        if (there == here) return true;
         app.history_mode.set_walk_index(there);
         // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
         // clearer that always takes them together: both index into the list the
@@ -2109,6 +2132,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // and the position nudge in the marker lane, Up/Down the
     // tempo cent step; the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family), bare PageUp/PageDown, bare Equal/Minus zoom,
+    // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
+    // older/newer step, a continuous step gesture like the arrows and held for
+    // the same reason, to walk quickly; it is bound only inside that view, so a
+    // repeat outside it fires into an unbound key exactly as a held arrow with
+    // nothing to nudge fires into a refusal. Their SHIFT shapes — the walk's
+    // absolute wall jumps — are excluded by the no-shift term below and stay
+    // one-shot: a held jump could only flap against the wall it just reached),
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
     // repeating Ctrl chords, re-derived 2026-08-06 — the Ctrl+Shift+Tab march
     // plus the WHOLE Ctrl+Z family (Ctrl+Z / Ctrl+Shift+Z undo / redo and the
@@ -2124,7 +2154,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         (key == GuiKeys::Left || key == GuiKeys::Right ||
          key == GuiKeys::Up || key == GuiKeys::Down ||
          key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
-         key == GuiKeys::Equal || key == GuiKeys::Minus))
+         key == GuiKeys::Equal || key == GuiKeys::Minus ||
+         key == GuiKeys::Comma || key == GuiKeys::Period))
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
     // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic

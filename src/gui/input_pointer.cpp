@@ -2889,34 +2889,52 @@ void GuiInputHandler::clear_redesign_button_hover() {
 void GuiInputHandler::recompute_redesign_button_hover() {
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
-    bool changed = false;
+    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
+    // walk because the walk below is what stamps it; the rule is stated at the
+    // stamp itself.
+    const bool modal_owns_the_keyboard =
+        app.prompt.active || keyboard_modal_editor_active();
+    bool changed     = false;
+    int  hovered_tip = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
+        const RedesignButton id = static_cast<RedesignButton>(i);
         // A zero-width stash (before that row's first paint) contains no point,
         // and the pre-motion (-1, -1) cursor is outside every rect, so both cold
         // states resolve to "not hovered" without a special case.
         //
-        // HOVERABILITY IS THE SECOND TERM (redesign_button_hoverable,
-        // app_state.h): a DISABLED row-2 button and the SELECTED tab both refuse
-        // the hover face, and both refusals live in that one predicate rather
-        // than as conditions here or in the painter.
-        const bool inside = app.pointer_in_window &&
-                            rect_contains(f.rect, mx, my) &&
-                            redesign_button_hoverable(
-                                app, audio.total_frames(),
-                                static_cast<RedesignButton>(i));
-        if (f.hovered == inside) continue;
-        f.hovered = inside;
-        changed = true;
+        // THE ZONE IS THE SECOND TERM (redesign_button_hover_zone, app_state.h):
+        // an open dropdown and the SELECTED tab answer nothing to the pointer at
+        // all, and both refusals live in that one predicate rather than as
+        // conditions here or in the painter.
+        const bool under_pointer = app.pointer_in_window &&
+                                   rect_contains(f.rect, mx, my) &&
+                                   redesign_button_hover_zone(app, id);
+        // THE FACE ADDS THE ENABLED TERM AND THE HINT DOES NOT (architect
+        // 2026-08-07): a disabled button keeps its dead face under the pointer
+        // and still explains itself, kdenlive's own behaviour. This is the ONE
+        // place the two consumers of a hover part company, which is why both are
+        // resolved in this single walk.
+        const bool inside =
+            under_pointer &&
+            redesign_button_enabled(app, audio.total_frames(), id);
+        if (f.hovered != inside) {
+            f.hovered = inside;
+            changed   = true;
+        }
+        if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
+            redesign_button_tooltip(app, id).line1 != nullptr)
+            hovered_tip = i;
     }
     if (changed) viewport.invalidate_top_strip();
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip
     // (redesign_button_tooltip owns that membership, and no state changes it —
-    // only Render's TEXT follows the iteration bit), so this walks the
-    // whole roster: a newly hovered one stamps the clock, and moving between two
-    // of them hides and re-stamps, so a fresh dwell begins on each arrival. The run
+    // only Render's TEXT follows the iteration bit and the compare tabs' the
+    // history one), so the walk above covers the whole roster: a newly hovered
+    // one stamps the clock, and moving between two of them hides and re-stamps,
+    // so a fresh dwell begins on each arrival. The run
     // loop's tick compares the stamp against kTooltipDelayMs and flips
     // `visible` — no timer is created and nothing here decides visibility.
     //
@@ -2931,22 +2949,12 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // face: it is a second surface, it hangs past the strip, and the chord it
     // names is exactly what the modal gate is swallowing. Forcing "no owner" here
     // rather than gating the tick keeps the stamp and the hide in one place — the
-    // walk below then also hides whatever was already up, so the modal's OPEN
-    // edge needs nothing beyond its own hide (on_key's, for the case where no
-    // motion and no tick follow).
-    // THE DROPDOWN NEEDS NO TERM HERE: redesign_button_hoverable refuses the
-    // whole roster while a popup is up, so the walk finds no owner by itself.
-    const bool modal_owns_the_keyboard =
-        app.prompt.active || keyboard_modal_editor_active();
-    int hovered_tip = -1;
-    for (int i = 0; i < kRedesignButtonCount && !modal_owns_the_keyboard; ++i) {
-        const RedesignButton id = static_cast<RedesignButton>(i);
-        if (redesign_button_tooltip(app, id).line1 != nullptr &&
-            app.redesign_buttons[i].hovered) {
-            hovered_tip = i;
-            break;
-        }
-    }
+    // resolution below then also hides whatever was already up, so the modal's
+    // OPEN edge needs nothing beyond its own hide (on_key's, for the case where
+    // no motion and no tick follow).
+    // THE DROPDOWN NEEDS NO TERM OF ITS OWN: redesign_button_hover_zone refuses
+    // the whole roster while a popup is up, so the walk finds no owner by itself
+    // — the two floating surfaces cannot coexist by construction.
     if (hovered_tip < 0) {
         hide_shift_tooltip();
     } else if (app.redesign_tooltip.owner != hovered_tip) {
@@ -3823,9 +3831,11 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // indefinitely ("next motion" is not a property, as the tooltip hide above
     // says), so a face lit at the moment of the open
     // would otherwise stay lit under a surface that has taken the pointer from
-    // it. It is also what keeps the tooltip DOWN for as long as the popup is up:
-    // with no button hoverable, the dwell writer (recompute_redesign_button_
-    // hover) can never stamp a new one.
+    // it. THE TOOLTIP STAYS DOWN for as long as the popup is up on the same
+    // predicate's OTHER half: redesign_button_hover_zone (the term hoverability
+    // and the dwell still share — the enabled term is the one they parted on)
+    // refuses every button while a menu is open, so the dwell writer
+    // (recompute_redesign_button_hover) can never stamp a new one.
     //
     // ROW 1 IS CLEARED HERE TOO AND STAYS CLEAR while the menu is up; it
     // re-resolves at the next motion or the next tick (main.cpp runs the same

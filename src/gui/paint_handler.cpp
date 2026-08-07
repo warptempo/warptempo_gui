@@ -2131,31 +2131,32 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
-    // THE HOVER TOOLTIP, on whichever roster button is hovered — at most one,
-    // because at most one button is hovered. The tick owns WHEN it appears (the
-    // dwell); this owns only what it looks like, and publishes the rect it
-    // painted so the hide edge can damage it.
+    // THE HOVER TOOLTIP, on whichever roster button the dwell belongs to — at
+    // most one, because at most one button is under the pointer. The tick owns
+    // WHEN it appears (the dwell); this owns only what it looks like, and
+    // publishes the rect it painted so the hide edge can damage it.
     app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
     if (!app.redesign_tooltip.visible) return;
 
-    int hovered = -1;
-    for (int i = 0; i < kRedesignButtonCount; ++i) {
-        const RedesignButton id = static_cast<RedesignButton>(i);
-        if (redesign_button_tooltip(app, id).line1 == nullptr) continue;
-        // A DISABLED BUTTON ADVERTISES NOTHING: a greyed Render's chords are as
-        // refused as each other, so it gets no hint. The hover recompute already
-        // refuses to hover a disabled button; this is the belt to that braces,
-        // and it keeps the rule stated where it is visible.
-        if (app.redesign_buttons[i].hovered &&
-            redesign_button_enabled(app, audio.total_frames(), id)) {
-            hovered = i;
-            break;
-        }
-    }
-    if (hovered < 0) return;
+    // THE DWELL'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
+    // input side decided which button the hint belongs to when it stamped the
+    // clock (recompute_redesign_button_hover), and `visible` is only ever set for
+    // a stamp, so an owner is always standing here. Re-walking the roster for a
+    // hovered button would be a SECOND membership rule to keep in step with that
+    // one — and since 2026-08-07 it could not be the same rule anyway: A
+    // DISABLED BUTTON SHOWS ITS HINT (the architect's kdenlive-parity ruling)
+    // while it never sets the hover FACE, so `hovered` no longer names the
+    // tooltip's subject.
+    const int hovered = app.redesign_tooltip.owner;
+    if (hovered < 0 || hovered >= kRedesignButtonCount) return;
 
     const RedesignTooltipText text =
         redesign_button_tooltip(app, static_cast<RedesignButton>(hovered));
+    // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the compare tabs drop their
+    // tooltips when the `h` view opens — and a hint with no line 1 is no hint.
+    // The stamp's own hides cover every other route; this is the one state that
+    // needs no pointer event to reach.
+    if (text.line1 == nullptr) return;
     const GuiRect& btn = app.redesign_buttons[hovered].rect;
     if (btn.w <= 0 || btn.h <= 0) return;
 
