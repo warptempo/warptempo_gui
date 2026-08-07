@@ -480,18 +480,9 @@ bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
 // live-state counter-entry onto `to`, and applies the common restore body;
 // saved_distance moves by `saved_distance_delta` (+1 undo, −1 redo). The caller
 // has already run history_entry_actionable on `from`.
-//
-// `keep_viewport` is the ALT shapes' STAY-PUT suppression (architect 2026-08-06;
-// the whole rule is at do_undo's declaration, undo.h). It reaches exactly TWO
-// sites, both in the visual tail below — the singleton's offscreen recenter and
-// the group's scroll-or-frame block — and NOTHING else on this path branches on
-// it: the tab switch, the settings restore, the store swap, the post-restore
-// rules, the land, the region clear, the dirty recompute, the damage and the
-// target preview are byte-for-byte the plain pair's.
 void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                  std::vector<UndoEntry>& to,
-                                 int saved_distance_delta,
-                                 bool keep_viewport) {
+                                 int saved_distance_delta) {
     playback_lifecycle.stop_playback_if_playing();
     UndoEntry entry = std::move(from.back());
     from.pop_back();
@@ -681,19 +672,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no
                 // zoom change): center on the touched marker's active-domain image
                 // and re-snap/clamp through the one chokepoint only when it is
-                // outside the visible span. THE STAY-PUT SHAPES SKIP THE WHOLE
-                // BLOCK (keep_viewport, the first of its two readers): the land
-                // above still runs, so the cursor sits on the restored marker
-                // whether or not that column is on screen.
-                if (!keep_viewport) {
-                    const int64_t domain_frame =
-                        source_frame_to_active_domain(app, viewport.audio, src_f);
-                    const int64_t visible = samples_visible(app, viewport.audio);
-                    const int64_t start   = app.viewport_start_sample;
-                    if (domain_frame < start || domain_frame >= start + visible) {
-                        app.viewport_start_sample = domain_frame - visible / 2;
-                        clamp_viewport_start(app, viewport.audio);
-                    }
+                // outside the visible span.
+                const int64_t domain_frame =
+                    source_frame_to_active_domain(app, viewport.audio, src_f);
+                const int64_t visible = samples_visible(app, viewport.audio);
+                const int64_t start   = app.viewport_start_sample;
+                if (domain_frame < start || domain_frame >= start + visible) {
+                    app.viewport_start_sample = domain_frame - visible / 2;
+                    clamp_viewport_start(app, viewport.audio);
                 }
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
@@ -804,13 +790,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // no-op return.
             int64_t lo = 0, hi = 0;
             bool    have = false;
-            // THE STAY-PUT SHAPES SKIP THE WHOLE FRAMING (keep_viewport, the
-            // second and last of its two readers): the gate sits on the span
-            // DERIVATION rather than on the test below, which leaves `have`
-            // false and makes the framing block unreachable by construction —
-            // one decision, no second condition to keep in step with it, and
-            // the members' positions are not walked for an answer nobody reads.
-            if (!keep_viewport) {
+            {
                 const bool phase_reset = (app.active_markers_view == 'P');
                 const auto& warp_vec = app.warpmarkers.markers();
                 const auto& phase_reset_vec = app.phaseresetmarkers.markers();
@@ -895,14 +875,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     target_render.trigger();
 }
 
-void Undo::do_undo(bool keep_viewport) {
+void Undo::do_undo() {
     if (!history_entry_actionable(app.history.undo_stack)) return;
-    restore_history_entry(app.history.undo_stack, app.history.redo_stack, +1,
-                          keep_viewport);
+    restore_history_entry(app.history.undo_stack, app.history.redo_stack, +1);
 }
 
-void Undo::do_redo(bool keep_viewport) {
+void Undo::do_redo() {
     if (!history_entry_actionable(app.history.redo_stack)) return;
-    restore_history_entry(app.history.redo_stack, app.history.undo_stack, -1,
-                          keep_viewport);
+    restore_history_entry(app.history.redo_stack, app.history.undo_stack, -1);
 }

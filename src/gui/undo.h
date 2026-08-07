@@ -129,21 +129,8 @@ struct Undo {
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
-    // THE STAY-PUT PAIR (architect 2026-08-06): `keep_viewport` is ALT on the
-    // Ctrl+Z family — Ctrl+Alt+Z and Ctrl+Alt+Shift+Z are undo and redo with the
-    // restore's VIEWPORT WRITES suppressed and nothing else changed. The store
-    // swap, the settings restore, the touched-set re-select, the playhead LAND,
-    // the region clear, the dirty recompute, the full-area damage and the target
-    // preview all run identically; only the singleton's offscreen recenter and
-    // the group's scroll/zoom-out framing are skipped, so a restore may land
-    // entirely offscreen — which is the point, the user holding their framing.
-    // THE CROSS-TAB SWITCH IS KEPT: an entry belonging to the other A/B tab still
-    // switches the view to it (and that switch applies the destination tab's own
-    // stored band). It is the restore's CORRECTNESS cue — the user must see which
-    // tab the step acted on — not a viewport courtesy, and the distinction is why
-    // it sits outside the suppression.
-    void do_undo(bool keep_viewport);
-    void do_redo(bool keep_viewport);
+    void do_undo();
+    void do_redo();
 
     // Whether the current eligible gesture press of `kind` coalesces into the
     // burst's existing undo entry — TRUE on either arm of the hybrid (a
@@ -224,12 +211,8 @@ struct Undo {
     // Direction-parameterized restore core shared by do_undo / do_redo. Pops
     // `from`, pushes the live-state counter-entry onto `to`, and applies the
     // whole common restore body; saved_distance_delta is +1 for undo, -1 for
-    // redo. `keep_viewport` is the alt shapes' suppression (see do_undo above);
-    // it has exactly TWO readers, both in the visual tail — the singleton
-    // offscreen recenter and the group framing block. Callers guard with
-    // history_entry_actionable first.
+    // redo. Callers guard with history_entry_actionable first.
     void restore_history_entry(std::vector<UndoEntry>& from,
                                std::vector<UndoEntry>& to,
-                               int saved_distance_delta,
-                               bool keep_viewport);
+                               int saved_distance_delta);
 };
