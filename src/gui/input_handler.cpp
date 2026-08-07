@@ -494,7 +494,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Left/Right tempo-image step, were deleted (marker_drag.h), leaving bare
     // Left/Right in W+target a consumed refusal at the split below;
     // (2) the phase-reset propagate paste starts in source
-    // view and lands in target through the `t` toggle chokepoint. (The
+    // view and lands in target through the `t` toggle chokepoint; and (3) since
+    // 2026-08-07 the ITERATION-BRACKET WIPE in W+target, granted with the ruling
+    // that iteration mode is target-legal (the authoritative inventory and the
+    // argument are at active_column_authoring_allowed, app_state.h). (The
     // 2026-07-24 "third exception" — a both-views warp POSITION nudge — was
     // re-ruled away the same day: no warp position authoring in target view.)
 
@@ -1687,23 +1690,26 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // is the one place the toggle-into-target edge is handled.
     if (entering_target) flag_editor.exit_top_flag_edit_no_commit();
 
-    // Entering target view exits iteration mode through the shared wipe
-    // chokepoint: brackets are the step-away batch tool, target view the
-    // live-by-hand tool. wipe_iter_state pushes ONE undo entry when any
-    // bracket existed (plain undo back in S restores the bracket set — the
-    // ungated-undo rule at the chokepoint), and no-ops otherwise. This makes
-    // mode-off-in-target an INVARIANT: the mode only turns on in warp+source
-    // (the `i` toggle's active_column_authoring_allowed gate), Ctrl+Tab never
-    // changes the audio view, and every S -> T entry runs this exit. The
-    // settings-editor active_audio_view=T commit routes through this same edge
-    // and inherits the wipe (a GUI-kind commit is history-less, but this
-    // wipe's undo entry is the warp-store side effect wipe_iter_state always
-    // pushes — exactly like the `i` toggle, no special-casing). No extra
-    // invalidation here — the toggle's own tail repaints everything.
-    if (entering_target && app.iteration_mode_enabled) {
-        flag_editor.wipe_iter_state();
-        app.iteration_mode_enabled = false;
-    }
+    // (NOTHING HAPPENS TO ITERATION MODE ON THIS EDGE — the record of a
+    // DELETED wipe, kept because the invariant it created was leaned on in
+    // four other files. Until 2026-08-07 an S -> T entry EXITED iteration mode
+    // through wipe_iter_state, clearing every marker's bracket and pushing one
+    // undo entry, on the architect's 2026-07-23 ruling that "brackets are the
+    // step-away batch tool, target view the live-by-hand tool". THAT RULING IS
+    // SUPERSEDED: ITERATION MODE IS TARGET-LEGAL (architect 2026-08-07). Its
+    // premise — that target view is where tempo is authored live, by hand —
+    // stopped holding when contortion ruling 8 (2026-07-29) made the bare
+    // Up/Down cent step the whole tempo surface and admitted it in W+target,
+    // and nothing technical ever bound a bracket to source view: a bracket is
+    // DELTA-RELATIVE (the sweep enumerates base + delta per cell), so it
+    // composes with any base-tempo change from either view. So the mode bit
+    // and the brackets now PERSIST ACROSS S <-> T IN BOTH DIRECTIONS, and
+    // mode-off-in-target is no longer an invariant anywhere. What did NOT
+    // change: bracket AUTHORING is still source-only — the flag editor's iter
+    // grammar keeps its home-view gate through both open routes, and the
+    // editor teardown one line above still runs. The settings-editor
+    // active_audio_view=T commit routes through this same edge and inherits
+    // the persistence exactly as it inherited the wipe.)
 
     // Target-view playback is rebound to the rendered target buffer once it is
     // ready, and Space is gated while that buffer is unavailable or updating.

@@ -151,6 +151,18 @@ struct UndoEntry {
     // while the stack's SIZE does not move, so the size alone cannot see it and
     // the serial can. Nothing else reads it, nothing serializes it, and it is
     // never compared for anything but equality.
+    //
+    // AND IT IS A TRIPWIRE RATHER THAN A CORNER-CLOSE SINCE 2026-08-07: the one
+    // live producer it was written for — the S->T view switch's iteration-bracket
+    // push, the frozen-stack premise's single admitted hole — is DELETED with
+    // the ruling that iteration mode is target-legal, and `i` is not on the
+    // mode's allowlist, so NO ROUTE PUSHES, POPS OR EVICTS AN UNDO ENTRY while
+    // the view stands. The check is kept under the architect's silent-wrong-guard
+    // rule: the premise it defends is a DERIVED GLOBAL property spanning both
+    // allowlists and every mutator's close tail, so a future regression anywhere
+    // in that span would otherwise show a lane that is silently wrong (a member's
+    // delta attributed to its neighbour). With the check it shows a BLANK one.
+    // The eviction arithmetic above stays as the record of what it would catch.
     std::uint64_t             serial               = 0;
 };
 
@@ -2311,6 +2323,17 @@ struct AppState {
     // again on every read rather than trusting the derivation blindly, the
     // premise being derived rather than enforced.
     //
+    // AND IT IS EXCEPTIONLESS BY CONSTRUCTION since the iteration-mode ruling
+    // later the same day: the admitted VIEW SWITCHES used to push one entry on
+    // the S->T edge (the iteration-bracket wipe), and that wipe is deleted —
+    // iteration mode is target-legal, so entering target view changes no store
+    // (the record is at handle_active_audio_view_toggle, input_handler.cpp).
+    // The bit itself cannot move in here either: `i` is not on the keyboard
+    // allowlist and the icon row's iteration button greys with it. So the walk
+    // now has NO live producer to tolerate, and its size and serial checks are
+    // TRIPWIRES over a derived global property rather than corner-closes over a
+    // known one (UndoEntry::serial states the rule and why it is kept).
+    //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it (membership re-derived 2026-08-06): zoom, the paged
@@ -2987,11 +3010,15 @@ struct AppState {
     // string and hand it over directly. The PHASE-RESET clipboard above is a
     // different concept and stays.)
 
-    // Iteration mode. Toggled by plain `i` in warp's home (W marker view +
-    // source audio view; no-op elsewhere). Session-only (off at load, lost on
-    // app close); survives the W/P marker-view switch, but entering target
-    // audio view (S->T) exits the mode through wipe_iter_state, so the mode
-    // can never rest in target view. When true, flag_text_iter splices the
+    // Iteration mode. Toggled by plain `i` in the WARP COLUMN, in EITHER AUDIO
+    // VIEW (no-op in phase-reset view). Session-only (off at load, lost on app
+    // close); it survives the W/P marker-view switch AND the S/T audio-view
+    // switch in both directions — ITERATION MODE IS TARGET-LEGAL (architect
+    // 2026-08-07, superseding his 2026-07-23 ruling that entering target view
+    // wipes the brackets and exits the mode; the deleted wipe's record is at
+    // handle_active_audio_view_toggle, input_handler.cpp, and the sweep
+    // dispatches from either view too). Bracket AUTHORING stays source-only at
+    // the flag editor's own home-view gate. When true, flag_text_iter splices the
     // inline `+[lo, hi]` bracket into every eligible owning marker's composed
     // label, so the mode is visible directly on the flags (it is a flag-cache
     // fingerprint field for exactly that reason).
@@ -3120,13 +3147,24 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // selection-only readout all live — the retired hover popup and lane readouts
 // are recorded at the HoverPopupState deletion note above;
 // every placement/store mutation refuses silently,
-// navigation-class, exactly the read-only-tab convention). The TWO ruled
+// navigation-class, exactly the read-only-tab convention). The THREE ruled
 // exceptions live at their sites: (1) the bare UP/DOWN TEMPO CENT STEP in
 // W+target (owner-only there, adjust_tempo_cents — singleton and group), which is
 // the WHOLE tempo surface now and is dispatched without consulting this
 // predicate; (2) the
 // phase-reset propagate (a warp-view gesture that authors phase resets; its
-// paste lands in target view). The list SHRANK to these two on 2026-07-29: the
+// paste lands in target view); (3) THE ITERATION-BRACKET WIPE IN TARGET VIEW
+// (granted 2026-08-07 with the ruling that iteration mode is TARGET-LEGAL — two
+// sites, the iteration sweep's success tail and the `i` toggle's OFF branch,
+// both reachable in W+target now that the mode rests there; the class is argued
+// once at run_iteration_sweep_render's tail, input_key_dispatch.cpp). It is the
+// narrowest of the three: iter brackets are SESSION-ONLY warp-store fields,
+// never serialized and excluded from the render recipe, pushed with
+// affects_persistence=false, so the write reaches neither disk nor a render —
+// the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
+// LIST: it moves MODE STATE, not authored content, and simply gates on the warp
+// column in either view. The list SHRANK to two on 2026-07-29 and grew back to
+// three on 2026-08-07: the
 // tempo family's other two flavors — the pointer tempo DRAG and the bare
 // Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
 // head of marker_drag.h), so bare Left/Right in W+target with a selection is now

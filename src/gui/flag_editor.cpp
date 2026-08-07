@@ -557,9 +557,15 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
 // Wipe every marker's session-only iter bracket. The single clear every
 // iteration-mode exit route shares: the `i` toggle's turning-off branch,
-// enter_bpm_mode's forced iter-off, and the S->T audio-view toggle
-// (handle_active_audio_view_toggle) — exiting the mode is the clear on every
-// route, so a bracket exists only while the mode paints it on the flags.
+// enter_bpm_mode's forced iter-off, and the iteration sweep's success tail —
+// exiting the mode is the clear on every route, so a bracket exists only while
+// the mode paints it on the flags. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
+// OF THEM (2026-08-07): iteration mode is target-legal, so entering target view
+// neither exits the mode nor clears anything (the record is at
+// handle_active_audio_view_toggle, input_handler.cpp). Two of the three
+// surviving callers can now run in TARGET view, where the write is the granted
+// home-view-binding exception argued at the sweep's tail
+// (run_iteration_sweep_render, input_key_dispatch.cpp).
 // Pushes one undo entry when something was cleared and no-ops otherwise, so
 // a bracketless exit leaves the undo stack untouched; plain undo is
 // deliberately ungated and may restore a previously accepted bracket set.

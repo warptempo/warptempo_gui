@@ -73,7 +73,13 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     // playhead and viewport express where the user was AT THIS DISPATCH.
     s.view_zoom_level = app.zoom_level;
     if (app.active_audio_view == 'T') {
-        // Already target-axis: take the live values verbatim.
+        // Already target-axis: take the live values verbatim. A SWEEP CELL
+        // REACHES THIS ARM TOO since 2026-08-07 (the iteration sweep dispatches
+        // from either audio view now that iteration mode is target-legal), and
+        // it diverges here exactly as it does in the source arm below — the
+        // cell's own per-cell markers describe a different map than the live
+        // one these values are expressed in — with the same answer: the wav-arm
+        // writer clamp brings an out-of-domain browse position back in.
         s.view_viewport_start_frame = app.viewport_start_sample;
         s.view_playhead_frame       = app.playhead_cursor_sample;
     } else {

@@ -668,27 +668,34 @@ private:
 // is the same pairing the commit walk has: member i against the frozen live now
 // side, "how far back does this take me".
 //
-// THE STACK IS ALL BUT FROZEN WHILE THE VIEW STANDS, and the premise is derived
-// rather than hoped: every route that could push, pop or evict an undo entry is
-// either consumed by the mode's two allowlists or closes the view as part of
-// itself (AppState::HistoryMode owns that derivation — the same one that keeps
-// the frozen now side honest), WITH ONE ADMITTED PRODUCER — the S->T view
-// switch's iteration-bracket push. So the member count is captured at init and
-// the caches are plain vectors sized once, and the indexing is FROM THE BOTTOM,
-// which is what makes an append harmless: a captured position keeps naming the
-// entry it named, the new entry is simply not in the walk, and the frozen now
-// side is the state before it.
+// THE STACK IS FROZEN WHILE THE VIEW STANDS, and the premise is derived rather
+// than hoped: every route that could push, pop or evict an undo entry is either
+// consumed by the mode's two allowlists or closes the view as part of itself
+// (AppState::HistoryMode owns that derivation — the same one that keeps the
+// frozen now side honest). IT IS EXCEPTIONLESS since 2026-08-07: the one
+// admitted producer it shipped with — the S->T view switch's iteration-bracket
+// push — is gone with the ruling that ITERATION MODE IS TARGET-LEGAL, so
+// entering target view writes no store at all, and the mode bit cannot toggle in
+// here either (`i` is not on the keyboard allowlist). So the member count is
+// captured at init and the caches are plain vectors sized once, and the indexing
+// is FROM THE BOTTOM, which is what would make an append harmless if one ever
+// returned: a captured position keeps naming the entry it named, the new entry
+// is simply not in the walk, and the frozen now side is the state before it.
 //
-// AND THE WALK CHECKS RATHER THAN ASSUMES, over every mutation shape (2026-08-07,
-// closing the arc's one recorded corner). Each walked position's ENTRY SERIAL is
-// captured at init beside the count (UndoEntry::serial, app_state.h — a
-// monotonic stamp taken when an entry enters a stack), and a position whose
-// serial has moved answers NOTHING: a blank lane, the same honest degradation a
-// shrunken stack gets. That is what closes the kCap EVICTION — an evicting push
-// slides every entry down one while the size holds, so the size alone cannot see
-// it — and it covers anything unforeseen by construction, since the question the
-// check asks is "is this still the entry I captured" rather than "has one of the
-// shapes I thought of happened". member_at owns both terms.
+// AND THE WALK CHECKS RATHER THAN ASSUMES, over every mutation shape (2026-08-07).
+// Each walked position's ENTRY SERIAL is captured at init beside the count
+// (UndoEntry::serial, app_state.h — a monotonic stamp taken when an entry enters
+// a stack), and a position whose serial has moved answers NOTHING: a blank lane,
+// the same honest degradation a shrunken stack gets. It was written to close the
+// kCap EVICTION — an evicting push slides every entry down one while the size
+// holds, so the size alone cannot see it — and with that push's own producer now
+// deleted, BOTH TERMS ARE TRIPWIRES: no live route can trip them, and they are
+// kept because the premise above is a DERIVED GLOBAL property spanning both
+// allowlists and every mutator's close tail, where a future regression would
+// otherwise produce a silently wrong lane instead of a blank one. The check
+// covers anything unforeseen by construction, since the question it asks is "is
+// this still the entry I captured" rather than "has one of the shapes I thought
+// of happened". member_at owns both terms.
 //
 // THE REDO STACK IS DELIBERATELY EXCLUDED. The walk is what is BEHIND you — the
 // commit walk's own shape — and redo is the branch you stepped off. Including it

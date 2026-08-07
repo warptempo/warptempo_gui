@@ -154,25 +154,28 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::F && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
-    // Bare `t` (the S/T audio-view switch) WRITES THE WARP STORE on one edge and
-    // is still navigation-class under the persistent-mutation standard above.
-    // Entering target view exits iteration mode through wipe_iter_state, which
-    // clears every marker's iter bracket and pushes an undo entry — a real store
-    // write in a locked tab. It conforms because iter brackets are SESSION-ONLY
-    // in every direction that matters: they are never serialized (no sidecar
-    // field), the push carries affects_persistence=false so it cannot dirty the
-    // document, and the engine's render recipe excludes them, so the wipe can
-    // reach neither disk nor a render. The gate is this route's only defense, so
-    // the fact is recorded here rather than left to be re-derived.
+    // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
+    // NO STORE AT ALL since 2026-08-07. It used to write the warp store on one
+    // edge — entering target view exited iteration mode through wipe_iter_state,
+    // clearing every bracket and pushing an undo entry, admitted here because
+    // iter brackets are session-only (never serialized, affects_persistence
+    // false, excluded from the render recipe) so the write reached neither disk
+    // nor a render. THAT WIPE IS DELETED with the ruling that iteration mode is
+    // TARGET-LEGAL (the record is at handle_active_audio_view_toggle,
+    // input_handler.cpp), so the admission now rests on nothing but the
+    // persistent-mutation standard above. The former reasoning is kept because
+    // TWO OTHER GATES leaned on it (the history mode's allowlist below, and the
+    // local walk's frozen-stack premise) and both are re-derived by this
+    // deletion.
     const bool is_sub_t =
         (key == GuiKeys::T && !ctrl && !shift && !alt);
     const bool is_sub_p =
         (key == GuiKeys::P && !ctrl && !shift && !alt);
     // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
     // admitted for exactly the reason `t` and `p` are, and by exactly the same
-    // argument: they RUN those two handlers and nothing else, so the only store
-    // write they can reach is the S->T iter wipe recorded at is_sub_t above,
-    // session-only in every direction that matters. Nothing new to weigh.
+    // argument: they RUN those two handlers and nothing else, so they reach no
+    // store write at all (the S->T iter wipe that was the one exception is
+    // deleted — see is_sub_t above). Nothing new to weigh.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && !ctrl && !shift && !alt);
@@ -1122,14 +1125,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             walk, no re-measured now side.
 //                             THEY RUN THEIR ORDINARY HANDLERS WHOLE, side
 //                             effects and all, each weighed against the mode's
-//                             own invariants. The S->T entry's iteration wipe
-//                             writes the warp store and pushes an undo entry,
-//                             and it is admitted on the READ-ONLY gate's own
-//                             argument (stated at is_sub_t in
-//                             read_only_key_blocked): iter brackets are
-//                             session-only, serialized nowhere, so the frozen
-//                             now side — which is the three sidecar TEXTS —
-//                             cannot see the write at all. `p` clears the live
+//                             own invariants. NONE OF THEM WRITES A STORE OR
+//                             PUSHES AN UNDO ENTRY since 2026-08-07: the S->T
+//                             entry's iteration wipe — the one that did, and
+//                             the one producer both this gate and the LOCAL
+//                             walk's frozen-stack premise had to reason about
+//                             — is deleted with the ruling that iteration mode
+//                             is target-legal (the record is at
+//                             handle_active_audio_view_toggle,
+//                             input_handler.cpp). `i` is not on this allowlist,
+//                             so the bit cannot toggle in here either, and the
+//                             view now has NO undo-stack producer at all.
+//                             `p` clears the live
 //                             selection and runs the coincidence auto-select;
 //                             the mode neither reads nor paints that selection
 //                             (the lane suppresses every live flag while it
@@ -2546,6 +2553,21 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // the chokepoint every other iter-mode exit runs). Safe here: every
     // request above carries its own per-cell marker copies, so nothing
     // dispatched reads the live iter fields.
+    //
+    // IN TARGET VIEW THIS TAIL IS A GRANTED HOME-VIEW-BINDING EXCEPTION
+    // (architect 2026-08-07, with the ruling that iteration mode is
+    // TARGET-LEGAL — the sweep dispatches from either audio view now). The
+    // wipe writes the WARP store and pushes an undo entry, which off warp's
+    // home view the binding would otherwise refuse; it was what gated this
+    // whole command to source view (bdf4336, 2026-07-22), and that gate is
+    // gone. The exception is admitted on the CENT STEP'S OWN CLASS of
+    // argument, and narrower: iter brackets are SESSION-ONLY fields — never
+    // serialized (no sidecar key), excluded from the render recipe, and
+    // pushed with affects_persistence=false — so the write can reach neither
+    // disk nor a render, and the state it clears is the very state this
+    // command just consumed. Every other route out of the mode already runs
+    // this same clear, so nothing about the mode's lifecycle changed with the
+    // view.
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
     viewport.invalidate_top_strip();
@@ -2585,11 +2607,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // ITERATION MODE RE-AIMS IT OTHERWISE (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
     // under renders/, the same refusals — and there is no second chord for it.
-    // The single render below is the both-modes-off meaning, unchanged. Target
-    // view needs no clause of its own: mode-off-in-target is an invariant (the
-    // S->T toggle wipes iteration mode through wipe_iter_state), so a
-    // target-view press always takes the single-render arm exactly as it always
-    // did.
+    // The single render below is the both-modes-off meaning, unchanged. THE
+    // SWEEP DISPATCHES FROM EITHER AUDIO VIEW since 2026-08-07 (the mode is
+    // TARGET-LEGAL): the bit alone selects the command, and target view needs
+    // no clause of its own for the opposite reason it needed none before — the
+    // mode can now REST in target, and the arm below fires there. This is also
+    // what keeps the Render button honest, its "Render Iterations" face
+    // following the same bit from either view. The sweep's own body carries no
+    // view assumption (it builds per-cell marker copies off the warp store and
+    // renders are view-independent); its success-tail wipe is the granted
+    // home-view-binding exception recorded at run_iteration_sweep_render.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
@@ -3564,13 +3591,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // so iteration popups appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
         if (app.active_markers_view == 'W') {
-            // Iteration mode drives the warp flag editor's bracket authoring,
-            // so it toggles only in warp's home (source) view — both
-            // directions refuse silently off home (consumed no-op). The S->T
-            // toggle exits iteration mode through wipe_iter_state
-            // (handle_active_audio_view_toggle), so the mode never rests in
-            // target view.
-            if (!active_column_authoring_allowed(app)) return true;
+            // THE GATE IS THE WARP COLUMN ALONE — both audio views (architect
+            // 2026-08-07, iteration mode is TARGET-LEGAL; the deleted S->T
+            // wipe's record is in handle_active_audio_view_toggle,
+            // input_handler.cpp). It read active_column_authoring_allowed
+            // until then, which pinned the toggle to warp's SOURCE home. The
+            // relaxation is about MODE STATE rather than authoring, which is
+            // why it is not a home-view-binding exception: the bit selects
+            // what Ctrl+Alt+R means and what the flags show, while bracket
+            // AUTHORING stays source-only at the flag editor's own gate. The
+            // two views behave IDENTICALLY here in every other respect —
+            // read-only in particular, which refuses `i` from either view for
+            // the same one reason (the key is not on read_only_key_blocked's
+            // allowlist, a view-independent gate that runs above this
+            // dispatch).
             const bool turning_on = !app.iteration_mode_enabled;
             if (!turning_on) {
                 // Turning iteration mode OFF wipes every marker's
@@ -3578,6 +3612,15 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                 // clear (wipe_iter_state, shared with enter_bpm_mode's
                 // forced iter-off so the two exit routes cannot drift).
                 // Runs before the flag flips.
+                // IN TARGET VIEW THAT WIPE IS A WARP-STORE WRITE OFF WARP'S
+                // HOME, admitted as the same granted home-view-binding
+                // exception the sweep's success tail takes (architect
+                // 2026-08-07, recorded at run_iteration_sweep_render's tail
+                // where the class is argued in full): iter brackets are
+                // session-only fields, never serialized and excluded from the
+                // render recipe, so the write reaches neither disk nor a
+                // render, and the entry it pushes carries
+                // affects_persistence=false.
                 flag_editor.wipe_iter_state();
             }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;

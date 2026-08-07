@@ -2032,29 +2032,29 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // CAPTURED AT INIT, and that entry's snapshots are the state BEFORE the event it
 // records.
 //
-// IT INDEXES FROM THE BOTTOM, WHICH IS WHY A PUSH CANNOT MOVE A MEMBER — and
-// that matters because the frozen-stack premise has exactly one hole: the
-// admitted S->T VIEW SWITCH pushes an iteration-bracket entry when brackets
-// stand (the allowlist admits it on the read-only gate's own argument — the
-// brackets are session-only and serialize nowhere). A push APPENDS, leaving
-// every captured absolute position naming the entry it always named, so the walk
-// simply does not carry the new entry — and the frozen now side is the state
-// before it too, so index 0's forward pairing stays exactly event 0's change.
+// IT INDEXES FROM THE BOTTOM, WHICH IS WHY A PUSH COULD NOT MOVE A MEMBER — a
+// property that mattered while the frozen-stack premise had one hole, the
+// admitted S->T VIEW SWITCH's iteration-bracket push. THAT HOLE IS CLOSED AT ITS
+// SOURCE (2026-08-07): iteration mode is TARGET-LEGAL, so the S->T edge wipes
+// nothing and writes no store, and `i` is not on the mode's keyboard allowlist,
+// so the bit cannot move in here either. NO ROUTE PUSHES, POPS OR EVICTS while
+// the view stands. The bottom-indexing stays what it always was — the shape that
+// keeps an append harmless if one ever returns.
 //
-// AND THE POSITION'S IDENTITY IS CHECKED, not assumed (2026-08-07, CLOSING the
-// arc's one recorded corner). The captured serial (UndoEntry::serial) is
-// compared against the entry sitting at that position now, and a mismatch
-// answers NOTHING — a blank lane, the honest degradation, and now the answer for
-// EVERY mutation shape rather than for the ones that were thought of:
-//   * a SHRUNKEN stack — no producer at all (undo, redo and load are consumed or
-//     close the view) — is caught by the size term below, which is what keeps
-//     the read in range before the serial can be looked at;
+// SO BOTH GUARDS BELOW ARE TRIPWIRES, kept deliberately rather than as
+// corner-closes with a live producer behind them (the architect's
+// silent-wrong-guard rule: the premise is a DERIVED GLOBAL property spanning
+// both allowlists and every mutator's close tail, and a regression anywhere in
+// that span turns a lane silently wrong — a member's delta attributed to its
+// neighbour — where these two turn it BLANK). What each would catch:
+//   * a SHRUNKEN stack (undo, redo and load are consumed or close the view) is
+//     caught by the size term, which is also what keeps the read in range before
+//     the serial can be looked at;
 //   * an EVICTING PUSH is what the serial is really for: a stack already at
-//     UndoHistory::kCap when that view switch pushes drops the bottom entry and
-//     slides every position down one WHILE THE SIZE HOLDS, so no count can see
-//     it and the identity can. This was the arc's accepted corner ("a lane
-//     showing its neighbour's delta until the visit ends"), and it is closed:
-//     the first position asked answers nothing instead;
+//     UndoHistory::kCap when something pushes drops the bottom entry and slides
+//     every position down one WHILE THE SIZE HOLDS, so no count can see it and
+//     the identity can — the first position asked answers nothing instead of a
+//     neighbour's delta;
 //   * anything unforeseen is covered by construction, the question being "is
 //     this still the entry I captured" rather than "did one of these happen".
 // The two terms are ordered rather than merged: the size guard is a bounds
