@@ -857,8 +857,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                              y < trim_bar_row.y + trim_bar_row.h;
     // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES, which is why the
     // mode enters the map HERE rather than as a fourth blanket return above. The
-    // mode is PER-ZONE exactly as read-only is: the Pan and the Zoom (both
-    // entries) stay live under it — they are its navigation vocabulary — while
+    // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
+    // left — read-only was the other, and its trim refusals are deleted with the
+    // ruling that trim is band rather than authored content. Under the mode the
+    // Pan and the Zoom (both entries) stay live — they are its navigation
+    // vocabulary — while
     // the endcap/bridge drags and the two ctrl bound-set clicks are consumed
     // no-ops, so their cues must go. This term is what takes them: the ctrl arm
     // falls to the waveform's own Zoom-or-Arrow question and the ctrl+shift arm
@@ -870,7 +873,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // superseding the single click and the Zoom cue it wore for a day), so it
     // adds NO cue here: a double-click has no cursor promise anywhere in the
     // product — the live band's span framing is one too, and the band shows the
-    // shapes of its drags, never that. The read-only model exactly.
+    // shapes of its drags, never that.
     const bool trim_write_gestures_live =
         in_trim_bar && !app.history_mode.active;
 
@@ -935,18 +938,18 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // BOTH, so the caps take the boundary-extension shapes (begin left_side,
         // end right_side) and the bridge keeps ew-resize, the move.
         //
-        // READ-ONLY REFUSES — the plain trim-bar press's read-only return arms no
-        // drag and writes no bound (the band's sole read-only defense,
-        // input_pointer.cpp), so the cue must not promise a resize a locked tab
-        // will not run. The band's span-framing double-click DOES survive
-        // read-only, but it is not what this cursor names.
+        // READ-ONLY NO LONGER REFUSES ANYTHING HERE (architect 2026-08-07): the
+        // band's read-only return is deleted, trim being band rather than
+        // authored content, so a locked tab runs the endcap and bridge drags and
+        // this arm must promise them. The term that used to answer Arrow on the
+        // read-only bit is gone with the gesture refusal it mirrored — cue and
+        // gesture stay one decision, which is why nothing replaced it.
         if (in_trim_bar) {
-            // THE `h` HISTORY MODE ANSWERS EXACTLY AS A LOCKED TAB DOES, and for
-            // the same reason: the drags this band's shapes promise are consumed
-            // in there, and its one live gesture is a DOUBLE-click, which no cue
-            // in the product names. The Arrow, over the whole band.
+            // THE `h` HISTORY MODE IS THE ONE THING THAT STILL TAKES THIS BAND'S
+            // CUES: the drags its shapes promise are consumed in there, and its
+            // one live gesture is a DOUBLE-click, which no cue in the product
+            // names. The Arrow, over the whole band.
             if (app.history_mode.active) return GuiCursorKind::Arrow;
-            if (active_view_state(app).read_only) return GuiCursorKind::Arrow;
             switch (hit_test_trim_endcap(app, audio, x, y)) {
                 case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
                 case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
@@ -1771,7 +1774,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // protect and a live audition survives it. A claim that can still
         // REFUSE goes one step further (architect 2026-07-27): its stop sits
         // INSIDE the refusal gate, at the latest point before the mutation, so
-        // a claimed-but-refused press (a bound set in a read-only tab, over a
+        // a claimed-but-refused press (a bound set over a
         // degenerate audio/geometry state, or at a column not STRICTLY INSIDE the
         // partner bound — the 2026-08-01 guard)
         // is as playback-inert as an unclaimed one. That covers every modified
@@ -1913,10 +1916,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // trim bound at the click (REINSTATED architect 2026-08-01 — ctrl is
             // BEGIN and ctrl+shift is END, the pair's original shape, now homed
             // on the redesigned bar's whole band rather than the chip row it grew
-            // up on; set_trim_bound_at_click refuses a read-only tab silently —
-            // the clicks ADJUST the window that always rests, they never create
-            // one — refuses any value not STRICTLY INSIDE its partner, and, being
-            // a SETTER, deselects past its refusals). EVERY other lane is a
+            // up on; set_trim_bound_at_click refuses any value not STRICTLY
+            // INSIDE its partner — the clicks ADJUST the window that always
+            // rests, they never create one — and, being
+            // a SETTER, deselects past its refusals. IT NO LONGER REFUSES A
+            // READ-ONLY TAB: trim is band, not authored content, and that gate
+            // was deleted 2026-08-07). EVERY other lane is a
             // strict no-op, falling through to the return below (the ctrl-click
             // clear on an empty marker spot is RETIRED, architect 2026-07-23:
             // ctrl-click in Ableton is just click, and ctrl stays the zoom
@@ -1933,7 +1938,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const GuiRect trim_band = top_trim_row_area(app);
                 if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
                     // NO stop here: the bound set has its own refusals
-                    // (read-only, a degenerate audio/geometry state, a value not
+                    // (a degenerate audio/geometry state, a value not
                     // strictly inside its partner), and a refused press changes
                     // nothing, so there is nothing for a stop to protect. The
                     // stop lives INSIDE set_trim_bound_at_click, past every
@@ -1951,10 +1956,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Ctrl+Shift-exact: the TRIM BAR is its ONE claim — set the END trim
         // bound at the click (ctrl is BEGIN, ctrl+shift is END; the same
-        // reinstated pair, architect 2026-08-01. set_trim_bound_at_click refuses a
-        // read-only tab silently — the adjust-only pair gate died with the unset
-        // state 2026-07-30, a full pair always resting — refuses any value not
-        // strictly inside its partner, and deselects as a SETTER past its
+        // reinstated pair, architect 2026-08-01. set_trim_bound_at_click refuses
+        // any value not strictly inside its partner — the adjust-only pair gate
+        // died with the unset state 2026-07-30, a full pair always resting, and
+        // the read-only refusal died 2026-08-07 with trim's reclassification as
+        // band — and deselects as a SETTER past its
         // refusals). Everywhere else Ctrl+Shift stays a strict no-op, playback
         // included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
@@ -2077,9 +2083,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const bool in_trim_bar =
                 (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
             if (!shift && in_trim_bar) {
-                // Plain trim-bar press. In a writable tab an endcap/bridge hit ARMS
-                // the trim drag (a motionless release then runs that same click
-                // action at on_button_release); read-only cannot arm one. Either
+                // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
+                // (a motionless release then runs that same click action at
+                // on_button_release), IN EITHER TAB since 2026-08-07 — the
+                // band's read-only return is deleted below. Either
                 // way the trim bar CONSUMES the press — it never falls to the
                 // marker handling.
                 // A PLAIN TRIM-BAR CLICK THAT NEVER BECOMES A DRAG IS NOW A
@@ -2102,8 +2109,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // release on this band, inside kDoubleClickMs and the slack on
                 // both axes, spends this press on the framing command and returns
                 // — no drag armed, no bound touched, playhead and selection
-                // untouched, allowed in read-only because it is pure navigation
-                // (all modal gates sit far above). The surface tag is what keeps
+                // untouched, and allowed in read-only for its own reason — it is
+                // pure navigation, which it was before the whole band became
+                // read-only-legal and still is (all modal gates sit far above).
+                // The surface tag is what keeps
                 // a marker or editor candidate from consuming here, and the TEST
                 // is shared with the history mode's own trim-bar double-click
                 // (trim_bar_double_click_at) so the two cannot drift on the
@@ -2117,23 +2126,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
                 // SEEDING is a RELEASE act (only the release knows the press
                 // stayed still), so the press records its point and the release
-                // decides — see TrimBarPressSeed. Recorded ABOVE the read-only
-                // return: a locked tab arms no drag but still frames.
+                // decides — see TrimBarPressSeed. It was recorded above this
+                // band's read-only return while that return existed, so that a
+                // locked tab framed without arming; the return is gone and the
+                // ordering no longer carries a rule.
                 app.trim_bar_press = TrimBarPressSeed{
                     .active = true, .press_x = x, .press_y = y};
-                // THIS RETURN IS THE SOLE READ-ONLY DEFENSE FOR THE WHOLE
-                // TRIM-BAR BAND, recorded here per the routing-gate rule
-                // (docs/engineering/validation_topology.md): the band is
-                // consumed either way, so a locked tab arms no drag and writes
-                // no bound, and route_trim_bar_press below deliberately carries
-                // NO read-only check of its own — it has exactly one caller,
-                // this one, so a second check there would be unreachable
-                // (deleted 2026-08-02, the handle_trim_x precedent). Anything
-                // that ever calls that router from a second site inherits this
-                // gate's job and must state where it discharges it. The ctrl /
-                // ctrl+shift bound-set press is NOT such a site: it never routes
-                // through here, and set_trim_bound_at_click owns its own refusal.
-                if (active_view_state(app).read_only) return;
+                // THE BAND'S READ-ONLY RETURN IS DELETED (architect 2026-08-07):
+                // it was the sole read-only defense for the whole trim-bar band,
+                // and the ruling removed the thing it was defending — read-only
+                // protects the AUTHORED MUSICAL CONTENT (the marker stores and
+                // the engine settings), while trim is BAND, no more locked than
+                // the viewport or the zoom beside it in ViewState. So a locked
+                // tab arms the endcap and bridge drags here exactly as a
+                // writable one does, route_trim_bar_press below still carries no
+                // read-only check (it never did), and the trim CURSOR cues over
+                // this band follow by construction, reading those same routers.
+                // The full ruling is at read_only_key_blocked
+                // (input_key_dispatch.cpp).
                 route_trim_bar_press(x, y);
                 return;
             }
@@ -3333,7 +3343,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     through the framing act the mode's edges stopped running when they went to
 //     full zoom out (frame_viewed_commit_diff_span, input_key_dispatch.cpp). It
 //     moves the viewport and nothing else, and a SINGLE click on that band stays
-//     the consumed nothing it is in a locked tab.
+//     the consumed nothing a motionless trim-bar click is everywhere.
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses. It
@@ -3482,11 +3492,14 @@ bool GuiInputHandler::handle_history_mode_press(
     }
     // THE TRIM BAR'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
     // SUPERSEDING the single click this act shipped with earlier that day): the
-    // mode's fourth plain act, and it is the REGULAR VIEWS' GESTURE EXACTLY —
-    // the read-only model, where the band's trim drags refuse while its
-    // span-framing double-click still navigates. So a SINGLE plain click here is
-    // the consumed nothing it is in a locked tab, and only the second click
-    // inside the window frames. The band is showing that span already
+    // mode's fourth plain act, and it is the REGULAR VIEWS' GESTURE EXACTLY, on
+    // the same band and through the same machinery. So a SINGLE plain click here
+    // is the consumed nothing a motionless trim-bar click is everywhere in the
+    // product (architect 2026-07-30), and only the second click
+    // inside the window frames. (The comparison this used to draw was to a
+    // LOCKED TAB, whose trim drags refused while its framing double-click
+    // navigated; that model is retired — read-only stopped refusing trim on
+    // 2026-08-07 — and the mode is the only per-zone consumer of the band left.) The band is showing that span already
     // (paint_trim's display-only substitution while the view stands), which is
     // what makes the gesture read as "zoom to what the bar shows" — and the
     // empty-delta case falls to the framer's whole-song arm, which is harmless

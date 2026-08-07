@@ -118,7 +118,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // GUI-kind key — fall through to the engine path. An error: malformed or
     // out-of-vocabulary value — red-flash with the returned reason. Otherwise
     // route the typed value through the key's gesture chokepoint below. The
-    // editor's state-dependent refusals (read-only tab, trim walls) stay here.
+    // editor's state-dependent refusals (the trim walls; the read-only-tab trim
+    // refusal that stood beside them was deleted 2026-08-07) stay here.
     auto g = warptempo_settings::validate_gui_setting(key, value);
     if (!g) return false;
     if (!*g) { reject((*g).error()); return true; }
@@ -273,10 +274,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (suffix == "read_only") {
-        // Navigation-class (allowed even while the tab is read-only). The
-        // editor cannot OPEN in a read-only tab (its `:` opener drops at the
-        // read-only key gate), so this is also the remote-unlock route for the
-        // OTHER tab. read_only lives in the band for both tabs.
+        // Navigation-class (allowed even while the tab is read-only), and the
+        // remote-unlock route for the OTHER tab. read_only lives in the band for
+        // both tabs.
+        // THE EDITOR'S KEYBOARD OPENER, bare `;`, is not on the read-only
+        // allowlist, so it cannot raise this surface in a locked ACTIVE tab —
+        // but the SETTINGS DROPDOWN can and does (its six items call
+        // open_prefilled directly from finish_dropdown_release, reaching no
+        // gate), so this arm is also the SELF-unlock route from inside a locked
+        // tab. Re-derived 2026-08-07; the older claim that the editor "cannot
+        // open in a read-only tab" predated the dropdown.
         if (gv.b == band.read_only) { unchanged(); return true; }
         band.read_only = gv.b;
         applied(); return true;
@@ -292,12 +299,18 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // nothing visible changed — so it deselects nothing; the entering tab
         // rests its pair bare either way (the Ctrl+Tab pull is an entry route,
         // not a setter).
-        // Trim is an authoring mutation: its gestures refuse in a read-only
-        // tab, so mirror that here (viewport / zoom / playhead / read_only
-        // above are navigation-class and stay allowed).
-        if (band.read_only) {
-            reject("tab is read-only; trim is not settable here"); return true;
-        }
+        // NO READ-ONLY REFUSAL (architect 2026-08-07, deleting the one this arm
+        // carried): read-only protects the AUTHORED MUSICAL CONTENT — the two
+        // marker stores and the engine settings — and trim is BAND, sitting in
+        // ViewState beside the viewport, the zoom, the playhead and the
+        // read_only bit itself, all four of which were already allowed here.
+        // The refusal existed to mirror the trim GESTURES' read-only returns,
+        // and those are deleted the same day, so mirroring them now means
+        // committing. It covered BOTH arms below (the guard read the NAMED tab's
+        // band, not the active one), so a parked `tab_b_trim_*=` written from a
+        // writable tab A while B is locked commits too — the same rule, and the
+        // weaker case of it: that write moves nothing visible at all. The full
+        // ruling is at read_only_key_blocked (input_key_dispatch.cpp).
         // THE `-1` UNSET ARM IS GONE (architect approval 2026-07-30): the trim
         // window is always set, so there is nothing to unset. A typed `-1` now
         // fails the SHARED validator (validate_gui_setting, settings_file.h —
@@ -335,7 +348,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // PARKED pair, not the live window, and moves nothing visible.
             input->commit_trim_mutation();
             // THE SETTER'S DESELECT after the bound commit + auto_clear
-            // (architect 2026-07-30). Past every refusal (read-only tab, the
+            // (architect 2026-07-30). Past every refusal (the
             // wall range check, the unchanged early return), so a refused commit
             // deselects nothing.
             selection.clear_selection();

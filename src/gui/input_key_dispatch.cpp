@@ -89,26 +89,48 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
 // and should be dropped.
-// WHAT READ-ONLY MEANS, in one sentence: the gate blocks PERSISTENT MUTATION —
-// anything that can reach DISK or a RENDER — not every write to a store. That is
-// why navigation, playback, zoom, view switches and the close prompt are all
-// admitted even though several of them write app state, and it is the standard
-// an allowlist entry is judged against.
-// Authoring-mutation chords are blocked here at the gate, not admitted for a
-// deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gesture
-// (x), Delete, and every propagate command all drop at this gate.
-// Ctrl+S (save) is likewise NOT on the allowlist: read-only means no save, so
-// it drops here like the authoring chords. Gesture-owned state changed in a
-// locked tab (the read-only flag, trim, view state, playback speed)
-// reaches disk only after unlocking (bare o) or via Ctrl+S from the writable
-// tab — never by saving from the locked tab itself.
-// ALL propagate commands are read-only-blocked: the copy (Ctrl+P) explicitly,
-// the paste pair (Ctrl+Alt+P and Ctrl+Alt+Shift+P) structurally — their
-// ctrl+alt modifier combinations match no allowlist predicate. The deeper
-// owner refusals — do_undo / do_redo's per-entry target-tab check
-// (undo.cpp), and the read-only drag refusals (input_pointer.cpp) — stay as
-// backstops for the mouse and cross-tab paths, no longer the primary surface
-// for these keyboard chords.
+//
+// WHAT READ-ONLY PROTECTS, in one sentence (architect 2026-08-07, RECLASSIFYING
+// the old "persistent mutation" standard): read-only protects the AUTHORED
+// MUSICAL CONTENT — the two marker stores and the engine settings — AND NOTHING
+// ELSE. The per-tab BAND is not content: viewport, zoom, playhead, TRIM and the
+// read_only bit itself are all read-only-LEGAL, and so are SAVE and RENDER,
+// which author nothing — a save writes the state the tab already holds and a
+// render reads it.
+// THE DRIVING CASE IS TRIM'S (the architect's own): a finished section's tab
+// locked against accidental marker movement, while its trim window is moved
+// freely to compare a passage against the other tab in target view, re-rendered,
+// and saved. TRIM'S OWN DATA MODEL ALREADY SAID BAND RATHER THAN CONTENT — it
+// lives in ViewState beside the viewport and the zoom, it has NO undo, and it
+// never dirties the session — so the gate treating it as authoring was a
+// classification leftover rather than a ruling.
+// THE OLD STANDARD IS SUPERSEDED WHOLE, and with it the two clauses it produced:
+// "read-only means no save" (Ctrl+S dropped here) and the structural drop of the
+// ctrl+alt render chords (their modifier combination simply matched no
+// predicate). ADMITTING Ctrl+S REMOVES AN INCONSISTENCY rather than creating
+// one: the close prompt's [S]ave has always saved from a locked tab —
+// GuiPrompt::respond calls GuiSaveOps::save with no read-only check of its own,
+// and the prompt block sits at the TOP of on_key, far above this gate — so the
+// keyboard chord was the only save route the lock ever stopped.
+// WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
+// than admitted for a deeper owner refusal: the marker drop / status-toggle /
+// position-nudge / Delete chords, the flag and BPM editors' openers, `;` (the
+// settings editor, whose engine-key commits ARE authored content), `i`,
+// undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command — the copy (Ctrl+P)
+// explicitly, the paste pair (Ctrl+Alt+P and Ctrl+Alt+Shift+P) structurally,
+// their modifier combinations matching no allowlist predicate — and `'`, the
+// load-in-place, which replaces the whole authored state.
+// The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
+// (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
+// drag arm, the flag editor's double-click open, the empty-lane marker drop) —
+// stay as backstops for the mouse and cross-tab paths, no longer the primary
+// surface for these keyboard chords.
+// THE POINTER TRIM REFUSALS ARE GONE WITH THIS RULING rather than merely
+// bypassed: the plain trim-bar press's band gate (input_pointer.cpp),
+// trim_bound_click_frame's first gate (input_trim.cpp) and the settings editor's
+// typed trim arm (settings_editor.cpp) were all deleted the same day, so the
+// whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
+// rule with no site left to disagree with it.
 bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -198,6 +220,47 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
+    // THE SAVE (architect 2026-08-07). It writes the state the tab already
+    // holds — it authors nothing — and the close prompt's [S]ave already saved
+    // from a locked tab through the very same owner (the header's inconsistency
+    // note). Ctrl-exact, exactly the dispatch arm's own spelling.
+    const bool is_save =
+        (ctrl && !shift && !alt && key == GuiKeys::S);
+    // THE RENDER CHORDS (architect 2026-08-07), both of them, spelled as their
+    // dispatch arms are (handle_render_dispatch_keys). A render READS the
+    // authored state and writes audio beside the source; it changes no marker
+    // and no engine setting, so the lock has nothing to protect from it.
+    // Ctrl+Alt+R is the single render, or — with the iteration bit set — the
+    // sweep, and in the `h` history view it is the Save-and-Commit act, which
+    // reaches its dispatch through this gate and is therefore admitted with it.
+    // Ctrl+Alt+Shift+R is the miscellaneous-render cell.
+    // ONE ADMITTED ROUTE WRITES A STORE, and it is worth naming rather than
+    // leaving to be rediscovered: the ITERATION SWEEP's success tail wipes every
+    // marker's iter bracket (wipe_iter_state) and pushes an undo entry for it.
+    // The bit is global rather than per-tab, so a tab locked while iteration
+    // mode already stood can reach that write. It is admitted on EXACTLY the
+    // argument that admitted bare `t` while `t` still carried the same wipe:
+    // iter brackets are SESSION-ONLY — never serialized, affects_persistence
+    // false, excluded from the render recipe — so the write touches no authored
+    // content the lock is protecting, and a locked tab that renders a sweep ends
+    // it in the same bracketless state a writable one does. `i` itself is NOT
+    // admitted, so the mode cannot be entered or left by key in a locked tab.
+    const bool is_render =
+        (ctrl && alt && !shift && key == GuiKeys::R);
+    const bool is_render_misc =
+        (ctrl && alt && shift && key == GuiKeys::R);
+    // THE TRIM GESTURES (architect 2026-08-07): bare `x` sets the trim window to
+    // the live region and Shift+X maximizes it back to the full window. Trim is
+    // BAND, not content (the header), so both are admitted, and their internal
+    // behavior is untouched — the degenerate-result refusal, Shift+X's identity
+    // guard, the setter's deselect, the playhead park and the trim-mutation
+    // playback stop are all the same code taking the same decisions. A locked
+    // tab could already FORM a region by plain drag (the reason bare Esc is
+    // admitted below), so `x` finally has something to consume in one.
+    const bool is_trim_x =
+        (!ctrl && !shift && !alt && key == GuiKeys::X);
+    const bool is_trim_shift_x =
+        (!ctrl && shift && !alt && key == GuiKeys::X);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -207,15 +270,18 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // The trim gesture (x), Delete, and the propagate copy/paste
-    // chords are likewise absent (blocked here).
+    // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
+    // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
+    // see is_trim_x above.
     return !(is_o || is_play_pause || is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
-             is_esc || is_ctrl_q);
+             is_esc || is_ctrl_q ||
+             is_save || is_render || is_render_misc ||
+             is_trim_x || is_trim_shift_x);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------

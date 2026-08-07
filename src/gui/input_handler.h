@@ -401,11 +401,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 //     other two clear_selection calls — the playhead_cursor= navigation jump and
 //     the engine-key commit — write no trim bound and are not members.)
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
-// already hold their playback stop under): a read-only bound set,
+// already hold their playback stop under):
 // degenerate geometry, a bound-set click not strictly inside its partner, a drag
 // event that moved no bound, and
-// a settings commit rejected for a read-only tab / an out-of-wall value / an
-// unchanged value all write no bound and so deselect nothing.
+// a settings commit rejected for an out-of-wall value / an
+// unchanged value all write no bound and so deselect nothing. (The read-only
+// arms of that list — the refused bound set and the refused settings commit —
+// are gone with the 2026-08-07 reclassification of trim as band.)
 // THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim MAXIMIZER,
 // which widens the window to the whole song rather than claiming one, so there is
 // no window for a deselect to hand the user (the architect's 2026-07-29
@@ -1300,15 +1302,16 @@ private:
     // read as crossed and reset to the song edges (ARCHITECT-CONFIRMED 2026-07-29;
     // the derivation is at the definition). x never MAXIMIZES either way
     // (that arm moved to Shift+X).
-    // No read-only check: the keyboard gate — the ONE read-only guard
-    // on that path — leaves x off its allowlist, and this pair is keyboard-only,
-    // so a locked tab never reaches it. The sole dispatch entry for the bare-x key.
+    // No read-only check, and nothing left for one to do: the keyboard gate
+    // ADMITS bare `x` and Shift+X since 2026-08-07 (trim is band, not authored
+    // content), so a locked tab runs both exactly as a writable one does. The
+    // sole dispatch entry for the bare-x key.
     void handle_trim_x();
 
     // Shift+X MAXIMIZES the trim to the full window [0, total-1] (architect
     // 2026-07-25 for the binding, re-posed 2026-07-30 under always-set: the full
     // window IS the old unset state — it renders untrimmed and plays to the
-    // natural end). Read-only is the keyboard gate's (see handle_trim_x above);
+    // natural end). Read-only admits it (see handle_trim_x above);
     // the body then delegates WHOLE to handle_trim_clear_both. A trim MAXIMIZER,
     // not a setter: it does NOT deselect, and it touches no region at all (the
     // gated region re-sync it carried died with the trim-window highlight,
@@ -1382,10 +1385,10 @@ private:
     // always rests (the unset state died 2026-07-30), so the claim is purely
     // GEOMETRIC. Returns true iff the press landed on trim
     // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
-    // bridge span) — armed or read-only-refused — so the caller claims with no
+    // bridge span) — so the caller claims with no
     // fallback; false lets the caller fall through to its ruler / marker flag
-    // handling.
-    // Read-only claims without arming. Trim drags are SETTERS, so they DESELECT
+    // handling. Read-only no longer refuses anywhere on this route
+    // (2026-08-07). Trim drags are SETTERS, so they DESELECT
     // and STOP a live audition at their first ACCEPTED bound change (the press
     // carries neither since 2026-07-30 — a trim-bar press that never becomes a
     // drag is a consumed nothing); the PLAYHEAD is what they never touch.
@@ -1442,8 +1445,8 @@ private:
     bool set_trim_bound_at_click(bool is_begin, int mouse_x);
 
     // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
-    // decision half of set_trim_bound_at_click above (its read-only and
-    // degenerate-geometry gates, the column clamp, the map + authored_frame_at_column
+    // decision half of set_trim_bound_at_click above (its
+    // degenerate-geometry gate, the column clamp, the map + authored_frame_at_column
     // derivation, the absolute walls, and the STRICTLY-INSIDE guard), leaving that
     // function nothing but the write and its tail. It is a shared owner for the
     // same reason the two trim-bar hit predicates are: the pointer CURSOR asks
@@ -1553,7 +1556,8 @@ private:
     // ALL THREE ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
     // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
     // so those three cues go while it stands and the whole band answers Arrow
-    // there — the locked tab's own answer. The one gesture the view DOES give
+    // there. (That answer was the LOCKED TAB'S too until 2026-08-07, when trim
+    // became read-only-legal; the view is the only zone consumer now.) The one gesture the view DOES give
     // that band is a DOUBLE-click (its diff-span framing), and a double-click
     // carries no cue anywhere in the product, the live band's own span framing
     // included. THE SCRUB ZONE IS MODE-SCOPED ON THE SAME MODEL, at its own arm:
@@ -1567,14 +1571,15 @@ private:
     // it always did; the one place a shift combination IS named is ctrl+shift on
     // the trim bar, which is a real bound-set claim rather than an unbound stray.
     //
-    // READ-ONLY IS PER-ZONE, each following its own gesture's answer: the strip
-    // drag and the pan are navigation and do not refuse there, an audition is not
-    // a mutation so the scrub does not either — but the TRIM drags DO refuse in a
-    // read-only tab (the band-level gate at the plain trim-bar press), so the
-    // TrimResize and endcap cues refuse with them. THE CTRL CLICKS TAKE THE SAME
-    // ANSWER through their own route: trim_bound_click_frame's first gate is that
-    // tab's read_only bit, so those two cues go Arrow in a locked tab without this
-    // map testing anything itself.
+    // READ-ONLY IS NOT IN THIS MAP AT ALL SINCE 2026-08-07, and the change is a
+    // deletion rather than a move: read-only protects the authored musical
+    // content, trim is BAND, and so every zone this map answers — the strip
+    // drag, the pan, the scrub, the endcap and bridge drags, the two ctrl
+    // bound-set clicks — runs unrefused in a locked tab. The per-zone read-only
+    // record that stood here (navigation live, TRIM refusing through the band
+    // gate, the two ctrl cues through trim_bound_click_frame's first gate) is
+    // RETIRED with those two gates; the `h` history view is the sole per-zone
+    // consumer left, above. Neither this map nor its callers test the bit.
     //
     // WHAT IT IS BLIND TO, deliberately and by ruling:
     // - The BARE RIGHT press scrubs the waveform's FULL HEIGHT, and this marks
@@ -1669,14 +1674,18 @@ private:
     bool playhead_in_marker_lane() const;
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
-    // allowlist of navigation / playback / zoom / view-switch / close-prompt
-    // keys honored in a read-only source tab — i.e. should be dropped.
-    // READ-ONLY BLOCKS PERSISTENT MUTATION — what can reach DISK or a RENDER —
-    // not every store write; the definition carries that standard and the one
-    // admitted key whose route writes a store under it (bare `t`).
-    // Authoring-mutation chords (trim gestures, Delete, undo/redo, the
-    // propagate commands) are blocked here at the gate, and Ctrl+S is not
-    // admitted either — read-only means no save from a locked tab. One entry is
+    // allowlist of navigation / playback / zoom / view-switch / close-prompt /
+    // band / save / render keys honored in a read-only source tab — i.e. should
+    // be dropped.
+    // READ-ONLY PROTECTS THE AUTHORED MUSICAL CONTENT — the two marker stores
+    // and the engine settings — AND NOTHING ELSE (architect 2026-08-07,
+    // superseding the old "blocks persistent mutation" standard); the definition
+    // carries the ruling, and it is the model's ONE authoritative home.
+    // Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
+    // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
+    // renders and the `x` / Shift+X trim gestures are ADMITTED — a save writes
+    // the state the tab already holds, a render reads it, and trim is band.
+    // One entry is
     // STATE-DEPENDENT: the bare horizontal arrows are admitted as navigation
     // only while playhead_in_marker_lane is false, since in the marker lane the
     // same press authors.

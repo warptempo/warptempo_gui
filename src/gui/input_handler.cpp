@@ -420,10 +420,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
-    // out every authoring chord while admitting navigation, playback,
-    // view-switching, the close-prompt routing, and the bare-o
-    // toggle-off escape chord. Runs when the active tab's ViewState carries
-    // read_only = true.
+    // out every AUTHORING chord — the marker stores and the engine settings are
+    // what the lock protects (architect 2026-08-07) — while admitting
+    // navigation, playback, view-switching, the close-prompt routing, the bare-o
+    // toggle-off escape chord, and THE BAND, THE SAVE AND THE RENDER. Runs when
+    // the active tab's ViewState carries read_only = true.
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space (no mods)        → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
@@ -457,25 +458,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is deleted, so a bare Esc with no render
     //                              running is a plain no-op
     //   - Ctrl+Q                 → close-prompt routing
-    // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
-    // gate like the authoring chords. Gesture-owned state changed in a locked
-    // tab (the read-only flag itself, trim, view state, playback speed)
-    // reaches disk only after unlocking (bare o) or via Ctrl+S from the
-    // writable tab.
+    //   - Ctrl+S                 → the save (2026-08-07). It writes the state
+    //                              the tab already holds and authors nothing —
+    //                              and the close prompt's [S]ave, which sits
+    //                              above this gate, always did save from a
+    //                              locked tab through the same owner
+    //   - Ctrl+Alt+R,            → the renders (2026-08-07): the single render
+    //     Ctrl+Alt+Shift+R          or the iteration sweep, the miscellaneous
+    //                              cell, and — in the `h` view — Save and
+    //                              Commit. A render READS the authored state
+    //   - x / Shift+X (no ctrl,  → the trim set-from-region and the maximizer
+    //     no alt)                  (2026-08-07). Trim is BAND, not content
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
-    // status-toggle chords, the trim gesture (x), Delete, the
+    // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
+    // commits are authored content), `i`, `'`, the
     // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
-    // guard on the keyboard path; the surviving deeper checks each cover a
+    // guard on the keyboard path — and since 2026-08-07 the only one on the
+    // POINTER path too has gone, the trim band's gate having been deleted with
+    // the reclassification. The surviving deeper checks each cover a
     // surface it cannot reach — do_undo / do_redo's target-tab peek (the
     // ACTIVE tab is writable but the top history entry targets the other,
     // read-only tab; this gate tests only the active tab), and the per-gesture
-    // wheel and pointer guards (a wheel event never passes through on_key, and
-    // neither does a pointer gesture — the ONE pointer surface that does is the
-    // toolbar row's four buttons, which dispatch their chord through on_key
-    // precisely so this gate applies to them unchanged: Save, Undo, Redo and
-    // Render all drop here in a locked tab exactly as their keys do). Full
+    // pointer AUTHORING guards (a pointer gesture never passes through on_key —
+    // the ONE pointer surface that does is the redesigned buttons, which
+    // dispatch their chord through on_key precisely so this gate applies to
+    // them unchanged: Undo and Redo drop here in a locked tab exactly as their
+    // keys do, while Save and Render now pass exactly as theirs do). Full
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
     if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
@@ -566,9 +576,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Bare `o` toggles the active tab's read-only flag. Always admitted
     // by the read-only allowlist above (the locked-out user must be
     // able to unlock). Pure view-state mutation: not undoable, not dirty;
-    // silently persisted on the next Ctrl+S from a writable surface (Ctrl+S
-    // drops at the read-only gate, so a tab just locked here reaches disk from
-    // the other, unlocked tab — or after a bare-o unlock). THE TAB'S PADLOCK IS
+    // silently persisted on the next Ctrl+S — WHICH THE LOCKED TAB CAN NOW RUN
+    // ITSELF (2026-08-07: the save authors nothing, so it is on the allowlist),
+    // so a tab locked here reaches disk without an unlock and without a trip to
+    // the other tab. THE TAB'S PADLOCK IS
     // THE WHOLE VISIBLE CUE since row 7 deleted the bottom strip's
     // "(read-only)" token as a restatement of it.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {

@@ -537,7 +537,9 @@ struct PendingMarkerDrag {
 // change. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
 // crossing. A full ordered pair always rests (2026-07-30), so the router arms on
-// GEOMETRY alone; a read-only tab claims the press but never arms.
+// GEOMETRY alone — in a read-only tab as in a writable one since 2026-08-07,
+// when trim was reclassified as band rather than authored content and the
+// band's read-only return was deleted.
 // Session-only, never serialized. Cleared on the crossing (begin_trim_drag
 // takes over), on release / lost button before the crossing, by the force-end
 // finalizer, and on file load. `is_begin` names the single bound; `both` marks the
@@ -1260,10 +1262,17 @@ struct ViewState {
     double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
 
-    // Per-tab read-only lock. Toggled by bare `o`. While true, the active
-    // tab admits a subset of keys (navigation, playback, view-switch) and
-    // its mouse handlers block authoring gestures (drop, drag, label
-    // edit). Persisted as tab_a_read_only / tab_b_read_only in .settings.
+    // Per-tab read-only lock. Toggled by bare `o`. IT PROTECTS THE AUTHORED
+    // MUSICAL CONTENT — the two marker stores and the engine settings — AND
+    // NOTHING ELSE (architect 2026-08-07): while true, the active tab admits a
+    // subset of keys (navigation, playback, view-switch, the save, the renders
+    // and the trim gestures) and its mouse handlers block the authoring gestures
+    // (drop, drag, label edit) — but NOT the trim drags or bound-set clicks,
+    // trim being BAND, which is to say the rest of this very struct: the
+    // viewport, zoom, playhead and trim fields around this one are all freely
+    // movable in a locked tab, as is the flag itself. The ruling's home is
+    // read_only_key_blocked (input_key_dispatch.cpp).
+    // Persisted as tab_a_read_only / tab_b_read_only in .settings.
     bool   read_only          = false;
 
     // Per-tab backing store for app.trim. Synced only at the tab-swap boundary
@@ -3454,13 +3463,17 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 //
 // WHAT EACH ENTRY MIRRORS, read off the routes themselves:
 //   * ALL FOUR row-2 chords drop at on_key's `app.loading || total <= 0` guard
-//     (input_handler.cpp) and at the PER-TAB READ-ONLY GATE. The read-only
-//     gate's allowlist (read_only_key_blocked, input_key_dispatch.cpp) admits
-//     none of Ctrl+S, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Alt+R — Ctrl+S explicitly
-//     ("read-only means no save"), undo/redo explicitly, and Ctrl+Alt+R
-//     structurally, its ctrl+alt combination matching no allowlist predicate.
-//     So a locked tab greys the WHOLE toolbar, which is the truth the keys
-//     already have.
+//     (input_handler.cpp). THE PER-TAB READ-ONLY GATE NOW SPLITS THEM (architect
+//     2026-08-07): read-only protects the AUTHORED MUSICAL CONTENT — the marker
+//     stores and the engine settings — so its allowlist
+//     (read_only_key_blocked, input_key_dispatch.cpp) admits Ctrl+S and
+//     Ctrl+Alt+R (a save writes the state the tab already holds; a render reads
+//     it) while still dropping Ctrl+Z and Ctrl+Shift+Z. So a locked tab greys
+//     UNDO AND REDO ALONE and leaves Save and Render live, which is the truth
+//     the keys have — the term lives in the per-button switch below rather than
+//     as a blanket line, because it is no longer a blanket fact. (It was one
+//     until this ruling, when "a locked tab greys the whole toolbar" was
+//     recorded here as code truth.)
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes its route's stable-state refusal, an empty warpmarkers_path
@@ -3607,14 +3620,20 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
             break;
     }
     if (a.loading || total_frames <= 0) return false;
-    if (active_view_state(a).read_only) return false;
+    // THE READ-ONLY TERM IS UNDO'S AND REDO'S ALONE since 2026-08-07 (it stood
+    // here as a blanket line over all four until then): the gate admits Ctrl+S
+    // and Ctrl+Alt+R in a locked tab, so greying their buttons would be the face
+    // promising less than the key delivers — the exact drift this predicate
+    // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty();
         case RedesignButton::Undo:
-            return history_step_actionable(a, a.history.undo_stack);
+            return !active_view_state(a).read_only &&
+                   history_step_actionable(a, a.history.undo_stack);
         case RedesignButton::Redo:
-            return history_step_actionable(a, a.history.redo_stack);
+            return !active_view_state(a).read_only &&
+                   history_step_actionable(a, a.history.redo_stack);
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:

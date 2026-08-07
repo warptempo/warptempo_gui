@@ -79,6 +79,22 @@
 // where they are — and adds the region clear every playhead-moving command
 // takes (the clear-site rule at clear_region_highlight, input_handler.h).
 //
+// EVERY TRIM ROUTE IS READ-ONLY-LEGAL (architect 2026-08-07). Read-only
+// protects the AUTHORED MUSICAL CONTENT — the two marker stores and the engine
+// settings — and trim is BAND: it lives in ViewState beside the viewport and the
+// zoom, it has no undo, and it never dirties the session, which is what the
+// gate's old "authoring mutation" classification of it was missing. So `x` and
+// `Shift+X` are on the keyboard allowlist, the endcap / bridge drags and the
+// ctrl / ctrl+shift bound-set clicks carry no read-only refusal anywhere on
+// their routes, the settings editor's typed `trim_*=` arms commit in a locked
+// tab, and the trim CURSOR cues promise all of it because they read those same
+// routes' own deciders. NOT ONE of the behaviors above changed with the
+// admission — the degenerate-result refusal, the strictly-inside guard, the
+// partner clamp, the setter's deselect, the playhead park and the
+// trim-mutation playback stop are the same code taking the same decisions. The
+// full ruling is at read_only_key_blocked (input_key_dispatch.cpp), the model's
+// one authoritative home.
+//
 // The zero floor is subsumed by the walls but remains the reason the floor
 // exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
@@ -262,10 +278,12 @@ void GuiInputHandler::handle_trim_clear_both() {
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
 // NO region → x is a SILENT NO-OP (the maximize
-// arm moved to Shift+X; x never widens). NO read-only check here: this pair is
-// keyboard-only (the sole callers are the bare-x / Shift+X dispatch arms), and
-// the keyboard gate — the ONE read-only guard on that path — leaves x off its
-// allowlist, so a locked tab never reaches either function.
+// arm moved to Shift+X; x never widens). NO read-only check here, and there is
+// nothing left for one to do: since 2026-08-07 the keyboard gate ADMITS bare `x`
+// and Shift+X, trim being band rather than authored content (this file's header
+// block), so a locked tab runs both exactly as a writable one does. The absence
+// of a check here predates the admission — it was unreachable duplication while
+// the gate blocked the keys — and it is now the ruling itself.
 //
 // Set-from-region: normalize the span at read time (endpoints rest in drag
 // order), inverse-map each active-domain endpoint to a source frame through
@@ -344,7 +362,8 @@ void GuiInputHandler::handle_trim_x() {
 // [0, total-1], which renders untrimmed and plays to the natural end, so the
 // user-visible act is unchanged and the endcaps simply rest at the song edges).
 // One-shot, history-less like every trim mutation. No read-only check of its own
-// (see handle_trim_x above: the keyboard gate owns that decision for both).
+// (see handle_trim_x above: read-only does not reach trim at all since
+// 2026-08-07, and both keys are on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
 // makes a second Shift+X a natural silent no-op and whose tail owns the repaint
 // (waveform + timestamp) and the target_render trigger. IT TOUCHES NO REGION AND
@@ -809,7 +828,10 @@ void GuiInputHandler::commit_trim_drag() {
 // silently resetting the whole window on a mis-click is the outcome trim cannot
 // afford (trim has no undo).
 //
-// Read-only refuses silently (trim authoring). History-less like every trim
+// READ-ONLY DOES NOT REFUSE (architect 2026-08-07): the clicks are trim, which
+// is band rather than authored content, so this route's first gate — the read-
+// only bit — was deleted with the reclassification and a locked tab sets a bound
+// exactly as a writable one does. History-less like every trim
 // mutation; the repaint + target_render.trigger() tail mirrors the drag release.
 // This function OWNS the press's playback stop — placed past every refusal above
 // and immediately ahead of the bound write, so the ctrl / ctrl+shift press carries
@@ -818,8 +840,8 @@ void GuiInputHandler::commit_trim_drag() {
 // gate). It DESELECTS at its tail, being a trim SETTER (architect 2026-07-29); it
 // publishes no region, the trim-window highlight having retired 2026-07-30.
 // Both bound-set clicks are this ONE function, so both deselect, and both deselect
-// only PAST THE REFUSALS: a read-only tab, a degenerate audio/geometry state and a
-// non-strictly-inside value all set nothing and leave the selection exactly as it
+// only PAST THE REFUSALS: a degenerate audio/geometry state and a
+// non-strictly-inside value both set nothing and leave the selection exactly as it
 // was. The deselect RESTS in every case, including when this click ARMS a drag
 // (set_trim_bound_at_click_then_arm_drag): that gesture has no cancel either, so
 // its caller captures nothing (the no-cancel rule at the drag-modal gate,
@@ -834,13 +856,16 @@ void GuiInputHandler::commit_trim_drag() {
 // can ask what this click would do without a second copy of the derivation: the
 // cue over the trim bar with ctrl held names the BEGIN bound only where the click
 // would actually set it, and falls to the Arrow on every refusal below — a
-// read-only tab, a degenerate audio/geometry state, and above all the
+// degenerate audio/geometry state, and above all the
 // strictly-inside guard, whose whole purpose is that a click landing on or past
 // its partner does nothing. Returns the frame the click WOULD write, or nullopt.
 // Nothing here mutates: the caller below owns the stop, the write and the tail.
+//
+// THE READ-ONLY BIT WAS THIS FUNCTION'S FIRST GATE UNTIL 2026-08-07 and is now
+// deleted, not moved: trim is band, so the two ctrl cues promise the set in a
+// locked tab because the set actually happens there (the file header's ruling).
 std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
     bool is_begin, int mouse_x) const {
-    if (active_view_state(app).read_only) return std::nullopt; // trim authoring
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0)
         return std::nullopt;
     if (current_samples_per_pixel(app, audio) <= 0.0) return std::nullopt;
@@ -866,8 +891,8 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
 }
 
 bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
-    // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click_frame above) — read-only,
-    // the degenerate audio/geometry states and the strictly-inside guard — so
+    // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click_frame above) — the
+    // degenerate audio/geometry states and the strictly-inside guard — so
     // this function is exactly the act, and the cursor cue that asks the same
     // question cannot answer it differently.
     const std::optional<int64_t> decided = trim_bound_click_frame(is_begin,
@@ -876,7 +901,7 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     const int64_t frame = *decided;
     // The act commits from here on, so THIS is where it stops a live audition
     // (architect 2026-07-27): the trim window is about to change under it, and
-    // every refusal above — read-only, a degenerate audio/geometry state, a
+    // every refusal above — a degenerate audio/geometry state, a
     // non-strictly-inside value — has already returned without stopping anything.
     // The caller (the ctrl / ctrl+shift trim-bar press) carries no stop of its own
     // for exactly that reason. Ahead of the write, like every claim's stop.
@@ -906,7 +931,7 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
 // anchor capture, the live sync, the first-accepted-change deselect/stop and the
 // release commit are all the drag's own rules, unchanged.
 //
-// THE ARM RIDES THE SET'S VERDICT: a refused set (read-only tab, degenerate
+// THE ARM RIDES THE SET'S VERDICT: a refused set (a degenerate
 // audio/geometry state, or a value not strictly inside its partner) arms nothing,
 // so a consumed no-op stays a consumed no-op with no drag left hanging on a bound
 // that never moved. The old pair-survival checks that used to gate the arm died
@@ -941,12 +966,13 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // fall through. Trim bounds are transparent to every OTHER chord (the caller
 // gates this to the plain, unmodified press).
 //
-// THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one: its ONE caller
-// returns on a read-only active tab BEFORE calling here (the plain trim-bar press,
-// input_pointer.cpp), which is the whole band's sole read-only defense and says so
-// at the gate. A read-only tab therefore still CONSUMES every trim-bar press and
-// arms nothing — the band-level behavior is unchanged; it is simply decided one
-// level up, one owner per routing decision (docs/engineering/validation_topology.md).
+// THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one — and since
+// 2026-08-07 neither does anything above it: the band's sole read-only defense
+// (the plain trim-bar press's own return, input_pointer.cpp) was DELETED with
+// the reclassification of trim as band rather than authored content, so a locked
+// tab arms the endcap and bridge drags exactly as a writable one does. The two
+// internal returns this function once carried had already been deleted in
+// 2026-08-02 as unreachable; nothing replaced them, and nothing should.
 // The two arms:
 //   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
 //     bar lane) arms that bound's single drag.
