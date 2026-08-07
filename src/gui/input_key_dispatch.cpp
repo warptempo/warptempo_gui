@@ -15,11 +15,14 @@
 #include "text_editor.h"
 #include "warpmarkers.h"
 
+#include <fcntl.h>
 #include <signal.h>
 #include <spawn.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -76,6 +79,74 @@ bool spawn_audio_player(const std::string& player,
                                 argv.data(), environ);
     posix_spawnattr_destroy(&attr);
     return rc == 0;
+}
+
+// Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
+// spec's ordinary command-line front end. True iff the folder is gone from
+// disk afterwards.
+//
+// THIS IS THE PRODUCT'S ONLY TRASHED DELETION (architect 2026-08-07), and the
+// scope line is deliberate: the one caller is the `'` load-in-place's renders/
+// wipe far below, which takes every archival render in the folder with it —
+// user-visible artifacts a sweep may have spent an evening producing, so a
+// wiped batch stays restorable. EVERY OTHER deletion in the product stays a
+// native remove: the atomic-write temporaries, the history mode's RAII scratch
+// dir, the process-private render cache and a cancelled render's own partial
+// artifacts are all ephemera the user never sees, and trashing them would
+// pollute his trash instead of protecting anything.
+//
+// argv exec, NEVER a shell (the project's standing rule): a project folder's
+// name carries spaces and reaches gio as one argv element with no quoting rules
+// in between. `--` guards a hypothetical dash-leading path. The folder goes
+// WHOLE, so a restore brings back one entry rather than a scatter of files.
+//
+// THE VERDICT IS AN OBSERVATION OF THE FILESYSTEM rather than the child's exit
+// status, for the reason main()'s SIG_IGN SIGCHLD makes unavoidable: under that
+// disposition waitpid returns ECHILD and the status is simply not obtainable
+// (the git runners in history_diff.cpp are written to the same regime, and
+// their comments own the reasoning). The wait still runs — it is what orders
+// the observation after the child — and the status is HONOURED when it does
+// arrive, a future session leaving the default disposition; what decides the
+// ordinary case is that the directory is no longer there. That one witness
+// covers every shape the caller's fallback exists for: gio absent (execvp
+// returns and the child _exit's), gio refusing (an unsupported filesystem, no
+// gvfs available), a fork that never happened.
+//
+// The child's stdout and stderr go to /dev/null: the caller's single fallback
+// line is the whole diagnostic this act prints, and gio's own words would only
+// double it.
+bool trash_directory(const std::filesystem::path& dir) {
+    const std::string path = dir.string();
+
+    char* argv[] = {const_cast<char*>("gio"), const_cast<char*>("trash"),
+                    const_cast<char*>("--"),  const_cast<char*>(path.c_str()),
+                    nullptr};
+
+    const pid_t pid = fork();
+    if (pid < 0) return false;
+    if (pid == 0) {
+        // Child: nothing between here and exec that is not async-signal-safe.
+        const int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
+        execvp("gio", argv);
+        _exit(127);
+    }
+
+    int   status = 0;
+    pid_t w      = 0;
+    do {
+        w = waitpid(pid, &status, 0);
+    } while (w < 0 && errno == EINTR);
+    if (w == pid && (!WIFEXITED(status) || WEXITSTATUS(status) != 0)) {
+        return false;
+    }
+
+    std::error_code ec;
+    return !std::filesystem::exists(dir, ec);
 }
 
 }  // namespace
@@ -3219,12 +3290,27 @@ bool GuiInputHandler::load_render_entry_in_place(
 
     // Wipe renders/ AFTER the successful load-in-place. The loaded render survives
     // through the render cache, not as a folder artifact.
+    //
+    // TO THE DESKTOP TRASH FIRST (architect 2026-08-07): this is the product's one
+    // deletion of user-visible artifacts, so a wiped batch stays restorable. THE
+    // FALLBACK IS THE DETECTION — no upfront probe, no setting, no capability
+    // cache: trash_directory answers by observation, and its false lands on the
+    // native remove_all below with ONE line saying the trash was unavailable. A
+    // successful trash prints nothing; silence is this wipe's ordinary ending and
+    // always was. The is_directory guard and the ec-reported failure line are the
+    // fallback path's own, unchanged.
     if (std::filesystem::is_directory(renders_root, ec)) {
-        std::filesystem::remove_all(renders_root, ec);
-        if (ec) {
+        if (!trash_directory(renders_root)) {
             std::fprintf(stderr,
-                "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
-                renders_root.string().c_str(), ec.message().c_str());
+                "warptempo_gui: load-in-place: Trash unavailable for '%s'; "
+                "deleting it instead\n",
+                renders_root.string().c_str());
+            std::filesystem::remove_all(renders_root, ec);
+            if (ec) {
+                std::fprintf(stderr,
+                    "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
+                    renders_root.string().c_str(), ec.message().c_str());
+            }
         }
     }
 
