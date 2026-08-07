@@ -2010,13 +2010,6 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
     count_ = app.history.undo_stack.size();
     gui_   = capture_history_gui_side(app);
     now_   = now;
-    // THE IDENTITY OF EACH WALKED POSITION, captured with the count and in the
-    // walk's own newest-first order, so `serials_[i]` is the entry member i
-    // names. member_at re-reads the position and compares.
-    serials_.assign(count_, 0);
-    for (std::size_t i = 0; i < count_; ++i) {
-        serials_[i] = app.history.undo_stack[count_ - 1 - i].serial;
-    }
     members_.assign(count_, Member{});
     // SIZED ONCE, NEVER GROWN — the frozen-stack premise (the class comment owns
     // it) is exactly what lets these be vectors where the commit walk needs
@@ -2038,34 +2031,25 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // SOURCE (2026-08-07): iteration mode is TARGET-LEGAL, so the S->T edge wipes
 // nothing and writes no store, and `i` is not on the mode's keyboard allowlist,
 // so the bit cannot move in here either. NO ROUTE PUSHES, POPS OR EVICTS while
-// the view stands. The bottom-indexing stays what it always was — the shape that
-// keeps an append harmless if one ever returns.
+// the view stands, so the premise is EXCEPTIONLESS BY CONSTRUCTION and stands on
+// that derivation alone. The bottom-indexing stays what it always was — the
+// shape that keeps an append harmless if one ever returns.
 //
-// SO BOTH GUARDS BELOW ARE TRIPWIRES, kept deliberately rather than as
-// corner-closes with a live producer behind them (the architect's
-// silent-wrong-guard rule: the premise is a DERIVED GLOBAL property spanning
-// both allowlists and every mutator's close tail, and a regression anywhere in
-// that span turns a lane silently wrong — a member's delta attributed to its
-// neighbour — where these two turn it BLANK). What each would catch:
-//   * a SHRUNKEN stack (undo, redo and load are consumed or close the view) is
-//     caught by the size term, which is also what keeps the read in range before
-//     the serial can be looked at;
-//   * an EVICTING PUSH is what the serial is really for: a stack already at
-//     UndoHistory::kCap when something pushes drops the bottom entry and slides
-//     every position down one WHILE THE SIZE HOLDS, so no count can see it and
-//     the identity can — the first position asked answers nothing instead of a
-//     neighbour's delta;
-//   * anything unforeseen is covered by construction, the question being "is
-//     this still the entry I captured" rather than "did one of these happen".
-// The two terms are ordered rather than merged: the size guard is a bounds
-// precondition on the subscript the serial check performs.
+// THE SIZE TERM BELOW IS A BOUNDS PRECONDITION on the subscript this function is
+// about to perform, and it predates all of that: a stack shorter than the
+// captured count answers NOTHING AT ALL (a blank lane) rather than being read at
+// indices that now mean other events.
+//
+// (A PUSH SERIAL — a per-entry identity the walk captured at init and re-checked
+// here, written for the kCap-EVICTION shape the admitted push could reach, where
+// the bottom entry goes and every position slides down one while the size holds
+// — lived for one day of that same date and was DELETED by the architect once
+// that producer went: a producer-less mechanism rather than a granularity change,
+// in a feature-complete project. Do not re-propose it.)
 const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         std::size_t index) {
     if (app_ == nullptr || index >= count_) return nullptr;
     if (app_->history.undo_stack.size() < count_) return nullptr;
-    if (app_->history.undo_stack[count_ - 1 - index].serial != serials_[index]) {
-        return nullptr;
-    }
     Member& m = members_[index];
     if (m.built) return &m;
 

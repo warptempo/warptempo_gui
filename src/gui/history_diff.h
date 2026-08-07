@@ -681,21 +681,14 @@ private:
 // is FROM THE BOTTOM, which is what would make an append harmless if one ever
 // returned: a captured position keeps naming the entry it named, the new entry
 // is simply not in the walk, and the frozen now side is the state before it.
-//
-// AND THE WALK CHECKS RATHER THAN ASSUMES, over every mutation shape (2026-08-07).
-// Each walked position's ENTRY SERIAL is captured at init beside the count
-// (UndoEntry::serial, app_state.h — a monotonic stamp taken when an entry enters
-// a stack), and a position whose serial has moved answers NOTHING: a blank lane,
-// the same honest degradation a shrunken stack gets. It was written to close the
-// kCap EVICTION — an evicting push slides every entry down one while the size
-// holds, so the size alone cannot see it — and with that push's own producer now
-// deleted, BOTH TERMS ARE TRIPWIRES: no live route can trip them, and they are
-// kept because the premise above is a DERIVED GLOBAL property spanning both
-// allowlists and every mutator's close tail, where a future regression would
-// otherwise produce a silently wrong lane instead of a blank one. The check
-// covers anything unforeseen by construction, since the question it asks is "is
-// this still the entry I captured" rather than "has one of the shapes I thought
-// of happened". member_at owns both terms.
+// The premise stands on that derivation alone — nothing at runtime enforces it.
+// member_at re-reads the stack's SIZE on every ask, but that is a bounds
+// precondition on the subscript, not a check of the premise: a stack shorter
+// than the captured count answers a blank lane rather than being read at indices
+// that now mean other events. (A per-entry PUSH SERIAL verifying each captured
+// position lived for one day of 2026-08-07, written for the kCap-eviction shape
+// the admitted push could reach; the architect deleted it with that producer —
+// member_at states the rule. Do not re-propose it.)
 //
 // THE REDO STACK IS DELIBERATELY EXCLUDED. The walk is what is BEHIND you — the
 // commit walk's own shape — and redo is the branch you stepped off. Including it
@@ -753,11 +746,6 @@ private:
     std::size_t                              count_ = 0;
     std::shared_ptr<const GuiHistoryGuiSide> gui_;
     GuiHistoryNowSide                        now_;
-    // WHICH ENTRY EACH WALKED POSITION HELD AT INIT (UndoEntry::serial,
-    // app_state.h), parallel to members_. It is the walk's whole identity check:
-    // a position whose serial has moved is not the member this walk captured,
-    // and member_at answers nothing for it.
-    std::vector<std::uint64_t>               serials_;
     std::vector<Member>                      members_;
     std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };

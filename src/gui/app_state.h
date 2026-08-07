@@ -128,42 +128,6 @@ struct UndoEntry {
     // after-state), which becomes the snapshot coordinate of the counter-entry.
     std::vector<int>          touched_snapshot;
     std::vector<int>          touched_live;
-    // WHICH ENTRY THIS IS — a monotonic serial stamped when the entry ENTERS a
-    // stack, and the only identity an entry carries (2026-08-07). 0 means never
-    // stamped, which no entry resident in either stack ever is: the stampers are
-    // UndoHistory::push, which every one of the four push_undo_* helpers goes
-    // through, and restore_history_entry's COUNTER-ENTRY, which is a genuinely
-    // new entry and takes a fresh serial of its own (re-derived by grep on
-    // `UndoEntry ` — those five sites are every construction in the product).
-    //
-    // AN ENTRY KEEPS ITS SERIAL FOR AS LONG AS IT SITS WHERE IT SITS, which is
-    // the whole of what it promises and the whole of what its reader needs. A
-    // restore MOVES an entry off a stack and into the live state; it is not
-    // re-stamped on the way, because it stops being a stack member at all. The
-    // in-place touched_live write (Undo::mark_touched_live) leaves it alone for
-    // the same reason: same entry, same position, same serial.
-    //
-    // ITS ONE READER IS THE HISTORY VIEW'S LOCAL WALK
-    // (GuiHistoryLocalWalk::member_at, history_diff.cpp), which captures the
-    // serial at each walked position when the view opens and refuses to answer
-    // for a position whose serial has moved. That is what makes the kCap
-    // EVICTION detectable: an evicting push slides every entry down one position
-    // while the stack's SIZE does not move, so the size alone cannot see it and
-    // the serial can. Nothing else reads it, nothing serializes it, and it is
-    // never compared for anything but equality.
-    //
-    // AND IT IS A TRIPWIRE RATHER THAN A CORNER-CLOSE SINCE 2026-08-07: the one
-    // live producer it was written for — the S->T view switch's iteration-bracket
-    // push, the frozen-stack premise's single admitted hole — is DELETED with
-    // the ruling that iteration mode is target-legal, and `i` is not on the
-    // mode's allowlist, so NO ROUTE PUSHES, POPS OR EVICTS AN UNDO ENTRY while
-    // the view stands. The check is kept under the architect's silent-wrong-guard
-    // rule: the premise it defends is a DERIVED GLOBAL property spanning both
-    // allowlists and every mutator's close tail, so a future regression anywhere
-    // in that span would otherwise show a lane that is silently wrong (a member's
-    // delta attributed to its neighbour). With the check it shows a BLANK one.
-    // The eviction arithmetic above stays as the record of what it would catch.
-    std::uint64_t             serial               = 0;
 };
 
 // Session-only region selection — an Ableton-style arrangement span, and TRIM
@@ -394,21 +358,6 @@ struct UndoHistory {
     int  saved_distance = 0;
     bool saved_valid    = true;
 
-    // THE SERIAL SOURCE (2026-08-07) — see UndoEntry::serial for what the stamp
-    // is for. It starts at 1 so that 0 can mean "never stamped", and it is
-    // MONOTONIC FOR THE PROCESS: reset() deliberately does not rewind it, since
-    // the whole value of a serial is that no two entries ever share one, and a
-    // rewind would let a refilled stack reissue numbers a reader may still be
-    // holding. At one stamp per authoring act a 64-bit counter cannot be
-    // exhausted by a human.
-    std::uint64_t next_serial = 1;
-
-    // Take the next one. TWO CALLERS by design: push() below, and
-    // restore_history_entry's counter-entry, which enters a stack without going
-    // through push (undo.cpp — the no-kCap-trim site states why it is a bare
-    // push_back).
-    std::uint64_t stamp_serial() { return next_serial++; }
-
     // Evict the oldest (bottom) entry of the undo stack for the kCap trim while
     // keeping the saved reference honest. Saved distances into the undo stack
     // are negative. Hopping the saved baseline over an entry is
@@ -458,12 +407,6 @@ struct UndoHistory {
         }
         redo_stack.clear();
         if (saved_valid) saved_distance -= 1;
-        // STAMPED AS IT ENTERS THE STACK (2026-08-07): this is the funnel every
-        // one of the four push_undo_* helpers goes through, so stamping here
-        // covers every authored entry with no site to forget. Whatever the
-        // caller left in the field is overwritten — the stamp is this owner's,
-        // not the producer's.
-        entry.serial = stamp_serial();
         undo_stack.push_back(std::move(entry));
         if (undo_stack.size() > kCap) {
             evict_undo_bottom_with_saved_ref();
@@ -2319,20 +2262,24 @@ struct AppState {
     // rests on (2026-08-07): every route that could push, pop or evict an entry
     // is an authoring route, so the two gates consume it or one of the three
     // mutators closes the view as part of itself. The walk therefore captures
-    // the stack's size once and indexes it for the visit — and checks that size
-    // again on every read rather than trusting the derivation blindly, the
-    // premise being derived rather than enforced.
+    // the stack's size once and indexes it for the visit — re-reading that size
+    // on every ask as a BOUNDS PRECONDITION on the subscript it is about to
+    // perform, which is all that check is.
     //
-    // AND IT IS EXCEPTIONLESS BY CONSTRUCTION since the iteration-mode ruling
-    // later the same day: the admitted VIEW SWITCHES used to push one entry on
-    // the S->T edge (the iteration-bracket wipe), and that wipe is deleted —
-    // iteration mode is target-legal, so entering target view changes no store
-    // (the record is at handle_active_audio_view_toggle, input_handler.cpp).
-    // The bit itself cannot move in here either: `i` is not on the keyboard
-    // allowlist and the icon row's iteration button greys with it. So the walk
-    // now has NO live producer to tolerate, and its size and serial checks are
-    // TRIPWIRES over a derived global property rather than corner-closes over a
-    // known one (UndoEntry::serial states the rule and why it is kept).
+    // IT IS EXCEPTIONLESS BY CONSTRUCTION: the premise shipped with one admitted
+    // producer — the S->T view switch's iteration-bracket push — and that push is
+    // DELETED with the ruling that iteration mode is target-legal, so entering
+    // target view changes no store (the record is at
+    // handle_active_audio_view_toggle, input_handler.cpp). The bit itself cannot
+    // move in here either: `i` is not on the keyboard allowlist and the icon
+    // row's iteration button greys with it. So the walk has NO producer to
+    // tolerate, and the derivation is the whole argument — no runtime check
+    // stands behind it. (A per-entry PUSH SERIAL, the walk verifying each
+    // captured position's identity on every read, lived for one day of that same
+    // date, written for the kCap-eviction corner the admitted push could reach.
+    // The architect DELETED it when that producer went: a producer-less
+    // mechanism, not a granularity change, in a feature-complete project. Do not
+    // re-propose it.)
     //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
