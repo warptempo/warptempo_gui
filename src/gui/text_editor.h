@@ -92,6 +92,12 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // bare basename. Program-written batch/entry names are short; 256 is a
 // generous ceiling for the relative path a user types or Tab-completes.
 constexpr int kMaxPendingCharsLoadInPlace = 256;
+// The history mode's commit-title editor (Ctrl+Alt+R while the view stands).
+// Holds the checkpoint's commit message — one line, prefilled with `Update
+// <id>` and free UTF-8 text the user may rewrite. 256 is the same generous
+// ceiling the load prompt takes, and it is well past the ~50-character summary
+// line a commit title is written to be.
+constexpr int kMaxPendingCharsCommitTitle = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -100,12 +106,15 @@ constexpr int kMaxPendingCharsLoadInPlace = 256;
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
 // load prompt uses LoadInPlace (a render entry's relative-path
-// identifier, resolved against the renders/ listing at commit).
+// identifier, resolved against the renders/ listing at commit); the history
+// mode's commit-title editor uses CommitTitle (free one-line text, the message
+// the checkpoint commit carries).
 enum class Kind {
     FlagPayload,
     BpmBracket,
     SettingsAssignment,
     LoadInPlace,
+    CommitTitle,
 };
 
 // State for a single editable rect.

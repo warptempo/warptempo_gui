@@ -29,7 +29,7 @@
 // MONOSPACE IS GONE FROM THE PRODUCT (architect 2026-08-01: "I wanted to get rid
 // of monospace altogether — the last row should be the same font as the rest").
 // Every string on the bottom line — the timestamp, the prompts, the
-// queue/render/transient status, the resolved readout and the three editors'
+// queue/render/transient status, the resolved readout and the four editors'
 // own text — is the redesign's sans at the redesign's size, shaped and painted
 // through the ONE chokepoint like every other redesigned row. (The dirty mark
 // used to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which
@@ -168,13 +168,13 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
     return s;
 }
 
-// The three bottom-strip editors (settings / load / BPM) share this one
-// body, differing only in prefix and which State they read. It shapes PREFIX AND
+// The four bottom-strip editors (settings / load / commit title / BPM) share
+// this one body, differing only in prefix and which State they read. It shapes PREFIX AND
 // PENDING AS ONE RUN — so the pair kerns exactly as it paints — and addresses
 // the pending half through that run's own byte boundaries, which it publishes
 // for the pointer path (AppState::BottomEditorText).
 //
-// ALL THREE INHERIT THE INVALID FLASH'S MARKER-FLAG BOX TOGETHER (2026-08-02,
+// ALL FOUR INHERIT THE INVALID FLASH'S MARKER-FLAG BOX TOGETHER (2026-08-02,
 // step 1 below) — they are the complete set of surfaces painting through here,
 // and every one of them fits it: each is a prefix plus one editable run on one
 // line, which is the exact shape the box wraps, and none carries a second field,
@@ -3850,9 +3850,25 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         render_bottom_strip_editor(cr, app, font, app.load_editor,
                                    kLoadEditorHistoryPrefix,
                                    sec.c_x, baseline, band_y, band_h);
+    } else if (text_editor::is_active(app.commit_title_editor)) {
+        // THE COMMIT-TITLE EDITOR (2026-08-07), the mode's other editor and the
+        // same story as the load editor above it: the mode's line yields its
+        // cell to the surface the user is typing into, and gets it back when the
+        // edit ends either way. It carries no mode test of its own — it can only
+        // be open while the view stands (its one opener is the view's Ctrl+Alt+R,
+        // and every closer of the view runs past a keyboard the editor owns) —
+        // and leaving the test out is the failing-safe direction: an editor that
+        // somehow outlived the view would still paint its caret rather than
+        // swallowing keys invisibly. Its prefix names its subject — the commit
+        // message, prefilled with `Update <id>` — and its red flash is a blank
+        // buffer. The two are mutually exclusive (each opener refuses while any
+        // editor owns the keyboard), so the order of these two branches is free.
+        render_bottom_strip_editor(cr, app, font, app.commit_title_editor,
+                                   kCommitTitleEditorPrefix,
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
         // THE `h` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
-        // three bottom-strip editors paint in. It ranks directly under the
+        // four bottom-strip editors paint in. It ranks directly under the
         // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and the
         // in-mode load editor above, and over the queue status, the remaining
         // editors and the readout, because while the mode stands this line is

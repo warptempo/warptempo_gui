@@ -4,6 +4,7 @@
 #include "async_renderer.h"
 #include "audio.h"
 #include "flag_editor.h"
+#include "history_commit_worker.h"
 #include "playback.h"
 #include "playback_lifecycle.h"
 #include "prompt.h"
@@ -341,19 +342,22 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     shape: true when the press is not admitted while the mode stands. Its
 //     admitted membership is enumerated at the definition.
 //
-// THE SECOND TAKES THE SESSION, THE FIRST DOES NOT, and the asymmetry is the
-// membership's own: the mode's keys are a fixed keymap, while TWO allowlist
-// admissions are conditional on the session they are asked about (re-derived
-// 2026-08-06) — the commit act's, on head_delta_empty (a view whose newest
-// checkpoint already carries the session's authoring content has nothing to
-// commit), and the revert act's, on a subject standing
+// THE SECOND TAKES THE WHOLE AppState, THE FIRST TAKES NOTHING BUT THE PRESS,
+// and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
+// while THREE allowlist admissions are conditional on state they are asked about
+// (re-derived 2026-08-07) — the commit act's, on head_delta_empty (a view whose
+// newest checkpoint already carries the session's authoring content has nothing
+// to commit) and on history_checkpoint_in_flight (one checkpoint at a time), and
+// the revert act's, on a subject standing
 // (history_mode_revert_subject_standing — a selected diff flag, else the focused
 // one). Both readers hand it the
-// same `app.history_mode` and neither restates a term of it, which is what
-// keeps the key and the face one decision.
+// same `app` and neither restates a term of it, which is what
+// keeps the key and the face one decision. It took the HistoryMode struct alone
+// until the in-flight bit joined, that bit living on AppState because the act
+// outlives the view it was launched from.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
-                              const AppState::HistoryMode& mode);
+                              const AppState& app);
 
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3):
@@ -435,6 +439,11 @@ struct GuiInputHandler {
     GuiActiveViews&          active_views;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
+    // The checkpoint act's background worker (2026-08-07). ONE user:
+    // run_history_commit, which dispatches the captured job onto it; the
+    // completion comes back through main.cpp's eventfd wiring into
+    // on_history_checkpoint_complete.
+    GuiHistoryCommitWorker&  history_commit_worker;
     GuiPlaybackLifecycle&    playback_lifecycle;
     GuiSaveOps&              save_ops;
     GuiPrompt&               prompt;
@@ -483,6 +492,7 @@ struct GuiInputHandler {
                     GuiActiveViews&          active_views_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
+                    GuiHistoryCommitWorker&  history_commit_worker_,
                     GuiPlaybackLifecycle&    playback_lifecycle_,
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
@@ -504,6 +514,7 @@ struct GuiInputHandler {
           active_views(active_views_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
+          history_commit_worker(history_commit_worker_),
           playback_lifecycle(playback_lifecycle_),
           save_ops(save_ops_),
           prompt(prompt_),
@@ -530,11 +541,11 @@ struct GuiInputHandler {
     // handle_active_audio_view_toggle chokepoint; the friendship lets it
     // reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
-    // The history mode's commit confirmation is answered inside the prompt's own
-    // response dispatch, and `y` runs the act — a private method here, beside
-    // the rest of the mode's machinery; the friendship lets the prompt reach it
-    // through its back-pointer, the same arrangement as the two above.
-    friend struct GuiPrompt;
+    // (NO GuiPrompt FRIENDSHIP. The prompt needed one while the history mode's
+    // commit confirmation lived there — its `y` reached the private act through
+    // a back-pointer — and both went with the prompt on 2026-08-07: the act is
+    // now run by the commit-title editor's Enter, which is a private method of
+    // this same struct.)
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
@@ -1149,16 +1160,17 @@ private:
     void handle_plain_bare_keys(GuiKey key);
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
-    // the load prompt, the bpm bracket editor, and (architect
-    // 2026-07-28) the top-strip flag editor. The modal contract is stated once
+    // the load prompt, the commit-title editor, the bpm bracket editor, and
+    // (architect 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
     // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, empty for the
-    // bpm and flag editors, and bare Tab never arrives for them at all: the
+    // commit-title, bpm and flag editors, and bare Tab never arrives for them at
+    // all: the
     // on_key gate (modal_editor_key_blocked) swallows it before this route ever
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
-    // editor's own damage for a text change — the three bottom-strip surfaces
+    // editor's own damage for a text change — the four bottom-strip surfaces
     // pass the timestamp area, the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
@@ -1214,6 +1226,33 @@ private:
     void load_editor_commit();
     void load_editor_exit_no_commit();
     bool handle_load_editor_key(GuiKey key, GuiInputState mods);
+
+    // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the load editor's exact
+    // pattern for the history view's OTHER act. Ctrl+Alt+R while the view
+    // stands opens it prefilled with `Update <id>`; Enter runs the
+    // Save-and-Commit act under whatever the buffer holds; Esc abandons with
+    // nothing written; an empty or whitespace-only buffer red-flashes and stays
+    // open, since a checkpoint with no message is not a thing to write.
+    // It REPLACED the act's confirmation prompt, and a bare Enter over the
+    // prefill is that prompt's `y` — the pause is the same, and the editor uses
+    // it to ask something worth asking.
+    //
+    // open_history_commit_editor: the opener, reached from ONE place —
+    // Ctrl+Alt+R's own arm, which the mode bit re-aims
+    // (handle_render_dispatch_keys).
+    // commit_title_editor_commit: Enter — validate non-blank, close the editor,
+    // run the act (run_history_commit, which owns the save, the close and the
+    // dispatch).
+    // commit_title_editor_exit_no_commit: Esc / Ctrl+Q teardown.
+    // handle_commit_title_editor_key: the key router, through
+    // route_modal_editor_key like the three editors before it. It passes NO
+    // autocomplete hook — there is no vocabulary here to complete against, a
+    // commit title being free text — so bare Tab drops at the modal gate exactly
+    // as it does for the bpm and flag editors.
+    void open_history_commit_editor();
+    void commit_title_editor_commit();
+    void commit_title_editor_exit_no_commit();
+    bool handle_commit_title_editor_key(GuiKey key, GuiInputState mods);
 
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
@@ -1652,12 +1691,12 @@ private:
     // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
     // modal_bottom_strip_editor_active is for; other sites carry a pointer here.
     // It names the BOTTOM-STRIP modal surfaces only — the settings editor, the
-    // load editor, and the bpm bracket editor (plus the prompts, gated
-    // separately). TWO CALLERS, and they ask the same question about two pointer
+    // load editor, the commit-title editor and the bpm bracket editor (plus the
+    // prompts, gated separately). TWO CALLERS, and they ask the same question about two pointer
     // facts: wheel_context's swallow (input_handler.cpp), because wheel zoom and
     // Alt+wheel pan are NAVIGATION, not chords, so they still punch through an
     // open top-strip flag editor; and pointer_cursor_kind (2026-08-03), because
-    // these three editors are exactly the ones that SWALLOW a pointer press, so
+    // these four editors are exactly the ones that SWALLOW a pointer press, so
     // they are exactly the ones over which no cursor may promise a gesture. The
     // flag editor's exemption is the same fact in both: it is
     // pointer-transparent, so the wheel reaches the viewport under it and a
@@ -1665,7 +1704,7 @@ private:
     // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
     // not decided here — but it is no longer scattered either: since 2026-07-28
     // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
-    // every open site calls and which records the whole decision table (the three
+    // every open site calls and which records the whole decision table (the four
     // bottom-strip editors and the prompts stop; the top-strip flag editor is
     // explicitly EXEMPT and keeps a live audition playing). So a new modal
     // surface inherits the wheel swallow from this predicate and its playback
@@ -1673,7 +1712,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all four editors, top strip included.
+    // Ctrl+Q). It serves all five editors, top strip included.
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
@@ -1748,12 +1787,16 @@ private:
     //     call sites.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
-    //   * open_history_commit_confirmation raises the fourth prompt, and is
-    //     reached from ONE place — Ctrl+Alt+R's own arm, which the mode bit
-    //     re-aims (handle_render_dispatch_keys).
-    //   * run_history_commit is the prompt's `y`: save, rebuild the bytes,
-    //     commit them, and close the view when the checkpoint reached the
-    //     repository. Its body owns the partition.
+    //   * the COMMIT-TITLE EDITOR asks for the message (its cluster is declared
+    //     above, beside the load editor whose pattern it takes).
+    //   * run_history_commit is that editor's Enter: save, rebuild the bytes,
+    //     close the view, and hand the captured job to the background worker.
+    //     Its body owns the close partition (THE VIEW CLOSES IFF THE SAVE
+    //     LANDED, architect 2026-08-07) and the capture list.
+    //   * on_history_checkpoint_complete is the worker's completion, back on
+    //     the main thread: it clears the in-flight bit and, for the three
+    //     reporting outcomes, raises the acknowledge notice — deferring it into
+    //     AppState::pending_history_notice while another modal stands.
     // THE REVERT ACT is the odd one out and deliberately so:
     //   * run_history_revert applies the SELECTED diff flags backwards into the
     //     live store of the active column and then closes the view. Its chord,
@@ -1774,7 +1817,13 @@ private:
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit, bool extend);
     void close_history_mode();
-    void open_history_commit_confirmation();
-    void run_history_commit();
+    void run_history_commit(const std::string& title);
+    void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome);
     void run_history_revert();
+
+public:
+    // THE DEFERRED NOTICE'S POLL, called once per tick from main.cpp: if a
+    // checkpoint failure report is parked and the bottom strip is free, open it.
+    // Public for that one caller, like repeat_eligible above.
+    void maybe_open_pending_history_notice();
 };

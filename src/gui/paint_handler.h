@@ -62,7 +62,7 @@ inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }
 
-// Single source for the three bottom-strip editor prefixes, read by the paint
+// Single source for the bottom-strip editor prefixes, read by the paint
 // sites (render_bottom_strip_editor) alone since row 7. The pointer path no
 // longer measures a prefix at all: the painter shapes prefix and pending as ONE
 // run and publishes where the pending half begins, so the click-to-caret origin
@@ -79,6 +79,10 @@ constexpr const char* kLoadEditorPrefix   = "Load: ./renders/";
 // one trailing space, and the branch that selects it is the only place the
 // two ever differ.
 constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
+// The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
+// message the checkpoint commit will carry. One trailing space, like the two
+// prefixes above that name a subject rather than a path.
+constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
 
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's

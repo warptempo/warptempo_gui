@@ -376,6 +376,13 @@ public:
     // GuiWaveformWorker::on_completion_event).
     void set_waveform_worker_completion_fd(int fd, std::function<void()> on_event);
 
+    // And the same hookup for the GuiHistoryCommitWorker's completion eventfd
+    // (2026-08-07, the checkpoint act's move onto a background worker). The
+    // poll set grows a fifth pollfd; on POLLIN the loop reads the counter and
+    // invokes this callback (routes to
+    // GuiHistoryCommitWorker::on_completion_event).
+    void set_history_worker_completion_fd(int fd, std::function<void()> on_event);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -492,6 +499,11 @@ private:
     // async-renderer fd above. -1 when no waveform worker is registered.
     int  waveform_worker_completion_fd_ = -1;
     std::function<void()> on_waveform_worker_completion_;
+
+    // Checkpoint-worker completion fd. Same lifetime story as the two above.
+    // -1 when no checkpoint worker is registered.
+    int  history_worker_completion_fd_ = -1;
+    std::function<void()> on_history_worker_completion_;
 
     // -- The system clipboard (the CLIPBOARD selection) --
     // The device is created against the seat, so it is recreated when a seat

@@ -73,13 +73,16 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-06 — EIGHT sites:
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-07 — EIGHT sites:
     // the `;` settings editor (input_handler.cpp), the Settings DROPDOWN item's
     // open of that same editor (input_pointer.cpp — a second door onto one
-    // surface, and the one route that reaches no key gate), the `'` load editor
-    // and the `m` bpm editor (input_key_dispatch.cpp), and the FOUR prompt opens
-    // (prompt.cpp: unsaved, error notice, env-hash mismatch, the history commit
-    // confirm).
+    // surface, and the one route that reaches no key gate), the `'` load editor,
+    // the `m` bpm editor and the history view's COMMIT-TITLE editor
+    // (input_key_dispatch.cpp), and the THREE prompt opens
+    // (prompt.cpp: unsaved, error notice, env-hash mismatch). The count held
+    // across 2026-08-07 by coincidence: the commit-title editor replaced the
+    // history commit confirmation, so one caller left prompt.cpp as another
+    // arrived in input_key_dispatch.cpp.
     // ONE MODAL OPEN IS NOT A CALLER, and it is a recorded exception rather than
     // a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
     // (PhaseResetPropagate::open_paste_confirmation) and stops through
@@ -91,7 +94,7 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * BOTTOM-STRIP modal surfaces — the three editors and the prompts — STOP.
+    //   * BOTTOM-STRIP modal surfaces — the four editors and the prompts — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
     //     wheel-transparent), and editing flag text while listening to the

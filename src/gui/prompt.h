@@ -7,8 +7,6 @@
 #include "save_ops.h"
 #include "viewport.h"
 
-struct GuiInputHandler;
-
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
 // unsaved-work dialog and the paste-confirm dialog. Two entry points are
 // exposed: request_close (called by Ctrl+Q and the WM-close
@@ -39,26 +37,18 @@ struct GuiPrompt {
           save_ops(save_ops_),
           playback_lifecycle(playback_lifecycle_) {}
 
-    // Back-pointer to the input handler, wired in main.cpp after both are
-    // constructed (the input handler holds this prompt by reference, so the
-    // cycle is resolved with a pointer set there — the settings editor's and the
-    // phase-reset propagate's own arrangement). ONE reader: the history commit
-    // prompt's `y`, which runs GuiInputHandler::run_history_commit. Null until
-    // the wiring runs, which is before any event can be dispatched.
-    GuiInputHandler* input = nullptr;
-
     void request_close();
     void activate_response(char k);
 
-    // THE HISTORY MODE'S COMMIT CONFIRMATION (HISTORY_COMMIT) — the product's
-    // fourth prompt and the only one guarding a write outside this session.
-    // `commit_title` is the message the commit will carry, from the act's own
-    // owner (history_checkpoint_title) so the question and the deed cannot name
-    // different things, and `repo` is the projects_repo setting verbatim. `y`
-    // runs the act; Esc abandons with nothing written. The commit message
-    // itself is not asked about (architect: it is derived, not chosen).
-    void open_history_commit_confirm(const std::string& commit_title,
-                                     const std::string& repo);
+    // (NO COMMIT CONFIRMATION HERE ANY MORE. The `h` history view's
+    // Save-and-Commit act was guarded by a fourth prompt — HISTORY_COMMIT, one
+    // question with `y` and Esc — until 2026-08-07, when the architect replaced
+    // it with the COMMIT-TITLE EDITOR: the act asks for the message instead of
+    // asking for permission, and a bare Enter over the prefilled default is the
+    // old `y`. The prompt kind, this opener and the back-pointer to the input
+    // handler that its `y` reached the act through are all deleted; the editor
+    // lives with the mode's other machinery, at
+    // GuiInputHandler::open_history_commit_editor.)
 
     // Dismiss-only modal error notice in the bottom strip (ERROR_NOTICE).
     // `text` is displayed verbatim — callers pass the owner's own error
@@ -67,8 +57,12 @@ struct GuiPrompt {
     // Covers the environmental and tripwire-class refusals. Callers: the
     // target-view entry gate (its resolve/build chain — the engine-metadata /
     // non-positive-tempo-product class; marker arrangements always enter —
-    // the parser resolver normalizes them, and trim plays no part) and the
-    // iteration-sweep cell-cap refusal.
+    // the parser resolver normalizes them, and trim plays no part), the
+    // iteration-sweep cell-cap refusal, and since 2026-08-07 THE CHECKPOINT
+    // ACT'S FAILURE REPORT (the act runs on a worker now, so a failure has no
+    // gesture to refuse and needs a surface of its own; the caller defers the
+    // open while another modal stands — GuiInputHandler::on_history_checkpoint_-
+    // complete owns that).
     void open_error_notice(std::string text);
 
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory

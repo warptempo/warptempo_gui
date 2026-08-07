@@ -693,6 +693,20 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
             close_history_mode();
             return true;
         }
+        // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-07). The walk, the now
+        // side and the head delta are all measured against the repository at
+        // init(), and the worker is mid-mutation on that repository: a view
+        // opened now would show a commit list the act is about to add to, or
+        // worse, catch it half-written. One consumed no-op and one line, the
+        // mode's own unavailable shape — the wait is seconds and the bit falls
+        // by itself. The CLOSE above is deliberately not gated: leaving a view
+        // is always allowed.
+        if (app.history_checkpoint_in_flight) {
+            std::fprintf(stderr,
+                "warptempo_gui: history: A checkpoint is still publishing; "
+                "try again when it finishes\n");
+            return true;
+        }
         // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
         // the visit must measure against the state the user is looking at.
         // UNAVAILABLE IS A CONSUMED NO-OP — the entry owner reports it and this
@@ -1135,14 +1149,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
-// and no handler in hand. IT TAKES THE SESSION alongside key+mods because TWO
-// admissions are conditional on it (the commit act's, on head_delta_empty, and
-// the revert act's, on a subject standing), and both readers hand it the same
-// `app.history_mode` — each condition is decided HERE and restated at neither
+// and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
+// THREE admissions are conditional on session state (the commit act's, on
+// head_delta_empty AND — since 2026-08-07 — on no checkpoint already being in
+// flight, and the revert act's, on a subject standing), and both readers hand it
+// the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
-// decision rather than two spellings of one.
+// decision rather than two spellings of one. It took the HistoryMode struct
+// alone until the in-flight bit arrived, which lives on AppState because the act
+// outlives the view it was launched from.
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
-                              const AppState::HistoryMode& mode) {
+                              const AppState& app) {
+    const AppState::HistoryMode& mode = app.history_mode;
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -1164,11 +1182,16 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_revert_act =
         (ctrl && !shift && !alt && key == GuiKeys::H &&
          history_mode_revert_subject_standing(mode));
-    // The act is admitted only while there is something to checkpoint: with the
-    // head delta empty this chord is not admitted at all, which is both the
-    // key's refusal and the Render button's grey.
+    // The act is admitted only while there is something to checkpoint AND no
+    // checkpoint is already in flight (2026-08-07, single-in-flight): with
+    // either condition failing this chord is not admitted at all, which is both
+    // the key's refusal and the Save-and-Commit button's grey. The two read very
+    // differently in time and both are honest — the head delta is static for the
+    // visit, while the in-flight bit falls the moment the worker reports and the
+    // button lights again on the next frame.
     const bool is_commit_act =
-        (ctrl && alt && !shift && key == GuiKeys::R && !mode.head_delta_empty);
+        (ctrl && alt && !shift && key == GuiKeys::R && !mode.head_delta_empty &&
+         !app.history_checkpoint_in_flight);
     const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
@@ -1199,40 +1222,119 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the three
 // writes, the pathspec-scoped commit, the push, and every stderr line about
-// them. What lives here is the question in front of it, THE SAVE in front of
-// that (2026-08-04 — the act is "Save and Commit" now), and the CLOSE behind it
-// (2026-08-05).
+// them. What lives here is the QUESTION in front of it (the commit-title
+// editor, 2026-08-07), THE SAVE in front of that (2026-08-04 — the act is "Save
+// and Commit" now), the CLOSE behind the save (2026-08-05, re-partitioned
+// 2026-08-07), and the DISPATCH onto the background worker with the report that
+// comes back from it.
 
-// ASK FIRST. One caller: Ctrl+Alt+R's own arm while the mode stands.
+// ASK FOR THE MESSAGE. One caller: Ctrl+Alt+R's own arm while the mode stands.
 //
-// THE QUESTION NAMES THE DEED, not a rephrasing of it — the commit message comes
-// from the act's own owner, so the prompt cannot advertise a title the commit
-// does not write, and since the act gained its save prelude the question names
-// that too ("Save and commit ..."), the deed having grown a half. The message
-// is not editable and is not asked about (the
-// architect's ruling: it is derived from the piece, not chosen), so this is a
-// confirmation and its answers are `y` and Esc.
+// IT USED TO ASK FOR PERMISSION (the fourth prompt, `y` or Esc, whose text named
+// a title the user could not change). The architect replaced it with this editor
+// on 2026-08-07, superseding his own "the commit message is derived, not
+// chosen": the act still pauses exactly once, and the pause now carries
+// information. THE DEFAULT IS THE OLD DERIVATION — history_checkpoint_title,
+// still the one owner of the `Update <id>` spelling — prefilled and
+// open-selected, so the common case is a bare Enter and the uncommon one is
+// typing over it.
 //
 // The guards are the act's preconditions restated as "there is something to ask
 // about": no mode, or a session that never resolved a piece directory, and there
 // is no commit to offer. Neither is reachable from the one call site (the chord
 // is admitted only while the mode stands, and an available session always
-// carries both strings), which is why they are silent. The admission narrowed
-// on 2026-08-05 without moving that reachability: a head delta that is empty
-// drops the chord at the allowlist, ABOVE the render route, so nothing can raise
-// this prompt over a session with nothing to checkpoint — a refusal this
-// function therefore never has to spell.
-void GuiInputHandler::open_history_commit_confirmation() {
+// carries both strings), which is why they are silent. Two allowlist admissions
+// narrow it further without moving that reachability — an empty head delta
+// (2026-08-05) and a checkpoint already in flight (2026-08-07) both drop the
+// chord ABOVE the render route, so nothing can raise this editor over a session
+// with nothing to commit or a worker mid-act, and neither refusal has to be
+// spelled here.
+//
+// PLAYBACK STOPS AS THE MODAL OPENS, through the shared owner and past every
+// guard, exactly as the three editors before it do. It is a structural no-op in
+// practice — the history view is silent by ruling, its entry having stopped any
+// session running before `h` — and it is here because the rule is the modal's,
+// not the surface's.
+void GuiInputHandler::open_history_commit_editor() {
     if (!app.history_mode.active) return;
+    if (text_editor::is_active(app.commit_title_editor)) return;
     const std::string& dir = app.history_mode.session.project_directory();
     if (dir.empty() || app.history_mode.session.sidecar_base_name().empty()) {
         return;
     }
-    prompt.open_history_commit_confirm(history_checkpoint_title(dir),
-                                       app.projects_repo);
+    playback_lifecycle.stop_playback_for_modal_open();
+    text_editor::enter(app.commit_title_editor,
+                       /*target=*/0,
+                       /*locked_prefix=*/"",
+                       history_checkpoint_title(dir),
+                       text_editor::Kind::CommitTitle);
+    // OPEN-SELECTED ON THE SEED, the prefilling openers' convention (the flag
+    // editor's, and the load editor's in the mode): the first keystroke replaces
+    // the default wholesale, so writing your own title is one act rather than a
+    // select-all first. The seed is never empty here — the title is built from a
+    // directory name this function has already refused to proceed without.
+    app.commit_title_editor.selection_anchor = 0;
+    app.commit_title_editor.cursor_pos =
+        static_cast<int>(app.commit_title_editor.pending.size());
+    viewport.invalidate_timestamp_area();
 }
 
-// THEN DO IT — the prompt's `y`, and the only caller.
+void GuiInputHandler::commit_title_editor_exit_no_commit() {
+    if (!text_editor::is_active(app.commit_title_editor)) return;
+    viewport.invalidate_timestamp_area();
+    text_editor::deactivate(app.commit_title_editor);
+}
+
+// Enter: run the act under the typed title.
+//
+// A BLANK BUFFER IS A RED FLASH, not a commit: git would take an empty message
+// only under --allow-empty-message, the walk that attributes the checkpoint
+// matches on the title, and a checkpoint nobody can name is not a thing this
+// product writes. Whitespace-only counts as blank (ASCII whitespace in the "C"
+// locale — the settings editor's own trim rule), and the flash leaves the
+// editor open with the text in place to be corrected, which is every editor's
+// refusal shape here.
+//
+// THE TITLE IS TAKEN VERBATIM OTHERWISE — free UTF-8 text through the one
+// incoming filter (text_editor::replace_selection), leading and trailing
+// whitespace included if the user typed it. There is no second grammar: what is
+// in the buffer is what the commit carries and what the attribution walk looks
+// for.
+//
+// THE EDITOR CLOSES BEFORE THE ACT RUNS, the old prompt's own order and for its
+// reason grown sharper: the act closes the view and dispatches a worker, so
+// leaving a modal editor standing over it would paint a caret into a strip whose
+// question has been answered.
+void GuiInputHandler::commit_title_editor_commit() {
+    if (!text_editor::is_active(app.commit_title_editor)) return;
+    const std::string title = app.commit_title_editor.pending;
+    const bool blank = title.find_first_not_of(" \t\r\n\f\v") ==
+                       std::string::npos;
+    if (blank) {
+        app.commit_title_editor.red = true;
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+    text_editor::deactivate(app.commit_title_editor);
+    viewport.invalidate_timestamp_area();
+    run_history_commit(title);
+}
+
+// Routes a key to the active commit-title editor through the shared modal
+// route. NO autocomplete hook: a commit message has no vocabulary to complete
+// against, so bare Tab is dropped by the modal gate like the bpm editor's.
+bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
+                                                     GuiInputState mods) {
+    return route_modal_editor_key(
+        app.commit_title_editor, key, mods,
+        /*autocomplete=*/nullptr,
+        [this] { commit_title_editor_commit(); },
+        [this] { commit_title_editor_exit_no_commit(); },
+        [this] { commit_title_editor_exit_no_commit(); },
+        [this] { viewport.invalidate_timestamp_area(); });
+}
+
+// THEN DO IT — the commit-title editor's Enter, and the only caller.
 //
 // THE BYTES ARE REBUILT FRESH, NEVER THE SESSION'S FROZEN NOW SIDE, and this is
 // the one place in the mode where the difference between them is real. The
@@ -1255,12 +1357,35 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // the user has since navigated away from — invisible in the diff (which displays
 // only `scale=`) and wrong on disk.
 //
-// THE ACT CLOSES THE VIEW (architect 2026-08-05, superseding his own 2026-08-04
-// "the mode stays open" and the in-place re-entry that showed an empty diff as
-// the confirmation). The view asks one question — what differs between this
-// session and a checkpoint — and an act that has just made the answer "nothing"
-// has answered it; leaving the user inside an empty view to press `h` is
-// ceremony. The tail below owns the partition.
+// THE ACT CLOSES THE VIEW (architect 2026-08-05). The view asks one question —
+// what differs between this session and a checkpoint — and an act that has just
+// made the answer "nothing" has answered it; leaving the user inside an empty
+// view to press `h` is ceremony.
+//
+// THE PARTITION IS THE SAVE'S SINCE 2026-08-07 (architect, superseding his own
+// "the view closes iff the checkpoint ends up in the repository"): THE VIEW
+// CLOSES IFF THE SAVE LANDED. That is the last thing this thread knows — the
+// checkpoint's own verdict arrives seconds later, on a worker, and a view held
+// open until then would be a modal wait dressed as a review. So a failed save
+// leaves the view exactly as it was (every refusal's shape) and a successful one
+// closes it, whatever the repository then says; the three failing verdicts
+// report through the acknowledge notice instead of through a view left standing.
+//
+// AND THE ACT IS ASYNCHRONOUS FROM THAT POINT (same ruling). The save is the
+// user's own bytes and stays synchronous; the checkpoint is `git add`, `git
+// commit` and a network push, which used to freeze the window for as long as the
+// remote took. Everything the act needs is CAPTURED BY VALUE here, on the main
+// thread — the two path strings, the projects_repo setting, the title, and the
+// freshly rebuilt now side — and handed to GuiHistoryCommitWorker, so the user
+// can edit, render, undo and even load in place while the checkpoint publishes,
+// and what lands is what was on screen when he asked. The capture happens BEFORE
+// the close, deliberately: the two strings are the closing session's.
+//
+// SINGLE IN FLIGHT: the in-flight bit goes up at the dispatch below and comes
+// down at the completion, and while it stands the chord that reaches this
+// function is not admitted at all (the Save-and-Commit button's grey derives
+// from that same one decision — see the note at the dispatch for why that half
+// is structural rather than visible) and bare `h` will not open a new view.
 //
 // THE ACT SAVES FIRST (architect 2026-08-04): the checkpoint is what you see,
 // SAVED and published, one sentence. Before this the act wrote and committed the
@@ -1283,8 +1408,8 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // exactly as any ordinary Ctrl+S failure can — and in the coincident
 // projects/<id>/ workflow those are repository working-tree paths. The
 // save's own failure line has already named the path; this one names the
-// act that declined because of it. The prompt is already down (the
-// prompt's `y` closes it before calling here), which is every other
+// act that declined because of it. The editor is already down (its Enter
+// closes it before calling here), which is every other
 // failure's shape in this act too.
 //
 // THE DOUBLE WRITE IS DELIBERATE AND HARMLESS in the coincident workflow. When
@@ -1304,11 +1429,19 @@ void GuiInputHandler::open_history_commit_confirmation() {
 // AND THE SAVE BUTTON STAYS (architect's explicit reasoning): saving to disk is
 // its own act and the common one; this act is a save that also PUBLISHES. Two
 // buttons because one is to disk and one is to disk and the remote.
-void GuiInputHandler::run_history_commit() {
+void GuiInputHandler::run_history_commit(const std::string& title) {
     if (!app.history_mode.active) return;
-    const std::string dir  = app.history_mode.session.project_directory();
-    const std::string base = app.history_mode.session.sidecar_base_name();
-    if (dir.empty() || base.empty()) return;
+    // A SECOND ACT CANNOT ARRIVE HERE — the chord is not admitted while one is in
+    // flight — so this guard is unreachable, and it asks THE WORKER rather than
+    // the AppState mirror the admission reads, because what it protects is that
+    // worker's single-job slot. (The two answer the same question a hair apart:
+    // the slot frees at the completion event, the bit one call later, inside the
+    // callback that event runs.)
+    if (history_commit_worker.is_busy()) return;
+    GuiHistoryCommitJob job;
+    job.project_directory = app.history_mode.session.project_directory();
+    job.base_name         = app.history_mode.session.sidecar_base_name();
+    if (job.project_directory.empty() || job.base_name.empty()) return;
 
     if (!save_ops.save()) {
         std::fprintf(stderr,
@@ -1317,37 +1450,97 @@ void GuiInputHandler::run_history_commit() {
         return;
     }
 
-    const GuiHistoryCommitOutcome outcome = commit_history_checkpoint(
-        dir, base, app.projects_repo, build_history_now_side(app));
+    // THE REST OF THE CAPTURE, all by value and all on this thread: the setting
+    // the guard and the push will read, the title the user wrote, and the bytes
+    // — rebuilt AFTER the save (which changes none of them, the coincident-write
+    // paragraph above) and BEFORE the close (which is a viewport act and touches
+    // none of them either), so the checkpoint is exactly this instant's state.
+    job.projects_repo = app.projects_repo;
+    job.title         = title;
+    job.bytes         = build_history_now_side(app);
 
-    // THE PARTITION, and its principle: THE VIEW CLOSES IFF THE ACT ENDS WITH
-    // THE CHECKPOINT IN THE REPOSITORY. Read against the act's five verdicts
-    // (GuiHistoryCommitOutcome, history_diff.h — re-derived here rather than
-    // inherited):
-    //   CLOSES — Committed (made and published), CommittedNotPushed (made; the
-    //   commit exists locally and the act's own stderr line says exactly that,
-    //   so nothing is hidden by leaving), and NothingToCommit (the newest
-    //   checkpoint ALREADY carries these bytes — the byte-level twin of the
-    //   grey, reached when the head-delta bit said there was something and the
-    //   repository disagreed; the state the user wanted is committed either
-    //   way, which is what the close is about).
-    //   STAYS OPEN — WriteFailed and CommitFailed, plus the failed save above
-    //   and this body's two silent guards. Nothing landed, so nothing is
-    //   finished: leaving the view exactly as it was is every refusal's shape in
-    //   this product, and the act is one Ctrl+Alt+R away from being retried
-    //   against the state still on screen.
-    // (An unavailable repository is CommitFailed's — the pre-flight that could
-    // not read `git status` — so it takes the stays-open arm with the rest.)
-    //
-    // WHY CLOSING IS THE WHOLE TAIL: the session was measured against a
-    // checkpoint list this act has just added to, so nothing about it describes
-    // the repository any more. Closing states that in one line, and the next `h`
-    // builds a session that does — walk, now side and head delta together.
-    if (outcome == GuiHistoryCommitOutcome::Committed ||
-        outcome == GuiHistoryCommitOutcome::CommittedNotPushed ||
-        outcome == GuiHistoryCommitOutcome::NothingToCommit) {
-        close_history_mode();
+    // THE VIEW CLOSES ON THE SAVE, and the session's two strings are already
+    // captured above, so the close cannot take them with it.
+    close_history_mode();
+
+    app.history_checkpoint_in_flight = true;
+    // THE BIT'S BUTTON HALF IS STRUCTURAL RATHER THAN VISIBLE, and worth saying
+    // so plainly: the Save-and-Commit FACE only exists inside the view, the view
+    // has just closed, and `h` refuses to reopen one while the bit stands — so
+    // the grey it derives is unreachable in practice. It is kept because it is
+    // not a second decision: the admission refuses the chord and the face reads
+    // that same admission, so if a future route ever did show that button with a
+    // checkpoint in flight, it would already say the truth.
+    history_commit_worker.dispatch(
+        std::move(job),
+        [this](GuiHistoryCommitOutcome outcome) {
+            on_history_checkpoint_complete(outcome);
+        });
+}
+
+// THE CHECKPOINT'S REPORT, back on the main thread (the platform's completion
+// eventfd, main.cpp's wiring). The act has already said everything it has to say
+// on stderr — every verdict prints its own line from the worker thread — so what
+// this owns is the ONE thing a background act cannot do for itself: telling the
+// user, at the window, when the checkpoint he asked for did not happen.
+//
+// THE PARTITION, over the act's five verdicts (GuiHistoryCommitOutcome,
+// history_diff.h):
+//   SILENT — Committed (made and published, the ordinary ending) and
+//   NothingToCommit (the newest checkpoint already carried these bytes, so the
+//   state the user wanted IS committed). Neither is a failure and neither needs
+//   a modal to acknowledge.
+//   THE NOTICE — WriteFailed (nothing reached the repository), CommitFailed (the
+//   three files are written and uncommitted, in the working tree where `git
+//   status` shows them) and CommittedNotPushed (the checkpoint exists locally
+//   and the remote does not have it). The three texts differ exactly where the
+//   user's next move does, which is why the act distinguishes them at all.
+//
+// IT IS ACKNOWLEDGE-ONLY (the architect's ruling on the notice): no retry key,
+// no repair offer. The retry is the act itself — a later Save and Commit finds
+// the committed-but-unpushed shape in its own pre-flight and pushes it.
+void GuiInputHandler::on_history_checkpoint_complete(
+        GuiHistoryCommitOutcome outcome) {
+    app.history_checkpoint_in_flight = false;
+
+    std::string text;
+    switch (outcome) {
+    case GuiHistoryCommitOutcome::Committed:
+    case GuiHistoryCommitOutcome::NothingToCommit:
+        return;
+    case GuiHistoryCommitOutcome::WriteFailed:
+        text = "The checkpoint could not be written, so nothing was "
+               "committed. The piece itself is saved.";
+        break;
+    case GuiHistoryCommitOutcome::CommitFailed:
+        text = "The checkpoint files were written but not committed. They "
+               "are in the working tree. The piece itself is saved.";
+        break;
+    case GuiHistoryCommitOutcome::CommittedNotPushed:
+        text = "The checkpoint is committed locally but the push failed. "
+               "The next save and commit publishes it.";
+        break;
     }
+
+    // PARK IT WHILE ANOTHER MODAL STANDS. The completion arrives on its own
+    // clock, so it can land in the middle of a prompt the user is answering or
+    // an edit he is typing; opening over either would take the keyboard away
+    // from a surface he is using. The tick polls the slot and opens the notice
+    // at the first frame the bottom strip is free.
+    app.pending_history_notice = std::move(text);
+    maybe_open_pending_history_notice();
+}
+
+// The parked notice's one opener, called from the completion above and once per
+// tick from main.cpp. Both routes are the same two questions: is anything
+// parked, and is the strip free? The slot clears as the notice opens, so it
+// shows exactly once.
+void GuiInputHandler::maybe_open_pending_history_notice() {
+    if (app.pending_history_notice.empty()) return;
+    if (app.prompt.active) return;
+    if (any_text_editor_active()) return;
+    prompt.open_error_notice(std::move(app.pending_history_notice));
+    app.pending_history_notice.clear();
 }
 
 // -- THE REVERT ACT --------------------------------------------------------
@@ -1646,8 +1839,9 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 }
 
 // The BOTTOM-STRIP modal surfaces: the settings editor, the load
-// editor, and the bpm editor (top_flag_editor reused with Kind::BpmBracket,
-// painted in the bottom strip) — plus the prompts, which own input through
+// editor, the bpm editor (top_flag_editor reused with Kind::BpmBracket,
+// painted in the bottom strip) and, since 2026-08-07, the history view's
+// commit-title editor — plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it still names is ONE behavior the
@@ -1658,17 +1852,20 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.load_editor) ||
+           text_editor::is_active(app.commit_title_editor) ||
            (text_editor::is_active(app.top_flag_editor) &&
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
-// Any text editor consuming printable keys — the two bottom-strip editors
+// Any text editor consuming printable keys — the THREE bottom-strip editors
+// (the settings prompt, the load prompt and the commit-title editor)
 // plus the top-strip flag editor in EITHER kind (the FlagPayload editor takes
 // typed letters too). The platform layer's kLeftClickKey probe: while this is
 // true that key types a normal letter rather than emulating the left button.
 bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.load_editor) ||
+           text_editor::is_active(app.commit_title_editor) ||
            text_editor::is_active(app.top_flag_editor);
 }
 
@@ -1766,8 +1963,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL FOUR editors — the settings and load prompts,
-// the bpm bracket, and (architect 2026-07-28) the top-strip flag editor, which
+// dropped. It serves ALL FIVE editors — the settings and load prompts,
+// the commit-title editor (2026-08-07), the bpm bracket, and (architect
+// 2026-07-28) the top-strip flag editor, which
 // this ruling brought under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
 // open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
@@ -1786,8 +1984,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // the caret, or erase. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered on
 // top: the settings/load editors' own bare-Tab value autocomplete (their
-// handle_*_editor_key intercepts it before handle_key; the bpm and flag editors
-// have no Tab route, so bare Tab drops while either is open), Ctrl+S (save), and
+// handle_*_editor_key intercepts it before handle_key; the commit-title, bpm and
+// flag editors have no Tab route, so bare Tab drops while any of them is open —
+// a commit message has no vocabulary to complete against), Ctrl+S (save), and
 // Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
 // so the only NotConsumed keys that can reach route_modal_editor_key's command
 // tail are those last two chords.
@@ -2165,8 +2364,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // keyboard allowlist is what admits the chord here at all. It outranks the
     // iteration bit unconditionally, including in the state where the mode was
     // opened with iteration mode already on (nothing can toggle that bit while
-    // the mode stands, `i` not being on the allowlist). The act confirms through
-    // a prompt before it touches anything; run_history_commit owns the sequence.
+    // the mode stands, `i` not being on the allowlist). The act asks for the
+    // commit message first, through the commit-title editor
+    // (open_history_commit_editor, 2026-08-07, where a confirmation prompt used
+    // to stand); that editor's Enter is what reaches run_history_commit, which
+    // owns the sequence.
     //
     // ITERATION MODE RE-AIMS IT OTHERWISE (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
@@ -2180,7 +2382,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
         if (app.history_mode.active) {
-            open_history_commit_confirmation();
+            open_history_commit_editor();
             return true;
         }
         if (app.iteration_mode_enabled) {
@@ -2985,19 +3187,20 @@ void GuiInputHandler::load_editor_commit() {
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
-// load prompt, the bpm bracket editor, and the top-strip flag editor.
-// All four spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
+// load prompt, the commit-title editor, the bpm bracket editor, and the
+// top-strip flag editor.
+// All five spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
 // else is swallowed as a backstop. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
-// Alt + Tab fall through to handle_key unchanged); the bpm and flag editors
-// pass an empty hook, but bare Tab never reaches this route for them at all —
-// the on_key gate swallows it first.
+// Alt + Tab fall through to handle_key unchanged); the commit-title, bpm and
+// flag editors pass an empty hook, but bare Tab never reaches this route for
+// them at all — the on_key gate swallows it first.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the three
+// `autocomplete` it is called unconditionally, with no emptiness test: the four
 // bottom-strip surfaces pass invalidate_timestamp_area, the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(

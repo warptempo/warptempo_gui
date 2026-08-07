@@ -2363,8 +2363,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 }
 
 // THE ACT, in order: write the three sidecars into the piece's directory in the
-// working tree, stage exactly those three paths, commit them under `Update
-// <id>`, push. Every step is fenced to those three paths and to this one
+// working tree, stage exactly those three paths, commit them under the caller's
+// `title`, push. Every step is fenced to those three paths and to this one
 // function.
 //
 // WHAT THE COMMIT CANNOT CARRY, and why the pathspec is not a nicety: `git
@@ -2403,8 +2403,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // transport.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
-    const std::string& projects_repo, const GuiHistoryNowSide& bytes) {
-    const std::string title = history_checkpoint_title(project_directory);
+    const std::string& projects_repo, const GuiHistoryNowSide& bytes,
+    const std::string& title) {
 
     // THE BRANCH, READ ONCE — and this is the ONLY place the act reads the
     // mutable symbolic HEAD for a value. Every later use is this one value: the

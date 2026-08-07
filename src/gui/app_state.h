@@ -1117,13 +1117,6 @@ enum class DialogTrigger {
     // persists on the next ordinary save). No dismiss-without-ack path:
     // acknowledging is the only way past the prompt.
     ENV_HASH_MISMATCH,
-    // THE HISTORY MODE'S COMMIT ACT (GuiPrompt::open_history_commit_confirm,
-    // 2026-08-04) — the fourth prompt, and the only one guarding a route that
-    // writes outside this session: `y` writes the live sidecars into the
-    // projects repository and commits and pushes them, Esc abandons with
-    // nothing done. It is a confirmation rather than a choice, so it wears the
-    // paste prompt's own response pair.
-    HISTORY_COMMIT,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom row's
@@ -2058,9 +2051,13 @@ struct AppState {
     // old leniencies (unparseable lines dropped, a missing file read as an
     // empty side, the per-commit Ambiguous display) died with the gate.
     //
-    // WHAT OPENS IT: bare `h`, and nothing else. The key reaches the toggle only
+    // WHAT OPENS IT: bare `h`, and nothing else — AND NOT WHILE A CHECKPOINT IS
+    // PUBLISHING (2026-08-07): the act runs on a worker now, and a walk measured
+    // against a repository that worker is mid-mutation on would be a lie, so the
+    // open is a consumed no-op with one stderr line while
+    // history_checkpoint_in_flight stands. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
-    // refusal for free — a prompt, any of the four editors, an open dropdown,
+    // refusal for free — a prompt, any of the five editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
@@ -2070,10 +2067,12 @@ struct AppState {
     // the `'` editor's render-entry load-in-place and, since 2026-08-04, its
     // load-in-place-from-a-commit
     // (both rewrite the very state the frozen now side was measured against);
-    // THE COMMIT ACT, when it ends with the checkpoint in the repository
-    // (architect 2026-08-05, superseding the act's in-place re-entry — the
-    // partition and its principle are at run_history_commit,
-    // input_key_dispatch.cpp); Ctrl+Q and the WM close, trivially, the process
+    // THE COMMIT ACT, WHEN ITS SAVE LANDS (architect 2026-08-07, superseding the
+    // checkpoint-in-the-repository partition of 2026-08-05, which in turn
+    // superseded the act's in-place re-entry: the checkpoint's own verdict now
+    // arrives seconds later on a worker, so the last thing the closing thread
+    // knows is whether the save succeeded — the partition and its principle are
+    // at run_history_commit, input_key_dispatch.cpp); Ctrl+Q and the WM close, trivially, the process
     // going with it. ESC IS NOT
     // ON THAT LIST AND CANNOT BE: the toggle is handle_history_mode_key's, and
     // Escape is not in that function's vocabulary at all (the membership is
@@ -2143,12 +2142,17 @@ struct AppState {
     // SESSION (architect 2026-08-04): while the mode stands that chord is not a
     // render but THE SAVE-AND-COMMIT ACT — the mode bit selecting the command
     // exactly as the iteration bit selects the sweep, one route with the
-    // selection inside it (handle_render_dispatch_keys). It asks first, through
-    // the product's fourth prompt, and on `y` runs THE ORDINARY SAVE beside the
+    // selection inside it (handle_render_dispatch_keys). IT ASKS FOR THE COMMIT
+    // MESSAGE FIRST, through the COMMIT-TITLE EDITOR (architect 2026-08-07,
+    // replacing the confirmation prompt that used to guard it and superseding
+    // "the message is derived, not chosen"): a fourth bottom-strip modal,
+    // prefilled with `Update <id>`, where a bare Enter is the old `y` and typing
+    // over the prefill names the checkpoint. On Enter the act runs THE ORDINARY
+    // SAVE beside the
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
     // the three sidecars into the piece's directory in the projects repository,
-    // commits them pathspec-scoped under `Update <id>` and pushes
+    // commits them pathspec-scoped under the entered title and pushes
     // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
     // git route, and its only writer outside the user's own save). A FAILED SAVE
     // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
@@ -2160,16 +2164,29 @@ struct AppState {
     // the mode stands, and reaches the act through its ordinary chord. THE
     // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
     // chord is a consumed no-op and that button greys (head_delta_empty, below,
-    // owns the bit and the one decision both readers take it from).
+    // owns the bit and the one decision both readers take it from), and since
+    // 2026-08-07 the same is true while a checkpoint is already publishing
+    // (history_checkpoint_in_flight, which lives on AppState rather than here
+    // because the act outlives the view).
     //
-    // THE ACT CLOSES THE VIEW when the checkpoint reaches the repository
-    // (architect 2026-08-05, superseding his 2026-08-04 "the mode stays open"
-    // and the in-place re-entry that showed the empty diff): the view exists to
-    // ask what differs from a checkpoint, and an act that just made the answer
-    // "nothing" has finished the question. It is a PARTITION, not a blanket
-    // close — an ending where nothing landed leaves the view exactly as it was,
-    // like every other refusal in the product — and run_history_commit
-    // (input_key_dispatch.cpp) owns it against the act's own verdicts.
+    // EVERYTHING PAST THE SAVE RUNS ON A WORKER (architect 2026-08-07): the git
+    // steps are a network act, and freezing the window for them was the one
+    // place this product made the user wait on a remote. The act captures what
+    // it needs by value, closes the view and hands the job to
+    // GuiHistoryCommitWorker; its three failing verdicts come back as an
+    // ACKNOWLEDGE NOTICE (the existing dismiss-only prompt, deferred while
+    // another modal stands), and its two clean ones say what they have to say on
+    // stderr.
+    //
+    // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
+    // superseding the checkpoint-in-the-repository partition of 2026-08-05,
+    // which superseded his 2026-08-04 "the mode stays open"): the view exists to
+    // ask what differs from a checkpoint, and an act that has just published one
+    // has finished the question — while holding the view open for a verdict that
+    // arrives seconds later on a worker would be a modal wait dressed as a
+    // review. It is still a PARTITION, not a blanket close: a FAILED SAVE leaves
+    // the view exactly as it was, like every other refusal in the product, and
+    // run_history_commit (input_key_dispatch.cpp) owns it.
     //
     // WHY THE FROZEN NOW SIDE CANNOT GO STALE — as a statement about the
     // AUTHORED state, which is what the flags describe. GuiHistoryDiff captures
@@ -2623,6 +2640,52 @@ struct AppState {
     // independent.
     text_editor::State load_editor;
     bool load_editor_blink_last = false;
+
+    // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth bottom-strip
+    // modal and the `h` history view's own: Ctrl+Alt+R while the view stands
+    // opens it prefilled with the checkpoint's default message (`Update <id>`,
+    // history_checkpoint_title's own spelling) and Enter runs the Save-and-
+    // Commit act with whatever the buffer holds as the commit title. It
+    // REPLACED the confirmation prompt that used to guard the act: the question
+    // "shall I?" and the question "under what message?" are the same pause, and
+    // only the second one carries information — a bare Enter is the old `y`.
+    // Esc abandons with nothing written, and an empty or whitespace-only buffer
+    // red-flashes rather than committing an unnamed checkpoint.
+    // A bottom-strip modal like the two above, with its own State so the paint
+    // regions stay independent; it can only be open while the history mode
+    // stands, which is what keeps it out of every other surface's way.
+    text_editor::State commit_title_editor;
+    bool commit_title_editor_blink_last = false;
+
+    // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
+    // onto a background worker.) Written on the MAIN THREAD at exactly two
+    // edges — true when run_history_commit dispatches the job, false when the
+    // completion event is consumed — so it is plain state, never read from the
+    // worker thread and needing no atomic. It is the GUI-side truth the worker's
+    // own is_busy() mirrors: the refusals below are pure reads of AppState (one
+    // of them an inline face predicate), and giving them a reference to the
+    // worker would put the button's face and the key's admission on two
+    // different objects.
+    //
+    // TWO REFUSALS READ IT, single-in-flight being the whole rule: the history
+    // view's Ctrl+Alt+R admission (history_mode_key_blocked, so the chord is a
+    // consumed no-op AND the Save-and-Commit button greys from that same one
+    // decision, exactly as the head-delta bit does), and bare `h` itself, which
+    // will not open a view whose walk would be measured against a repository the
+    // worker is mid-mutation on.
+    bool history_checkpoint_in_flight = false;
+
+    // THE DEFERRED FAILURE NOTICE (architect 2026-08-07). The checkpoint act now
+    // finishes on a background worker, so its failure report can arrive while a
+    // prompt or a bottom-strip editor already owns the strip — and a second
+    // modal opened over the first would steal the keyboard from an edit the user
+    // is in the middle of. So the completion parks its text here and the tick
+    // opens it at the first moment the bottom strip is free, clearing the slot
+    // as it does. Empty means nothing is waiting. Only the three reporting
+    // outcomes park anything (WriteFailed, CommitFailed, CommittedNotPushed);
+    // the two clean endings say what they have to say on stderr and leave this
+    // untouched.
+    std::string pending_history_notice;
 
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
@@ -3165,15 +3228,14 @@ inline bool history_mode_revert_subject_standing(
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
-// IT TAKES THE MODE ITSELF because the gate it asks does: TWO of that gate's
-// admissions are conditional on the session (re-derived 2026-08-06 — the commit
-// act's, on head_delta_empty, and the revert act's, on
-// history_mode_revert_subject_standing above), so both readers must hand it the
-// SAME state or the face
-// and the key would answer differently. The caller passes the struct and
+// IT TAKES THE WHOLE AppState because the gate it asks does: THREE of that
+// gate's admissions are conditional on state (re-derived 2026-08-07 — the commit
+// act's, on head_delta_empty and on history_checkpoint_in_flight, and the revert
+// act's, on history_mode_revert_subject_standing above), so both readers must
+// hand it the SAME state or the face
+// and the key would answer differently. The caller passes `a` and
 // restates none of its terms.
-bool history_mode_disables_button(const AppState::HistoryMode& mode,
-                                  RedesignButton b);
+bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
 // THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
 // (row 2's third face, and every row's while the history view stands) and for
@@ -3231,7 +3293,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     // mode's own gates (history_mode_disables_button, above), so this line
     // cannot fall out of step with the allowlist.
     if (a.history_mode.active &&
-        history_mode_disables_button(a.history_mode, b)) {
+        history_mode_disables_button(a, b)) {
         return false;
     }
     switch (b) {
@@ -3566,9 +3628,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // speed", "Center on focus", "Next marker") — these two are the named
 // exceptions, not a precedent to copy outward or "fix". The joining word stays
 // LOWERCASE ("and"), which is what title case means and what the architect
-// spelled; the prompt that asks about the act is PROSE and takes the ordinary
-// sentence case ("Save and commit ... ?", prompt.cpp), so the two spellings
-// differ on purpose.
+// spelled. (The prompt that used to ask about the act was PROSE and took the
+// ordinary sentence case; it is gone — the act asks for its commit MESSAGE now,
+// through an editor whose prefix is the plain "Commit: " label — so the title
+// case here is the button's alone.)
 //
 // THE SHIFT LINE GOES WITH IT, and that is the same fact rather than a second
 // decision: Ctrl+Alt+Shift+R is a consumed no-op in iteration mode (the refusal

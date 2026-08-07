@@ -18,6 +18,7 @@
 
 #include "app_state.h"
 #include "async_renderer.h"
+#include "history_commit_worker.h"
 #include "audio.h"
 #include "env_fingerprint.h"
 #include "waveform_worker.h"
@@ -756,6 +757,18 @@ int main(int argc, char** argv) {
             "warptempo_gui: Failed to start waveform worker; exiting\n");
         return 1;
     }
+    // THE CHECKPOINT WORKER (2026-08-07): the `h` history view's Save-and-Commit
+    // act runs its git steps here instead of on the GUI thread, which used to
+    // freeze the window for as long as the remote took. Single job in flight,
+    // completion delivered through its own eventfd below, and shutdown() JOINS
+    // an act in progress at quit (the state is saved before the act is
+    // dispatched at all, so the wait loses nothing).
+    GuiHistoryCommitWorker history_commit_worker;
+    if (!history_commit_worker.init()) {
+        std::fprintf(stderr,
+            "warptempo_gui: Failed to start the checkpoint worker; exiting\n");
+        return 1;
+    }
     // Shared process-local render cache for target-view reuse, archival
     // reuse/publish rungs, and the loaded-in-place render's survival after
     // the renders folder is wiped. init() creates the per-process cache
@@ -811,6 +824,10 @@ int main(int argc, char** argv) {
         [&async_renderer]() { async_renderer.on_completion_event(); });
     gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),
         [&waveform_worker]() { waveform_worker.on_completion_event(); });
+    gui.set_history_worker_completion_fd(history_commit_worker.completion_fd(),
+        [&history_commit_worker]() {
+            history_commit_worker.on_completion_event();
+        });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
                                   warpops, phase_resets, marker_drag,
@@ -818,6 +835,7 @@ int main(int argc, char** argv) {
                                   renders_dir, active_views,
                                   phase_reset_propagate,
                                   async_renderer,
+                                  history_commit_worker,
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
@@ -833,12 +851,10 @@ int main(int argc, char** argv) {
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
-    // And the same back-wire for the prompt (constructed before the input
-    // handler, which holds it by reference). ONE reader: the history mode's
-    // commit confirmation, whose `y` runs GuiInputHandler::run_history_commit —
-    // the act's GUI half lives with the mode's other machinery, and the prompt
-    // owns only the question.
-    prompt.input = &input_handler;
+    // (NO BACK-WIRE FOR THE PROMPT. It had one while the history mode's commit
+    // confirmation lived there — its `y` reached the act through the pointer —
+    // and both went with the prompt on 2026-08-07, the act now being run by the
+    // commit-title editor's Enter inside the input handler itself.)
 
     // Viewport worker kick: FOLLOW-SCROLL during playback is the one caller
     // that requests the new waveform immediately rather than waiting for the
@@ -1433,6 +1449,24 @@ int main(int argc, char** argv) {
                 invalidate_timestamp_area();
             }
         }
+        // And for the history view's commit-title editor.
+        if (text_editor::is_active(app.commit_title_editor)) {
+            const bool now_visible =
+                text_editor::cursor_visible_now(app.commit_title_editor);
+            if (now_visible != app.commit_title_editor_blink_last) {
+                app.commit_title_editor_blink_last = now_visible;
+                invalidate_timestamp_area();
+            }
+        }
+
+        // THE DEFERRED CHECKPOINT NOTICE (2026-08-07). The act finishes on a
+        // worker, so its failure report can arrive while a prompt or an editor
+        // owns the bottom strip; the completion parks the text and this poll
+        // opens it at the first tick the strip is free. It is a no-op with
+        // nothing parked, which is every tick but the few after a failure, and
+        // it sits ABOVE the loading/no-audio return below because a checkpoint
+        // launched before a load-in-place must still be able to report.
+        input_handler.maybe_open_pending_history_notice();
 
         if (app.loading || audio.total_frames() <= 0) return;
 
@@ -1632,6 +1666,10 @@ int main(int argc, char** argv) {
     // during shutdown cannot touch the dismantled cache. Idempotent; the
     // destructor's later call is then a no-op.
     async_renderer.shutdown();
+    // Blocks on an in-flight checkpoint rather than abandoning a git child
+    // mid-act; the piece is already saved (the act saves before it dispatches),
+    // so the wait costs a moment and never any work.
+    history_commit_worker.shutdown();
     // Remove this process's render-cache directory.
     render_cache.shutdown();
     return 0;

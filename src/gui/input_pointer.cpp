@@ -38,7 +38,7 @@
 // ONE CLICK-TO-BYTE MAPPING (row 7, 2026-08-01). Every editor in the product is
 // PROPORTIONAL now, so there is no advance to divide by anywhere: each takes an
 // origin plus the shaped run's per-byte boundaries from ITS OWN painter's
-// publication — the flag editor's FlagEditorBox, the three bottom-strip
+// publication — the flag editor's FlagEditorBox, the four bottom-strip
 // editors' BottomEditorText — and click-to-byte is the same nearest-boundary
 // search over both. The monospace arm (a char-0 origin times one cell advance)
 // died with the face; ActiveEditorText carries the one pair.
@@ -258,7 +258,7 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // THE THREE BOTTOM-STRIP EDITORS share ONE publication — only one of them is
+    // THE FOUR BOTTOM-STRIP EDITORS share ONE publication — only one of them is
     // ever open, and paint_bottom_strip fills it from whichever branch actually
     // painted. An invalid publication (nothing painted yet, or an editor the
     // row's precedence chain is hiding) leaves this invalid, exactly as the flag
@@ -267,13 +267,18 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     const bool bottom_open =
         text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.load_editor) ||
+        text_editor::is_active(app.commit_title_editor) ||
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
     if (bottom_open) {
         if (!be.valid) return g;
-        g.ed = text_editor::is_active(app.settings_editor) ? &app.settings_editor
-             : text_editor::is_active(app.load_editor)   ? &app.load_editor
-                                                           : &app.top_flag_editor;
+        g.ed = text_editor::is_active(app.settings_editor)
+                   ? &app.settings_editor
+             : text_editor::is_active(app.load_editor)
+                   ? &app.load_editor
+             : text_editor::is_active(app.commit_title_editor)
+                   ? &app.commit_title_editor
+                   : &app.top_flag_editor;
         g.text_left    = be.text_origin_x;
         g.byte_x       = &be.byte_x;
         g.bottom_strip = true;
@@ -394,25 +399,28 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // — was already answered LIVE by the hand entry the claim replaced.
 //
 // TWO ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
-// (2026-08-05), which is why this takes the mode rather than only a button. The
-// allowlist admits Ctrl+Alt+R only while there is something to checkpoint, so
-// the Save-and-Commit-faced Render GREYS when the session's authoring content
-// already matches the newest checkpoint (AppState::HistoryMode::head_delta_-
-// empty); and it admits CTRL+H only while a diff flag is selected, so the REVERT
-// button greys with an empty subject. The derivation carries both for free —
-// this function restates no term of either. They differ in cadence and that is
-// the honest difference: the head delta is measured once at entry and is static
-// for the visit, while the revert subject moves with every click, so Revert's
-// face changes within a visit and Render's does not.
+// (2026-08-05), which is why this takes the state rather than only a button. The
+// allowlist admits Ctrl+Alt+R only while there is something to checkpoint AND no
+// checkpoint is in flight, so the Save-and-Commit-faced Render GREYS when the
+// session's authoring content already matches the newest checkpoint
+// (AppState::HistoryMode::head_delta_empty) and again while the worker is
+// publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
+// second bit is why this now takes the whole AppState rather than the mode
+// struct); and it admits CTRL+H only while a diff flag is selected, so the
+// REVERT button greys with an empty subject. The derivation carries all of it
+// for free — this function restates no term of any of them. They differ in
+// cadence and that is the honest difference: the head delta is measured once at
+// entry and is static for the visit, while the revert subject moves with every
+// click and the in-flight bit falls when the worker reports.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
 //   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
 //   which in this mode IS the save-and-commit checkpoint act and wears the
-//   "Save and Commit" face — LIVE ONLY WITH A NON-EMPTY HEAD DELTA, the one
-//   session-dependent entry here, and greyed rather than relabelled when the
-//   session matches the newest checkpoint),
+//   "Save and Commit" face — LIVE ONLY WITH A NON-EMPTY HEAD DELTA AND NO
+//   CHECKPOINT IN FLIGHT (2026-08-07), and greyed rather than relabelled in
+//   either case),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads
 //   the viewed commit in place), and the history button itself (bare `h`, the
@@ -456,8 +464,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // row 4's never-grey rule still answers for it (the `'` button stays lit on a
 // locked tab, in the view as out of it). Only the VIEW's own consumption greys
 // anything here.
-bool history_mode_disables_button(const AppState::HistoryMode& mode,
-                                  RedesignButton b) {
+bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
         return true;
     }
@@ -468,7 +475,7 @@ bool history_mode_disables_button(const AppState::HistoryMode& mode,
         chord.shift = tc.shift;
         chord.alt   = tc.alt;
         if (history_mode_owns_key(tc.key, chord)) return false;
-        return history_mode_key_blocked(tc.key, chord, mode);
+        return history_mode_key_blocked(tc.key, chord, app);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
     // (the table plus the two anchors is the whole roster) and stated rather
@@ -1247,6 +1254,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.load_editor)) return;
+    if (text_editor::is_active(app.commit_title_editor)) return;
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         // The BPM editor is a bottom-strip modal owner (like the settings
@@ -1601,7 +1609,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //
     // GATE PROFILE — IDENTICAL TO THE LEFT SCRUB'S, by position: everything that
     // stops the left press before it reaches scrub_press_at has already run
-    // above (the prompt swallow, the three bottom-strip modal editors, the open
+    // above (the prompt swallow, the four bottom-strip modal editors, the open
     // dropdown, the four redesigned rows' band claims, the loading / empty-audio
     // return). Read-only tabs scrub as ever (playback is navigation), the
     // selection / cursor / region / follow are untouched, and no double-click
@@ -2602,6 +2610,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.load_editor)) return;
+    if (text_editor::is_active(app.commit_title_editor)) return;
     // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
     // finishes something a LEFT press armed, and no other button arms anything.
     // The bare RIGHT press bound 2026-08-01 is a one-shot scrub act — it arms no
@@ -4184,7 +4193,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (text_editor::is_active(app.settings_editor) ||
-        text_editor::is_active(app.load_editor)) {
+        text_editor::is_active(app.load_editor) ||
+        text_editor::is_active(app.commit_title_editor)) {
         // The button hover stays live under a keyboard-modal editor — the
         // rationale is at the prompt branch above, and THIS is the branch the
         // reported staleness came through (the Settings button opens the

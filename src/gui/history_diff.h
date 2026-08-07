@@ -454,17 +454,23 @@ private:
 // What the mode reads, it can now also WRITE: while the history mode stands,
 // Ctrl+Alt+R commits the live authoring state into the piece's directory in the
 // projects repository (the mode bit selects the command, exactly as the
-// iteration bit selects the sweep). The GUI half — the confirmation prompt, THE
+// iteration bit selects the sweep). The GUI half — the COMMIT-TITLE EDITOR that
+// asks for the message (2026-08-07, superseding the confirmation prompt), THE
 // ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and Commit", and a
-// failed save refuses it before this module is reached at all), the stderr
-// register, and the CLOSE that ends the view once the checkpoint is in the
-// repository (2026-08-05, superseding the in-place re-entry) — lives at
+// failed save refuses it before this module is reached at all), the CLOSE that
+// ends the view once THE SAVE has landed (2026-08-07, superseding the
+// checkpoint-in-the-repository partition), the dispatch onto the background
+// worker and the acknowledge notice its failures raise — lives at
 // GuiInputHandler::run_history_commit; what lives here is the act itself.
 
-// The commit message this act writes, and the one the prompt shows: `Update
-// <id>`, where the id is the piece directory's own leaf name ("projects/550 - 1"
-// -> "Update 550 - 1"). ONE OWNER for both readers, so the prompt cannot ask
-// about a title the commit does not use.
+// THE DEFAULT commit message: `Update <id>`, where the id is the piece
+// directory's own leaf name ("projects/550 - 1" -> "Update 550 - 1").
+//
+// SINCE 2026-08-07 IT IS A PREFILL RATHER THAN THE MESSAGE ITSELF (architect,
+// superseding "the message is derived, not chosen"): the act opens a
+// commit-title editor seeded with this, and whatever the user leaves in that
+// buffer is the title the act carries. This stays the ONE owner of the default
+// spelling, and it has exactly one reader — the editor's opener.
 std::string history_checkpoint_title(const std::string& project_directory);
 
 // HOW FAR THE ACT GOT. The two failures are distinguished because the user's
@@ -489,6 +495,19 @@ enum class GuiHistoryCommitOutcome {
 // three files are to contain. Every step states its own failure on stderr in one
 // line, and this returns how far it got; it prints its own success line too, so
 // the caller reports nothing.
+//
+// `title` IS THE COMMIT MESSAGE, and the caller's (the commit-title editor's
+// buffer, seeded from history_checkpoint_title). It is not merely written: it is
+// also the IDENTITY the attribution walk matches on, so "the commit whose
+// message is the act's own title" means this exact string. Two acts under one
+// title are therefore interchangeable to the walk when their content matches
+// too, which is the content-identity contract below, unchanged by the title
+// becoming the user's to write.
+//
+// IT RUNS ON A BACKGROUND WORKER SINCE 2026-08-07 (GuiHistoryCommitWorker),
+// which changes nothing in this body: every argument is a value the caller
+// captured on the main thread, this function reads no shared state, and its
+// stderr lines print from the worker thread in the same order they always did.
 //
 // `projects_repo` is the setting's own value, and it is here because THE PUSH
 // CONSUMES THE VALIDATED DESTINATION: the same guard init() runs as the mode's
@@ -524,4 +543,5 @@ enum class GuiHistoryCommitOutcome {
 // of a new piece stays a manual act.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
-    const std::string& projects_repo, const GuiHistoryNowSide& bytes);
+    const std::string& projects_repo, const GuiHistoryNowSide& bytes,
+    const std::string& title);

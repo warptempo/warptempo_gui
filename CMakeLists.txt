@@ -186,6 +186,9 @@ if(WARPTEMPO_BUILD_GUI)
         # warptempo_cli must never carry it. It needs no dependency beyond the C++
         # standard library and POSIX.
         src/gui/history_diff.cpp
+        # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
+        # runs that file's one mutating git route off the GUI thread.
+        src/gui/history_commit_worker.cpp
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp
         src/gui/target_render.cpp

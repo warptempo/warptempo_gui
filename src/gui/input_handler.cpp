@@ -229,8 +229,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // opens) exactly as with no drag in flight.
     }
 
-    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the two
-    // bottom-strip ones, the bpm bracket, and the top-strip flag editor
+    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the three
+    // bottom-strip ones (settings, load, and the commit title since
+    // 2026-08-07), the bpm bracket, and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
     // (modal_editor_key_blocked); everything else — playback, navigation, zoom,
@@ -280,6 +281,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // render/batch Esc cancel so Esc closes the edit first.
     if (text_editor::is_active(app.load_editor)) {
         if (handle_load_editor_key(key, mods)) return;
+    }
+
+    // Commit-title editor (Ctrl+Alt+R in the `h` history view). Same modal shape
+    // as the two blocks above, and mutually exclusive with them by construction:
+    // its opener is a chord the keyboard-modal gate drops while any editor is
+    // open, and the view's own allowlist admits no other opener.
+    if (text_editor::is_active(app.commit_title_editor)) {
+        if (handle_commit_title_editor_key(key, mods)) return;
     }
 
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
@@ -406,7 +415,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // its own reason, not a dependency of this one.)
     if (handle_history_mode_key(key, mods)) return;
     if (app.history_mode.active &&
-        history_mode_key_blocked(key, mods, app.history_mode)) {
+        history_mode_key_blocked(key, mods, app)) {
         return;
     }
 
@@ -614,11 +623,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
-    //       since it can only fire while one of the four editors owns the
+    //       since it can only fire while one of the five editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all four, through route_modal_editor_key: Esc closes /
+    //   (b) THE EDITORS — all five, through route_modal_editor_key: Esc closes /
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
+    //       the commit-title editor (2026-08-07) joined that route and added no
+    //       place of its own, which is the point of there being one route;
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
@@ -627,7 +638,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       share one popup state and one gate, so the second dropdown
     //       (2026-08-02) added no seventh place. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the three bottom-strip editors swallow the press that would open a
+    //       — the four bottom-strip editors swallow the press that would open a
     //       menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
@@ -636,10 +647,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
     // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) run
     // inside the view. Those two are what the ADMISSION buys, not the only rungs
-    // reachable in there (re-derived 2026-08-06): the view also opens the load
-    // editor on `'` and raises the commit-confirm prompt, so (a), (b) and (c) run
-    // in it too — but each of those gates sits ABOVE the allowlist in on_key, so
-    // the press never reaches the admission at all. It gained no
+    // reachable in there (re-derived 2026-08-07): the view also opens the load
+    // editor on `'` and the COMMIT-TITLE editor on Ctrl+Alt+R, so (a) and (b) run
+    // in it too — and (c) with them, the checkpoint's own failure notice being a
+    // prompt this view can raise — but each of those gates sits ABOVE the
+    // allowlist in on_key, so the press never reaches the admission at all. It gained no
     // binding of its own, and Esc cannot close it: the view's toggle is
     // handle_history_mode_key's, whose whole vocabulary is enumerated at
     // history_mode_owns_key (input_key_dispatch.cpp) and carries no Esc shape in
