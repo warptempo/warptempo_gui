@@ -2044,12 +2044,24 @@ struct AppState {
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
     // load-in-place gate itself — each candidate commit's three sidecars must
     // pass the strict whole-set load (load_commit_sidecars_strict,
-    // history_diff.h, the `'` act's own validation, one predicate) at init —
+    // history_diff.h, the `'` act's own validation, one predicate) —
     // so every checkpoint the mode can step to is one `'` can load.
-    // Ineligible commits leave the walk at entry, one stderr line counting
+    // Ineligible commits leave the walk, one stderr line counting
     // them, and the corner's n/N counts the ELIGIBLE list. The diff model's
     // old leniencies (unparseable lines dropped, a missing file read as an
     // empty side, the per-commit Ambiguous display) died with the gate.
+    //
+    // AND THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07): that gate
+    // is what made `h` stall, so the whole git half runs at STARTUP on a
+    // background worker (GuiHistoryPrefetch, history_prefetch.h) with no depth
+    // limit, STREAMING each eligible commit to the main thread as it passes.
+    // The visit BINDS to that store instead of building a list, which has three
+    // visible consequences: entry is instant; a view opened while the scan is
+    // still running shows an empty or partial walk and FILLS IN under the user,
+    // `n/N` growing and the `,` wall moving outward; and the store is re-warmed
+    // after a checkpoint publishes and whenever an entry finds it stale. A kick
+    // that would land while this view stands is DEFERRED to the exit — the
+    // visit's list must not be swapped underneath it.
     //
     // WHAT OPENS IT: bare `h`, and nothing else — AND NOT WHILE A CHECKPOINT IS
     // PUBLISHING (2026-08-07): the act runs on a worker now, and a walk measured
@@ -2440,7 +2452,23 @@ struct AppState {
         // dispatch.cpp) makes its Ctrl+Alt+R admission conditional on this, so
         // the chord is a consumed no-op and the Render button takes its row's
         // disabled face from the SAME decision — never two spellings of it.
-        bool head_delta_empty = false;
+        //
+        // "MEASURED ONCE AT ENTRY" BECAME "MEASURED ONCE" (2026-08-07, with the
+        // streaming walk): a visit may open before member 0 has arrived, and
+        // there is then nothing to measure. It RESTS TRUE in that window — the
+        // conservative face, the act greyed while the answer is unknown — and
+        // the measurement happens at the first drain that delivers member 0,
+        // after which it is static for the visit exactly as before. Still ONE
+        // measurement site (GuiInputHandler::measure_history_head_delta), which
+        // both the entry and the arrival hook call; `head_delta_measured` below
+        // is what makes it once.
+        bool head_delta_empty = true;
+
+        // Whether the bit above is an ANSWER rather than the resting default.
+        // False until member 0 has been compared against the frozen now side;
+        // the one measurement site sets it and nothing clears it inside a visit
+        // (the whole-struct reset at both edges does).
+        bool head_delta_measured = false;
 
         // THE EDITOR'S NAVIGATION BAND, PARKED FOR THE VISIT (architect
         // 2026-08-05 — "the view is a VIEWER"). The mode navigates freely, and

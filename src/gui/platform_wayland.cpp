@@ -1334,10 +1334,10 @@ void GuiPlatform::run() {
 
         // pfds[2] is the async-render completion eventfd; pfds[3] is the
         // waveform-worker completion eventfd; pfds[4] is the checkpoint
-        // worker's. When no fd is
-        // registered (fd == -1), events=0 so poll() ignores the slot —
+        // worker's; pfds[5] is the history prefetch's ready signal. When no fd
+        // is registered (fd == -1), events=0 so poll() ignores the slot —
         // same trick used for "watch only when we care."
-        struct pollfd pfds[5];
+        struct pollfd pfds[6];
         pfds[0].fd     = wl_display_get_fd(wl_display_);
         pfds[0].events = POLLIN;
         pfds[0].revents = 0;
@@ -1353,8 +1353,11 @@ void GuiPlatform::run() {
         pfds[4].fd     = history_worker_completion_fd_;
         pfds[4].events = (history_worker_completion_fd_ >= 0) ? POLLIN : 0;
         pfds[4].revents = 0;
+        pfds[5].fd     = history_prefetch_completion_fd_;
+        pfds[5].events = (history_prefetch_completion_fd_ >= 0) ? POLLIN : 0;
+        pfds[5].revents = 0;
 
-        int n = poll(pfds, 5, -1);
+        int n = poll(pfds, 6, -1);
 
         if (n < 0) {
             if (errno == EINTR) {
@@ -1424,8 +1427,17 @@ void GuiPlatform::run() {
             }
         }
 
+        if (history_prefetch_completion_fd_ >= 0 &&
+            (pfds[5].revents & POLLIN)) {
+            uint64_t cnt = 0;
+            (void)read(history_prefetch_completion_fd_, &cnt, sizeof(cnt));
+            if (on_history_prefetch_ready_) {
+                on_history_prefetch_ready_();
+            }
+        }
+
         // THE ITERATION HAS SETTLED. Everything this pass dispatched is above:
-        // the display's events, the tick, and all three worker completions. A loop
+        // the display's events, the tick, and all four worker events. A loop
         // boundary is by definition after every write any of them made, which is
         // what lets a consumer here derive an answer without knowing who wrote
         // what — the reason this hook exists at all is stated at its setter.
@@ -3109,6 +3121,10 @@ void GuiPlatform::set_waveform_worker_completion_fd(int fd, std::function<void()
 void GuiPlatform::set_history_worker_completion_fd(int fd, std::function<void()> on_event) {
     history_worker_completion_fd_  = fd;
     on_history_worker_completion_  = std::move(on_event);
+}
+void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void()> on_event) {
+    history_prefetch_completion_fd_ = fd;
+    on_history_prefetch_ready_      = std::move(on_event);
 }
 
 // ---------------------------------------------------------------------------

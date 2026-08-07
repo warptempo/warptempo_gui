@@ -189,6 +189,7 @@ if(WARPTEMPO_BUILD_GUI)
         # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
         # runs that file's one mutating git route off the GUI thread.
         src/gui/history_commit_worker.cpp
+        src/gui/history_prefetch.cpp
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp
         src/gui/target_render.cpp

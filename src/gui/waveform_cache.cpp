@@ -873,6 +873,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const uint64_t           history_sel_hash   = hash_selection(
                                  app.history_mode.selection,
                                  app.history_mode.focus);
+    // THE WALK'S SIZE (2026-08-07): the prefetch streams members in while the
+    // view stands, and the arrival of member 0 into an empty walk changes the
+    // lane's whole content while moving no other field above it.
+    const std::size_t        history_count      =
+        app.history_mode.session.commit_count();
 
     const bool matches =
         flag_cache.surface &&
@@ -894,7 +899,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_focus           == history_focus &&
         flag_cache.fp_history_generation      == history_generation &&
         flag_cache.fp_history_compare         == history_compare &&
-        flag_cache.fp_history_selection_hash  == history_sel_hash;
+        flag_cache.fp_history_selection_hash  == history_sel_hash &&
+        flag_cache.fp_history_commit_count    == history_count;
 
     if (matches) return;
 
@@ -1065,6 +1071,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_generation      = history_generation;
     flag_cache.fp_history_compare         = history_compare;
     flag_cache.fp_history_selection_hash  = history_sel_hash;
+    flag_cache.fp_history_commit_count    = history_count;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

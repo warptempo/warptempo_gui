@@ -318,6 +318,14 @@ void GuiInputHandler::close_history_mode() {
     // covers the restore's own damage too, which is why the applies above emit
     // theirs and nothing here has to widen for them.
     viewport.invalidate_all();
+
+    // THE DEFERRED PREFETCH KICK, FLUSHED (2026-08-07): a re-warm that arrived
+    // while this visit stood was parked rather than run, the visit being bound
+    // to the store's generation, and this is the first moment nothing is reading
+    // it. Last, so it cannot interleave with the restore above — and through the
+    // one funnel, which reads the live source and setting rather than anything
+    // the parked bit carried.
+    if (deferred_history_prefetch_kick_) kick_history_prefetch();
 }
 
 // DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
@@ -411,8 +419,15 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // is left untouched, because the fresh session is built beside it and only moved
 // in once it is known good.
 bool GuiInputHandler::open_history_mode_fresh() {
+    // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
+    // prefetch store now, and a store describing another source, another
+    // projects_repo or a branch tip that has moved would answer this visit out
+    // of the wrong history. It runs BEFORE the bind below, so init() binds to
+    // the fresh generation — and before `active` goes up, so the kick is not
+    // the deferred one.
+    kick_history_prefetch_if_stale();
     AppState::HistoryMode fresh;
-    if (!fresh.session.init(app)) return false;
+    if (!fresh.session.init(app, history_prefetch)) return false;
     // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
     // removal from the view): the mode consumes bare Space and both scrub
     // presses, so a session still running from before `h` could not be stopped
@@ -426,31 +441,10 @@ bool GuiInputHandler::open_history_mode_fresh() {
     fresh.active = true;
     fresh.index  = 0;      // the newest commit
     fresh.focus  = -1;
-    // THE HEAD DELTA, MEASURED ONCE — index 0, the newest checkpoint, against
-    // the now side init() just froze. It answers "is there anything to
-    // checkpoint", and the answer is static for the visit by construction: both
-    // sides are fixed for the session's life (the field's own comment,
-    // AppState::HistoryMode, owns the full reasoning and the recorded
-    // asymmetry). Measuring it here costs nothing extra — the lane's first paint
-    // asks for this very delta, and delta_at caches it.
-    //
-    // A MISSING DELTA READS AS "SOMETHING DIFFERS", which is the safe fallback:
-    // it leaves the act reachable and lets the act's own NothingToCommit arm
-    // answer. It is not a reachable state — an available session always carries
-    // at least one eligible commit (init() is UNAVAILABLE when none survives the
-    // load gate), so index 0 always resolves.
-    //
-    // CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
-    // compare mode rather than passing the session's bit: the act commits the
-    // LIVE state, so the question is live-vs-newest whatever reading the lane
-    // shows. Since the iterative reading turned FORWARD (architect 2026-08-05)
-    // the two coincide at index 0, so the name currently picks the same delta
-    // the bit would — kept explicit anyway, the coincidence being a property of
-    // the pairing and not of this question (the field's own comment,
-    // AppState::HistoryMode::head_delta_empty, owns the reasoning).
-    const GuiHistoryCommitDelta* head =
-        fresh.session.delta_at(0, GuiHistoryCompare::Cumulative);
-    fresh.head_delta_empty = (head != nullptr && head->is_empty());
+    // (THE HEAD DELTA IS MEASURED BELOW, once the session is moved in: it may
+    // have nothing to measure yet — a visit can open before the prefetch has
+    // delivered member 0 — so the measurement is its own owner now rather than
+    // two lines here. measure_history_head_delta owns the rule.)
     // EVERY ENTRY IS A NEW GENERATION. The flag cache identifies the mode's
     // content by (active, index, focus, compare) plus this, and two sessions of
     // the same piece open in the same shape — index 0, focus -1, iterative,
@@ -471,6 +465,7 @@ bool GuiInputHandler::open_history_mode_fresh() {
     fresh.entry_playhead_cursor_sample = app.playhead_cursor_sample;
     fresh.entry_audio_view             = app.active_audio_view;
     app.history_mode = std::move(fresh);
+    measure_history_head_delta();
     drop_lane_stash_across_history_edge();
     // OPEN AT FULL ZOOM OUT (architect 2026-08-05) — the whole song in the
     // window, from which the trim bar's double-click frames the differences on
@@ -481,6 +476,118 @@ bool GuiInputHandler::open_history_mode_fresh() {
     frame_history_view_whole_song();
     viewport.invalidate_all();
     return true;
+}
+
+// THE HEAD DELTA'S ONE MEASUREMENT SITE (architect 2026-08-07, generalizing the
+// entry's own two lines). It answers "is there anything to checkpoint" — index
+// 0, the newest checkpoint, against the now side init() froze — and the answer
+// is static for the visit once made, both sides being fixed for the session's
+// life (the field's own comment, AppState::HistoryMode::head_delta_empty, owns
+// the full reasoning and the recorded asymmetry).
+//
+// WHAT THE STREAMING WALK ADDED is a window in which there is nothing to
+// measure: a visit may open before the prefetch has delivered member 0 at all.
+// The bit RESTS TRUE there — the conservative face, since the act is greyed and
+// the chord refused while the answer is unknown — and this runs again at every
+// prefetch arrival while the view stands, taking the measurement the first time
+// member 0 exists. `head_delta_measured` is what makes that "the first time":
+// after it, this is a no-op whatever else arrives.
+//
+// CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
+// compare mode rather than passing the session's bit: the act commits the LIVE
+// state, so the question is live-vs-newest whatever reading the lane shows.
+// Since the iterative reading turned FORWARD (architect 2026-08-05) the two
+// coincide at index 0, so the name currently picks the same delta the bit would
+// — kept explicit anyway, the coincidence being a property of the pairing and
+// not of this question.
+//
+// A MISSING DELTA AT A NON-EMPTY WALK leaves the bit untouched and UNMEASURED,
+// so a later arrival can still answer. It is not a reachable state (an available
+// session's index 0 resolves whenever a member exists), and the resting TRUE is
+// the same conservative face the empty window wears.
+void GuiInputHandler::measure_history_head_delta() {
+    if (!app.history_mode.active) return;
+    if (app.history_mode.head_delta_measured) return;
+    if (app.history_mode.session.commit_count() == 0) return;
+    const GuiHistoryCommitDelta* head = app.history_mode.session.delta_at(
+        0, GuiHistoryCompare::Cumulative);
+    if (!head) return;
+    app.history_mode.head_delta_empty    = head->is_empty();
+    app.history_mode.head_delta_measured = true;
+}
+
+// -- THE PREFETCH'S THREE EDGES (architect 2026-08-07) ----------------------
+
+// START A FRESH SCAN — the ONE funnel, and the one place the deferral lives.
+// Its three kickers, re-derived by grep on this name: main.cpp's startup load
+// tail (once the source has settled), on_history_checkpoint_complete for the two
+// outcomes that moved HEAD, and kick_history_prefetch_if_stale below.
+//
+// A KICK WHILE THE VIEW STANDS IS DEFERRED, never dropped and never run: the
+// visit is BOUND to the store's current generation, and a restart would clear
+// the deque its indices name out from under it — `n/N`, the walls and the lane
+// would all change subject mid-read. The bit is flushed at the exit owner, which
+// is the first moment nothing is reading. (It is one bit rather than a queue
+// because a kick carries no payload but the live source and setting, which the
+// flush reads fresh.)
+void GuiInputHandler::kick_history_prefetch() {
+    if (app.history_mode.active) {
+        deferred_history_prefetch_kick_ = true;
+        return;
+    }
+    deferred_history_prefetch_kick_ = false;
+    history_prefetch.kick(app.source_audio_path, app.projects_repo);
+}
+
+// THE STALENESS TEST, and the `h` entry's own kick. The store is FRESH for this
+// visit when all three of its subject terms still hold: the same source, the
+// same projects_repo, and the same branch tip it was built against. Anything
+// else and the walk describes a repository this session is no longer asking
+// about.
+//
+// A RUN STILL IN FLIGHT IS FRESH BY DEFINITION, which is what covers the window
+// before its header (and with it the tip it read) has arrived: the run was
+// kicked for THIS subject and started against a tip nobody has read yet, so
+// re-kicking it would only restart the scan the entry is about to stream from.
+//
+// THE TIP READ IS ONE `rev-parse` on this thread — the whole of what an ordinary
+// entry now pays in git, against the log plus a strict load per candidate it
+// used to.
+void GuiInputHandler::kick_history_prefetch_if_stale() {
+    const bool same_subject =
+        history_prefetch.subject_source_path() == app.source_audio_path &&
+        history_prefetch.subject_projects_repo() == app.projects_repo;
+    if (same_subject) {
+        if (history_prefetch.running()) return;
+        if (!history_prefetch.tip_sha().empty() &&
+            history_prefetch.tip_sha() == read_history_branch_tip_sha()) {
+            return;
+        }
+    }
+    kick_history_prefetch();
+}
+
+// THE ARRIVAL HOOK — the platform's prefetch ready fd, once per POLLIN, whatever
+// the counter said (the signal means "the queue has something", never how much).
+//
+// The DRAIN is unconditional: the store is the app's, not the view's, and it
+// must stay current whether or not anyone is looking. What is conditional is the
+// REACTION, and it is the whole of what a growing walk needs while the view
+// stands:
+//   * the head delta gets its one measurement the moment member 0 exists;
+//   * the window is damaged, because `n/N` in the bottom corner and the diff
+//     lane both read a count that just changed — the lane through the flag
+//     cache's own fingerprint field, which is why an empty-walk entry's first
+//     member repaints rather than sitting blank.
+// FULL-WINDOW DAMAGE, the mode edges' own class: the corner and the lane are two
+// surfaces and neither is worth a rect. It fires only on a drain that APPENDED
+// something, so a header or a DONE arriving alone costs nothing.
+void GuiInputHandler::on_history_prefetch_ready() {
+    const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
+    if (!app.history_mode.active) return;
+    if (r.members_appended == 0) return;
+    measure_history_head_delta();
+    viewport.invalidate_all();
 }
 
 // FRAME THE VIEWED COMMIT'S DIFF SPAN — AN ON-DEMAND ACT, not an edge effect
@@ -1186,9 +1293,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // checkpoint is already in flight (2026-08-07, single-in-flight): with
     // either condition failing this chord is not admitted at all, which is both
     // the key's refusal and the Save-and-Commit button's grey. The two read very
-    // differently in time and both are honest — the head delta is static for the
-    // visit, while the in-flight bit falls the moment the worker reports and the
-    // button lights again on the next frame.
+    // differently in time and both are honest — the head delta is static once
+    // measured (and rests TRUE, greying the act, in the window before the
+    // prefetch has delivered member 0 to measure against: 2026-08-07,
+    // measure_history_head_delta owns the rule), while the in-flight bit falls
+    // the moment the worker reports and the button lights again on the next
+    // frame.
     const bool is_commit_act =
         (ctrl && alt && !shift && key == GuiKeys::R && !mode.head_delta_empty &&
          !app.history_checkpoint_in_flight);
@@ -1502,6 +1612,21 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome) {
     app.history_checkpoint_in_flight = false;
+
+    // RE-WARM THE WALK FOR THE OUTCOMES THAT MOVED HEAD (2026-08-07). The
+    // prefetch store describes the repository as of one tip, and these two just
+    // added a commit to it — so the next `h` must see the checkpoint the user
+    // has only this moment made. The other three moved no ref: WriteFailed and
+    // CommitFailed produced no commit, and NothingToCommit found the bytes
+    // already committed, so the standing store is still true for all three. (The
+    // scan's git READS may have raced this act's mutations — the accepted
+    // overlap recorded at GuiHistoryPrefetch — and this kick is what rebuilds
+    // whatever did.) The view is normally already closed by now, but the funnel
+    // defers rather than assumes.
+    if (outcome == GuiHistoryCommitOutcome::Committed ||
+        outcome == GuiHistoryCommitOutcome::CommittedNotPushed) {
+        kick_history_prefetch();
+    }
 
     std::string text;
     switch (outcome) {

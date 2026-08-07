@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "frame_format.h"
+#include "history_prefetch.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
 #include "warpmarkers.h"
@@ -15,6 +16,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -36,8 +38,11 @@ namespace {
 // path or a failing git there is UNAVAILABLE, reported once and dropped.
 constexpr const char* kRepoRoot = "/home/b/.warptempo/warptempo_gui";
 
-// The architect's ruled depth: the newest 20 commits touching the sidecars.
-constexpr int kCommitDepth = 20;
+// THE WALK IS UNCAPPED (architect 2026-08-07, retiring the ruled depth of 20).
+// The cap existed because the load gate's per-candidate strict load ran at `h`
+// and the entry had to finish in a keystroke; the scan runs on a background
+// worker now and streams its members, so there is no keystroke to fit inside and
+// no reason to hide the older half of a piece's history.
 
 // THE CORPUS FOLDER — the one directory name this module knows (architect
 // 2026-08-04). The repository layout convention is `<repo>/projects/<piece>/`;
@@ -1345,14 +1350,24 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
     // judges.
     //
     // THE DIRECTORY IS THE CALL'S OWN SCRATCH: the system temp dir, one
-    // per-process per-commit subdirectory, removed on every exit by the guard.
+    // per-process per-CALL subdirectory, removed on every exit by the guard.
     // NEVER the repository (the walk and the `'` act only ever read it) and
     // NEVER beside the source (the working sidecars are the user's, and a read
     // must not write near them).
+    //
+    // THE SERIAL IS WHAT MAKES IT PER-CALL RATHER THAN PER-COMMIT (2026-08-07,
+    // with the prefetch worker): pid + short sha collided as soon as two THREADS
+    // could ask about one commit at the same time — the worker gating a
+    // candidate while the main thread runs the `'` act on that same SHA — and
+    // the loser's guard would remove the winner's staged files mid-load. The
+    // counter is process-wide and atomic, so no two calls anywhere can name one
+    // directory.
+    static std::atomic<unsigned long long> scratch_serial{0};
     std::error_code   ec;
     const std::string leaf = "warptempo_gui-load-in-place-" +
                              std::to_string(static_cast<long>(::getpid())) +
-                             "-" + snap.sha.substr(0, 7);
+                             "-" + snap.sha.substr(0, 7) + "-" +
+                             std::to_string(scratch_serial.fetch_add(1));
     const std::filesystem::path scratch =
         std::filesystem::temp_directory_path(ec) / leaf;
     if (ec) {
@@ -1451,28 +1466,26 @@ GuiHistoryNowSide build_history_now_side(const AppState& app) {
     return out;
 }
 
-bool GuiHistoryDiff::init(const AppState& app) {
-    available_ = false;
-    unavailable_reason_.clear();
-    base_name_.clear();
-    project_directory_.clear();
-    commits_.clear();
-    for (std::vector<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
-        c.clear();
-    }
+// THE WALK'S CHEAP HALF (the contract is at the declaration). It answers WHERE
+// THE PIECE LIVES or why it cannot be found, in two git calls and no strict
+// load, and it PRINTS NOTHING: the caller decides whether this is a refusal the
+// user is watching for (GuiHistoryDiff::init's one stderr line) or a background
+// run's own finding, which the store simply keeps until an entry asks.
+GuiHistoryWalkHeader resolve_history_walk_header(
+        const std::string& source_audio_path,
+        const std::string& projects_repo) {
+    GuiHistoryWalkHeader h;
 
-    // Every failure arm lands here: one stderr line, and the whole session
-    // left in its documented empty shape whatever step got as far as filling
-    // in (the tree match runs after the base name is derived, so a late
-    // refusal has something to clear).
-    auto unavailable = [this](std::string why) {
-        unavailable_reason_ = std::move(why);
-        base_name_.clear();
-        project_directory_.clear();
-        commits_.clear();
-        std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
-                     unavailable_reason_.c_str());
-        return false;
+    // Every failure arm lands here: the reason, and the whole header left in
+    // its documented empty shape whatever step got as far as filling in (the
+    // tree match runs after the base name is derived, so a late refusal has
+    // something to clear).
+    auto unavailable = [&h](std::string why) {
+        h.ok = false;
+        h.unavailable_reason = std::move(why);
+        h.base_name.clear();
+        h.project_directory.clear();
+        return h;
     };
 
     std::error_code ec;
@@ -1503,7 +1516,7 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // THE MODE'S GATE; that one is the mutating boundary. Two askings because
     // the config can move between them, one owner because the question is one.
     std::string guard_reason;
-    if (!clone_is_projects_home(app.projects_repo, guard_reason)) {
+    if (!clone_is_projects_home(projects_repo, guard_reason)) {
         return unavailable(std::move(guard_reason));
     }
 
@@ -1512,14 +1525,13 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // siblings beside the WAV (file_loader.cpp's companion-file block). The
     // corpus names its files by exactly that, so mirroring the rule is what
     // makes the filename match work on names full of periods and commas.
-    if (app.source_audio_path.empty()) {
+    if (source_audio_path.empty()) {
         return unavailable("No source is loaded");
     }
-    base_name_ =
-        std::filesystem::path(app.source_audio_path).stem().string();
-    if (base_name_.empty()) {
+    h.base_name = std::filesystem::path(source_audio_path).stem().string();
+    if (h.base_name.empty()) {
         return unavailable("The source path has no base name: " +
-                           app.source_audio_path);
+                           source_audio_path);
     }
 
     // THE MATCH IS RESOLVED AGAINST THE COMMITTED TREE, not the working
@@ -1534,9 +1546,46 @@ bool GuiHistoryDiff::init(const AppState& app) {
                            std::string(kRepoRoot));
     }
     std::string reason;
-    if (!sole_directory_of(sidecar_entries_in_listing(tip_listing, base_name_),
-                           base_name_, project_directory_, reason)) {
+    if (!sole_directory_of(sidecar_entries_in_listing(tip_listing, h.base_name),
+                           h.base_name, h.project_directory, reason)) {
         return unavailable(std::move(reason));
+    }
+
+    h.ok = true;
+    return h;
+}
+
+std::string read_history_branch_tip_sha() {
+    std::string out;
+    if (!git_output({"rev-parse", "--verify", "--quiet",
+                     std::string(kBranchRef) + "^{commit}"}, out)) {
+        return std::string();
+    }
+    // One line, trailing newline and all.
+    while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) {
+        out.pop_back();
+    }
+    return out;
+}
+
+void scan_history_walk(
+        const std::string& source_audio_path, const std::string& projects_repo,
+        const std::function<bool()>&                           abandoned,
+        const std::function<void(GuiHistoryWalkHeader)>&       on_header,
+        const std::function<void(GuiHistoryCommitSidecars)>&   on_member,
+        const std::function<void(int candidates, int hidden)>& on_done) {
+    GuiHistoryWalkHeader header =
+        resolve_history_walk_header(source_audio_path, projects_repo);
+    const std::string base_name         = header.base_name;
+    const std::string project_directory = header.project_directory;
+    const bool        ok                = header.ok;
+    on_header(std::move(header));
+    if (!ok) {
+        // A run whose header refuses is FINISHED, not merely stopped: the DONE
+        // is what tells the store there is nothing more coming, and an entry
+        // reads the header's own reason rather than these zeroes.
+        on_done(0, 0);
+        return;
     }
 
     // The commit walk is ERA-AGNOSTIC BELOW `projects/`: one
@@ -1555,28 +1604,30 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // sidecar in the corpus. This is the one pathspec here that cannot simply be
     // `:(literal)` — glob magic and literal magic are mutually exclusive, and the
     // walk needs the glob half.
-    const std::string escaped_base = escape_glob(base_name_);
-    std::vector<std::string> log_args{"log", "-n",
-                                      std::to_string(kCommitDepth),
-                                      "--format=%H", kBranchRef, "--"};
+    //
+    // AND IT IS UNCAPPED (2026-08-07): no `-n` term, so the pathspec walk
+    // reaches the piece's first checkpoint. Everything else about it is
+    // unchanged.
+    const std::string escaped_base = escape_glob(base_name);
+    std::vector<std::string> log_args{"log", "--format=%H", kBranchRef, "--"};
     for (const char* ext : kSidecarExtensions) {
         log_args.push_back(std::string(":(glob)") +
                            std::string(kProjectsPrefix) + "**/" + escaped_base +
                            ext);
     }
     std::string log_out;
-    if (!git_output(log_args, log_out)) {
-        return unavailable("No commit touches 'projects/**/" + base_name_ +
-                           ".*'");
-    }
-
     std::vector<std::string> candidates;
-    for (std::string& sha : split_lines(log_out)) {
-        if (!sha.empty()) candidates.push_back(std::move(sha));
+    if (git_output(log_args, log_out)) {
+        for (std::string& sha : split_lines(log_out)) {
+            if (!sha.empty()) candidates.push_back(std::move(sha));
+        }
     }
+    // A `log` that ran and said nothing and a `log` that could not run are the
+    // same answer here — no candidate — and the entry's own "No commit touches"
+    // line is what states it. The count rides out in the DONE below.
     if (candidates.empty()) {
-        return unavailable("No commit touches 'projects/**/" + base_name_ +
-                           ".*'");
+        on_done(0, 0);
+        return;
     }
 
     // THE LOAD GATE (architect 2026-08-04): each candidate's eligibility is
@@ -1589,40 +1640,122 @@ bool GuiHistoryDiff::init(const AppState& app) {
     // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides in both
     // readings, and the NEW sides too in the iterative one wherever its forward
     // partner is a commit rather than the live state, so no delta ever
-    // runs git again. Eager on purpose: the cost is bounded (at
-    // most kCommitDepth strict loads of three tiny files each, staged through
-    // the temp dir) and paying it at entry is what lets `n/N`, the clamps and
-    // the corner all read one settled eligible list for the session.
+    // runs git again.
+    //
+    // EACH ELIGIBLE MEMBER IS PUBLISHED THE MOMENT IT PASSES (2026-08-07): the
+    // gate is the expensive step and it is per candidate, so handing the result
+    // over one at a time is what lets a view opened mid-scan show the newest
+    // checkpoints while the older ones are still being read. The loop is
+    // otherwise the eager one it always was.
+    //
+    // THE ABANDON CHECK IS THE LOOP'S OWN TOP, and the finest grain that costs
+    // nothing: one candidate is a `rev-parse`, an `ls-tree`, three `show`s and
+    // three strict loads of tiny files, so a supersede or a quit waits out at
+    // most that.
     int hidden = 0;
+    int done   = 0;
     for (const std::string& sha : candidates) {
+        if (abandoned()) break;
+        ++done;
         GuiHistoryCommitLoad load;
         std::string          why;
-        if (!load_commit_sidecars_strict(sha, base_name_, project_directory_,
+        if (!load_commit_sidecars_strict(sha, base_name, project_directory,
                                          load, why)) {
             ++hidden;
             continue;
         }
-        commits_.push_back(std::move(load.sidecars));
+        on_member(std::move(load.sidecars));
     }
-    if (commits_.empty()) {
+    on_done(done, hidden);
+}
+
+const std::deque<GuiHistoryCommitSidecars>& GuiHistoryDiff::members() const {
+    static const std::deque<GuiHistoryCommitSidecars> kNone;
+    if (!store_ || store_->generation() != store_generation_) return kNone;
+    return store_->members();
+}
+
+std::size_t GuiHistoryDiff::commit_count() const { return members().size(); }
+
+bool GuiHistoryDiff::init(const AppState&           app,
+                          const GuiHistoryPrefetch& prefetch) {
+    available_ = false;
+    unavailable_reason_.clear();
+    base_name_.clear();
+    project_directory_.clear();
+    store_            = nullptr;
+    store_generation_ = 0;
+    for (std::deque<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
+        c.clear();
+    }
+
+    // Every failure arm lands here: one stderr line, and the whole session
+    // left in its documented empty shape.
+    auto unavailable = [this](std::string why) {
+        unavailable_reason_ = std::move(why);
+        base_name_.clear();
+        project_directory_.clear();
+        store_            = nullptr;
+        store_generation_ = 0;
+        std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
+                     unavailable_reason_.c_str());
+        return false;
+    };
+
+    // BIND FIRST, so the generation is the one the header below describes: the
+    // caller has already kicked a fresh run if the store was stale, and nothing
+    // can kick another while the mode stands.
+    store_            = &prefetch;
+    store_generation_ = prefetch.generation();
+
+    // THE HEADER, FROM THE STORE OR COMPUTED HERE. The worker fills it in the
+    // first moments of a run, so an entry that lands before it does — a `h`
+    // pressed in the second after launch, or right after a staleness kick —
+    // simply asks the same question on this thread. Two git calls, no strict
+    // load: cheap enough to pay at a keystroke, which is exactly why the split
+    // is here rather than one step later.
+    if (prefetch.has_header()) {
+        if (!prefetch.header().ok) {
+            return unavailable(prefetch.header().unavailable_reason);
+        }
+        base_name_         = prefetch.header().base_name;
+        project_directory_ = prefetch.header().project_directory;
+    } else {
+        const GuiHistoryWalkHeader h =
+            resolve_history_walk_header(app.source_audio_path,
+                                        app.projects_repo);
+        if (!h.ok) return unavailable(h.unavailable_reason);
+        base_name_         = h.base_name;
+        project_directory_ = h.project_directory;
+    }
+
+    // THE TWO TERMINAL ZERO CASES, and only a FINISHED scan can state either:
+    // no commit touches the sidecars at all, or every one that does refuses the
+    // strict load. Both are today's exact lines. A scan still running with no
+    // member yet is NOT one of them — the view opens empty and populates — so
+    // the refusal is conditioned on done, never on emptiness alone.
+    //
+    // WHICH LEAVES ONE SHAPE WITH NO REFUSAL, recorded rather than closed: a
+    // visit that opened mid-scan whose run then finishes with zero eligible
+    // members rests at `0/0` with a blank lane until the user presses `h` again.
+    // It is a refusal that arrived too late to be one, and the alternative would
+    // be a NEW closer — the view closing itself under the reader — which is a
+    // bigger change than the case is worth (it needs a piece with committed
+    // sidecars whose every checkpoint refuses the strict load, and an `h` inside
+    // the second the scan takes to say so).
+    if (prefetch.run_done() && prefetch.members().empty()) {
         return unavailable(
-            "None of the " + std::to_string(hidden) +
-            " commit(s) touching 'projects/**/" + base_name_ +
-            ".*' passes the strict sidecar load");
-    }
-    if (hidden > 0) {
-        std::fprintf(stderr,
-                     "warptempo_gui: History hid %d commit(s) whose sidecars "
-                     "refuse the strict load\n",
-                     hidden);
+            prefetch.candidate_count() == 0
+                ? ("No commit touches 'projects/**/" + base_name_ + ".*'")
+                : ("None of the " + std::to_string(prefetch.hidden_count()) +
+                   " commit(s) touching 'projects/**/" + base_name_ +
+                   ".*' passes the strict sidecar load"));
     }
 
     // The now side is captured once, here: every delta this session hands out
-    // is measured against these exact bytes.
+    // is measured against these exact bytes. (The delta caches are NOT sized
+    // here any more — membership grows during a visit, so delta_at grows them.)
     now_ = build_history_now_side(app);
-    for (std::vector<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
-        c.resize(commits_.size());
-    }
     available_ = true;
     return true;
 }
@@ -1648,8 +1781,9 @@ bool GuiHistoryCommitDelta::frame_span(int64_t& lo, int64_t& hi) const {
 
 const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     static const std::string kNone;
-    if (index >= commits_.size()) return kNone;
-    return commits_[index].sha;
+    const std::deque<GuiHistoryCommitSidecars>& m = members();
+    if (index >= m.size()) return kNone;
+    return m[index].sha;
 }
 
 namespace {
@@ -1751,16 +1885,22 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
 
 const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     std::size_t index, GuiHistoryCompare compare) {
-    if (!available_ || index >= commits_.size()) return nullptr;
-    std::vector<std::optional<GuiHistoryCommitDelta>>& slots =
+    const std::deque<GuiHistoryCommitSidecars>& commits = members();
+    if (!available_ || index >= commits.size()) return nullptr;
+    std::deque<std::optional<GuiHistoryCommitDelta>>& slots =
         cache_[static_cast<std::size_t>(compare)];
+    // GROW TO MEMBERSHIP, never shrink: the walk only ever appends (older
+    // commits, arriving from the scan), and push_back leaves every slot already
+    // handed out exactly where it is — this deque IS the pointer-stability
+    // contract at the declaration.
+    while (slots.size() < commits.size()) slots.emplace_back();
     if (slots[index].has_value()) return &*slots[index];
 
-    // THE THEN SIDE IS A SNAPSHOT THE LOAD GATE ALREADY READ at init in both
-    // readings: walk membership required reading (and strictly loading) all
-    // three sidecars, so the walk carries every member's texts and a delta runs
-    // no git at all, whichever pair of sides it takes.
-    const GuiHistoryCommitSidecars& snap = commits_[index];
+    // THE THEN SIDE IS A SNAPSHOT THE LOAD GATE ALREADY READ, in both readings:
+    // walk membership required reading (and strictly loading) all three
+    // sidecars, so the walk carries every member's texts and a delta runs no git
+    // at all, whichever pair of sides it takes.
+    const GuiHistoryCommitSidecars& snap = commits[index];
 
     if (compare == GuiHistoryCompare::Cumulative) {
         slots[index] = compute_commit_delta(
@@ -1799,7 +1939,7 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
             now_.phaseresetmarkers_text, now_.settings_text);
         return &*slots[index];
     }
-    const GuiHistoryCommitSidecars& newer = commits_[index - 1];
+    const GuiHistoryCommitSidecars& newer = commits[index - 1];
     slots[index] = compute_commit_delta(
         snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
         snap.settings.text, newer.warpmarkers.text,

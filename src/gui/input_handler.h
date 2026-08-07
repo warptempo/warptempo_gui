@@ -5,6 +5,7 @@
 #include "audio.h"
 #include "flag_editor.h"
 #include "history_commit_worker.h"
+#include "history_prefetch.h"
 #include "playback.h"
 #include "playback_lifecycle.h"
 #include "prompt.h"
@@ -444,6 +445,11 @@ struct GuiInputHandler {
     // completion comes back through main.cpp's eventfd wiring into
     // on_history_checkpoint_complete.
     GuiHistoryCommitWorker&  history_commit_worker;
+    // THE HISTORY WALK'S PREFETCH STORE (2026-08-07). The `h` visit BINDS to
+    // it (GuiHistoryDiff::init) instead of running git itself, and this handler
+    // owns the three kick sites' one funnel — kick_history_prefetch, which is
+    // also what defers a kick that would land while the view stands.
+    GuiHistoryPrefetch&      history_prefetch;
     GuiPlaybackLifecycle&    playback_lifecycle;
     GuiSaveOps&              save_ops;
     GuiPrompt&               prompt;
@@ -493,6 +499,7 @@ struct GuiInputHandler {
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
+                    GuiHistoryPrefetch&      history_prefetch_,
                     GuiPlaybackLifecycle&    playback_lifecycle_,
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
@@ -515,6 +522,7 @@ struct GuiInputHandler {
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
+          history_prefetch(history_prefetch_),
           playback_lifecycle(playback_lifecycle_),
           save_ops(save_ops_),
           prompt(prompt_),
@@ -1820,8 +1828,35 @@ private:
     void run_history_commit(const std::string& title);
     void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome);
     void run_history_revert();
+    // THE HEAD DELTA'S ONE MEASUREMENT SITE (2026-08-07). Called at the entry
+    // and again at every prefetch arrival while the view stands; it measures
+    // exactly once, when member 0 first exists, and is a no-op forever after.
+    void measure_history_head_delta();
+    // A KICK THAT WOULD LAND WHILE THE VIEW STANDS IS DEFERRED to the exit —
+    // the visit's list must not be swapped underneath it. Set here, flushed by
+    // close_history_mode.
+    bool deferred_history_prefetch_kick_ = false;
 
 public:
+    // -- THE HISTORY PREFETCH'S THREE PUBLIC EDGES (2026-08-07) -------------
+    //
+    // START A FRESH SCAN of the loaded source's committed history — the ONE
+    // funnel for all three kickers (main.cpp's startup load tail, the
+    // checkpoint completion's re-warm, and the `h` entry's staleness kick), and
+    // the one place the deferred-while-active rule lives.
+    void kick_history_prefetch();
+    // The same question with the staleness test in front of it: kick only when
+    // the store describes another source, another projects_repo, or a branch tip
+    // that has moved. Public for symmetry with the funnel; its one caller is the
+    // mode's entry owner.
+    void kick_history_prefetch_if_stale();
+    // THE ARRIVAL HOOK, from the platform's prefetch ready fd (main.cpp's
+    // wiring): drain the worker's queue into the store and, while the view
+    // stands, react to what arrived — measure the head delta the moment member 0
+    // exists, and damage the window so the lane and the `n/N` corner catch up
+    // with a walk that just grew.
+    void on_history_prefetch_ready();
+
     // THE DEFERRED NOTICE'S POLL, called once per tick from main.cpp: if a
     // checkpoint failure report is parked and the bottom strip is free, open it.
     // Public for that one caller, like repeat_eligible above.

@@ -323,12 +323,21 @@ struct FlagCache {
     // lane's fp_selection_hash applied to the mode's own list. Hashed rather
     // than counted, since a range replace can leave the size untouched while
     // naming different flags.
+    //
+    // AND THE WALK'S SIZE IS THE SEVENTH (2026-08-07, with the streaming
+    // prefetch): the walk GROWS under a live session, and the arrival that
+    // matters most moves no other field here — a view opened before member 0
+    // arrives stands at index 0, focus -1, one generation, one reading, and an
+    // EMPTY lane, and the delta it must now draw appears with nothing else
+    // changing. Counted rather than hashed: membership only ever appends, so the
+    // size is the whole of what can differ.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
     unsigned long long fp_history_generation = 0;
     GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
     uint64_t           fp_history_selection_hash = 0;
+    std::size_t        fp_history_commit_count   = 0;
 
     void destroy_surface() {
         if (surface) {
@@ -400,7 +409,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (19 fields, RE-DERIVED 2026-08-05 off the compare in
+    // (20 fields, RE-DERIVED 2026-08-07 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -413,10 +422,11 @@ struct GuiPaintHandler {
     //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
     //     and fp_editing_flag_target (the open editor's marker, whose box this
     //     pass SKIPS);
-    //   - THE HISTORY MODE, SIX (four 2026-08-04, the fifth and sixth
-    //     2026-08-05): fp_history_active, fp_history_index, fp_history_focus,
-    //     fp_history_generation, fp_history_compare and
-    //     fp_history_selection_hash — the `h` view replaces
+    //   - THE HISTORY MODE, SEVEN (four 2026-08-04, the fifth and sixth
+    //     2026-08-05, the seventh 2026-08-07): fp_history_active,
+    //     fp_history_index, fp_history_focus,
+    //     fp_history_generation, fp_history_compare,
+    //     fp_history_selection_hash and fp_history_commit_count — the `h` view replaces
     //     the lane's whole content, so these decide it as completely as the five
     //     marker-driven fields decide the live one; the generation is what
     //     distinguishes two SESSIONS that agree on the others (a close and a

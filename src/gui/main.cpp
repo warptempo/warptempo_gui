@@ -19,6 +19,7 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "history_commit_worker.h"
+#include "history_prefetch.h"
 #include "audio.h"
 #include "env_fingerprint.h"
 #include "waveform_worker.h"
@@ -769,6 +770,19 @@ int main(int argc, char** argv) {
             "warptempo_gui: Failed to start the checkpoint worker; exiting\n");
         return 1;
     }
+    // THE HISTORY WALK'S PREFETCH WORKER (2026-08-07): the `h` view's commit
+    // walk is built here, at startup and off the GUI thread, instead of at every
+    // `h`. It streams its members back through its own ready fd (wired below,
+    // after the input handler exists — the drain has a reaction as well as a
+    // store to fill). Fatal on a failed init like its three siblings: with no
+    // worker there is no walk, and the view would open empty forever.
+    GuiHistoryPrefetch history_prefetch;
+    if (!history_prefetch.init()) {
+        std::fprintf(stderr,
+            "warptempo_gui: Failed to start the history prefetch worker; "
+            "exiting\n");
+        return 1;
+    }
     // Shared process-local render cache for target-view reuse, archival
     // reuse/publish rungs, and the loaded-in-place render's survival after
     // the renders folder is wiped. init() creates the per-process cache
@@ -836,6 +850,7 @@ int main(int argc, char** argv) {
                                   phase_reset_propagate,
                                   async_renderer,
                                   history_commit_worker,
+                                  history_prefetch,
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
@@ -851,6 +866,12 @@ int main(int argc, char** argv) {
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
+    // The prefetch's ready fd is wired HERE rather than beside the other three,
+    // because its callback needs the input handler: a drain fills the store AND,
+    // while the view stands, measures the head delta and damages the window for
+    // a walk that just grew.
+    gui.set_history_prefetch_completion_fd(history_prefetch.completion_fd(),
+        [&input_handler]() { input_handler.on_history_prefetch_ready(); });
     // (NO BACK-WIRE FOR THE PROMPT. It had one while the history mode's commit
     // confirmation lived there — its `y` reached the act through the pointer —
     // and both went with the prompt on 2026-08-07, the act now being run by the
@@ -1264,6 +1285,13 @@ int main(int argc, char** argv) {
                 if (app.fftw3_threads_hash != cur.fftw3_threads) note("fftw3_threads");
                 if (!changed.empty()) prompt.open_env_hash_mismatch(changed);
             }
+            // THE PREFETCH'S STARTUP KICK (2026-08-07), here because this is
+            // where the source settles: app.source_audio_path and
+            // app.projects_repo are both final by now (the sidecars applied
+            // above), and the scan needs exactly those two. It costs the GUI
+            // thread one queue push — everything else happens on the worker
+            // while the user is still looking at the first frame.
+            input_handler.kick_history_prefetch();
             return;  // loaded state paints on the next tick
         }
 
@@ -1670,6 +1698,9 @@ int main(int argc, char** argv) {
     // mid-act; the piece is already saved (the act saves before it dispatches),
     // so the wait costs a moment and never any work.
     history_commit_worker.shutdown();
+    // The prefetch abandons its scan at the next candidate boundary rather than
+    // being waited out: it writes nothing anywhere.
+    history_prefetch.shutdown();
     // Remove this process's render-cache directory.
     render_cache.shutdown();
     return 0;

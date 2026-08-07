@@ -7,11 +7,14 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 struct AppState;
+class GuiHistoryPrefetch;
 
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
@@ -79,12 +82,23 @@ struct AppState;
 // resolution + scratch staging + three strict frozen loaders the `'` act runs,
 // ONE predicate with no relaxed variant — so every checkpoint the mode can step
 // to is one it can load. A candidate that refuses (a missing sidecar, a parse
-// refusal, an ambiguous per-commit path resolution) leaves the walk at init,
-// counted on one stderr line. That is what makes both sides of every diff
-// loader-clean text with all three files present: there is no missing-file
+// refusal, an ambiguous per-commit path resolution) leaves the walk, counted on
+// one stderr line at the end of the scan. That is what makes both sides of every
+// diff loader-clean text with all three files present: there is no missing-file
 // case, no unparseable line, and no legacy leniency arm anywhere in the diff
 // model — the architect's no-legacy rule (the program never imports leniently;
 // an old-format checkpoint is hand-edited, never tolerated).
+//
+// THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07, retiring the ruled
+// depth of 20). Two facts follow from the gate above: it costs a strict
+// whole-set load PER CANDIDATE, and that cost has to be paid before a walk
+// member exists at all — which is what made `h` stall, and what the depth cap
+// was really buying. So the git half moved OFF the entry and ONTO A BACKGROUND
+// WORKER that runs at startup (GuiHistoryPrefetch, history_prefetch.h): the same
+// steps in the same order, uncapped, STREAMING each eligible member to the main
+// thread as it passes the gate. GuiHistoryDiff BINDS to that store rather than
+// building a list of its own, so a visit costs no git at all in the ordinary
+// case and the walk may GROW while the view stands.
 //
 // THE NOW SIDE IS FROZEN AT init(): the three strings are captured once and
 // every cached delta is measured against them, so a session that keeps
@@ -377,31 +391,109 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
                                  GuiHistoryCommitLoad& out,
                                  std::string&          reason);
 
-// The session object: the commit list resolved AND LOAD-GATED once at init —
-// each member's three sidecar snapshots are read there by the gate and kept —
-// with each commit's delta computed lazily on first request and cached
-// thereafter PER (INDEX, COMPARE), so stepping back over a commit already
-// visited costs nothing in either reading and no delta ever runs git at all.
+// -- THE WALK'S GIT HALF, TAKEN OFF THE SESSION (2026-08-07) ----------------
+//
+// Everything below this line up to GuiHistoryDiff is what init() used to do
+// inline and what the prefetch worker now does off-thread. It lives HERE, in
+// the module that owns every git call, so the worker file owns only threading:
+// the read/write fence stays "which function a call site names", and the
+// prefetch names none of the mutating one.
+
+// WHERE THE PIECE LIVES, or why it cannot be found — the walk's cheap half: the
+// projects-home guard, the source's base-name derivation and the tip-tree match,
+// two git calls and no strict load anywhere. `unavailable_reason` carries the
+// one line the mode prints when it refuses, in the exact shape it always had.
+struct GuiHistoryWalkHeader {
+    bool        ok = false;
+    std::string unavailable_reason;
+    std::string base_name;
+    std::string project_directory;
+};
+
+// Run that cheap half. TWO CALLERS, deliberately: the prefetch worker at the
+// head of every run, and GuiHistoryDiff::init when a visit opens before the
+// worker's header has arrived — so an entry refusal is the same answer computed
+// in the same place whichever thread asks.
+GuiHistoryWalkHeader resolve_history_walk_header(
+    const std::string& source_audio_path, const std::string& projects_repo);
+
+// THE WALKED BRANCH'S TIP, full SHA, empty when it cannot be read. It is the
+// prefetch store's STALENESS key: a run describes the repository as of one tip,
+// and an entry that finds the tip moved kicks a fresh run rather than trusting
+// the old one.
+std::string read_history_branch_tip_sha();
+
+// ONE PREFETCH RUN, WHOLE — the header, the UNCAPPED `git log` over the same
+// `:(glob)projects/**/<base>.<ext>` pathspecs, and per candidate the strict
+// whole-set load gate, in that order.
+//
+// IT REPORTS THROUGH CALLBACKS RATHER THAN RETURNING A LIST, which is what makes
+// the streaming possible: `on_header` fires once (with `ok` false and the reason
+// set when the piece cannot be found at all), `on_member` once per ELIGIBLE
+// commit in walk order (newest first) carrying the snapshots the gate read, and
+// `on_done` once at the end with the candidate and hidden counts — the counted
+// stderr line's own numbers. Ineligible candidates produce no member callback.
+//
+// `abandoned` IS ASKED BETWEEN CANDIDATES, and nowhere else: a superseding kick
+// or a shutdown wants this run to stop, and a candidate boundary is the finest
+// grain that costs nothing (the strict load of one commit's three tiny files).
+// `on_done` fires on the abandoned path too, so the caller's own bookkeeping has
+// one shape.
+//
+// EVERY CALLBACK RUNS ON THE CALLING THREAD. This function touches no AppState
+// and no shared state of its own — its whole input is the two strings — so the
+// worker may run it while the main thread reads the store the callbacks filled.
+void scan_history_walk(
+    const std::string& source_audio_path, const std::string& projects_repo,
+    const std::function<bool()>&                        abandoned,
+    const std::function<void(GuiHistoryWalkHeader)>&    on_header,
+    const std::function<void(GuiHistoryCommitSidecars)>& on_member,
+    const std::function<void(int candidates, int hidden)>& on_done);
+
+// The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07,
+// superseding the list this used to build for itself at init) — each member
+// carries the three sidecar snapshots the load gate read on the worker — with
+// each commit's delta computed lazily on first request and cached thereafter PER
+// (INDEX, COMPARE), so stepping back over a commit already visited costs nothing
+// in either reading and no delta ever runs git at all.
+//
+// THE WALK MAY GROW UNDER A LIVE SESSION, which is the streaming's whole point:
+// a visit opened while the scan is still running sees members appended in walk
+// order (newest first, so every arrival is OLDER than everything already there)
+// and answers a larger commit_count() from one tick to the next. Nothing an
+// existing index means changes when that happens — `n/N` grows, the `,` wall
+// moves outward, and the lane repaints because the flag cache's fingerprint
+// carries the count.
 class GuiHistoryDiff {
 public:
-    // Check the projects-home guard, locate the loaded source's sidecars in
-    // the committed tree, resolve the commit list, and GATE each candidate
-    // through the strict whole-set load (load_commit_sidecars_strict): an
-    // ineligible candidate leaves the walk here, and one stderr line counts
-    // the hidden ones when any survive. Returns available(). Every failure
-    // path is UNAVAILABLE with one stderr line and no further git work: the
-    // repo root missing, no `origin` remote, a `projects_repo` that is empty
-    // or that names a different repository than this clone's FETCH url or
-    // than any of its effective PUSH urls, no committed file bearing this
-    // source's sidecar names, more than one directory bearing them, no commit
-    // touching any of them, or every touching commit refusing the strict
-    // load.
-    bool init(const AppState& app);
+    // BIND THE VISIT TO THE PREFETCH STORE and freeze the live now side. The
+    // git half of this call is gone (the store's worker ran it, or is running
+    // it): what is left is the header — taken from the store, or COMPUTED
+    // SYNCHRONOUSLY HERE by resolve_history_walk_header when the visit opens
+    // before the worker's own header has arrived, two git calls and no strict
+    // load — plus the now-side capture and the delta caches.
+    //
+    // Returns available(). Every failure path is UNAVAILABLE with one stderr
+    // line and nothing else: the repo root missing, no `origin` remote, a
+    // `projects_repo` that is empty or that names a different repository than
+    // this clone's FETCH url or than any of its effective PUSH urls, no
+    // committed file bearing this source's sidecar names, more than one
+    // directory bearing them, and — the TERMINAL ZERO cases, which only a
+    // FINISHED scan can state — no commit touching any of them, or every
+    // touching commit refusing the strict load.
+    //
+    // A SCAN STILL RUNNING WITH NO MEMBER YET IS AVAILABLE, not a refusal: the
+    // view opens on an empty walk (`0/0`, a blank lane) and populates live. The
+    // two zero answers above are the same shape a moment later, so refusing here
+    // would make entry a race.
+    bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
     bool               available() const { return available_; }
     const std::string& unavailable_reason() const { return unavailable_reason_; }
 
-    std::size_t commit_count() const { return commits_.size(); }
+    // How many eligible commits the bound store has DELIVERED so far. It only
+    // ever grows within a visit.
+    std::size_t commit_count() const;
 
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
@@ -411,13 +503,22 @@ public:
     // are independent and each is asked repeatedly, so one cache slot per pair
     // is what keeps a compare switch as free as a step back. Returns nullptr
     // for an out-of-range index or an unavailable session. The returned pointer
-    // stays valid for the session's lifetime (the cache never reallocates its
-    // elements).
+    // stays valid for the session's lifetime: the cache is a DEQUE per reading
+    // (2026-08-07, replacing the vector sized once at init), and a deque's
+    // push_back — which is the only way membership grows — never moves the
+    // elements already in it. So a walk that grows under a live session appends
+    // empty slots and invalidates no pointer this ever handed out.
     //
     // EVERY INDEX ANSWERS IN BOTH READINGS — no index is a special case, the
     // iterative reading's forward partner being the next-newer walk member or,
     // at the newest index, the live now side. The two readings COINCIDE at that
     // newest index and are cached separately there, one delta computed twice.
+    //
+    // AND THE ITERATIVE PAIRING IS APPEND-STABLE BY CONSTRUCTION, which is what
+    // lets a growing walk leave the cache alone: index i pairs with i−1 (or the
+    // live now side at 0), both of which are NEWER than i — and every arrival is
+    // older than everything already delivered, so no member ever appears between
+    // an index and its forward partner. A cached delta stays the right answer.
     const GuiHistoryCommitDelta* delta_at(std::size_t         index,
                                           GuiHistoryCompare   compare);
 
@@ -432,21 +533,34 @@ public:
     const std::string& project_directory() const { return project_directory_; }
 
 private:
+    // The bound store's walk, or an empty one. It ANSWERS EMPTY FOR A
+    // GENERATION MISMATCH, which is the defensive half of the binding: a run
+    // superseded under a live session would have swapped the deque out from
+    // under these indices, and reading a stale generation as "no members" is the
+    // cold answer the lane already knows how to draw. It is not a reachable
+    // state — a kick while the mode stands is DEFERRED to the exit
+    // (GuiInputHandler::kick_history_prefetch), so a visit's generation is fixed
+    // for its whole life.
+    const std::deque<GuiHistoryCommitSidecars>& members() const;
+
     bool              available_ = false;
     std::string       unavailable_reason_;
     std::string       base_name_;
     std::string       project_directory_;
     GuiHistoryNowSide now_;
-    // The eligible commits, newest first, each carrying the three sidecar
-    // snapshots the load gate read at init — the walk's then sides.
-    std::vector<GuiHistoryCommitSidecars> commits_;
 
-    // One slot per (commit, compare mode), filled on first request. A
-    // deque-free vector of optionals per reading, both sized once at init, so
-    // no element ever moves and delta_at's returned pointer stays good for the
-    // session. Indexed by the enum's own value, which is what makes adding a
-    // third reading a one-line change here.
-    std::array<std::vector<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
+    // THE WALK ITSELF LIVES IN THE PREFETCH STORE (history_prefetch.h), not
+    // here: this is a binding, and the generation is which run it bound to.
+    const GuiHistoryPrefetch* store_            = nullptr;
+    unsigned long long        store_generation_ = 0;
+
+    // One slot per (commit, compare mode), filled on first request and grown to
+    // match membership as the store delivers. A DEQUE per reading, because
+    // push_back leaves every element already in it exactly where it is, which is
+    // delta_at's pointer-stability contract under a growing walk. Indexed by the
+    // enum's own value, which is what makes adding a third reading a one-line
+    // change here.
+    std::array<std::deque<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
 // -- THE COMMIT ACT — the product's one mutating git route ------------------

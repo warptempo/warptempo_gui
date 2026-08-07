@@ -383,6 +383,16 @@ public:
     // GuiHistoryCommitWorker::on_completion_event).
     void set_history_worker_completion_fd(int fd, std::function<void()> on_event);
 
+    // And the SIXTH, the history walk's prefetch worker (2026-08-07). It is the
+    // one whose eventfd is a READY signal rather than a completion: the scan
+    // streams many results, the counter coalesces their signals, and the
+    // callback DRAINS whatever has queued (routes to
+    // GuiHistoryPrefetch::drain through the input handler's arrival hook). The
+    // loop's read of the counter is unchanged — the value is not the count of
+    // anything the callback needs.
+    void set_history_prefetch_completion_fd(int fd,
+                                            std::function<void()> on_event);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -504,6 +514,11 @@ private:
     // -1 when no checkpoint worker is registered.
     int  history_worker_completion_fd_ = -1;
     std::function<void()> on_history_worker_completion_;
+
+    // History-prefetch ready fd. Same lifetime story again; -1 when no prefetch
+    // worker is registered.
+    int  history_prefetch_completion_fd_ = -1;
+    std::function<void()> on_history_prefetch_ready_;
 
     // -- The system clipboard (the CLIPBOARD selection) --
     // The device is created against the seat, so it is recreated when a seat
