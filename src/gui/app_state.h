@@ -128,6 +128,30 @@ struct UndoEntry {
     // after-state), which becomes the snapshot coordinate of the counter-entry.
     std::vector<int>          touched_snapshot;
     std::vector<int>          touched_live;
+    // WHICH ENTRY THIS IS — a monotonic serial stamped when the entry ENTERS a
+    // stack, and the only identity an entry carries (2026-08-07). 0 means never
+    // stamped, which no entry resident in either stack ever is: the stampers are
+    // UndoHistory::push, which every one of the four push_undo_* helpers goes
+    // through, and restore_history_entry's COUNTER-ENTRY, which is a genuinely
+    // new entry and takes a fresh serial of its own (re-derived by grep on
+    // `UndoEntry ` — those five sites are every construction in the product).
+    //
+    // AN ENTRY KEEPS ITS SERIAL FOR AS LONG AS IT SITS WHERE IT SITS, which is
+    // the whole of what it promises and the whole of what its reader needs. A
+    // restore MOVES an entry off a stack and into the live state; it is not
+    // re-stamped on the way, because it stops being a stack member at all. The
+    // in-place touched_live write (Undo::mark_touched_live) leaves it alone for
+    // the same reason: same entry, same position, same serial.
+    //
+    // ITS ONE READER IS THE HISTORY VIEW'S LOCAL WALK
+    // (GuiHistoryLocalWalk::member_at, history_diff.cpp), which captures the
+    // serial at each walked position when the view opens and refuses to answer
+    // for a position whose serial has moved. That is what makes the kCap
+    // EVICTION detectable: an evicting push slides every entry down one position
+    // while the stack's SIZE does not move, so the size alone cannot see it and
+    // the serial can. Nothing else reads it, nothing serializes it, and it is
+    // never compared for anything but equality.
+    std::uint64_t             serial               = 0;
 };
 
 // Session-only region selection — an Ableton-style arrangement span, and TRIM
@@ -358,6 +382,21 @@ struct UndoHistory {
     int  saved_distance = 0;
     bool saved_valid    = true;
 
+    // THE SERIAL SOURCE (2026-08-07) — see UndoEntry::serial for what the stamp
+    // is for. It starts at 1 so that 0 can mean "never stamped", and it is
+    // MONOTONIC FOR THE PROCESS: reset() deliberately does not rewind it, since
+    // the whole value of a serial is that no two entries ever share one, and a
+    // rewind would let a refilled stack reissue numbers a reader may still be
+    // holding. At one stamp per authoring act a 64-bit counter cannot be
+    // exhausted by a human.
+    std::uint64_t next_serial = 1;
+
+    // Take the next one. TWO CALLERS by design: push() below, and
+    // restore_history_entry's counter-entry, which enters a stack without going
+    // through push (undo.cpp — the no-kCap-trim site states why it is a bare
+    // push_back).
+    std::uint64_t stamp_serial() { return next_serial++; }
+
     // Evict the oldest (bottom) entry of the undo stack for the kCap trim while
     // keeping the saved reference honest. Saved distances into the undo stack
     // are negative. Hopping the saved baseline over an entry is
@@ -407,6 +446,12 @@ struct UndoHistory {
         }
         redo_stack.clear();
         if (saved_valid) saved_distance -= 1;
+        // STAMPED AS IT ENTERS THE STACK (2026-08-07): this is the funnel every
+        // one of the four push_undo_* helpers goes through, so stamping here
+        // covers every authored entry with no site to forget. Whatever the
+        // caller left in the field is overwritten — the stamp is this owner's,
+        // not the producer's.
+        entry.serial = stamp_serial();
         undo_stack.push_back(std::move(entry));
         if (undo_stack.size() > kCap) {
             evict_undo_bottom_with_saved_ref();

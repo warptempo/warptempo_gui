@@ -509,6 +509,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // entry.touched_snapshot. Empty stays empty (hint-less producers).
     counter.touched_snapshot    = entry.touched_live;
     counter.touched_live        = entry.touched_snapshot;
+    // A FRESH SERIAL, NEVER THE RESTORED ENTRY'S (2026-08-07). The counter is a
+    // NEW entry — built from the live state, not moved off the other stack — and
+    // it is entering a stack, which is exactly when UndoEntry::serial is stamped.
+    // It cannot ride through UndoHistory::push (that would clear the redo stack
+    // and cap the undo one, neither of which a restore may do — the no-trim note
+    // below), so it takes the stamp from the same owner directly. Inheriting
+    // `entry.serial` instead would put two entries carrying one identity in play,
+    // which is the one thing a serial must never allow.
+    counter.serial              = app.history.stamp_serial();
     std::vector<GuiWarpMarker>       before_w = counter.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
 

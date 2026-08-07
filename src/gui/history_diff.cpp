@@ -2010,6 +2010,13 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
     count_ = app.history.undo_stack.size();
     gui_   = capture_history_gui_side(app);
     now_   = now;
+    // THE IDENTITY OF EACH WALKED POSITION, captured with the count and in the
+    // walk's own newest-first order, so `serials_[i]` is the entry member i
+    // names. member_at re-reads the position and compares.
+    serials_.assign(count_, 0);
+    for (std::size_t i = 0; i < count_; ++i) {
+        serials_[i] = app.history.undo_stack[count_ - 1 - i].serial;
+    }
     members_.assign(count_, Member{});
     // SIZED ONCE, NEVER GROWN — the frozen-stack premise (the class comment owns
     // it) is exactly what lets these be vectors where the commit walk needs
@@ -2034,21 +2041,31 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // simply does not carry the new entry — and the frozen now side is the state
 // before it too, so index 0's forward pairing stays exactly event 0's change.
 //
-// A SHRUNKEN STACK IS ANSWERED AS NOTHING AT ALL (a blank lane) rather than read
-// at indices that now mean other events. It has no producer: undo, redo and load
-// are all consumed or close the view.
-//
-// THE ONE SHAPE NEITHER TERM CATCHES is an EVICTING push — a stack already at
-// UndoHistory::kCap when that view switch pushes, where the bottom entry goes and
-// every position shifts by one while the size does not. It needs a 500-deep undo
-// stack, iteration brackets standing, and an S->T switch made inside the view;
-// the cost is a lane showing its neighbour's delta until the visit ends, nothing
-// written and nothing else touched. Recorded rather than closed: the exact fix is
-// an identity the undo history does not currently carry.
+// AND THE POSITION'S IDENTITY IS CHECKED, not assumed (2026-08-07, CLOSING the
+// arc's one recorded corner). The captured serial (UndoEntry::serial) is
+// compared against the entry sitting at that position now, and a mismatch
+// answers NOTHING — a blank lane, the honest degradation, and now the answer for
+// EVERY mutation shape rather than for the ones that were thought of:
+//   * a SHRUNKEN stack — no producer at all (undo, redo and load are consumed or
+//     close the view) — is caught by the size term below, which is what keeps
+//     the read in range before the serial can be looked at;
+//   * an EVICTING PUSH is what the serial is really for: a stack already at
+//     UndoHistory::kCap when that view switch pushes drops the bottom entry and
+//     slides every position down one WHILE THE SIZE HOLDS, so no count can see
+//     it and the identity can. This was the arc's accepted corner ("a lane
+//     showing its neighbour's delta until the visit ends"), and it is closed:
+//     the first position asked answers nothing instead;
+//   * anything unforeseen is covered by construction, the question being "is
+//     this still the entry I captured" rather than "did one of these happen".
+// The two terms are ordered rather than merged: the size guard is a bounds
+// precondition on the subscript the serial check performs.
 const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         std::size_t index) {
     if (app_ == nullptr || index >= count_) return nullptr;
     if (app_->history.undo_stack.size() < count_) return nullptr;
+    if (app_->history.undo_stack[count_ - 1 - index].serial != serials_[index]) {
+        return nullptr;
+    }
     Member& m = members_[index];
     if (m.built) return &m;
 
