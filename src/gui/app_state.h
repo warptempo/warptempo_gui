@@ -2142,12 +2142,25 @@ struct AppState {
     //
     // AND THE ROSTER WEARS THOSE REFUSALS (architect 2026-08-04): every
     // redesigned button whose act this mode consumes takes its row's DISABLED
-    // face and ignores the pointer, so Undo, Redo, copy, paste, bpm, iteration,
-    // follow, listen and the two menu anchors grey out while Quit, the view bar,
-    // Save, the Commit-faced Render, the S/T + W/P radios, the load-in-place
-    // opener and the history button stay lit — the load-in-place opener ON THE
-    // COMMIT TABS, that one having become source-conditional in 2026-08-07 like
-    // the two acts above it. The partition is
+    // face and ignores the pointer, and the ones that still work stay lit. The
+    // membership below is RE-DERIVED from the code (the retell rule: walk the
+    // chord table against the two predicates rather than edit an inherited
+    // list), 2026-08-08.
+    //   DEAD — Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), RENDER (Ctrl+Alt+R, which
+    //   left the allowlist with its shifted twin on 2026-08-08 when the
+    //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
+    //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
+    //   the two menu anchors.
+    //   LIT — Quit (Ctrl+Q), the view bar's three (bare 1/2/3), the
+    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the S/T + W/P radios (bare
+    //   `t` / `p`), all four row-3 tabs and the history button (Ctrl+Tab and
+    //   bare `h`, the mode's OWN vocabulary, which the derivation asks about
+    //   first), and the walk's two arrows (bare `,` / `.`, the same).
+    //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
+    //   key and the face: Save greys with an empty head delta (or a checkpoint
+    //   in flight), the load-in-place opener greys on the LOCAL tabs (no commit
+    //   to load), and Revert greys with no diff flag selected.
+    // The partition is
     // DERIVED
     // from the two gates above (plus the anchors' toggle_dropdown lockout) and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp

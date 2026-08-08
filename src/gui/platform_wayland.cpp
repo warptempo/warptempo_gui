@@ -2737,10 +2737,37 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // No motion is synthesized: this edge runs inside the GUI's own
             // release handler, and re-entering it is not worth the hover
             // refresh the next real motion delivers anyway.
-            virtual_pointer_x_ = restore_x;
-            virtual_pointer_y_ = capture_restore_y_;
-            pointer_x_ = static_cast<int>(std::nearbyint(restore_x));
-            pointer_y_ = static_cast<int>(std::nearbyint(capture_restore_y_));
+            //
+            // THE WRITE-BACK IS CLAMPED THOUGH THE HINT IS NOT (2026-08-08), and
+            // the two are different questions rather than an inconsistency. The
+            // HINT is raw on purpose (the paragraph above): the compositor
+            // clamps an off-window hint back on-screen itself, and clamping it
+            // here would instead pin the cursor to the window edge. The RECORD
+            // models where a CLICK CAN BE ROUTED, which is surface-local by
+            // definition — every consumer of pointer_x_/pointer_y_ hit-tests
+            // against surface rects — so an off-window value stored here is a
+            // point no press can legitimately land on, and until the next
+            // physical motion a click would route at it. The alt-pan is the one
+            // producer: it sets no restore-x override, so its raw travel can end
+            // anywhere. AND THE CLAMP IS EXACT IN EVERY CASE THAT MATTERS: if
+            // the compositor's screen-clamp really did draw the cursor outside
+            // this window, a pointer-leave follows and the record stops being
+            // consulted at all; if it drew it inside, the drawn point IS the
+            // clamped one. (The separately accepted staleness — a compositor
+            // that revokes the lock without applying the hint — is untouched:
+            // that path passes apply_restore_hint = false and never reaches
+            // here.)
+            const double max_x = width_  > 0 ? static_cast<double>(width_  - 1)
+                                             : 0.0;
+            const double max_y = height_ > 0 ? static_cast<double>(height_ - 1)
+                                             : 0.0;
+            const double tracked_x = std::clamp(restore_x, 0.0, max_x);
+            const double tracked_y =
+                std::clamp(capture_restore_y_, 0.0, max_y);
+            virtual_pointer_x_ = tracked_x;
+            virtual_pointer_y_ = tracked_y;
+            pointer_x_ = static_cast<int>(std::nearbyint(tracked_x));
+            pointer_y_ = static_cast<int>(std::nearbyint(tracked_y));
         }
         zwp_locked_pointer_v1_destroy(locked_pointer_);
         locked_pointer_ = nullptr;
@@ -2774,8 +2801,10 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // above is a request, and only the compositor's next absolute event says
     // where the pointer actually came back. THE COORDINATES AND THE FLAG PART
     // COMPANY HERE, which is the whole shape of the fix above: the tracked
-    // position is written to the hint (the pixels the cursor is drawn on, the
-    // best estimate there is), while the flag keeps saying the estimate is not
+    // position is written to the hint clamped into the surface (the pixels the
+    // cursor is drawn on where that is inside this window, and the nearest point
+    // a click could route at where it is not), while the flag keeps saying the
+    // estimate is not
     // an observation — so cursor kinds stay dropped until the compositor speaks
     // and no OTHER consumer is left holding a point the pointer never occupied.
     apply_cursor_kind();

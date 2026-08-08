@@ -436,25 +436,58 @@ void GuiInputHandler::close_history_mode() {
 
     // THE RESTORE. Bit-exact whenever the audio view is the one the snapshot was
     // taken in — the ordinary visit, and the only shape reachable without a view
-    // switch. When the view HAS flipped the snapshot's two frame-shaped values
-    // are in the other domain, and translating them through the live warp map is
-    // what the `t` toggle does to the band it carries across; the zoom LEVEL is
-    // carried untranslated there too, so it is here. A parity of two flips lands
-    // back on the exact arm, having translated nothing.
+    // switch. A parity of two flips lands back on that exact arm, having
+    // translated nothing.
+    //
+    // WHEN THE VIEW HAS FLIPPED the snapshot's two frame-shaped values are in the
+    // other domain, and the translation is THE `t` TOGGLE'S OWN RECIPE — which is
+    // NOT "map both values" (the claim that stood here until 2026-08-08, and it
+    // was false for the viewport wherever the warp is nonlinear: mapping the two
+    // ends independently moves the playhead's distance from the window's left
+    // edge, so the band came back with its playhead sitting somewhere else in
+    // it). The toggle is COLUMN-PRESERVING: it takes the playhead's screen COLUMN
+    // in the pre-flip domain, translates THE PLAYHEAD ALONE, and DERIVES the
+    // destination start from that preserved column
+    // (handle_active_audio_view_toggle, input_handler.cpp, is the semantic owner
+    // of all three steps; input_render_dispatch.cpp's target-view anchor already
+    // re-spells them in place for the same reason, and this is the third site).
+    // Re-spelled rather than hoisted because the toggle's own two spp reads are
+    // `current_samples_per_pixel`, whose live_total_frames evaluation is a
+    // deliberately preserved cache/diagnostic timing — a shared owner would have
+    // to keep or drop that, which is a bigger change than this arithmetic.
+    //
+    // SPP IS DOMAIN-INDEPENDENT (samples_per_pixel_at is a pure function of the
+    // zoom level and the sample rate, and the level is carried across
+    // untranslated exactly as the toggle carries it), so ONE value serves both
+    // sides here and the recipe reduces to preserving the playhead-to-viewport
+    // FRAME offset — which is precisely what the toggle's own inactive-tab arm
+    // does by shifting the stored viewport by the playhead's delta. The column
+    // form is kept because the column is the premise; the frame count is not.
     if (audio.total_frames() > 0) {
         if (entry_view != app.active_audio_view) {
             const std::vector<WarpFrameMapSegment>& map =
                 target_view_warp_frame_map_cached(
                     app, audio.sample_rate(),
                     static_cast<long>(audio.total_frames())).warp_frame_map;
-            auto flip = [&](int64_t v) {
-                const double d = static_cast<double>(v < 0 ? 0 : v);
-                return static_cast<int64_t>(std::nearbyint(
-                    entry_view == 'S' ? map_source_to_target(d, map)
-                                      : map_target_to_source(d, map)));
-            };
-            restore_ph = flip(restore_ph);
-            restore_vp = flip(restore_vp);
+            // The playhead's column in the ENTRY view's window, from the
+            // snapshot trio and nothing live: the entry pair at the entry zoom.
+            const double spp =
+                samples_per_pixel_at(entry_zoom, audio.sample_rate());
+            const double ph_px =
+                (spp > 0.0)
+                ? (static_cast<double>(restore_ph - restore_vp) / spp)
+                : 0.0;
+            // The playhead ALONE crosses the map, banker's-rounded as every
+            // domain translation in the product is.
+            const double d = static_cast<double>(restore_ph < 0 ? 0 : restore_ph);
+            restore_ph = static_cast<int64_t>(std::nearbyint(
+                entry_view == 'S' ? map_source_to_target(d, map)
+                                  : map_target_to_source(d, map)));
+            // The start that puts it back at that column in the POST-flip
+            // domain. A negative or past-domain result is the clamp tail's
+            // business, exactly as it is at the toggle.
+            restore_vp = static_cast<int64_t>(std::nearbyint(
+                static_cast<double>(restore_ph) - ph_px * spp));
         }
         // PLAYHEAD FIRST, VIEWPORT SECOND, and the order is what makes the
         // restore exact: move_playhead_to scrolls the viewport when its
