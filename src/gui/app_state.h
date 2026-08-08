@@ -2033,7 +2033,15 @@ struct AppState {
     //       half, resolved above every branch so a modal cannot hide it), which
     //       keeps the mode from outliving the visit — wander down to the
     //       waveform and Settings needs a click again;
-    //   (4) the pointer leaving the WINDOW (the platform's pointer-leave hook).
+    //   (4) the pointer leaving the WINDOW OUTSIDE ROW 1'S BAND (the platform's
+    //       pointer-leave hook, which asks point_in_menu_row_band of the
+    //       REMEMBERED position and calls the disarm only on a no). Row 1 abuts
+    //       the titlebar, so sliding one pixel UP off the row is the commonest
+    //       way to leave the window from it, and that is a step onto the
+    //       titlebar rather than out of the visit: the mode survives it and the
+    //       hovered row-1 button keeps its face, exactly as an OPEN menu already
+    //       survives the same edge (architect 2026-08-08). A leave anywhere
+    //       else — below the row, or with the mode not armed — disarms.
     // Entries (2)-(4) share one gated writer, disarm_menu_row, which is inert
     // while a menu is open — there the popup's own routes decide, and (1) is
     // what they call. The ONE close that KEEPS the mode is the row-1 hover
@@ -2733,7 +2741,12 @@ struct AppState {
     //     ITEM FACES (recompute_dropdown_hover), both repaired from the run
     //     loop's per-iteration SETTLED HOOK, because their inputs — about ten
     //     fact families for the one, the painter-published item rects for the
-    //     other — settle with no pointer event of any kind under them.
+    //     other — settle with no pointer event of any kind under them;
+    //   * the POINTER-LEAVE HOOK (main.cpp), the one reader that is not a repair
+    //     and the one that WANTS the position the pointer left behind: it asks
+    //     point_in_menu_row_band whether the leave went out through row 1, which
+    //     decides whether the menu row's armed mode and the hovered button's
+    //     face survive it (the rule is at AppState::Dropdown::menu_row_armed).
     // The dropdown's RELEASE is deliberately NOT a reader: it derives its item
     // from the coordinates the release itself carries (finish_dropdown_release).
     int               last_mouse_x = -1;
@@ -2747,7 +2760,10 @@ struct AppState {
     // shared guard of all three repairs above, each carrying it inside its OWN
     // body rather than at its wiring: the tick and the settled hook keep running
     // after a leave, and neither may resurrect what the pointer-leave hook just
-    // dropped.
+    // dropped. The ROSTER's repair refuses the whole walk on it (the other two
+    // do the same), which is also what lets that hook KEEP a face — the row-1
+    // button still lit while the pointer rests on the titlebar — instead of
+    // having it wiped a wakeup later.
     // Written at exactly two edges: true in on_motion, false in the
     // pointer-leave / capability-loss hook beside the hover and press clears.
     // Re-entry delivers a synthesized motion, which sets it back.
@@ -3063,6 +3079,21 @@ GuiRect bottom_strip_area(const AppState& a);
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
 GuiRect top_menu_row_area(const AppState& a);
+// ROW 1'S BAND AS A PREDICATE — the ONE spelling of "this point is on the menu
+// row", so the geometry is written once for the two consumers that decide the
+// MENU ROW'S MODE by it (AppState::Dropdown::menu_row_armed):
+//   * update_menu_row_exit (input_pointer.cpp), which ends the mode when a
+//     delivered MOTION leaves the band — wander down to the waveform and
+//     Settings needs a click again;
+//   * the platform's POINTER-LEAVE hook (main.cpp), which asks the same question
+//     of the REMEMBERED position to tell a leave THROUGH row 1 (upward onto the
+//     titlebar, which row 1 abuts — mode and hovered face both survive) from a
+//     leave anywhere else (both go).
+// It is the press claim's own rect too, so "on the row" means one thing to the
+// claim, the exit and the leave alike.
+inline bool point_in_menu_row_band(const AppState& a, int x, int y) {
+    return rect_contains(top_menu_row_area(a), x, y);
+}
 GuiRect top_toolbar_row_area(const AppState& a);
 GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);

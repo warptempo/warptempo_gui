@@ -2909,6 +2909,30 @@ void GuiInputHandler::clear_redesign_button_hover() {
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
+    // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW — the same first line
+    // and the same reason as recompute_dropdown_hover's, the boundary's other
+    // pointer-derived face: the remembered coordinates name a point INSIDE the
+    // window even after the pointer has left, so this walk has no honest answer
+    // to give while it is out. Its per-TICK caller (main.cpp) keeps running after
+    // a leave, and the refusal is what makes that call inert in both directions —
+    // it can neither re-light a face the pointer-leave hook dropped nor CLEAR the
+    // one that hook deliberately KEEPS when the pointer left through row 1 with
+    // the menu row's mode armed (the rule is at that hook, the band predicate at
+    // point_in_menu_row_band). Nothing else can move a face out there: the only
+    // writer of `hovered = true` is this walk, and the only other writers of
+    // false are the leave hook itself and the dropdown open edge, which no
+    // out-of-window event can reach.
+    // THE GUARD LIVES HERE, NOT AT THE WIRING, because this function is the
+    // faces' one derivation — on_motion, the other caller, writes
+    // app.pointer_in_window true at its top and seeds the coordinates in the same
+    // breath, so it is unaffected by construction, and a future third caller
+    // inherits the rule instead of having to remember it.
+    // ACCEPTED, and it is the leave hook's cost rather than this line's: a kept
+    // face is FROZEN for as long as the pointer stays out, so a row-1 button that
+    // changed its enabled or selected bit meanwhile keeps the hovered bit it left
+    // with until the re-entry motion re-derives the whole roster. The paint reads
+    // both bits, and row 1's faces are the ones this can reach at all.
+    if (!app.pointer_in_window) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
@@ -2928,9 +2952,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // THE ZONE IS THE SECOND TERM (redesign_button_hover_zone, app_state.h):
         // an open dropdown and the SELECTED tab answer nothing to the pointer at
         // all, and both refusals live in that one predicate rather than as
-        // conditions here or in the painter.
-        const bool under_pointer = app.pointer_in_window &&
-                                   rect_contains(f.rect, mx, my) &&
+        // conditions here or in the painter. There is no in-window term: the
+        // whole walk refused above.
+        const bool under_pointer = rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
         // THE FACE ADDS THE ENABLED TERM AND THE HINT DOES NOT (architect
         // 2026-08-07): a disabled button keeps its dead face under the pointer
@@ -3892,8 +3916,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
 
 // THE MENU ROW'S MODE, EXIT HALF — "the pointer left row 1, go cold", which is
 // what keeps the mode from outliving the visit: wander down to the waveform and
-// Settings needs a click again. The band is top_menu_row_area, the press claim's
-// own rect, so "on the row" means one thing to both.
+// Settings needs a click again. The band is point_in_menu_row_band (app_state.h),
+// which wraps top_menu_row_area — the press claim's own rect, so "on the row"
+// means one thing to the claim, to this exit and to the pointer-leave hook, the
+// predicate's second consumer.
 //
 // IT RUNS WHEREVER MOTION IS SEEN — on_motion's very top, above every branch —
 // and that is the half's whole design. The OPEN half below has a guard list (it
@@ -3912,7 +3938,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
 // disarm_menu_row carries that gate for all of its callers.
 void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
     if (!app.dropdown.menu_row_armed) return;
-    if (rect_contains(top_menu_row_area(app), mouse_x, mouse_y)) return;
+    if (point_in_menu_row_band(app, mouse_x, mouse_y)) return;
     disarm_menu_row();
 }
 
@@ -3958,10 +3984,13 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
 // pointer-leave hook (main.cpp, beside the row's other face clears — a pointer
 // that has left the window has left the VISIT, the band exit's own reason at a
 // coarser edge, NOT a claim that no motion can follow: a re-entry synthesizes
-// one, and it finds a cold row that takes a click again, which is the intent),
-// ANY pointer press (on_button_press's top) and ANY
-// key press (on_key's top). It damages nothing: the mode is invisible, painting
-// no face of its own; what it changes is what the NEXT motion does.
+// one, and it finds a cold row that takes a click again, which is the intent —
+// and that call is CONDITIONAL since 2026-08-08: a leave whose last position was
+// inside row 1's band is a step onto the titlebar, not out of the visit, so the
+// hook skips this call entirely there), ANY pointer press (on_button_press's
+// top) and ANY key press (on_key's top). It damages nothing: the mode is
+// invisible, painting no face of its own; what it changes is what the NEXT
+// motion does.
 //
 // THE "NO MENU OPEN" GATE IS THIS FUNCTION'S REASON TO EXIST rather than four
 // inline writes. Leaving the window is NOT a dismissal — the popup stays up, as
@@ -4004,9 +4033,12 @@ void GuiInputHandler::disarm_menu_row() {
 //     its per-iteration caller (main.cpp's settled hook) from re-lighting from
 //     the remembered coordinates what this function drops — and
 //     close_dropdown's struct reset needs a dismissal this edge is not.
-// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and so
-// does the row's armed mode (the leave hook calls disarm_menu_row for that, and
-// its no-menu-open gate owns the question).
+// THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and the
+// row's armed mode is the leave hook's own question, asked beside this call:
+// with a menu open disarm_menu_row is inert (its no-menu-open gate), and with
+// none open the hook skips it altogether when the pointer left THROUGH row 1's
+// band, so the mode survives that leave the way the standing menu survives this
+// one.
 // THE PRESS CLAIM GOES ABOVE THE TRANSITION GATE: this is the button-LOST edge,
 // so a re-entry that still reports the button down must not resurrect an arm no
 // release will ever be attributed to. Coming back takes a fresh press, exactly

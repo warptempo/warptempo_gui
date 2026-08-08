@@ -1085,9 +1085,11 @@ int main(int argc, char** argv) {
     });
 
     // Pointer-leave / capability-loss drop. THIS BODY IS THE AUTHORITATIVE
-    // EFFECT LIST for the hook — tooltip hide, roster hover, roster click face,
-    // the popup's two item faces plus its press claim, and the conditional
-    // menu-row disarm. The platform-side sites name their OWN concern and point
+    // EFFECT LIST for the hook — tooltip hide, roster click face, the popup's two
+    // item faces plus its press claim, and the PAIR that a leave through row 1
+    // skips, the roster hover clear and the menu-row disarm (which is itself
+    // gated a second time, on no menu being open). The platform-side sites name
+    // their OWN concern and point
     // here rather than each keeping a list that can drift (the setter contract
     // and the member comment in platform_wayland.h, and the capability-loss fire
     // site in platform_wayland.cpp).
@@ -1101,9 +1103,10 @@ int main(int argc, char** argv) {
     // that each drops a VISUAL FACE or a press CLAIM, so a later motion or
     // release lands unowned or as a harmless no-op — never an inability of those
     // events to arrive.
-    // The hover-driven faces must therefore be cleared here, or a pointer that
-    // slides out of the window over a button leaves its pill / outline lit for
-    // as long as it stays outside. THE MARKER
+    // The hover-driven faces must therefore be cleared here — EXCEPT on the one
+    // leave named below, which keeps its button lit on purpose — or a pointer
+    // that slides out of the window over a button leaves its pill / outline lit
+    // for as long as it stays outside. THE MARKER
     // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
     // redesigned rows' button hover is the only ROSTER hover left (an open
     // dropdown's item hover is the other pointer-position-dependent surface
@@ -1123,13 +1126,39 @@ int main(int argc, char** argv) {
     // claim (clear_dropdown_pointer_state), and dropping the claim is what
     // leaves a re-entry's motion and any later release owning nothing; the MENU
     // ITSELF STAYS UP, because leaving the window is not a dismissal.
-    // THE MENU ROW'S MODE ENDS HERE TOO (the armed bit, AppState::Dropdown::
-    // menu_row_armed): once a menu has been opened from row 1 the anchors open on
+    // THE MENU ROW'S MODE ENDS HERE TOO, BUT NOT WHEN THE POINTER LEAVES THROUGH
+    // ROW 1 (the armed bit, AppState::Dropdown::menu_row_armed; architect
+    // 2026-08-08). Once a menu has been opened from row 1 the anchors open on
     // hover alone, and a pointer that has left the window has left the visit, so
     // coming back must take a click again — the same rule the band-exit disarm
     // states, at the coarser edge. It is a no-op while a menu is OPEN (the gate is
     // inside disarm_menu_row): leaving the window is not a dismissal, and the
     // popup that stays up stays the mode.
+    // THE EXCEPTION IS THAT SAME SENTENCE APPLIED TO THE CLOSED-AND-ARMED STATE.
+    // Row 1 ABUTS THE TITLEBAR, so the commonest way to leave the window from the
+    // row is to slide one pixel UP off it — and the mode's own band question,
+    // asked of the remembered position (point_in_menu_row_band, the exact
+    // predicate the motion exit uses), answers "still on the row". Leaving the
+    // window that way is no more a dismissal than leaving it with a menu standing
+    // is: that case already keeps the popup up, keeps the mode, and behaves
+    // stickily on return, and the two must not disagree over which pixel the
+    // pointer crossed. So on that leave the mode SURVIVES and the hovered row-1
+    // button KEEPS ITS FACE — Quit stays lit under a pointer resting on the
+    // titlebar, which is the visible half of the rule — and the first motion back
+    // in re-derives hover normally and, over an anchor, opens its menu (the armed
+    // hover open at on_motion's tail).
+    // THE FACE IS KEPT WHOLESALE, not per button, because with the pointer inside
+    // row 1's band no OTHER roster button can be hovered: hover is resolved from
+    // that one position against disjoint rects, so "the faces standing at the
+    // leave" is exactly "the row-1 button under the pointer, if any".
+    // NOTHING ELSE MAY CLEAR IT WHILE THE POINTER IS OUT, and one refusal covers
+    // that: recompute_redesign_button_hover — the tick's per-frame repair and the
+    // only writer of these bits that runs without a pointer event — returns early
+    // while app.pointer_in_window is false (stated there). A RESIZE still ends the
+    // mode, deliberately: it runs close_dropdown, which clears the armed bit above
+    // its own early return, and a relayout is a real dismissal. Any OTHER leave —
+    // below the row, or with the mode not armed — behaves exactly as it always
+    // did.
     // THE TOOLTIP GOES DOWN ON THIS EDGE TOO, and it must go down HERE rather
     // than be left to the tick's hover recompute: the hint hangs BELOW the top
     // strip, and hide_shift_tooltip is the only route that damages the box's own
@@ -1138,14 +1167,24 @@ int main(int argc, char** argv) {
     // would find no hovered owner, publish a zero rect and return — leaving the
     // part of the box below the strip in the buffer with no rect left to erase
     // it with. Hiding in the same event that takes the pointer away makes the
-    // erase and the unhover one edge.
+    // erase and the unhover one edge — and the tick is not a fallback for it in
+    // any case: that recompute refuses outright while the pointer is outside, so
+    // this is the only hide the edge gets.
     gui.set_pointer_left_hook([&] {
+        // Read the band BEFORE the in-window flag goes false: the answer is about
+        // the remembered position, which this hook does not touch, but the two
+        // reads belong together and the order says which leave this is.
+        const bool through_menu_row =
+            app.dropdown.menu_row_armed &&
+            point_in_menu_row_band(app, app.last_mouse_x, app.last_mouse_y);
         app.pointer_in_window = false;
         input_handler.hide_shift_tooltip();
-        input_handler.clear_redesign_button_hover();
+        if (!through_menu_row) {
+            input_handler.clear_redesign_button_hover();
+            input_handler.disarm_menu_row();
+        }
         input_handler.clear_redesign_button_press();
         input_handler.clear_dropdown_pointer_state();
-        input_handler.disarm_menu_row();
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook
@@ -1463,8 +1502,9 @@ int main(int argc, char** argv) {
         // an ACTIVE GESTURE FREEZES HOVER — the motion path enforces that by
         // returning before its tail, and an ungated tick would quietly undo it.
         // A pointer that has LEFT the window is handled inside the recompute
-        // (app.pointer_in_window), so the tick cannot re-light what the leave
-        // hook just cleared.
+        // (it returns early on app.pointer_in_window), so the tick can neither
+        // re-light what the leave hook cleared nor clear the row-1 face that hook
+        // deliberately keeps when the pointer left through the menu row.
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 

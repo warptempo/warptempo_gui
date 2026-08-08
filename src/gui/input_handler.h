@@ -618,14 +618,20 @@ struct GuiInputHandler {
     // input_pointer.cpp).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
-    // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
+    // and is called from on_motion's no-gesture tail and from the run loop's
+    // TICK; it REFUSES OUTRIGHT while the pointer is outside the window (its own
+    // first lines), which is what keeps the tick's call inert in both directions
+    // out there. clear_ is the pointer-LEAVE
     // / capability-loss drop, wired in main.cpp on the pointer-leave hook,
     // because a face is an answer to "where is the pointer" and the pointer is
     // gone: capability loss ends that stream outright, and an ordinary leave has
     // no motion only WHILE the pointer stays outside — long enough for a lit
     // pill to sit there unowned until a re-entry's synthesized motion recomputes
-    // it. Both damage ONLY on a real
-    // transition, and at most one invalidate_top_strip per call however many
+    // it. THAT CALL IS CONDITIONAL (architect 2026-08-08): a leave through ROW
+    // 1's band with the menu row's mode armed KEEPS the faces, so the hovered
+    // row-1 button stays lit while the pointer rests on the titlebar — the same
+    // leave that keeps the mode itself, argued at the hook. Both damage ONLY on a
+    // real transition, and at most one invalidate_top_strip per call however many
     // faces moved.
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
@@ -688,7 +694,9 @@ struct GuiInputHandler {
     // pointer-leave hook (main.cpp, beside the row's other face clears — a
     // pointer that has left the window has left the VISIT, which is the same
     // reason the band exit disarms, at a coarser edge; it is not a claim that no
-    // motion can follow, since a re-entry synthesizes one), and from the top of
+    // motion can follow, since a re-entry synthesizes one — and that call is
+    // skipped when the leave went out through ROW 1's own band, a step onto the
+    // titlebar the mode survives), and from the top of
     // on_button_press and
     // on_key (any press, any chord). It carries the "no menu open" gate, because
     // leaving the WINDOW is not a dismissal, a menu left standing is still the
@@ -729,7 +737,8 @@ struct GuiInputHandler {
     // own, so dropping the arm alone would leave an item lit outside the
     // window. The menu stays OPEN and the row stays ARMED — leaving the window
     // is not a dismissal, and the mode is disarm_menu_row's question, asked
-    // beside this call.
+    // beside this call and asked only of a leave that did NOT go out through row
+    // 1's band.
     void clear_dropdown_pointer_state();
 
     // THE HOVER TOOLTIP's hide — the hint's job ends the moment the user acts,
