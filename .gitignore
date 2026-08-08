@@ -21,8 +21,9 @@ docs/welcome_back_template.md
 tools/build/
 
 # projects
+projects/*/*.fingerprint
 projects/*/*.peaks
 projects/*/*.wav
-projects/*/*.fingerprint
+projects/*/peaks/
 projects/*/renders/
 projects/*/sheet/
