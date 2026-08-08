@@ -941,11 +941,15 @@ constexpr IconRowDef kIconRowButtons[] = {
 // which owns the label and the tooltip halves of the same fact and the reasoning
 // for both). It lives HERE because the constant icons do: kToolbarButtons is the
 // painter's roster half, and app_state.h carries no icon vocabulary at all.
-// Exactly one button overrides its own: Render, which is the COMMIT ACT while
-// the history mode stands and wears the commit icon to say so.
+// Exactly one button overrides its own: SAVE, which is the COMMIT ACT while the
+// history mode stands and wears the commit icon to say so — and keeps wearing it
+// while the checkpoint publishes, beside the "Committing..." label. (Render held
+// this override from 2026-08-04 to 2026-08-08, when the act moved onto the save
+// chord it begins with; Render's own icon is constant again.)
 icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
                                  icons::Icon table_icon) {
-    if (b == RedesignButton::Render && app.history_mode.active) {
+    if (b == RedesignButton::Save &&
+        (app.history_checkpoint_in_flight || app.history_mode.active)) {
         return icons::Icon::VcsCommit;
     }
     return table_icon;
@@ -1492,11 +1496,14 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
         // The label is shaped ONCE per button and both measured and painted from
         // that run — the button's width exists nowhere else, which is exactly why
         // the painter publishes the hit rect. So a label that CHANGES WITH STATE
-        // (Render's, in iteration mode — redesign_button_label owns which and
+        // (Save's three and Render's two — redesign_button_label owns which and
         // why) simply shapes wider and takes the width it needs: the walk below
         // is a css float walk with no authored button width anywhere in it, and
         // every button to this one's right is placed from the running pen. There
-        // is nothing here to keep in step with the text.
+        // is nothing here to keep in step with the text. SAVE IS THE ROW'S FIRST
+        // BUTTON, so its stateful widths PUSH the other three along (Render's,
+        // being last, pushed nothing) — which costs exactly nothing here and is
+        // why this walk is written the way it is.
         const text_shape::ShapedRun run = text_shape::shape_text_run(
             font, redesign_button_label(app, def.id, def.label));
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
@@ -3894,7 +3901,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // same story as the load editor above it: the mode's line yields its
         // cell to the surface the user is typing into, and gets it back when the
         // edit ends either way. It carries no mode test of its own — it can only
-        // be open while the view stands (its one opener is the view's Ctrl+Alt+R,
+        // be open while the view stands (its one opener is the view's Ctrl+S,
         // and every closer of the view runs past a keyboard the editor owns) —
         // and leaving the test out is the failing-safe direction: an editor that
         // somehow outlived the view would still paint its caret rather than

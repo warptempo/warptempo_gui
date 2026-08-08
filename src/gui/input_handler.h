@@ -346,7 +346,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // THE SECOND TAKES THE WHOLE AppState, THE FIRST TAKES NOTHING BUT THE PRESS,
 // and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
 // while THREE allowlist admissions are conditional on state they are asked about
-// (re-derived 2026-08-07) — the commit act's, on head_delta_empty (a view whose
+// (re-derived 2026-08-07) — the commit act's, which is CTRL+S since 2026-08-08,
+// on head_delta_empty (a view whose
 // newest checkpoint already carries the session's authoring content has nothing
 // to commit) and on history_checkpoint_in_flight (one checkpoint at a time), and
 // the revert act's, on a subject standing
@@ -1238,7 +1239,7 @@ private:
     bool handle_load_editor_key(GuiKey key, GuiInputState mods);
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the load editor's exact
-    // pattern for the history view's OTHER act. Ctrl+Alt+R while the view
+    // pattern for the history view's OTHER act. Ctrl+S while the view
     // stands opens it prefilled with `Update <id>`; Enter runs the
     // Save-and-Commit act under whatever the buffer holds; Esc abandons with
     // nothing written; an empty or whitespace-only buffer red-flashes and stays
@@ -1248,8 +1249,9 @@ private:
     // it to ask something worth asking.
     //
     // open_history_commit_editor: the opener, reached from ONE place —
-    // Ctrl+Alt+R's own arm, which the mode bit re-aims
-    // (handle_render_dispatch_keys).
+    // Ctrl+S's own arm, which the mode bit re-aims (on_key's `s` handler,
+    // input_handler.cpp; it was Ctrl+Alt+R's arm until 2026-08-08, when the
+    // architect moved the act onto the SAVE button's chord).
     // commit_title_editor_commit: Enter — validate non-blank, close the editor,
     // run the act (run_history_commit, which owns the save, the close and the
     // dispatch).
@@ -1828,7 +1830,10 @@ private:
     //     Ctrl+H, is NOT part of the mode's own vocabulary — it is admitted by
     //     the allowlist (conditionally, on a subject standing) and dispatched
     //     from on_key's ordinary body BELOW the read-only gate, so a locked tab
-    //     refuses it exactly as it refuses `'` and Ctrl+Alt+R. Its body owns the
+    //     refuses it exactly as it refuses `'` — but no longer as it refuses the
+    //     checkpoint act, which authors nothing and runs from a locked tab
+    //     (2026-08-07's band ruling; the act's chord is Ctrl+S since
+    //     2026-08-08, admitted by that same gate). Its body owns the
     //     per-class inverse, the always-force rule and the one undo entry.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     bool open_history_mode_fresh();

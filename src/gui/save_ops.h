@@ -15,6 +15,12 @@
 // NO Viewport REFERENCE any more (2026-08-01): a save paints nothing. Its one
 // damage request was the bottom row's dirty-dot cell, and the dot moved to the
 // window title, which the compositor repaints.
+//
+// ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
+// while a Save-and-Commit checkpoint is publishing, because that background act
+// writes these same three paths in the coincident projects/<id>/ workflow. The
+// term lives at the top of save() — one place, every caller — and the Save
+// button's "Committing..." face is its mirror.
 struct GuiSaveOps {
     AppState&        app;
     Undo&            undo;

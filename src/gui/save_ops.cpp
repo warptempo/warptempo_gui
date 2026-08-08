@@ -7,6 +7,42 @@
 #include <cstring>
 
 bool GuiSaveOps::save() {
+    // NO SAVE WHILE A CHECKPOINT IS PUBLISHING (architect 2026-08-08). The
+    // checkpoint worker writes the three sidecars into projects/<id>/ on its own
+    // thread, and in the coincident workflow — the loaded source living inside
+    // that same projects/<id>/ — those are EXACTLY the three paths this function
+    // writes, through the same fixed `<path>.tmp` temp name. Two writers on one
+    // temp name is a torn temp or a rename of captured-older bytes over a newer
+    // save, so the window is closed by refusing the save rather than by naming
+    // the temp files per-writer: with saves refused for the act's duration there
+    // is no concurrent writer of those three paths at all (a second checkpoint
+    // act is already refused, single-in-flight).
+    //
+    // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the five editors' own Ctrl+S
+    // admission (route_modal_editor_key) and the close prompt's [S]ave all
+    // funnel through here, so the lockout needs no second spelling.
+    //
+    // THE CLOSE PROMPT'S [S]ave IS REACHABLE HERE, and it answers with the arm
+    // it already has: the act saves before it dispatches, so the session is
+    // CLEAN at that moment and only an edit made DURING the publish can raise
+    // that prompt at all — and then the refusal below takes the prompt's
+    // existing "Save failed." / [R]etry rung, where one retry a moment later
+    // succeeds (the bit falls when the worker reports; quit's own join, which
+    // blocks on the act, happens after the prompt is answered rather than
+    // before it). Accepted as it stands: the window is seconds wide, the state
+    // is never lost, and [Delete] still quits — a second failure vocabulary for
+    // "busy, try again" would be a new surface for a self-correcting wait.
+    //
+    // THE ACT'S OWN PRELUDE SAVE IS EXEMPT BY ORDERING, not by a flag:
+    // run_history_commit calls this BEFORE it sets the bit (input_key_dispatch.
+    // cpp — save, capture, close, dispatch, in that order), so the save that is
+    // part of the act runs while nothing is in flight.
+    //
+    // SILENT, and the face is the message: the Save button reads "Committing..."
+    // and is disabled off this same bit (redesign_button_enabled, app_state.h),
+    // so a refusal here is a consumed nothing the user was already told about.
+    if (app.history_checkpoint_in_flight) return false;
+
     // Startup's locale_check.h tripwire covers launch; this catches a
     // dynamically loaded module changing numeric locale mid-session so refusal
     // preserves authored sidecars instead of writing corrupted numbers.

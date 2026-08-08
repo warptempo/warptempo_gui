@@ -2184,7 +2184,7 @@ struct AppState {
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
-    // second is Ctrl+Alt+R, further down, on the same reasoning). In the
+    // second is Ctrl+S, further down, on the same reasoning). In the
     // mode that editor's subject CHANGES: it opens prefilled with the viewed
     // commit's full SHA, takes any spelling git can resolve in its place, and on
     // Enter loads THAT COMMIT's three sidecars into the live session in
@@ -2203,11 +2203,18 @@ struct AppState {
     // and the mode's bottom-strip line yields its cell to the editor for the
     // life of the edit.
     //
-    // THE OTHER ADMITTED MUTATOR IS Ctrl+Alt+R, AND IT WRITES OUTSIDE THIS
-    // SESSION (architect 2026-08-04): while the mode stands that chord is not a
-    // render but THE SAVE-AND-COMMIT ACT — the mode bit selecting the command
-    // exactly as the iteration bit selects the sweep, one route with the
-    // selection inside it (handle_render_dispatch_keys). IT ASKS FOR THE COMMIT
+    // THE OTHER ADMITTED MUTATOR IS Ctrl+S, AND IT WRITES OUTSIDE THIS
+    // SESSION (architect 2026-08-04, REHOMED FROM Ctrl+Alt+R 2026-08-08): while
+    // the mode stands that chord is not the plain disk save but THE
+    // SAVE-AND-COMMIT ACT — the mode bit selecting the command exactly as the
+    // iteration bit selects the sweep, one route with the selection inside it
+    // (on_key's `s` arm). It belongs on THIS chord because the act runs the
+    // ordinary save as its first step, so the Save button is the surface that
+    // tells the truth about it; Render kept its own chord and greys in the view
+    // with the rest of the consumed roster, and THE PLAIN DISK SAVE HAS NO
+    // HOTKEY IN HERE at all (a settings-only drift — the one thing the head
+    // delta calls "nothing to checkpoint" — is saved by leaving the view first,
+    // architect-accepted 2026-08-08). IT ASKS FOR THE COMMIT
     // MESSAGE FIRST, through the COMMIT-TITLE EDITOR (architect 2026-08-07,
     // replacing the confirmation prompt that used to guard it and superseding
     // "the message is derived, not chosen"): a fourth bottom-strip modal,
@@ -2222,11 +2229,11 @@ struct AppState {
     // git route, and its only writer outside the user's own save). A FAILED SAVE
     // REFUSES THE WHOLE ACT before any of that, one stderr line and nothing
     // committed; run_history_commit (input_key_dispatch.cpp) owns the order, the
-    // refusal and the coincident-path reasoning. Ctrl+Alt+-
-    // Shift+R is NOT admitted, so the miscellaneous render stays a consumed
-    // nothing here and the Render button drops its shift line with it; the
-    // button itself wears the commit icon and the label "Save and Commit" while
-    // the mode stands, and reaches the act through its ordinary chord. THE
+    // refusal and the coincident-path reasoning. NEITHER RENDER CHORD is
+    // admitted, so both stay consumed nothings here and the Render button wears
+    // its ordinary face over the mode's disabled one; the SAVE button wears the
+    // commit icon and the label "Save and Commit" while the mode stands, and
+    // reaches the act through its own chord. THE
     // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
     // chord is a consumed no-op and that button greys (head_delta_empty, below,
     // owns the bit and the one decision both readers take it from), and since
@@ -2260,8 +2267,9 @@ struct AppState {
     // would drift from what is on screen — and it is not one here BY
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session EXCEPT
-    // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+Alt+R (the
-    // commit act) and Ctrl+H (the revert act; membership re-derived 2026-08-06)
+    // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+S (the
+    // commit act, on Ctrl+Alt+R until 2026-08-08) and Ctrl+H (the revert act;
+    // membership re-derived 2026-08-06)
     // — and every one of those closes the view as it ends, so no session
     // outlives a write to its own now side. The
     // mode's entry re-inits, so each visit measures against the state at that
@@ -2356,9 +2364,10 @@ struct AppState {
         // chord, following the surface (architect 2026-08-05, superseding his
         // same-day "there is no hotkey for the pair"): in the mode that chord
         // CYCLES the readings through the one switch owner instead of switching
-        // tabs, which is the mode-bit-selects-the-command shape Ctrl+Alt+R
-        // already has. CTRL+SHIFT+TAB IS THAT CYCLE'S MIRROR since 2026-08-07 —
-        // one tab LEFT with wrap, through the same owner — so the paired march
+        // tabs, which is the mode-bit-selects-the-command shape Ctrl+S and the
+        // iteration bit already have. CTRL+SHIFT+TAB IS THAT CYCLE'S MIRROR
+        // since 2026-08-07 — one tab LEFT with wrap, through the same owner —
+        // so the paired march
         // is the mode's own reverse cycle in here rather than a consumed no-op
         // (outside the view the march is untouched).
         //
@@ -2529,7 +2538,7 @@ struct AppState {
         // derivation, re-stated 2026-08-06: the allowlist DOES admit an authoring
         // chord — Ctrl+H, the revert act — so "no authoring route is admitted" is
         // not what makes the bit safe. What makes it safe is that all THREE of
-        // the mode's mutators (`'`, Ctrl+Alt+R and Ctrl+H) end by closing the
+        // the mode's mutators (`'`, Ctrl+S and Ctrl+H) end by closing the
         // view, so no session outlives a write to its own now side. A FUTURE
         // MUTATOR THAT DOES NOT CLOSE THE VIEW WOULD HAVE TO RECOMPUTE THIS BIT.
         // It is cleared by the whole-struct reset at close,
@@ -2570,13 +2579,16 @@ struct AppState {
         // reads EMPTY and greys the act, even though a byte-level commit would
         // land. Deliberate: a checkpoint is about authoring content, the same
         // reasoning that makes `scale` the only settings key this mode
-        // displays. Ctrl+S stays live for the disk save, and the act's own
-        // NothingToCommit arm remains the byte-level backstop for the state
-        // where the bit says there IS something and the repository disagrees.
+        // displays. THE PLAIN DISK SAVE IS NOT THE ESCAPE HATCH IT WAS: since
+        // 2026-08-08 Ctrl+S in the view IS this act, so a settings-only drift is
+        // saved by leaving the view first (architect-accepted with the move).
+        // The act's own NothingToCommit arm remains the byte-level backstop for
+        // the state where the bit says there IS something and the repository
+        // disagrees.
         //
         // ONE READER, TWO CONSUMERS: history_mode_key_blocked (input_key_-
-        // dispatch.cpp) makes its Ctrl+Alt+R admission conditional on this, so
-        // the chord is a consumed no-op and the Render button takes its row's
+        // dispatch.cpp) makes its Ctrl+S admission conditional on this, so
+        // the chord is a consumed no-op and the SAVE button takes its row's
         // disabled face from the SAME decision — never two spellings of it.
         //
         // "MEASURED ONCE AT ENTRY" BECAME "MEASURED ONCE" (2026-08-07, with the
@@ -2844,7 +2856,7 @@ struct AppState {
     bool load_editor_blink_last = false;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth bottom-strip
-    // modal and the `h` history view's own: Ctrl+Alt+R while the view stands
+    // modal and the `h` history view's own: Ctrl+S while the view stands
     // opens it prefilled with the checkpoint's default message (`Update <id>`,
     // history_checkpoint_title's own spelling) and Enter runs the Save-and-
     // Commit act with whatever the buffer holds as the commit title. It
@@ -2869,12 +2881,20 @@ struct AppState {
     // worker would put the button's face and the key's admission on two
     // different objects.
     //
-    // TWO REFUSALS READ IT, single-in-flight being the whole rule: the history
-    // view's Ctrl+Alt+R admission (history_mode_key_blocked, so the chord is a
-    // consumed no-op AND the Save-and-Commit button greys from that same one
-    // decision, exactly as the head-delta bit does), and bare `h` itself, which
-    // will not open a view whose walk would be measured against a repository the
-    // worker is mid-mutation on.
+    // THREE REFUSALS READ IT, single-in-flight and the write race being the two
+    // rules: the history view's Ctrl+S admission (history_mode_key_blocked, so
+    // the chord is a consumed no-op AND the Save-and-Commit button greys from
+    // that same one decision, exactly as the head-delta bit does); bare `h`
+    // itself, which will not open a view whose walk would be measured against a
+    // repository the worker is mid-mutation on; and — since 2026-08-08 — EVERY
+    // SAVE, globally, at the one save owner (GuiSaveOps::save). That third one
+    // is the bit's only VISIBLE face: the act closes the view and `h` will not
+    // reopen one, so the first refusal's grey is structural, while the save
+    // lockout shows as the Save button's "Committing..." wherever the user is.
+    // Its reason is a real race rather than a policy — the worker writes the
+    // three sidecars into projects/<id>/ off the main thread, and in the
+    // coincident workflow a concurrent Ctrl+S writes those same paths through
+    // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
 
     // THE DEFERRED FAILURE NOTICE (architect 2026-08-07). The checkpoint act now
@@ -3476,12 +3496,18 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 //     recorded here as code truth.)
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
-//   * Save takes its route's stable-state refusal, an empty warpmarkers_path
-//     (GuiSaveOps::save). Its OTHER refusal — a numeric locale that is no
-//     longer "C" — is deliberately NOT here: that is a mid-session dynamic
-//     fault, not stable state, and greying a button on it would hide the one
-//     stderr line that reports it.
-//   * Render takes Ctrl+Alt+R's own first line, an empty source_audio_path.
+//   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
+//     an empty warpmarkers_path, and — since 2026-08-08 — a CHECKPOINT IN
+//     FLIGHT, the global save lockout that keeps the checkpoint worker's writes
+//     from racing a concurrent save of the same three paths. Its OTHER refusal
+//     — a numeric locale that is no longer "C" — is deliberately NOT here: that
+//     is a mid-session dynamic fault, not stable state, and greying a button on
+//     it would hide the one stderr line that reports it.
+//   * Render takes Ctrl+Alt+R's own first line, an empty source_audio_path. Its
+//     history-view grey needs no arm here and never did: in the view both render
+//     chords are off the allowlist (2026-08-08), so the mode line at the top of
+//     this body answers for it through the derived partition, exactly as it does
+//     for Undo, Redo and the rest of the consumed roster.
 //   * Row 1's Quit and row 3's tabs answer true HERE: Quit keeps its two faces
 //     by ruling, and a tab has no disabled face of its own. Their entries exist
 //     so the vector is total over the roster and the comparator needs no
@@ -3626,8 +3652,18 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
+        // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
+        // is GLOBAL rather than mode-scoped because the act outlives the view it
+        // was launched from: while the worker writes the three sidecars into
+        // projects/<id>/, every save is refused at the one save owner
+        // (GuiSaveOps::save, which states why), so this arm is that refusal's
+        // mirror exactly as the read-only terms below mirror the key gate. The
+        // face it produces is the "Committing..." label's own state, and the
+        // per-tick drift comparator (main.cpp) is what repaints the row on both
+        // edges of the bit with no damage call at either.
         case RedesignButton::Save:
-            return !a.warpmarkers_path.empty();
+            return !a.warpmarkers_path.empty() &&
+                   !a.history_checkpoint_in_flight;
         case RedesignButton::Undo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.undo_stack);
@@ -3870,25 +3906,33 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     return {nullptr, nullptr};
 }
 
-// THE RENDER BUTTON'S TWO STATE FACES — the ONE row on this whole surface whose
-// text follows STATE rather than being a constant (architect 2026-08-02, joined
-// by the history face 2026-08-04). Ctrl+Alt+R is a chord whose MEANING is
-// selected by a mode bit, and the button says whichever command it currently is:
+// ROW 2'S TWO STATEFUL BUTTONS — the ONE row on this whole surface whose text
+// follows STATE rather than being a constant (architect 2026-08-02 for Render,
+// 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). Each is a chord
+// whose MEANING is selected by a mode bit, and the button says whichever command
+// it currently is:
 //
-//   HISTORY MODE STANDING → "Save and Commit", and the vcs-commit icon with it:
-//   the chord SAVES the piece beside its source through the ordinary Ctrl+S
-//   owner and then commits the live state into the projects repository as a
-//   checkpoint (run_history_commit, input_key_dispatch.cpp, owns the order and
-//   the refusal). The label carries both halves because the act does. It is
-//   ranked FIRST because it is the outer mode — the history mode's own allowlist
-//   is what admits the chord at all, and it admits it as the commit act whether
-//   or not iteration mode happens to have been left on underneath (nothing can
-//   toggle that bit while the mode stands, `i` not being on the allowlist).
-//   Its hint is the matching ONE-LINE form: Ctrl+Alt+Shift+R is not admitted by
-//   the mode's allowlist, so a shift press there does nothing at all.
+//   SAVE, WITH THE HISTORY MODE STANDING → "Save and Commit", and the vcs-commit
+//   icon with it: Ctrl+S there SAVES the piece beside its source through this
+//   very button's ordinary act and then commits the live state into the projects
+//   repository as a checkpoint (run_history_commit, input_key_dispatch.cpp, owns
+//   the order and the refusal). The label carries both halves because the act
+//   does. IT LIVES ON THIS BUTTON BECAUSE THE ACT IS SAVE-FIRST BY DEFINITION
+//   (architect 2026-08-08, correcting the Render hijack it shipped under): a
+//   surface that runs the save first belongs on the save's own slot, and Render
+//   went back to being a render in every mode.
 //
-//   ITERATION MODE ON → "Render Iterations", the sweep, and its own one-line
-//   hint.
+//   SAVE, WITH A CHECKPOINT PUBLISHING → "Committing...", the same commit icon,
+//   DISABLED, in EVERY view (the act outlives the view it was launched from).
+//   Ranked FIRST of the three because it is the outermost fact: while the worker
+//   is writing the three sidecars no save may run at all (GuiSaveOps::save's own
+//   term, whose mirror this face is). Three literal dots, not an ellipsis
+//   character — the product's text is ASCII in every label.
+//
+//   RENDER, WITH ITERATION MODE ON → "Render Iterations", the sweep, and its own
+//   one-line hint. The history mode gives Render NO face of its own any more: in
+//   the view both render chords are consumed, so the button wears its ordinary
+//   label and icon over the derived disabled face.
 //
 // THE TITLE CASE IS DELIBERATE AND SCOPED TO THESE TWO STRINGS (architect
 // 2026-08-03 for the capital I, 2026-08-04 for the capital C beside it): every
@@ -3901,22 +3945,29 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // through an editor whose prefix is the plain "Commit: " label — so the title
 // case here is the button's alone.)
 //
-// THE SHIFT LINE GOES WITH IT, and that is the same fact rather than a second
-// decision: Ctrl+Alt+Shift+R is a consumed no-op in iteration mode (the refusal
-// is in the render route, input_key_dispatch.cpp), so advertising a shift press
-// there would advertise nothing. The rule the static_assert below states —
-// the hint exists exactly where a shift press does something — therefore holds
-// on this form too, not only on the constant table it overrides.
+// "COMMITTING..." NEEDS NO EXCEPTION OF ITS OWN: it is one word, so sentence
+// case and title case spell it identically.
 //
-// BOTH STRINGS LIVE HERE, beside the constant table, so the label the button
+// RENDER'S SHIFT LINE GOES WITH ITS ITERATION FACE, and that is the same fact
+// rather than a second decision: Ctrl+Alt+Shift+R is a consumed no-op in
+// iteration mode (the refusal is in the render route, input_key_dispatch.cpp),
+// so advertising a shift press there would advertise nothing. The rule the
+// static_assert below states — the hint exists exactly where a shift press does
+// something — therefore holds on this form too, not only on the constant table
+// it overrides. In the HISTORY VIEW the whole button is dead, hint included in
+// the sense that it describes what the button does where it works — its two-line
+// constant form, the resting-disabled family's own answer.
+//
+// ALL THREE STRINGS LIVE HERE, beside the constant table, so the label a button
 // paints and the name its hint gives cannot drift into two different words.
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
-inline constexpr const char* kRenderCommitLabel     = "Save and Commit";
+inline constexpr const char* kSaveCommitLabel       = "Save and Commit";
+inline constexpr const char* kSaveCommittingLabel   = "Committing...";
 // ROW 3'S TWO STATE LABELS — the tab pair's, while the `h` view stands and the
 // tabs are the COMPARE SELECTOR instead (architect 2026-08-05). Sentence case,
-// the ordinary convention: these are ordinary one-word labels and not the
-// Render row's two named title-case exceptions. They live beside the render
-// pair for the same reason that pair lives beside the constant table — one
+// the ordinary convention: these are ordinary one-word labels and not row 2's
+// two named title-case exceptions. They live beside the toolbar
+// pair for the same reason that trio lives beside the constant table — one
 // place where a stateful button's word is written.
 // FOUR OF THEM SINCE 2026-08-07, the row being the product of the two axes: the
 // two readings of the COMMIT walk, then the same two of the LOCAL one. The
@@ -3952,9 +4003,24 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     if (a.history_mode.active && redesign_button_is_tab(b)) {
         return {nullptr, nullptr};
     }
-    if (b == RedesignButton::Render && a.history_mode.active) {
-        return {"Save and Commit (Ctrl+Alt+R)", nullptr};
+    // THE SAVE BUTTON'S TWO OVERRIDES, in the label's own rank order. A
+    // publishing checkpoint outranks the view because it outlives it; inside the
+    // view the button IS the act. Both are one-line forms: Save admits no shift
+    // press in any state (redesign_button_shift_admits), so neither can grow a
+    // second line. THE IN-FLIGHT HINT SHOWS ON A DEAD BUTTON, per the
+    // 2026-08-07 tooltips-on-disabled ruling, and names what the button is doing
+    // rather than what a press would do — there is no press here, and the face
+    // already says as much.
+    if (b == RedesignButton::Save && a.history_checkpoint_in_flight) {
+        return {"Committing the checkpoint (Ctrl+S)", nullptr};
     }
+    if (b == RedesignButton::Save && a.history_mode.active) {
+        return {"Save and Commit (Ctrl+S)", nullptr};
+    }
+    // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
+    // with its chord, so in the view Render is an ordinary dead button and shows
+    // its ordinary two-line hint — what it does and where it works, which is the
+    // same thing the three resting-disabled row-4 buttons show.
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return {"Render Iterations (Ctrl+Alt+R)", nullptr};
     }
@@ -3964,8 +4030,9 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // A BUTTON'S LABEL, by the same bits and for the same reason. The constant
 // per-button labels live with the painters' roster halves (kToolbarButtons and
 // kTabs, paint_handler.cpp); this answers only "does this button override its
-// own", which THREE now do — the Render button on two different mode bits, and
-// row 3's two tabs on the history view's. LABEL MEMBERSHIP IS UNCHANGED by any
+// own", which SIX now do — the SAVE button on two bits (a publishing checkpoint,
+// then the history view), the Render button on the iteration bit, and row 3's
+// four tabs on the history view's. LABEL MEMBERSHIP IS UNCHANGED by any
 // override: a button with a label keeps one in every mode. (The TOOLTIP
 // override's membership does move, once: the compare tabs drop theirs, on the
 // view bar's own reasoning — the sibling function above states it at its site.)
@@ -3984,8 +4051,14 @@ inline const char* redesign_button_label(const AppState& a, RedesignButton b,
         if (b == RedesignButton::TabC) return kCompareIterativeLocalLabel;
         if (b == RedesignButton::TabD) return kCompareCumulativeLocalLabel;
     }
-    if (b == RedesignButton::Render && a.history_mode.active) {
-        return kRenderCommitLabel;
+    // THE SAVE BUTTON'S THREE STATES, ranked outermost first: a publishing
+    // checkpoint (global — the act outlives the view), then the view itself,
+    // then the plain save from the table.
+    if (b == RedesignButton::Save && a.history_checkpoint_in_flight) {
+        return kSaveCommittingLabel;
+    }
+    if (b == RedesignButton::Save && a.history_mode.active) {
+        return kSaveCommitLabel;
     }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return kRenderIterationsLabel;

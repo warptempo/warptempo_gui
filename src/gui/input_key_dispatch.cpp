@@ -305,7 +305,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // THE SAVE (architect 2026-08-07). It writes the state the tab already
     // holds — it authors nothing — and the close prompt's [S]ave already saved
     // from a locked tab through the very same owner (the header's inconsistency
-    // note). Ctrl-exact, exactly the dispatch arm's own spelling.
+    // note). Ctrl-exact, exactly the dispatch arm's own spelling. IT CARRIES THE
+    // SAVE AND COMMIT ACT IN THE `h` VIEW since 2026-08-08 and needs no clause
+    // for it: publishing a checkpoint of the state the tab already holds authors
+    // nothing either, which is the same ruling that admitted the render chords.
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     // THE RENDER CHORDS (architect 2026-08-07), both of them, spelled as their
@@ -313,9 +316,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // authored state and writes audio beside the source; it changes no marker
     // and no engine setting, so the lock has nothing to protect from it.
     // Ctrl+Alt+R is the single render, or — with the iteration bit set — the
-    // sweep, and in the `h` history view it is the Save-and-Commit act, which
-    // reaches its dispatch through this gate and is therefore admitted with it.
-    // Ctrl+Alt+Shift+R is the miscellaneous-render cell.
+    // sweep; Ctrl+Alt+Shift+R is the miscellaneous-render cell. THE SAVE AND
+    // COMMIT ACT IS ADMITTED THROUGH CTRL+S INSTEAD since 2026-08-08 (the act
+    // moved onto the save chord it begins with), which changes nothing about
+    // this gate's answer: a save and a checkpoint publish the state the tab
+    // already holds and author nothing, and the save entry above admits it.
     // ONE ADMITTED ROUTE WRITES A STORE, and it is RATIFIED rather than merely
     // tolerated (architect 2026-08-07, ruling on it as a named consequence of
     // the reclassification): the ITERATION SWEEP's success tail wipes every
@@ -1476,37 +1481,55 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             load-in-place button greys while a Local tab is
 //                             lit — one decision for the key and the face, the
 //                             shape the two below already have.
-//   - Ctrl+Alt+R (no shift) → THE COMMIT ACT, the mode's second admitted mutator
-//                             (2026-08-04) and admitted on the same reasoning as
-//                             `'`: in the mode that chord is not a render at all
-//                             but the act of committing the live state into the
-//                             projects repository as a checkpoint. THE MODE BIT
-//                             SELECTS THE COMMAND — the iteration bit's own
-//                             precedent — so there is ONE route and the
-//                             selection sits inside it, at the chord's arm in
-//                             handle_render_dispatch_keys; nothing is dispatched
-//                             from here. The Render button reaches it by
-//                             synthesizing this same chord, and wears the commit
-//                             icon and label while the mode stands.
-//                             THIS IS THE ONE ADMISSION CONDITIONAL ON THE
-//                             SESSION (architect 2026-08-05): with the HEAD
+//   - Ctrl+S                → THE SAVE-AND-COMMIT ACT, the mode's second
+//                             admitted mutator, and in here it is the ONLY
+//                             meaning this chord has (architect 2026-08-08,
+//                             moving the act off Ctrl+Alt+R, which is a
+//                             consumed nothing in here now, its shifted
+//                             twin with it). The act is
+//                             save-FIRST by definition — it runs the ordinary
+//                             Ctrl+S through its own owner and only then writes,
+//                             commits and pushes — so the Save button is where
+//                             it belongs, and the mode bit selects the command
+//                             inside that button's own chord exactly as the
+//                             iteration bit selects the sweep. The dispatch is
+//                             the `s` arm in on_key (input_handler.cpp), which
+//                             opens the COMMIT-TITLE EDITOR; nothing is
+//                             dispatched from here. The Save button reaches it
+//                             by synthesizing this same chord and wears the
+//                             commit icon and the label "Save and Commit" while
+//                             the mode stands.
+//                             THE PLAIN DISK SAVE HAS NO HOTKEY IN THE VIEW,
+//                             and that is the ruling rather than a gap: a
+//                             settings-only drift — the one thing the act's own
+//                             head-delta grey calls "nothing to checkpoint" — is
+//                             saved by leaving the view first. (Ctrl+S inside
+//                             the commit-title editor is still the plain save,
+//                             through the five-editor modal contract, which this
+//                             gate never sees: the keyboard-modal gate sits
+//                             above it.)
+//                             IT IS ONE OF THE THREE ADMISSIONS CONDITIONAL ON
+//                             THE SESSION, and the first of them
+//                             (architect 2026-08-05 for the head delta,
+//                             2026-08-07 for the in-flight bit, both inherited
+//                             from the chord this act moved off): with the HEAD
 //                             DELTA EMPTY — the newest checkpoint already
 //                             carrying this session's authoring content — there
 //                             is nothing to checkpoint, so the chord drops here
-//                             as a consumed no-op and the Render button takes
-//                             its row's disabled face from this same line. The
-//                             bit is measured once at entry and cannot change
-//                             while the mode stands (AppState::HistoryMode::-
-//                             head_delta_empty owns it, the asymmetry included:
-//                             "no changes" is the delta's vocabulary, the two
-//                             marker columns plus `scale`, so a settings-only
-//                             drift greys the act too). Ctrl+S is unaffected —
-//                             saving to disk is its own act.
-//                             Ctrl+Alt+SHIFT+R IS DELIBERATELY NOT ADMITTED: a
-//                             miscellaneous render is an authoring act with no
-//                             meaning in this mode, so it stays a consumed
-//                             nothing here and the button's hint drops its shift
-//                             line to match.
+//                             as a consumed no-op and the SAVE button takes its
+//                             row's disabled face from this same line. The bit
+//                             is measured once and cannot change while the mode
+//                             stands (AppState::HistoryMode::head_delta_empty
+//                             owns it, the asymmetry included: "no changes" is
+//                             the delta's vocabulary, the two marker columns
+//                             plus `scale`, so a settings-only drift greys the
+//                             act too). The in-flight term is the same one
+//                             decision for one checkpoint at a time; it is
+//                             structural rather than visible in here (the act
+//                             closes the view and `h` will not reopen one over a
+//                             publishing repository), while the GLOBAL save
+//                             lockout that DOES show is GuiSaveOps::save's own
+//                             term, mirrored by the "Committing..." face.
 //   - Ctrl+H (no shift/alt) → THE REVERT ACT, the mode's THIRD admitted mutator
 //                             (architect 2026-08-05) and admitted on the same
 //                             reasoning as the two above: in the mode it is not
@@ -1535,9 +1558,6 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             this act writes it; Save-and-Commit, which
 //                             authors nothing, is admitted by that gate
 //                             instead).
-//   - Ctrl+S                → the save. It writes the LIVE state, which is
-//                             exactly the now side the diff is measured against,
-//                             so it cannot make the display disagree with disk.
 //   - Ctrl+Q                → the close routing.
 //   - Esc (bare)            → ITS EXISTING BINDINGS, AND NOT ONE OF ITS OWN
 //                             (architect 2026-08-04, closing the arc's recorded
@@ -1594,6 +1614,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // as the tab cycle's reverse, so the march still never runs in here, but by the
 // mode taking the chord rather than by this gate dropping it.)
 //
+// AND BOTH RENDER CHORDS ARE OUT since 2026-08-08 (architect), Ctrl+Alt+R having
+// joined its shifted twin here when the checkpoint act moved onto Ctrl+S: a
+// render is an authoring-adjacent act with no meaning in a viewer, and with
+// nothing left to select between, the chord has no in-mode meaning to admit. The
+// consequence is the roster's, and it is the derived partition working: the
+// Render button wears its ORDINARY label and icon in here over the mode's
+// disabled face, joining Undo, Redo and the rest of the consumed roster with no
+// hand entry anywhere.
+//
 // VIEWS ARE ADMITTED, TAB SWITCHES ARE NOT, and the line between them is not
 // arbitrary: a view switch re-reads THE SAME piece — the same three sidecar
 // texts the now side was frozen from, the same delta, another column of it —
@@ -1632,8 +1661,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
-// THREE admissions are conditional on session state (the commit act's, on
-// head_delta_empty AND — since 2026-08-07 — on no checkpoint already being in
+// THREE admissions are conditional on session state (the commit act's — Ctrl+S
+// since 2026-08-08 — on head_delta_empty AND on no checkpoint already being in
 // flight, and the revert act's, on a subject standing), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
@@ -1674,20 +1703,24 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_revert_act =
         (ctrl && !shift && !alt && key == GuiKeys::H &&
          history_mode_revert_subject_standing(mode));
-    // The act is admitted only while there is something to checkpoint AND no
-    // checkpoint is already in flight (2026-08-07, single-in-flight): with
-    // either condition failing this chord is not admitted at all, which is both
-    // the key's refusal and the Save-and-Commit button's grey. The two read very
-    // differently in time and both are honest — the head delta is static once
-    // measured (and rests TRUE, greying the act, in the window before the
-    // prefetch has delivered member 0 to measure against: 2026-08-07,
-    // measure_history_head_delta owns the rule), while the in-flight bit falls
-    // the moment the worker reports and the button lights again on the next
-    // frame.
-    const bool is_commit_act =
-        (ctrl && alt && !shift && key == GuiKeys::R && !mode.head_delta_empty &&
+    // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
+    // — the act saves first, so it belongs on the save chord). It is admitted
+    // only while there is something to checkpoint AND no checkpoint is already
+    // in flight (2026-08-07, single-in-flight): with either condition failing
+    // the chord is not admitted at all, which is both the key's refusal and the
+    // Save button's grey. The two read very differently in time and both are
+    // honest — the head delta is static once measured (and rests TRUE, greying
+    // the act, in the window before the prefetch has delivered member 0 to
+    // measure against: 2026-08-07, measure_history_head_delta owns the rule),
+    // while the in-flight bit falls the moment the worker reports and the button
+    // lights again on the next frame.
+    //
+    // THE PLAIN DISK SAVE IS NOT SEPARATELY ADMITTED, deliberately: in the view
+    // this chord has exactly one meaning, and a head-delta-empty session saves
+    // by leaving the view.
+    const bool is_save =
+        (ctrl && !shift && !alt && key == GuiKeys::S && !mode.head_delta_empty &&
          !app.history_checkpoint_in_flight);
-    const bool is_save   = (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
     // all three bare-exact, read off their own arms in on_key (the `t` toggle,
@@ -1704,7 +1737,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     return !(is_zoom_symbol || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc ||
-             is_load_in_place || is_commit_act || is_revert_act ||
+             is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q);
 }
 
@@ -1718,7 +1751,9 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // 2026-08-07), and the DISPATCH onto the background worker with the report that
 // comes back from it.
 
-// ASK FOR THE MESSAGE. One caller: Ctrl+Alt+R's own arm while the mode stands.
+// ASK FOR THE MESSAGE. One caller: Ctrl+S's own arm while the mode stands
+// (input_handler.cpp — it was Ctrl+Alt+R's until 2026-08-08, when the architect
+// moved the act onto the chord its own first step already is).
 //
 // IT USED TO ASK FOR PERMISSION (the fourth prompt, `y` or Esc, whose text named
 // a title the user could not change). The architect replaced it with this editor
@@ -1736,9 +1771,9 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // carries both strings), which is why they are silent. Two allowlist admissions
 // narrow it further without moving that reachability — an empty head delta
 // (2026-08-05) and a checkpoint already in flight (2026-08-07) both drop the
-// chord ABOVE the render route, so nothing can raise this editor over a session
-// with nothing to commit or a worker mid-act, and neither refusal has to be
-// spelled here.
+// chord ABOVE the `s` arm, so nothing can raise this editor over a session with
+// nothing to commit or a worker mid-act, and neither refusal has to be spelled
+// here.
 //
 // PLAYBACK STOPS AS THE MODAL OPENS, through the shared owner and past every
 // guard, exactly as the three editors before it do. It is a structural no-op in
@@ -1877,6 +1912,16 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // from that same one decision — see the note at the dispatch for why that half
 // is structural rather than visible) and bare `h` will not open a new view.
 //
+// AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
+// what makes the coincident-write paragraph below safe rather than merely
+// unlucky: the worker writes the three sidecars into projects/<id>/ off the main
+// thread, and in that workflow a concurrent Ctrl+S would write the very same
+// paths through the same fixed temp name. The refusal lives at the one save
+// owner (GuiSaveOps::save) and its face is the Save button's "Committing...".
+// THE PRELUDE SAVE BELOW IS EXEMPT BY ORDERING ALONE — it runs before the bit
+// goes up, three statements down — so the act's own save needs no flag and no
+// second entry point.
+//
 // THE ACT SAVES FIRST (architect 2026-08-04): the checkpoint is what you see,
 // SAVED and published, one sentence. Before this the act wrote and committed the
 // repo copies while the session still claimed unsaved changes — incoherent in
@@ -1953,14 +1998,18 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // captured above, so the close cannot take them with it.
     close_history_mode();
 
+    // THE BIT GOES UP AFTER THE SAVE, WHICH IS THE WHOLE EXEMPTION the act's own
+    // prelude needs: from here on every save is refused at GuiSaveOps::save, and
+    // the save three statements above ran while nothing was in flight.
     app.history_checkpoint_in_flight = true;
-    // THE BIT'S BUTTON HALF IS STRUCTURAL RATHER THAN VISIBLE, and worth saying
-    // so plainly: the Save-and-Commit FACE only exists inside the view, the view
-    // has just closed, and `h` refuses to reopen one while the bit stands — so
-    // the grey it derives is unreachable in practice. It is kept because it is
-    // not a second decision: the admission refuses the chord and the face reads
-    // that same admission, so if a future route ever did show that button with a
-    // checkpoint in flight, it would already say the truth.
+    // TWO FACES COME OFF THIS ONE BIT AND ONLY ONE OF THEM IS VISIBLE. The
+    // allowlist's Ctrl+S refusal derives a grey on the SAVE-AND-COMMIT face,
+    // which exists only inside the view — the view has just closed and `h`
+    // refuses to reopen one while the bit stands — so that half is structural,
+    // kept because it is not a second decision. What the user actually sees is
+    // the GLOBAL one: the same bit greys the Save button and relabels it
+    // "Committing..." in every view (redesign_button_enabled /
+    // redesign_button_label), mirroring the save lockout above.
     history_commit_worker.dispatch(
         std::move(job),
         [this](GuiHistoryCommitOutcome outcome) {
@@ -2886,27 +2935,18 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
     //
-    // TWO MODE BITS RE-AIM THIS CHORD, and they are the same idea twice: the
-    // command is selected by a mode, inside this one route, so no surface that
-    // reaches the chord needs to know which command it currently is.
+    // ONE MODE BIT RE-AIMS THIS CHORD, the iteration one. THE HISTORY MODE HAD
+    // THE OUTER CLAIM FROM 2026-08-04 TO 2026-08-08 and no longer does: the
+    // save-and-commit act moved onto Ctrl+S, the chord the act's own first step
+    // already is (architect 2026-08-08), so this route is a render again in
+    // every mode and the history view simply never reaches it — neither render
+    // chord is on that view's allowlist, which is also where the Render button's
+    // disabled face in there comes from.
     //
-    // THE HISTORY MODE COMES FIRST (architect 2026-08-04) because it is the
-    // outer mode: while it stands, Ctrl+Alt+R is THE SAVE-AND-COMMIT ACT — save
-    // the piece, then write the live state into the projects repository as a
-    // checkpoint and push it — and the mode's own
-    // keyboard allowlist is what admits the chord here at all. It outranks the
-    // iteration bit unconditionally, including in the state where the mode was
-    // opened with iteration mode already on (nothing can toggle that bit while
-    // the mode stands, `i` not being on the allowlist). The act asks for the
-    // commit message first, through the commit-title editor
-    // (open_history_commit_editor, 2026-08-07, where a confirmation prompt used
-    // to stand); that editor's Enter is what reaches run_history_commit, which
-    // owns the sequence.
-    //
-    // ITERATION MODE RE-AIMS IT OTHERWISE (architect 2026-08-02): with that mode
+    // ITERATION MODE RE-AIMS IT (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
     // under renders/, the same refusals — and there is no second chord for it.
-    // The single render below is the both-modes-off meaning, unchanged. THE
+    // The single render below is the mode-off meaning, unchanged. THE
     // SWEEP DISPATCHES FROM EITHER AUDIO VIEW since 2026-08-07 (the mode is
     // TARGET-LEGAL): the bit alone selects the command, and target view needs
     // no clause of its own for the opposite reason it needed none before — the
@@ -2919,10 +2959,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
-        if (app.history_mode.active) {
-            open_history_commit_editor();
-            return true;
-        }
         if (app.iteration_mode_enabled) {
             run_iteration_sweep_render();
             return true;
@@ -3004,11 +3040,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // iteration mode; redesign_button_tooltip, app_state.h), so nothing
     // advertises a press this arm swallows.
     //
-    // WHILE THE HISTORY MODE STANDS THIS CHORD NEVER ARRIVES — the mode's
-    // keyboard allowlist admits Ctrl+Alt+R and not its shifted twin, so the
-    // press is consumed a gate above and this arm is not reached from either
-    // surface. The Render button's hint drops its shift line there too, by the
-    // same rule and at the same table.
+    // WHILE THE HISTORY MODE STANDS THIS CHORD NEVER ARRIVES, and since
+    // 2026-08-08 neither does its unshifted twin — the mode's keyboard allowlist
+    // admits NEITHER render chord, the checkpoint act having moved onto Ctrl+S —
+    // so the press is consumed a gate above and this arm is not reached from
+    // either surface. The Render button is simply dead in there, hint and all,
+    // which is the derived partition's own answer.
     if (ctrl && alt && shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;

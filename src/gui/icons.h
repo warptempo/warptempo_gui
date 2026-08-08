@@ -37,12 +37,13 @@ enum class Icon {
     EditUndo,            // Undo
     EditRedo,            // Redo
     MediaRecord,         // Render
-    // Render's OTHER face: while the history mode stands, Ctrl+Alt+R saves and
-    // commits the checkpoint instead of rendering, so the button wears the
-    // commit icon and the "Save and Commit" label (the swap's owner is
-    // redesign_button_label /
-    // redesign_button_icon; the mode is AppState::HistoryMode).
-    VcsCommit,           // Render, while the history mode stands
+    // SAVE's OTHER face: while the history mode stands, Ctrl+S saves and then
+    // commits the checkpoint, so the button wears the commit icon and the
+    // "Save and Commit" label — and keeps both while the checkpoint publishes,
+    // under "Committing..." (the swap's owner is redesign_button_label /
+    // redesign_button_icon; the mode is AppState::HistoryMode). It was RENDER's
+    // second face until 2026-08-08, when the act moved onto the save chord.
+    VcsCommit,           // Save, in the history view and while publishing
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
     EditCopy,            // Copy phase resets

@@ -753,9 +753,11 @@ private:
 // -- THE COMMIT ACT — the product's one mutating git route ------------------
 //
 // What the mode reads, it can now also WRITE: while the history mode stands,
-// Ctrl+Alt+R commits the live authoring state into the piece's directory in the
-// projects repository (the mode bit selects the command, exactly as the
-// iteration bit selects the sweep). The GUI half — the COMMIT-TITLE EDITOR that
+// Ctrl+S saves the piece and commits the live authoring state into its directory
+// in the projects repository (the mode bit selects the command, exactly as the
+// iteration bit selects the sweep; the chord was Ctrl+Alt+R until 2026-08-08,
+// when the architect moved the act onto the chord its first step already is).
+// The GUI half — the COMMIT-TITLE EDITOR that
 // asks for the message (2026-08-07, superseding the confirmation prompt), THE
 // ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and Commit", and a
 // failed save refuses it before this module is reached at all), the CLOSE that

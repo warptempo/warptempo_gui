@@ -92,7 +92,7 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // bare basename. Program-written batch/entry names are short; 256 is a
 // generous ceiling for the relative path a user types or Tab-completes.
 constexpr int kMaxPendingCharsLoadInPlace = 256;
-// The history mode's commit-title editor (Ctrl+Alt+R while the view stands).
+// The history mode's commit-title editor (Ctrl+S while the view stands).
 // Holds the checkpoint's commit message — one line, prefilled with `Update
 // <id>` and free UTF-8 text the user may rewrite. 256 is the same generous
 // ceiling the load prompt takes, and it is well past the ~50-character summary

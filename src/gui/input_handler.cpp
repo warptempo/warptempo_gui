@@ -283,7 +283,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_load_editor_key(key, mods)) return;
     }
 
-    // Commit-title editor (Ctrl+Alt+R in the `h` history view). Same modal shape
+    // Commit-title editor (Ctrl+S in the `h` history view). Same modal shape
     // as the two blocks above, and mutually exclusive with them by construction:
     // its opener is a chord the keyboard-modal gate drops while any editor is
     // open, and the view's own allowlist admits no other opener.
@@ -464,9 +464,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              above this gate, always did save from a
     //                              locked tab through the same owner
     //   - Ctrl+Alt+R,            → the renders (2026-08-07): the single render
-    //     Ctrl+Alt+Shift+R          or the iteration sweep, the miscellaneous
-    //                              cell, and — in the `h` view — Save and
-    //                              Commit. A render READS the authored state
+    //     Ctrl+Alt+Shift+R          or the iteration sweep, and the
+    //                              miscellaneous cell. A render READS the
+    //                              authored state. (Save and Commit rode this
+    //                              pair into the `h` view until 2026-08-08; it
+    //                              is the Ctrl+S entry's now, on that entry's
+    //                              own reasoning — it publishes what the tab
+    //                              already holds)
     //   - x / Shift+X (no ctrl,  → the trim set-from-region and the maximizer
     //     no alt)                  (2026-08-07). Trim is BAND, not content
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
@@ -661,7 +665,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) run
     // inside the view. Those two are what the ADMISSION buys, not the only rungs
     // reachable in there (re-derived 2026-08-07): the view also opens the load
-    // editor on `'` and the COMMIT-TITLE editor on Ctrl+Alt+R, so (a) and (b) run
+    // editor on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a) and (b) run
     // in it too — and (c) with them, the checkpoint's own failure notice being a
     // prompt this view can raise — but each of those gates sits ABOVE the
     // allowlist in on_key, so the press never reaches the admission at all. It gained no
@@ -698,15 +702,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // CTRL+H — THE HISTORY VIEW'S REVERT ACT (architect 2026-08-05): apply the
     // view's SELECTED diff flags backwards into the live store and close the
     // view. Outside the mode the chord is UNBOUND, which is what the mode test
-    // says — there is no second meaning to select between, unlike Ctrl+Alt+R's.
+    // says — there is no second meaning to select between, unlike Ctrl+S's.
     //
     // IT IS DISPATCHED HERE RATHER THAN CLAIMED BY handle_history_mode_key, and
     // that placement is the whole gate story: this line sits BELOW the read-only
-    // gate, so a locked tab drops the press exactly as it drops `'` and
-    // Ctrl+Alt+R — the lock means hands off the piece's authored state, and this
-    // act writes markers. The mode's allowlist above admits the chord (and only
-    // while there is a subject to revert), which is what lets it reach here at
-    // all; the act's own body owns everything past that.
+    // gate, so a locked tab drops the press exactly as it drops `'` — the lock
+    // means hands off the piece's authored state, and this act writes markers.
+    // (It parted company with the checkpoint act on 2026-08-07, when the gate
+    // reclassified saving and rendering as authoring-free; that act runs from a
+    // locked tab, on Ctrl+S since 2026-08-08.) The mode's allowlist above
+    // admits the chord (and only while there is a subject to revert), which is
+    // what lets it reach here at all; the act's own body owns everything past
+    // that.
     if (app.history_mode.active && ctrl && !shift && !alt && key == GuiKeys::H) {
         run_history_revert();
         return;
@@ -875,7 +882,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // from exactly where the cursor was.
         // Ctrl+S saves; every other modifier combination on `s` is unbound and a
         // consumed no-op here.
-        if (ctrl && !shift && !alt) { save_ops.save(); return; }
+        //
+        // THE HISTORY VIEW SELECTS THE OTHER COMMAND (architect 2026-08-08, the
+        // iteration bit's own bit-selects-the-command precedent applied to this
+        // chord): while the view stands Ctrl+S is SAVE AND COMMIT — the act that
+        // runs this very save first and then publishes the checkpoint — so the
+        // fork is here, inside the one route, and the Save button reaches it by
+        // synthesizing this chord like every other redesigned button. The act's
+        // own preconditions are already spent above: the view's allowlist admits
+        // this chord only with a non-empty head delta and no checkpoint in
+        // flight, which is the same one decision that greys the button. (It rode
+        // Ctrl+Alt+R from 2026-08-04 to 2026-08-08; the act is save-first by
+        // definition, so it belongs on the save chord and the Render hijack is
+        // gone whole.) Inside the commit-title editor Ctrl+S is the PLAIN save
+        // again, through the five-editor modal contract, which sits above this
+        // arm and never reaches it.
+        if (ctrl && !shift && !alt) {
+            if (app.history_mode.active) {
+                open_history_commit_editor();
+                return;
+            }
+            save_ops.save();
+            return;
+        }
         // Both drops are home-view authoring, so off home refuses silently
         // (consumed no-op). The lead-in arm needs no separate target-view test:
         // P's home IS target, so this one gate already carries it.

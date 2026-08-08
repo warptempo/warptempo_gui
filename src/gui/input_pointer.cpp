@@ -411,9 +411,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //
 // TWO ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
 // (2026-08-05), which is why this takes the state rather than only a button. The
-// allowlist admits Ctrl+Alt+R only while there is something to checkpoint AND no
-// checkpoint is in flight, so the Save-and-Commit-faced Render GREYS when the
-// session's authoring content already matches the newest checkpoint
+// allowlist admits Ctrl+S — the checkpoint act's chord since 2026-08-08 — only
+// while there is something to checkpoint AND no
+// checkpoint is in flight, so the Save-and-Commit-faced SAVE button GREYS when
+// the session's authoring content already matches the newest checkpoint
 // (AppState::HistoryMode::head_delta_empty) and again while the worker is
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
@@ -427,11 +428,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
 //   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
-//   1/2/3, the admitted view selectors), Save (Ctrl+S), Render (Ctrl+Alt+R,
-//   which in this mode IS the save-and-commit checkpoint act and wears the
-//   "Save and Commit" face — LIVE ONLY WITH A NON-EMPTY HEAD DELTA AND NO
-//   CHECKPOINT IN FLIGHT (2026-08-07), and greyed rather than relabelled in
-//   either case),
+//   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
+//   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
+//   ONLY WITH A NON-EMPTY HEAD DELTA AND NO CHECKPOINT IN FLIGHT, and greyed
+//   rather than relabelled in either case; it was RENDER's chord and RENDER's
+//   face until 2026-08-08, when the act moved onto the save it begins with),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads
 //   the viewed commit in place), and the history button itself (bare `h`, the
@@ -457,19 +458,22 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   selected (history_mode_revert_subject_standing), so this walk answers DEAD
 //   with an empty subject and LIVE the moment a click selects one. Both facts
 //   come from the same admission with nothing restated here, exactly as
-//   Render's head-delta grey does.
-//   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); copy phase (Ctrl+P), paste
+//   Save's head-delta grey does.
+//   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
+//   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
+//   moved onto Ctrl+S — so the button wears its ordinary Render face over this
+//   partition's dead one, and the walk says so with nothing hand-listed);
+//   copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
 //   (bare `l`); and the two menu anchors, Settings and Navigation.
 //
-// TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face:
-// Render is LIVE on Ctrl+Alt+R though its SHIFT twin is consumed in the mode —
-// and the shift press is swallowed by THE ALLOWLIST, not by the render route
-// (re-derived 2026-08-06: is_commit_act is shift-exact and nothing else in
-// history_mode_key_blocked matches Ctrl+Alt+Shift+R, so it drops there and never
-// reaches handle_render_dispatch_keys at all). The
-// tooltip already drops its shift line here, which is the honest pair. (2) A
+// TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
+// which since 2026-08-08 has nothing left to arbitrate on row 2: the ONE button
+// whose shifted twin the mode consumed while its base chord stood — Render —
+// is dead on both shapes now, and Save admits no shift press at all. (Save's
+// own base chord is what this walk asks about, its shift column being false in
+// the table and in redesign_button_shift_admits alike.) (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, it applies inside the view exactly as outside it, and
 // row 4's never-grey rule still answers for it (the `'` button stays lit on a
