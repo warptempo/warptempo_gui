@@ -167,7 +167,8 @@ enum class GuiHistoryCompare {
 };
 
 // WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
-// WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO STACK. Row 3
+// WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO/REDO
+// TIMELINE. Row 3
 // carries the product of the two axes as four tabs in two labelled groups
 // (2026-08-08) — [Iterative:] Remote | Local, then [Cumulative:] Remote |
 // Local — and this is the axis each group's two tabs select, the group heading
@@ -178,11 +179,13 @@ enum class GuiHistoryCompare {
 //   whole model). Its members cost git, its membership is the strict load gate,
 //   and it is the DEFAULT at every entry.
 //
-//   LOCAL — the undo stack, read with the SAME machinery over different states:
-//   each member is one undo entry's snapshots serialized through the save
-//   writers' own string halves, and the same compute_commit_delta types the
+//   LOCAL — the session's own UNDO/REDO TIMELINE, read with the SAME machinery
+//   over different states: each member is one STATE of that timeline — a redo
+//   entry's, the live one, or an undo entry's snapshots — serialized through the
+//   save writers' own string halves, and the same compute_commit_delta types the
 //   difference. No git, no files, nothing on disk — the walk is what this
-//   session has done, in the vocabulary the commit walk already speaks.
+//   session has done and what it can still redo, in the vocabulary the commit
+//   walk already speaks.
 //
 // THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
 // them: the six entry vectors plus `scale`. Viewport, trim and the rest of the
@@ -330,7 +333,8 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
 
 // One settings file's bytes: the captured GUI half plus whichever engine
 // settings the caller is describing. The live state's own text is this with
-// app.engine_settings; a local walk member's is this with that undo entry's.
+// app.engine_settings; a local walk member's is this with that member's entry's
+// (the LIVE member takes the now side's own text and never reaches this).
 std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine);
 
@@ -650,91 +654,142 @@ private:
     std::array<std::deque<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
-// THE LOCAL WALK — THE SESSION'S OWN UNDO HISTORY, READ AS A WALK (architect
-// 2026-08-07: "the local history feature will be helpful for understanding
-// undo/redo history"). It is GuiHistoryDiff's formula over different states, and
-// deliberately nothing more: same members-newest-first indexing, same two
-// readings, same forward pairing, same delta type, same painter, same lane.
+// THE LOCAL WALK — THE SESSION'S OWN UNDO/REDO TIMELINE, READ AS A WALK
+// (architect 2026-08-07: "the local history feature will be helpful for
+// understanding undo/redo history"). It is GuiHistoryDiff's formula over
+// different members, and deliberately nothing more: same members-newest-first
+// indexing, same two readings, same forward pairing, same delta type, same
+// painter, same lane.
 //
-// A MEMBER IS ONE UNDO ENTRY'S STATE. With N = the undo stack's size, member
-// index i (newest first) is `undo_stack[N-1-i]`, and that entry's snapshots are
-// THE STATE BEFORE THE EVENT IT RECORDS. Serializing them through the save
-// writers' own string halves gives the same three loader-clean texts a commit
-// member carries, so the diff needs no second grammar and no second reader.
+// A MEMBER IS ONE STATE OF THE TIMELINE — not one undo entry (architect
+// 2026-08-08, superseding the undo-stack-only walk). With U = the undo stack's
+// size and R = the redo stack's, BOTH CAPTURED AT init, the walk carries
+// N = U + R + 1 members, newest first: every state Ctrl+Z and Ctrl+Shift+Z can
+// reach, plus the one the session is standing in.
+//   * k < R — A FUTURE STATE, `redo_stack[k]`. Redo counter-entries are pushed
+//     as the user undoes, so redo_stack[0] is the FURTHEST future and
+//     redo_stack.back() the nearest: the vector already runs newest-first, and
+//     a counter-entry's snapshots are the state a redo would restore.
+//   * k == R — THE LIVE MEMBER, the session's current state. The walk already
+//     holds it as the frozen now side, so nothing is captured or serialized for
+//     it; its three texts are that side's own.
+//   * k > R — A PAST STATE, `undo_stack[U + R - k]`, whose snapshots are THE
+//     STATE BEFORE THE EVENT THAT ENTRY RECORDS (k = R+1 is the stack's top,
+//     one Ctrl+Z away; k = N-1 is undo_stack[0], the state at file open).
+// Both stacks carry all three snapshot pieces — the carry-everywhere shape at
+// UndoEntry, which restore_history_entry reproduces field for field on the
+// counter-entry it pushes — so serializing them through the save writers' own
+// string halves gives the same three loader-clean texts a commit member carries,
+// and the diff needs no second grammar and no second reader.
 //
-// WHICH MAKES THE ITERATIVE READING EXACTLY ONE EVENT. Index i pairs forward
-// with i−1 (the live now side at i = 0), and the state before event i−1 IS the
-// state after event i — so the delta at index i is EVENT i'S OWN CHANGE, which
-// is what "understanding undo/redo history" wants to see. The cumulative reading
-// is the same pairing the commit walk has: member i against the frozen live now
-// side, "how far back does this take me".
+// SO THE MEMBERS ARE THE TIMELINE'S STATES, newest first, and every adjacent
+// pair (k, k−1) brackets exactly one event. THE WALK IS THEREFORE NEVER EMPTY:
+// a session that has authored nothing is N = 1, the live state alone, reading
+// `1/1` and comparing against itself (architect 2026-08-08: "once we've reached
+// the undo history, even if there is nothing in it, we are comparing one state
+// against an identical state"). `0/0` on a Local tab means the walk was never
+// initialized, and nothing else.
 //
-// THE STACK IS FROZEN WHILE THE VIEW STANDS, and the premise is derived rather
-// than hoped: every route that could push, pop or evict an undo entry is either
-// consumed by the mode's two allowlists or closes the view as part of itself
-// (AppState::HistoryMode owns that derivation — the same one that keeps the
-// frozen now side honest). IT IS EXCEPTIONLESS since 2026-08-07: the one
-// admitted producer it shipped with — the S->T view switch's iteration-bracket
-// push — is gone with the ruling that ITERATION MODE IS TARGET-LEGAL, so
-// entering target view writes no store at all, and the mode bit cannot toggle in
-// here either (`i` is not on the keyboard allowlist). So the member count is
-// captured at init and the caches are plain vectors sized once, and the indexing
-// is FROM THE BOTTOM, which is what would make an append harmless if one ever
-// returned: a captured position keeps naming the entry it named, the new entry
-// is simply not in the walk, and the frozen now side is the state before it.
-// The premise stands on that derivation alone — nothing at runtime enforces it.
-// member_at re-reads the stack's SIZE on every ask, but that is a bounds
-// precondition on the subscript, not a check of the premise: a stack shorter
-// than the captured count answers a blank lane rather than being read at indices
-// that now mean other events. (A per-entry PUSH SERIAL verifying each captured
-// position lived for one day of 2026-08-07, written for the kCap-eviction shape
-// the admitted push could reach; the architect deleted it with that producer —
-// member_at states the rule. Do not re-propose it.)
+// WHICH MAKES THE ITERATIVE READING EXACTLY ONE EVENT — THE COMMIT WALK'S OWN
+// FORWARD PAIRING, verbatim: member k against member k−1, the next-newer
+// member, and at k == 0 against ITSELF, nothing being newer than the furthest
+// future state. That self-pair is the blank lane the commit walk shows at its
+// newest index right after a commit. At the LIVE member the delta is the change
+// the next REDO would apply; at the first past member it is what Ctrl+Z would
+// revert.
 //
-// THE REDO STACK IS DELIBERATELY EXCLUDED. The walk is what is BEHIND you — the
-// commit walk's own shape — and redo is the branch you stepped off. Including it
-// would need a second index origin and a signed position, for a question
-// ("what would redo do") the undo stack's own members already answer one step at
-// a time.
+// THE CUMULATIVE READING IS "how does my session differ", so it measures
+// against THE LIVE MEMBER always — and for a FUTURE member THE SIDES SWAP: the
+// live state is the THEN side and the future state the NOW side, the future
+// state being the newer of the two. That is what keeps THE NEWER SIDE IS GREEN
+// one exceptionless colour rule across the whole timeline instead of a rule with
+// a redo exception. At the live member itself both sides are the same state, so
+// the lane is blank there in both readings.
 //
-// AN ENTRY THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
-// rather than a gap: an `affects_persistence == false` entry (the iteration
+// (THE REDO STACK WAS DELIBERATELY EXCLUDED until 2026-08-08, on the reasoning
+// that a walk is what is BEHIND you and that including redo would need a second
+// index origin and a signed position. The architect superseded that with the
+// complaint the states model answers — set a marker, move it, Ctrl+Z, open the
+// view and it read `1/1` about a session holding three states — and the
+// objection went with it: there is ONE index origin here, the newest state, and
+// the live state is a member like any other.)
+//
+// THE TIMELINE IS FROZEN WHILE THE VIEW STANDS, and the premise is derived
+// rather than hoped: every route that could push, pop or evict an entry on
+// EITHER stack is either consumed by the mode's two allowlists or closes the
+// view as part of itself (AppState::HistoryMode owns that derivation — the same
+// one that keeps the frozen now side honest), and it covers the redo stack by
+// the same argument, redo's only writers being push (which clears it) and the
+// two restores. IT IS EXCEPTIONLESS since 2026-08-07: the one admitted producer
+// it shipped with — the S->T view switch's iteration-bracket push — is gone with
+// the ruling that ITERATION MODE IS TARGET-LEGAL, so entering target view writes
+// no store at all, and the mode bit cannot toggle in here either (`i` is not on
+// the keyboard allowlist). So both sizes are captured at init and the caches are
+// plain vectors sized once, and the past members index FROM THE BOTTOM of the
+// undo stack, which is what would make an append harmless if one ever returned:
+// a captured position keeps naming the entry it named and the new entry is
+// simply not in the walk. The premise stands on that derivation alone — nothing
+// at runtime enforces it. member_at re-reads BOTH stacks' SIZES on every ask,
+// but that is a bounds precondition on the subscript, not a check of the
+// premise: a stack shorter than its captured size answers a blank lane rather
+// than being read at indices that now mean other events. (A per-entry PUSH
+// SERIAL verifying each captured position lived for one day of 2026-08-07,
+// written for the kCap-eviction shape the admitted push could reach; the
+// architect deleted it with that producer — member_at states the rule. Do not
+// re-propose it.)
+//
+// A MEMBER PAIR THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
+// rather than a gap: an `affects_persistence == false` event (the iteration
 // bracket's session-only snapshot) changes nothing any sidecar would carry, so
-// there is nothing for a delta to say about it — the same blank the commit walk
-// shows for a checkpoint whose content matches its neighbour.
+// there is nothing for a delta to say about the pair that brackets it — the same
+// blank the commit walk shows for a checkpoint whose content matches its
+// neighbour.
 class GuiHistoryLocalWalk {
 public:
-    // BIND TO THE LIVE SESSION at the mode's entry: the undo stack's size is
+    // BIND TO THE LIVE SESSION at the mode's entry: BOTH stacks' sizes are
     // captured, the GUI half of the settings writer is captured (one snapshot
     // for BOTH sides of every delta — the reason it is captured at all is at
     // GuiHistoryGuiSide), and `now` is the visit's frozen now side, taken from
-    // GuiHistoryDiff::now_side() so the two walks measure against one capture.
+    // GuiHistoryDiff::now_side() so the two walks measure against one capture —
+    // and so the LIVE MEMBER costs this walk nothing but the copy it already
+    // makes.
     //
-    // `app` IS RETAINED as the stack's owner. It outlives every visit (it is the
-    // one long-lived object in the program) and the entry it hands back is read
-    // only through the frozen count above.
+    // `app` IS RETAINED as the stacks' owner. It outlives every visit (it is the
+    // one long-lived object in the program) and the entries it hands back are
+    // read only through the frozen sizes above.
     void init(const AppState& app, const GuiHistoryNowSide& now);
 
-    // How many undo entries the walk carries — the `n/N` denominator on the two
-    // Local tabs, and fixed for the visit. Zero is an ordinary answer: a session
-    // that has authored nothing shows `0/0` and a blank lane, every step a
-    // clamped no-op, and the tabs are still selectable.
+    // How many STATES the timeline carries — U + R + 1, the `n/N` denominator on
+    // the two Local tabs, and fixed for the visit. It is never zero once init has
+    // run against a session: a session that has authored nothing answers 1, the
+    // live state alone. Zero is the UNINITIALIZED answer (no visit has bound this
+    // walk), which is the only way a Local tab can read `0/0`.
     std::size_t entry_count() const { return count_; }
+
+    // WHERE THE SESSION STANDS in the walk — the live member's index, which is
+    // the captured redo count. The ONE entry owner opens the view here rather
+    // than at 0, because 0 is the furthest FUTURE state and this is the state on
+    // screen; with no redo entries the two coincide. Zero on an uninitialized
+    // walk, which no reader reaches (the entry owner calls init first).
+    std::size_t live_index() const { return redo_count_; }
 
     // The member's delta IN ONE OF THE TWO READINGS, computed on first call and
     // cached per (index, compare) exactly as the commit walk's is. Returns
     // nullptr for an out-of-range index, an uninitialized walk, or a stack whose
-    // size no longer matches the capture (the frozen-stack premise, checked
+    // size no longer matches the capture (the frozen-timeline premise, checked
     // rather than assumed). The returned pointer is stable for the visit: the
-    // caches are sized once at init and the stack cannot grow under them.
+    // caches are sized once at init and neither stack can grow under them.
     const GuiHistoryCommitDelta* delta_at(std::size_t       index,
                                           GuiHistoryCompare compare);
 
 private:
     // One member's three texts, serialized on first ask and kept. Lazy for the
     // reason the commit walk's deltas are: a visit typically reads a handful of
-    // members out of a stack that may hold hundreds, and formatting all of them
-    // at `h` would be exactly the entry stall the prefetch arc removed.
+    // members out of a timeline that may hold hundreds, and formatting all of
+    // them at `h` would be exactly the entry stall the prefetch arc removed. (The
+    // LIVE member is the one that costs nothing either way — it copies the three
+    // frozen now-side strings — and it takes the same lazy path rather than a
+    // case of its own.)
     struct Member {
         bool        built = false;
         std::string warpmarkers_text;
@@ -743,8 +798,13 @@ private:
     };
     const Member* member_at(std::size_t index);
 
-    const AppState*                          app_   = nullptr;
-    std::size_t                              count_ = 0;
+    const AppState*                          app_        = nullptr;
+    // The two captured sizes and the member count they imply — U, R and
+    // N = U + R + 1. `count_` is what entry_count answers and what bounds every
+    // index; the two halves are what member_at maps an index through.
+    std::size_t                              undo_count_ = 0;
+    std::size_t                              redo_count_ = 0;
+    std::size_t                              count_      = 0;
     std::shared_ptr<const GuiHistoryGuiSide> gui_;
     GuiHistoryNowSide                        now_;
     std::vector<Member>                      members_;

@@ -884,8 +884,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // index, compare, focus and generation can every one of them be unchanged
     // across it — and the local index is the other walk's own `,` / `.`, which
     // moves no field above either. THE LOCAL WALK'S SIZE NEEDS NO FIELD: it is
-    // the undo stack's, captured at the mode's entry and frozen for the visit
-    // (GuiHistoryLocalWalk's premise), so it cannot move while this cache lives.
+    // built from the two undo stacks' sizes, captured at the mode's entry and
+    // frozen for the visit (GuiHistoryLocalWalk's premise), so it cannot move
+    // while this cache lives.
     const GuiHistoryWalkSource history_source = app.history_mode.source;
     const std::size_t        history_local_index = app.history_mode.local_index;
 

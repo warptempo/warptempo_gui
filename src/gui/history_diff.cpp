@@ -1854,7 +1854,8 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
 // `sha` is always the VIEWED member's, in both readings: the delta NAMES the
 // checkpoint it describes, whichever side of the comparison that checkpoint
 // happens to be (the old side in iterative, the old side in cumulative too). The
-// local walk passes it EMPTY — an undo entry has no name.
+// local walk passes it EMPTY — a state of the session's own timeline has no
+// name.
 GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
                                            const std::string& then_warp,
                                            const std::string& then_phase_reset,
@@ -2001,18 +2002,23 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
 }
 
 // ---------------------------------------------------------------------------
-// the LOCAL walk — the same formula over the undo stack
+// the LOCAL walk — the same formula over the undo/redo timeline's states
 // ---------------------------------------------------------------------------
 
 void GuiHistoryLocalWalk::init(const AppState&          app,
                                const GuiHistoryNowSide& now) {
-    app_   = &app;
-    count_ = app.history.undo_stack.size();
-    gui_   = capture_history_gui_side(app);
-    now_   = now;
+    app_        = &app;
+    undo_count_ = app.history.undo_stack.size();
+    redo_count_ = app.history.redo_stack.size();
+    // THE +1 IS THE LIVE MEMBER — the state the session is standing in, which is
+    // a member of the timeline like any other (the class comment owns the model).
+    // It is also why a fresh session answers 1 rather than 0.
+    count_      = undo_count_ + redo_count_ + 1;
+    gui_        = capture_history_gui_side(app);
+    now_        = now;
     members_.assign(count_, Member{});
-    // SIZED ONCE, NEVER GROWN — the frozen-stack premise (the class comment owns
-    // it) is exactly what lets these be vectors where the commit walk needs
+    // SIZED ONCE, NEVER GROWN — the frozen-timeline premise (the class comment
+    // owns it) is exactly what lets these be vectors where the commit walk needs
     // deques: nothing can append a member under a live visit, so no reallocation
     // can move a delta this hands out.
     for (std::vector<std::optional<GuiHistoryCommitDelta>>& c : cache_) {
@@ -2021,24 +2027,28 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 }
 
 // ONE MEMBER'S THREE TEXTS, serialized on first ask. The mapping is the class
-// comment's: member index i, newest first, is undo_stack[N-1-i] for the N
-// CAPTURED AT INIT, and that entry's snapshots are the state BEFORE the event it
-// records.
+// comment's, in three arms over the captured U and R: index k < R is the FUTURE
+// state redo_stack[k], k == R is THE LIVE MEMBER (the frozen now side's own
+// three texts, nothing serialized), and k > R is the PAST state
+// undo_stack[U + R - k], whose snapshots are the state BEFORE the event that
+// entry records.
 //
-// IT INDEXES FROM THE BOTTOM, WHICH IS WHY A PUSH COULD NOT MOVE A MEMBER — a
-// property that mattered while the frozen-stack premise had one hole, the
-// admitted S->T VIEW SWITCH's iteration-bracket push. THAT HOLE IS CLOSED AT ITS
-// SOURCE (2026-08-07): iteration mode is TARGET-LEGAL, so the S->T edge wipes
-// nothing and writes no store, and `i` is not on the mode's keyboard allowlist,
-// so the bit cannot move in here either. NO ROUTE PUSHES, POPS OR EVICTS while
-// the view stands, so the premise is EXCEPTIONLESS BY CONSTRUCTION and stands on
-// that derivation alone. The bottom-indexing stays what it always was — the
-// shape that keeps an append harmless if one ever returns.
+// THE PAST ARM INDEXES FROM THE BOTTOM, WHICH IS WHY A PUSH COULD NOT MOVE A
+// MEMBER — a property that mattered while the frozen-timeline premise had one
+// hole, the admitted S->T VIEW SWITCH's iteration-bracket push. THAT HOLE IS
+// CLOSED AT ITS SOURCE (2026-08-07): iteration mode is TARGET-LEGAL, so the S->T
+// edge wipes nothing and writes no store, and `i` is not on the mode's keyboard
+// allowlist, so the bit cannot move in here either. NO ROUTE PUSHES, POPS OR
+// EVICTS ON EITHER STACK while the view stands, so the premise is EXCEPTIONLESS
+// BY CONSTRUCTION and stands on that derivation alone. The bottom-indexing stays
+// what it always was — the shape that keeps an append harmless if one ever
+// returns.
 //
-// THE SIZE TERM BELOW IS A BOUNDS PRECONDITION on the subscript this function is
-// about to perform, and it predates all of that: a stack shorter than the
-// captured count answers NOTHING AT ALL (a blank lane) rather than being read at
-// indices that now mean other events.
+// THE TWO SIZE TERMS BELOW ARE BOUNDS PRECONDITIONS on the subscript this
+// function is about to perform, and they predate all of that: a stack shorter
+// than its captured size answers NOTHING AT ALL (a blank lane) rather than being
+// read at indices that now mean other events. BOTH are tested whichever arm the
+// index takes, because the count that bounds the index is built from both.
 //
 // (A PUSH SERIAL — a per-entry identity the walk captured at init and re-checked
 // here, written for the kCap-EVICTION shape the admitted push could reach, where
@@ -2049,11 +2059,30 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         std::size_t index) {
     if (app_ == nullptr || index >= count_) return nullptr;
-    if (app_->history.undo_stack.size() < count_) return nullptr;
+    if (app_->history.undo_stack.size() < undo_count_) return nullptr;
+    if (app_->history.redo_stack.size() < redo_count_) return nullptr;
     Member& m = members_[index];
     if (m.built) return &m;
 
-    const UndoEntry& e = app_->history.undo_stack[count_ - 1 - index];
+    if (index == redo_count_) {
+        // THE LIVE MEMBER, verbatim from the frozen now side — the same three
+        // strings every delta's live side is already made of, so "the member and
+        // the now side agree" is an identity here rather than two formattings
+        // that had better match.
+        m.warpmarkers_text       = now_.warpmarkers_text;
+        m.phaseresetmarkers_text = now_.phaseresetmarkers_text;
+        m.settings_text          = now_.settings_text;
+        m.built                  = true;
+        return &m;
+    }
+
+    // A FUTURE state's entry is a redo counter-entry, a PAST state's an undo
+    // entry, and the two carry identical fields (the carry-everywhere shape), so
+    // one body reads both.
+    const UndoEntry& e =
+        index < redo_count_
+            ? app_->history.redo_stack[index]
+            : app_->history.undo_stack[undo_count_ + redo_count_ - index];
     m.warpmarkers_text       = format_warpmarkers_text(e.snapshot);
     m.phaseresetmarkers_text =
         format_phaseresetmarkers_text(e.phase_reset_snapshot);
@@ -2069,41 +2098,53 @@ const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
 
 const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
         std::size_t index, GuiHistoryCompare compare) {
-    const Member* then_side = member_at(index);
-    if (then_side == nullptr) return nullptr;
+    const Member* member = member_at(index);
+    if (member == nullptr) return nullptr;
     std::vector<std::optional<GuiHistoryCommitDelta>>& slots =
         cache_[static_cast<std::size_t>(compare)];
     if (slots[index].has_value()) return &*slots[index];
 
-    // THE NEW SIDE, by the commit walk's own two rules. CUMULATIVE takes the
-    // frozen live now side whatever the position — "how far back does this take
-    // me". ITERATIVE compares FORWARD: the member one NEWER (index - 1, the list
-    // being newest-first), or that same live now side at index 0 — and since the
-    // state before event i-1 IS the state after event i, that delta is EVENT i'S
-    // OWN CHANGE. Every index has a forward partner here for the same reason it
-    // does on the commit walk: the newest end is where the session is.
-    const std::string* now_warp     = &now_.warpmarkers_text;
-    const std::string* now_phase    = &now_.phaseresetmarkers_text;
-    const std::string* now_settings = &now_.settings_text;
-    if (compare == GuiHistoryCompare::Iterative && index > 0) {
-        const Member* newer = member_at(index - 1);
-        // Unreachable (the size check above passed for this same stack, and a
-        // smaller index is in range whenever this one is), and stated rather
-        // than assumed: the live now side is the honest fallback, being what
-        // index 0 pairs with.
-        if (newer != nullptr) {
-            now_warp     = &newer->warpmarkers_text;
-            now_phase    = &newer->phaseresetmarkers_text;
-            now_settings = &newer->settings_text;
-        }
+    // THE PAIR, by the model's two rules (the class comment derives them).
+    //
+    // ITERATIVE IS THE COMMIT WALK'S FORWARD PAIRING VERBATIM: then = this
+    // member, now = the member one NEWER (index - 1, the list being newest
+    // first), so the delta is exactly the event the two bracket. At index 0
+    // there is nothing newer, so the member pairs WITH ITSELF and
+    // compute_commit_delta answers empty — the same blank the commit walk shows
+    // at its newest index right after a commit. Computed rather than
+    // short-circuited, so there is one pairing expression and no second route to
+    // an empty delta.
+    //
+    // CUMULATIVE MEASURES AGAINST THE LIVE MEMBER, whatever the position — "how
+    // does my session differ". For a PAST member (index > R) and for the live
+    // member itself that is then = this member, now = live, unchanged. For a
+    // FUTURE member (index < R) THE SIDES SWAP — then = live, now = this member
+    // — because the future state is the NEWER of the two, and the newer side is
+    // green in both readings without an exception.
+    const Member* then_side = member;
+    const Member* now_side  = nullptr;
+    if (compare == GuiHistoryCompare::Iterative) {
+        now_side = (index == 0) ? member : member_at(index - 1);
+    } else if (index < redo_count_) {
+        then_side = member_at(redo_count_);
+        now_side  = member;
+    } else {
+        now_side = member_at(redo_count_);
     }
+    // Unreachable: both partners are in range whenever `index` is (index - 1 is
+    // smaller, and the live member's index is below the count by construction),
+    // and the two size preconditions passed for this same pair of stacks a
+    // moment ago. Stated rather than assumed, and answering the blank lane
+    // rather than pairing against a side that does not exist.
+    if (then_side == nullptr || now_side == nullptr) return nullptr;
 
-    // NO SHA: an undo entry has no name, and the corner reads the empty string
+    // NO SHA: a timeline state has no name, and the corner reads the empty string
     // rather than being told separately (the local tabs show `n/N` alone).
     slots[index] = compute_commit_delta(
         std::string(), then_side->warpmarkers_text,
         then_side->phaseresetmarkers_text, then_side->settings_text,
-        *now_warp, *now_phase, *now_settings);
+        now_side->warpmarkers_text, now_side->phaseresetmarkers_text,
+        now_side->settings_text);
     return &*slots[index];
 }
 

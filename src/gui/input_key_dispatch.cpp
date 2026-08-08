@@ -776,6 +776,16 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // cannot be opened to read its undo stack. That is deliberate — the view is
     // the GitHub recheck, and the local tabs are a second reading inside it.
     fresh.local.init(app, fresh.session.now_side());
+    // AND IT OPENS WHERE THE SESSION STANDS (architect 2026-08-08), which is the
+    // one place the two walks' entry positions differ. The commit walk opens at
+    // 0 because its newest member is where the session is; the LOCAL walk's 0 is
+    // the FURTHEST FUTURE state — the far end of the redo stack — and the state
+    // on screen is the LIVE member, at the captured redo count. With no redo
+    // entries the two coincide, which is why this reads as "still the newest" on
+    // an ordinary session. The whole-struct reset zeroes local_index, so this is
+    // an assignment the entry makes rather than a default the initializer could
+    // carry: only a bound walk knows where its live member is.
+    fresh.local_index = fresh.local.live_index();
     // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
     // removal from the view): the mode consumes bare Space and both scrub
     // presses, so a session still running from before `h` could not be stopped
@@ -1300,11 +1310,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     //
     // THE ACTIVE WALK'S POSITION, never a named one (2026-08-07): the step reads
     // walk_count / walk_index and writes through set_walk_index, so the same body
-    // walks the committed history or the undo stack depending on which pair of
-    // tabs is lit, and each walk keeps the position the other one left alone. An
-    // EMPTY walk — a session that has authored nothing, on the Local tabs —
-    // clamps at both walls and every press is the same consumed nothing a wall
-    // is.
+    // walks the committed history or the session's own undo/redo timeline
+    // depending on which pair of tabs is lit, and each walk keeps the position
+    // the other one left alone. On the Local tabs `.` walks INTO FUTURE STATES
+    // when redo entries exist, the walk opening at the live member rather than at
+    // its newest one (GuiHistoryLocalWalk owns that model). A ONE-MEMBER walk —
+    // a session that has authored nothing — clamps at both walls and every press
+    // is the same consumed nothing a wall is, as does the commit side's empty
+    // window.
     if (key == GuiKeys::Comma || key == GuiKeys::Period) {
         const std::size_t count = app.history_mode.walk_count();
         const std::size_t here  = app.history_mode.walk_index();

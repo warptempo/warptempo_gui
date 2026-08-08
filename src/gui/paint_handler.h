@@ -338,8 +338,9 @@ struct FlagCache {
     // index, focus, generation, reading and count every one of them unchanged
     // while the lane's whole content changes — and the LOCAL walk's `,` / `.`
     // moves its own position field, which no other input here mirrors. The local
-    // walk's SIZE needs no field beside them: it is the undo stack's, captured at
-    // entry and frozen for the visit, unlike the commit walk's streaming one.
+    // walk's SIZE needs no field beside them: it is built from the two undo
+    // stacks' sizes, captured at entry and frozen for the visit, unlike the
+    // commit walk's streaming one.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;

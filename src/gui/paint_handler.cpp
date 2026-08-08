@@ -4045,8 +4045,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // below: this is a passive report, not an editor, so it takes no caret,
         // no prefix face and no flash.
         // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
-        // walk_index / walk_count, so a Local tab counts undo entries with the
-        // same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
+        // walk_index / walk_count, so a Local tab counts the session's own
+        // timeline states with the same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
         // ALONE, and deliberately named rather than routed through an accessor:
         // an undo entry has no commit, so the token simply does not appear on
         // the Local tabs — the empty-sha test below is that fact rather than a
@@ -4054,12 +4054,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         std::string line;
         const std::size_t count = app.history_mode.walk_count();
         // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing
-        // at all: with the LOCAL tabs an empty walk is an ORDINARY state — a
-        // session that has authored nothing — and a blank corner beside a blank
-        // lane says only that the corner has stopped working. One spelling for
-        // both walks, so the commit side's own empty window (a visit opened
-        // before the prefetch has delivered member 0) reads `0/0` too, which is
-        // the same true statement.
+        // at all: a blank corner beside a blank lane says only that the corner
+        // has stopped working. ONE SPELLING FOR BOTH WALKS, and since 2026-08-08
+        // only the COMMIT walk can reach it — its empty window, a visit opened
+        // before the prefetch has delivered member 0. The LOCAL walk is never
+        // empty while the mode stands: the one entry owner binds it before
+        // `active` goes up and its member count is U + R + 1, so a session that
+        // has authored nothing reads `1/1` — one state compared against itself.
+        // The zero arm therefore describes the commit side alone now, and stays
+        // one expression because the arithmetic below is the walk-agnostic one.
         line += std::to_string(count == 0 ? 0 : app.history_mode.walk_index() + 1);
         line += '/';
         line += std::to_string(count);

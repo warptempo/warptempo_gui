@@ -2219,9 +2219,10 @@ struct AppState {
     // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
     // "the local history feature will be helpful for understanding undo/redo
     // history"): the COMMITTED history this mode was built on, and THE SESSION'S
-    // OWN UNDO STACK read through the identical delta machinery
-    // (GuiHistoryLocalWalk, history_diff.h, owns the model and the pairing
-    // derivation). The lane, the flags, the colours, the corner's `n/N`, the
+    // OWN UNDO/REDO TIMELINE read through the identical delta machinery — every
+    // state Ctrl+Z and Ctrl+Shift+Z can reach plus the live one, newest first
+    // since 2026-08-08 (GuiHistoryLocalWalk, history_diff.h, owns the model and
+    // the pairing derivation). The lane, the flags, the colours, the corner's `n/N`, the
     // walk's `,` / `.`, the diff-flag cycle, the trim bar's span and its framing
     // double-click are all SOURCE-AGNOSTIC — they read the displayed delta and
     // the active walk's position, never a named walk. THREE surfaces are not,
@@ -2331,13 +2332,14 @@ struct AppState {
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
-    // THE SAME DERIVATION FREEZES THE UNDO STACK, which is what the LOCAL walk
-    // rests on (2026-08-07): every route that could push, pop or evict an entry
-    // is an authoring route, so the two gates consume it or one of the three
-    // mutators closes the view as part of itself. The walk therefore captures
-    // the stack's size once and indexes it for the visit — re-reading that size
-    // on every ask as a BOUNDS PRECONDITION on the subscript it is about to
-    // perform, which is all that check is.
+    // THE SAME DERIVATION FREEZES BOTH UNDO STACKS, which is what the LOCAL walk
+    // rests on (2026-08-07; both stacks since 2026-08-08, when the walk grew to
+    // the whole undo/redo timeline): every route that could push, pop or evict an
+    // entry on either stack is an authoring route, so the two gates consume it or
+    // one of the three mutators closes the view as part of itself. The walk
+    // therefore captures both sizes once and indexes them for the visit —
+    // re-reading them on every ask as a BOUNDS PRECONDITION on the subscript it
+    // is about to perform, which is all that check is.
     //
     // IT IS EXCEPTIONLESS BY CONSTRUCTION: the premise shipped with one admitted
     // producer — the S->T view switch's iteration-bracket push — and that push is
@@ -2396,10 +2398,19 @@ struct AppState {
         // subject: read three checkpoints back, look at what your last two undo
         // steps did, come back and you are still three checkpoints back.
         GuiHistoryWalkSource source = GuiHistoryWalkSource::Commit;
-        // Index into the LOCAL walk, 0 = the newest undo entry. Same two steps,
-        // same clamps, same clearing edges — everything the walk does reads the
-        // ACTIVE source's position through walk_index() below rather than naming
-        // either field.
+        // Index into the LOCAL walk, 0 = the NEWEST MEMBER — which since
+        // 2026-08-08 is the furthest FUTURE state, the far end of the redo
+        // stack, the walk being the whole undo/redo timeline read as states
+        // (GuiHistoryLocalWalk owns the model). Same two steps, same clamps,
+        // same clearing edges — everything the walk does reads the ACTIVE
+        // source's position through walk_index() below rather than naming either
+        // field.
+        //
+        // THE ENTRY POSITION IS THE ENTRY OWNER'S, NOT THIS INITIALIZER'S: the
+        // whole-struct reset lands 0 here, and open_history_mode_fresh then sets
+        // the LIVE member's index — where the session is standing — because only
+        // a bound walk knows what that index is. With no redo entries the two
+        // are the same number.
         std::size_t local_index = 0;
         // WHICH READING THE LANE SHOWS (architect 2026-08-05), the two compare
         // modes' bit. GuiHistoryCompare (history_diff.h) owns the pair's
@@ -4011,9 +4022,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // shifted twins jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
         // shift line deliberately does not name the member kind since
-        // 2026-08-08: the Local tabs' members are undo entries, not
-        // checkpoints, so "checkpoint" would lie on half the surface these
-        // arrows serve.
+        // 2026-08-08: the Local tabs' members are states of the session's own
+        // undo/redo timeline, not checkpoints, so "checkpoint" would lie on half
+        // the surface these arrows serve.
         // THEY ARE HOVERABLE HINTS EVERYWHERE, including outside the history
         // view where the pair rests disabled (architect 2026-08-07, kdenlive's
         // own behavior: a disabled icon still explains itself). The hint is what
