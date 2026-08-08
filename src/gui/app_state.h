@@ -3893,23 +3893,30 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
         case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
         case RedesignButton::IconLoadInPlace:
-            return {"Load render in place (')", nullptr};
+            // "Load in place" not "Load render in place": the act loads
+            // SIDECARS — a renders/ entry's sidecar set (the render name is
+            // only the match key) or, in the history view, a commit's
+            // sidecars — so naming "render" overclaims the surface.
+            return {"Load in place (')", nullptr};
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
         case RedesignButton::IconHistory: return {"History (h)", nullptr};
-        // THE WALK'S TWO STEPS, in HELP's own words for the walk ("older" /
-        // "newer" checkpoints), in the TWO-LINE form since 2026-08-07: their
+        // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
         // shifted twins jump to the walk's walls, so the hint says so — the same
-        // rule the static_assert below states, met by two more buttons.
+        // rule the static_assert below states, met by two more buttons. The
+        // shift line deliberately does not name the member kind since
+        // 2026-08-08: the Local tabs' members are undo entries, not
+        // checkpoints, so "checkpoint" would lie on half the surface these
+        // arrows serve.
         // THEY ARE HOVERABLE HINTS EVERYWHERE, including outside the history
         // view where the pair rests disabled (architect 2026-08-07, kdenlive's
         // own behavior: a disabled icon still explains itself). The hint is what
         // tells a user what the greyed arrows would do and where they work; the
         // dead FACE is untouched, and so is the inert press.
         case RedesignButton::IconHistoryOlder:
-            return {"Older (,)", "Press Shift for oldest checkpoint."};
+            return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::IconHistoryNewer:
-            return {"Newer (.)", "Press Shift for newest checkpoint."};
+            return {"Newer (.)", "Press Shift for newest."};
         // THE REVERT ACT, one line: the chord has no shifted twin. It rests
         // disabled outside the view like the two arrows, and is greyed inside it
         // whenever nothing is selected — in all three states it shows this hint,
