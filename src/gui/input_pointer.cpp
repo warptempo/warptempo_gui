@@ -568,12 +568,18 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //     `p` swap lands nothing either: both used to be cleaning up a restored
 //     P-column selection, and the parked slots died 2026-07-29);
 //   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the
-//     S<->T flip (input_handler.cpp) is now the only one, landing only on a
+//     S<->T flip (input_handler.cpp), landing only on a
 //     NON-EMPTY selection — with no lane the cursor is the playhead in its own
 //     right and keeps its own value. The flip CARRIES a 2+ selection across
 //     since 2026-07-30 (its collapse died with the SPAN FORM), so the selection
 //     here may be a GROUP, and the land seats the cursor on its focus exactly as
-//     it does for a singleton. Ctrl+Tab left this class
+//     it does for a singleton. THE `h` HISTORY VIEW'S EXIT RESTORE joined this
+//     class 2026-08-08 (close_history_mode, input_key_dispatch.cpp): its
+//     restore re-spells the flip's column-preserving translation whenever the
+//     visit left the entry audio view, so it re-spells the flip's land too, on
+//     the same non-empty-selection gate and in that TRANSLATION ARM ALONE — an
+//     unflipped visit restores the parked cursor bit-exact and has no round trip
+//     to repair. Ctrl+Tab left this class
 //     when the parked
 //     selections died: it restores its tab's stored cursor VERBATIM, hands the
 //     lane nothing, and its only land is the auto-select's below;

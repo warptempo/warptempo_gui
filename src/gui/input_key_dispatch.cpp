@@ -464,7 +464,8 @@ void GuiInputHandler::close_history_mode() {
     // does by shifting the stored viewport by the playhead's delta. The column
     // form is kept because the column is the premise; the frame count is not.
     if (audio.total_frames() > 0) {
-        if (entry_view != app.active_audio_view) {
+        const bool view_flipped = (entry_view != app.active_audio_view);
+        if (view_flipped) {
             const std::vector<WarpFrameMapSegment>& map =
                 target_view_warp_frame_map_cached(
                     app, audio.sample_rate(),
@@ -501,6 +502,52 @@ void GuiInputHandler::close_history_mode() {
         // idempotent no-ops when nothing moved.
         viewport.move_playhead_to(restore_ph);
         viewport.apply_zoom_to_start(entry_zoom, restore_vp);
+
+        // AND A SURVIVING SELECTION RE-EXPRESSES THROUGH ITS FOCUS — THE
+        // TOGGLE'S SECOND HALF, reproduced here because the arm above
+        // reproduces its first and the two are one recipe. The translation is a
+        // DOUBLE ROUND TRIP: the snapshot cursor is already an integer frame in
+        // the entry domain, and mapping it plus rounding again need not return
+        // the focused marker's image — at a legal 1/4 slope a marker at source
+        // 1001 paints at target 250, whose inverse is source 1000 — so the raw
+        // arithmetic can seat the cursor a few frames off the focus the lane
+        // still owns, and every later Space / arrow would read that stale point.
+        // THE MARKER LANE OWNS THE PLAYHEAD (the rule and the caller inventory
+        // live at land_playhead_on_marker, input_pointer.cpp; this site is in
+        // that inventory's view-switch class).
+        //
+        // THE TRANSLATION ARM ONLY, deliberately. With no flip the restore is
+        // the entry trio BIT-EXACT — no round trip and so no drift — and the
+        // viewer's promise is to put back exactly what stood, including a
+        // cursor that legitimately rested off its focus at entry. Under a flip
+        // the live `t` toggle is precisely what this exit is re-spelling, and
+        // the toggle lands: the visit that flipped the view ran the toggle's own
+        // land on the way in, and this restores that same relationship rather
+        // than the arithmetic's.
+        //
+        // THE FOCUS IS THE ENTRY'S, unchanged, because the STORE selection
+        // cannot move inside the view: no admitted key and no admitted press
+        // mutates it (history_mode_key_blocked's list, and the press router's
+        // pass-through list at handle_history_mode_press — the mode's own clicks
+        // touch the mode-local diff selection alone), and the two admitted
+        // MUTATORS that could — `'` and Ctrl+H — both come through this closer
+        // first. The index is bounds-guarded inside the owner regardless, which
+        // lands nothing rather than reading past a store.
+        //
+        // A PURE CURSOR WRITE WITH NO VIEWPORT MOVE (the owner's own ruling), so
+        // the start applied just above stands: the landed frame and the
+        // translation's can differ by several frames, but by well under one
+        // PAINTED COLUMN at any legal zoom — the toggle's own argument, a column
+        // being at least ~27 frames at the deepest zoom the product allows. The
+        // owner emits its own damage, the full-window invalidate below covers it
+        // either way, and the republication under it rebuilds the LANE, which
+        // reads no cursor — so this sits above both exactly as the toggle's land
+        // sits above its synchronous plate render.
+        if (view_flipped && !app.selected_markers.empty() &&
+            app.last_selected_marker >= 0) {
+            land_playhead_on_marker(app, audio, viewport,
+                                    app.last_selected_marker);
+        }
     }
 
     // AND THE LIVE LANE IS REPUBLISHED IN THIS SAME PRESS (architect 2026-08-07,
