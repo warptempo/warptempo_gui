@@ -1318,6 +1318,18 @@ int main(int argc, char** argv) {
         // clear lands in the same frame they do.
         target_render.tick_updating_hold();
 
+        // Its sibling for the ARCHIVAL status message: promote the message
+        // parked at dispatch once the worker reports that synthesis actually
+        // began, so a render served by one of do_render's reuse rungs shows
+        // nothing (architect 2026-08-08). The tick for the same reason as the
+        // hold, from the other direction: the hold watches for an event that
+        // never comes (quiet), this one watches for an event on the WORKER
+        // thread that wakes nothing on ours — the completion eventfd fires only
+        // when the render is over. Both are polls of settled state, both cost a
+        // compare, and keeping them adjacent keeps the two status owners' tick
+        // work in one place.
+        input_handler.tick_promote_render_status();
+
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either
         // dispatches to the worker, sets the supersede slot, or no-ops.

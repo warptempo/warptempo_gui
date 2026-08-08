@@ -686,6 +686,18 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
+    // THE SYNTHESIS BOUNDARY, and the one write of the signal. Everything above
+    // is reuse: the up-to-date rung, the project-artifact byte copy and the
+    // render-cache publish all return before this line, and each of their
+    // failure fallbacks falls THROUGH to it — so this single site is reached
+    // exactly when engine work is about to happen, on both the disk and buffer
+    // routes. The GUI's archival status message is deferred until this store is
+    // observed (architect 2026-08-08: a reuse-served render must announce
+    // nothing; the message means synthesis is happening, not that a command was
+    // issued). Null for any request whose dispatcher does not ask — the target
+    // preview's, and the contract is at the field.
+    if (req.synthesis_started) req.synthesis_started->store(true);
+
     std::fprintf(stderr, "warptempo_gui: Rendering -> %s\n",
                  final_output_path.c_str());
 

@@ -49,20 +49,28 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 // which is coincidence, not coupling — change one without the other freely.
 
 // DETECT: a trigger arriving within this of the previous one makes a RUN. It
-// has to cover the MACHINE-CADENCE producers with headroom and nothing else — a
-// drag re-triggering per pointer frame (~16 ms) and the compositor's key repeat
-// (~25-40 ms typical) — while deliberately EXCLUDING leisurely manual tapping,
-// which is a series of distinct actions and keeps the one-off lifecycle.
-inline constexpr long long kUpdatingRunDetectMs = 150;
+// covers the MACHINE-CADENCE producers with headroom and nothing else — roughly
+// TWICE the architect's measured 40 ms key-repeat interval (labwc repeatRate 25
+// per second) and far above a drag's per-pointer-frame cadence (~8-16 ms) —
+// while deliberately EXCLUDING leisurely manual tapping, which is a series of
+// distinct actions and keeps the one-off lifecycle.
+inline constexpr long long kUpdatingRunDetectMs = 75;
 
-// QUIET: this long with no trigger ends the run ("the action stopped"). It is
-// deliberately SHORT, because it is the only extra time a run's FINAL label can
-// stay up compared with a one-off: if the last render finishes before the window
-// expires the label drops at expiry — at most this many milliseconds later than
-// a one-off's clear — and if the last render outlives the window the run ends
-// first and the ordinary completion clear fires with zero added time. A long
-// window here would make short renders look longer than they are.
-inline constexpr long long kUpdatingRunQuietMs = 150;
+// QUIET: this long with no trigger ends the run ("the action stopped").
+//
+// IT MATCHES DETECT BECAUSE WHAT WE MEASURE IS NOT THE DEVICE CADENCE — it is
+// the gap between two triggers as PROCESSED on the GUI thread, which is
+// meanwhile dispatching and cancelling a synthesis per keystroke with every core
+// busy. The loop batches under that load, so a steady 40 ms device cadence can
+// present here as a 60-80 ms processed gap; a quiet window tighter than the
+// jitter band would expire between two events of one continuous hold, end the
+// run mid-gesture and re-introduce exactly the blink the hold exists to remove.
+// 75 carries that headroom while keeping the run's cost imperceptible: it is the
+// only extra time a run's FINAL label can stay up compared with a one-off (and
+// only when the last render finishes before the window expires — if it outlives
+// the window the run ends first and the ordinary completion clear fires with
+// zero added time).
+inline constexpr long long kUpdatingRunQuietMs = 75;
 
 // Target-view live target render orchestrator. Owns the cancel-restart
 // dispatch helper called from every output-affecting mutation site (marker

@@ -158,6 +158,36 @@ struct RenderRequest {
     // populates it; it is never null in a program-built request, and
     // do_render dereferences it without a null check.
     RenderCache* render_cache = nullptr;
+
+    // THE SYNTHESIS-STARTED SIGNAL (architect 2026-08-08). Nullable, and the
+    // ONLY field do_render WRITES THROUGH: it stores true at the one point where
+    // every reuse rung has been passed or has fallen back and actual engine work
+    // begins — the site of the "Rendering -> " stderr line — and never anywhere
+    // else. It exists so the GUI can show its archival status message when
+    // synthesis really starts rather than when a command was issued: the three
+    // disk reuse rungs are first in line by design, and a rung-served render is
+    // a byte copy that must announce nothing.
+    //
+    // OWNERSHIP, and why it is a RAW pointer where the cancel token is a
+    // shared_ptr: the token needs per-session shared ownership because copies
+    // OUTLIVE the render (the cache writer thread holds one, and must still read
+    // its own session's bit truthfully after a later dispatch). This flag has no
+    // such consumer — do_render writes it only while the worker runs, and the
+    // only reader is the GUI thread's per-tick promotion check — so it points at
+    // a long-lived member of the dispatcher that owns the parked message, reset
+    // to false at each dispatch. Cross-thread access is worker-write /
+    // GUI-read against a live render, which the atomic covers; the GUI-side
+    // resets happen only at dispatch and at completion, both of which the
+    // single-in-flight worker contract fences (dispatch asserts idle,
+    // completion runs after do_render returned).
+    //
+    // NULL FOR THE TARGET PREVIEW, deliberately rather than "set for
+    // uniformity": the buffer route skips the disk rungs entirely and its label
+    // already distinguishes reuse from synthesis on the GUI thread BEFORE
+    // dispatch (target_render.cpp), so wiring it here would add a second writer
+    // to a flag with no second reader — the kind of silent divergence the null
+    // default makes impossible. do_render null-checks at its one write.
+    std::atomic<bool>* synthesis_started = nullptr;
 };
 
 // Synchronous render. Blocks the caller until the pipeline finishes (or

@@ -203,11 +203,79 @@ void GuiInputHandler::finalize_render_run() {
     // ordering consistent with the other status-clear paths.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
+    // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
+    // DIE HERE or a rung-served run — which never promoted, so this clear of the
+    // slot has nothing of its to erase — would leave its message waiting for the
+    // NEXT dispatch's signal to show it. Every terminal branch of an archival
+    // session reaches this one function (the single render's on_done and the
+    // batch's out-of-entries and cancelled terminal), so this is the whole
+    // cleanup. The signal reset is belt-and-braces — each dispatch resets it
+    // too — and keeps the resting state honest between runs; it is safe here
+    // because a completion runs on the GUI thread after do_render returned.
+    pending_status_text_.clear();
+    synthesis_started_.store(false);
+    status_promoted_ = false;
     // Worker is now idle — pump the deferred work. maybe_dispatch_pending
     // offers the beat to a parked archival command first (an explicit user
     // command outranks the derived preview), then to a pending target
     // render queued by a target-view edit during this run.
     target_render.maybe_dispatch_pending();
+}
+
+void GuiInputHandler::park_render_status(std::string text) {
+    // THE ONE OWNER of "an archival entry is about to be dispatched": it retires
+    // the outgoing entry's status and arms the incoming one's.
+    //
+    // THE RETRACTION IS THE HALF THAT IS NOT OBVIOUS. Within a sweep each cell
+    // parks its own message, and a cell that SYNTHESIZED had its message
+    // promoted into the slot; if the next cell is then served by a reuse rung it
+    // promotes nothing, and without this the previous cell's "Rendering 3 of 8"
+    // would sit on the strip through however many byte-copy cells follow —
+    // naming an entry that finished and a count that is no longer true. Clearing
+    // only what WE promoted is what keeps this from reaching across owners: a
+    // preview's "Updating..." in the shared slot is not ours to erase.
+    if (status_promoted_) {
+        // Invalidate before clearing, the ordering every status-clear path here
+        // keeps.
+        viewport.invalidate_timestamp_area();
+        app.queue_progress_text.clear();
+        status_promoted_ = false;
+    }
+    // BEFORE THE DISPATCH BY CONSTRUCTION (both callers park, then dispatch):
+    // this reset is what stops the PREVIOUS session's fired signal from
+    // promoting the incoming message instantly, which is exactly what a reuse
+    // cell following a synthesis cell would otherwise do.
+    synthesis_started_.store(false);
+    pending_status_text_ = std::move(text);
+}
+
+void GuiInputHandler::tick_promote_render_status() {
+    // THE TICK IS THE OBSERVER because the event being watched happens on the
+    // WORKER thread: do_render stores the signal as it crosses into synthesis,
+    // and nothing on the GUI thread is woken by that — the completion eventfd
+    // fires at the END of the render, far too late to be this message's cue.
+    // Polling a flag once per tick is the whole mechanism, and the ~8 ms it can
+    // cost (the timerfd's free-running interval) is invisible against a render.
+    // Same idiom, and the same wiring site, as the preview label's run hold
+    // (GuiTargetRender::tick_updating_hold).
+    //
+    // ORDERED CHEAPEST FIRST: nothing parked is the resting state.
+    if (pending_status_text_.empty())  return;
+    // The worker went idle without ever crossing the boundary — a rung-served
+    // render whose finalize is about to clear the parked string, or has already.
+    // Promoting now would paint a message for work that is over.
+    if (!async_renderer.is_busy())     return;
+    if (!synthesis_started_.load())    return;
+
+    app.queue_progress_text = pending_status_text_;
+    // Explicitly, rather than by moving out: one promotion per parked message is
+    // the contract, and the emptiness above is the test that enforces it.
+    pending_status_text_.clear();
+    // Records that the text now in the shared slot is OURS, which is what lets
+    // the next park retract it and keeps that retraction from touching another
+    // owner's message.
+    status_promoted_ = true;
+    viewport.invalidate_timestamp_area();
 }
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
@@ -243,8 +311,15 @@ void GuiInputHandler::maybe_reestablish_target_buffer() {
 void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
-    app.queue_progress_text    = "Rendering...";
-    viewport.invalidate_timestamp_area();
+    // THE MESSAGE IS PARKED, NOT SHOWN (architect 2026-08-08). do_render's three
+    // reuse rungs are ahead of all engine work by design, so a dispatch says
+    // nothing about whether anything will be rendered: an up-to-date artifact, a
+    // project-artifact byte copy or a render-cache publish all return before the
+    // engine is touched. "Rendering..." means synthesis is happening — not that
+    // a command was issued — so it waits until the worker reports crossing that
+    // boundary, and a rung-served render never shows it at all.
+    park_render_status("Rendering...");
+    req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) {
             const bool success = (o == RenderOutcome::Success);
@@ -365,10 +440,16 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   "Rendering %d of %d (%s)...",
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
-    app.queue_progress_text = buf;
-    viewport.invalidate_timestamp_area();
+    // PARKED, NOT SHOWN — same rule as the single render (rationale at
+    // dispatch_single_archival_render), and this is where it earns most: a
+    // sweep's cells are individually rung-served or synthesized, so the row
+    // counts up only across the cells that actually rendered something and a run
+    // of reuse cells passes in silence. The park is also what RETRACTS the
+    // previous cell's message when that cell did show one — see the owner.
+    park_render_status(buf);
 
     RenderRequest req = std::move(batch_.reqs[batch_.next_index]);
+    req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) { on_batch_entry_complete(o); });
 }

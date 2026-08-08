@@ -28,6 +28,7 @@
 #include "gui_input.h"
 #include "platform_wayland.h"
 
+#include <atomic>
 #include <cmath>
 #include <expected>
 #include <filesystem>
@@ -910,6 +911,15 @@ struct GuiInputHandler {
     // probe lambda calls it.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
+    // Per-iteration promotion check for the archival status message, wired from
+    // main.cpp's on_tick beside the preview label's own tick (the reason the
+    // tick is the observer is stated at both sites). The message is composed and
+    // PARKED at dispatch and written to the status slot only once the worker
+    // reports that synthesis actually began, so a render served by one of
+    // do_render's reuse rungs says nothing at all. Cheap: one empty-string test
+    // per tick when nothing is parked.
+    void tick_promote_render_status();
+
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
     // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and
@@ -923,6 +933,34 @@ private:
         bool                       active     = false;
     };
     ActiveBatch batch_;
+
+    // THE DEFERRED ARCHIVAL STATUS MESSAGE — the three fields that implement it,
+    // written by park_render_status / tick_promote_render_status /
+    // finalize_render_run and by nothing else.
+    //
+    // pending_status_text_ is the composed message ("Rendering..." for a single
+    // render, "Rendering N of M (label)..." for a sweep entry) waiting for
+    // permission to appear. Parked by park_render_status at the two archival
+    // dispatch sites instead of being written to app.queue_progress_text, copied
+    // into the slot by tick_promote_render_status, and cleared there and at
+    // finalize_render_run — so a render served by a reuse rung, which never
+    // fires the signal, simply drops its message at the completion with nothing
+    // ever painted.
+    //
+    // status_promoted_ says the text currently in the SHARED slot is ours, and
+    // exists so a park can retract it (a sweep cell's "3 of 8" must not linger
+    // over the reuse cells that follow) without ever erasing another owner's
+    // message — the preview's "Updating..." lives in the same slot.
+    //
+    // synthesis_started_ is the flag do_render stores true at its synthesis
+    // boundary (RenderRequest::synthesis_started carries its address; the
+    // ownership argument is at that field). The GUI thread resets it at each
+    // dispatch — before the worker can run, so a previous session's true can
+    // never promote the next session's message, which is what keeps a sweep's
+    // reuse cells silent after a synthesis cell — and again at finalize.
+    std::string       pending_status_text_;
+    std::atomic<bool> synthesis_started_{false};
+    bool              status_promoted_ = false;
 
     // Result of one walk over the renders/ batch root: the highest
     // leading-index `<digits>_...` folder, and that folder's filename.
@@ -961,8 +999,18 @@ private:
 
     // Finalize the current single-render-or-batch run on the GUI thread:
     // clear queue_running / queue_progress_text, invalidate the bottom
-    // strip. The summary log is the caller's concern.
+    // strip, and drop the deferred status message with its signal. The summary
+    // log is the caller's concern.
     void finalize_render_run();
+
+    // Arm the deferred status message for an entry about to be dispatched, and
+    // retire the outgoing one's: retract a message THIS owner promoted (a sweep
+    // cell's count must not outlive its cell), reset the synthesis signal, park
+    // the new text. Called by both archival dispatch sites immediately before
+    // async_renderer.dispatch, which is what makes the reset's
+    // before-the-worker-runs ordering structural. Full rationale at the
+    // definition.
+    void park_render_status(std::string text);
 
     // Re-establish a cold/stale target buffer after a successful archival
     // completion. Shared by the single-archival success tail and the batch
