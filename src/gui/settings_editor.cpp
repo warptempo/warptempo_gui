@@ -318,13 +318,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // Navigation-class (allowed even while the tab is read-only), and the
         // remote-unlock route for the OTHER tab. read_only lives in the band for
         // both tabs.
-        // THE EDITOR'S KEYBOARD OPENER, bare `;`, is not on the read-only
-        // allowlist, so it cannot raise this surface in a locked ACTIVE tab —
-        // but the SETTINGS DROPDOWN can and does (its six items call
-        // open_prefilled directly from finish_dropdown_release, reaching no
-        // gate), so this arm is also the SELF-unlock route from inside a locked
-        // tab. Re-derived 2026-08-07; the older claim that the editor "cannot
-        // open in a read-only tab" predated the dropdown.
+        // IT IS THE REMOTE ROUTE ONLY: there is no SELF-unlock through this
+        // surface, because no route raises the editor on a locked ACTIVE tab at
+        // all — bare `;` is off the read-only allowlist one level up, and the
+        // settings dropdown's item clicks go through open_prefilled, which
+        // delegates to open() whole and takes its refusal (the reasoning lives
+        // at that opener). So this arm is reached by typing
+        // `tab_X_read_only=false` from an UNLOCKED active tab about the other
+        // one; a locked ACTIVE tab is unlocked by its own tab click, the padlock
+        // toggle.
         if (gv.b == band.read_only) { unchanged(); return true; }
         band.read_only = gv.b;
         applied(); return true;

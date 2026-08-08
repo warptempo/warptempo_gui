@@ -112,6 +112,16 @@ bool spawn_audio_player(const std::string& player,
 // returns and the child _exit's), gio refusing (an unsupported filesystem, no
 // gvfs available), a fork that never happened.
 //
+// THE WITNESS ANSWERS ONLY A CONFIRMED ABSENCE, which is why the error_code is
+// read rather than discarded: std::filesystem::exists returns false both when
+// the status says not_found and when the status query itself FAILED (a
+// permission or I/O error), and those two are opposite verdicts. A false with
+// `ec` set is INDETERMINATE — the folder may well still be there — so it is not
+// absence and this helper returns false for it, routing the caller onto the
+// native fallback, whose own failure is loud. Reporting a successful trash on
+// an unreadable status would suppress that fallback and let the caller announce
+// a wipe that never happened.
+//
 // The child's stdout and stderr go to /dev/null: the caller's single fallback
 // line is the whole diagnostic this act prints, and gio's own words would only
 // double it.
@@ -146,7 +156,8 @@ bool trash_directory(const std::filesystem::path& dir) {
     }
 
     std::error_code ec;
-    return !std::filesystem::exists(dir, ec);
+    const bool absent = !std::filesystem::exists(dir, ec);
+    return absent && !ec;
 }
 
 }  // namespace
@@ -1519,9 +1530,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             mode arm either: admitting it lets the press fall
 //                             through to on_key's ordinary body, which is what
 //                             puts it BELOW the read-only gate — a locked tab
-//                             refuses it exactly as it refuses `'` and
-//                             Ctrl+Alt+R (the lock means hands off the piece's
-//                             authored state, and this act writes it).
+//                             refuses it exactly as it refuses `'` (the lock
+//                             means hands off the piece's authored state, and
+//                             this act writes it; Save-and-Commit, which
+//                             authors nothing, is admitted by that gate
+//                             instead).
 //   - Ctrl+S                → the save. It writes the LIVE state, which is
 //                             exactly the now side the diff is measured against,
 //                             so it cannot make the display disagree with disk.
@@ -1657,7 +1670,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // Revert button takes its row's disabled face from this same line. Unlike
     // the two mutators above it, this chord is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, BELOW the read-only gate, so a
-    // locked tab refuses it exactly as it refuses `'` and Ctrl+Alt+R.
+    // locked tab refuses it exactly as it refuses `'`.
     const bool is_revert_act =
         (ctrl && !shift && !alt && key == GuiKeys::H &&
          history_mode_revert_subject_standing(mode));
