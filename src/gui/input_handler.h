@@ -1836,8 +1836,12 @@ private:
     //     trim bar's plain DOUBLE-CLICK, the regular views' span-framing gesture
     //     with this act as its command — rather than an edge effect. Its own
     //     comment carries the recipe and the span rule.
-    //   * frame_history_view_whole_song is what the EDGES do instead: entry,
-    //     each `,` / `.` step and each compare switch open at FULL ZOOM OUT.
+    //   * frame_history_view_whole_song is what the ENTRY does instead: a fresh
+    //     visit opens at FULL ZOOM OUT. It is the mode's ONLY viewport write
+    //     since 2026-08-08 — the `,` / `.` step and the compare switch stopped
+    //     calling it, the window being the USER'S for the whole visit and
+    //     unified across the four tabs — so its callers are the entry owner and
+    //     the framing act above, whose empty-delta arm falls through to it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since

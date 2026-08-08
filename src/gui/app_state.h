@@ -2387,10 +2387,14 @@ struct AppState {
         // A SWITCH IS A MODE EDGE, exactly like a `,` / `.` step, and one owner
         // does all of it (GuiInputHandler::set_history_reading, the four-tab selector
         // since 2026-08-07): clear the mode
-        // focus, drop the lane's published content, reset the viewport to full
-        // zoom out, REPUBLISH THE LANE SYNCHRONOUSLY (2026-08-07 — the arriving
-        // reading's flags stand before the press returns, so the swap shows no
-        // blank frame), damage the window.
+        // focus, drop the lane's published content, clear a resting region,
+        // REPUBLISH THE LANE SYNCHRONOUSLY (2026-08-07 — the arriving reading's
+        // flags stand before the press returns, so the swap shows no blank
+        // frame), damage the window. IT MOVES NO VIEWPORT (architect
+        // 2026-08-08, superseding the 2026-08-05 reset to full zoom out at this
+        // edge and at the step): the window is the user's while the view
+        // stands, so all four tabs are read through the one frame he chose and
+        // only the ENTRY frames the whole song.
         //
         // EVERY READER OF THE DISPLAYED DELTA PASSES IT, and since 2026-08-07
         // they do so THROUGH ONE ACCESSOR (displayed_delta() below) rather than

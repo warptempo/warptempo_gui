@@ -632,20 +632,21 @@ void GuiInputHandler::close_history_mode() {
 //
 // A SYNCHRONOUS FLAG REBUILD AT EVERY EDGE IS EXACTLY WHAT THEY DO NOW
 // (architect 2026-08-07), SUPERSEDING this site's own "heavier than a one-tick
-// window warrants" weighing — the window is VISIBLE. At full zoom out, which is
-// where the walk is read (the edges land there themselves) and where the framing
-// therefore moves nothing, no other route republished inside the press: each `,` /
-// `.` step and each reading switch painted a BLANK lane for a frame before the
-// arriving commit's flags landed, and a blank frame between two contents is a
-// flicker whatever removing it costs. All four edges now call
-// republish_history_lane_now (below) as their last act — the three in-view ones on
-// the line after their framing, the EXIT below its parked-band restore, where the
-// mode is already down and the rebuild publishes the LIVE lane the editor is
-// coming back to (that fourth call landed hours after the first three, closing
-// the one window this comment recorded as the fix's remainder). So the lane's old
-// content is replaced only once the new one is ready, atomically inside the press,
-// with no stale-hit window on either side of the swap, and the ENTER and LEAVE
-// edges are symmetric.
+// window warrants" weighing — the window is VISIBLE. Nothing else in a step or a
+// reading switch republishes the lane inside the press: each painted a BLANK
+// lane for a frame before the arriving commit's flags landed, and a blank frame
+// between two contents is a flicker whatever removing it costs. (That was true
+// even while those edges framed the viewport, the walk being read at full zoom
+// out where the framing moved nothing; since 2026-08-08 they write no viewport
+// at all, so the call below is the only republication they have.) All four edges
+// now call republish_history_lane_now (below) as their last act — the three
+// in-view ones as the tail of the press, the EXIT below its parked-band restore,
+// where the mode is already down and the rebuild publishes the LIVE lane the
+// editor is coming back to (that fourth call landed hours after the first three,
+// closing the one window this comment recorded as the fix's remainder). So the
+// lane's old content is replaced only once the new one is ready, atomically
+// inside the press, with no stale-hit window on either side of the swap, and the
+// ENTER and LEAVE edges are symmetric.
 //
 // THE DROP STAYS — as that rebuild's own pre-step, and as the COLD ANSWER for the
 // frames the rebuild cannot serve: maybe_rebuild_flag_cache refuses while the
@@ -698,24 +699,25 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // columns already do.
 //
 // THE ONE COST, recorded rather than inferred away: at an edge whose viewport
-// write MOVED something — the framing's apply_zoom_to_start in view, the parked
+// write MOVED something — the ENTRY's framing apply_zoom_to_start, the parked
 // band's at the exit — that call has already kicked, so the press renders the
 // plate twice. The flag cache does not rebuild twice: it is fingerprint-guarded,
 // and the first kick already published the arriving lane. The double render
-// therefore lands only where the user's press asked for a viewport change as
-// well, and skipping this call by testing whether the write moved would make the
-// fix depend on an inference about another function's internals; ONE SHAPE AT
-// EVERY EDGE is worth one redundant render at the ones that move. The two
-// load-in-place closers pay theirs for a third reason, stated at the exit.
+// therefore lands only where the press moved the viewport as well, which since
+// 2026-08-08 is those two edges alone (the step and the reading switch write no
+// viewport), and skipping this call by testing whether the write moved would
+// make the fix depend on an inference about another function's internals; ONE
+// SHAPE AT EVERY EDGE is worth one redundant render at the ones that move. The
+// two load-in-place closers pay theirs for a third reason, stated at the exit.
 //
 // THE ORDER IS FIXED at every caller, and it is one rule in two spellings: this
 // call comes LAST of the acts that change what the lane should show. In view that
-// is state write, focus clear, stash drop, region clear, framing, THEN this; at
-// the exit it is the whole-struct reset, the stash drop, the parked-band restore,
-// THEN this. Everything the rebuild reads must already be true, and the viewport
-// the flags are mapped onto must already have settled — which at the exit means
-// strictly below apply_zoom_to_start, whose own kick this would otherwise
-// precede and waste.
+// is state write, focus clear, stash drop, region clear, and the entry's framing
+// where there is one, THEN this; at the exit it is the whole-struct reset, the
+// stash drop, the parked-band restore, THEN this. Everything the rebuild reads
+// must already be true, and the viewport the flags are mapped onto must already
+// have settled — which at the exit means strictly below apply_zoom_to_start,
+// whose own kick this would otherwise precede and waste.
 void GuiInputHandler::republish_history_lane_now() {
     viewport.kick_waveform_sync();
 }
@@ -802,7 +804,10 @@ bool GuiInputHandler::open_history_mode_fresh() {
     drop_lane_stash_across_history_edge();
     // OPEN AT FULL ZOOM OUT (architect 2026-08-05) — the whole song in the
     // window, from which the trim bar's double-click frames the differences on
-    // demand.
+    // demand. THE ONLY EDGE THAT FRAMES since 2026-08-08: a fresh visit still
+    // starts from the overview, and everything the user does to the viewport
+    // after that is his for the rest of the visit (the framer's own comment
+    // carries the ruling).
     // After the drop, so the synchronous rebuild the framing may kick
     // republishes the ARRIVING commit's flags rather than being erased by it,
     // and after the session is moved in, since the framer is mode-gated.
@@ -929,8 +934,9 @@ void GuiInputHandler::on_history_prefetch_ready() {
 
 // FRAME THE VIEWED COMMIT'S DIFF SPAN — AN ON-DEMAND ACT, not an edge effect
 // (architect 2026-08-05, superseding his own per-diff framing of earlier that
-// day). The three mode edges reset to FULL ZOOM OUT instead
-// (frame_history_view_whole_song, below); this is what the user asks for when he
+// day). The mode's INTERNAL edges move no viewport at all since 2026-08-08 (the
+// window is the user's for the whole visit; only the entry frames, at
+// frame_history_view_whole_song below); this is what the user asks for when he
 // wants the differences filling the window, and its ONE caller is THE TRIM BAR'S
 // PLAIN DOUBLE-CLICK — the regular views' span-framing gesture exactly, on the
 // same band and through the same consume-before-arm machinery, with this act as
@@ -989,13 +995,23 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
                          /*margin=*/true);
 }
 
-// WHAT THE MODE'S THREE EDGES DO INSTEAD (architect 2026-08-05, SUPERSEDING the
-// same-day per-diff framing at those edges — the framing itself survives whole
-// as the trim-bar double-click's act above). Entry, each `,` / `.` step and each
-// COMPARE SWITCH reset the viewport to FULL ZOOM OUT: the whole song in the
-// window, which is the reading position a checkpoint review starts from — the
+// WHAT THE ENTRY DOES — the mode opens at FULL ZOOM OUT, the whole song in the
+// window, which is the reading position a checkpoint review starts from: the
 // delta's flags are laid out across the piece, and where they SIT is as much of
-// the answer as what they say. From there the double-click frames them.
+// the answer as what they say. From there the trim bar's double-click frames
+// them on demand.
+//
+// TWO CALLERS SINCE 2026-08-08, re-derived by grep on this name: the ONE EDGE
+// that frames, the entry owner open_history_mode_fresh; and
+// frame_viewed_commit_diff_span above, which falls through to it as its
+// EMPTY-DELTA arm (the double-click's own whole-song answer, an on-demand act
+// rather than an edge). THE VIEWPORT IS OTHERWISE THE USER'S FOR THE WHOLE
+// VISIT (architect 2026-08-08, SUPERSEDING his own 2026-08-05 "three edges land
+// at full zoom out"): each `,` / `.` step and each compare-tab switch used to
+// call this and no longer do, so a pan and a zoom made once are read through
+// every walk step and every one of the four tabs — the viewport is UNIFIED
+// across them — and the only reset left is the exit's, which puts the editor's
+// own parked band back.
 //
 // FULL ZOOM OUT IS SPELLED AS THE SPAN FRAMER'S WHOLE-SONG ARM, [0, total] with
 // NO margin, which the framer's centering plus the wall clamp degenerate to the
@@ -1003,9 +1019,9 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
 // effective_max_zoom_level, arrived at through the mode's one framing route
 // rather than a second recipe.
 //
-// IT MOVES THE VIEWPORT AND NOTHING ELSE, exactly as the span framing does: a
-// step leaves the playhead where the user put it, and the edges' own focus clear
-// and stash drop are their callers'.
+// IT MOVES THE VIEWPORT AND NOTHING ELSE, exactly as the span framing does: the
+// playhead stays where it is, and the entry's own focus clear and stash drop are
+// its caller's.
 //
 // The `!active` guard is the defensive shape the framing above carries, for the
 // same reason: every caller is inside the mode already.
@@ -1031,8 +1047,8 @@ void GuiInputHandler::frame_history_view_whole_song() {
 // come back to (AppState::HistoryMode's `source` owns that rule).
 //
 // A SWITCH IS A MODE EDGE, with the `,` / `.` step's shape exactly — the same
-// four acts in the same order, for the same reasons, because the same thing is
-// true of it: the lane is about to show a DIFFERENT LIST.
+// acts in the same order, for the same reasons, because the same thing is true
+// of it: the lane is about to show a DIFFERENT LIST.
 //   * the mode focus AND ITS SELECTION clear, through the one clearer that
 //     always takes the pair — both index the painted list, so carrying either
 //     would light an unrelated flag; the playhead it landed stays where it is,
@@ -1046,20 +1062,20 @@ void GuiInputHandler::frame_history_view_whole_song() {
 //     on the step's own edge argument, the architect having named the exit and
 //     the step): a span drawn in here marks a passage of the delta being read,
 //     and the arriving reading is a different delta;
-//   * the viewport resets to FULL ZOOM OUT, in this same press — the step's own
-//     edge rule since 2026-08-05, and it applies here for the step's own reason:
-//     the arriving reading generally covers a different extent, so a viewport
-//     left where the leaving one was framed would show one answer at the other's
-//     magnification;
+//   * THE VIEWPORT IS NOT TOUCHED — the step's own rule since 2026-08-08, and
+//     it applies here for the step's own reason: the window is the USER'S while
+//     the view stands, so the four tabs share one viewport and a switch shows
+//     the arriving reading through exactly the frame the leaving one was read
+//     in, which is what makes the two readings of one member comparable at a
+//     glance (architect, SUPERSEDING the 2026-08-05 reset to full zoom out);
 //   * full-window damage, a discrete command.
 //
 // IDEMPOTENT AT THE TOP, which is where its callers' radio rule comes from: a
-// press on the tab already lit changes nothing, frames nothing and damages
-// nothing, so the press is a consumed nothing without either call site testing
-// for it — and it is what makes Ctrl+Tab's cycle safe to express as a plain
-// "the next one" without a live-reading test of its own. The `!active` guard is
-// the same defensive shape the two framers carry — the callers are gated by the
-// mode already.
+// press on the tab already lit changes nothing and damages nothing, so the press
+// is a consumed nothing without either call site testing for it — and it is what
+// makes Ctrl+Tab's cycle safe to express as a plain "the next one" without a
+// live-reading test of its own. The `!active` guard is the same defensive shape
+// the two framers carry — the callers are gated by the mode already.
 void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
                                           GuiHistoryCompare    compare) {
     if (!app.history_mode.active) return;
@@ -1072,7 +1088,6 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     clear_region_highlight(app, viewport);
-    frame_history_view_whole_song();
     republish_history_lane_now();
     viewport.invalidate_all();
 }
@@ -1307,21 +1322,27 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // the old commit's: dropping all three is what stops a lane press or a
         // Tab step landing the playhead on a flag that is no longer shown. The
         // refill is this press's own (republish_history_lane_now, at the tail),
-        // so the emptied state lives only across the four lines between.
+        // so the emptied state lives only across the handful of lines between.
         drop_lane_stash_across_history_edge();
         // AND THE REGION GOES WITH THE COMMIT (architect 2026-08-05, the
         // view-local rule): a span drawn in here marks a passage of the
         // checkpoint it was drawn against, and the step is leaving that
         // checkpoint. Same reasoning as the focus clear above, on the same edge.
         clear_region_highlight(app, viewport);
-        // BACK TO FULL ZOOM OUT, in this same press — so a step away and back
-        // always resets the reading position, and the pans and zooms the user
-        // made on the commit he is leaving stay his own business for as long as
-        // he stays on it. Below the drop for the reason the entry states.
-        frame_history_view_whole_song();
-        // THEN THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07,
-        // the architect's reported flicker): at full zoom out the framing moves
-        // nothing, so without this the step showed a blank lane for a frame.
+        // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08,
+        // SUPERSEDING the 2026-08-05 per-edge reset to full zoom out): he pans
+        // and zooms once and reads the SAME WINDOW through every step of the
+        // walk, so a checkpoint's flags are compared against the previous one's
+        // at the magnification he chose rather than at an overview he has to
+        // re-establish after each press. Only the ENTRY frames the whole song
+        // now, and the trim bar's double-click is the on-demand "show me this
+        // delta's span". So this edge writes NO viewport at all.
+        //
+        // THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07, the
+        // architect's reported flicker): the drop above emptied the lane and
+        // nothing else in this press republishes it — the step moves no
+        // viewport, so no kick rides along — and without this the step showed a
+        // blank lane until the next tick.
         republish_history_lane_now();
         viewport.invalidate_all();
         return true;

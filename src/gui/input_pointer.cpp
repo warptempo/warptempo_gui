@@ -3358,10 +3358,12 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // joined the marker lane and the trim bar gained its framing gesture):
 //   * a DOUBLE-CLICK anywhere on the TRIM BAR band ZOOMS TO THE VIEWED
 //     CHECKPOINT'S DIFF SPAN — the span that band is already displaying —
-//     through the framing act the mode's edges stopped running when they went to
-//     full zoom out (frame_viewed_commit_diff_span, input_key_dispatch.cpp). It
-//     moves the viewport and nothing else, and a SINGLE click on that band stays
-//     the consumed nothing a motionless trim-bar click is everywhere.
+//     through the framing act the mode's edges stopped running in 2026-08-05
+//     (frame_viewed_commit_diff_span, input_key_dispatch.cpp). Since 2026-08-08
+//     it is the ONLY framing gesture a standing view has, the internal edges
+//     writing no viewport at all and the window being the user's for the whole
+//     visit. It moves the viewport and nothing else, and a SINGLE click on that
+//     band stays the consumed nothing a motionless trim-bar click is everywhere.
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses. It
