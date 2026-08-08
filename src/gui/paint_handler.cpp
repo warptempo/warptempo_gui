@@ -742,17 +742,31 @@ constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
 // drawn in the compare view at all. `label` is likewise the NON-mode word, and
 // those two have none — they exist nowhere but in the view, where the override
 // (redesign_button_label) answers for all four.
+//
+// `group_label` IS THE COMPARE VIEW'S TEXT BLOCK (architect 2026-08-08): "this
+// def paints a heading BEFORE itself while the view stands". It is what makes
+// the row two labelled groups —
+//
+//     [Iterative:] [Remote] [Local]    [Cumulative:] [Remote] [Local]
+//
+// — with the reading said once per group instead of four times in four suffixed
+// tab labels. Carried on the table rather than spelled in the walk so the walk
+// stays ONE left-to-right accumulation and the A/B path is untouched: outside
+// the view the field is never read at all. A TEXT BLOCK IS NOT A BUTTON — no
+// rect published, no hover, no press meaning, no lock slot — so it is a
+// nullptr-or-a-word field here and not a fifth and sixth roster entry.
 struct TabDef {
     RedesignButton id;
     char           letter;
     const char*    label;
     bool           compare_only;
+    const char*    group_label;
 };
 constexpr TabDef kTabs[] = {
-    {RedesignButton::TabA, 'A', "A", false},
-    {RedesignButton::TabB, 'B', "B", false},
-    {RedesignButton::TabC, 'A', "",  true},
-    {RedesignButton::TabD, 'B', "",  true},
+    {RedesignButton::TabA, 'A', "A", false, kCompareIterativeGroupLabel},
+    {RedesignButton::TabB, 'B', "B", false, nullptr},
+    {RedesignButton::TabC, 'A', "",  true,  kCompareCumulativeGroupLabel},
+    {RedesignButton::TabD, 'B', "",  true,  nullptr},
 };
 
 // A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
@@ -1625,11 +1639,23 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // slots or four), the width, the label and the lock.
     //
     // AND IT IS FOUR SLOTS SINCE 2026-08-07 (architect), the product of the two
-    // axes in row order: the two readings over the COMMIT walk, labelled
-    // "(Remote)" since 2026-08-07, then the same two over the LOCAL one — the
-    // session's own undo history read through the same delta machinery. The extra pair is painted here and NOWHERE ELSE;
-    // outside the view the walk below publishes it as an empty rect and paints
-    // the A/B pair alone, exactly as it always did.
+    // axes — the two readings over the COMMIT walk and the same two over the
+    // LOCAL one, the session's own undo history read through the same delta
+    // machinery. SINCE 2026-08-08 THE ROW SAYS THAT PRODUCT AS TWO LABELLED
+    // GROUPS (architect, superseding the four self-labelled tabs):
+    //
+    //     [Iterative:] [Remote] [Local]    [Cumulative:] [Remote] [Local]
+    //
+    // — the reading said once per group by a TEXT BLOCK (not a button: no rect,
+    // no hover, no press, no lock slot; the walk below owns its look) and each
+    // tab naming only the walk it selects. Row order is therefore the Iterative
+    // group's two walks then the Cumulative group's two, and it is the SAME
+    // order the press claim (input_pointer.cpp), the selected-face predicate
+    // (redesign_button_selected) and the Ctrl+Tab cycle (input_key_dispatch.cpp)
+    // read. The extra pair and both text blocks are painted here and NOWHERE
+    // ELSE; outside the view the walk below publishes that pair as an empty
+    // rect, paints no heading and paints the A/B tabs alone, exactly as it
+    // always did.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
@@ -1678,14 +1704,18 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // happen with active_tab_view always 'A' or 'B' but costs one int to state.
     int sel_x = 0, sel_w = 0;
 
-    // THE WALK: tabs flush from the lane's left edge, adjacent, margin zero. A
+    // THE WALK: cells flush from the lane's left edge, adjacent, margin zero. A
     // tab's width is the LARGER of its two paddings around the shaped label and
     // the minimum — and nothing else, so it is identical selected or not (the
     // side borders draw inside the box). With the A/B labels the minimum is what
     // binds, which makes both tabs exactly the same width and the row regular by
-    // construction; with the compare view's two words the shaped run binds and
-    // the tabs differ in width, which is what a label-sized tab bar does and the
-    // reason nothing in this walk assumes they match.
+    // construction; in the compare view each cell is sized by its own word — the
+    // headings and "Remote" clear the minimum and "Local" does not — so the
+    // cells differ in width, which is what a label-sized tab bar does and the
+    // reason nothing in this walk assumes they match. THE COMPARE VIEW'S TEXT
+    // BLOCKS ARE CELLS IN THIS SAME ACCUMULATION, sharing the formula with the
+    // tabs so the heading and the tab words line up; they are the only cells
+    // that publish nothing.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
         // A SLOT THIS MODE DOES NOT HAVE PUBLISHES AN EMPTY RECT AND NOTHING
@@ -1700,6 +1730,49 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             publish_button_face(app, audio.total_frames(), def.id,
                                 GuiRect{0, 0, 0, 0});
             continue;
+        }
+        // THE GROUP'S TEXT BLOCK, painted BEFORE the tab that carries it and
+        // only in the compare view (architect 2026-08-08). It is the row's
+        // heading — "Iterative:" over the first pair of walks, "Cumulative:"
+        // over the second — and it is NOT A BUTTON: no face is published, so
+        // there is no rect to hit, nothing to hover, no press meaning and no
+        // lock slot. A press landing on one falls out of the tab-row band
+        // claim's own walk having matched no slot, which is that row's consumed
+        // nothing (input_pointer.cpp).
+        //
+        // IT IS PAINTED AS AN UNSELECTED TAB WEARING THE SELECTED TAB'S
+        // BACKGROUND, and per this row's colour ruling the selected tab's
+        // interior IS the lane ground — already filled across the whole lane
+        // above — so the block is exactly the shaped label in the tab ink,
+        // CENTERED in a field computed by THE TAB'S OWN WIDTH FORMULA (no lock
+        // slot, the compare view having none), on the tabs' own solved
+        // baseline. No fill, no borders, no trim, and the row's border-bottom
+        // runs under it unbroken exactly as it does under an unselected tab —
+        // only the SELECTED tab breaks that line, and a text block is never
+        // selected. Sharing the formula and the baseline solver is what makes
+        // the heading line up with the tab text beside it rather than merely
+        // sit near it.
+        //
+        // FLUSH, like every cell in this row: the block is simply the next cell
+        // in the one accumulation, with the same zero margin the tabs have
+        // between themselves.
+        if (compare_selector && def.group_label != nullptr) {
+            const text_shape::ShapedRun group =
+                text_shape::shape_text_run(font, def.group_label);
+            const int group_w =
+                static_cast<int>(std::nearbyint(group.width_px));
+            const int group_field = std::max(min_w, group_w + 2 * pad);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(
+                cr, group,
+                static_cast<double>(x) +
+                    std::nearbyint(
+                        (static_cast<double>(group_field) - group.width_px) *
+                        0.5),
+                redesign_baseline(font, static_cast<double>(lane.y),
+                                  static_cast<double>(content_h)));
+            x += group_field;
         }
         // THE LABEL IS THE OVERRIDE OWNER'S (redesign_button_label, app_state.h,
         // which also answers for the Render button's two mode labels), so the

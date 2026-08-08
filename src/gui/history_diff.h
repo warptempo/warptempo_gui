@@ -168,9 +168,10 @@ enum class GuiHistoryCompare {
 
 // WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
 // WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO STACK. Row 3
-// carries the product of the two axes as four tabs — Iterative (Remote) /
-// Cumulative (Remote) / Iterative (Local) / Cumulative (Local) — and this is the
-// axis the two Local ones select.
+// carries the product of the two axes as four tabs in two labelled groups
+// (2026-08-08) — [Iterative:] Remote | Local, then [Cumulative:] Remote |
+// Local — and this is the axis each group's two tabs select, the group heading
+// naming the other.
 //
 //   COMMIT — the checkpoint walk this mode was built on: the piece's committed
 //   sidecar history, matched by name under `projects/` (the file head owns the

@@ -2411,10 +2411,12 @@ struct AppState {
         // by hand.
         //
         // ITS SELECTOR IS ROW 3'S TABS, which stop being the A/B tabs while the
-        // view stands and become this bit's radio: with the COMMIT walk lit that
-        // is "Iterative (Remote)" and "Cumulative (Remote)" (the four-slot roster
-        // and its labels are at kCompareIterativeLabel), the selected face marks
-        // the live reading and a press on another switches; at the NEWEST index
+        // view stands and become this bit's radio: since 2026-08-08 the row is
+        // TWO LABELLED GROUPS — "Iterative:" over a Remote/Local pair, then
+        // "Cumulative:" over another (the four-slot roster and its words are at
+        // kCompareRemoteLabel) — so this bit is the GROUP a lit tab sits under,
+        // the selected face marks the live pair and a press on another slot
+        // switches; at the NEWEST index
         // the two readings coincide, so the switch there redraws the same lane
         // and only the lit tab moves. ITS HOTKEY IS CTRL+TAB — the tabs' own
         // chord, following the surface (architect 2026-08-05, superseding his
@@ -3692,8 +3694,9 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::TabA:
         case RedesignButton::TabB:
         // ROW 3'S SECOND PAIR (2026-08-07) joins its row's arm: the compare
-        // selector's Local half is live wherever it is drawn, and outside the
-        // `h` view it is not drawn at all.
+        // selector's two compare-only slots — the CUMULATIVE group's two walks
+        // since the row grouped, 2026-08-08 — are live wherever they are drawn,
+        // and outside the `h` view they are not drawn at all.
         case RedesignButton::TabC:
         case RedesignButton::TabD:
         case RedesignButton::IconS:
@@ -3816,18 +3819,20 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     // one in the mode, both being the reading cycle's two directions there.
     //
     // FOUR SLOTS SINCE 2026-08-07, and the lit one is the live (SOURCE, READING)
-    // PAIR: the row is the product of the two axes in row order — Iterative
-    // (Remote), Cumulative (Remote), Iterative (Local), Cumulative (Local) — so
-    // exactly one is ever lit and the radio rule falls out of the pair being a
-    // pair.
+    // PAIR: the row is the product of the two axes in row order, which since
+    // 2026-08-08 is TWO LABELLED GROUPS of two walks — (Commit, Iterative),
+    // (Local, Iterative), (Commit, Cumulative), (Local, Cumulative), the order
+    // the painter walks, the press claim tables and the Ctrl+Tab cycle steps —
+    // so exactly one is ever lit and the radio rule falls out of the pair being
+    // a pair.
     if (a.history_mode.active) {
         const bool local =
             a.history_mode.source == GuiHistoryWalkSource::Local;
         const bool iterative =
             a.history_mode.compare == GuiHistoryCompare::Iterative;
         if (b == RedesignButton::TabA) return !local &&  iterative;
-        if (b == RedesignButton::TabB) return !local && !iterative;
-        if (b == RedesignButton::TabC) return  local &&  iterative;
+        if (b == RedesignButton::TabB) return  local &&  iterative;
+        if (b == RedesignButton::TabC) return !local && !iterative;
         if (b == RedesignButton::TabD) return  local && !iterative;
     }
     switch (b) {
@@ -3846,10 +3851,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                                                 a.active_markers_view == 'W';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
-        // THE LOCAL PAIR HAS NO OUT-OF-VIEW MEANING — there is no third or
-        // fourth tab in this product, only two more slots the compare selector
-        // uses. Outside the view they are not painted, and false is what the
-        // drift comparator reads for them there.
+        // THE COMPARE-ONLY PAIR HAS NO OUT-OF-VIEW MEANING — there is no third
+        // or fourth tab in this product, only two more slots the compare
+        // selector uses. Outside the view they are not painted, and false is
+        // what the drift comparator reads for them there.
         case RedesignButton::TabC:
         case RedesignButton::TabD:       return false;
         case RedesignButton::IconS:      return a.active_audio_view   == 'S';
@@ -3976,7 +3981,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // constant chord. The lock's key is `o`, which HELP carries.
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
-        // The compare selector's Local pair exists only inside the `h` view,
+        // The compare selector's second pair exists only inside the `h` view,
         // where the whole row drops its tooltips (the override below); outside
         // it there is no painted button to hover. So there is no text to write
         // here, and null is that fact rather than an omission.
@@ -4084,35 +4089,44 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
 inline constexpr const char* kSaveCommitLabel       = "Save and Commit";
 inline constexpr const char* kSaveCommittingLabel   = "Committing...";
-// ROW 3'S TWO STATE LABELS — the tab pair's, while the `h` view stands and the
-// tabs are the COMPARE SELECTOR instead (architect 2026-08-05). Sentence case,
-// the ordinary convention: these are ordinary one-word labels and not row 2's
-// two named title-case exceptions. They live beside the toolbar
-// pair for the same reason that trio lives beside the constant table — one
-// place where a stateful button's word is written.
-// FOUR OF THEM SINCE 2026-08-07, the row being the product of the two axes: the
-// two readings of the COMMIT walk, then the same two of the LOCAL one. The
-// parenthesized suffix is what names the walk on the surface — parenthesized
-// rather than prefixed so the two readings stay the first word a reader lands
-// on, and sentence case throughout like the pair it grew from.
+// ROW 3'S COMPARE-SELECTOR WORDS, while the `h` view stands and the tabs are the
+// COMPARE SELECTOR instead of the A/B pair (architect 2026-08-05). Sentence
+// case, the ordinary convention: these are ordinary labels and not row 2's two
+// named title-case exceptions. They live beside the toolbar trio for the same
+// reason that trio lives beside the constant table — one place where a stateful
+// button's word is written.
 //
-// BOTH PAIRS CARRY THEIR WALK (architect 2026-08-07, later the same day): the
-// commit pair went from bare "Iterative" / "Cumulative" to "(Remote)", so the
-// row names its source on all four slots instead of leaving one pair's source
-// implied by the other's suffix. The words are the SURFACE's, not the model's —
-// GuiHistoryWalkSource stays Commit | Local, the committed history being what a
-// remote publishes, and these two constant names stay the unsuffixed pair's.
+// THE ROW IS TWO LABELLED GROUPS SINCE 2026-08-08 (architect), superseding the
+// four self-labelled tabs the product of the two axes first shipped as
+// ("Iterative (Remote)" ... "Cumulative (Local)", 2026-08-07 — the parenthesized
+// suffix is gone whole, its word having moved into the group label):
+//
+//     [Iterative:] [Remote] [Local]    [Cumulative:] [Remote] [Local]
+//
+// The READING is said once per group as a TEXT BLOCK — not a button, no rect
+// published, no hover and no press meaning — and each group's two tabs name only
+// the WALK they select, which is why there are two tab words here and not four.
+// The words are the SURFACE's, not the model's: GuiHistoryWalkSource stays
+// Commit | Local, the committed history being what a remote publishes.
+//
+// THE GROUP LABELS CARRY THE COLON, which is what makes them read as headings
+// rather than as two more slots; the painter (paint_tab_row, paint_handler.cpp)
+// owns their look — the tab's own width formula and baseline with no fill, no
+// border and no trim, so the words line up exactly with the tab text beside
+// them.
 //
 // THE WIDTH IS ABSORBED, checked rather than assumed (the row is one
 // left-to-right accumulation of max(kTabMinWidthPx, shaped + 2*pad), no wrap and
-// no clip): shaped at the product's one size the four labels measure 126 + 151 +
-// 109 + 134 = 520 px at 100% and 259 + 305 + 223 + 269 = 1056 px at 200%, plus
-// eight paddings (10 px each, scaled) = 600 px and 1216 px of row 3 against the
-// 1920 px window. The suffix cost 25 px per label at 100% and 46 px at 200%.
-inline constexpr const char* kCompareIterativeLabel  = "Iterative (Remote)";
-inline constexpr const char* kCompareCumulativeLabel = "Cumulative (Remote)";
-inline constexpr const char* kCompareIterativeLocalLabel  = "Iterative (Local)";
-inline constexpr const char* kCompareCumulativeLocalLabel = "Cumulative (Local)";
+// no clip): shaped at the product's one size the six cells measure 81 + 76 + 58
+// + 105 + 76 + 58 = 454 px at 100% and 163 + 152 + 116 + 209 + 152 + 116 =
+// 908 px at 200%, against the 1920 px window. The grouping took 148 px off the
+// row at 100% — the four suffixed labels wanted 602 px — because "Remote" and
+// "Local" are each said twice at tab size instead of four long labels being
+// spelled out in full.
+inline constexpr const char* kCompareRemoteLabel = "Remote";
+inline constexpr const char* kCompareLocalLabel  = "Local";
+inline constexpr const char* kCompareIterativeGroupLabel  = "Iterative:";
+inline constexpr const char* kCompareCumulativeGroupLabel = "Cumulative:";
 inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
                                                    RedesignButton b) {
     // THE COMPARE TABS CARRY NO TOOLTIP, on the view bar's own reasoning
@@ -4159,18 +4173,20 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // view bar's own reasoning — the sibling function above states it at its site.)
 inline const char* redesign_button_label(const AppState& a, RedesignButton b,
                                          const char* table_label) {
-    // THE TABS ARE THE COMPARE SELECTOR IN THE `h` VIEW, so they say which
-    // reading they select rather than which tab they are. The A slot takes
-    // Iterative because it is the default; the shaped-run layout each painter
-    // does absorbs the width change (every one of these labels is wider than
-    // "A"/"B", and the tab's width has always been max(minimum, shaped + 2*pad)).
-    // The order is the enum's, which is the painted one: the COMMIT walk's two
-    // readings, then the LOCAL walk's two.
+    // THE TABS ARE THE COMPARE SELECTOR IN THE `h` VIEW, so they say which WALK
+    // they select; the READING is said once per group by the painter's text
+    // block, which is not a button and has no label to answer for here. The
+    // shaped-run layout each painter does absorbs the width change (both words
+    // are wider than "A"/"B", and the tab's width has always been max(minimum,
+    // shaped + 2*pad)). The order is the enum's, which is the painted one: the
+    // ITERATIVE group's two walks, then the CUMULATIVE group's two — the same
+    // order the press claim and the Ctrl+Tab cycle read, so the row is one
+    // sequence everywhere.
     if (a.history_mode.active) {
-        if (b == RedesignButton::TabA) return kCompareIterativeLabel;
-        if (b == RedesignButton::TabB) return kCompareCumulativeLabel;
-        if (b == RedesignButton::TabC) return kCompareIterativeLocalLabel;
-        if (b == RedesignButton::TabD) return kCompareCumulativeLocalLabel;
+        if (b == RedesignButton::TabA) return kCompareRemoteLabel;
+        if (b == RedesignButton::TabB) return kCompareLocalLabel;
+        if (b == RedesignButton::TabC) return kCompareRemoteLabel;
+        if (b == RedesignButton::TabD) return kCompareLocalLabel;
     }
     // THE SAVE BUTTON'S THREE STATES, ranked outermost first: a publishing
     // checkpoint (global — the act outlives the view), then the view itself,

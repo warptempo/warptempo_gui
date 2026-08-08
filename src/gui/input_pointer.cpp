@@ -135,11 +135,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the already-selected half a consumed nothing rather than a switch away.
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
-    // THE COMPARE SELECTOR'S LOCAL PAIR (2026-08-07) carries the SAME chord and
+    // THE COMPARE SELECTOR'S SECOND PAIR (2026-08-07) carries the SAME chord and
     // never dispatches it: these two slots exist only inside the `h` view, where
     // the tab row's band claim routes every press to the switch owner above this
-    // table. Outside the view they are unpainted and their rect is empty, so no
-    // press can reach them at all. They are here because the table is TOTAL over
+    // table. (Since 2026-08-08 they are that row's CUMULATIVE group — the two
+    // walks under the second text block — rather than its Local half; which pair
+    // of readings they carry does not reach this table, whose whole content for
+    // them is "Ctrl+Tab, never dispatched".) Outside the view they are unpainted
+    // and their rect is empty, so no press can reach them at all. They are here
+    // because the table is TOTAL over
     // the roster by static_assert below, and because that totality is what
     // history_mode_disables_button's derivation rests on — Ctrl+Tab being the
     // mode's own vocabulary is what answers LIVE for all four.
@@ -1534,10 +1538,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (button == GuiMouseButton::Left && !mods.shift) {
                     // THE ROW IS THE PRODUCT OF THE TWO AXES, in painted order,
                     // and each slot names its own pair — which is what a DIRECT
-                    // selector is, against the keyboard's cycle. A press that
-                    // lands on no slot (the row's empty tail past the last tab)
-                    // falls out of the walk having claimed nothing, exactly as
-                    // it did with two.
+                    // selector is, against the keyboard's cycle. Painted order
+                    // is TWO LABELLED GROUPS since 2026-08-08 — the Iterative
+                    // group's two walks, then the Cumulative group's two — and
+                    // this table follows the row, so the four slots read the
+                    // same sequence here, at the selected face and in the cycle.
+                    // A press that lands on no slot falls out of the walk having
+                    // claimed nothing: the row's empty tail past the last tab,
+                    // and now the two GROUP LABELS too, which publish no rect at
+                    // all (they are text, not buttons) and so are the row's own
+                    // consumed nothing — the band claim above has already
+                    // returned by the time this loop finds no hit.
                     struct TabReading {
                         RedesignButton       id;
                         GuiHistoryWalkSource source;
@@ -1546,10 +1557,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static constexpr TabReading kTabReadings[] = {
                         {RedesignButton::TabA, GuiHistoryWalkSource::Commit,
                          GuiHistoryCompare::Iterative},
-                        {RedesignButton::TabB, GuiHistoryWalkSource::Commit,
-                         GuiHistoryCompare::Cumulative},
-                        {RedesignButton::TabC, GuiHistoryWalkSource::Local,
+                        {RedesignButton::TabB, GuiHistoryWalkSource::Local,
                          GuiHistoryCompare::Iterative},
+                        {RedesignButton::TabC, GuiHistoryWalkSource::Commit,
+                         GuiHistoryCompare::Cumulative},
                         {RedesignButton::TabD, GuiHistoryWalkSource::Local,
                          GuiHistoryCompare::Cumulative},
                     };

@@ -1232,8 +1232,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // hotkey for the pair": the surface was repurposed first and the key
     // followed; GROWN TO FOUR 2026-08-07 with the local walk, the natural
     // generalization of a toggle over two). It steps IN ROW ORDER WITH WRAP —
-    // Iterative (Remote), Cumulative (Remote), Iterative (Local), Cumulative
-    // (Local) — through the ONE switch owner, so the click and the key cannot
+    // and since 2026-08-08 that row is two labelled groups, so the order is the
+    // Iterative group's Remote then Local, then the Cumulative group's Remote
+    // then Local — through the ONE switch owner, so the click and the key cannot
     // diverge. SHIFT REVERSES IT (architect 2026-08-07): one tab LEFT, the exact
     // mirror, which is what the paired march becomes in a view with one tab band
     // — it was this arm's ctrl-exactness and the allowlist's consumed no-op until
@@ -1254,8 +1255,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         };
         static constexpr Reading kRow[] = {
             {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Iterative},
-            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Cumulative},
             {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Iterative},
+            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Cumulative},
             {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Cumulative},
         };
         constexpr std::size_t kCount = std::size(kRow);
