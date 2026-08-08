@@ -1588,9 +1588,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //   - ' (bare)              → THE LOAD EDITOR, and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
 //                             the mode it loads something else in place: the editor
-//                             opens prefilled with the viewed commit's SHA and
-//                             loads THAT COMMIT's three sidecars in place
-//                             (load_history_commit_in_place), which is the
+//                             opens prefilled with the viewed member and loads
+//                             THAT MEMBER's state in place, which is the
 //                             mode's own
 //                             act rather than an authoring chord that would
 //                             leave the frozen now side describing a state that
@@ -1601,14 +1600,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             load button reaches it here, like every other
 //                             redesigned button, by synthesizing this same bare
 //                             chord.
-//                             IT IS ADMITTED ON THE COMMIT TABS ALONE since
-//                             2026-08-07, which makes it a THIRD
-//                             session-conditional admission: the LOCAL walk's
-//                             members are undo entries, which no `'` can name or
-//                             load, so the chord is a consumed no-op and the
-//                             load-in-place button greys while a Local tab is
-//                             lit — one decision for the key and the face, the
-//                             shape the two below already have.
+//                             IT IS ADMITTED ON BOTH WALKS since 2026-08-08
+//                             (architect, superseding the 2026-08-07 ruling that
+//                             the Local tabs consume it): the Commit tabs take a
+//                             COMMIT SPELLING and load its three sidecars
+//                             (load_history_commit_in_place), the Local tabs take
+//                             a member NUMBER and load that state of the
+//                             session's own timeline as a new undo entry
+//                             (load_history_local_entry_in_place). The local arm
+//                             is a FOURTH session-conditional admission, on the
+//                             walk being bound — a term that is always true on a
+//                             live Local tab and is there for the unbound walk
+//                             alone (the term at the predicate says why).
 //   - Ctrl+S                → THE SAVE-AND-COMMIT ACT, the mode's second
 //                             admitted mutator, and in here it is the ONLY
 //                             meaning this chord has (architect 2026-08-08,
@@ -1799,9 +1802,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
-// THREE admissions are conditional on session state (the commit act's — Ctrl+S
+// FOUR admissions are conditional on session state (the commit act's — Ctrl+S
 // since 2026-08-08 — on head_delta_empty AND on no checkpoint already being in
-// flight, and the revert act's, on a subject standing), and both readers hand it
+// flight, the revert act's, on a subject standing, and the load-in-place's local
+// arm, on the local walk being bound), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
 // decision rather than two spellings of one. It took the HistoryMode struct
@@ -1819,17 +1823,24 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
-    // THE LOAD-IN-PLACE IS THE COMMIT WALK'S ACT, so it is admitted on the
-    // COMMIT tabs alone (2026-08-07, with the local walk). There is no commit
-    // behind a Local tab to prefill the editor with or to load: the walk's
-    // members are undo entries, which have no name, no tree and no sidecars on
-    // disk. So the chord is a consumed no-op there and the icon row's
-    // load-in-place button greys — one decision, both readers, exactly as the
-    // two session-conditional admissions below work. (Putting a whole undo
-    // state back is the REVERT act's business, and Ctrl+H stays live here.)
+    // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
+    // the 2026-08-07 "the Local tabs consume it": a local member is a STATE of
+    // this session's timeline, and loading a state in place is exactly what the
+    // act does). The two differ only in what the editor asks for — a commit
+    // spelling on the Commit tabs, a member NUMBER on the Local ones — and the
+    // routing lives at load_editor_commit, not here.
+    //
+    // THE LOCAL ARM CARRIES ONE TERM: the walk must have members. It is the
+    // head delta's shape — one decision refusing the key AND greying the icon
+    // row's load-in-place button — and it is STRUCTURALLY ALWAYS TRUE on a live
+    // Local tab, the walk carrying U + R + 1 members and the one entry owner
+    // binding it before the mode goes up. It is kept because it is the honest
+    // gate against the UNBOUND walk (the `0/0` blank-lane state), which is the
+    // one thing that would give the editor no member to prefill or to load.
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare &&
-         mode.source == GuiHistoryWalkSource::Commit);
+         (mode.source == GuiHistoryWalkSource::Commit ||
+          mode.walk_count() > 0));
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
     // SECOND session-conditional admission: Ctrl+H is admitted only while there
     // is a subject to revert — a selected diff flag, or the focused one — so
@@ -3745,6 +3756,177 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     return true;
 }
 
+// -- Load-in-place from a LOCAL HISTORY MEMBER (the `'` editor on a Local tab) -
+//
+// WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
+// superseding his own "the Local tabs consume `'`"), with A STATE OF THIS
+// SESSION'S OWN UNDO/REDO TIMELINE as its source. `text` is whatever the user
+// left in the load editor: the viewed member's displayed NUMBER, which the
+// opener prefilled, or any other member number he typed over it — the corner's
+// own `n/N` vocabulary, which is the only name a local member has.
+//
+// IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
+// one as ONE NEW UNDO ENTRY, exactly as loading a commit is, so Ctrl+Z
+// afterwards returns to the state from immediately before the load — walking to
+// the oldest member and loading it gives you the file-open state to audition,
+// with one keystroke back out of it. push_undo_both CLEARS THE REDO STACK, which
+// is correct and ruled: the load forks the timeline, and the walk it forked was
+// already closed with the mode a few lines above.
+//
+// WHAT GATES, all of it BEFORE any store is touched — the family's
+// validate-before-mutate contract: the text must be ASCII DIGITS naming a member
+// in [1, N], and the walk must hand back that member's state. Anything else is
+// ONE stderr line and a false return, the caller keeping the editor open with
+// its red flash and the typed text in it to correct. There is no second grammar
+// and nothing to resolve: N is the walk's own member count, and the number is an
+// index into it.
+//
+// WHAT IS APPLIED, AND WHAT DELIBERATELY IS NOT: an undo entry carries the two
+// MARKER COLUMNS and the ENGINE BLOCK and nothing else (the carry-everywhere
+// shape at UndoEntry), so that is exactly what this restores — the same three
+// pieces the walk's delta vocabulary is built from. NO tab bands, NO
+// playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs: the
+// sibling loads those because a SIDECAR SET carries them, and a timeline state
+// simply does not. The engine block is applied the way a restore applies one
+// (restore_history_entry) — the values into app.engine_settings, with the
+// synchronous plate rebuild and the target-preview trigger in the tail covering
+// the map it changes.
+//
+// THE STATE IS TAKEN AS TYPED SNAPSHOTS, never through the member's three TEXTS:
+// those are the DIFF's medium, and re-parsing them would put the strict loaders
+// in a path with nothing to parse. It is COPIED before anything is written,
+// which is what makes THE IDENTITY LOAD (loading the live member, the one the
+// session is standing in) an ordinary case rather than a store assigned to
+// itself. That load is deliberately NOT refused: it pushes an undo entry whose
+// restore puts back what is already there, which is honest — the user asked for
+// that member — and costs one Ctrl+Z to leave.
+//
+// AND THE MODE CLOSES, at the first line past the last refusal, for the reason
+// both siblings state: this replaces the very state the frozen now side was
+// measured against.
+bool GuiInputHandler::load_history_local_entry_in_place(
+        const std::string& text) {
+    // The mode is the route's precondition — the walk lives on it, and the close
+    // below is part of the act. The source test is the routing's own fact
+    // restated defensively: load_editor_commit sends only Local-tab pendings
+    // here.
+    if (!app.history_mode.active) return false;
+    if (app.history_mode.source != GuiHistoryWalkSource::Local) return false;
+
+    // THE WHOLE VALIDATION. ASCII digits only — the number is a count position,
+    // not text — parsed with the range check folded INTO the accumulation, which
+    // is what keeps a pasted forty-digit string from overflowing on its way to
+    // being refused (every further digit only grows the value, so the first one
+    // past the count settles it).
+    const std::size_t count = app.history_mode.local.entry_count();
+    std::size_t       number = 0;
+    bool              parsed = !text.empty();
+    for (const char c : text) {
+        if (c < '0' || c > '9') { parsed = false; break; }
+        number = number * 10 + static_cast<std::size_t>(c - '0');
+        if (number > count) { parsed = false; break; }
+    }
+    if (parsed && number == 0) parsed = false;
+
+    // THE WALK'S OWN ANSWER IS THE SECOND HALF OF THE GATE. It is empty only for
+    // an UNBOUND walk or a stack shorter than its capture (the blank-lane state,
+    // which a live Local tab cannot reach — the mode's entry binds the walk and
+    // the allowlist refuses the chord on an empty one), so this is the
+    // unreachable arm stated rather than assumed, refusing in the same shape a
+    // bad number does.
+    std::optional<GuiHistoryLocalWalk::MemberState> state;
+    if (parsed) state = app.history_mode.local.member_state(number - 1);
+    if (!state) {
+        std::fprintf(stderr,
+            "warptempo_gui: Load in place refused: '%s' is not a history entry "
+            "number (1..%zu)\n", text.c_str(), count);
+        return false;
+    }
+
+    // COPIED BEFORE ANYTHING IS WRITTEN (see the header): the pointers name the
+    // live stores themselves on the identity load, and the close below ends the
+    // visit they are valid for.
+    std::vector<GuiWarpMarker>       src_warp   = *state->warp_markers;
+    std::vector<GuiPhaseResetMarker> src_phase_resets =
+        *state->phase_reset_markers;
+    EngineSettings                   src_engine = *state->engine_settings;
+
+    // Every input is in hand and valid; nothing below refuses.
+
+    // NOT a modal open, so NOT the modal-open owner's business — the standalone
+    // mutator's own self-guard, exactly as both siblings spell it. The `'`
+    // editor's open already froze playback through that owner on the keyboard
+    // route; stopping again here keeps the mutator correct from any caller.
+    playback_lifecycle.stop_playback_if_playing();
+
+    // THE MODE ENDS HERE, on the first line past the last refusal and before the
+    // first store write — the family's placement. It also drops the walk the
+    // state was read out of, which is why the copies are above it, AND it is
+    // what keeps this act inside the walk's frozen-timeline premise: the push
+    // below happens with no visit standing, so the entry it adds is not one any
+    // walk had captured.
+    close_history_mode();
+
+    std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
+    std::vector<GuiPhaseResetMarker> phase_reset_pre =
+        app.phaseresetmarkers.markers();
+
+    app.warpmarkers.markers_mut()       = std::move(src_warp);
+    app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
+    // Wholesale authoring reset: the ONE selection goes, and there is nothing
+    // else to reset — no per-tab per-mode slot holds a copy.
+    selection.clear_selection();
+
+    // ONE cross-file undo entry: the marker pair plus the OUTGOING engine
+    // settings, which push_undo_both captures from `app` — so this must run
+    // BEFORE the incoming block is applied below. NO TAB OVERRIDE: the load
+    // lands on the ACTIVE tab, a timeline state carrying no tab band of its own.
+    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
+                        app.active_markers_view, 0);
+    undo.recompute_dirty();
+
+    // Wholesale authoring reset: clear every marker's session-only iteration
+    // state and the bpm state, and turn off both sweep modes' visibility —
+    // exactly as loading a commit would, the two acts replacing the authored
+    // state the same way.
+    {
+        auto& mv = app.warpmarkers.markers_mut();
+        for (auto& m : mv) {
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
+        }
+    }
+    flag_editor.wipe_bpm_state();
+    app.iteration_mode_enabled = false;
+    app.bpm_mode_enabled       = false;
+
+    // The engine block, applied as a restore applies one (restore_history_entry)
+    // — the values, and nothing beside them: the map rebuild and the target
+    // preview are the tail's, below, exactly as they are a restore's.
+    app.engine_settings = std::move(src_engine);
+
+    clamp_viewport_start(app, audio);
+    // COINCIDENCE AUTO-SELECT at the load-in-place chokepoint (rule and inventory
+    // at auto_select_marker_at_playhead), at the tail for the siblings' reason:
+    // everything the scan reads has landed.
+    auto_select_marker_at_playhead(app, audio, selection, viewport);
+    viewport.kick_waveform_sync();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+
+    // The tail's trigger owns the rebind for a 'T' landing.
+    target_render.trigger();
+
+    // NO renders/ WIPE and NO DISK WRITE of any kind: this act moved state that
+    // was already in memory from one place in memory to another.
+    std::fprintf(stderr,
+        "warptempo_gui: load-in-place: Loaded local history entry %zu of %zu "
+        "in place\n",
+        number, count);
+    gui.invalidate_region(0, 0, app.width, app.height);
+    return true;
+}
+
 // Open the `'` load prompt. No-op with no source loaded. An empty
 // renders/ reports a one-line bottom-strip status and does not open. Stops
 // playback only when the modal actually opens (after every guard), so a
@@ -3752,8 +3934,11 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 //
 // THE `h` HISTORY MODE CHANGES WHAT THIS EDITOR IS FOR, and the whole change is
 // this one branch plus the routing at load_editor_commit: in the mode the
-// editor takes a COMMIT SPELLING and opens PREFILLED with the viewed commit's
-// full SHA (load_history_commit_in_place). Both of the renders-side guards
+// editor takes THE VIEWED WALK'S OWN VOCABULARY and opens PREFILLED with the
+// viewed member — a COMMIT SPELLING seeded with the full 40-char SHA on the
+// Commit tabs (load_history_commit_in_place), a MEMBER NUMBER seeded with the
+// corner's own displayed `n` on the Local tabs since 2026-08-08
+// (load_history_local_entry_in_place). Both of the renders-side guards
 // drop with the
 // renders-side subject — an empty renders/ is no obstacle to loading a commit
 // in place,
@@ -3766,16 +3951,24 @@ void GuiInputHandler::open_load_editor() {
 
     std::string prefill;
     if (app.history_mode.active) {
-        // The viewed commit's full 40-char SHA. An out-of-range index answers
-        // with the empty string, which opens an empty editor the user can paste
-        // into — the honest cold answer, and unreachable in practice since the
-        // mode only opens with a non-empty walk and every step clamps.
+        // THE SEED IS THE VIEWED MEMBER, IN THE ACTIVE WALK'S OWN SPELLING
+        // (2026-08-08, when the Local tabs got the act): the corner's displayed
+        // NUMBER on the local timeline, the commit's full 40-char SHA on the
+        // committed one. The fork is here rather than in an accessor for the
+        // reason the corner's own SHA token is spelled out: the two walks name
+        // their members in different vocabularies, and the editor asks for the
+        // one the user is looking at.
         //
-        // IT NAMES THE COMMIT WALK OUTRIGHT, and needs no source fork: the
-        // chord and this button are admitted on the COMMIT tabs alone
-        // (history_mode_key_blocked, 2026-08-07), an undo entry having no
-        // spelling to prefill with and nothing on disk to load.
-        prefill = app.history_mode.session.sha_at(app.history_mode.index);
+        // The commit arm's out-of-range index answers with the empty string,
+        // which opens an empty editor the user can paste into — the honest cold
+        // answer, and unreachable in practice since the mode only opens with a
+        // non-empty walk and every step clamps. The local arm cannot be cold at
+        // all: `local_index` is always a bound walk's own position.
+        if (app.history_mode.source == GuiHistoryWalkSource::Local) {
+            prefill = std::to_string(app.history_mode.local_index + 1);
+        } else {
+            prefill = app.history_mode.session.sha_at(app.history_mode.index);
+        }
     } else {
         // Running-render guard: the load-in-place wipes renders/, which would race a
         // background sweep writing into it. Refuse, don't cancel — a running
@@ -3907,12 +4100,14 @@ void GuiInputHandler::load_editor_autocomplete() {
 // identifier matching nothing is a typo, not a fault, and the flash is the whole
 // answer (architect 2026-08-02).
 //
-// IN THE `h` HISTORY MODE THE SUBJECT IS A COMMIT, not a render entry: the
-// pending goes to load_history_commit_in_place, which owns every refusal on
-// that route
-// and names each one on stderr. The two routes share this function's SHAPE
-// exactly — a true result closes the editor, a false one red-flashes and stays
-// open — so a failed resolve leaves the typed spelling in place to be corrected.
+// IN THE `h` HISTORY MODE THE SUBJECT IS A HISTORY MEMBER, not a render entry,
+// and WHICH KIND is the viewed walk's: a COMMIT SPELLING on the Commit tabs
+// (load_history_commit_in_place), a MEMBER NUMBER on the Local tabs since
+// 2026-08-08 (load_history_local_entry_in_place). Each owns every refusal on its
+// own route and names each one on stderr. All three routes share this function's
+// SHAPE exactly — a true result closes the editor, a false one red-flashes and
+// stays open — so a failed resolve leaves the typed text in place to be
+// corrected.
 void GuiInputHandler::load_editor_commit() {
     if (!text_editor::is_active(app.load_editor)) return;
     const std::string pending = app.load_editor.pending;
@@ -3923,7 +4118,11 @@ void GuiInputHandler::load_editor_commit() {
     };
 
     if (app.history_mode.active) {
-        if (load_history_commit_in_place(pending)) {
+        const bool loaded =
+            app.history_mode.source == GuiHistoryWalkSource::Local
+                ? load_history_local_entry_in_place(pending)
+                : load_history_commit_in_place(pending);
+        if (loaded) {
             viewport.invalidate_timestamp_area();
             text_editor::deactivate(app.load_editor);
         } else {

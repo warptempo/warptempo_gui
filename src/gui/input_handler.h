@@ -1287,13 +1287,18 @@ private:
     // recipe in place as the new authoring baseline through
     // load_render_entry_in_place.
     //
-    // THE `h` HISTORY MODE GIVES THE SAME EDITOR A SECOND SUBJECT (2026-08-04):
-    // while the mode stands it takes a COMMIT SPELLING, opens prefilled with the
-    // viewed commit's SHA, and loads it in place through
-    // load_history_commit_in_place. The mode is
-    // the only discriminator, tested at the opener, at the commit and at the
-    // autocomplete; every other line of the editor — its keys, its modality, its
-    // painted cell, its Esc — is the same one behaviour for both subjects.
+    // THE `h` HISTORY MODE GIVES THE SAME EDITOR TWO MORE SUBJECTS, one per walk
+    // (2026-08-04 for the commit, 2026-08-08 for the local member): on the COMMIT
+    // tabs it takes a COMMIT SPELLING, opens prefilled with the viewed commit's
+    // SHA and loads it through load_history_commit_in_place; on the LOCAL tabs it
+    // takes a MEMBER NUMBER, opens prefilled with the viewed member's displayed
+    // `n`, and loads that timeline state through
+    // load_history_local_entry_in_place. The mode is the discriminator for the
+    // pair against the renders side and the walk SOURCE is the discriminator
+    // between them, both tested at the opener and at the commit (the autocomplete
+    // speaks neither vocabulary and no-ops on the mode alone); every other line
+    // of the editor — its keys, its modality, its painted cell, its Esc — is the
+    // same one behaviour for all three subjects.
     //
     // open_load_editor: bare `'` opener (no-op with no source loaded; outside
     // the mode also refuses over a running/parked render and over an empty
@@ -1363,6 +1368,19 @@ private:
     // closes as part of the act. Gated on the mode standing: the sidecar base
     // name is the session's. Full behaviour paragraph at the definition.
     bool load_history_commit_in_place(const std::string& spelling);
+
+    // load_history_local_entry_in_place: the same act with A STATE OF THIS
+    // SESSION'S OWN UNDO/REDO TIMELINE as its source (architect 2026-08-08) —
+    // apply the member `text` names, by its displayed NUMBER in [1, N], as the
+    // new authoring baseline. Validate-before-mutate like both siblings: a
+    // non-numeric, zero, out-of-range or unreadable member is one stderr line
+    // and a false return with nothing touched. It restores exactly what an undo
+    // entry carries — the two marker columns and the engine block — and nothing
+    // a sidecar set would add (no tab bands, no prefs, no trim), applies it ON
+    // TOP as ONE new undo entry rather than as a rollback, writes no disk and
+    // closes the mode as part of the act. Full behaviour paragraph at the
+    // definition.
+    bool load_history_local_entry_in_place(const std::string& text);
 
     // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
     // (no context-awareness beyond that) — a live region trims to it, begin at

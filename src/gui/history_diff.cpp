@@ -2027,9 +2027,9 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 }
 
 // ONE MEMBER'S THREE TEXTS, serialized on first ask. The mapping is the class
-// comment's, in three arms over the captured U and R: index k < R is the FUTURE
-// state redo_stack[k], k == R is THE LIVE MEMBER (the frozen now side's own
-// three texts, nothing serialized), and k > R is the PAST state
+// comment's, and it lives at entry_at below rather than here: index k < R is the
+// FUTURE state redo_stack[k], k == R is THE LIVE MEMBER (the frozen now side's
+// own three texts, nothing serialized), and k > R is the PAST state
 // undo_stack[U + R - k], whose snapshots are the state BEFORE the event that
 // entry records.
 //
@@ -2044,11 +2044,12 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // what it always was — the shape that keeps an append harmless if one ever
 // returns.
 //
-// THE TWO SIZE TERMS BELOW ARE BOUNDS PRECONDITIONS on the subscript this
-// function is about to perform, and they predate all of that: a stack shorter
-// than its captured size answers NOTHING AT ALL (a blank lane) rather than being
-// read at indices that now mean other events. BOTH are tested whichever arm the
-// index takes, because the count that bounds the index is built from both.
+// THE TWO SIZE TERMS IN member_readable ARE BOUNDS PRECONDITIONS on the
+// subscript this function is about to perform, and they predate all of that: a
+// stack shorter than its captured size answers NOTHING AT ALL (a blank lane)
+// rather than being read at indices that now mean other events. BOTH are tested
+// whichever arm the index takes, because the count that bounds the index is
+// built from both.
 //
 // (A PUSH SERIAL — a per-entry identity the walk captured at init and re-checked
 // here, written for the kCap-EVICTION shape the admitted push could reach, where
@@ -2056,15 +2057,33 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // — lived for one day of that same date and was DELETED by the architect once
 // that producer went: a producer-less mechanism rather than a granularity change,
 // in a feature-complete project. Do not re-propose it.)
+bool GuiHistoryLocalWalk::member_readable(std::size_t index) const {
+    if (app_ == nullptr || index >= count_) return false;
+    if (app_->history.undo_stack.size() < undo_count_) return false;
+    if (app_->history.redo_stack.size() < redo_count_) return false;
+    return true;
+}
+
+const UndoEntry* GuiHistoryLocalWalk::entry_at(std::size_t index) const {
+    // THE LIVE MEMBER HAS NO ENTRY: it is the state the session is standing in,
+    // held by the live stores themselves and by the frozen now side's texts.
+    if (index == redo_count_) return nullptr;
+    // A FUTURE state's entry is a redo counter-entry, a PAST state's an undo
+    // entry, and the two carry identical fields (the carry-everywhere shape), so
+    // one expression reads both.
+    return index < redo_count_
+        ? &app_->history.redo_stack[index]
+        : &app_->history.undo_stack[undo_count_ + redo_count_ - index];
+}
+
 const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         std::size_t index) {
-    if (app_ == nullptr || index >= count_) return nullptr;
-    if (app_->history.undo_stack.size() < undo_count_) return nullptr;
-    if (app_->history.redo_stack.size() < redo_count_) return nullptr;
+    if (!member_readable(index)) return nullptr;
     Member& m = members_[index];
     if (m.built) return &m;
 
-    if (index == redo_count_) {
+    const UndoEntry* entry = entry_at(index);
+    if (entry == nullptr) {
         // THE LIVE MEMBER, verbatim from the frozen now side — the same three
         // strings every delta's live side is already made of, so "the member and
         // the now side agree" is an identity here rather than two formattings
@@ -2076,13 +2095,7 @@ const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         return &m;
     }
 
-    // A FUTURE state's entry is a redo counter-entry, a PAST state's an undo
-    // entry, and the two carry identical fields (the carry-everywhere shape), so
-    // one body reads both.
-    const UndoEntry& e =
-        index < redo_count_
-            ? app_->history.redo_stack[index]
-            : app_->history.undo_stack[undo_count_ + redo_count_ - index];
+    const UndoEntry& e = *entry;
     m.warpmarkers_text       = format_warpmarkers_text(e.snapshot);
     m.phaseresetmarkers_text =
         format_phaseresetmarkers_text(e.phase_reset_snapshot);
@@ -2094,6 +2107,24 @@ const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
         format_history_settings_text(*gui_, e.settings.engine_settings);
     m.built = true;
     return &m;
+}
+
+// ONE MEMBER'S TYPED STATE — the same three arms as the texts above, over the
+// state itself. The LIVE MEMBER's is the session's own stores and engine block;
+// every other member's is its entry's snapshots, which is exactly what a restore
+// of that entry would put back. Nothing is built, cached or serialized here: the
+// state already exists, and this only says where.
+std::optional<GuiHistoryLocalWalk::MemberState>
+GuiHistoryLocalWalk::member_state(std::size_t index) const {
+    if (!member_readable(index)) return std::nullopt;
+    const UndoEntry* entry = entry_at(index);
+    if (entry == nullptr) {
+        return MemberState{&app_->warpmarkers.markers(),
+                           &app_->phaseresetmarkers.markers(),
+                           &app_->engine_settings};
+    }
+    return MemberState{&entry->snapshot, &entry->phase_reset_snapshot,
+                       &entry->settings.engine_settings};
 }
 
 const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(

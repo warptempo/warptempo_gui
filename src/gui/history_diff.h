@@ -15,6 +15,7 @@
 #include <vector>
 
 struct AppState;
+struct UndoEntry;
 class GuiHistoryPrefetch;
 
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
@@ -782,6 +783,35 @@ public:
     const GuiHistoryCommitDelta* delta_at(std::size_t       index,
                                           GuiHistoryCompare compare);
 
+    // ONE MEMBER'S STATE, TYPED — the three pieces a load-in-place puts back
+    // into the live session, handed out as pointers into the state that is
+    // already there (a stack entry's snapshots, or the live stores and engine
+    // block for THE LIVE MEMBER). It is deliberately NOT the member's three
+    // TEXTS: those are the DIFF's medium, and round-tripping typed state
+    // through them to load it would put the strict parsers in a path that
+    // needs no grammar at all.
+    //
+    // ONE CONSUMER — the Local tabs' `'` load-in-place
+    // (GuiInputHandler::load_history_local_entry_in_place). It COPIES all three
+    // before it writes anything, which is what keeps the identity load (loading
+    // the live member) from assigning a store to itself.
+    //
+    // THE POINTERS LIVE AS LONG AS THE VISIT DOES and no longer: they name the
+    // frozen stacks and the live stores, so any route that ends the visit —
+    // the load-in-place's own close included — invalidates them.
+    struct MemberState {
+        const std::vector<GuiWarpMarker>*       warp_markers        = nullptr;
+        const std::vector<GuiPhaseResetMarker>* phase_reset_markers = nullptr;
+        const EngineSettings*                   engine_settings     = nullptr;
+    };
+    // EMPTY is member_at's nullptr in optional's spelling and means the same
+    // thing: an out-of-range index, an uninitialized walk, or a stack shorter
+    // than its capture (the bounds precondition). It is the blank-lane state,
+    // and a live Local tab cannot reach it — the walk is bound before the mode
+    // goes up and every step clamps — so the one consumer treats it as a
+    // refusal rather than acting on a guess.
+    std::optional<MemberState> member_state(std::size_t index) const;
+
 private:
     // One member's three texts, serialized on first ask and kept. Lazy for the
     // reason the commit walk's deltas are: a visit typically reads a handful of
@@ -797,6 +827,18 @@ private:
         std::string settings_text;
     };
     const Member* member_at(std::size_t index);
+
+    // THE BOUNDS PRECONDITION, shared by the two member readers: the walk is bound,
+    // the index is in range, and NEITHER stack has shrunk below its capture.
+    // False means "answer nothing at all" rather than subscript a stack whose
+    // indices may now name other events (member_at's own comment owns the
+    // reasoning; this is where the three tests live).
+    bool member_readable(std::size_t index) const;
+    // THE INDEX -> STACK ENTRY MAPPING, the class comment's three arms in one
+    // place: nullptr for THE LIVE MEMBER (k == R, which has no entry — its state
+    // is the session's own), the redo stack below it, the undo stack above it.
+    // Precondition: member_readable(index), so this never bounds-checks.
+    const UndoEntry* entry_at(std::size_t index) const;
 
     const AppState*                          app_        = nullptr;
     // The two captured sizes and the member count they imply — U, R and

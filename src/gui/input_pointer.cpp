@@ -420,8 +420,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // bare Tab, Home, End or `c`), and the ONE new roster chord — the tabs' Ctrl+Tab
 // — was already answered LIVE by the hand entry the claim replaced.
 //
-// TWO ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
-// (2026-08-05), which is why this takes the state rather than only a button. The
+// THREE ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
+// (2026-08-05 for the first two, 2026-08-08 for the third), which is why this
+// takes the state rather than only a button. The
 // allowlist admits Ctrl+S — the checkpoint act's chord since 2026-08-08 — only
 // while there is something to checkpoint AND no
 // checkpoint is in flight, so the Save-and-Commit-faced SAVE button GREYS when
@@ -430,11 +431,15 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
 // struct); and it admits CTRL+H only while a diff flag is selected, so the
-// REVERT button greys with an empty subject. The derivation carries all of it
+// REVERT button greys with an empty subject; and since 2026-08-08 it admits
+// bare `'` on the LOCAL tabs only while that walk is BOUND, which greys the
+// load-in-place button on the blank-lane state a live tab cannot reach. The
+// derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
 // cadence and that is the honest difference: the head delta is measured once at
-// entry and is static for the visit, while the revert subject moves with every
-// click and the in-flight bit falls when the worker reports.
+// entry and is static for the visit, the local walk's binding is fixed for the
+// visit too, while the revert subject moves with every click and the in-flight
+// bit falls when the worker reports.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
@@ -445,8 +450,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   rather than relabelled in either case; it was RENDER's chord and RENDER's
 //   face until 2026-08-08, when the act moved onto the save it begins with),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
-//   switches), the load-editor opener (bare `'`, which in this mode loads
-//   the viewed commit in place), and the history button itself (bare `h`, the
+//   switches), the load-editor opener (bare `'`, which in this mode loads THE
+//   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Commit tabs,
+//   the timeline state on the Local ones since 2026-08-08, and live on both:
+//   its local arm is the THIRD session-dependent entry, dead only on an unbound
+//   walk), and the history button itself (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
 //   and ALL FOUR TABS since 2026-08-05 — live as the READING SELECTOR rather than

@@ -2200,8 +2200,10 @@ struct AppState {
     //   than through this partition, which knows only about buttons.
     //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
     //   key and the face: Save greys with an empty head delta (or a checkpoint
-    //   in flight), the load-in-place opener greys on the LOCAL tabs (no commit
-    //   to load), and Revert greys with no diff flag selected.
+    //   in flight), Revert greys with no diff flag selected, and the
+    //   load-in-place opener greys only on an UNBOUND local walk (2026-08-08,
+    //   when the Local tabs got the act — the term is the blank-lane state a
+    //   live tab cannot reach, so in practice that button is lit on all four).
     // The partition is
     // DERIVED
     // from the two gates above (plus the Settings anchor's toggle_dropdown
@@ -2227,8 +2229,11 @@ struct AppState {
     // double-click are all SOURCE-AGNOSTIC — they read the displayed delta and
     // the active walk's position, never a named walk. THREE surfaces are not,
     // and each says why at its own site: the corner's SHA token (an undo entry
-    // has no name), the `'` LOAD-IN-PLACE (no commit to load — a consumed no-op
-    // and a greyed button on the Local tabs), and SAVE-AND-COMMIT, whose reach
+    // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS since
+    // 2026-08-08 but FORKS ON THE SOURCE — the editor asks for a commit spelling
+    // on one pair of tabs and a member NUMBER on the other, and the act behind it
+    // is a different function per walk (the mode's two, at the opener and at
+    // load_editor_commit) — and SAVE-AND-COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
     // reads the painted flags' frames and then-side lines and knows nothing
@@ -2242,16 +2247,25 @@ struct AppState {
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
     // second is Ctrl+S, further down, on the same reasoning). In the
-    // mode that editor's subject CHANGES: it opens prefilled with the viewed
-    // commit's full SHA, takes any spelling git can resolve in its place, and on
-    // Enter loads THAT COMMIT's three sidecars into the live session in
+    // mode that editor's subject CHANGES, AND IT CHANGES WITH THE WALK
+    // (2026-08-08, when the architect gave the Local tabs the act his 2026-08-07
+    // ruling had them consume). ON THE COMMIT TABS it opens prefilled with the
+    // viewed commit's full SHA, takes any spelling git can resolve in its place,
+    // and on Enter loads THAT COMMIT's three sidecars into the live session in
     // place, 1:1
     // (GuiInputHandler::load_history_commit_in_place — parse-gated by the strict
     // whole-file loaders, so an unresolvable commit, a missing sidecar or a
-    // legacy format is a red flash and one stderr line with nothing touched),
-    // one cross-file undo entry, no disk write anywhere. The mode closes as part
-    // of a successful load-in-place, so the frozen now side never outlives the
-    // state it
+    // legacy format is a red flash and one stderr line with nothing touched).
+    // ON THE LOCAL TABS it opens prefilled with the viewed member's displayed
+    // NUMBER, takes any member number in place of it, and loads THAT STATE of
+    // this session's timeline — the two marker columns and the engine block, all
+    // an undo entry carries (GuiInputHandler::load_history_local_entry_in_place;
+    // a non-number or an out-of-range one is the same red flash and one stderr
+    // line). EITHER WAY it is ONE cross-file undo entry ON TOP of the current
+    // state rather than a rollback — so Ctrl+Z afterwards returns to the state
+    // from just before the load — and no disk write anywhere. The mode closes as
+    // part of a successful load-in-place, so the frozen now side never outlives
+    // the state it
     // was measured against. THE EDITOR-OPEN SUB-STATE is the mode standing with
     // that editor up: the mode's two gates stop being reached — the
     // keyboard-modal editor gate sits above them in on_key, and any pointer
@@ -2727,9 +2741,14 @@ struct AppState {
         // The three questions every walk-facing reader asks — how many members,
         // where am I, and what does the lane show — answered once for the live
         // source instead of forked at each site. What is NOT here is anything
-        // COMMIT-SPECIFIC by intent: the `'` editor's SHA prefill and the
-        // corner's short-SHA token name `session` and `index` outright, because
-        // an undo entry has no commit to load or to name.
+        // PER-VOCABULARY by intent: the corner's short-SHA token names `session`
+        // and `index` outright because an undo entry has no commit to name, and
+        // the `'` editor's PREFILL and its act fork on the source at their own
+        // two sites (the opener and load_editor_commit) because the two walks
+        // name their members differently — a SHA on one, the displayed member
+        // NUMBER on the other (`local_index + 1`, the corner's own arithmetic,
+        // named directly inside a branch that has already established the
+        // source).
 
         // How many members the ACTIVE walk carries — the `n/N` denominator.
         std::size_t walk_count() const {
@@ -4010,10 +4029,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
         case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
         case RedesignButton::IconLoadInPlace:
-            // "Load in place" not "Load render in place": the act loads
-            // SIDECARS — a renders/ entry's sidecar set (the render name is
+            // "Load in place" not "Load render in place": the act loads A
+            // STATE — a renders/ entry's sidecar set (the render name is
             // only the match key) or, in the history view, a commit's
-            // sidecars — so naming "render" overclaims the surface.
+            // sidecars or a member of the session's own timeline — so naming
+            // "render" overclaims the surface.
             return {"Load in place (')", nullptr};
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
