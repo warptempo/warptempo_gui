@@ -3429,6 +3429,17 @@ bool GuiInputHandler::load_render_entry_in_place(
     // successful trash prints nothing; silence is this wipe's ordinary ending and
     // always was. The is_directory guard and the ec-reported failure line are the
     // fallback path's own, unchanged.
+    //
+    // THE GUARD READS ITS error_code for the same reason the trash witness does:
+    // is_directory returns false both when the status says "not there" and when
+    // the status QUERY ITSELF FAILED (a permission or I/O error), and those are
+    // opposite verdicts. An absence is the ordinary silent ending — nothing to
+    // wipe — while a failed query is INDETERMINATE: the folder may well still be
+    // there, nothing was trashed or deleted, and it gets its own line. The tail's
+    // "and wiped renders/" is then WITHHELD on both failing shapes (the failed
+    // query and the fallback delete's own error), since the load succeeded either
+    // way but the wipe did not happen.
+    bool wiped = true;
     if (std::filesystem::is_directory(renders_root, ec)) {
         if (!trash_directory(renders_root)) {
             std::fprintf(stderr,
@@ -3440,12 +3451,20 @@ bool GuiInputHandler::load_render_entry_in_place(
                 std::fprintf(stderr,
                     "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
                     renders_root.string().c_str(), ec.message().c_str());
+                wiped = false;
             }
         }
+    } else if (ec) {
+        std::fprintf(stderr,
+            "warptempo_gui: load-in-place: Could not check '%s': %s\n",
+            renders_root.string().c_str(), ec.message().c_str());
+        wiped = false;
     }
 
-    std::fprintf(stderr,
-        "warptempo_gui: load-in-place: Loaded render in place and wiped renders/\n");
+    std::fprintf(stderr, wiped
+        ? "warptempo_gui: load-in-place: Loaded render in place and wiped "
+          "renders/\n"
+        : "warptempo_gui: load-in-place: Loaded render in place\n");
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }

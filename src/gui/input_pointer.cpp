@@ -167,13 +167,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconLoadInPlace,
      GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // THE HISTORY MODE (2026-08-04), the row's twelfth and the table's
-    // twenty-second: bare `h`, a TOGGLE like follow and iteration — its chord
+    // twenty-fourth: bare `h`, a TOGGLE like follow and iteration — its chord
     // opens the mode and closes it, and the button dispatches on both edges
     // because the icon row's band claim sits ABOVE the mode's pointer gate (the
     // rows' presses are covered by the KEYBOARD gate instead, which admits `h`
     // through handle_history_mode_key one line before the allowlist).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
-    // THE REVERT ACT (2026-08-05), the table's twenty-third: CTRL+H applies the
+    // THE REVERT ACT (2026-08-05), the table's twenty-fifth: CTRL+H applies the
     // view's SELECTED diff flags backwards into the live state and closes the
     // view. Momentary like the two below — not a radio, not a toggle, click face
     // only. It is the one entry here whose chord is NOT claimed by the mode's
@@ -181,8 +181,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // read-only gate, so a locked tab refuses the click exactly as it refuses
     // the key (the load-in-place's precedent, `'`).
     {RedesignButton::IconRevert, GuiKeys::H, true, false, false, false, true},       // Ctrl+H
-    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-fourth and
-    // twenty-fifth: bare `,` steps OLDER and bare `.` NEWER, through the same
+    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-sixth and
+    // twenty-seventh: bare `,` steps OLDER and bare `.` NEWER, through the same
     // dispatch and therefore through handle_history_mode_key's own arm — walls
     // clamped as consumed no-ops there, exactly as the keys behave. Neither is
     // a radio and neither is a toggle: they are momentary steps, so both flags
