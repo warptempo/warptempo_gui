@@ -378,11 +378,18 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // cannot drift from the allowlist: admit a chord there and its button lights on
 // the next frame with nothing to remember here.
 //
-// THE TWO ANCHORS ARE THE HAND ENTRY, because they are the roster's two
-// NON-chord actions and there is no chord to ask about: Settings and Navigation
-// each toggle a popup, and toggle_dropdown refuses whole while the mode stands
-// (its first line — the same lockout that keeps a popup and this mode mutually
-// exclusive). One named site, not a policy invented here.
+// THE SETTINGS ANCHOR IS THE HAND ENTRY — one entry, not two, since 2026-08-08.
+// The two anchors are the roster's only NON-chord actions, so there is no chord
+// to ask the gate about and each has to be answered here; what changed is the
+// answer for one of them. SETTINGS stays DEAD because toggle_dropdown still
+// refuses that menu while the mode stands (its first line): its six items open
+// the settings editor, a modal the view has no place for. NAVIGATION is LIVE
+// because the architect ruled its menu open in the view — the toggle no longer
+// refuses it — and every one of its seven rows is a chord that meets the mode's
+// own gates through on_key, so nothing about it is a hand answer beyond this
+// function's silence on it. The one row the view consumes greys at the ITEM
+// (dropdown_item_enabled, app_state.h), a surface this partition does not reach:
+// it answers about BUTTONS, and a menu row is not one.
 //
 // THE TWO TABS NEEDED A SECOND HAND ENTRY FOR ONE DAY AND NO LONGER DO
 // (2026-08-05). While it stands row 3 is the READING SELECTOR — four slots since
@@ -459,6 +466,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   with an empty subject and LIVE the moment a click selects one. Both facts
 //   come from the same admission with nothing restated here, exactly as
 //   Save's head-delta grey does.
+//   and THE NAVIGATION ANCHOR since 2026-08-08 (architect) — the SECOND of the
+//   two hand entries, flipped: its menu opens in the view and its commands act
+//   there, so a dead face would be a lie about a working button. It is the one
+//   LIVE entry that is not a chord's admission, which is why it is spelled in the
+//   body rather than derived.
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
 //   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
 //   moved onto Ctrl+S — so the button wears its ordinary Render face over this
@@ -466,7 +478,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
-//   (bare `l`); and the two menu anchors, Settings and Navigation.
+//   (bare `l`); and the SETTINGS anchor — alone here since 2026-08-08, when
+//   NAVIGATION moved to the LIVE column above with its menu.
 //
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
 // which since 2026-08-08 has nothing left to arbitrate on row 2: the ONE button
@@ -480,9 +493,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // locked tab, in the view as out of it). Only the VIEW's own consumption greys
 // anything here.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
-    if (b == RedesignButton::Settings || b == RedesignButton::Navigation) {
-        return true;
-    }
+    if (b == RedesignButton::Settings) return true;
+    if (b == RedesignButton::Navigation) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -1337,6 +1349,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // under a press it refused would be the worse answer.
             const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
             if (hit >= 0 && plain) {
+                // A DISABLED ITEM ARMS NOTHING AND DISMISSES NOTHING (2026-08-08,
+                // with the menus' first per-item disabled state): the press is
+                // consumed where it lands and the MENU STAYS UP, kdenlive's own
+                // answer for a greyed row — pressing one is a nothing, not a
+                // dismissal. That is why this returns rather than falling into
+                // the close below, which is the answer for the separator, the
+                // chrome and the box's outside: those are the popup's DEAD SPACE,
+                // and a greyed item is a row that is simply not for you.
+                // The predicate is the painter's own (dropdown_item_enabled,
+                // app_state.h), so the grey face and the inert press are one fact
+                // read twice — the roster's disabled-press rule, one surface out.
+                if (!dropdown_item_enabled(app, pop.menu, hit)) return;
                 // ITEMS ACT ON RELEASE — this press only ARMS one. The whole
                 // redesign fires its buttons on press; a MENU is the exception,
                 // because that is the universal convention (press, slide, release
@@ -3021,6 +3045,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // box a click hits. The closed menu's rects are zero and contain no point, so
 // the walk needs no membership test beyond the open check.
 //
+// A DISABLED ITEM RESOLVES TO NO ITEM, which is what keeps the two faces honest
+// with one line rather than a term in the painter: neither face can name a row
+// the press and the release refuse. The predicate is the same one they and the
+// painter read (dropdown_item_enabled, app_state.h).
+//
 // TWO CALLERS, AND EACH ANSWERS A QUESTION THE OTHER CANNOT (2026-08-03).
 // PER DELIVERED MOTION, from on_motion's open-dropdown branch: the settled hook
 // does NOT run between the events one wl_display_dispatch_pending delivers, so a
@@ -3087,16 +3116,20 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     // instead of having to remember it. Same first line and same reason as
     // refresh_pointer_cursor's, the boundary's other consumer.
     if (!app.pointer_in_window) return;
-    const int mx = app.last_mouse_x;
-    const int my = app.last_mouse_y;
-    int hit = -1;
-    for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
-        const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
-        if (rect_contains(r, mx, my)) {
-            hit = i;
-            break;
-        }
-    }
+    // THE GEOMETRY IS dropdown_item_at'S, asked at the remembered coordinates —
+    // one walk over the published rects for this face derivation, for the press
+    // claim and for the release's derive, so "which item is here" cannot mean
+    // three slightly different things.
+    const int raw = dropdown_item_at(app.last_mouse_x, app.last_mouse_y);
+    // A DISABLED ITEM IS NEITHER HOVERED NOR ARMED (2026-08-08): resolving it to
+    // "no item" is the whole rule, and it covers both faces at once — nothing
+    // lights under the pointer, and an arm sliding across a greyed row drops
+    // exactly as it does over the separator or the chrome, then re-arms on the
+    // next live row. So the painter never has to ask whether a lit item is also
+    // a dead one.
+    const int hit =
+        (raw >= 0 && !dropdown_item_enabled(app, app.dropdown.menu, raw))
+            ? -1 : raw;
     const bool press_live =
         mods.primary_button_held && app.dropdown.press_began_on_item;
     const int armed = press_live ? hit : app.dropdown.pressed_item;
@@ -3185,6 +3218,12 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
 // WHICH ITEM IS AT (x, y), or -1. The rects are the painter's published item
 // boxes, so a hit is exactly the box that lights; a closed popup has zero rects
 // and therefore contains no point, which is the correct cold answer.
+//
+// PURE GEOMETRY, DELIBERATELY: a DISABLED item keeps its rect and answers here
+// like any other, because it keeps its row on screen too. Whether the row may be
+// hovered, armed or activated is dropdown_item_enabled's question, asked by each
+// of this function's three callers on its own side — one geometric answer, one
+// enablement answer, neither hiding inside the other.
 int GuiInputHandler::dropdown_item_at(int x, int y) const {
     for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
         const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
@@ -3284,9 +3323,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // claim to run at all. Deriving here without the claim would be the one
     // behavior change this round refuses: a held button this popup never saw
     // must not fire an item it happens to come up over.
-    const int armed = app.dropdown.press_began_on_item
-                          ? dropdown_item_at(x, y)
-                          : app.dropdown.pressed_item;
+    int armed = app.dropdown.press_began_on_item
+                    ? dropdown_item_at(x, y)
+                    : app.dropdown.pressed_item;
+    // A DISABLED ITEM ACTIVATES NOTHING AND CLOSES NOTHING (2026-08-08). The
+    // recorded arm can never name one — the hover walk resolves a greyed row to
+    // "no item" — but the DERIVE reads raw geometry, so the gate belongs on this
+    // side of it too, and answering -1 is what routes the release into the
+    // armed-nothing return below: consumed, menu still up, which is the same
+    // answer the press over that row already gave.
+    if (armed >= 0 &&
+        !dropdown_item_enabled(app, app.dropdown.menu, armed)) armed = -1;
     // The press claim ends here whatever it armed, so nothing the pointer does
     // afterwards can move an arm this button-down no longer owns.
     app.dropdown.press_began_on_item = false;
@@ -3304,6 +3351,11 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // refusals) applies identically, so an item whose command cannot act
         // right now simply does nothing — the buttons-never-grey rule, one
         // surface further out. No stop, no modal, nothing restated here.
+        // THAT IS ALSO HOW THE `h` HISTORY VIEW ANSWERS THIS MENU (2026-08-08):
+        // per item, at the mode's own two gates — its allowlist for the zoom and
+        // framing rows, history_mode_owns_key for the rest — with the one row
+        // that would mean something else in there greyed above and never reaching
+        // this dispatch at all.
         const NavigationPopupItem& it =
             kNavigationPopupItems[static_cast<size_t>(armed)];
         close_dropdown();
@@ -3770,24 +3822,41 @@ void GuiInputHandler::close_dropdown() {
 }
 
 void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
-    // A POPUP AND THE `h` HISTORY MODE ARE NEVER UP TOGETHER, and this is the
-    // half of that rule the mode cannot enforce from its own gates: the mode
-    // refuses to OPEN while a popup stands (the entry sits below on_key's
-    // dropdown gate), and this line refuses the popup while the MODE stands. The
+    // THE SETTINGS MENU AND THE `h` HISTORY MODE ARE NEVER UP TOGETHER, and this
+    // is the half of that rule the mode cannot enforce from its own gates: the
+    // mode refuses to OPEN while a popup stands (the entry sits below on_key's
+    // dropdown gate), and this line refuses THAT menu while the MODE stands. The
     // guard belongs here for the same reason the flag-editor teardown below
     // does — this is the ONE route every open passes, the anchor click, the
     // hover switch and the armed re-open alike.
     //
-    // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS. Every other route
-    // out of row 1 dispatches a synthesized chord through on_key and so meets
-    // the mode's keyboard allowlist; the two anchors do not, and a Settings item
-    // opens the settings editor by a DIRECT call (finish_dropdown_release),
-    // reaching no gate at all. Refusing the menu is one line where covering that
-    // path per item would be several.
+    // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS, and that bypass is
+    // exactly what the SETTINGS half is scoped to. Every other route out of row 1
+    // dispatches a synthesized chord through on_key and so meets the mode's
+    // keyboard allowlist; the two anchors do not, and a Settings item opens the
+    // settings editor by a DIRECT call (finish_dropdown_release), reaching no
+    // gate at all. Refusing the menu is one line where covering that path per
+    // item would be several.
     //
-    // Above the close below, and safely so: no menu can be open here, since the
-    // mode could not have been entered with one up nor a menu opened since.
-    if (app.history_mode.active) return;
+    // THE NAVIGATION MENU NEEDS NO SUCH COVER AND IS LIVE IN THE VIEW (architect
+    // 2026-08-08): it has no direct call to shut — every one of its seven rows is
+    // a CHORD, dispatched through on_key exactly as a redesigned button's is, so
+    // the mode answers PER ITEM at the same two gates a key meets (the allowlist
+    // admits zoom in / out / overview; history_mode_owns_key claims
+    // center-on-focus and the two marker steps as re-expressions over the diff
+    // flags). The one row whose chord means something ELSE in here — "Walk both
+    // tabs", the mode's reverse compare-tab cycle — greys at the item instead
+    // (dropdown_item_enabled, app_state.h), which is the only thing a chord
+    // dispatch cannot answer for: the command runs, it is simply not the one the
+    // label names.
+    //
+    // THE GUARD STAYS ABOVE THE CLOSE BELOW, and now that matters rather than
+    // being trivially safe: with Navigation open in the mode, a hover switch onto
+    // the dead Settings anchor arrives here, and returning from ABOVE the close is
+    // what makes it a nothing — it neither puts Navigation away nor opens
+    // Settings, so the pointer crossing a dead anchor leaves the standing menu
+    // exactly as it was.
+    if (app.history_mode.active && menu == DropdownMenu::Settings) return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on the OTHER menu's
     // button switches — the close below runs first, damaging the box that is

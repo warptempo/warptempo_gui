@@ -641,7 +641,9 @@ struct GuiInputHandler {
     // action of BOTH non-chord buttons, Settings and Navigation: it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
-    // than a rule. close_ is what every dismissal route calls — an outside
+    // than a rule. Its ONE refusal is the `h` history view's, and it is
+    // MENU-SCOPED since 2026-08-08: Settings does not open in there, Navigation
+    // does (the reasoning is at the definition). close_ is what every dismissal route calls — an outside
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. toggle_ does NOT record the press claim that
@@ -653,7 +655,8 @@ struct GuiInputHandler {
     // item, or on the anchor whose menu it opened — the ARMED item with it, one
     // walk, one hit, because a menu lights exactly one item and the press only
     // decides which face it wears (the rule, and why the arm cannot double as the
-    // liveness test, are at the definition). IT HAS TWO CALLERS AND BOTH ARE
+    // liveness test, are at the definition); a DISABLED row resolves to NO item
+    // there, so neither face can ever name one. IT HAS TWO CALLERS AND BOTH ARE
     // LOAD-BEARING: on_motion's open-dropdown branch runs it per DELIVERED
     // MOTION, because a dispatch batch can carry a motion and then the PAINT that
     // reads these faces with no loop tail in between, and main.cpp's settled hook
@@ -704,7 +707,11 @@ struct GuiInputHandler {
     void open_menu_row_anchor_on_hover(int mouse_x, int mouse_y);
     void update_menu_row_exit(int mouse_x, int mouse_y);
     void disarm_menu_row();
-    // Which item is at (x, y), or -1 — the painter's published boxes.
+    // Which item is at (x, y), or -1 — the painter's published boxes. PURE
+    // GEOMETRY: a DISABLED row keeps its box and answers here like any other,
+    // and whether it may be hovered, armed or activated is the separate question
+    // each of the three callers asks for itself (dropdown_item_enabled,
+    // app_state.h).
     int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
     // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
@@ -721,8 +728,11 @@ struct GuiInputHandler {
     // separator, the chrome, the anchor button or off the box) nothing runs, the
     // release is consumed and the menu stays open — dismissal is a PRESS act here
     // and a release never dismisses, which is what makes the plain anchor click
-    // open-and-stay-up by construction. An UNCLAIMED release derives nothing and
-    // takes the recorded arm, which is -1 in every state that can reach it.
+    // open-and-stay-up by construction. A DISABLED row takes that same
+    // consumed-and-still-open answer (2026-08-08): the derive reads raw geometry,
+    // so the enablement gate is applied on this side of it. An UNCLAIMED release
+    // derives nothing and takes the recorded arm, which is -1 in every state that
+    // can reach it.
     bool finish_dropdown_release(int x, int y);
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
     // face and the press claim — at the hook fired by both the pointer-leave

@@ -711,6 +711,37 @@ inline constexpr double kRedesignHoverLightenMix = 0.15;
 // the whole cue, exactly as the settings menu's rows have always worked).
 inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 
+// A DISABLED MENU ITEM'S TWO INKS (2026-08-08, sampled off dropdown_disabled.png
+// — its "Group Clips" / "Ungroup Clips" rows, which kdenlive greys with no
+// selection in the timeline; the same crop's live rows carry the ordinary label
+// and accelerator inks, so the pair below is a difference measured against a
+// known reference rather than a lone reading). The row keeps its GEOMETRY and
+// its ground: a greyed item still occupies its slot, paints no hover or press
+// face, and differs from a live one in ink alone.
+//
+//   LABEL — full-coverage pixels read #686a6c = (104, 106, 108) over this menu's
+//   own (28, 31, 34) ground.
+//   HOTKEY — #515356 = (81, 83, 86) on the same rows.
+//
+// BOTH DERIVATIONS ARE RECORDED AND NEITHER SHIPS AS A FACTOR, the palette being
+// opaque hard-coded constants by ruling. The label is kRedesignLabel over
+// kRedesignPopupGround at ~0.339 — (252-28)*0.339 + 28 = 103.9, (252-31)*0.339 +
+// 31 = 105.9, (252-34)*0.339 + 34 = 107.9 — which is NOT kRedesignDisabledMix
+// (0.322, row 2's own sampled dim, which would give 100 here) and NOT
+// kRedesignDimMix (0.52): four dims now, four constants, each checked against
+// the others before being added. The HOTKEY is then the disabled LABEL taken at
+// the accelerator column's own 178/255 — (104*178 + 28*77)/255 = 81.0, (106*178
+// + 31*77)/255 = 83.4, (108*178 + 34*77)/255 = 85.7 — i.e. the source dims the
+// row once and its accelerator twice, exactly the relationship the live pair
+// already has (kRedesignPopupHotkey records the same 178/255 over kRedesignLabel).
+//
+// LIKE THE LIVE INKS, THEY ARE THE ROW'S INK IN EVERY FACE — which for a
+// disabled row means the only face there is: the input side never hovers or arms
+// one (dropdown_item_enabled, app_state.h), and the painter reads that same
+// predicate before it draws a face at all.
+inline constexpr GuiColor kRedesignPopupDisabledLabel  = hex(0x686A6C);
+inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
+
 // (THE GUI FONT SIZE AXIS IS GONE — architect approval 2026-08-01.
 // kDefaultFontSizePt, set_gui_font_size_pt, gui_font_scale and the
 // g_font_size_pt state behind them were the font_size setting: one GUI-wide

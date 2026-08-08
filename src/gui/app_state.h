@@ -996,10 +996,26 @@ inline constexpr int kSettingsPopupItemCount =
 // dropdown_full_hotkeys.png, is the anatomy). The spellings follow that crop's
 // convention — a bare letter uppercase, modifiers spelled out with `+`.
 //
-// AN ITEM NEVER GREYS OUT and never refuses here: a command that cannot act
-// right now still dispatches and its own arm answers, which is the roster's
-// standing buttons-never-grey rule ("one that cannot act right now simply does
-// nothing, exactly like its key") applied one surface further out.
+// AN ITEM NEVER GREYS OUT and never refuses here, WITH ONE RULED EXCEPTION: a
+// command that cannot act right now still dispatches and its own arm answers,
+// which is the roster's standing buttons-never-grey rule ("one that cannot act
+// right now simply does nothing, exactly like its key") applied one surface
+// further out. THE EXCEPTION IS "Walk both tabs" INSIDE THE `h` HISTORY VIEW
+// (architect 2026-08-08): in there Ctrl+Shift+Tab is not the A/B walk at all —
+// the mode claims it as the REVERSE cycle of its own compare-tab row — so an
+// item left live would dispatch a chord that does something else entirely under
+// a label promising the walk. It greys rather than lying. That is a difference
+// in KIND from every other refusal on this menu, which are all "the same command,
+// with nothing to act on"; the predicate and the whole argument are at
+// dropdown_item_enabled, below AppState.
+//
+// EVERY OTHER ROW IS LIVE IN THAT VIEW, which is the other half of the same
+// ruling and why the menu opens there at all: zoom in / out / overview reach the
+// mode's keyboard allowlist (history_mode_key_blocked), and center-on-focus and
+// the two marker steps are claimed by the mode's own vocabulary
+// (history_mode_owns_key) as re-expressions over its diff flags. The dispatch
+// below needs no arm for any of it — the items are chords, and the mode answers
+// per item at the same two gates a key does.
 struct NavigationPopupItem {
     const char* label;
     const char* hotkey;   // the accelerator column's text, right-aligned
@@ -2143,10 +2159,23 @@ struct AppState {
     // key_blocked (the keyboard allowlist, which the redesigned buttons and the
     // Navigation menu's items pass through too, since both dispatch as chords
     // via on_key) and handle_history_mode_press (the pointer allowlist). Each
-    // states its own admitted set at its definition. The dropdowns are shut out
-    // structurally instead, at toggle_dropdown, which is what keeps the mode and
-    // a popup from ever standing together — the same shape that keeps a popup
-    // and an editor apart.
+    // states its own admitted set at its definition. THE SETTINGS DROPDOWN is
+    // shut out structurally instead, at toggle_dropdown: its six items all open
+    // the settings editor, a modal this view has no place for, and refusing the
+    // menu is one line where covering that one pointer bypass per item would be
+    // several.
+    //
+    // THE NAVIGATION DROPDOWN OPENS IN HERE (architect 2026-08-08), so a popup
+    // and this mode DO stand together and the old "never together" invariant is
+    // retired to the Settings half. It costs the gates nothing: every one of its
+    // seven rows is a CHORD dispatched through on_key, so the two gates above
+    // answer per item exactly as they do for a redesigned button — zoom in / out
+    // / overview are admitted by the allowlist, and center-on-focus and the two
+    // marker steps are claimed by history_mode_owns_key as re-expressions over
+    // the diff flags. ONE row greys instead of dispatching, the menus' first and
+    // only per-item disabled state: "Walk both tabs", whose Ctrl+Shift+Tab is
+    // this mode's reverse compare-tab cycle rather than the A/B walk the label
+    // promises (dropdown_item_enabled, below).
     //
     // AND THE ROSTER WEARS THOSE REFUSALS (architect 2026-08-04): every
     // redesigned button whose act this mode consumes takes its row's DISABLED
@@ -2158,19 +2187,25 @@ struct AppState {
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
     //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
-    //   the two menu anchors.
+    //   the SETTINGS anchor — the one anchor left in this column since
+    //   2026-08-08, and the one entry here that is not a chord's refusal but the
+    //   toggle_dropdown lockout's.
     //   LIT — Quit (Ctrl+Q), the view bar's three (bare 1/2/3), the
     //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the S/T + W/P radios (bare
     //   `t` / `p`), all four row-3 tabs and the history button (Ctrl+Tab and
     //   bare `h`, the mode's OWN vocabulary, which the derivation asks about
-    //   first), and the walk's two arrows (bare `,` / `.`, the same).
+    //   first), the walk's two arrows (bare `,` / `.`, the same), and the
+    //   NAVIGATION anchor since 2026-08-08 — the menu it opens works in here,
+    //   and its one dead row greys at the ITEM (dropdown_item_enabled) rather
+    //   than through this partition, which knows only about buttons.
     //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
     //   key and the face: Save greys with an empty head delta (or a checkpoint
     //   in flight), the load-in-place opener greys on the LOCAL tabs (no commit
     //   to load), and Revert greys with no diff flag selected.
     // The partition is
     // DERIVED
-    // from the two gates above (plus the anchors' toggle_dropdown lockout) and
+    // from the two gates above (plus the Settings anchor's toggle_dropdown
+    // lockout, the one hand entry left) and
     // inventoried in one place — history_mode_disables_button, input_pointer.cpp
     // — and it is read live from `active` below, so leaving the mode restores
     // every face on the next frame with nothing latched.
@@ -3504,12 +3539,43 @@ inline bool history_mode_revert_subject_standing(
     return !mode.selection.empty() || mode.focus >= 0;
 }
 
+// IS THIS DROPDOWN ITEM LIVE? — the menus' ONE per-item disabled state, and the
+// one predicate every reader of it goes through: the painter (which draws the
+// greyed inks and no hover or press face), the popup's press claim, its hover
+// recompute and its release body. Geometry is deliberately NOT in here — an item
+// keeps its row, its rect and its place in the layout whether it greys or not
+// (kdenlive's disabled rows do), so dropdown_item_at stays the one geometric
+// answer and this is the one enablement answer, asked beside it.
+//
+// IT HAS EXACTLY ONE PRODUCER (architect 2026-08-08): the Navigation menu's
+// "Walk both tabs" row while the `h` history view stands, where Ctrl+Shift+Tab is
+// the mode's own reverse compare-tab cycle rather than the walk the label
+// promises. The argument for greying it — and for every other row on both menus
+// staying live — is at kNavigationPopupItems above. The SETTINGS menu has no
+// producer at all and answers true throughout: it does not open in that view (its
+// anchor is refused at toggle_dropdown), and outside it its six items keep the
+// never-grey rule, their own refusals answering.
+//
+// THE ROW IS IDENTIFIED BY ITS CHORD, not by its table position, so reordering
+// kNavigationPopupItems cannot silently grey a different command; the alt term is
+// spelled with the others because the chord's shape is what is being named, and
+// because the mode refuses alt outright (history_mode_owns_key).
+inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
+    if (menu != DropdownMenu::Navigation) return true;
+    if (!a.history_mode.active) return true;
+    if (i < 0 || i >= kNavigationPopupItemCount) return true;
+    const NavigationPopupItem& it =
+        kNavigationPopupItems[static_cast<std::size_t>(i)];
+    return !(it.ctrl && it.shift && !it.alt && it.key == GuiKeys::Tab);
+}
+
 // WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `h` HISTORY VIEW? True for exactly
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
 // beside the chord table it walks) asks history_mode_key_blocked about each
-// button's own chord and names the toggle_dropdown lockout for the two anchors
-// that have none, and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
+// button's own chord and hand-answers the TWO ANCHORS, which have none — Settings
+// dead on the toggle_dropdown lockout, Navigation live since 2026-08-08, its menu
+// opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //

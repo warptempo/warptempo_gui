@@ -398,6 +398,19 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // the state the user asked for. It is not wasted either — it is what keeps the
 // close idempotent and single-shaped, and a load that ever grew an early return
 // past this point would leave a restored band rather than the review's.
+//
+// NO CLOSER CAN FIRE WITH A DROPDOWN OPEN, so this owner does not close one and
+// carries no dead line for it. Since 2026-08-08 the Navigation menu DOES stand
+// inside the view (toggle_dropdown's lockout narrowed to Settings), which makes
+// the question real rather than vacuous — and the answer is positional, re-derived
+// by grepping every caller of this function: all of them are KEYBOARD routes
+// (bare `h`, the Ctrl+S checkpoint act, both load-in-places behind `'`, and the
+// Ctrl+H revert), and every one of them dispatches BELOW on_key's popup gate,
+// which swallows every chord but Ctrl+Q while a menu is up. Ctrl+Q closes the
+// popup itself and then takes the close-window route, which ends the process
+// rather than the view; the WM close is the same. There is no pointer closer at
+// all. So a popup standing at the moment of a close is unreachable, and a
+// close_dropdown() here would be code no state can execute.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // THE VIEW'S REGIONS ARE VIEW-LOCAL (architect 2026-08-05): a span drawn in
@@ -1748,14 +1761,24 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
 // chord and call on_key (dispatch_redesign_chord and finish_dropdown_release),
 // so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
-// their keys do. The one non-chord route out of that row — the two dropdown
-// anchors — is shut at toggle_dropdown instead.
+// their keys do. AND THE MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
+// merely in principle: that menu now OPENS inside the view (the architect
+// narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
+// the settings editor by a direct call and so have no gate of their own), and
+// this predicate is what admits its zoom, zoom-out and overview rows in there
+// while refusing nothing else on it — the remaining four are claimed one line
+// above as the mode's own vocabulary. The row whose chord means something ELSE
+// in the view greys at the item instead (dropdown_item_enabled, app_state.h),
+// which is the one thing a chord dispatch cannot express: the chord acts, it is
+// just not the act the label names.
 //
 // AND SINCE 2026-08-04 THIS GATE IS ALSO READ BY THE FACES: a button whose chord
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
-// clicks silently. The partition is DERIVED from this function (and from the
-// toggle_dropdown lockout for the two anchors), never hand-listed —
+// clicks silently. The partition is DERIVED from this function (and hand-answered
+// for the two anchors alone, which have no chord to ask about: Settings dead on
+// the toggle_dropdown lockout, Navigation live since 2026-08-08), never
+// hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
 //

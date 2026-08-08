@@ -1151,7 +1151,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     //
     // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for ALL
     // THREE buttons — plus ONE mode-scoped third, the history view's disabled
-    // face on the two anchors (below, at the pill):
+    // face, which since 2026-08-08 lands on the SETTINGS anchor alone (Navigation
+    // stays lit in there, its menu working; the partition is
+    // history_mode_disables_button's and nothing here restates it) (below, at the
+    // pill):
     // at rest the label paints bare on the row ground;
     // hovered, a filled blue pill sits under it, FLUSH with the row's CONTENT
     // height (the css float model — a flat button fills its whole row, architect
@@ -2292,6 +2295,14 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // a second difference of its own, and everything else (chrome, item height,
     // insets, separator, faces, baseline, and now the label indent and right
     // margin) is one set of numbers by construction.
+    //
+    // THE PER-ITEM DISABLED STATE (2026-08-08) IS NOT A SECOND DIFFERENCE either,
+    // for the same reason the accelerator column is not two rules: this painter
+    // asks one predicate per row (dropdown_item_enabled) and the MENUS are not
+    // named in it. Navigation happens to be the only one with a producer today —
+    // its "Walk both tabs" row inside the `h` history view — and Settings gets
+    // the identical treatment the day it grows one. Geometry is untouched on
+    // either menu: a greyed row still occupies its slot at its full height.
     app.dropdown.rect = GuiRect{0, 0, 0, 0};
     app.dropdown.item_rects = {};
     if (!app.dropdown.open()) return;
@@ -2403,8 +2414,19 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const GuiRect item{x + inset, iy, item_w, item_h};
         app.dropdown.item_rects[static_cast<size_t>(i)] = item;
 
-        const bool pressed = (app.dropdown.pressed_item == i);
-        const bool hovered = (app.dropdown.hovered_item == i);
+        // A DISABLED ROW KEEPS ITS GEOMETRY AND LOSES ITS FACES (2026-08-08, with
+        // the menus' first per-item disabled state): the rect above is published
+        // exactly as a live row's is — the row still occupies its slot, and the
+        // width, the layout and the item block's height know nothing about this —
+        // and what changes is that no hover or press face is drawn and the two
+        // inks swap to their sampled dim pair. The input side already refuses to
+        // hover or arm one, so the test below is the SAME predicate read a second
+        // time rather than a second rule: the face and the press cannot disagree
+        // about a row, which is the roster's disabled-button doctrine one surface
+        // out.
+        const bool item_live = dropdown_item_enabled(app, menu, i);
+        const bool pressed = item_live && (app.dropdown.pressed_item == i);
+        const bool hovered = item_live && (app.dropdown.hovered_item == i);
         if (pressed || hovered) {
             // TWO FACES FROM THE ITEM CROPS, and they are built differently
             // because one has an outline and the other does not:
@@ -2455,8 +2477,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        const GuiColor label_ink =
+            item_live ? kRedesignLabel : kRedesignPopupDisabledLabel;
+        cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
 
@@ -2465,14 +2488,17 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // crop measured, and aligning to it keeps every hotkey's last ink column
         // on one line whatever the item inset is. Its ink is the sampled dim
         // (kRedesignPopupHotkey), in every face — the item's fill is the whole
-        // hover/press cue, as it is for the label.
+        // hover/press cue, as it is for the label. A DISABLED row swaps it for
+        // the sampled dim pair's other half, keeping the accelerator dimmer than
+        // its own label exactly as the live pair does (the two derivations are
+        // recorded together at kRedesignPopupDisabledLabel).
         if (row.hotkey != nullptr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            cairo_set_source_rgb(cr, kRedesignPopupHotkey.r,
-                                 kRedesignPopupHotkey.g,
-                                 kRedesignPopupHotkey.b);
+            const GuiColor hot_ink =
+                item_live ? kRedesignPopupHotkey : kRedesignPopupDisabledHotkey;
+            cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
             text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
         }
         iy += item_h;
