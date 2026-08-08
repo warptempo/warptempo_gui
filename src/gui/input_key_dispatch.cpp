@@ -3426,22 +3426,37 @@ bool GuiInputHandler::load_render_entry_in_place(
     // FALLBACK IS THE DETECTION — no upfront probe, no setting, no capability
     // cache: trash_directory answers by observation, and its false lands on the
     // native remove_all below with ONE line saying the trash was unavailable. A
-    // successful trash prints nothing; silence is this wipe's ordinary ending and
-    // always was. The is_directory guard and the ec-reported failure line are the
-    // fallback path's own, unchanged.
+    // successful trash prints no diagnostic of its own; that silence is this
+    // wipe's ordinary ending and always was, and the act's own tail line below is
+    // what names where the batch went. The is_directory guard and the
+    // ec-reported failure line are the fallback path's own, unchanged.
     //
     // THE GUARD READS ITS error_code for the same reason the trash witness does:
     // is_directory returns false both when the status says "not there" and when
     // the status QUERY ITSELF FAILED (a permission or I/O error), and those are
     // opposite verdicts. An absence is the ordinary silent ending — nothing to
-    // wipe — while a failed query is INDETERMINATE: the folder may well still be
-    // there, nothing was trashed or deleted, and it gets its own line. The tail's
-    // "and wiped renders/" is then WITHHELD on both failing shapes (the failed
-    // query and the fallback delete's own error), since the load succeeded either
-    // way but the wipe did not happen.
-    bool wiped = true;
+    // dispose of — while a failed query is INDETERMINATE: the folder may well
+    // still be there, nothing was trashed or deleted, and it gets its own line.
+    //
+    // THE TAIL LINE THEN NAMES THE DISPOSAL THAT ACTUALLY HAPPENED (architect
+    // 2026-08-08), three wordings off one verdict: TRASHED says "moved renders/
+    // to the trash", because that batch is RESTORABLE and "wiped" would overstate
+    // it — the whole point of the trash-first rule; WIPED says "wiped renders/"
+    // for the native fallback's own delete, which is not restorable; and NONE
+    // drops the clause entirely on the two failing shapes (the failed query and
+    // the fallback delete's error), since the load succeeded either way but the
+    // disposal did not happen and each shape has already printed its own line.
+    // THE ABSENT DIRECTORY KEEPS THE "WIPED" WORDING, unchanged from before the
+    // split: the clause is a claim about the END STATE the act guarantees — there
+    // is no renders/ on disk and nothing of it left to restore — which is exactly
+    // true with nothing there, and the split is about restorability, the one axis
+    // an absence has no side of.
+    enum class WipeVerdict { Trashed, Wiped, None };
+    WipeVerdict verdict = WipeVerdict::Wiped;  // The absent case; see above.
     if (std::filesystem::is_directory(renders_root, ec)) {
-        if (!trash_directory(renders_root)) {
+        if (trash_directory(renders_root)) {
+            verdict = WipeVerdict::Trashed;
+        } else {
             std::fprintf(stderr,
                 "warptempo_gui: load-in-place: Trash unavailable for '%s'; "
                 "deleting it instead\n",
@@ -3451,20 +3466,22 @@ bool GuiInputHandler::load_render_entry_in_place(
                 std::fprintf(stderr,
                     "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
                     renders_root.string().c_str(), ec.message().c_str());
-                wiped = false;
+                verdict = WipeVerdict::None;
             }
         }
     } else if (ec) {
         std::fprintf(stderr,
             "warptempo_gui: load-in-place: Could not check '%s': %s\n",
             renders_root.string().c_str(), ec.message().c_str());
-        wiped = false;
+        verdict = WipeVerdict::None;
     }
 
-    std::fprintf(stderr, wiped
-        ? "warptempo_gui: load-in-place: Loaded render in place and wiped "
-          "renders/\n"
-        : "warptempo_gui: load-in-place: Loaded render in place\n");
+    const char* disposal =
+        (verdict == WipeVerdict::Trashed) ? " and moved renders/ to the trash"
+      : (verdict == WipeVerdict::Wiped)   ? " and wiped renders/"
+                                          : "";
+    std::fprintf(stderr,
+        "warptempo_gui: load-in-place: Loaded render in place%s\n", disposal);
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
