@@ -69,6 +69,18 @@ public:
     // handler to decide whether to deliver a cancel.
     bool is_busy() const;
 
+    // True iff the CURRENT session's cancel token is set — "the job the worker
+    // is running has been asked to die". The session concept lives here (each
+    // dispatch mints a fresh token), so this is the one place that can answer
+    // it; every kill route in the product reaches the token through
+    // request_cancel above, so no caller has to enumerate them. Its reader is
+    // the deferred archival status message's promotion check
+    // (tick_promote_render_status), which must not paint a message for a
+    // session whose product will be discarded. GUI-thread read of a GUI-thread-
+    // written member, the same access shape request_cancel takes; the pointee
+    // atomic covers the worker's own reads.
+    bool current_session_cancelled() const;
+
 private:
     enum class State : int { Idle, Running, CompletionPending };
 

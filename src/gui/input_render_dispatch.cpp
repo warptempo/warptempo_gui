@@ -266,6 +266,28 @@ void GuiInputHandler::tick_promote_render_status() {
     // Promoting now would paint a message for work that is over.
     if (!async_renderer.is_busy())     return;
     if (!synthesis_started_.load())    return;
+    // LIVENESS, AND THE SLOT BELONGS TO THE LIVE SESSION'S OWNER. A kill lands
+    // on the GUI thread while the worker is somewhere inside do_render, so a
+    // session cancelled just below its last reuse/cancel check still crosses the
+    // synthesis boundary and fires the signal: without this, a preview edit that
+    // killed a running archival render — stamping its own "Updating..." into the
+    // shared slot as it went (GuiTargetRender::trigger's busy branch) — would
+    // then watch the dead archival's "Rendering..." land on top of it, and a slow
+    // cancellation would keep that false label up until the pending preview was
+    // pumped. A killed session can never publish Success, so its message names
+    // work whose product is discarded either way.
+    //
+    // THE TEST IS LIVENESS, NOT OWNERSHIP OF THE SLOT: the symmetric case is
+    // legitimate and must keep working — an archival command that preempts a
+    // running preview parks AFTER the kill, on a session dispatched fresh, and
+    // its promotion rightly replaces the stale "Updating..." the run hold left
+    // standing. The park's session is unambiguous because both park sites park
+    // and then dispatch in the same GUI-thread call, and no dispatch can happen
+    // while the worker is busy — so the token this reads is always the parked
+    // message's own. Refusing in place rather than clearing keeps ONE owner for
+    // the park's death (finalize_render_run, which every terminal branch
+    // reaches); the check simply keeps answering no until then.
+    if (async_renderer.current_session_cancelled()) return;
 
     app.queue_progress_text = pending_status_text_;
     // Explicitly, rather than by moving out: one promotion per parked message is

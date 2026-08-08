@@ -76,6 +76,14 @@ void GuiAsyncRenderer::request_cancel() {
     session_cancel_->store(true);
 }
 
+bool GuiAsyncRenderer::current_session_cancelled() const {
+    // Resting false between sessions: dispatch installs a fresh token, so an
+    // idle dispatcher reports the LAST session's verdict until the next
+    // dispatch replaces it. The one caller pairs this with is_busy(), where
+    // "the current session" is the live one by the single-in-flight contract.
+    return session_cancel_->load();
+}
+
 bool GuiAsyncRenderer::is_busy() const {
     const int s = state_.load();
     return s == static_cast<int>(State::Running) ||

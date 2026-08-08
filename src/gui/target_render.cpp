@@ -209,7 +209,11 @@ void GuiTargetRender::trigger() {
         //
         // An honest wait: a previous render is being cancelled before ours can
         // start, so surface the target-render status. "Rendering..." (archival)
-        // and "Updating..." (target render) share the slot.
+        // and "Updating..." (target render) share the slot — and this stamp is
+        // safe against the archival message it may be replacing precisely
+        // because the cancel below makes that session dead: the archival label
+        // is parked until synthesis is observed, and the promotion refuses on a
+        // cancelled session (tick_promote_render_status, which owns the rule).
         stamp_updating();
         async_renderer.request_cancel();
         return;
@@ -223,25 +227,35 @@ void GuiTargetRender::stamp_updating() {
     // asynchronous. The calm comes from the HOLD (the completion clears deferring
     // while a run stands), never from refusing to say anything.
     //
-    // THE REPEAT-RUN TIMELINE (the held cent step in W+target, each repeat
-    // killing and redispatching the render — the blink the hold exists for):
-    //   t=0     press 1. No previous trigger: no run. The dispatch misses the
-    //           reuse rungs and stamps here — label shows.
+    // THE REPEAT-RUN TIMELINE (the HELD cent step in W+target, each repeat
+    // killing and redispatching the render — the blink the hold exists for),
+    // walked against the live windows (kUpdatingRunDetectMs /
+    // kUpdatingRunQuietMs, both 75) and labwc's repeat shape (575 ms delay, then
+    // one repeat every 40 ms):
+    //   t=0     the physical press. No previous trigger: no run. The dispatch
+    //           misses the reuse rungs and stamps here — label shows.
     //   t=40    that render completes; complete_successful_buffer clears the
     //           label immediately, exactly as it always did (no run stands, so
     //           nothing holds it). A single tap ends here, with no linger.
-    //   t=90    press 2, within the DETECT window of press 1 (90 < 150):
-    //           run_active_. The dispatch stamps again — label shows. THE ONE
-    //           ACCEPTED BLINK was t=40..90; nothing can see a run before its
-    //           second event.
-    //   t=90+   every later repeat kills and redispatches, and every completion
-    //           and cancellation along the way HOLDS the label. It stands
-    //           steady for the rest of the hold, however long that is.
-    //   t=X     last press. Its render lands under the hold, label still up.
-    //   t=X+150 the tick finds a QUIET window with no trigger in it: run over,
+    //   t=575   repeat 1, the compositor's repeat DELAY later. 575 is nowhere
+    //           near the DETECT window, so this is still not a run: it takes the
+    //           one-off lifecycle in full — stamp, then its own completion
+    //           clear. THE ACCEPTED BLINKS ARE ALL BEFORE THIS POINT; nothing
+    //           can see a run before its second event, and a held key does not
+    //           produce one until the repeats proper start.
+    //   t=615   repeat 2, one 40 ms repeat interval after repeat 1 (40 < 75):
+    //           run_active_. The dispatch stamps again — label shows.
+    //   t=615+  every later repeat arrives another 40 ms on, comfortably inside
+    //           the window, and each one kills and redispatches; every
+    //           completion and cancellation along the way HOLDS the label. It
+    //           stands steady for the rest of the hold, however long the key is
+    //           held.
+    //   t=X     the key is released, so t=X is the last repeat. Its render lands
+    //           under the hold, label still up.
+    //   t=X+75  the tick finds a QUIET window with no trigger in it: run over,
     //           and with the work idle it clears + invalidates once
     //           (tick_updating_hold). Had that last render still been running at
-    //           X+150, the run would simply have ended there and its own
+    //           X+75, the run would simply have ended there and its own
     //           completion clear — unheld again — would have fired on time.
     // A single slow render also behaves as it always did: one stamp at the
     // start, one clear at the end, and re-entries in between find the label

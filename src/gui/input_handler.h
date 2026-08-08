@@ -958,6 +958,12 @@ private:
     // dispatch — before the worker can run, so a previous session's true can
     // never promote the next session's message, which is what keeps a sweep's
     // reuse cells silent after a synthesis cell — and again at finalize.
+    //
+    // The signal says synthesis BEGAN, never that it will finish, so the
+    // promotion also asks the dispatcher whether the parked message's session is
+    // still alive (GuiAsyncRenderer::current_session_cancelled): a killed session
+    // crosses the boundary and fires this flag on its way out, and its message
+    // must not land on a newer owner's. Full rationale at the check.
     std::string       pending_status_text_;
     std::atomic<bool> synthesis_started_{false};
     bool              status_promoted_ = false;
