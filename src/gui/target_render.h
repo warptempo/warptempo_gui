@@ -8,6 +8,7 @@
 #include "render_pipeline.h"
 #include "viewport.h"
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <vector>
@@ -27,6 +28,42 @@
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio);
 
+// THE "Updating..." RUN HOLD (architect 2026-08-08), and its two windows. Both
+// read nothing but the wall-clock spacing of output-affecting triggers, whatever
+// produced them — which is what lets one rule cover key repeat, a pointer drag
+// and manual input with no input classification anywhere.
+//
+// THE LABEL IS HELD FOR A RUN'S WHOLE LIFE AND IS NEVER SUPPRESSED. Once a run
+// stands, the work-completion clears stop firing — a mid-run render that
+// completes, or is killed and redispatched by the next trigger, leaves the label
+// standing — so a torrent of triggers shows one steady label instead of a blink
+// per event. When the input goes quiet the run ends on the tick and the label
+// clears once the work is idle. A SINGLE isolated trigger never starts a run and
+// behaves exactly as it always did: stamp at the dispatch, clear at the
+// completion, no hold and no linger. The one accepted blink is the gap between
+// the first trigger's completion and the second trigger — unavoidable, since
+// nothing can know a run has begun until its second event arrives.
+//
+// TWO NAMES SO THEY TUNE INDEPENDENTLY: they answer different questions ("is
+// this a run?" and "is the run over?") and today they happen to share a value,
+// which is coincidence, not coupling — change one without the other freely.
+
+// DETECT: a trigger arriving within this of the previous one makes a RUN. It
+// has to cover the MACHINE-CADENCE producers with headroom and nothing else — a
+// drag re-triggering per pointer frame (~16 ms) and the compositor's key repeat
+// (~25-40 ms typical) — while deliberately EXCLUDING leisurely manual tapping,
+// which is a series of distinct actions and keeps the one-off lifecycle.
+inline constexpr long long kUpdatingRunDetectMs = 150;
+
+// QUIET: this long with no trigger ends the run ("the action stopped"). It is
+// deliberately SHORT, because it is the only extra time a run's FINAL label can
+// stay up compared with a one-off: if the last render finishes before the window
+// expires the label drops at expiry — at most this many milliseconds later than
+// a one-off's clear — and if the last render outlives the window the run ends
+// first and the ordinary completion clear fires with zero added time. A long
+// window here would make short renders look longer than they are.
+inline constexpr long long kUpdatingRunQuietMs = 150;
+
 // Target-view live target render orchestrator. Owns the cancel-restart
 // dispatch helper called from every output-affecting mutation site (marker
 // edits, phase reset edits, trim hotkeys, settings commits, undo/redo, tab
@@ -35,11 +72,14 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 //   - No-ops in source view. Source view's playback continues to read
 //     source.wav across archival renders unchanged.
 //   - In target view: stops playback, requests cancellation of an active
-//     batch/queue run when needed. It sets
-//     queue_progress_text="updating..." and dispatches a fresh render to
+//     batch/queue run when needed, and dispatches a fresh render to
 //     app.target_buffer (the always-on limiter applies). The dispatch
 //     is deferred until the worker is idle (the existing on_done callback paths
 //     pump pending target renders through maybe_dispatch_pending()).
+//     The queue_progress_text="Updating..." label is NOT stamped here: it is
+//     stamped only where the update actually goes asynchronous, through the one
+//     stamp helper (stamp_updating below). trigger() does own the label's RUN
+//     detection, though — every call stamps the trigger clock at its top.
 //
 // On completion the render on_done rebinds the playback device's
 // borrowed pointer to app.target_buffer via GuiPlayback::rebind_buffer
@@ -125,6 +165,17 @@ struct GuiTargetRender {
     // current?".
     void ensure_ready();
 
+    // Per-iteration hook for the "Updating..." label's RUN HOLD: the end that
+    // watches the INPUT (the two context-ending clears drop a run too, but they
+    // end the context rather than the gesture). Wired from main.cpp's on_tick,
+    // where the reason for that site rather than another is stated. Cheap and
+    // total: it returns immediately unless a run stands, and it is the clear a
+    // run's own held completions defer to. Detecting the end on a clock rather
+    // than at an event is what makes "the user let go" observable at all — the
+    // last trigger of a run is indistinguishable from the middle of one when it
+    // arrives.
+    void tick_updating_hold();
+
 private:
     // Construct and dispatch the target RenderRequest. Caller must
     // have verified the worker is idle and we are in target view.
@@ -135,6 +186,16 @@ private:
     // queue_progress_text and re-pumps pending_ (a fresh trigger() may
     // have arrived during render).
     void on_render_done(RenderOutcome outcome);
+
+    // THE ONE WRITER of the "Updating..." label. Both async stamp sites —
+    // trigger()'s pending-behind-a-busy-worker branch and
+    // dispatch_render_now()'s synthesis miss — call this instead of assigning
+    // the text; the reuse rungs resolve synchronously and never call it at all.
+    // It stamps whenever the label is not already showing, unconditionally: the
+    // run machinery works by HOLDING the label against the completion clears,
+    // never by refusing a stamp, so nothing here consults the run state or any
+    // clock (rationale at the two run constants above).
+    void stamp_updating();
 
     // Shared Success tail for cache hits, archival artifact loads, and worker
     // completions. Cache insertion is owned by the render worker; target_render
@@ -203,6 +264,38 @@ private:
     // store before its commit — from mislabeling a buffer with a bound its
     // samples never embodied.
     int64_t dispatched_buffer_start_frame_ = 0;
+
+    // THE RUN STATE, the whole of it — two fields. last_trigger_time_ is written
+    // by trigger()'s top alone and read by trigger() and tick_updating_hold;
+    // run_active_ is written by those two plus the two CONTEXT-ENDING clears
+    // (dispatch_render_now's early refusal and cancel_in_flight_update, which
+    // reset it because the surface a hold would calm is going away) and read by
+    // the two WORK-COMPLETION clears, whose deferral is the hold itself.
+    //
+    // NOT THE LOADERS: file_loader owns the same status slot for its own
+    // "Loading..." line and assigns it directly, touching neither field. That
+    // costs nothing — a run left standing across a load simply finds the slot
+    // already empty at its next quiet tick, where the "is the text ours" guard
+    // makes the late clear a no-op, and the run state resets there as usual.
+    //
+    // last_trigger_time_ is stamped at the TOP of EVERY trigger() call, before
+    // any of its early returns and whatever the dispatch turns out to do: a
+    // reuse-resolving trigger is still part of the user's cadence, and a run
+    // made of nothing but reuse hits simply holds a label that was never shown
+    // (a no-op that costs one compare per completion). steady_clock: monotonic,
+    // immune to a wall-clock step — the same idiom the undo tap window measures
+    // on (undo.h's last_gesture_time_), deliberately reused rather than
+    // introducing a second kind of clock for a second millisecond window. The
+    // default-constructed epoch value would only be consulted before the first
+    // trigger, so the never-triggered case is asked explicitly rather than
+    // leaning on how far steady_clock's zero happens to be from now.
+    std::chrono::steady_clock::time_point last_trigger_time_{};
+    // True from the moment a second trigger arrives within kUpdatingRunDetectMs
+    // of the previous one until kUpdatingRunQuietMs of quiet ends it on the tick.
+    // While it stands, the two work-completion clears hold their fire — that
+    // deferral IS the hold. A single isolated trigger never sets it, which is
+    // what keeps one-shot behavior byte-identical to the pre-hold shape.
+    bool run_active_ = false;
 
     // Set true by trigger() when a dispatch is wanted but the worker
     // wasn't idle. Cleared once dispatch_render_now is actually

@@ -8,6 +8,7 @@
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
+#include <chrono>
 #include <cstdio>
 #include <optional>
 #include <utility>
@@ -123,6 +124,28 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 }
 
 void GuiTargetRender::trigger() {
+    // RUN DETECTION, at the very top so EVERY call counts toward the cadence —
+    // ahead of the source-view and no-audio returns and ahead of the dispatch,
+    // whose outcome (a synchronous reuse hit or a real render) says nothing
+    // about how fast the user is going. Two triggers closer together than the
+    // DETECT window ARE a run; one isolated trigger is not, and can never be,
+    // since a run only begins at a second event. The label is then HELD for the
+    // run's life by the completion clears' deferral, and the run ends on the
+    // tick a QUIET window after this stamp (tick_updating_hold). Full rationale
+    // at the two constants.
+    {
+        const std::chrono::steady_clock::time_point now =
+            std::chrono::steady_clock::now();
+        // Ask "never triggered" explicitly rather than trusting steady_clock's
+        // zero to sit more than a window away from now.
+        if (last_trigger_time_ != std::chrono::steady_clock::time_point{} &&
+            now - last_trigger_time_ <
+                std::chrono::milliseconds{kUpdatingRunDetectMs}) {
+            run_active_ = true;
+        }
+        last_trigger_time_ = now;
+    }
+
     // Output-affecting mutation hook: the buffer is now stale relative
     // to engine input. Set the bit unconditionally — even in source
     // view — so a later S→T ensure_ready() sees the staleness and
@@ -167,22 +190,99 @@ void GuiTargetRender::trigger() {
     // next entry, so setting it here is enough.
     app.queue_cancel_requested = true;
 
-    // Surface the target-render status through queue_progress_text.
-    // "Rendering..." (archival) and "Updating..." (target render) share
-    // the slot.
-    app.queue_progress_text = "Updating...";
-    viewport.invalidate_timestamp_area();
-
+    // NO STATUS STAMP HERE (architect 2026-08-08). At this point nobody knows
+    // yet whether the update will go asynchronous at all: with an idle worker
+    // dispatch_render_now often resolves SYNCHRONOUSLY on a reuse rung (the
+    // render cache or the archival artifact) and returns with the buffer already
+    // rebound. Stamping unconditionally made the label flash on every such
+    // reuse — undo/redo A→B→A, the S→T entry with a current fingerprint, an
+    // out-of-window phase-reset edit hitting the trim-aware key — for the
+    // handful of microseconds until the same call cleared it, and cost the
+    // bottom strip two repaints for work that never left the GUI thread. The
+    // label is now stamped only where the update really becomes a wait: the
+    // busy branch just below, and dispatch_render_now's synthesis miss.
     pending_ = true;
     if (async_renderer.is_busy()) {
         // Worker is mid-render on some other output. Cancel; the existing
         // on_done path will call maybe_dispatch_pending() once the worker
         // exits.
+        //
+        // An honest wait: a previous render is being cancelled before ours can
+        // start, so surface the target-render status. "Rendering..." (archival)
+        // and "Updating..." (target render) share the slot.
+        stamp_updating();
         async_renderer.request_cancel();
         return;
     }
     // Worker is idle. Dispatch immediately.
     dispatch_render_now();
+}
+
+void GuiTargetRender::stamp_updating() {
+    // No gate and no clock: a stamp is always honest — it means work just went
+    // asynchronous. The calm comes from the HOLD (the completion clears deferring
+    // while a run stands), never from refusing to say anything.
+    //
+    // THE REPEAT-RUN TIMELINE (the held cent step in W+target, each repeat
+    // killing and redispatching the render — the blink the hold exists for):
+    //   t=0     press 1. No previous trigger: no run. The dispatch misses the
+    //           reuse rungs and stamps here — label shows.
+    //   t=40    that render completes; complete_successful_buffer clears the
+    //           label immediately, exactly as it always did (no run stands, so
+    //           nothing holds it). A single tap ends here, with no linger.
+    //   t=90    press 2, within the DETECT window of press 1 (90 < 150):
+    //           run_active_. The dispatch stamps again — label shows. THE ONE
+    //           ACCEPTED BLINK was t=40..90; nothing can see a run before its
+    //           second event.
+    //   t=90+   every later repeat kills and redispatches, and every completion
+    //           and cancellation along the way HOLDS the label. It stands
+    //           steady for the rest of the hold, however long that is.
+    //   t=X     last press. Its render lands under the hold, label still up.
+    //   t=X+150 the tick finds a QUIET window with no trigger in it: run over,
+    //           and with the work idle it clears + invalidates once
+    //           (tick_updating_hold). Had that last render still been running at
+    //           X+150, the run would simply have ended there and its own
+    //           completion clear — unheld again — would have fired on time.
+    // A single slow render also behaves as it always did: one stamp at the
+    // start, one clear at the end, and re-entries in between find the label
+    // already up and return.
+    if (app.queue_progress_text == "Updating...") {
+        return;
+    }
+    app.queue_progress_text = "Updating...";
+    viewport.invalidate_timestamp_area();
+}
+
+void GuiTargetRender::tick_updating_hold() {
+    // THE ONE END THAT WATCHES THE INPUT (the two context-ending clears also
+    // drop the run, but they end the CONTEXT, not the gesture). Nothing event-
+    // driven could do this job: the last trigger of a run looks exactly like the
+    // middle of one when it arrives, so "the user let go" is only observable as
+    // a stretch of quiet, which needs a clock somebody reads without being
+    // asked. Cheap: one bool test per tick while nothing is running.
+    if (!run_active_) {
+        return;
+    }
+    if (std::chrono::steady_clock::now() - last_trigger_time_ <
+        std::chrono::milliseconds{kUpdatingRunQuietMs}) {
+        return;
+    }
+    // The counter resets. From here the completion clears are unheld again, so a
+    // still-running render's own completion does the ordinary job and this
+    // method deliberately does NOT pre-empt it: clearing a label over work that
+    // is still in flight would lie in the one direction that matters.
+    run_active_ = false;
+    if (is_updating()) {
+        return;
+    }
+    // Quiet AND idle: the run's last render already landed under the hold, so
+    // its completion clear was the one that got deferred and this is that clear,
+    // arriving late. Guarded on the text being OURS — an archival "Rendering..."
+    // in the shared slot belongs to a live session and is not ours to erase.
+    if (app.queue_progress_text == "Updating...") {
+        viewport.invalidate_timestamp_area();
+        app.queue_progress_text.clear();
+    }
 }
 
 void GuiTargetRender::maybe_dispatch_pending() {
@@ -209,6 +309,11 @@ void GuiTargetRender::dispatch_render_now() {
     if (app.active_audio_view != 'T' ||
         audio.total_frames() <= 0 || app.source_audio_path.empty()) {
         pending_ = false;
+        // A CONTEXT-ENDING clear: the target view is gone (or the audio is), so
+        // whatever run was in progress is over with it. Reset the run state and
+        // clear unheld — a hold only makes sense while the surface it calms is
+        // still on screen.
+        run_active_ = false;
         if (app.queue_progress_text == "Updating...") {
             viewport.invalidate_timestamp_area();
             app.queue_progress_text.clear();
@@ -330,12 +435,21 @@ void GuiTargetRender::dispatch_render_now() {
     // Miss: synthesize. The remainder is the original dispatch path.
     in_flight_ = true;
 
-    // Re-stamp the progress text. A cancelled archival's on_done
-    // (finalize_render_run) clears the text in its terminal branch,
-    // and the target render's dispatch may run in that callback's pumping
-    // path. Target-render status uses queue_progress_text.
-    app.queue_progress_text = "Updating...";
-    viewport.invalidate_timestamp_area();
+    // THE MISS IS WHERE THE UPDATE BECOMES A WAIT — both reuse rungs above
+    // returned synchronously without touching the label — so this is one of the
+    // two sites that stamp it (trigger()'s busy branch is the other), through
+    // the one stamp helper.
+    //
+    // It stamps rather than re-stamps in general, because trigger() often has
+    // not stamped at all: it never does on the idle path, and even when its busy
+    // branch did, a cancelled archival's on_done (finalize_render_run) clears
+    // the text in its terminal branch while the target dispatch runs inside that
+    // same callback's pumping path, so the label can be down here even when the
+    // busy branch put it up. Mid-run the label is usually already showing, held
+    // there by the completion clears' deferral, and the helper's own
+    // already-showing return makes this a no-op. Target-render status uses
+    // queue_progress_text.
+    stamp_updating();
 
     // Clear the target buffer; do_render appends synthesised samples
     // into it via std::vector::insert. The buffer's domain anchor is stamped
@@ -399,10 +513,16 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer_frames = 0;
     }
 
-    if (outcome != RenderOutcome::Success) {
+    if (outcome != RenderOutcome::Success && !run_active_) {
         // Clear status. Match finalize_render_run by invalidating the bottom
         // strip before clearing queue_progress_text; timestamp_invalidate_rect()
         // covers the whole bottom strip.
+        //
+        // HELD DURING A RUN: mid-run this branch is the CANCELLED outcome of the
+        // render the next trigger just killed, and its successor is already
+        // pending — clearing here would blink the label off between two renders
+        // of one continuous gesture. The run's own end clears it
+        // (tick_updating_hold, once the quiet window passes with the work idle).
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
     }
@@ -450,9 +570,23 @@ void GuiTargetRender::complete_successful_buffer() {
 
     // Clear status. Match finalize_render_run by invalidating the bottom strip
     // before clearing queue_progress_text; timestamp_invalidate_rect() covers
-    // the whole bottom strip.
-    viewport.invalidate_timestamp_area();
-    app.queue_progress_text.clear();
+    // the whole bottom strip. GUARDED on a non-empty slot, like the two sibling
+    // clears (dispatch_render_now's early refusal and cancel_in_flight_update):
+    // the reuse rungs reach this tail with the label NEVER stamped — a
+    // synchronous cache or artifact hit resolves without going asynchronous, so
+    // nothing was shown — and clearing an already-empty string would cost the
+    // bottom strip a repaint for no visible change.
+    //
+    // HELD DURING A RUN: a completion inside a torrent of triggers is the middle
+    // of one continuous gesture, and the next trigger is already on its way, so
+    // clearing here is exactly the per-event blink the hold exists to stop. The
+    // run's end clears instead (tick_updating_hold, once the quiet window passes
+    // with the work idle). Outside a run this is the ordinary immediate clear it
+    // has always been.
+    if (!run_active_ && !app.queue_progress_text.empty()) {
+        viewport.invalidate_timestamp_area();
+        app.queue_progress_text.clear();
+    }
 }
 
 GuiTargetRender::BufferStartVerdict
@@ -582,6 +716,9 @@ void GuiTargetRender::cancel_in_flight_update() {
         async_renderer.request_cancel();
     }
     pending_ = false;
+    // A CONTEXT-ENDING clear (the T→S exit): the target view the label belongs
+    // to is going away, so any run goes with it and this clear is unheld.
+    run_active_ = false;
     if (app.queue_progress_text == "Updating...") {
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();

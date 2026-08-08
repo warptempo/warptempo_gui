@@ -1295,6 +1295,29 @@ int main(int argc, char** argv) {
             return;  // loaded state paints on the next tick
         }
 
+        // End-of-run check for the "Updating..." label's hold: a stretch of
+        // quiet with no output-affecting trigger in it means the user stopped,
+        // so the run ends and the held label clears once the work is idle
+        // (target_render.h's two run constants carry the rule).
+        //
+        // THE TICK, NOT THE SETTLED HOOK, and not any event site. It has to be a
+        // clock somebody reads unbidden: a run ends by nothing happening, and
+        // the last trigger of a run is indistinguishable from the middle of one
+        // when it arrives, so no event exists to hang this on. The tick is the
+        // right unbidden reader — the timerfd is a free-running ~125 Hz interval
+        // (arm_playback_timer, half the refresh period), armed whether or not
+        // anything is playing and independent of input and of frame callbacks,
+        // so the quiet is noticed within a tick of the window expiring even on a
+        // completely idle desktop. It is also where the product's other
+        // millisecond display timeouts already live (the button hover dwell
+        // below). The settled hook was considered and refused: its documented
+        // class is POINTER-DERIVED FACES whose inputs move with no pointer event
+        // under them, and this is neither pointer-derived nor a face.
+        // Placement inside the tick is free — it reads only its own run state
+        // and the status slot — but it sits above the paint invalidations so its
+        // clear lands in the same frame they do.
+        target_render.tick_updating_hold();
+
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either
         // dispatches to the worker, sets the supersede slot, or no-ops.
