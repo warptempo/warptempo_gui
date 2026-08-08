@@ -94,11 +94,12 @@ public:
     void play(int64_t start_sample, int64_t end_sample);
 
     // Stop playback and block until any in-flight audio callback has exited,
-    // normally within about two JACK periods. If callbacks stop arriving
-    // because the server is stalled or dead, warns to stderr and returns after
-    // 250 ms. Safe to call when not playing; it still fences. Main thread only.
-    // The cursor retains its last value so the main thread can snapshot where
-    // it stopped.
+    // normally within about two JACK periods. The wait has no deadline: it
+    // returns only once the callback has quiesced, so a stalled or dead
+    // server hangs here rather than letting the caller mutate a buffer the
+    // audio thread may still read. Safe to call when not playing; it still
+    // fences. Main thread only. The cursor retains its last value so the
+    // main thread can snapshot where it stopped.
     void stop();
 
     // Clamp to [0.10, 1.00] and publish to the audio thread. The change

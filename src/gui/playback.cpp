@@ -455,21 +455,15 @@ void GuiPlayback::stop() {
     // increment proves a full callback ran start-to-finish after that
     // straggler exited, and its release increment paired with our
     // acquire loads orders all of its buffer reads before anything the
-    // caller mutates after stop() returns. Bounded by ~2 JACK periods.
-    // The timeout covers a stalled or dead server (callbacks stop
-    // arriving); proceeding after a warning beats hanging the GUI.
+    // caller mutates after stop() returns. Normally ~2 JACK periods.
+    // The wait is deliberately unbounded (architect 2026-08-08): a server
+    // that has stopped running callbacks entirely is a broken environment,
+    // and hanging visibly beats returning into a buffer the callback can
+    // still be reading — callers clear, append to and reallocate the
+    // target buffer the moment stop() returns.
     const uint64_t c0 =
         impl_->process_cycles.load(std::memory_order_acquire);
-    const auto deadline = std::chrono::steady_clock::now()
-                          + std::chrono::milliseconds(250);
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
-        if (std::chrono::steady_clock::now() >= deadline) {
-            std::fprintf(stderr,
-                "warptempo_gui: JACK process callback did not quiesce "
-                "within 250 ms; proceeding. Buffer operations after this "
-                "stop may race a stalled callback.\n");
-            return;
-        }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
