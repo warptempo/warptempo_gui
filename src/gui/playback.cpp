@@ -476,7 +476,15 @@ void GuiPlayback::set_speed(float speed) {
 }
 
 bool GuiPlayback::is_playing() const {
-    return impl_->playing.load(std::memory_order_relaxed);
+    // ACQUIRE, not relaxed: this load pairs with the audio thread's release
+    // store of playing = false at the natural end (fill_output), which the
+    // callback makes after its last read of the borrowed sample buffer. The
+    // conditional-stop sites (target_render.cpp's ensure_ready and
+    // rebind_to_source) skip stop()'s quiescence fence on a false read, so
+    // the acquire is what orders that final callback's buffer reads before
+    // anything the caller mutates afterwards. Free on the target — x86 loads
+    // already carry acquire ordering; the tightening is formal.
+    return impl_->playing.load(std::memory_order_acquire);
 }
 
 int64_t GuiPlayback::cursor() const {
@@ -585,7 +593,13 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
     // disabled. This flag check is defense in depth for skipped stops; a
     // mid-flight pointer swap would be silent corruption. The refusal keeps the
     // buffer/offset pair consistent: neither is stored.
-    if (impl_->playing.load(std::memory_order_relaxed)) {
+    // ACQUIRE, for is_playing()'s reason: the role here stays defense in depth
+    // — refuse on a true read — but a FALSE read falls straight through to the
+    // pointer swap below, so the same pairing with the audio thread's
+    // natural-end release store is what orders that last callback's buffer
+    // reads before the assignments. Free on the target; the tightening is
+    // formal.
+    if (impl_->playing.load(std::memory_order_acquire)) {
         std::fprintf(stderr,
             "warptempo_gui: rebind_buffer called while playing — refusing "
             "to swap the audio buffer (would race the callback)\n");
