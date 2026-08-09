@@ -2090,7 +2090,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // has nothing else to go on. Each carries a constant row in the hint
         // table with no history-view override, so the words are the same in
         // both states: "Older (,)" and "Newer (.)" with their shift lines,
-        // "Revert (Ctrl+H)", "Cumulative (U)".
+        // "Revert (Ctrl+H)", "Cumulative (u)".
         //
         // The Cumulative toggle is the first of the four that is also
         // SELECTABLE at rest: its lamp reads a session bit the view does not

@@ -4142,7 +4142,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // wears outside the view — which is where a user most needs to be told
         // what the button is and that the history view is where it lives.
         case RedesignButton::IconCumulative:
-            return {"Cumulative (U)", nullptr};
+            return {"Cumulative (u)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
         // shifted twins jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
