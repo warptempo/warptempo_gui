@@ -887,42 +887,37 @@ private:
 // spelling, and it has exactly one reader — the editor's opener.
 std::string history_checkpoint_title(const std::string& project_directory);
 
-// HOW FAR THE ACT GOT. The two failures are distinguished because the user's
-// next move differs: nothing reached the repository on a write failure, while a
-// commit failure leaves three written files sitting in the working tree, visible
-// to `git status` and committable by hand.
+// HOW FAR THE ACT GOT — six answers over ONE sanctioned path (the act's own head
+// in the .cpp owns the model; this says what each value means to the caller).
 //
-// EVERY CLEAN-ARM ANSWER IS ABOUT THE CHECKPOINT COMMIT, never about the branch
-// tip (2026-08-09): the pre-flight names this piece's checkpoint on the branch —
-// the newest commit touching the three checkpoint paths and touching nothing
-// else — and every verdict below is a statement about THAT commit. A tip sitting
-// above it is the user's own work and no part of the answer.
+// WriteFailed — NOTHING REACHED THE REPOSITORY. The three sidecars could not be
+// written, or the act refused before writing them at all: a DETACHED HEAD is
+// unsanctioned use and throws here, since there is no branch to publish onto.
 //
-// NothingToCommit IS AN ESTABLISHED ANSWER, and only that (narrowed 2026-08-09):
-// the checkpoint paths are clean AND the named checkpoint commit's own tree was
-// seen to carry these bytes AND the remote-tracking ref was seen to carry that
-// commit — committed and published already, so no commit exists to make, nothing
-// was left behind and there is nothing to publish. It is the one clean ending
-// beside Committed, and the caller treats the two alike.
+// CommitFailed — the three files are written and UNCOMMITTED, sitting in the
+// working tree where `git status` shows them and a hand `git commit` finishes
+// them. It also covers the two thrown reads around the commit: an unusable
+// `git status`, the mid-act branch-mismatch tripwire, and a branch tip that
+// could not be read after committing.
 //
-// Unconfirmed IS WHAT THAT ANSWER USED TO SWALLOW, in FOUR shapes (split out
-// 2026-08-09): the paths are clean but NO commit touching only those paths could
-// be named on this branch; the newest one that touches them is MIXED (it carries
-// foreign paths, which this act may not publish by sha); the named commit could
-// NOT be confirmed to carry the checkpoint's bytes; or git has a DETACHED HEAD,
-// which has no remote-tracking ref to observe at all and nothing to push onto.
-// None establishes content AND publication — in the detached case the repository
-// was never even asked about publication — and all are therefore FAILING
-// outcomes, not quiet successes. Reporting any of them as "nothing to commit"
-// told the user everything was done on the strength of a question that had gone
-// unanswered, which is exactly the reading the committed-but-unpushed arm below
-// exists to avoid. Each prints its own stderr line naming its own cause.
+// NothingToCommit — THE CLEAN, IN-SYNC ENDING: the bytes just written are what
+// the branch already carries AND the remote-tracking ref carries the branch.
+// Committed and published already, nothing to do. It is the one clean ending
+// beside Committed and the caller treats the two alike — including clearing a
+// standing failure report, which is how a push made IN THE TERMINAL is
+// recognized by the next act.
 //
-// CommittedNotPushed is a SUCCESS for the caller's purposes — the checkpoint
-// exists, and the walk (which reads the local branch for exactly this reason)
-// shows it — with the push to retry. The caller keeps a session bit for that
-// retry (AppState::checkpoint_push_pending), because the act's own admission is
-// otherwise measured on the AUTHORING delta, which a landed commit empties.
+// Unconfirmed — THE ACT ESTABLISHED NOTHING, in three shapes: the paths are
+// clean but the branch is BEHIND its remote (unpushed commits — the terminal's
+// job under this model); the paths are clean and the remote could not be read;
+// or the push ran and the remote-tracking ref could not be observed carrying the
+// checkpoint. An unanswerable question is never a yes, and never clears a
+// standing report.
+//
+// CommittedNotPushed — the checkpoint is in the local branch and the push did
+// not land (or the projects-home guard refused the destination). The fix is
+// `git push` in the terminal; the next act's clean arm observes it and takes the
+// report down.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
@@ -940,12 +935,9 @@ enum class GuiHistoryCommitOutcome {
 // the caller reports nothing.
 //
 // `title` IS THE COMMIT MESSAGE, and the caller's (the commit-title editor's
-// buffer, seeded from history_checkpoint_title). It is not merely written: it is
-// also the IDENTITY the attribution walk matches on, so "the commit whose
-// message is the act's own title" means this exact string. Two acts under one
-// title are therefore interchangeable to the walk when their content matches
-// too, which is the content-identity contract below, unchanged by the title
-// becoming the user's to write.
+// buffer, seeded from history_checkpoint_title). It is written and never read
+// back: the act matches on nothing, the content-signature attribution that once
+// did having gone with the graded machinery (2026-08-09).
 //
 // IT RUNS ON A BACKGROUND WORKER SINCE 2026-08-07 (GuiHistoryCommitWorker),
 // which changes nothing in this body: every argument is a value the caller
@@ -968,18 +960,14 @@ enum class GuiHistoryCommitOutcome {
 // the observation and the publication mean different branches (the .cpp's push
 // leg owns all three, with the `-c` mechanics).
 //
-// EVERY OUTCOME IS A REPOSITORY OBSERVATION, never a transport result: a commit
-// that landed under a hung post-commit hook is FOUND and pushed rather than
-// reported failed, and a pre-flight that finds the checkpoint already committed
-// but not yet pushed PUSHES IT (the retry route for exactly that shape) instead
-// of answering NothingToCommit. An observation that could not be MADE is its own
-// answer everywhere — never silence read as a yes.
-//
-// WHAT "FOUND" MEANS IS CONTENT, NOT AUTHORSHIP: the act attributes a commit
-// carrying exactly this checkpoint — its title, only these three paths, and
-// these exact bytes — and content-equivalent commits are deliberately
-// interchangeable, whoever ran the git. The .cpp's find_checkpoint_commit owns
-// the full contract and why it is the ruled one.
+// SUCCESS IS AN OBSERVATION; EVERY OTHER ANSWER IS THE TRANSPORT'S (2026-08-09,
+// with the strict model). `Committed` is claimed only when the remote-tracking
+// ref is SEEN to carry the checkpoint — silence is never read as a yes, and an
+// unanswerable verify is `Unconfirmed`. The failures, by contrast, are the
+// child's own account: a commit or a push that git reported as failing IS the
+// failure, with the recorded cost that a commit landing under a hung
+// `post-commit` hook reads as `CommitFailed`. The act's head in the .cpp owns
+// the ruling, the seven steps and the accepted consequences.
 //
 // IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
 // mode at all, so there is nothing to bootstrap from here — the first checkpoint
@@ -988,39 +976,3 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,
     const std::string& title);
-
-// IS A CHECKPOINT WAITING TO BE PUBLISHED FOR THIS PIECE? — one READ-ONLY
-// question in two reads, and THE ACT'S OWN TWO, in the act's own order: which
-// commit on the current branch IS this piece's checkpoint (the same selector the
-// act's clean pre-flight arm publishes from — newest by the three checkpoint
-// paths, and touching those paths alone), then whether the remote-tracking ref
-// carries THAT commit (the containment reading the push verdict is made of,
-// witnessed so an absent ref and an unreadable repository cannot share an
-// answer).
-//
-// ONE SELECTOR, ONE SUBJECT, and that is the whole point of taking the piece's
-// directory and base name rather than a sha: the caller cannot hand this a
-// different commit than the act will publish, because neither of them chooses
-// one — the same function does, from the same inputs. Passing the display walk's
-// newest member instead was a real divergence (that walk is era-agnostic over
-// `projects/**/<base>.*` while the act works the CURRENT directory's three exact
-// paths, so a directory move can make them name different commits), and it could
-// clear the bit on a commit the act never published.
-//
-// WHY IT EXISTS (2026-08-09): the checkpoint act's admission needs to know
-// whether a push is still owed, and the SESSION cannot be that memory — a
-// failure report is in-memory while the obligation is durable, so a quit and a
-// relaunch would strand the retry behind a greyed button. THE REPOSITORY IS THE
-// DURABLE STORE, and this is the read that asks it. Nothing is persisted
-// anywhere; the answer is re-derived at the mode's entry.
-//
-// TRUE MEANS DEMONSTRATED ABSENCE AND NOTHING ELSE. Every unanswerable shape
-// answers FALSE — a detached HEAD (no remote-tracking ref to ask about), no such
-// commit, a MIXED one (touching foreign paths, which this act may not publish by
-// sha), a ref or a walk git could not read — because the bit it feeds ADMITS an
-// act, and admitting one on a guess is worse than leaving it greyed until the
-// repository can answer. An ABSENT remote-tracking ref is not unanswerable: it
-// demonstrably carries nothing, so it answers TRUE, exactly as the push verdict
-// reads it.
-bool history_checkpoint_push_pending(const std::string& project_directory,
-                                     const std::string& base_name);

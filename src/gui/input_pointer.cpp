@@ -424,14 +424,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // (2026-08-05 for the first two, 2026-08-08 for the third), which is why this
 // takes the state rather than only a button. The
 // allowlist admits Ctrl+S — the checkpoint act's chord since 2026-08-08 — only
-// while there is something to DO (something to checkpoint, or something to
-// publish) AND no
+// while there is something to checkpoint AND no
 // checkpoint is in flight, so the Save-and-Commit-faced SAVE button GREYS when
 // the session's authoring content already matches the newest checkpoint
-// (AppState::HistoryMode::head_delta_empty) with no push still owed
-// (AppState::checkpoint_push_pending, 2026-08-09 — the bit that keeps the
-// committed-but-unpushed retry reachable, and lights this button for it) and
-// again while the worker is
+// (AppState::HistoryMode::head_delta_empty) and again while the worker is
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
 // struct); and it admits CTRL+H only while a diff flag is selected, so the

@@ -2342,11 +2342,9 @@ struct AppState {
     // its ordinary face over the mode's disabled one; the SAVE button wears the
     // commit icon and the label "Save and Commit" while the mode stands, and
     // reaches the act through its own chord. THE
-    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint AND
-    // nothing to publish the chord is a consumed no-op and that button greys
-    // (head_delta_empty, below, owns the first bit; AppState::checkpoint_push_-
-    // pending, added 2026-08-09 so the committed-but-unpushed retry can be
-    // reached at all, owns the second — one decision, both readers), and since
+    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
+    // chord is a consumed no-op and that button greys (head_delta_empty, below,
+    // owns the bit and the one decision both readers take it from), and since
     // 2026-08-07 the same is true while a checkpoint is already publishing
     // (history_checkpoint_in_flight, which lives on AppState rather than here
     // because the act outlives the view).
@@ -3102,65 +3100,6 @@ struct AppState {
     // session that never publishes a checkpoint.
     std::string critical_error_message;
 
-    // IS A CHECKPOINT WAITING TO BE PUBLISHED? (architect's arc, 2026-08-09.)
-    // The commit act ends CommittedNotPushed when the checkpoint reached the
-    // local branch and the push did not — the documented retry being "the next
-    // save and commit publishes it", through the act's own committed-but-unpushed
-    // pre-flight arm. THAT RETRY WAS UNREACHABLE without this bit, and the reason
-    // is a collision between two honest measurements: the completion re-warms the
-    // walk from the LOCAL branch, which now carries the checkpoint, so the head
-    // delta measures live-vs-newest as EMPTY and the Ctrl+S admission — which
-    // asks "is there anything to checkpoint?" — greys the act. The session would
-    // then sit with an unpublished checkpoint, a standing critical chip and no
-    // in-product route to either.
-    //
-    // SO THE ADMISSION ASKS TWO QUESTIONS, one per bit: the head delta asks "is
-    // there anything to CHECKPOINT?" and this asks "is there anything to
-    // PUBLISH?", and either one standing admits the chord. WHICH ARM THEN RUNS IS
-    // THE ACT'S OWN PRE-FLIGHT to settle — with no authoring change it finds the
-    // paths clean and the remote behind and pushes the existing commit; with one,
-    // it commits and pushes as usual. Nothing here predicts that.
-    //
-    // IT IS DERIVED FROM THE REPOSITORY, NOT PERSISTED, and that is what makes it
-    // survive a relaunch: a push obligation is DURABLE while this session is not,
-    // so a checkpoint that committed and failed to push used to leave the act
-    // greyed on the next launch with the documented retry unreachable. The
-    // repository is the durable store, so THE MODE'S ENTRY RE-DERIVES the bit
-    // where it already measures the head delta (measure_history_head_delta): one
-    // read-only question in the act's own two reads — which commit is this
-    // piece's checkpoint on the branch, and does the remote carry THAT commit
-    // (history_checkpoint_push_pending, history_diff.h). It runs THE ACT'S OWN
-    // SELECTOR on the act's own inputs, so the bit and the act it admits cannot
-    // name different commits. Nothing is written to disk, so nothing can be
-    // stale.
-    //
-    // ITS EVENT-DRIVEN HALF IS A FAST PATH OVER THAT SAME TRUTH, for the session
-    // that made the act — the window between a failed push and the next `h`,
-    // where there is no walk to re-derive from: SET by CommittedNotPushed (a
-    // commit exists and the remote lacks it), CLEARED by Committed and by
-    // NothingToCommit, which since 2026-08-09 means committed AND published,
-    // confirmed (history_diff.h's outcome contract). The other three outcomes
-    // leave it exactly as they found it: Unconfirmed settles nothing by
-    // definition, and a later write or commit failure does not un-publish
-    // whatever an earlier act left unpushed. One deriver, one writer pair, and no
-    // way for them to disagree — they read the same fact about the same
-    // repository.
-    //
-    // UNANSWERABLE RESTS FALSE (the deriver's own rule, stated at
-    // history_checkpoint_push_pending): a detached HEAD, no identifiable
-    // checkpoint commit, a MIXED one, an unreadable ref or a walk that could not
-    // run all leave the act GREYED rather than admitting a chord on a guess — the
-    // same conservative rest the head delta takes before the prefetch has
-    // delivered anything to measure.
-    //
-    // IT REVIVES THE ADMISSION, NOT THE REPORT. The critical chip beside it is
-    // SESSION-scoped by ruling and stays event-driven: a relaunch shows no chip
-    // even when this derives true, because the architect specced the slot's
-    // lifetime as the session's. What the derivation restores across a relaunch
-    // is the user's ROUTE to finishing the job, which is the thing that was
-    // unreachable.
-    bool checkpoint_push_pending = false;
-
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
     int64_t last_tick_live_total = 0;
@@ -3771,10 +3710,9 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
 //
 // IT TAKES THE WHOLE AppState because the gate it asks does: FOUR of that
 // gate's admissions are conditional on state (re-derived 2026-08-09 — the commit
-// act's, on head_delta_empty OR checkpoint_push_pending and on
-// history_checkpoint_in_flight; the revert act's, on
-// history_mode_revert_subject_standing above; and the load-in-place's local arm,
-// on the local walk being bound), so both readers must
+// act's, on head_delta_empty and on history_checkpoint_in_flight; the revert
+// act's, on history_mode_revert_subject_standing above; and the load-in-place's
+// local arm, on the local walk being bound), so both readers must
 // hand it the SAME state or the face
 // and the key would answer differently. The caller passes `a` and
 // restates none of its terms.

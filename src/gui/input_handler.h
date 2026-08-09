@@ -351,11 +351,9 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
 // while THREE allowlist admissions are conditional on state they are asked about
 // (re-derived 2026-08-07) — the commit act's, which is CTRL+S since 2026-08-08,
-// on head_delta_empty OR-ed with checkpoint_push_pending (nothing to
-// checkpoint AND nothing to publish is what greys it — 2026-08-09; a view whose
+// on head_delta_empty (a view whose
 // newest checkpoint already carries the session's authoring content has nothing
-// to commit unless a push is still owed) and on history_checkpoint_in_flight
-// (one checkpoint at a time), and
+// to commit) and on history_checkpoint_in_flight (one checkpoint at a time), and
 // the revert act's, on a subject standing
 // (history_mode_revert_subject_standing — a selected diff flag, else the focused
 // one). Both readers hand it the
