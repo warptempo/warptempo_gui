@@ -2031,12 +2031,25 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // BUTTON AND THE CUMULATIVE TOGGLE OUTSIDE THE VIEW (architect
         // 2026-08-05 for the first three, 2026-08-08 for the fourth): the
         // mode-scoped exception inverted, for the four buttons whose keys exist
-        // only inside it. Same blend, same pointer-dead press and same absent
-        // tooltip, decided at the same one predicate — so the row still has
-        // exactly one dead face, in two states of one mode rather than in two
-        // mechanisms. The Cumulative toggle is the first of the four that is
-        // also SELECTABLE at rest: its lamp reads a session bit the view does
-        // not own, so it wears the dimmed selected fill out here whenever the
+        // only inside it. Same blend and same pointer-dead press, decided at the
+        // same one predicate — so the row still has exactly one dead face, in
+        // two states of one mode rather than in two mechanisms.
+        //
+        // THEIR HINTS STAY LIVE AT REST, and that is the point rather than an
+        // oversight (architect 2026-08-07, the tooltips-on-disabled ruling):
+        // the hover walk resolves the dead FACE and the hint from the same
+        // pass but on DIFFERENT terms — the face carries the enabled bit and
+        // the hint rides redesign_button_hover_zone alone (the split is stated
+        // at that walk, input_pointer.cpp) — so all four explain themselves
+        // from outside the view, which is where a user meets them greyed and
+        // has nothing else to go on. Each carries a constant row in the hint
+        // table with no history-view override, so the words are the same in
+        // both states: "Older (,)" and "Newer (.)" with their shift lines,
+        // "Revert (Ctrl+H)", "Cumulative (U)".
+        //
+        // The Cumulative toggle is the first of the four that is also
+        // SELECTABLE at rest: its lamp reads a session bit the view does not
+        // own, so it wears the dimmed selected fill out here whenever the
         // reading is cumulative (the rule below covers it with no new arm).
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's

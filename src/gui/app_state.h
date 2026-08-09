@@ -2241,10 +2241,13 @@ struct AppState {
     // every face on the next frame with nothing latched.
     //
     // ROW 3'S TABS ARE THE EXCEPTION, and a repurposing rather than a refusal
-    // (architect 2026-08-05): their chord stays consumed like every other tab
-    // switch, and the SURFACE becomes the reading selector — TWO slots then,
-    // FOUR since 2026-08-07, one per (walk source, reading) pair. See `source`
-    // and `compare` below.
+    // (architect 2026-08-05): their chord stays consumed like every other A/B
+    // tab switch, and the SURFACE becomes the WALK SELECTOR — two slots,
+    // "Remote" and "Local", one per GuiHistoryWalkSource. See `source` below.
+    // (The row carried the walk-and-reading PRODUCT as four slots for one day,
+    // 2026-08-07..08; the READING is row 4's own Cumulative toggle now, over a
+    // session bit that is not in this struct at all — AppState::history_-
+    // cumulative, which is why nothing here names it.)
     //
     // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
     // "the local history feature will be helpful for understanding undo/redo
@@ -3715,10 +3718,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 //     so the vector is total over the roster and the comparator needs no
 //     membership test. (The tabs answer true in EVERY state since 2026-08-05:
 //     the history view, which greyed them for one day, repurposes the row as
-//     its reading selector instead, and the chord it gave that selector —
-//     Ctrl+Tab, the mode's own cycle — is what makes the derived
-//     partition call them LIVE, so the mode line at the top of this body never
-//     fires for them either, and row 3 has no disabled face at all.)
+//     its WALK selector instead, and the chord it gave that selector —
+//     Ctrl+Tab, the mode's own cycle over the walk sources — is what makes the
+//     derived partition call them LIVE, so the mode line at the top of this
+//     body never fires for them either, and row 3 has no disabled face at all.)
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
 // swallows the PRESS at the pointer path's own modal gate, and a modal that
 // greyed the chrome under it would be a fourth face nobody asked for.
@@ -4329,13 +4332,13 @@ static_assert(
 // mechanism per behaviour is the shape to keep.
 //
 // THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
-// carries it into the history view for free: in there the row selects the
-// (source, reading) PAIR and the lit one is still the one with no hover face.
-// All FOUR slots take it — the two outside the view are unpainted there and
-// unreachable by their zero rect anyway. It sits in the ZONE rather than in
-// hoverability alone because the compare tabs carry no tooltip either way (their
-// null rows are membership), so no behaviour rests on the distinction and one
-// statement is better than two.
+// carries it into the history view for free: in there the row selects the WALK
+// SOURCE and the lit one is still the one with no hover face. Both slots take
+// it, in both meanings of the row, with no mode term anywhere in the
+// expression. It sits in the ZONE rather than in hoverability alone because the
+// tabs carry no tooltip either way while the view stands (their null rows are
+// membership), so no behaviour rests on the distinction and one statement is
+// better than two.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     if (a.dropdown.open()) return false;
     if (redesign_button_is_tab(b)) return !redesign_button_selected(a, b);

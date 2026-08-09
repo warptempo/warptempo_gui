@@ -120,9 +120,15 @@ class GuiHistoryPrefetch;
 // rather than a convenience).
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
-// against two different "other sides", and the view offers both — the row-3
-// tabs select which while it stands, and Ctrl+Tab toggles the pair
-// (kdenlive-redesign.md's tab record).
+// against two different "other sides", and the view offers both.
+//
+// WHICH ONE IS SHOWING IS A SESSION PREFERENCE, not view state and not a tab:
+// AppState::history_cumulative is the bit (its contract lives at that field),
+// bare `u` and row 4's Cumulative button toggle it, and it is OFF — iterative —
+// at program start and KEPT ACROSS VISITS thereafter, since the mode's own
+// struct is reset whole at both edges and this deliberately is not in it. Row 3
+// selects the WALK SOURCE while the view stands ("Remote" / "Local"), and
+// Ctrl+Tab cycles those sources; neither touches the reading.
 //
 //   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
 //   ITEM as the new one. It compares FORWARD, toward now: the next-newer
@@ -130,7 +136,9 @@ class GuiHistoryPrefetch;
 //   index, which has no committed successor — THE FROZEN LIVE NOW SIDE. So it
 //   answers "what happened after this checkpoint", one step at a time, which is
 //   the question a walk backwards through the history is asking at each stop. It
-//   is the DEFAULT at every entry.
+//   is the state the PROGRAM starts in (the bit's own initializer) — not a
+//   per-visit default: a session that has turned cumulative on stays there until
+//   `u` turns it back or the program closes.
 //
 //   CUMULATIVE — the viewed checkpoint against the frozen live now side, the
 //   reading the mode shipped with. It answers "how does what I have now differ

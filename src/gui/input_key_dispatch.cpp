@@ -1001,10 +1001,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // nothing moves.
 //
 // THE SPAN IS THE DISPLAYED DELTA'S, through the one accessor that forks on the
-// (source, reading) pair, so it follows the tab like every other reader: two
-// readings of one member generally differ in extent, and so do the two walks, so
-// a click that framed another tab's span would be showing one answer at
-// another's magnification.
+// (source, reading) pair, so it follows WHAT THE LANE IS SHOWING like every
+// other reader — the walk from the lit tab, the reading from the session's own
+// bit: two readings of one member generally differ in extent, and so do the two
+// walks, so a click that framed some other pair's span would be showing one
+// answer at another's magnification.
 //
 // THE RECIPE IS THE TRIM-BAR DOUBLE-CLICK'S, through its own framing core
 // frame_span_into_view: the deterministic zoom-TO-span with the 2.5%-per-side
@@ -1212,12 +1213,13 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
     // CTRL IS THE TAB CYCLE'S AND NOTHING ELSE'S, IN BOTH DIRECTIONS since
-    // 2026-08-07 (architect): Ctrl+Tab steps the reading one tab RIGHT and
+    // 2026-08-07 (architect): Ctrl+Tab steps the WALK SOURCE one tab RIGHT and
     // Ctrl+Shift+Tab one tab LEFT, both with wrap and both through the one switch
-    // owner. The paired marker march the shifted chord runs OUTSIDE the view has
-    // no meaning in a view with one tab band and was this gate's consumed no-op
-    // until now; it is the mode's own reverse cycle instead, claimed here so it
-    // never reaches the allowlist.
+    // owner, and neither touches the READING (that is bare `u`'s alone since
+    // 2026-08-08). The paired marker march the shifted chord runs OUTSIDE the
+    // view has no meaning in a view with one tab band and was this gate's
+    // consumed no-op until now; it is the mode's own reverse cycle instead,
+    // claimed here so it never reaches the allowlist.
     // ITS ISOLEFTTAB SPELLING IS CLAIMED WITH IT, and the reason is xkb's: that
     // keysym lives on the Tab key's shift level, so a layout delivering
     // Ctrl+Shift+Tab that way would otherwise fall through this predicate into the
@@ -1829,7 +1831,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // HERE STILL — but neither Tab chord reaches this gate any more: the mode took
 // Ctrl+Tab for its cycle on 2026-08-05 and Ctrl+Shift+Tab for that cycle's
 // REVERSE on 2026-08-07, both one line above (the surface went first — row 3 is
-// the reading selector while the view stands — and the keys followed it,
+// the WALK selector while the view stands — and the keys followed it,
 // superseding the pair's original "no hotkey" ruling). So the tab BAND is as
 // untouched as it ever was; what changed is that both chords now do the mode's
 // own work instead of nothing.

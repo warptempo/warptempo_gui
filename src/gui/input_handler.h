@@ -336,10 +336,11 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // (history_mode_disables_button, app_state.h) asks both of them about a table of
 // chords.
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
-//     `,` / `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag
-//     cycle), Ctrl+Tab and Ctrl+Shift+Tab (the row-3 tab cycle, forward and
-//     reverse — the two ctrl-carrying shapes), bare Home / End and bare `c`. The definition
-//     carries the derivation. handle_history_mode_key consumes exactly these,
+//     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
+//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle), Ctrl+Tab
+//     and Ctrl+Shift+Tab (the row-3 tab cycle over the WALK SOURCES, forward
+//     and reverse — the two ctrl-carrying shapes), bare Home / End and bare
+//     `c`. The definition carries the derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
 //     this first.
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
