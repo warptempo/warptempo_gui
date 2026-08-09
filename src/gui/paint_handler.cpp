@@ -119,10 +119,14 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // and the text inside it keeps starting at the cell's left pen, exactly as it
 // did when the cell sat on the left).
 //
-// THE ONE 13px PAD IS USED THREE TIMES, unchanged from the shipped row and
-// deliberately: the left lead-in before C, the inter-section gap between C and
-// A, and the right margin after A. One constant, three uses, an
-// eye-consistency choice.
+// THE ONE 13px PAD IS USED THREE TIMES ON AN ORDINARY ROW, unchanged from the
+// shipped row and deliberately: the left lead-in, the inter-section gap before
+// A's reserved cell, and the right margin after it. A ROW CARRYING A CRITICAL
+// MESSAGE USES IT A FOURTH TIME, between that cell and C — the lead-in then
+// leads into the critical chip instead of into C, and the gap the chip's right
+// edge takes is the same constant again (re-derived 2026-08-09, and the same
+// inventory is recorded at bottom_row_pad_x, paint_handler.h). One constant,
+// three uses or four, an eye-consistency choice either way.
 //
 // A'S CELL IS RESERVED WHETHER OR NOT THE CLOCK PAINTS, and C ends where that
 // reservation begins — so C never jumps and never collides. C is CLIPPED at

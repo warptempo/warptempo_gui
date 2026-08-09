@@ -2293,7 +2293,7 @@ struct AppState {
     // (GuiInputHandler::load_history_commit_in_place — parse-gated by the strict
     // whole-file loaders, so an unresolvable commit, a missing sidecar or a
     // legacy format is a red flash and one stderr line with nothing touched).
-    // ON THE LOCAL TABS it opens prefilled with the viewed member's displayed
+    // ON THE LOCAL TAB it opens prefilled with the viewed member's displayed
     // NUMBER, takes any member number in place of it, and loads THAT STATE of
     // this session's timeline — the two marker columns and the engine block, all
     // an undo entry carries (GuiInputHandler::load_history_local_entry_in_place;
@@ -2342,9 +2342,11 @@ struct AppState {
     // its ordinary face over the mode's disabled one; the SAVE button wears the
     // commit icon and the label "Save and Commit" while the mode stands, and
     // reaches the act through its own chord. THE
-    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
-    // chord is a consumed no-op and that button greys (head_delta_empty, below,
-    // owns the bit and the one decision both readers take it from), and since
+    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint AND
+    // nothing to publish the chord is a consumed no-op and that button greys
+    // (head_delta_empty, below, owns the first bit; AppState::checkpoint_push_-
+    // pending, added 2026-08-09 so the committed-but-unpushed retry can be
+    // reached at all, owns the second — one decision, both readers), and since
     // 2026-08-07 the same is true while a checkpoint is already publishing
     // (history_checkpoint_in_flight, which lives on AppState rather than here
     // because the act outlives the view).
@@ -2353,12 +2355,15 @@ struct AppState {
     // steps are a network act, and freezing the window for them was the one
     // place this product made the user wait on a remote. The act captures what
     // it needs by value, closes the view and hands the job to
-    // GuiHistoryCommitWorker; its three failing verdicts come back to THE
+    // GuiHistoryCommitWorker; its four failing verdicts come back to THE
     // BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09, replacing the
     // acknowledge modal they raised until then: a critical failure must be
     // impossible to miss and impossible to hijack the keyboard with, so the
     // report is permanent and paint-only — critical_error_message, below), and
-    // its two clean ones say what they have to say on stderr and CLEAR the slot.
+    // its two ESTABLISHED ones say what they have to say on stderr and CLEAR the
+    // slot. The fourth failure is Unconfirmed, split out of NothingToCommit that
+    // same day: an act that confirmed neither the content nor the publication
+    // must not clear a standing report by claiming a clean ending.
     //
     // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
     // superseding the checkpoint-in-the-repository partition of 2026-08-05,
@@ -3091,10 +3096,39 @@ struct AppState {
     // "critical", not "checkpoint", so a future critical producer can write it
     // with no new surface; today the only writer is the checkpoint worker's
     // completion (GuiInputHandler::on_history_checkpoint_complete), which sets it
-    // on the three failing verdicts and clears it on the two clean ones. Empty
+    // on the four failing verdicts and clears it on the two ESTABLISHED ones —
+    // never on an answer that merely failed to establish anything. Empty
     // means nothing critical has happened, which is the resting state of every
     // session that never publishes a checkpoint.
     std::string critical_error_message;
+
+    // IS A CHECKPOINT WAITING TO BE PUBLISHED? (architect's arc, 2026-08-09.)
+    // The commit act ends CommittedNotPushed when the checkpoint reached the
+    // local branch and the push did not — the documented retry being "the next
+    // save and commit publishes it", through the act's own committed-but-unpushed
+    // pre-flight arm. THAT RETRY WAS UNREACHABLE without this bit, and the reason
+    // is a collision between two honest measurements: the completion re-warms the
+    // walk from the LOCAL branch, which now carries the checkpoint, so the head
+    // delta measures live-vs-newest as EMPTY and the Ctrl+S admission — which
+    // asks "is there anything to checkpoint?" — greys the act. The session would
+    // then sit with an unpublished checkpoint, a standing critical chip and no
+    // in-product route to either.
+    //
+    // SO THE ADMISSION ASKS TWO QUESTIONS, one per bit: the head delta asks "is
+    // there anything to CHECKPOINT?" and this asks "is there anything to
+    // PUBLISH?", and either one standing admits the chord. WHICH ARM THEN RUNS IS
+    // THE ACT'S OWN PRE-FLIGHT to settle — with no authoring change it finds the
+    // paths clean and the remote behind and pushes the existing commit; with one,
+    // it commits and pushes as usual. Nothing here predicts that.
+    //
+    // ITS LIFECYCLE IS THE THREE ANSWERS THAT SETTLE THE QUESTION: SET by
+    // CommittedNotPushed (a commit exists and the remote lacks it), CLEARED by
+    // Committed and by NothingToCommit — which since 2026-08-09 means committed
+    // AND published, confirmed (history_diff.h's outcome contract). The other
+    // three leave it exactly as they found it: Unconfirmed settles nothing by
+    // definition, and a later write or commit failure does not un-publish
+    // whatever an earlier act left unpushed.
+    bool checkpoint_push_pending = false;
 
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
@@ -3704,10 +3738,12 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
-// IT TAKES THE WHOLE AppState because the gate it asks does: THREE of that
-// gate's admissions are conditional on state (re-derived 2026-08-07 — the commit
-// act's, on head_delta_empty and on history_checkpoint_in_flight, and the revert
-// act's, on history_mode_revert_subject_standing above), so both readers must
+// IT TAKES THE WHOLE AppState because the gate it asks does: FOUR of that
+// gate's admissions are conditional on state (re-derived 2026-08-09 — the commit
+// act's, on head_delta_empty OR checkpoint_push_pending and on
+// history_checkpoint_in_flight; the revert act's, on
+// history_mode_revert_subject_standing above; and the load-in-place's local arm,
+// on the local walk being bound), so both readers must
 // hand it the SAME state or the face
 // and the key would answer differently. The caller passes `a` and
 // restates none of its terms.

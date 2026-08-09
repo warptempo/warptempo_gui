@@ -3134,13 +3134,21 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                          "unpublished\n",
                          branch.c_str());
         }
+        // UNCONFIRMED, NOT "NOTHING TO COMMIT" (2026-08-09). This arm answers
+        // that the repository did not confirm what the act needed to know — the
+        // paths are clean, but the tip's own tree was not seen to carry these
+        // bytes — so it established neither content nor publication and nothing
+        // was pushed. It returned NothingToCommit until this date, which told the
+        // caller a clean ending on the strength of an unanswered question and let
+        // a standing failure report be cleared by it. The line it prints is
+        // unchanged; only the verdict the caller reads is.
         if (!commit_carries_our_bytes(head, base_name, paths, texts)) {
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit: the checkpoint "
                          "paths are clean, but the branch tip could not be "
                          "confirmed to carry these bytes, so nothing was "
                          "pushed\n");
-            return GuiHistoryCommitOutcome::NothingToCommit;
+            return GuiHistoryCommitOutcome::Unconfirmed;
         }
         return push_branch(head, /*already_committed=*/true,
                            /*publication_known=*/!unobserved);

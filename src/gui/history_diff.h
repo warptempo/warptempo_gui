@@ -890,14 +890,32 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // HOW FAR THE ACT GOT. The two failures are distinguished because the user's
 // next move differs: nothing reached the repository on a write failure, while a
 // commit failure leaves three written files sitting in the working tree, visible
-// to `git status` and committable by hand. NothingToCommit is neither: the bytes
-// already ARE the newest checkpoint (committing twice), so no commit exists to
-// make and nothing was left behind. CommittedNotPushed is a SUCCESS for the
-// caller's purposes — the checkpoint exists, and the walk (which reads the local
-// branch for exactly this reason) shows it — with the push to retry.
+// to `git status` and committable by hand.
+//
+// NothingToCommit IS AN ESTABLISHED ANSWER, and only that (narrowed 2026-08-09):
+// the checkpoint paths are clean AND the branch tip's own tree was seen to carry
+// these bytes AND the remote-tracking ref was seen to carry that tip — committed
+// and published already, so no commit exists to make, nothing was left behind
+// and there is nothing to publish. It is the one clean ending beside Committed,
+// and the caller treats the two alike.
+//
+// Unconfirmed IS WHAT THAT ANSWER USED TO SWALLOW: the paths are clean, but the
+// tip could NOT be confirmed to carry the checkpoint's bytes, so nothing was
+// pushed. It establishes NEITHER content NOR publication — the repository did
+// not answer the question — and it is therefore a FAILING outcome, not a quiet
+// success. Reporting it as "nothing to commit" told the user everything was done
+// on the strength of a question that had gone unanswered, which is exactly the
+// reading the committed-but-unpushed arm below exists to avoid.
+//
+// CommittedNotPushed is a SUCCESS for the caller's purposes — the checkpoint
+// exists, and the walk (which reads the local branch for exactly this reason)
+// shows it — with the push to retry. The caller keeps a session bit for that
+// retry (AppState::checkpoint_push_pending), because the act's own admission is
+// otherwise measured on the AUTHORING delta, which a landed commit empties.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
+    Unconfirmed,
     CommitFailed,
     CommittedNotPushed,
     Committed,

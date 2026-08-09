@@ -1712,16 +1712,24 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             2026-08-07 for the in-flight bit, both inherited
 //                             from the chord this act moved off): with the HEAD
 //                             DELTA EMPTY — the newest checkpoint already
-//                             carrying this session's authoring content — there
-//                             is nothing to checkpoint, so the chord drops here
+//                             carrying this session's authoring content — AND NO
+//                             PUSH STILL OWED, there
+//                             is nothing to do, so the chord drops here
 //                             as a consumed no-op and the SAVE button takes its
-//                             row's disabled face from this same line. The bit
+//                             row's disabled face from this same line. The delta
+//                             bit
 //                             is measured once and cannot change while the mode
 //                             stands (AppState::HistoryMode::head_delta_empty
 //                             owns it, the asymmetry included: "no changes" is
 //                             the delta's vocabulary, the two marker columns
 //                             plus `scale`, so a settings-only drift greys the
-//                             act too). The in-flight term is the same one
+//                             act too); the PUSH-PENDING bit beside it
+//                             (AppState::checkpoint_push_pending, 2026-08-09)
+//                             asks the other question — is anything waiting to
+//                             be PUBLISHED — and exists because a landed commit
+//                             empties the delta while the remote still lacks it,
+//                             which used to leave the documented retry
+//                             unreachable. The in-flight term is the same one
 //                             decision for one checkpoint at a time; it is
 //                             structural rather than visible in here (the act
 //                             closes the view and `h` will not reopen one over a
@@ -1871,7 +1879,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // pure, and the face derivation asks it about a table of chords with no press
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
 // FOUR admissions are conditional on session state (the commit act's — Ctrl+S
-// since 2026-08-08 — on head_delta_empty AND on no checkpoint already being in
+// since 2026-08-08 — on head_delta_empty OR checkpoint_push_pending AND on no
+// checkpoint already being in
 // flight, the revert act's, on a subject standing, and the load-in-place's local
 // arm, on the local walk being bound), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
@@ -1922,21 +1931,38 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
          history_mode_revert_subject_standing(mode));
     // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
     // — the act saves first, so it belongs on the save chord). It is admitted
-    // only while there is something to checkpoint AND no checkpoint is already
-    // in flight (2026-08-07, single-in-flight): with either condition failing
-    // the chord is not admitted at all, which is both the key's refusal and the
-    // Save button's grey. The two read very differently in time and both are
-    // honest — the head delta is static once measured (and rests TRUE, greying
-    // the act, in the window before the prefetch has delivered member 0 to
-    // measure against: 2026-08-07, measure_history_head_delta owns the rule),
-    // while the in-flight bit falls the moment the worker reports and the button
-    // lights again on the next frame.
+    // while there is something TO DO and no checkpoint is already in flight
+    // (2026-08-07, single-in-flight): with either condition failing the chord is
+    // not admitted at all, which is both the key's refusal and the Save button's
+    // grey.
+    //
+    // "SOMETHING TO DO" IS TWO QUESTIONS SINCE 2026-08-09, and they are
+    // different questions rather than two spellings of one:
+    //   * IS THERE ANYTHING TO CHECKPOINT? — the head delta, live against the
+    //     newest commit. Static once measured, and it rests TRUE (greying the
+    //     act) in the window before the prefetch has delivered member 0 to
+    //     measure against (2026-08-07, measure_history_head_delta owns that rule,
+    //     and this arc does not touch the measurement).
+    //   * IS THERE ANYTHING TO PUBLISH? — the push-pending bit, set when an act
+    //     committed and failed to push. It exists because the FIRST question
+    //     answers "no" in exactly that case: the commit landed on the local
+    //     branch, the re-warmed walk sees it, and the head delta goes empty while
+    //     the remote still has nothing. Without this term the documented retry —
+    //     the act's own committed-but-unpushed pre-flight arm — could not be
+    //     reached without an unrelated authoring edit.
+    // EITHER ONE ADMITS THE CHORD, and WHICH ARM RUNS is the act's pre-flight to
+    // settle, not this predicate's: it looks at the working tree and the remote
+    // and either commits or pushes what is already committed. As ever this is ONE
+    // decision serving both readers — the key here and the Save button's face
+    // through the derived partition — so a session with an unpushed checkpoint
+    // sees a LIVE Save and Commit button with nothing restated at either site.
     //
     // THE PLAIN DISK SAVE IS NOT SEPARATELY ADMITTED, deliberately: in the view
-    // this chord has exactly one meaning, and a head-delta-empty session saves
-    // by leaving the view.
+    // this chord has exactly one meaning, and a session with nothing to
+    // checkpoint and nothing to publish saves by leaving the view.
     const bool is_save =
-        (ctrl && !shift && !alt && key == GuiKeys::S && !mode.head_delta_empty &&
+        (ctrl && !shift && !alt && key == GuiKeys::S &&
+         (!mode.head_delta_empty || app.checkpoint_push_pending) &&
          !app.history_checkpoint_in_flight);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
@@ -1985,12 +2011,21 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // about": no mode, or a session that never resolved a piece directory, and there
 // is no commit to offer. Neither is reachable from the one call site (the chord
 // is admitted only while the mode stands, and an available session always
-// carries both strings), which is why they are silent. Two allowlist admissions
-// narrow it further without moving that reachability — an empty head delta
-// (2026-08-05) and a checkpoint already in flight (2026-08-07) both drop the
-// chord ABOVE the `s` arm, so nothing can raise this editor over a session with
-// nothing to commit or a worker mid-act, and neither refusal has to be spelled
-// here.
+// carries both strings), which is why they are silent. The allowlist narrows it
+// further without moving that reachability — "nothing to do" (an empty head
+// delta with no push pending, 2026-08-05 and 2026-08-09) and a checkpoint
+// already in flight (2026-08-07) both drop the chord ABOVE the `s` arm, so
+// nothing can raise this editor over a session with nothing to do or a worker
+// mid-act, and neither refusal has to be spelled here.
+//
+// ON THE PUSH-ONLY RETRY THE TITLE GOES UNUSED, and that is ACCEPTED rather than
+// special-cased: when the session's only outstanding work is publishing a
+// checkpoint that already committed, the act's pre-flight takes its
+// committed-but-unpushed arm and pushes the EXISTING commit, whose message was
+// written when it was made. The editor still opens and a bare Enter still runs
+// the act, exactly as on any other checkpoint — one shape, one pause, and no
+// branch here that would have to predict which arm the pre-flight is going to
+// choose (it reads the working tree and the remote; this opener reads neither).
 //
 // PLAYBACK STOPS AS THE MODAL OPENS, through the shared owner and past every
 // guard, exactly as the three editors before it do. It is a structural no-op in
@@ -2110,7 +2145,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // checkpoint's own verdict arrives seconds later, on a worker, and a view held
 // open until then would be a modal wait dressed as a review. So a failed save
 // leaves the view exactly as it was (every refusal's shape) and a successful one
-// closes it, whatever the repository then says; the three failing verdicts
+// closes it, whatever the repository then says; the four failing verdicts
 // report through the BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09,
 // superseding the acknowledge notice they reported through until then) instead
 // of through a view left standing.
@@ -2249,32 +2284,47 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // program closes. AppState::critical_error_message owns the contract; this is
 // its one producer.
 //
-// THE PARTITION, over the act's five verdicts (GuiHistoryCommitOutcome,
-// history_diff.h):
-//   SILENT, AND THEY CLEAR THE SLOT — Committed (made and published, the
+// THE PARTITION, over the act's SIX verdicts (GuiHistoryCommitOutcome,
+// history_diff.h, whose contract comment owns what each one establishes):
+//   ESTABLISHED, AND THEY CLEAR THE SLOT — Committed (made and published, the
 //   ordinary ending) and NothingToCommit (the newest checkpoint already carried
-//   these bytes, so the state the user wanted IS committed). Neither is a
-//   failure, and either one supersedes a failure the slot is still showing: the
-//   message describes the repository's last answer, and this is a newer one.
-//   THE THREE FAILURES — WriteFailed (nothing reached the repository),
+//   these bytes AND the remote already had it). Neither is a failure, and either
+//   one supersedes a failure the slot is still showing: the message describes
+//   the repository's last answer, and this is a newer one.
+//   THE FOUR FAILURES — WriteFailed (nothing reached the repository),
 //   CommitFailed (the three files are written and uncommitted, in the working
-//   tree where `git status` shows them) and CommittedNotPushed (the checkpoint
-//   exists locally and the remote does not have it). The three texts differ
-//   exactly where the user's next move does, which is why the act distinguishes
-//   them at all. They are SHORT because the row is one line and the detail is
-//   already on stderr, verbatim and unchanged by this arc.
+//   tree where `git status` shows them), CommittedNotPushed (the checkpoint
+//   exists locally and the remote does not have it) and, since 2026-08-09,
+//   Unconfirmed (the paths are clean but the tip was not confirmed to carry
+//   these bytes, so nothing was pushed). The texts differ exactly where the
+//   user's next move does, which is why the act distinguishes them at all. They
+//   are SHORT because the row is one line and the detail is already on stderr,
+//   verbatim and unchanged by this arc.
+//
+// AN UNANSWERED QUESTION IS NOT A SUCCESS, which is the whole point of the sixth
+// verdict: Unconfirmed came back as NothingToCommit until 2026-08-09, so an act
+// that established neither content nor publication CLEARED a standing critical
+// report — the one thing this slot must never do on anything but a newer,
+// better answer.
 //
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE. The retry is the act itself
 // — a later Save and Commit finds the committed-but-unpushed shape in its own
 // pre-flight and pushes it — and that same act is what takes the message down.
+// WHAT MAKES THAT REACHABLE is the push-pending bit this sets beside the slot:
+// the landed commit empties the head delta, so without it the act's own
+// admission would grey out and the documented retry could never run
+// (AppState::checkpoint_push_pending owns the reasoning and the lifecycle).
 //
-// AND NOTHING ASYNCHRONOUS RAISES A MODAL ANY MORE, which is what retired a
-// whole family of guards this function used to owe (the parked notice, its three
-// park classes, the dropdown close and the release-owned scrap clears, all
-// deleted 2026-08-09 as producer-less): the product's remaining prompts are all
-// dispatched by a key or a gesture and so meet the gates that already clear the
-// way for them. A paint-only slot can be written from any clock at all, because
-// it takes nothing from anyone.
+// AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
+// is what retired a whole family of guards this function used to owe (the parked
+// notice, its three park classes, the dropdown close and the release-owned scrap
+// clears, all deleted 2026-08-09 as producer-less). One asynchronous modal
+// opener remains, the compositor's WM close (main.cpp's set_on_close), and it
+// owes those guards in its own body: it force-ends every live gesture, hides the
+// hint and closes the popup before raising the unsaved-work prompt. What is gone
+// is an async opener that had to park and clear on someone ELSE's behalf — a
+// paint-only slot can be written from any clock at all, because it takes nothing
+// from anyone.
 void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome) {
     app.history_checkpoint_in_flight = false;
@@ -2282,9 +2332,10 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // RE-WARM THE WALK FOR THE OUTCOMES THAT MOVED HEAD (2026-08-07). The
     // prefetch store describes the repository as of one tip, and these two just
     // added a commit to it — so the next `h` must see the checkpoint the user
-    // has only this moment made. The other three moved no ref: WriteFailed and
-    // CommitFailed produced no commit, and NothingToCommit found the bytes
-    // already committed, so the standing store is still true for all three. (The
+    // has only this moment made. The other four moved no ref: WriteFailed and
+    // CommitFailed produced no commit, NothingToCommit found the bytes already
+    // committed, and Unconfirmed committed nothing either (its arm is reached
+    // only with the paths already clean). (The
     // scan's git READS may have raced this act's mutations — the accepted
     // overlap recorded at GuiHistoryPrefetch — and this kick is what rebuilds
     // whatever did.) The view is normally already closed by now, but the funnel
@@ -2297,7 +2348,11 @@ void GuiInputHandler::on_history_checkpoint_complete(
     switch (outcome) {
     case GuiHistoryCommitOutcome::Committed:
     case GuiHistoryCommitOutcome::NothingToCommit:
+        // THE TWO ESTABLISHED ANSWERS, and the only two that clear anything: the
+        // checkpoint is both made and published, so a failure the slot was
+        // showing is superseded and a push that was owed has landed.
         app.critical_error_message.clear();
+        app.checkpoint_push_pending = false;
         break;
     case GuiHistoryCommitOutcome::WriteFailed:
         app.critical_error_message = "Checkpoint failed: nothing was committed";
@@ -2306,17 +2361,30 @@ void GuiInputHandler::on_history_checkpoint_complete(
         app.critical_error_message =
             "Checkpoint failed: files written but not committed";
         break;
+    case GuiHistoryCommitOutcome::Unconfirmed:
+        // NOTHING WAS ESTABLISHED HERE, so nothing is cleared here: neither the
+        // slot (a standing report stands) nor the pending bit (a push that was
+        // owed is still owed). It only ever ADDS its own report.
+        app.critical_error_message = "Checkpoint could not be confirmed";
+        break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
         app.critical_error_message = "Checkpoint committed; push failed";
+        // THE RETRY'S OWN KEY: the commit landed and the push did not, so the
+        // act stays admitted on "there is something to PUBLISH" even though the
+        // landed commit has just emptied the head delta.
+        app.checkpoint_push_pending = true;
         break;
     }
 
-    // THE ROW'S OWN DAMAGE, unconditional across all five arms because all five
-    // WRITE the slot — the two clean ones by clearing it, which erases a cell
-    // that was painting a moment ago and is exactly as much a change as setting
-    // one. This is the bottom strip's one invalidation (invalidate_timestamp_area
-    // — the row's damage owner since it carried only the clock), the same call
-    // every transient-status writer makes.
+    // THE ROW'S OWN DAMAGE, unconditional across all six arms because all six
+    // WRITE the slot — the two established ones by clearing it, which erases a
+    // cell that was painting a moment ago and is exactly as much a change as
+    // setting one. This is the bottom strip's one invalidation
+    // (invalidate_timestamp_area — the row's damage owner since it carried only
+    // the clock), the same call every transient-status writer makes. The Save
+    // button's face needs nothing here: the push-pending bit reaches it through
+    // the same one decision the chord takes, and the row's per-tick face-drift
+    // comparator repaints on the edge.
     viewport.invalidate_timestamp_area();
 }
 

@@ -64,16 +64,23 @@ struct GuiPrompt {
     // and no live gesture can stand when either fires — so neither owes this
     // surface anything on the way in.
     //
-    // (THE CHECKPOINT ACT'S FAILURE REPORT WAS A THIRD CALLER from 2026-08-07,
-    // and the only ASYNCHRONOUS one: it arrived on a worker's clock, past every
-    // gate, and had to make room for itself — parking behind a prompt or an
-    // editor, closing an open dropdown, parking for a live pointer gesture whose
-    // release this prompt's own gate would have swallowed. On 2026-08-09 the
-    // architect replaced it with the bottom row's PERMANENT PAINT-ONLY CRITICAL
-    // SLOT — a critical failure must be impossible to miss and impossible to
-    // hijack with — and that whole family of guards went with it as
-    // producer-less. Every prompt in the product is again raised by a key or a
-    // gesture.)
+    // (THE CHECKPOINT ACT'S FAILURE REPORT WAS A THIRD CALLER from 2026-08-07:
+    // it arrived on a worker's clock, past every gate, and had to make room for
+    // itself — parking behind a prompt or an editor, closing an open dropdown,
+    // parking for a live pointer gesture whose release this prompt's own gate
+    // would have swallowed. On 2026-08-09 the architect replaced it with the
+    // bottom row's PERMANENT PAINT-ONLY CRITICAL SLOT — a critical failure must
+    // be impossible to miss and impossible to hijack with — and that whole
+    // family of guards went with it as producer-less.)
+    //
+    // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it is not this
+    // one: the compositor's WM close raises the unsaved-work prompt
+    // (GuiPrompt::request_close from main.cpp's set_on_close) on the compositor's
+    // clock, with no key and no gesture behind it. It is safe because it CLEARS
+    // THE WAY IN ITS OWN BODY first — force-ending every live gesture through
+    // their release bodies, hiding the floating hint and closing the popup — so
+    // the honest rule is that nothing asynchronous raises a modal without doing
+    // that, rather than that nothing asynchronous raises one at all.
     void open_error_notice(std::string text);
 
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory
