@@ -2293,33 +2293,58 @@ void GuiInputHandler::on_history_checkpoint_complete(
         break;
     }
 
-    // PARK IT WHILE ANOTHER MODAL STANDS. The completion arrives on its own
-    // clock, so it can land in the middle of a prompt the user is answering or
-    // an edit he is typing; opening over either would take the keyboard away
-    // from a surface he is using. The tick polls the slot and opens the notice
-    // at the first frame the bottom strip is free. An open DROPDOWN is the one
-    // surface in the way that is CLOSED rather than waited for — the opener owns
-    // that fork and states why.
+    // PARK IT WHILE THE USER IS BUSY. The completion arrives on its own clock,
+    // so it can land in the middle of a prompt he is answering, an edit he is
+    // typing or a DRAG he is halfway through; taking the keyboard — or the
+    // release — away from any of those would interrupt an act in progress. The
+    // tick polls the slot and opens the notice at the first frame nothing is in
+    // the way. An open DROPDOWN is the one surface that is CLOSED rather than
+    // waited for — the opener owns the whole fork and states why.
     app.pending_history_notice = std::move(text);
     maybe_open_pending_history_notice();
 }
 
 // The parked notice's one opener, called from the completion above and once per
 // tick from main.cpp. Both routes ask the same questions and take the same acts,
-// which is the point of there being one body: is anything parked, is the strip
-// free — and if it opens, the popup goes first. The slot clears as the notice
-// opens, so it shows exactly once.
+// which is the point of there being one body: is anything parked, and if it
+// opens, the popup goes first. The slot clears as the notice opens, so it shows
+// exactly once.
 //
-// THE THIRD QUESTION IS NOT A PARK, IT IS A CLOSE (2026-08-08), and the
-// difference is what the surface is: a prompt or an editor is a surface the user
-// is USING, so the notice waits for it; an open dropdown is a transient popup,
-// closable at any instant, and a notice that waited on one would sit parked for
-// as long as an idle menu stayed up. So this closes it through THE ONE CLOSE
-// OWNER (close_dropdown, which also disarms the menu-row mode and drops the
-// popup's published rect, item rects and hover/press faces with the whole-struct
-// reset — no stranded hover survives under the notice) immediately before the
-// open, and not one line earlier: the close belongs to the OPEN, not to the
-// poll, so a tick that parks again leaves a menu the user is reading alone.
+// WHAT IS IN THE WAY DECIDES WHAT HAPPENS TO IT, and there are exactly three
+// classes (the third arrived 2026-08-09):
+//   * A SURFACE IN USE — a prompt, or any of the five text editors — PARKS the
+//     notice. The user is answering or typing into it, and opening over it would
+//     take the keyboard away mid-act.
+//   * A TRANSIENT POPUP — an open dropdown — is CLOSED (2026-08-08). It is
+//     closable at any instant and nobody is committed to it, while a notice that
+//     WAITED on one would sit parked for as long as an idle menu stayed up.
+//   * AN ACT IN FLIGHT — any live pointer gesture — PARKS, and parks precisely
+//     BECAUSE IT CANNOT BE CLOSED: pointer gestures have no cancel by ruling
+//     (the drag-modal gate, input_handler.cpp), so the only two things this
+//     could do to one are wait for it or FORCE-END it — and force-ending from a
+//     WORKER'S CLOCK would commit a drag mid-travel that the user never
+//     released. The force-end routes that do exist (Ctrl+Q, the resize, the WM
+//     close) are all acts the user or the compositor demanded at that instant;
+//     an unsolicited report is not one, and it has no deadline to justify one.
+// THE CLOSE BELONGS TO THE OPEN, NOT TO THE POLL, which is why it sits below
+// every park test: a frame that parks again leaves a menu the user is reading
+// alone. close_dropdown is THE ONE CLOSE OWNER — it disarms the menu-row mode
+// and drops the popup's published rect, item rects and hover/press faces with
+// its whole-struct reset, so no stranded hover survives under the notice.
+//
+// WHAT THE GESTURE PARK PREVENTS, concretely: ERROR_NOTICE raised over a live
+// drag would have the gesture's RELEASE swallowed at on_button_release's
+// `if (app.prompt.active) return;`, which sits ABOVE every gesture release arm —
+// physical release, the `e` keyup's synthesized one and the capability-loss
+// branch's owed one alike. The gesture structs would stay active with no
+// release left to end them: the keyboard drag-modal gate stays latched after the
+// notice is acknowledged, and on a capability return a later no-button motion
+// finalizes the stale strip drag against the new stream's coordinates and jumps
+// the viewport.
+//
+// THE PARK IS BOUNDED BY THE TICK, which is what makes waiting the cheap answer:
+// the same body runs once per frame, so the notice lands at the first
+// gesture-free, modal-free frame — the length of a drag at most.
 //
 // IT FOLLOWS THE WM-CLOSE ROUTE'S OWN PRECEDENT, which does exactly this pair —
 // close_dropdown() then prompt.request_close() (main.cpp) — and for exactly its
@@ -2346,6 +2371,11 @@ void GuiInputHandler::maybe_open_pending_history_notice() {
     if (app.pending_history_notice.empty()) return;
     if (app.prompt.active) return;
     if (any_text_editor_active()) return;
+    // THE AGGREGATE, never a hand-written gesture list: any_pointer_gesture_active
+    // (app_state.h) is the product's one "some pointer gesture is in flight"
+    // query, pending drags included — a press held before its threshold owes a
+    // release exactly as a live drag does.
+    if (any_pointer_gesture_active(app)) return;
     // THE TWO FLOATING SURFACES GO DOWN TOGETHER, the WM-close route's own
     // pairing: no floating hint stands over a modal either, and a VISIBLE
     // tooltip is not swept by the tick (the hover recompute stops the DWELL

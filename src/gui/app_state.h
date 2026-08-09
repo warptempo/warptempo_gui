@@ -3276,7 +3276,7 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FIVE CONSUMERS, re-derived by grep 2026-08-03, each stating the same
+// SIX CONSUMERS, re-derived by grep 2026-08-09, each stating the same
 // "nothing pops mid-gesture" boundary from its own side:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
 //     the platform's per-frame sub-detent accumulator probe both route through
@@ -3293,7 +3293,14 @@ inline int64_t snap_authored_frame(double frame) {
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
-//     contract is at pointer_cursor_kind's declaration, input_handler.h).
+//     contract is at pointer_cursor_kind's declaration, input_handler.h);
+//   * the CHECKPOINT NOTICE'S OPENER (maybe_open_pending_history_notice,
+//     input_key_dispatch.cpp, 2026-08-09) — the newest consumer and the only one
+//     that is not an INPUT route: a prompt raised over a live gesture would have
+//     the release that ends the gesture swallowed by its own modal gate, so the
+//     worker's report PARKS until the gesture is over rather than force-ending
+//     an act nobody asked to end. That opener states the whole park-or-close
+//     partition.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
