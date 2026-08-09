@@ -1775,6 +1775,13 @@ void GuiPlatform::forget_keyboard_state() {
     // carry), which no motion writes. The two sets do not intersect, so this
     // edge needs no restoring second act. `pointer_in_window` going true here is
     // correct besides: a keyboard leave says nothing about where the pointer is.
+    // NOR DOES IT OWE THE STAGED-MOTION HANDLING THE POINTER EDGES DO (re-checked
+    // 2026-08-08): with no hold this returns at its `!held` guard and flushes
+    // nothing, and with one it DELIVERS — the flush and then the release — so no
+    // staged motion can outlive the call either way. Nothing needs dropping here
+    // in any case, because this edge destroys no pointer object: a flag left set
+    // is delivered by the next frame on the same live relative pointer, which is
+    // the correct owner and the ordinary path.
     end_left_hold_source(/*physical=*/false);
 }
 
@@ -1982,12 +1989,28 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // belong to the destroyed pointer object. They must not combine with
         // input from a later wl_pointer created when the seat regains the
         // capability, even if cursor region and modifiers happen to match.
+        // THE STAGED RELATIVE MOTION IS ONE OF THEM (2026-08-08, closing a gap
+        // this block's own sentence already covered in principle): it is staged
+        // on the RELATIVE-POINTER object destroyed a few lines above, so leaving
+        // the flag set would let the next frame of a FUTURE wl_pointer deliver an
+        // on_motion that originated on the old one — precisely the object
+        // boundary this reset exists to police. It is reachable whenever no hold
+        // was live to flush it: both end_left_hold_source calls then return at
+        // their `!held` guard, the backstop destroys the capture, and nothing
+        // else empties the stage.
+        // IT DROPS HERE WHERE wl_pointer.leave FLUSHES, and the split is whether
+        // a live gesture is still there to receive the delta. At the leave one
+        // always is, and it is owed the event (its `moved` latch — the argument
+        // is at that flush). Here the holds are already down, the gesture ended
+        // in the release above, and the delivery would cross an object boundary:
+        // there is nothing left with a claim on it.
         scroll_accum_       = 0.0;
         scroll_context_key_ = 0;
         frame_v120_accum_   = 0.0;
         frame_axis_accum_   = 0.0;
         frame_have_v120_    = false;
         frame_have_axis_    = false;
+        frame_have_relmotion_ = false;
     }
     // Touch capability bit remains ignored.
 }
@@ -2433,6 +2456,42 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // open dropdown's item hover/arm is one, and it rides this same edge:
     // main.cpp's hook widened 2026-08-03 to drop it alongside the roster's;
     // see clear_dropdown_pointer_state.)
+    // THE STAGED RELATIVE MOTION IS DELIVERED FIRST, and this edge owes that for
+    // the same reason the capability branch's hold ends do: WHAT IS STILL OWED
+    // GOES BEFORE THE INVARIANT RESTORE (codex 2026-08-08). A captured drag's
+    // relative motion is staged, not delivered — it is coalesced to the
+    // wl_pointer.frame boundary (on_relative_pointer_motion) — and the frame that
+    // TERMINATES this leave runs on_pointer_frame's pending block AFTER the hook
+    // below has already fired. That block calls on_motion_, whose prologue
+    // unconditionally sets `pointer_in_window` TRUE, and an ordinary leave has no
+    // second hook to put it back: the bit would stand for a pointer that is
+    // outside, masked only while the gesture lives, and the moment that gesture
+    // ends with the pointer still away (the `e` keyup, a resize or close
+    // force-finalize) the tick and settled repairs would be re-admitted at stale
+    // coordinates. Flushing here empties the stage, so that block is a no-op and
+    // the hook's word is final.
+    //
+    // IT FLUSHES RATHER THAN DROPS, and the difference from the capability
+    // teardown's reset (which DOES drop, beside its two frame-scratch siblings)
+    // is whether a LIVE GESTURE IS STILL THERE TO RECEIVE IT. Here one always
+    // is: motion stages only while a capture stands, a capture stands only for a
+    // live strip drag or alt-pan, and the only thing that could have ended it in
+    // between is a button event — which flushes first by its own rule. And the
+    // delta is genuinely owed to that gesture rather than merely nice to have:
+    // the drag's `moved` latch is set ONLY by the motion path, the release
+    // re-evaluates no threshold, and last_x/last_y stay at the press until the
+    // crossing — so dropping the event that CROSSES the Chebyshev threshold
+    // would leave `moved` false and the release would commit nothing at all,
+    // losing the whole gesture rather than one frame of travel. (Positionally a
+    // drop would cost nothing — pointer_x_/y_ are written eagerly at stage time
+    // and last_x/last_y span any gap — which is exactly why the latch is the
+    // thing that decides this.) The teardown's case is the mirror image: the
+    // holds are already down there, no gesture is left, and the object the
+    // motion was staged on is being destroyed.
+    // A FLUSH WITH NO GESTURE CANNOT REACH THE NO-GESTURE TAIL, so this delivers
+    // no hover recompute at the virtual position: flag set implies a live
+    // gesture, whose branch returns above that tail.
+    flush_deferred_motion();
     // OrdinaryLeave is the argument, and the sentence above is exactly what it
     // buys the consumer: the stream continues, so this is the edge on which the
     // hook body is permitted to keep state it expects a return motion to
@@ -2727,7 +2786,15 @@ void GuiPlatform::on_pointer_frame() {
     // the motion and finalized before this point; the flag is then false here
     // and this block is a no-op. It fires only when the frame carried motion but
     // no button — the common case — refreshing hover / advancing the drag with
-    // one delivery per frame. Uncaptured absolute motion is untouched (delivered
+    // one delivery per frame.
+    // TWO EDGES ALSO EMPTY THE STAGE BEFORE THIS BLOCK CAN RUN, both because
+    // this delivery would otherwise land AFTER the leave hook that was supposed
+    // to be the last word (2026-08-08): wl_pointer.leave FLUSHES above its hook
+    // — the frame terminating that leave reaches this block, and a delivery here
+    // would set `pointer_in_window` back to true with no second hook to undo it
+    // — and the pointer-capability teardown DROPS the flag in its frame-scratch
+    // reset, the relative-pointer object being gone by then. Each states its own
+    // reason for flushing rather than dropping, or the reverse. Uncaptured absolute motion is untouched (delivered
     // live in on_pointer_motion; compositors already pace it at frame cadence).
     if (frame_have_relmotion_ && on_motion_) {
         on_motion_(pointer_x_, pointer_y_, current_mods());
