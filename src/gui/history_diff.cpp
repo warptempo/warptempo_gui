@@ -412,19 +412,24 @@ bool git_output(const std::vector<std::string>& args, std::string& out) {
 // code returned true for it) or that it outlived the deadline below and was
 // killed.
 //
-// THE RETURN IS THE CHILD'S OWN ACCOUNT, and since 2026-08-09 the checkpoint act
-// DECIDES ITS FAILURES ON IT: false means git could not be run, ran and reported
-// failure, or hit the deadline, and the act reports CommitFailed or
-// CommittedNotPushed accordingly. That is the strict model — one sanctioned path,
-// exit codes plus one observation — and its recorded cost is exactly the shape
-// this comment used to warn about: git updates HEAD BEFORE it runs `post-commit`,
-// so a hook that hangs past the deadline gets the child killed here over a
-// checkpoint that already exists, and this act will call that landed commit a
-// failure. The terminal shows the truth, and the act's next clean arm sorts it
-// out. SUCCESS IS STILL NOT THE TRANSPORT'S TO CLAIM: a true return means only
-// "git did not complain", and `Committed` is claimed only where the repository
-// was OBSERVED to carry the checkpoint. `first_line` is git's own account of what
-// went wrong and rides along on the failure it decides.
+// WHAT `false` ACTUALLY COVERS, stated exactly because a caller once believed
+// more of it: THE CHILD COULD NOT BE EXECED, the pipe could not be read, or THE
+// DEADLINE FIRED and the child was killed. THAT IS ALL. It emphatically does NOT
+// mean "git reported failure": THE EXIT STATUS IS UNREADABLE HERE — main()
+// installs SIG_IGN for SIGCHLD, so waitpid answers ECHILD and there is no status
+// to read — so a child that execs, writes its complaint, closes its pipe and
+// exits nonzero inside the deadline returns TRUE. A rejecting pre-commit hook, a
+// refused push, an identity or signing failure all look like success from here.
+//
+// SO `true` MEANS ONLY "git ran to its own end", and no caller may read it as an
+// outcome. The checkpoint act reads it that way and only that way (2026-08-09):
+// its FAILURES may be decided on a false return — which is the strict model's
+// recorded trade, since a commit that landed and then hung in `post-commit` past
+// the deadline gets its child killed here and is reported failed — while every
+// SUCCESS is decided on an OBSERVATION afterwards: the branch tip having MOVED
+// for the commit, the remote-tracking ref carrying the checkpoint for the push.
+// `first_line` is git's own account of what went wrong and rides along on
+// whichever verdict the observation reaches.
 //
 // STDOUT AND STDERR SHARE ONE PIPE, so `first_line` is git's own first non-empty
 // line whichever stream it chose (`commit` reports on stdout, `push` on stderr).
@@ -2503,11 +2508,15 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //       paths.
 //   (3) CLEAN paths — nothing to commit; ONE containment read says whether the
 //       branch is in sync with its remote, which is what decides the report.
-//   (4) DIRTY — `git add`, then `git commit` under the caller's title.
-//   (5) The commit is OURS: read the branch tip. Sanctioned use means nothing
-//       else commits here mid-act, so the tip IS the checkpoint.
+//   (4) DIRTY — read the branch tip, then `git add` and `git commit` under the
+//       caller's title.
+//   (5) The commit is OURS IF THE TIP MOVED: sanctioned use means nothing else
+//       commits here mid-act, so a moved tip IS the checkpoint and an unmoved
+//       one is a commit that never happened.
 //   (6) PUSH the sha onto the captured branch, at the guard-validated URL.
-//   (7) VERIFY — the remote-tracking ref observably carries it.
+//   (7) VERIFY — and the verify is the VERDICT: the remote-tracking ref carrying
+//       the checkpoint is Committed, an observed absence is CommittedNotPushed,
+//       and an unanswerable read is Unconfirmed.
 //
 // THE TWO KEEPS, and why each survived a deletion pass that took everything
 // around it. THE PRE-FLIGHT'S BRANCH TRIPWIRE (step 2): `git status` takes no
@@ -2518,6 +2527,15 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // "the checkpoint is published" is the one claim this act must never make on
 // anything less — so success is an OBSERVATION, and an unanswerable observation
 // is simply not a yes.
+//
+// AND SUCCESS IS AN OBSERVATION AT BOTH MUTATING STEPS, which is what the
+// subprocess layer forces rather than a preference: run_git_mutate CANNOT SEE A
+// CHILD'S EXIT STATUS (its header states exactly what its `false` covers), so a
+// git that exits nonzero within the deadline reads as `true` here. FAILURES may
+// therefore be decided on the advisory return OR on an observation — a commit
+// whose tip did not move, a push whose remote demonstrably lacks the checkpoint
+// — while a SUCCESS is only ever an observation: the tip MOVED, and the
+// remote-tracking ref CARRIES it.
 //
 // THE ACCEPTED CONSEQUENCES, recorded rather than worked around. A HUNG
 // post-commit HOOK reads as CommitFailed although the commit landed — git moves
@@ -2693,13 +2711,35 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     }
 
     // (4) DIRTY — stage and commit, both pathspec-scoped to the same three
-    // paths. THE TRANSPORT'S OWN ANSWER DECIDES, which is the strict model's
-    // trade and is recorded at the head: a commit that landed and then hung in
-    // `post-commit` past the deadline reads as CommitFailed here, and the
-    // terminal shows the truth. The `add` stays advisory — `git commit --
-    // <paths>` takes the working tree's own contents for those paths, so it
-    // matters only for a previously UNTRACKED sidecar, and the commit says so
-    // itself if that is what failed.
+    // paths.
+    //
+    // THE TIP IS READ FIRST, because the commit's SUCCESS is an observation like
+    // every other success in this act. run_git_mutate CANNOT SEE A CHILD'S EXIT
+    // STATUS AT ALL (the SIGCHLD disposition makes waitpid answer ECHILD — its
+    // own header states exactly what its `false` covers), so a `git commit` that
+    // exits nonzero WITHOUT creating a commit — a rejecting pre-commit hook, an
+    // identity or signing failure — comes back TRUE. Believing it would read the
+    // UNMOVED tip as the checkpoint, push that old commit, observe the remote
+    // already carrying it and report an established Committed over three
+    // sidecars still sitting uncommitted. So: remember the tip, and require it to
+    // have MOVED.
+    //
+    // FAILURE STILL DECIDES ON THE ADVISORY RETURN, which is the strict model's
+    // recorded trade: a commit that landed and then hung in `post-commit` past
+    // the deadline reads as CommitFailed although the tip moved, and the terminal
+    // shows the truth. There is deliberately NO upgrade arm for it — blunt is
+    // ruled.
+    //
+    // The `add` stays advisory — `git commit -- <paths>` takes the working
+    // tree's own contents for those paths, so it matters only for a previously
+    // UNTRACKED sidecar, and the commit says so itself if that is what failed.
+    const std::string before = resolved_object_name(source_ref);
+    if (before.empty()) {
+        return commit_failed("could not read '" + source_ref +
+                             "' before committing; the written files are still "
+                             "in the working tree");
+    }
+
     std::string              add_line;
     std::vector<std::string> add_args{"add", "--"};
     for (const std::string& p : pathspecs) add_args.push_back(p);
@@ -2717,15 +2757,26 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return commit_failed(why);
     }
 
-    // (5) THE COMMIT IS OURS. Sanctioned use means nothing else commits on this
-    // branch while the act runs, so the branch tip now IS the checkpoint — no
-    // attribution walk, no content signature, no range. The ref is read rather
-    // than HEAD, keeping every source-side observation bound to the captured
-    // branch; a read that cannot answer is the error the model calls for.
+    // (5) THE COMMIT IS OURS, AND THE MOVE IS WHAT PROVES ONE HAPPENED.
+    // Sanctioned use means nothing else commits on this branch while the act
+    // runs, so a tip that has moved IS the checkpoint — no attribution walk, no
+    // content signature, no range. A tip that has NOT moved is the rejected-hook
+    // shape above: git said nothing useful and made nothing, so this is a
+    // failure however cheerfully the child exited. The ref is read rather than
+    // HEAD, keeping every source-side observation bound to the captured branch;
+    // a read that cannot answer is the error the model calls for.
     const std::string landed = resolved_object_name(source_ref);
     if (landed.empty()) {
         return commit_failed("committed, but could not read '" + source_ref +
                              "' to learn what landed");
+    }
+    if (landed == before) {
+        std::string why = "git commit made no commit — check the terminal; the "
+                          "written files are still in the working tree";
+        std::string transport = commit_line;
+        if (transport.empty()) transport = add_line;
+        if (!transport.empty()) why += " (git said: " + transport + ")";
+        return commit_failed(why);
     }
     std::fprintf(stderr, "warptempo_gui: Committed %s \"%s\"\n",
                  short_sha(landed).c_str(), title.c_str());
@@ -2774,10 +2825,24 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // because a commit landing on top of it moves the ref above. Anything else
     // — a walk that could not run, a ref that does not resolve — is simply not a
     // yes, and says so.
-    if (remote_carries(branch, landed) == GuiHistoryContainment::Contains) {
+    switch (remote_carries(branch, landed)) {
+    case GuiHistoryContainment::Contains:
         std::fprintf(stderr, "warptempo_gui: Pushed %s \"%s\"\n",
                      short_sha(landed).c_str(), title.c_str());
         return GuiHistoryCommitOutcome::Committed;
+    case GuiHistoryContainment::Missing:
+        // AN OBSERVED ABSENCE IS A FAILED PUSH, whatever the transport said —
+        // and it is the arm that catches a push exiting nonzero while still
+        // returning true above (rejected refspec, refused credentials, a remote
+        // hook saying no). The checkpoint is in the local branch and the remote
+        // demonstrably has not got it, which is CommittedNotPushed exactly.
+        std::fprintf(stderr,
+                     "warptempo_gui: Push failed: 'origin/%s' does not carry "
+                     "the checkpoint — push from the terminal\n",
+                     branch.c_str());
+        return GuiHistoryCommitOutcome::CommittedNotPushed;
+    case GuiHistoryContainment::Unavailable:
+        break;
     }
     std::fprintf(stderr,
                  "warptempo_gui: Push unconfirmed: could not observe "

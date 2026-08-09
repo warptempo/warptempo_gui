@@ -894,11 +894,16 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // written, or the act refused before writing them at all: a DETACHED HEAD is
 // unsanctioned use and throws here, since there is no branch to publish onto.
 //
-// CommitFailed — the three files are written and UNCOMMITTED, sitting in the
-// working tree where `git status` shows them and a hand `git commit` finishes
-// them. It also covers the two thrown reads around the commit: an unusable
-// `git status`, the mid-act branch-mismatch tripwire, and a branch tip that
-// could not be read after committing.
+// CommitFailed — git made no checkpoint the act can stand behind. It covers the
+// commit that reported failure, THE COMMIT THAT REPORTED NOTHING AND MOVED NO
+// TIP (a rejecting pre-commit hook, an identity or signing failure — the child's
+// exit status is unreadable here, so the moved tip is what proves a commit
+// happened), and the reads around them: an unusable `git status`, the mid-act
+// branch-mismatch tripwire, and a branch tip unreadable before or after
+// committing. In every case the three files are written and sitting in the
+// working tree, where `git status` shows them and a hand `git commit` finishes
+// them. ITS ONE FALSE POSITIVE IS RULED AND RECORDED: a commit that landed and
+// then hung in `post-commit` past the deadline reads as this, tip moved and all.
 //
 // NothingToCommit — THE CLEAN, IN-SYNC ENDING: the bytes just written are what
 // the branch already carries AND the remote-tracking ref carries the branch.
@@ -907,17 +912,19 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // standing failure report, which is how a push made IN THE TERMINAL is
 // recognized by the next act.
 //
-// Unconfirmed — THE ACT ESTABLISHED NOTHING, in three shapes: the paths are
-// clean but the branch is BEHIND its remote (unpushed commits — the terminal's
-// job under this model); the paths are clean and the remote could not be read;
-// or the push ran and the remote-tracking ref could not be observed carrying the
-// checkpoint. An unanswerable question is never a yes, and never clears a
-// standing report.
+// Unconfirmed — THE ACT COULD NOT ESTABLISH ITS ANSWER, in three shapes: the
+// paths are clean but the branch is BEHIND its remote (unpushed commits — the
+// terminal's job under this model); the paths are clean and the remote could not
+// be read; or a checkpoint WAS committed and the remote-tracking ref could not
+// be read to say whether the push arrived. An unanswerable question is never a
+// yes, and never clears a standing report.
 //
 // CommittedNotPushed — the checkpoint is in the local branch and the push did
-// not land (or the projects-home guard refused the destination). The fix is
-// `git push` in the terminal; the next act's clean arm observes it and takes the
-// report down.
+// not land: the guard refused the destination, the push reported failure, or —
+// the observed arm — the remote-tracking ref was SEEN not to carry the
+// checkpoint afterwards, which is what catches a push that exited nonzero while
+// still looking like success to the subprocess layer. The fix is `git push` in
+// the terminal; the next act's clean arm observes it and takes the report down.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,

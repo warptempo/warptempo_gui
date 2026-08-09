@@ -912,8 +912,15 @@ void GuiInputHandler::measure_history_head_delta() {
 
 // START A FRESH SCAN — the ONE funnel, and the one place the deferral lives.
 // Its three kickers, re-derived by grep on this name: main.cpp's startup load
-// tail (once the source has settled), on_history_checkpoint_complete for the two
-// outcomes that moved HEAD, and kick_history_prefetch_if_stale below.
+// tail (once the source has settled), on_history_checkpoint_complete for every
+// outcome that MAY have committed (four of the six — that site owns the
+// derivation), and kick_history_prefetch_if_stale below.
+//
+// IT SUPERSEDES WHATEVER IS RUNNING, and no caller has to ask: the store's kick
+// bumps the generation, clears the queue and replaces the pending run, so a scan
+// begun against an older tip is abandoned between candidates and its queued
+// members are dropped by tag. The freshness short-circuit that can DECLINE to
+// kick lives one function down, and only the `h` entry goes through it.
 //
 // A KICK WHILE THE VIEW STANDS IS DEFERRED, never dropped and never run: the
 // visit is BOUND to the store's current generation, and a restart would clear
@@ -941,6 +948,11 @@ void GuiInputHandler::kick_history_prefetch() {
 // before its header (and with it the tip it read) has arrived: the run was
 // kicked for THIS subject and started against a tip nobody has read yet, so
 // re-kicking it would only restart the scan the entry is about to stream from.
+// THE RUNNING SCAN IS ALWAYS THE NEWEST KICK'S, which is what keeps that
+// shortcut honest across a checkpoint: the completion re-warms through the
+// FUNNEL, which supersedes rather than asking this question, and a kick that
+// arrived while a view stood is flushed at the exit before any later entry can
+// reach this line.
 //
 // THE TIP READ IS ONE `rev-parse` on this thread — the whole of what an ordinary
 // entry now pays in git, against the log plus a strict load per candidate it
@@ -2310,19 +2322,38 @@ void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome) {
     app.history_checkpoint_in_flight = false;
 
-    // RE-WARM THE WALK FOR THE OUTCOMES THAT MOVED HEAD (2026-08-07). The
-    // prefetch store describes the repository as of one tip, and these two just
-    // added a commit to it — so the next `h` must see the checkpoint the user
-    // has only this moment made. The other four moved no ref: WriteFailed and
-    // CommitFailed produced no commit, NothingToCommit found the bytes already
-    // committed, and Unconfirmed committed nothing either (its arm is reached
-    // only with the paths already clean). (The
-    // scan's git READS may have raced this act's mutations — the accepted
-    // overlap recorded at GuiHistoryPrefetch — and this kick is what rebuilds
-    // whatever did.) The view is normally already closed by now, but the funnel
-    // defers rather than assumes.
-    if (outcome == GuiHistoryCommitOutcome::Committed ||
-        outcome == GuiHistoryCommitOutcome::CommittedNotPushed) {
+    // RE-WARM THE WALK FOR EVERY OUTCOME THAT MAY HAVE MOVED HEAD (2026-08-07,
+    // membership re-derived 2026-08-09). The prefetch store describes the
+    // repository as of one tip, so the next `h` must see a checkpoint this act
+    // made — and "made" is not the same set as "succeeded".
+    //   FOUR MAY HAVE COMMITTED: Committed and CommittedNotPushed obviously did;
+    //   CommitFailed may have, because the act reports it on a hung
+    //   `post-commit` hook whose commit had ALREADY landed (git moves HEAD
+    //   before running the hook — the recorded accepted consequence); and
+    //   Unconfirmed reaches the push verify only past a commit that DID move the
+    //   tip, so its unanswerable-verify arm sits on a real new commit too.
+    //   TWO PROVABLY DID NOT: WriteFailed never reaches git at all (a detached
+    //   refusal or a failed write), and NothingToCommit is the clean arm, which
+    //   runs no add and no commit by construction.
+    // Kicking the two extra costs one scan on a rare failure and buys the walk
+    // being TRUE after it; the old membership left the next visit reading a
+    // pre-commit repository.
+    //
+    // THE KICK SUPERSEDES AN IN-FLIGHT SCAN rather than being swallowed by one,
+    // and that is the funnel's own idiom rather than anything spelled here:
+    // GuiHistoryPrefetch::kick BUMPS THE GENERATION, clears the queue and
+    // replaces the pending run, so a scan started against the pre-commit tip is
+    // abandoned mid-walk and its remaining members are dropped by tag. (The
+    // freshness SHORT-CIRCUIT that treats a running scan as fresh lives at
+    // kick_history_prefetch_if_stale, the `h` ENTRY's path, and this route does
+    // not go through it — which is what keeps a completion-time re-warm from
+    // being answered by the very scan it is meant to replace.) The scan's git
+    // READS may also have raced this act's mutations — the accepted overlap
+    // recorded at GuiHistoryPrefetch — and this kick is what rebuilds whatever
+    // did. The view is normally already closed by now, but the funnel defers
+    // rather than assumes.
+    if (outcome != GuiHistoryCommitOutcome::WriteFailed &&
+        outcome != GuiHistoryCommitOutcome::NothingToCommit) {
         kick_history_prefetch();
     }
 
