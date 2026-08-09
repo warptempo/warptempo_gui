@@ -295,14 +295,15 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // order and SINGLE-SELECTS the first marker whose land value is EXACTLY the
 // resting playhead. Definition in input_pointer.cpp, beside the land whose
 // formula it reuses; that comment states the rule, the exactness, and the
-// first-in-store tie-break. FIVE CALL SITES (re-derived 2026-08-06 by grep), each
+// first-in-store tie-break. SIX CALL SITES (re-derived 2026-08-08 by grep), each
 // stating only its own class and pointing there: the source load's tail
 // (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
-// BOTH LOAD-IN-PLACE BODIES' tails (input_key_dispatch.cpp) — the `'`
-// render-entry load (load_render_entry_in_place, joined 2026-07-30) and the `h`
-// view's commit load (load_history_commit_in_place), each because a load-in-place
-// is specified 1:1 with a source load, and the
+// ALL THREE LOAD-IN-PLACE BODIES' tails (input_key_dispatch.cpp) — the `'`
+// render-entry load (load_render_entry_in_place, joined 2026-07-30), the `h`
+// view's commit load (load_history_commit_in_place) and that view's LOCAL-tab
+// load (load_history_local_entry_in_place, 2026-08-08), each because a
+// load-in-place is specified 1:1 with a source load, and the
 // load has always run this. No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,

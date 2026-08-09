@@ -2127,10 +2127,13 @@ struct AppState {
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
     // its own reason on stderr and the mode simply does not open.
     //
-    // WHAT CLOSES IT, the whole list: bare `h` again; EITHER LOAD-IN-PLACE —
-    // the `'` editor's render-entry load-in-place and, since 2026-08-04, its
-    // load-in-place-from-a-commit
-    // (both rewrite the very state the frozen now side was measured against);
+    // WHAT CLOSES IT, the whole list: bare `h` again; ANY LOAD-IN-PLACE — the
+    // `'` editor's three acts, its render-entry load, its
+    // load-in-place-from-a-commit (2026-08-04) and its LOCAL-tab load of a
+    // timeline state (2026-08-08), each of which rewrites the very state the
+    // frozen now side was measured against (the renders-side one cannot actually
+    // run from in here, and the closer inventory at close_history_mode,
+    // input_key_dispatch.cpp, says why it still calls the closer);
     // THE COMMIT ACT, WHEN ITS SAVE LANDS (architect 2026-08-07, superseding the
     // checkpoint-in-the-repository partition of 2026-08-05, which in turn
     // superseded the act's in-place re-entry: the checkpoint's own verdict now

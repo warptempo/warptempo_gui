@@ -384,28 +384,52 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 
 // Leave the mode, clearing it WHOLE — the commit walk with it, so the next entry
 // re-inits and measures against the state at THAT moment. The one exit owner:
-// bare `h`, either load-in-place, the commit act's landed verdicts, and any
-// future closer call this rather than clearing fields themselves. Idempotent, so
+// every closer calls this rather than clearing fields themselves. Idempotent, so
 // a closer may fire with the mode already down.
+//
+// THE CALLER INVENTORY, and the ONE authoritative site for it (re-derived by
+// grep 2026-08-08, when the third load-in-place arrived) — SIX callers, of which
+// FIVE can actually be running with a view up:
+//   * handle_history_mode_key — bare `h`, the toggle's close arm;
+//   * run_history_commit — the Save-and-Commit act, once its save has landed;
+//   * run_history_revert — Ctrl+H, which rewrites the state the now side was
+//     measured against and so must not leave the lane describing it;
+//   * load_history_commit_in_place and load_history_local_entry_in_place — the
+//     mode's own `'`, one act per walk;
+//   * load_render_entry_in_place — the renders-side `'`, which has ONE caller
+//     (load_editor_commit's non-mode branch) and therefore CANNOT run with the
+//     view standing: in the mode that editor's Enter routes to one of the two
+//     above. Its call is the idempotent no-op this function's early return
+//     exists for, placed at the mutator so the close travels with the act.
+// There is no pointer closer and no closer outside this file's two acts and the
+// three loads.
 //
 // IT ALSO PUTS THE EDITOR'S NAVIGATION BAND BACK (architect 2026-08-05): the
 // view is a VIEWER, so the pans, zooms and playhead landings a review made are
-// the review's, not the session's. THE ONE RESTORE SITE, serving all four
-// closers — the two load-in-places need no exemption from it, and get none:
-// each calls this on the first line past its last refusal and then APPLIES THE
-// LOADED FILE'S OWN BAND some seventy lines later (the tab_a / tab_b replace,
-// the live-band pull, the clamps), so the restore below is simply overwritten by
-// the state the user asked for. It is not wasted either — it is what keeps the
-// close idempotent and single-shaped, and a load that ever grew an early return
-// past this point would leave a restored band rather than the review's.
+// the review's, not the session's. THE ONE RESTORE SITE, serving every closer —
+// the load-in-places need no exemption from it, and get none, though the reason
+// splits by act (2026-08-08, when the local load made the family three):
+//   * THE COMMIT LOAD calls this on the first line past its last refusal and
+//     then APPLIES THE LOADED FILE'S OWN BAND some seventy lines later (the
+//     tab_a / tab_b replace, the live-band pull, the clamps), so the restore
+//     below is simply overwritten by the state the user asked for;
+//   * THE LOCAL LOAD APPLIES NO BAND AT ALL — a timeline state carries none, an
+//     undo entry holding markers and the engine block and nothing else — so the
+//     restore below STANDS, and standing is correct: the act ends in the editor,
+//     at the window the user was reviewing from before he opened the view.
+// (The renders-side load applies a band too, on the commit load's own shape; it
+// just never reaches this from inside a visit.) The restore is not wasted on any
+// of them — it is what keeps the close idempotent and single-shaped, and a load
+// that ever grew an early return past this point would leave a restored band
+// rather than the review's.
 //
 // NO CLOSER CAN FIRE WITH A DROPDOWN OPEN, so this owner does not close one and
 // carries no dead line for it. Since 2026-08-08 the Navigation menu DOES stand
 // inside the view (toggle_dropdown's lockout narrowed to Settings), which makes
 // the question real rather than vacuous — and the answer is positional, re-derived
-// by grepping every caller of this function: all of them are KEYBOARD routes
-// (bare `h`, the Ctrl+S checkpoint act, both load-in-places behind `'`, and the
-// Ctrl+H revert), and every one of them dispatches BELOW on_key's popup gate,
+// by grepping every caller of this function (the inventory above): all of them
+// are KEYBOARD routes — bare `h`, the Ctrl+S checkpoint act, the Ctrl+H revert,
+// and the loads behind `'` — and every one of them dispatches BELOW on_key's popup gate,
 // which swallows every chord but Ctrl+Q while a menu is up. Ctrl+Q closes the
 // popup itself and then takes the close-window route, which ends the process
 // rather than the view; the WM close is the same. There is no pointer closer at
@@ -578,13 +602,13 @@ void GuiInputHandler::close_history_mode() {
     // that used to blank) or a fingerprint-guarded no-op for the flag cache after
     // the restore's own.
     //
-    // THE TWO LOAD-IN-PLACE CLOSERS PAY A REDUNDANT REBUILD HERE and are
+    // THE LOAD-IN-PLACE CLOSERS PAY A REDUNDANT REBUILD HERE and are
     // deliberately not special-cased: each calls this closer on the first line
-    // past its last refusal and then applies the LOADED file's own band some
-    // seventy lines later, republishing over the top of this — the same
-    // "simply overwritten, and not wasted either" reasoning the restore above
-    // carries, at the same price of one plate render on a keypress that is
-    // already loading a file.
+    // past its last refusal and then rebuilds again at its own tail, over the top
+    // of this — the same "not wasted either" reasoning the restore above carries
+    // (which is where the per-act membership and the band difference between them
+    // live), at the price of one plate render on a keypress that is already
+    // loading a state.
     republish_history_lane_now();
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
@@ -721,7 +745,8 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // viewport), and skipping this call by testing whether the write moved would
 // make the fix depend on an inference about another function's internals; ONE
 // SHAPE AT EVERY EDGE is worth one redundant render at the ones that move. The
-// two load-in-place closers pay theirs for a third reason, stated at the exit.
+// load-in-place closers pay theirs for a third reason, stated at the exit (which
+// owns the closer inventory).
 //
 // THE ORDER IS FIXED at every caller, and it is one rule in two spellings: this
 // call comes LAST of the acts that change what the lane should show. In view that
@@ -3349,10 +3374,13 @@ bool GuiInputHandler::load_render_entry_in_place(
     // replaces the authored state the mode's frozen now side was measured
     // against, so leaving the mode standing would leave every flag in the lane
     // describing a session that no longer exists. Placed at the MUTATOR rather
-    // than at the `'` key because this function is what performs the replacement
-    // — the opener is blocked by the mode's keyboard allowlist today, so the
-    // keyboard route cannot reach here at all, and the close belongs with the
-    // act rather than with one of its callers.
+    // than at the `'` key because this function is what performs the replacement,
+    // and the close belongs with the act rather than with one of its callers.
+    // IN PRACTICE IT IS AN IDEMPOTENT NO-OP: the mode ADMITS bare `'`, but in the
+    // view that editor's Enter routes to one of the mode's own two loads, so no
+    // renders-side load ever runs with a visit standing (the closer inventory at
+    // close_history_mode states it). The line stays for the same reason the
+    // close is at the mutator at all.
     close_history_mode();
 
     const char load_tab = settings->active_tab_view;
