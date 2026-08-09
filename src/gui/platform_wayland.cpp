@@ -1767,6 +1767,14 @@ void GuiPlatform::forget_keyboard_state() {
     // travel and the GUI's own release body performs the restore from inside it,
     // exactly as an ordinary release does. Do not add a capture teardown above
     // this line; end the hold first if one is ever needed here.
+    // ITS FLUSH RESURRECTS NOTHING EITHER, the pointer twin's other hazard
+    // (2026-08-08): the release below can flush a deferred motion, and
+    // on_motion's prologue writes app-side state — the remembered coordinates
+    // and `pointer_in_window` — while everything THIS edge clears is
+    // platform-side (the four modifier bits, the armed repeat, the scroll
+    // carry), which no motion writes. The two sets do not intersect, so this
+    // edge needs no restoring second act. `pointer_in_window` going true here is
+    // correct besides: a keyboard leave says nothing about where the pointer is.
     end_left_hold_source(/*physical=*/false);
 }
 
@@ -1796,18 +1804,25 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // when the manager is absent or the object already exists).
         create_relative_pointer_if_ready();
     } else if (!has_pointer && wl_pointer_) {
-        // THIS BRANCH'S ORDER IS RULED, and it is two constraints rather than a
-        // preference — the owed release sits BETWEEN them (2026-08-08):
+        // THIS BRANCH'S ORDER IS RULED, and it is three constraints rather than a
+        // preference — the owed release sits in the MIDDLE of them (2026-08-08):
         //   (1) THE POPUP'S PRESS CLAIM DROPS FIRST, so the release below cannot
-        //       activate a menu item (the architect's ruling, at the hook call);
+        //       activate a menu item (the architect's ruling, at the first hook
+        //       fire);
         //   (2) THE RELEASE PRECEDES THE CAPTURE TEARDOWN, so a gesture commits
         //       at its true coordinates rather than at the cursor restore hint
-        //       (codex; the argument is at the hold ends).
-        // The two are independent and compose: the hook, the only route to (1),
-        // leads; the hold ends follow it; the capture teardown follows them; and
-        // the wl_pointer itself goes last, because the gesture's own release body
-        // restores the cursor through it. What the live stream still OWES is
-        // delivered in the middle of its own teardown, and deliberately so.
+        //       (codex; the argument is at the hold ends);
+        //   (3) THE HARD EDGE'S INVARIANTS ARE RESTORED LAST, because delivering
+        //       (2) re-enters the GUI and can undo them (codex; the argument is
+        //       at the second hook fire).
+        // The three are independent and compose. THE HOOK IS THE ONE VEHICLE for
+        // (1) and (3) alike — the platform writes no app state — so it fires
+        // TWICE, once at each end of the release, with the same reason and two
+        // different jobs; its body is idempotent, which is what makes that legal.
+        // Between them: the hold ends, then the capture teardown, and the
+        // wl_pointer itself last, because the gesture's own release body restores
+        // the cursor through it. What the live stream still OWES is delivered in
+        // the middle of its own teardown, and deliberately so.
         //
         // Same hook as wl_pointer.leave, and here the hard version of the reason:
         // capability loss ends this pointer stream with no leave, no motion and
@@ -1824,6 +1839,10 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // edge, so "everything goes" stays true by construction rather than by
         // each consumer remembering it.
         //
+        // THIS IS THE FIRST OF TWO FIRES, and its job is the CLAIM DROP THE
+        // RELEASE MUST NOT SEE; the second, below the hold ends, is the invariant
+        // restore that the release's own flush can undo. Same reason, same
+        // idempotent body, two different obligations.
         // IT RUNS ABOVE THE HOLD ENDS SO A MENU ITEM CANNOT FIRE ON THE WAY OUT
         // (architect 2026-08-08): A MENU ITEM IS A CLICK CONVENTION, NOT A DRAG
         // COMMIT. The no-cancel ruling — any end commits — governs GESTURES, and
@@ -1898,6 +1917,49 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // fired.)
         end_left_hold_source(/*physical=*/true);
         end_left_hold_source(/*physical=*/false);
+
+        // THE HOOK FIRES A SECOND TIME, and this one is the INVARIANT RESTORE
+        // (codex 2026-08-08). The two fires have different jobs and both are
+        // needed: the FIRST, above, drops the popup's press claim so the release
+        // cannot activate a menu item (the architect's ruling, argued there);
+        // THIS one re-establishes the hard edge's own contract after the stream's
+        // obligations have been discharged, because DELIVERING THEM CAN UNDO IT.
+        // end_left_hold_source calls flush_deferred_motion before the release it
+        // delivers, that flush re-enters GuiInputHandler::on_motion, and
+        // on_motion's prologue is unconditional: it records the coordinates and
+        // sets `pointer_in_window` TRUE. So a capability loss with a relative
+        // event staged — the ordinary case mid-captured-drag, the lock's motion
+        // being deferred to the frame boundary — would end with the bit standing
+        // for a pointer that no longer exists, the tick's roster recompute
+        // re-admitted, and a face or a tooltip dwell able to start from stale
+        // virtual coordinates with no stream left to correct them.
+        // WHAT THE FLUSHED MOTION ACTUALLY WRITES on this path, traced rather
+        // than assumed: the prologue's two coordinate fields (the REMEMBERED
+        // position, which is correct to keep — it is what the last real motion
+        // saw) and that one bit; the menu-row exit above the branches is inert
+        // (a press disarmed the mode when the gesture began); and the motion then
+        // lands in its live-gesture branch and returns ABOVE the roster recompute
+        // and the no-gesture tail, which is exactly the "an active gesture
+        // freezes hover" rule doing its job. `pointer_in_window` is therefore the
+        // only invariant a flush can resurrect TODAY — with the one exception
+        // that proves the shape, a prompt or a keyboard-modal editor standing
+        // over the gesture, whose branches sit above the gesture ones and DO
+        // recompute the roster from those coordinates.
+        // IT IS THE WHOLE HOOK RATHER THAN A POKE AT THAT BIT for exactly that
+        // reason: the prologue and the branch order are free to grow, and a
+        // narrower restore would silently stop covering them. The body is
+        // idempotent — every clear in it is transition-gated, the release has
+        // already dropped what a release drops, and the row-1 keep-alive
+        // short-circuits on the hard reason — so a second fire costs a handful of
+        // compares and can take nothing away that must survive. It does not touch
+        // gesture state at all; the gesture committed in the release above and
+        // cleared its own structs there.
+        // EVERYTHING BELOW THIS LINE IS PROTOCOL TEARDOWN AND SCALAR RESETS with
+        // no path back into GUI code, which is what makes this the last word. A
+        // future statement here that CAN re-enter the GUI belongs above this
+        // fire, not below it.
+        if (pointer_left_hook_)
+            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
 
         // THE CAPTURE'S BACKSTOP, and normally already a no-op: a captured
         // gesture ends inside the release above, whose own body calls

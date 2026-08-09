@@ -2174,8 +2174,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     const RedesignTooltipText text =
         redesign_button_tooltip(app, static_cast<RedesignButton>(hovered));
-    // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the compare tabs drop their
-    // tooltips when the `h` view opens — and a hint with no line 1 is no hint.
+    // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the walk-selector tabs drop
+    // their tooltips when the `h` view opens — and a hint with no line 1 is no
+    // hint.
     // The stamp's own hides cover every other route; this is the one state that
     // needs no pointer event to reach.
     if (text.line1 == nullptr) return;

@@ -3013,10 +3013,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (changed) viewport.invalidate_top_strip();
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
-    // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip
-    // (redesign_button_tooltip owns that membership, and no state changes it —
-    // only Render's TEXT follows the iteration bit and the compare tabs' the
-    // history one), so the walk above covers the whole roster: a newly hovered
+    // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
+    // and redesign_button_tooltip's stateful overload owns both that membership
+    // and the three things state moves in it (re-derived from that one function):
+    // MEMBERSHIP moves exactly ONCE — row 3's WALK-SELECTOR tabs drop their hint
+    // entirely while the `h` view stands, on the view bar's own reasoning — while
+    // the TEXT follows state on two buttons, SAVE (a publishing checkpoint first,
+    // then the history view's "Save and Commit") and RENDER (the iteration bit).
+    // The walk above covers the whole roster either way: a newly hovered
     // one stamps the clock, and moving between two of them hides and re-stamps,
     // so a fresh dwell begins on each arrival. The run
     // loop's tick compares the stamp against kTooltipDelayMs and flips

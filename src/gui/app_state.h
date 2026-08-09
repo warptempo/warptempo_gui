@@ -1853,7 +1853,7 @@ struct AppState {
     // and the click TOGGLES rather than only releasing.
     //
     // WITH ONE STATE'S EXCEPTION since 2026-08-05: while the `h` history view
-    // stands the tabs are not tabs but the COMPARE SELECTOR, so no padlock is
+    // stands the tabs are not tabs but the WALK SELECTOR, so no padlock is
     // drawn, no slot is reserved and this stays ZERO — the press path's lock
     // branch is then unreachable through the rect's own emptiness rather than
     // through a mode test, and "visible" and "clickable" stay one fact.
