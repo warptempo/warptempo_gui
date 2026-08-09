@@ -1817,10 +1817,44 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
         // matching button release or frame boundary) arrive on this object.
-        // End a held physical left button here, so marker/trim commits and the
-        // three navigation/text gestures cannot remain stuck until a future
-        // pointer capability happens to appear.
+        // End the logical left hold here — BOTH SOURCES, not just the physical
+        // one (2026-08-08) — so marker/trim commits and the three
+        // navigation/text gestures cannot remain stuck until a future pointer
+        // capability happens to appear.
+        //
+        // WHY THE SYNTHESIZED SOURCE BELONGS HERE TOO, though its own key stream
+        // is untouched by a POINTER capability loss: a bare-`e` hold is a
+        // synthesized LEFT BUTTON, and the gesture it armed is a pointer gesture
+        // in every other respect — it reads pointer coordinates, it is fed by
+        // pointer motion, and `primary_button_held` (current_mods) is the OR of
+        // the two sources, which every button-lost arm in on_motion consults. Left
+        // standing, it would survive an edge that has just destroyed the object
+        // its whole existence is expressed against: a capability RETURN would
+        // synthesize an enter motion, the new stream's first event would read the
+        // OLD hold as still down, and the gesture would resume at the new
+        // stream's coordinates — crossing a threshold or committing a mutation
+        // with no click of any kind in between, and holding the keyboard's
+        // drag-modal until the key came up. That is exactly what
+        // GuiPointerLeaveReason::CapabilityLoss promises cannot happen, and the
+        // promise is this site's to keep, not only the hook's.
+        // ENDING IT IS A COMMIT, NOT A CANCEL — pointer gestures have no cancel,
+        // and this route delivers the ordinary release through the ordinary path
+        // (at the last known coordinates, exactly as the button-lost arms
+        // handle a hold that ends without a fresh press). It also zeroes
+        // synth_left_keycode_, which is what makes the later `e` KEYUP a
+        // no-op: that handler matches on the owning keycode, and nothing owns
+        // the hold any more.
+        // THE ORDER OF THE TWO CALLS IS FREE and the pair delivers exactly ONE
+        // release however they are ordered: each delivers only on the logical
+        // OR's 1->0 edge, so with both sources held the first merely clears its
+        // bit and the second carries the edge. They sit BELOW the hook for the
+        // reason the hook body states — its clears drop press CLAIMS, so the
+        // release these may deliver lands unowned rather than resurrecting one.
+        // (The keyboard's own hard edges end the synthesized source through the
+        // same route, in forget_keyboard_state; this is the pointer-side twin,
+        // and neither can rely on the other having fired.)
         end_left_hold_source(/*physical=*/true);
+        end_left_hold_source(/*physical=*/false);
 
         // A sub-detent carry and the staged half of a logical pointer frame
         // belong to the destroyed pointer object. They must not combine with
@@ -1927,6 +1961,13 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
         // is 0 unless a hold is live). The release is NEVER gated: not by the
         // editor probe (an editor opened mid-hold must not orphan the button)
         // and not by pointer focus (it lands at the last known coordinates).
+        // THIS IS NOT THE HOLD'S ONLY END, and the keycode match is what makes
+        // the others cost nothing here: the two HARD edges end it themselves —
+        // keyboard leave / keyboard-capability loss (forget_keyboard_state) and
+        // POINTER-capability loss (on_seat_capabilities, which must, the gesture
+        // being a pointer gesture) — and each zeroes synth_left_keycode_ as it
+        // goes, so the keyup that eventually arrives matches nothing and is a
+        // plain no-op rather than a second release.
         if (xkb_keycode == synth_left_keycode_) {
             end_left_hold_source(/*physical=*/false);
         }

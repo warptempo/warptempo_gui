@@ -64,6 +64,11 @@ inline constexpr int kGuiCursorKindCount = 7;
 //     NOTHING pointer-derived may be kept — anything left standing has no event
 //     left that could take it down, and a later capability RETURN is a new
 //     stream that must start cold rather than inherit the old one's state.
+//     THAT SENTENCE IS BIGGER THAN THIS HOOK, and its other half is the fire
+//     site's own: the same edge ends the LOGICAL LEFT HOLD in both its sources,
+//     the synthesized bare-`e` one included, because a surviving hold is state
+//     the returning stream would inherit just as visibly as a lit face would
+//     (on_seat_capabilities carries the argument).
 // The distinction exists for exactly one consumer today (main.cpp's hook body,
 // where the menu row's armed mode and its hovered button survive an ordinary
 // leave through row 1 and never survive the hard one); every other clear the
@@ -966,9 +971,12 @@ private:
     // dispatched, so the button handler always sees the latest accumulated
     // position. Idempotent — a no-op when no deferred motion is pending; clears
     // the flag so on_pointer_frame's trailing delivery does not double-fire.
-    // Every button-delivery site (the wl_pointer button listener, the
-    // kLeftClickKey synth edges, and the keyboard-leave / capability-loss
-    // synth releases) calls this immediately before delivering.
+    // Every button-delivery site calls this immediately before delivering; the
+    // classes, re-derived by grep: the wl_pointer button listener, the
+    // kLeftClickKey synth edges, and the HARD-EDGE hold ends — keyboard leave /
+    // keyboard-capability loss (forget_keyboard_state) and pointer-capability
+    // loss (on_seat_capabilities, which ends BOTH sources) — all of which reach
+    // it inside end_left_hold_source rather than calling it themselves.
     void flush_deferred_motion();
 
     // Ends ONE source's contribution to the logical left hold (logical left =
