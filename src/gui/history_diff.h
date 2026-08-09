@@ -894,16 +894,26 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // written, or the act refused before writing them at all: a DETACHED HEAD is
 // unsanctioned use and throws here, since there is no branch to publish onto.
 //
-// CommitFailed — git made no checkpoint the act can stand behind. It covers the
-// commit that reported failure, THE COMMIT THAT REPORTED NOTHING AND MOVED NO
-// TIP (a rejecting pre-commit hook, an identity or signing failure — the child's
-// exit status is unreadable here, so the moved tip is what proves a commit
-// happened), and the reads around them: an unusable `git status`, the mid-act
-// branch-mismatch tripwire, and a branch tip unreadable before or after
-// committing. In every case the three files are written and sitting in the
-// working tree, where `git status` shows them and a hand `git commit` finishes
-// them. ITS ONE FALSE POSITIVE IS RULED AND RECORDED: a commit that landed and
-// then hung in `post-commit` past the deadline reads as this, tip moved and all.
+// CommitFailed — git made no checkpoint THE ACT CAN STAND BEHIND, which is not
+// quite the same as "no commit exists", and the difference splits its arms in
+// two.
+//   BEFORE THE COMMIT, nothing has been asked of git but reads, so the three
+//   files are written and sitting in the working tree where `git status` shows
+//   them and a hand `git commit` finishes them: an unusable `git status`, the
+//   mid-act branch-mismatch tripwire, and a branch tip that could not be read
+//   before committing.
+//   AT OR AFTER THE COMMIT, a commit MAY exist that this verdict cannot see. The
+//   commit that reported failure is usually one that made nothing — but a
+//   commit that landed and then hung in `post-commit` past the deadline lands
+//   here too, tip moved and all (git moves HEAD before running the hook). The
+//   commit that reported nothing and MOVED NO TIP made nothing, and that is what
+//   the tip compare is for: the child's exit status is unreadable here, so a
+//   moved tip is the only proof a commit happened, and a rejecting pre-commit
+//   hook or an identity/signing failure is caught by its absence. And a tip that
+//   could not be read AFTER committing says nothing either way.
+// SO THE TERMINAL SHOWS WHICH, and that is the ruled model rather than a gap:
+// `git status` and `git log` answer in one look, a hand commit finishes an
+// unfinished one, and the next act's clean arm re-observes whatever was left.
 //
 // NothingToCommit — THE CLEAN, IN-SYNC ENDING: the bytes just written are what
 // the branch already carries AND the remote-tracking ref carries the branch.

@@ -49,9 +49,12 @@
 // `ls-tree`, `show`) and the checkpoint act's `add`/`commit`/`push` may be
 // running beside it. A read that races a mutation sees the repository partway
 // through — an older `log`, a commit not yet listed — and the answer to that is
-// the RE-WARM rather than a lock: the act's completion kicks a fresh run for the
-// outcomes that moved HEAD, so whatever raced is rebuilt from the settled
-// repository a moment later. (The `h` entry is refused outright while a
+// the RE-WARM rather than a lock: the act's completion kicks a fresh run for
+// every outcome that MAY have committed — four of the six, everything but the
+// two that provably run no commit — so whatever raced is rebuilt from the
+// settled repository a moment later. That kick SUPERSEDES this run rather than
+// queueing behind it (the generation bump above is the whole mechanism), which
+// is what keeps a scan begun against the pre-commit tip from outliving it. (The `h` entry is refused outright while a
 // checkpoint publishes, so no VIEW can be reading a half-mutated walk either.)
 class GuiHistoryPrefetch {
 public:
@@ -80,10 +83,12 @@ public:
     // START A FRESH RUN against this source and this projects_repo, superseding
     // whatever is running. Clears the store, bumps the generation.
     //
-    // THREE KICKERS, and the inventory is here because there is nowhere better:
-    // the startup load's tail (main.cpp, once the source has settled), the
-    // checkpoint act's completion for the two outcomes that moved HEAD, and the
-    // `h` entry when the store is STALE. All three reach this through
+    // THREE KICKERS, and the inventory is here because there is nowhere better
+    // (membership re-derived 2026-08-09): the startup load's tail (main.cpp,
+    // once the source has settled), the checkpoint act's completion for every
+    // outcome that MAY have committed (four of the six —
+    // GuiInputHandler::on_history_checkpoint_complete owns that derivation), and
+    // the `h` entry when the store is STALE. All three reach this through
     // GuiInputHandler::kick_history_prefetch, which is what defers a kick that
     // would land while the view stands.
     void kick(std::string source_audio_path, std::string projects_repo);

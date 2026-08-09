@@ -2282,15 +2282,14 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //   these bytes AND the remote already had it). Neither is a failure, and either
 //   one supersedes a failure the slot is still showing: the message describes
 //   the repository's last answer, and this is a newer one.
-//   THE FOUR FAILURES — WriteFailed (nothing reached the repository),
-//   CommitFailed (the three files are written and uncommitted, in the working
-//   tree where `git status` shows them), CommittedNotPushed (the checkpoint
-//   exists locally and the remote does not have it) and, since 2026-08-09,
-//   Unconfirmed (the act established neither content nor publication — no commit
-//   touching the checkpoint paths alone could be named, or the named one was not
-//   confirmed to carry these bytes, or git has a detached HEAD and there was no
-//   remote-tracking ref to ask at all — so
-//   nothing was pushed). The texts differ exactly where the
+//   THE FOUR FAILURES — WriteFailed (nothing reached the repository at all),
+//   CommitFailed (git made no checkpoint the act can stand behind), Committed-
+//   NotPushed (the checkpoint is in the local branch and the remote has not got
+//   it) and Unconfirmed (the act could not establish its answer). WHAT EACH ONE
+//   ESTABLISHES IS THE ENUM CONTRACT'S TO SAY, and it says it once
+//   (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs only
+//   which class each falls in, so the arms are not re-enumerated here.
+//   The texts differ exactly where the
 //   user's next move does, which is why the act distinguishes them at all. They
 //   are SHORT because the row is one line and the detail is already on stderr,
 //   verbatim and unchanged by this arc.
@@ -2330,11 +2329,15 @@ void GuiInputHandler::on_history_checkpoint_complete(
     //   CommitFailed may have, because the act reports it on a hung
     //   `post-commit` hook whose commit had ALREADY landed (git moves HEAD
     //   before running the hook — the recorded accepted consequence); and
-    //   Unconfirmed reaches the push verify only past a commit that DID move the
-    //   tip, so its unanswerable-verify arm sits on a real new commit too.
+    //   Unconfirmed may have, because ONE of its arms is the push verify, which
+    //   is reached only past a commit that DID move the tip. Its other arms are
+    //   the CLEAN one's and commit nothing — an unreadable local tip, a branch
+    //   observably behind its remote, an unanswerable containment read — but a
+    //   kick cannot tell them apart from here and does not need to: the whole
+    //   set is admitted on the one arm that can have moved HEAD.
     //   TWO PROVABLY DID NOT: WriteFailed never reaches git at all (a detached
-    //   refusal or a failed write), and NothingToCommit is the clean arm, which
-    //   runs no add and no commit by construction.
+    //   refusal or a failed write), and NothingToCommit is the clean arm's
+    //   in-sync ending, which runs no add and no commit by construction.
     // Kicking the two extra costs one scan on a rare failure and buys the walk
     // being TRUE after it; the old membership left the next visit reading a
     // pre-commit repository.
