@@ -1013,11 +1013,13 @@ int main(int argc, char** argv) {
         input_handler.finalize_active_drags();
         // THE HINT GOES DOWN WITH IT, and this is the SAME RULE AS THE KEY-PRESS
         // HIDE rather than a new one: no floating hint stands over a modal. Every
-        // KEYBOARD opener implements it at the top of on_key; the compositor close
-        // is the one modal opener that arrives asynchronously, with no key and no
-        // pointer event to carry the hide, so the rule needs its call here or the
-        // hint stands over the prompt until the tick's dwell refusal catches it a
-        // frame later. Ordered ABOVE request_close so the box's published rect is
+        // KEYBOARD opener implements it at the top of on_key; the ASYNCHRONOUS
+        // modal openers — this compositor close, and since 2026-08-07 the
+        // checkpoint worker's failure notice — carry no key and no pointer event
+        // to hide with, so each needs its own call (the notice's is at
+        // GuiInputHandler::maybe_open_pending_history_notice, beside its own popup
+        // close) or the hint stands over the prompt until the tick's dwell
+        // refusal catches it a frame later. Ordered ABOVE request_close so the box's published rect is
         // damaged before the prompt's own repaint, and beside the popup close for
         // the reason below — the two floating surfaces go down together.
         input_handler.hide_shift_tooltip();
@@ -1033,7 +1035,11 @@ int main(int argc, char** argv) {
         // prompt outranks the dropdown" structural in all four input channels
         // instead of an ordering accident in two of them.
         // THE RESIZE PATH DOES THE EQUIVALENT for the same class of reason (a
-        // popup that cannot stay coherent through what follows), and Ctrl+Q needs
+        // popup that cannot stay coherent through what follows), and so does THE
+        // CHECKPOINT NOTICE'S OPENER — the other asynchronous modal opener, which
+        // meets no gate at all and therefore owes this same pair (2026-08-08;
+        // maybe_open_pending_history_notice, input_key_dispatch.cpp, states the
+        // close-rather-than-park reasoning for it). Ctrl+Q needs
         // no line of its own: it reaches the popup's own keyboard gate first,
         // which closes the menu and only then lets the close route run.
         input_handler.close_dropdown();

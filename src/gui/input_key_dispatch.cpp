@@ -2254,19 +2254,64 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // clock, so it can land in the middle of a prompt the user is answering or
     // an edit he is typing; opening over either would take the keyboard away
     // from a surface he is using. The tick polls the slot and opens the notice
-    // at the first frame the bottom strip is free.
+    // at the first frame the bottom strip is free. An open DROPDOWN is the one
+    // surface in the way that is CLOSED rather than waited for — the opener owns
+    // that fork and states why.
     app.pending_history_notice = std::move(text);
     maybe_open_pending_history_notice();
 }
 
 // The parked notice's one opener, called from the completion above and once per
-// tick from main.cpp. Both routes are the same two questions: is anything
-// parked, and is the strip free? The slot clears as the notice opens, so it
-// shows exactly once.
+// tick from main.cpp. Both routes ask the same questions and take the same acts,
+// which is the point of there being one body: is anything parked, is the strip
+// free — and if it opens, the popup goes first. The slot clears as the notice
+// opens, so it shows exactly once.
+//
+// THE THIRD QUESTION IS NOT A PARK, IT IS A CLOSE (2026-08-08), and the
+// difference is what the surface is: a prompt or an editor is a surface the user
+// is USING, so the notice waits for it; an open dropdown is a transient popup,
+// closable at any instant, and a notice that waited on one would sit parked for
+// as long as an idle menu stayed up. So this closes it through THE ONE CLOSE
+// OWNER (close_dropdown, which also disarms the menu-row mode and drops the
+// popup's published rect, item rects and hover/press faces with the whole-struct
+// reset — no stranded hover survives under the notice) immediately before the
+// open, and not one line earlier: the close belongs to the OPEN, not to the
+// poll, so a tick that parks again leaves a menu the user is reading alone.
+//
+// IT FOLLOWS THE WM-CLOSE ROUTE'S OWN PRECEDENT, which does exactly this pair —
+// close_dropdown() then prompt.request_close() (main.cpp) — and for exactly its
+// reason: with both surfaces standing, OWNERSHIP SPLITS. The prompt takes keys
+// and new presses (its gates are tested first), but MOTION still reaches the
+// dropdown branch, and a left RELEASE reaches finish_dropdown_release, which
+// sits ABOVE the prompt gate in on_button_release — so an item pressed and still
+// HELD when the notice arrived would fire on release and raise the settings
+// editor UNDERNEATH it. Even without that, acknowledging would leave the popup
+// standing.
+//
+// AND THIS IS THE ONE ROUTE THAT COULD REACH THAT STATE AT ALL, which is why the
+// line is owed here and nowhere else (re-derived by grep over the prompt
+// openers): every OTHER opener is downstream of a gate that has already ended
+// the popup — the keyboard ones (the target-view entry notice, the iteration
+// sweep's cap refusal, Ctrl+Q's unsaved dialog) sit below on_key's popup gate,
+// which swallows every chord but Esc and Ctrl+Q while a menu is up; the pointer
+// ones sit below the presses that close it; the load-time env-hash prompt runs
+// before any row exists. This notice arrives on a WORKER'S CLOCK with no gesture
+// behind it, so it meets no gate at all — the async completion is exactly the
+// route that made "a prompt and a popup cannot stand together" an argument from
+// reachability rather than from structure.
 void GuiInputHandler::maybe_open_pending_history_notice() {
     if (app.pending_history_notice.empty()) return;
     if (app.prompt.active) return;
     if (any_text_editor_active()) return;
+    // THE TWO FLOATING SURFACES GO DOWN TOGETHER, the WM-close route's own
+    // pairing: no floating hint stands over a modal either, and a VISIBLE
+    // tooltip is not swept by the tick (the hover recompute stops the DWELL
+    // under a prompt but does not take a hint already up, and it refuses
+    // outright while the pointer is outside the window). This hide is also the
+    // only route that damages the box's own published rect, which hangs BELOW
+    // the top strip the popup close damages.
+    close_dropdown();
+    hide_shift_tooltip();
     prompt.open_error_notice(std::move(app.pending_history_notice));
     app.pending_history_notice.clear();
 }

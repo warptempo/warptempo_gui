@@ -60,9 +60,12 @@ struct GuiPrompt {
     // the parser resolver normalizes them, and trim plays no part), the
     // iteration-sweep cell-cap refusal, and since 2026-08-07 THE CHECKPOINT
     // ACT'S FAILURE REPORT (the act runs on a worker now, so a failure has no
-    // gesture to refuse and needs a surface of its own; the caller defers the
-    // open while another modal stands — GuiInputHandler::on_history_checkpoint_-
-    // complete owns that).
+    // gesture to refuse and needs a surface of its own). THAT ONE CALLER IS THE
+    // ONLY ASYNC ONE, so it is the only one that has to make room for itself:
+    // it defers the open while a prompt or an editor stands and CLOSES an open
+    // dropdown as it opens — GuiInputHandler::maybe_open_pending_history_notice
+    // owns both, and states why the two surfaces are treated differently. Every
+    // other caller here is a gesture whose own gate has already dealt with both.
     void open_error_notice(std::string text);
 
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory
