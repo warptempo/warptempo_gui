@@ -236,8 +236,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     the view;
 //   * THE `h` HISTORY MODE'S OWN EDGES (architect 2026-08-05, THE VIEW-LOCAL
 //     REGION RULE): the mode's EXIT (close_history_mode, the one exit owner) and
-//     each `,` / `.` STEP and COMPARE SWITCH (the switching-commits family,
-//     input_key_dispatch.cpp). A span drawn in the view is a reading mark on the
+//     each `,` / `.` STEP and each WALK-OR-READING SWITCH (the switching-
+//     commits family, input_key_dispatch.cpp — set_history_reading is the one
+//     switch owner behind the tabs, Ctrl+Tab and bare `u` alike). A span drawn in the view is a reading mark on the
 //     checkpoint it was drawn against, so it does not outlive that checkpoint —
 //     and cannot rest in the editor at all, which is what keeps "a region rests
 //     only beside an EMPTY selection" true out there while the view's own press
@@ -614,7 +615,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
-    // the view bar's three, row 2's four, row 3's two tabs and row 4's fifteen
+    // the view bar's three, row 2's four, row 3's two tabs and row 4's sixteen
     // (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
@@ -1880,7 +1881,8 @@ private:
     //     visit opens at FULL ZOOM OUT. It is the mode's ONLY viewport write
     //     since 2026-08-08 — the `,` / `.` step and the compare switch stopped
     //     calling it, the window being the USER'S for the whole visit and
-    //     unified across the four tabs — so its callers are the entry owner and
+    //     unified across every walk and reading — so its callers are the entry
+    //     owner and
     //     the framing act above, whose empty-delta arm falls through to it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
@@ -1892,7 +1894,7 @@ private:
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published content — the two pointer stashes and the diff-flag list
     //     their indices name — at every mode edge: the entry, the exit, each
-    //     commit step and each COMPARE SWITCH (four call sites, re-derived by
+    //     walk step and each WALK-OR-READING SWITCH (four call sites, re-derived by
     //     grep 2026-08-06). Its own comment carries the argument and is the
     //     authoritative statement of the edge set.
     //   * republish_history_lane_now REFILLS it in the same press, at ALL FOUR
@@ -1904,10 +1906,11 @@ private:
     //     carries both arguments.
     //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
-    //     2026-08-07 to the (walk source, reading) PAIR the four tabs select):
-    //     row 3's repurposed tabs SELECT through it — the mode's only pointer
-    //     surface outside the waveform and the lane — and Ctrl+Tab CYCLES the
-    //     four through it. A switch is a MODE EDGE with the `,` / `.` step's own
+    //     2026-08-07 to the (walk source, reading) PAIR): row 3's repurposed
+    //     tabs SELECT THE WALK through it — the mode's only pointer surface
+    //     outside the waveform and the lane — Ctrl+Tab CYCLES the two walks
+    //     through it, and bare `u` FLIPS THE READING through it (2026-08-08,
+    //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
     //     shape, and the owner is idempotent, which is what makes a press on the
     //     already-shown tab a consumed nothing at its call sites.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in

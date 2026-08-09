@@ -54,6 +54,15 @@ enum class Icon {
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
+    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), the history group's second:
+    // three ascending hollow bars on the chart axis, which is what accumulation
+    // looks like — running totals growing left to right, against the iterative
+    // reading's one step at a time. It is THE ONE AUTHORED FILE in
+    // assets/icons/breeze/, drawn in Breeze office-chart-bar's own construction
+    // (that file's axis, foot tick and 1-unit hollow bars) because Breeze ships
+    // no ascending-bars chart icon; the file says so at its head and the icon
+    // table's entry repeats why.
+    OfficeChartBarAscending,   // The cumulative reading (`u`)
     // THE WALK'S TWO ARROWS (2026-08-05), the history group's other pair: the
     // checkpoint walk's older (`,`) and newer (`.`) steps. Breeze's own
     // go-previous / go-next chevrons — go-jump's own construction minus its
@@ -78,7 +87,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 18;
+inline constexpr int kIconCount = 19;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

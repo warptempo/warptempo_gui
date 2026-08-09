@@ -133,22 +133,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
     // the already-selected half a consumed nothing rather than a switch away.
+    // (The row carried two MORE slots for one day, 2026-08-07..08, when it was
+    // the (walk source, reading) product; they never dispatched — the `h`
+    // view's band claim routes every press in that row to the switch owner —
+    // and they went with the reading, which is row 4's own toggle now.)
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
-    // THE COMPARE SELECTOR'S SECOND PAIR (2026-08-07) carries the SAME chord and
-    // never dispatches it: these two slots exist only inside the `h` view, where
-    // the tab row's band claim routes every press to the switch owner above this
-    // table. (Since 2026-08-08 they are that row's CUMULATIVE group — the two
-    // walks under the second text block — rather than its Local half; which pair
-    // of readings they carry does not reach this table, whose whole content for
-    // them is "Ctrl+Tab, never dispatched".) Outside the view they are unpainted
-    // and their rect is empty, so no press can reach them at all. They are here
-    // because the table is TOTAL over
-    // the roster by static_assert below, and because that totality is what
-    // history_mode_disables_button's derivation rests on — Ctrl+Tab being the
-    // mode's own vocabulary is what answers LIVE for all four.
-    {RedesignButton::TabC,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
-    {RedesignButton::TabD,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     // Row 4 — the icon row. The four view buttons are radios on the same two
     // toggling chords the tabs' pair models; the rest are plain dispatches.
     {RedesignButton::IconS,      GuiKeys::T,   false, false, false, true,  true},   // bare t
@@ -171,13 +161,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconLoadInPlace,
      GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // THE HISTORY MODE (2026-08-04), the row's twelfth and the table's
-    // twenty-fourth: bare `h`, a TOGGLE like follow and iteration — its chord
+    // twenty-second: bare `h`, a TOGGLE like follow and iteration — its chord
     // opens the mode and closes it, and the button dispatches on both edges
     // because the icon row's band claim sits ABOVE the mode's pointer gate (the
     // rows' presses are covered by the KEYBOARD gate instead, which admits `h`
     // through handle_history_mode_key one line before the allowlist).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
-    // THE REVERT ACT (2026-08-05), the table's twenty-fifth: CTRL+H applies the
+    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), the row's thirteenth and the
+    // table's twenty-third: bare `u` flips the history view's delta between
+    // ITERATIVE (off) and CUMULATIVE (on). A TOGGLE like follow, iteration and
+    // the history button — the selected face reads the live bit its own chord
+    // flips — and like the three entries below it, its key is bound ONLY inside
+    // the view, so it rests disabled and dispatches nothing outside one.
+    {RedesignButton::IconCumulative, GuiKeys::U, false, false, false, false, true},  // bare u
+    // THE REVERT ACT (2026-08-05), the table's twenty-fourth: CTRL+H applies the
     // view's SELECTED diff flags backwards into the live state and closes the
     // view. Momentary like the two below — not a radio, not a toggle, click face
     // only. It is the one entry here whose chord is NOT claimed by the mode's
@@ -185,8 +182,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // read-only gate, so a locked tab refuses the click exactly as it refuses
     // the key (the load-in-place's precedent, `'`).
     {RedesignButton::IconRevert, GuiKeys::H, true, false, false, false, true},       // Ctrl+H
-    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-sixth and
-    // twenty-seventh: bare `,` steps OLDER and bare `.` NEWER, through the same
+    // THE WALK'S TWO STEPS (2026-08-05), the table's twenty-fifth and
+    // twenty-sixth: bare `,` steps OLDER and bare `.` NEWER, through the same
     // dispatch and therefore through handle_history_mode_key's own arm — walls
     // clamped as consumed no-ops there, exactly as the keys behave. Neither is
     // a radio and neither is a toggle: they are momentary steps, so both flags
@@ -396,17 +393,16 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // it answers about BUTTONS, and a menu row is not one.
 //
 // THE TWO TABS NEEDED A SECOND HAND ENTRY FOR ONE DAY AND NO LONGER DO
-// (2026-08-05). While it stands row 3 is the READING SELECTOR — four slots since
-// 2026-08-07, the two readings of each of the two walks — with a mode-local press
-// route at the tab row's own band claim; the pair shipped with no hotkey at all,
-// so their chord was consumed while their buttons were live and only a hand entry
-// could say so. Ctrl+Tab BECAME the cycle later that day, claimed by
-// the mode's own vocabulary (history_mode_owns_key), so the derivation now
-// answers LIVE for them on its own and the exception is gone. Ctrl+Shift+Tab
-// joined it as the REVERSE cycle on 2026-08-07 and changes nothing here — no
-// roster entry carries a shifted Tab — and the lock slots still go with the tabs'
-// old meaning (the painter draws no padlock and publishes no lock rect in the
-// mode).
+// (2026-08-05). While it stands row 3 is the WALK SELECTOR — Remote and Local,
+// one axis since 2026-08-08 — with a mode-local press route at the tab row's own
+// band claim; the pair shipped with no hotkey at all, so their chord was
+// consumed while their buttons were live and only a hand entry could say so.
+// Ctrl+Tab BECAME the cycle later that day, claimed by the mode's own vocabulary
+// (history_mode_owns_key), so the derivation now answers LIVE for them on its
+// own and the exception is gone. Ctrl+Shift+Tab joined it as the REVERSE cycle
+// on 2026-08-07 and changes nothing here — no roster entry carries a shifted Tab
+// — and the lock slots still go with the tabs' old meaning (the painter draws no
+// padlock and publishes no lock rect in the mode).
 //
 // THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
 // never sees the mode's own vocabulary — handle_history_mode_key consumes it one
@@ -414,11 +410,15 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // grey out THE VERY BUTTON THAT LEAVES THE VIEW. history_mode_owns_key is that
 // line's own predicate, shared rather than re-spelled, and its membership is
 // re-derived at its own definition.
-// THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW, either time (2026-08-05
-// — first the diff-flag cycle, Home/End and `c`, then the compare toggle). None
-// of the bare shapes is a roster chord (nothing in kToolbarChords dispatches
-// bare Tab, Home, End or `c`), and the ONE new roster chord — the tabs' Ctrl+Tab
-// — was already answered LIVE by the hand entry the claim replaced.
+// THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW, any of the three times
+// (2026-08-05 — first the diff-flag cycle, Home/End and `c`, then the compare
+// toggle; 2026-08-08 — bare `u`, the reading's own toggle). None of the bare
+// shapes is a roster chord EXCEPT `u` (nothing in kToolbarChords dispatches bare
+// Tab, Home, End or `c`), the ONE older roster chord — the tabs' Ctrl+Tab — was
+// already answered LIVE by the hand entry the claim replaced, and `u` needs no
+// entry either: it IS a roster chord, so this walk finds it, and the mode owning
+// it is exactly what makes the walk answer LIVE — the same derivation the walk's
+// two arrows and Revert already ride.
 //
 // THREE ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
 // (2026-08-05 for the first two, 2026-08-08 for the third), which is why this
@@ -457,19 +457,21 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   walk), and the history button itself (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
-//   and ALL FOUR TABS since 2026-08-05 — live as the READING SELECTOR rather than
+//   and BOTH TABS since 2026-08-05 — live as the WALK SELECTOR rather than
 //   as tabs (Ctrl+Tab, the mode's own cycle, so they come out of the walk
 //   like any other admitted chord), with their padlocks not drawn at all (the
 //   mode's tabs are not tabs, so there is no lock state to show and no lock rect
 //   published for bare `o` to be refused through),
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
-//   them with nothing hand-listed. They are two of the roster's three
+//   them with nothing hand-listed,
+//   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
+//   and the same free answer). Those three plus Revert are the roster's FOUR
 //   RESTING-DISABLED buttons, which is the OTHER predicate's fact rather than
 //   this one's: their keys are bound nowhere outside the view, so
 //   redesign_button_enabled greys them there and this function is what says they
-//   act in here. They never grey at a walk WALL either — a step past the oldest
-//   or newest checkpoint is a consumed no-op, which is the same nothing every
+//   act in here. The arrows never grey at a walk WALL either — a step past the
+//   oldest or newest member is a consumed no-op, which is the same nothing every
 //   other refusal in this partition is.
 //   and THE REVERT ACT since 2026-08-05 (Ctrl+H) — the SECOND session-dependent
 //   entry, and the only button that is resting-disabled AND conditionally grey
@@ -1517,24 +1519,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect tab_row = top_tab_row_area(app);
         if (rect_contains(tab_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
-            // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` VIEW STANDS
-            // (architect 2026-08-05, FOUR SLOTS since 2026-08-07), so its
+            // THE ROW IS THE WALK SELECTOR WHILE THE `h` VIEW STANDS (architect
+            // 2026-08-05 for the repurposing, 2026-08-08 for the axis), so its
             // presses are routed HERE and never reach the chord table below:
-            // these SELECT a (walk source, reading) pair, which is not what a
-            // chord dispatch would do — the tabs' chord, Ctrl+Tab, became the
-            // mode's own CYCLE and would step past whichever slot was clicked.
+            // these SELECT a walk source, which is not what a chord dispatch
+            // would do — the tabs' chord, Ctrl+Tab, became the mode's own CYCLE
+            // and would step past whichever slot was clicked.
             //
-            // ONE SWITCH OWNER for all six routes — these four slots and the
-            // keyboard cycle's two directions (Ctrl+Tab forward, Ctrl+Shift+Tab
-            // back since 2026-08-07; set_history_reading) — and it is
-            // IDEMPOTENT, which is where the live tabs' radio rule comes from:
-            // a press on the tab already lit is a consumed no-op because the
-            // owner returns, not because this site tests for it.
+            // ONE SWITCH OWNER for all five routes into the (source, reading)
+            // pair — these two slots, the keyboard cycle's two directions
+            // (Ctrl+Tab, Ctrl+Shift+Tab) and the `u` reading toggle, all through
+            // set_history_reading — and it is IDEMPOTENT, which is where the
+            // live tabs' radio rule comes from: a press on the tab already lit
+            // is a consumed no-op because the owner returns, not because this
+            // site tests for it.
+            //
+            // THE READING IS NOT ON THIS ROW since 2026-08-08 (it was, as two
+            // more slots and then as two labelled groups, for one day): a press
+            // here passes the CURRENT reading through unchanged, so switching
+            // walk keeps how you were reading it.
             //
             // THE READ-ONLY LOCK DOES NOT APPLY, deliberately: the gate that
             // refuses on a locked tab is on_key's, and nothing here dispatches a
             // key. A lock means hands off the piece's authored state, and the
-            // compare mode is neither authored nor per-tab — refusing it would
+            // history view is neither authored nor per-tab — refusing it would
             // stop a locked session from READING its own history, which is the
             // one thing the view is for. The padlock itself is not even drawn in
             // here (paint_tab_row), so there is no second target to test for.
@@ -1544,37 +1552,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // act.
             if (app.history_mode.active) {
                 if (button == GuiMouseButton::Left && !mods.shift) {
-                    // THE ROW IS THE PRODUCT OF THE TWO AXES, in painted order,
-                    // and each slot names its own pair — which is what a DIRECT
-                    // selector is, against the keyboard's cycle. Painted order
-                    // is TWO LABELLED GROUPS since 2026-08-08 — the Iterative
-                    // group's two walks, then the Cumulative group's two — and
-                    // this table follows the row, so the four slots read the
-                    // same sequence here, at the selected face and in the cycle.
-                    // A press that lands on no slot falls out of the walk having
-                    // claimed nothing: the row's empty tail past the last tab,
-                    // and now the two GROUP LABELS too, which publish no rect at
-                    // all (they are text, not buttons) and so are the row's own
-                    // consumed nothing — the band claim above has already
-                    // returned by the time this loop finds no hit.
-                    struct TabReading {
+                    // EACH SLOT NAMES ITS OWN WALK, in painted order — which is
+                    // what a DIRECT selector is, against the keyboard's cycle.
+                    // A press that lands on neither (the row's empty tail past
+                    // the last tab) falls out of the walk having claimed
+                    // nothing, the band claim above having already consumed it.
+                    struct TabWalk {
                         RedesignButton       id;
                         GuiHistoryWalkSource source;
-                        GuiHistoryCompare    compare;
                     };
-                    static constexpr TabReading kTabReadings[] = {
-                        {RedesignButton::TabA, GuiHistoryWalkSource::Commit,
-                         GuiHistoryCompare::Iterative},
-                        {RedesignButton::TabB, GuiHistoryWalkSource::Local,
-                         GuiHistoryCompare::Iterative},
-                        {RedesignButton::TabC, GuiHistoryWalkSource::Commit,
-                         GuiHistoryCompare::Cumulative},
-                        {RedesignButton::TabD, GuiHistoryWalkSource::Local,
-                         GuiHistoryCompare::Cumulative},
+                    static constexpr TabWalk kTabWalks[] = {
+                        {RedesignButton::TabA, GuiHistoryWalkSource::Commit},
+                        {RedesignButton::TabB, GuiHistoryWalkSource::Local},
                     };
-                    for (const TabReading& t : kTabReadings) {
+                    for (const TabWalk& t : kTabWalks) {
                         if (!redesign_button_hit(app, t.id, x, y)) continue;
-                        set_history_reading(t.source, t.compare);
+                        set_history_reading(t.source, app.history_compare());
                         break;
                     }
                 }
@@ -1657,7 +1650,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // 2026-08-06): the Settings and Navigation anchors, which have none and are
     // shut at toggle_dropdown instead, and — WHILE THIS MODE STANDS — the A/B TAB
     // PAIR, which the tab row's own band claim intercepts above and turns into
-    // set_history_reading directly (the compare selector, deliberately not a
+    // set_history_reading directly (the walk selector, deliberately not a
     // chord: the keyboard twin is Ctrl+Tab, claimed a line above the allowlist,
     // and the pair's own chord is the A/B switch the mode consumes). Both
     // exceptions are refusals or acts decided ABOVE this gate, so neither leaves
@@ -2932,7 +2925,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs and row 4's fifteen — the stash is
+// four, row 3's two tabs and row 4's sixteen — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
@@ -3866,7 +3859,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // admits zoom in / out / overview; history_mode_owns_key claims
     // center-on-focus and the two marker steps as re-expressions over the diff
     // flags). The one row whose chord means something ELSE in here — "Walk both
-    // tabs", the mode's reverse compare-tab cycle — greys at the item instead
+    // tabs", the mode's reverse walk-tab cycle — greys at the item instead
     // (dropdown_item_enabled, app_state.h), which is the only thing a chord
     // dispatch cannot answer for: the command runs, it is simply not the one the
     // label names.

@@ -631,10 +631,12 @@ void GuiInputHandler::close_history_mode() {
 }
 
 // DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
-// it, at the entry, the exit, each commit step and each COMPARE SWITCH (the
-// fourth edge, 2026-08-05: the two readings are two different lists, so a switch
-// replaces the lane's content exactly as a step does): the two pointer stashes
-// and the diff-flag LIST their indices name.
+// it, at the entry, the exit, each walk step and each SWITCH (the fourth edge,
+// 2026-08-05: a different walk or a different reading is a different list, so a
+// switch replaces the lane's content exactly as a step does — one edge whether
+// it arrived from a tab press, the Ctrl+Tab cycle or bare `u`, all three going
+// through set_history_reading): the two pointer stashes and the diff-flag LIST
+// their indices name.
 //
 // The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK
 // by the flag cache's rebuild, so they legitimately run one frame behind a
@@ -1031,7 +1033,8 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
     if (!app.history_mode.active) return;
     if (audio.total_frames() <= 0) return;
 
-    const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
+    const GuiHistoryCommitDelta* d =
+        app.history_mode.displayed_delta(app.history_compare());
     int64_t lo = 0, hi = 0;
     if (!d || !d->frame_span(lo, hi)) {
         frame_history_view_whole_song();
@@ -1055,9 +1058,9 @@ void GuiInputHandler::frame_viewed_commit_diff_span() {
 // EMPTY-DELTA arm (the double-click's own whole-song answer, an on-demand act
 // rather than an edge). THE VIEWPORT IS OTHERWISE THE USER'S FOR THE WHOLE
 // VISIT (architect 2026-08-08, SUPERSEDING his own 2026-08-05 "three edges land
-// at full zoom out"): each `,` / `.` step and each compare-tab switch used to
-// call this and no longer do, so a pan and a zoom made once are read through
-// every walk step and every one of the four tabs — the viewport is UNIFIED
+// at full zoom out"): each `,` / `.` step and each reading or walk switch used
+// to call this and no longer do, so a pan and a zoom made once are read through
+// every walk step, both tabs and both readings — the viewport is UNIFIED
 // across them — and the only reset left is the exit's, which puts the editor's
 // own parked band back.
 //
@@ -1081,14 +1084,14 @@ void GuiInputHandler::frame_history_view_whole_song() {
 }
 
 // SWITCH WHAT THE LANE SHOWS — the ONE owner (architect 2026-08-05 for the two
-// compare readings, GENERALIZED 2026-08-07 to the (WALK SOURCE, READING) pair
-// row 3's four tabs select), and its callers, re-derived by grep: those four
-// repurposed tabs (the tab row's band claim, input_pointer.cpp), which SELECT
-// directly, and the keyboard's Ctrl+Tab (handle_history_mode_key), which CYCLES
-// them in row order. The key arrived after the surface, superseding the pair's
-// original "there is no hotkey" ruling, and it goes through here rather than
-// writing the fields so that the click and the key cannot come to mean different
-// things.
+// compare readings, GENERALIZED 2026-08-07 to the (WALK SOURCE, READING) pair),
+// and its callers, re-derived by grep: row 3's TWO repurposed tabs (the tab
+// row's band claim, input_pointer.cpp), which select a WALK directly; the
+// keyboard's Ctrl+Tab / Ctrl+Shift+Tab (handle_history_mode_key), which CYCLES
+// the walks in row order; and bare `u` (same file), which flips the READING.
+// Each key arrived after its surface, superseding the pair's original "there is
+// no hotkey" ruling, and all of them go through here rather than writing the
+// fields so that the click and the key cannot come to mean different things.
 //
 // SWITCHING SOURCE DOES NOT MOVE THE OTHER WALK'S POSITION — neither field is
 // touched here at all, which is what makes the two walks two places a visit can
@@ -1112,7 +1115,8 @@ void GuiInputHandler::frame_history_view_whole_song() {
 //     and the arriving reading is a different delta;
 //   * THE VIEWPORT IS NOT TOUCHED — the step's own rule since 2026-08-08, and
 //     it applies here for the step's own reason: the window is the USER'S while
-//     the view stands, so the four tabs share one viewport and a switch shows
+//     the view stands, so every walk and reading shares one viewport and a
+//     switch shows
 //     the arriving reading through exactly the frame the leaving one was read
 //     in, which is what makes the two readings of one member comparable at a
 //     glance (architect, SUPERSEDING the 2026-08-05 reset to full zoom out);
@@ -1124,15 +1128,24 @@ void GuiInputHandler::frame_history_view_whole_song() {
 // makes Ctrl+Tab's cycle safe to express as a plain "the next one" without a
 // live-reading test of its own. The `!active` guard is the same defensive shape
 // the two framers carry — the callers are gated by the mode already.
+//
+// IT WRITES THE PAIR ACROSS TWO HOMES since 2026-08-08, and the split is the
+// reading's session scope rather than a second owner: the WALK SOURCE is
+// per-visit state on HistoryMode, while the READING is the program-session
+// preference AppState::history_cumulative (its contract is at that field). Both
+// halves still arrive here and only here — the tab press passes (its walk, the
+// current reading), the `u` toggle passes (the current walk, the flipped
+// reading), and the Ctrl+Tab cycle passes (the next walk, the current reading).
 void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
                                           GuiHistoryCompare    compare) {
     if (!app.history_mode.active) return;
+    const bool cumulative = (compare == GuiHistoryCompare::Cumulative);
     if (app.history_mode.source == source &&
-        app.history_mode.compare == compare) {
+        app.history_cumulative == cumulative) {
         return;
     }
-    app.history_mode.source  = source;
-    app.history_mode.compare = compare;
+    app.history_mode.source = source;
+    app.history_cumulative  = cumulative;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     clear_region_highlight(app, viewport);
@@ -1143,6 +1156,7 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // THE MODE'S OWN KEYBOARD SURFACE — the whole membership, re-derived from the
 // arms below (2026-08-05):
 //   * bare `h`             — the toggle, the ONE shape bound outside the mode;
+//   * bare `u`             — the CUMULATIVE reading's toggle (2026-08-08);
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
 //     IsoLeftTab exactly as the live cycle is;
@@ -1165,9 +1179,10 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // but Ctrl+Q). Every other key above inherits the identical list.
 //
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
-// check and every other arm below it, so with the mode down `,`, `.`, Tab,
+// check and every other arm below it, so with the mode down `u`, `,`, `.`, Tab,
 // Ctrl+Tab, Ctrl+Shift+Tab, Home/End and `c` fall through to the ordinary
-// dispatch and behave exactly as they always have. The two CTRL shapes are the
+// dispatch and behave exactly as they always have. Bare `u` is bound NOWHERE
+// there, so falling through is the unbound key's own consumed nothing. The two CTRL shapes are the
 // ones this predicate CLAIMS while the mode is down as well as up — Ctrl+Tab
 // since 2026-08-05, Ctrl+Shift+Tab since 2026-08-07 — and it costs neither
 // anything: the claim is a membership test, the arm below it is not reached, and
@@ -1180,17 +1195,19 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // is decided HERE — one line above the allowlist — rather than in it. Spelling
 // the membership twice is exactly how that face would come to lie about the
 // button that opens the view.
-// THREE OF THESE SHAPES ARE ALSO BUTTON CHORDS, re-derived by reading
+// FOUR OF THESE SHAPES ARE ALSO BUTTON CHORDS, re-derived by reading
 // kToolbarChords rather than remembered (the reverse cycle's CTRL+SHIFT+TAB is
 // not among them — no roster entry carries a shifted Tab, so the 2026-08-07
 // claim moved no face): CTRL+TAB, which arrived with the
 // compare toggle (2026-08-05) — the roster's only Tab entries are the two TABS',
-// and in the mode those buttons ARE the compare selector, so the partition did
+// and in the mode those buttons ARE the walk selector, so the partition did
 // not move when this claim arrived: the pair was already answered LIVE by hand,
 // and the derivation now says the same thing, which is what let the hand entry
-// go — and BARE `,` / BARE `.`, the walk's own two buttons (2026-08-05), which
-// are the roster's first RESTING-DISABLED entries: their enabled bit is the mode
-// itself, so they dispatch these keys only from in here. Nothing in the roster
+// go — BARE `,` / BARE `.`, the walk's own two buttons (2026-08-05), which
+// were the roster's first RESTING-DISABLED entries: their enabled bit is the
+// mode itself, so they dispatch these keys only from in here — and BARE `u`,
+// the Cumulative toggle's own button (2026-08-08), which joined that
+// resting-disabled family on exactly the same terms. Nothing in the roster
 // dispatches bare Tab, Home, End or `c`.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
@@ -1226,7 +1243,11 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // validation makes it (ctrl and alt are already refused above).
     if (key == GuiKeys::Comma || key == GuiKeys::Period) return true;
     if (mods.shift) return false;
-    return key == GuiKeys::H || key == GuiKeys::Home ||
+    // BARE `u` IS THE READING'S TOGGLE (2026-08-08) — BARE ONLY, like `h` and
+    // the four below it: a modified `u` binds nothing anywhere in the product,
+    // so strict modifier validation leaves it the consumed nothing it already
+    // was and this claim adds no shape.
+    return key == GuiKeys::H || key == GuiKeys::U || key == GuiKeys::Home ||
            key == GuiKeys::End || key == GuiKeys::C;
 }
 
@@ -1265,40 +1286,37 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CTRL+TAB / CTRL+SHIFT+TAB — THE TAB CYCLE, the keyboard twin of the tab
     // click (architect 2026-08-05, SUPERSEDING his own same-day "there is no
     // hotkey for the pair": the surface was repurposed first and the key
-    // followed; GROWN TO FOUR 2026-08-07 with the local walk, the natural
-    // generalization of a toggle over two). It steps IN ROW ORDER WITH WRAP —
-    // and since 2026-08-08 that row is two labelled groups, so the order is the
-    // Iterative group's Remote then Local, then the Cumulative group's Remote
-    // then Local — through the ONE switch owner, so the click and the key cannot
-    // diverge. SHIFT REVERSES IT (architect 2026-08-07): one tab LEFT, the exact
-    // mirror, which is what the paired march becomes in a view with one tab band
-    // — it was this arm's ctrl-exactness and the allowlist's consumed no-op until
-    // then, and outside the view it is untouched. Both spellings of the shifted
-    // chord arrive here (the predicate's own comment says why).
+    // followed). It grew to four slots with the local walk on 2026-08-07 and is
+    // TWO AGAIN since 2026-08-08, when the READING left the row for its own
+    // toggle: the cycle steps THE WALK SOURCE in row order with wrap — Remote,
+    // Local — through the ONE switch owner, so the click and the key cannot
+    // diverge, and it passes the CURRENT reading through untouched (`u` is the
+    // only thing that moves that bit).
+    //
+    // BOTH DIRECTIONS COINCIDE ON A TWO-CYCLE, and both spellings stay claimed
+    // anyway: forward-one and back-one are the same step over two, so
+    // Ctrl+Shift+Tab (architect 2026-08-07, and the IsoLeftTab keysym it may
+    // arrive as) reaches the same owner with the same result. Keeping it
+    // dispatching here rather than falling through is what stops it becoming the
+    // live paired marker march inside the view, which is what the 2026-08-07
+    // claim was for; the arithmetic below is left general so a third walk would
+    // need no new shape.
     //
     // NEITHER DIRECTION REPEATS while held: `repeat_eligible` excludes the whole
-    // ctrl family in here, a held two-state — now four-state — switch being able
-    // only to flap.
+    // ctrl family in here, a held switch being able only to flap.
     //
     // THE ROW ORDER IS SPELLED ONCE, as a table read by this cycle and by
-    // nothing else — the four tab BUTTONS name their own pair at the press site,
+    // nothing else — the two tab BUTTONS name their own walk at the press site,
     // which is what a direct selector does.
     if (mods.ctrl && (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab)) {
-        struct Reading {
-            GuiHistoryWalkSource source;
-            GuiHistoryCompare    compare;
-        };
-        static constexpr Reading kRow[] = {
-            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Iterative},
-            {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Iterative},
-            {GuiHistoryWalkSource::Commit, GuiHistoryCompare::Cumulative},
-            {GuiHistoryWalkSource::Local,  GuiHistoryCompare::Cumulative},
+        static constexpr GuiHistoryWalkSource kRow[] = {
+            GuiHistoryWalkSource::Commit,
+            GuiHistoryWalkSource::Local,
         };
         constexpr std::size_t kCount = std::size(kRow);
         std::size_t here = 0;
         for (std::size_t i = 0; i < kCount; ++i) {
-            if (kRow[i].source == app.history_mode.source &&
-                kRow[i].compare == app.history_mode.compare) {
+            if (kRow[i] == app.history_mode.source) {
                 here = i;
                 break;
             }
@@ -1308,9 +1326,31 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // The step is written as an addition so the wrap is one expression in
         // both directions: kCount - 1 forward is one back, modulo the row.
         const bool forward = (key == GuiKeys::Tab && !mods.shift);
-        const Reading& there =
-            kRow[(here + (forward ? 1 : kCount - 1)) % kCount];
-        set_history_reading(there.source, there.compare);
+        set_history_reading(kRow[(here + (forward ? 1 : kCount - 1)) % kCount],
+                            app.history_compare());
+        return true;
+    }
+
+    // BARE `u` — THE CUMULATIVE READING'S TOGGLE (architect 2026-08-08), the
+    // axis row 3 carried as two more tabs for one day. It flips the session's
+    // own bit through the same switch owner the tabs use, so a reading change is
+    // the SAME MODE EDGE a walk change is — focus and selection cleared, lane
+    // stash dropped, region cleared, lane republished synchronously, window
+    // damaged — and the two can never come to do different amounts of work.
+    //
+    // ONE-SHOT, NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare
+    // shapes that DO repeat and leaves this one out): a held toggle can only
+    // flap, exactly as the ctrl cycle can.
+    //
+    // THE BIT IS THE SESSION'S, NOT THE VIEW'S: it lives on AppState so the mode
+    // edges cannot reset it (its contract is at AppState::history_cumulative), so
+    // this toggle is remembered until the program closes. Its BUTTON is row 4's
+    // IconCumulative, which dispatches this same bare chord.
+    if (key == GuiKeys::U) {
+        set_history_reading(app.history_mode.source,
+                            app.history_cumulative
+                                ? GuiHistoryCompare::Iterative
+                                : GuiHistoryCompare::Cumulative);
         return true;
     }
 
@@ -1750,15 +1790,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // them and returns above this line), exactly as they do under any other editor.
 //
 // WHAT THE MODE CLAIMS ONE LINE ABOVE THIS GATE, and so never reaches it:
-// handle_history_mode_key's own vocabulary — bare `h` (the toggle), bare `,` and
+// handle_history_mode_key's own vocabulary — bare `h` (the toggle), bare `u`
+// (the CUMULATIVE READING's toggle, 2026-08-08), bare `,` and
 // `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE),
-// CTRL+TAB AND CTRL+SHIFT+TAB (the TAB CYCLE, forward and reverse — the shifted
+// CTRL+TAB AND CTRL+SHIFT+TAB (the WALK CYCLE, forward and reverse — the shifted
 // shape claimed 2026-08-07, having been this gate's consumed march until then),
 // bare Home / End (the ABSOLUTE ends of the song,
 // not the trim bounds) and bare `c` (working zoom centered on the mode's own
-// focus). The last four families joined on 2026-08-05, and they are claimed
+// focus). Four of those families joined on 2026-08-05, and they are claimed
 // rather than admitted for one reason: each is a MODE-LOCAL re-expression,
-// reading the diff-flag list, the mode's focus or its compare bit instead of the
+// reading the diff-flag list, the mode's focus or the reading bit instead of the
 // live stores and the live tab band the ordinary arms would reach. That
 // function's declaration comment carries the membership; this gate never sees
 // any of it.
@@ -2717,7 +2758,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // unchanged, which is the eligibility it wants: fast walking of the flags
     // instead of the markers. Its CTRL+TAB tab cycle is excluded by the
     // same no-ctrl term, which is the eligibility that one wants — a held
-    // switch through a four-tab row would only flap — and the term catches the
+    // switch through the tab row would only flap — and the term catches the
     // reverse cycle's ctrl+shift+IsoLeftTab spelling with it (the Tab spelling
     // needs the arm below).
     if (!mods.ctrl && !mods.alt &&
@@ -2726,7 +2767,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Ctrl+Shift+Tab exactly (the lockstep marker march) repeats too — OUTSIDE
     // THE `h` HISTORY VIEW ONLY (2026-08-07). In the view that chord is the
     // mode's REVERSE TAB CYCLE, and the cycle is deliberately one-shot in both
-    // directions: a held four-state switch could only flap through the row. The
+    // directions: a held switch could only flap through the row. The
     // forward Ctrl+Tab needs no term of its own — the no-ctrl arms above already
     // exclude it in both its meanings — and the reverse cycle's OTHER spelling,
     // ctrl+shift+IsoLeftTab, is excluded by those same arms' no-ctrl term. The

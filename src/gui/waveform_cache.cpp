@@ -727,7 +727,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // newer side everywhere — so nothing below this line knows which walk or
     // which reading it is drawing, nor that the two readings coincide at the
     // newest index of either.
-    const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
+    const GuiHistoryCommitDelta* d =
+        app.history_mode.displayed_delta(app.history_compare());
     if (!d) return;
 
     // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
@@ -870,7 +871,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
     const unsigned long long history_generation = app.history_mode.generation;
-    const GuiHistoryCompare  history_compare    = app.history_mode.compare;
+    // The READING is the session's own bit since 2026-08-08 (it moved off
+    // HistoryMode onto AppState so a mode edge cannot reset it); the fingerprint
+    // term is unchanged in value space — the same two-valued reading, read
+    // through the one mapping owner.
+    const GuiHistoryCompare  history_compare    = app.history_compare();
     const uint64_t           history_sel_hash   = hash_selection(
                                  app.history_mode.selection,
                                  app.history_mode.focus);
@@ -879,7 +884,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // lane's whole content while moving no other field above it.
     const std::size_t        history_count      =
         app.history_mode.session.commit_count();
-    // THE WALK SOURCE AND THE LOCAL POSITION (2026-08-07, the four tabs). The
+    // THE WALK SOURCE AND THE LOCAL POSITION (2026-08-07). The
     // source is what makes a tab switch across the two walks repaint at all —
     // index, compare, focus and generation can every one of them be unchanged
     // across it — and the local index is the other walk's own `,` / `.`, which

@@ -332,8 +332,8 @@ struct FlagCache {
     // changing. Counted rather than hashed: membership only ever appends, so the
     // size is the whole of what can differ.
     //
-    // AND THE WALK SOURCE IS THE EIGHTH, ITS POSITION THE NINTH (2026-08-07,
-    // with the four tabs): the view reads TWO walks now, so which one is
+    // AND THE WALK SOURCE IS THE EIGHTH, ITS POSITION THE NINTH (2026-08-07):
+    // the view reads TWO walks now, so which one is
     // displayed is a content fact of its own — a switch between them can leave
     // index, focus, generation, reading and count every one of them unchanged
     // while the lane's whole content changes — and the LOCAL walk's `,` / `.`
@@ -610,7 +610,7 @@ private:
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom) and the
-    // ICON ROW (top lane 3, row 4: the fifteen view/mode/action buttons, their
+    // ICON ROW (top lane 3, row 4: the sixteen view/mode/action buttons, their
     // separators and its border-bottom).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the

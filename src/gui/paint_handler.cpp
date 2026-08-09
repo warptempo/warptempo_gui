@@ -730,43 +730,24 @@ constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
 // app.active_tab_view, so the selected tab is read LIVE every paint and there
 // is no second copy of "which tab is current" anywhere.
 //
-// FOUR ROWS SINCE 2026-08-07, TWO OF THEM COMPARE-ONLY: the `h` view's selector
-// is the product of two axes (walk source x reading), so the row grows two more
-// slots while it stands and drops back to the A/B pair when it does not. The
-// flag is what the walk below skips on, and a skipped slot still publishes an
-// EMPTY rect — nothing to hit, nothing to hover, and the tick comparator still
-// reading fresh bits for it.
+// TWO ROWS, ALWAYS — the row's membership does not move with any mode. It grew
+// two compare-only slots on 2026-08-07 for the (walk source, reading) product
+// and lost them again on 2026-08-08, when the architect moved the READING onto
+// its own icon-row toggle and left the tabs naming the walk alone; the empty-rect
+// publication those slots needed went with them, so every def here paints and
+// publishes on every run.
 //
-// `letter` is the A/B tab's own, so the compare-only pair carries a placeholder
-// it can never reach: the lock slot is the letter's only reader and it is not
-// drawn in the compare view at all. `label` is likewise the NON-mode word, and
-// those two have none — they exist nowhere but in the view, where the override
-// (redesign_button_label) answers for all four.
-//
-// `group_label` IS THE COMPARE VIEW'S TEXT BLOCK (architect 2026-08-08): "this
-// def paints a heading BEFORE itself while the view stands". It is what makes
-// the row two labelled groups —
-//
-//     [Iterative:] [Remote] [Local]    [Cumulative:] [Remote] [Local]
-//
-// — with the reading said once per group instead of four times in four suffixed
-// tab labels. Carried on the table rather than spelled in the walk so the walk
-// stays ONE left-to-right accumulation and the A/B path is untouched: outside
-// the view the field is never read at all. A TEXT BLOCK IS NOT A BUTTON — no
-// rect published, no hover, no press meaning, no lock slot — so it is a
-// nullptr-or-a-word field here and not a fifth and sixth roster entry.
+// `letter` is the A/B tab's own — what the paint compares against
+// app.active_tab_view — and `label` the NON-mode word; in the `h` view the
+// override (redesign_button_label) answers for both slots instead.
 struct TabDef {
     RedesignButton id;
     char           letter;
     const char*    label;
-    bool           compare_only;
-    const char*    group_label;
 };
 constexpr TabDef kTabs[] = {
-    {RedesignButton::TabA, 'A', "A", false, kCompareIterativeGroupLabel},
-    {RedesignButton::TabB, 'B', "B", false, nullptr},
-    {RedesignButton::TabC, 'A', "",  true,  kCompareCumulativeGroupLabel},
-    {RedesignButton::TabD, 'B', "",  true,  nullptr},
+    {RedesignButton::TabA, 'A', "A"},
+    {RedesignButton::TabB, 'B', "B"},
 };
 
 // A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
@@ -908,7 +889,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // eleven buttons in four groups; the keys are untouched. The twelfth and
     // fifth arrived 2026-08-04 at the row's other end — the history button —
     // and its group took three more 2026-08-05, the revert act and the walk's
-    // older / newer steps, leaving the row at FIFTEEN buttons in five groups.)
+    // older / newer steps; the Cumulative reading's toggle joined that group
+    // 2026-08-08, leaving the row at SIXTEEN buttons in five groups.)
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -928,15 +910,20 @@ constexpr IconRowDef kIconRowButtons[] = {
     // way the four existing boundaries do rather than inventing a second kind of
     // gap that would have to be explained.
     {RedesignButton::IconHistory, IconRowLead::Separator, nullptr, icons::Icon::VcsDiff},
-    // THE REVERT ACT (2026-08-05), immediately right of the button that opens
-    // the view and left of the walk's two — the architect's own order, and it
-    // reads as the group's shape: the view, what you can DO from inside it, then
-    // where you can step. Ordinary 2px Gap like the rest of the group.
-    // Unlike the two below it, this insertion is NOT a pure append — it shifts
-    // Older and Newer one button-width right — and that costs nothing: the
-    // layout is a single left-to-right accumulation recomputed each paint, with
-    // no rect or separator held anywhere, and the hit stash is republished by
-    // that same walk.
+    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), immediately right of the
+    // button that opens the view — the architect's placement, and the group now
+    // reads History | Cumulative | Revert | Older | Newer: the view, how it
+    // READS, what you can DO from inside it, then where you can step. The
+    // separator gap ahead of the group does not move; this is another 2px Gap
+    // inside it, and like Revert's own insertion it shifts everything to its
+    // right one button-width and costs nothing (one left-to-right accumulation
+    // recomputed each paint, no rect or separator held anywhere).
+    {RedesignButton::IconCumulative,
+     IconRowLead::Gap, nullptr, icons::Icon::OfficeChartBarAscending},
+    // THE REVERT ACT (2026-08-05), left of the walk's two — the architect's own
+    // order. Ordinary 2px Gap like the rest of the group. Unlike the two below
+    // it, this insertion was NOT a pure append — it shifted Older and Newer one
+    // button-width right — and that cost nothing, for the reason above.
     {RedesignButton::IconRevert,
      IconRowLead::Gap, nullptr, icons::Icon::DocumentRevert},
     // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
@@ -1625,44 +1612,35 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // this row (a tab press is a chord, never a refusal), and this row has NO
     // disabled face at all.
     //
-    // THE ROW IS THE COMPARE SELECTOR WHILE THE `h` HISTORY VIEW STANDS
-    // (architect 2026-08-05), which is a REPURPOSING of the surface, not a state
-    // of the tabs: the labels read the reading each slot selects, the selected
-    // face marks the live one (redesign_button_selected's own history arm), a
-    // press on another switches (the tab row's band claim, input_pointer.cpp)
-    // and THE LOCK SLOTS ARE GONE WHOLE — no padlock drawn, no rect published,
-    // no width reserved, because a lock is TAB state and these are not tabs. It
-    // is why the row's own former disabled face (the mode's, 2026-08-04) is
-    // retired with this arc: the tabs are live in the view now, and every other
-    // state of this row is the ordinary one. ONE NAME for that state, read once
-    // here and consulted by the four places it changes: the MEMBERSHIP (two
-    // slots or four), the width, the label and the lock.
+    // THE ROW IS THE WALK SELECTOR WHILE THE `h` HISTORY VIEW STANDS (architect
+    // 2026-08-05 for the repurposing, 2026-08-08 for what it selects), which is
+    // a REPURPOSING of the surface, not a state of the tabs: the labels read
+    // "Remote" and "Local" — the committed checkpoint walk and the session's own
+    // timeline — the selected face marks the live one
+    // (redesign_button_selected's own history arm), a press on the other
+    // switches (the tab row's band claim, input_pointer.cpp) and THE LOCK SLOTS
+    // ARE GONE WHOLE — no padlock drawn, no rect published, no width reserved,
+    // because a lock is TAB state and these are not tabs. It is why the row's
+    // own former disabled face (the mode's, 2026-08-04) is retired with this
+    // arc: the tabs are live in the view now, and every other state of this row
+    // is the ordinary one. ONE NAME for that state, read once here and consulted
+    // by the three places it changes: the width, the label and the lock.
     //
-    // AND IT IS FOUR SLOTS SINCE 2026-08-07 (architect), the product of the two
-    // axes — the two readings over the COMMIT walk and the same two over the
-    // LOCAL one, the session's own undo history read through the same delta
-    // machinery. SINCE 2026-08-08 THE ROW SAYS THAT PRODUCT AS TWO LABELLED
-    // GROUPS (architect, superseding the four self-labelled tabs):
-    //
-    //     [Iterative:] [Remote] [Local]    [Cumulative:] [Remote] [Local]
-    //
-    // — the reading said once per group by a TEXT BLOCK (not a button: no rect,
-    // no hover, no press, no lock slot; the walk below owns its look) and each
-    // tab naming only the walk it selects. Row order is therefore the Iterative
-    // group's two walks then the Cumulative group's two, and it is the SAME
-    // order the press claim (input_pointer.cpp), the selected-face predicate
-    // (redesign_button_selected) and the Ctrl+Tab cycle (input_key_dispatch.cpp)
-    // read. The extra pair and both text blocks are painted here and NOWHERE
-    // ELSE; outside the view the walk below publishes that pair as an empty
-    // rect, paints no heading and paints the A/B tabs alone, exactly as it
-    // always did.
+    // THE ROW IS TWO SLOTS AGAIN (architect 2026-08-08). It carried the (walk
+    // source, reading) product for one day — four self-labelled tabs on
+    // 2026-08-07, then two labelled groups with the reading in a text block over
+    // each pair — and the architect retired the whole shape: the READING is row
+    // 4's Cumulative toggle now (bare `u`, a mode bit), so this row selects ONE
+    // axis and needs neither the extra pair nor the headings. The compare-only
+    // membership flag, the empty-rect publication it required and the text-block
+    // painter are deleted whole.
     //
     // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
     // being read-only (or stops being active) cannot strand a clickable rect
     // where nothing is drawn — the same write-it-every-run rule the floating
-    // surfaces and the flag editor's box follow. In the compare view it stays
+    // surfaces and the flag editor's box follow. In the history view it stays
     // zero for the whole run, no lock being drawn at all.
-    const bool compare_selector = app.history_mode.active;
+    const bool walk_selector = app.history_mode.active;
     app.tab_lock_rect = GuiRect{0, 0, 0, 0};
     const GuiRect lane = top_tab_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1704,91 +1682,32 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // happen with active_tab_view always 'A' or 'B' but costs one int to state.
     int sel_x = 0, sel_w = 0;
 
-    // THE WALK: cells flush from the lane's left edge, adjacent, margin zero. A
+    // THE WALK: tabs flush from the lane's left edge, adjacent, margin zero. A
     // tab's width is the LARGER of its two paddings around the shaped label and
     // the minimum — and nothing else, so it is identical selected or not (the
     // side borders draw inside the box). With the A/B labels the minimum is what
     // binds, which makes both tabs exactly the same width and the row regular by
-    // construction; in the compare view each cell is sized by its own word — the
-    // headings and "Remote" clear the minimum and "Local" does not — so the
-    // cells differ in width, which is what a label-sized tab bar does and the
-    // reason nothing in this walk assumes they match. THE COMPARE VIEW'S TEXT
-    // BLOCKS ARE CELLS IN THIS SAME ACCUMULATION, sharing the formula with the
-    // tabs so the heading and the tab words line up; they are the only cells
-    // that publish nothing.
+    // construction; in the history view each tab is sized by its own word —
+    // "Remote" clears the minimum by 18 px at 100% and "Local" sits at it — so
+    // the two differ in width, which is what a label-sized tab bar does and the
+    // reason nothing in this walk assumes they match.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
-        // A SLOT THIS MODE DOES NOT HAVE PUBLISHES AN EMPTY RECT AND NOTHING
-        // ELSE (2026-08-07). Publishing rather than skipping outright is what
-        // keeps two other mechanisms honest: an empty rect contains no point, so
-        // the compare-only pair takes no click and no hover outside the view,
-        // and the tick's drift comparator (main.cpp) replays every roster entry's
-        // enabled/selected predicates against this stash — a slot left unwritten
-        // would disagree with it forever and repaint the whole top strip every
-        // tick.
-        if (def.compare_only && !compare_selector) {
-            publish_button_face(app, audio.total_frames(), def.id,
-                                GuiRect{0, 0, 0, 0});
-            continue;
-        }
-        // THE GROUP'S TEXT BLOCK, painted BEFORE the tab that carries it and
-        // only in the compare view (architect 2026-08-08). It is the row's
-        // heading — "Iterative:" over the first pair of walks, "Cumulative:"
-        // over the second — and it is NOT A BUTTON: no face is published, so
-        // there is no rect to hit, nothing to hover, no press meaning and no
-        // lock slot. A press landing on one falls out of the tab-row band
-        // claim's own walk having matched no slot, which is that row's consumed
-        // nothing (input_pointer.cpp).
-        //
-        // IT IS PAINTED AS AN UNSELECTED TAB WEARING THE SELECTED TAB'S
-        // BACKGROUND, and per this row's colour ruling the selected tab's
-        // interior IS the lane ground — already filled across the whole lane
-        // above — so the block is exactly the shaped label in the tab ink,
-        // CENTERED in a field computed by THE TAB'S OWN WIDTH FORMULA (no lock
-        // slot, the compare view having none), on the tabs' own solved
-        // baseline. No fill, no borders, no trim, and the row's border-bottom
-        // runs under it unbroken exactly as it does under an unselected tab —
-        // only the SELECTED tab breaks that line, and a text block is never
-        // selected. Sharing the formula and the baseline solver is what makes
-        // the heading line up with the tab text beside it rather than merely
-        // sit near it.
-        //
-        // FLUSH, like every cell in this row: the block is simply the next cell
-        // in the one accumulation, with the same zero margin the tabs have
-        // between themselves.
-        if (compare_selector && def.group_label != nullptr) {
-            const text_shape::ShapedRun group =
-                text_shape::shape_text_run(font, def.group_label);
-            const int group_w =
-                static_cast<int>(std::nearbyint(group.width_px));
-            const int group_field = std::max(min_w, group_w + 2 * pad);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
-            text_shape::show_shaped_run(
-                cr, group,
-                static_cast<double>(x) +
-                    std::nearbyint(
-                        (static_cast<double>(group_field) - group.width_px) *
-                        0.5),
-                redesign_baseline(font, static_cast<double>(lane.y),
-                                  static_cast<double>(content_h)));
-            x += group_field;
-        }
         // THE LABEL IS THE OVERRIDE OWNER'S (redesign_button_label, app_state.h,
-        // which also answers for the Render button's two mode labels), so the
-        // table's constant and the history view's compare word are one lookup
+        // which also answers for the Save and Render buttons' mode labels), so
+        // the table's constant and the history view's walk word are one lookup
         // and cannot drift into two spellings.
         const text_shape::ShapedRun run = text_shape::shape_text_run(
             font, redesign_button_label(app, def.id, def.label));
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
         // THE FIELD, then THE SLOT. The field is what it always was — the shaped
-        // label auto-sizes it, so the compare labels widen the tabs and nothing
-        // else moves. The slot is reserved on every tab in every state SO LONG AS
-        // THE TABS ARE TABS, which is what keeps both identical in width and
-        // makes locking one shove nothing; in the compare view there is no lock,
-        // so there is no slot either and the tab is its field.
+        // label auto-sizes it, so the history view's words widen the tabs and
+        // nothing else moves. The slot is reserved on every tab in every state
+        // SO LONG AS THE TABS ARE TABS, which is what keeps both identical in
+        // width and makes locking one shove nothing; in the history view there
+        // is no lock, so there is no slot either and the tab is its field.
         const int field_w = std::max(min_w, label_w + 2 * pad);
-        const int tab_w   = field_w + (compare_selector ? 0 : slot_w);
+        const int tab_w   = field_w + (walk_selector ? 0 : slot_w);
 
         // THE STASH IS WHAT THE DRIFT COMPARATOR READS (main.cpp's per-tick
         // enabled/selected sweep), so publishing `selected` is load-bearing,
@@ -1806,7 +1725,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // THE ROW HAS NO DISABLED FACE AGAIN (2026-08-05). It grew one on
         // 2026-08-04 for the `h` history view, which greyed both tabs because
         // their chord was consumed; the architect then made the view REPURPOSE
-        // the pair as the compare selector, so the tabs are live in the one
+        // the pair as the walk selector, so the tabs are live in the one
         // state that ever dimmed them — derived, since Ctrl+Tab is that
         // selector's own chord and the mode claims it (history_mode_owns_key)
         // — and redesign_button_enabled answers true for them everywhere. The dim machinery went with
@@ -1932,15 +1851,15 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // contract is at AppState::tab_lock_rect) — the click is bare `o`, which
         // is defined on the active tab alone.
         //
-        // THE SLOT IS GONE WHOLE IN THE `h` COMPARE VIEW (architect 2026-08-05,
+        // THE SLOT IS GONE WHOLE IN THE `h` VIEW (architect 2026-08-05,
         // superseding the 2026-08-04 dead-slot face): a padlock reports a TAB's
-        // read-only bit, and in there the pair is not tabs but the compare
+        // read-only bit, and in there the pair is not tabs but the walk
         // selector, so there is no such bit to report and nothing to dim. Not
         // drawn, not reserved in the width above, and no rect published — the
         // press path's lock branch is therefore unreachable in the mode without
         // testing for it, and bare `o` (still blocked by the allowlist) has no
         // pointer affordance left to lie about.
-        if (!compare_selector) {
+        if (!walk_selector) {
             const ViewState& vs = (def.letter == 'B') ? app.tab_b : app.tab_a;
             const int lx = x + tab_w - lock_mar - lock_box;
             const int ly = lane.y + (content_h - lock_box) / 2;
@@ -1990,11 +1909,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, four vertical separators, and fifteen 32x32 buttons in five
+    // width, four vertical separators, and sixteen 32x32 buttons in five
     // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
     // the bpm / iteration / follow modes, the listen / load-in-place pair, and
-    // the history group: the mode's own button (2026-08-04) plus the revert act
-    // and the walk's older / newer arrows (2026-08-05).
+    // the history group: the mode's own button (2026-08-04) plus the cumulative
+    // reading's toggle (2026-08-08), the revert act and the walk's older /
+    // newer arrows (2026-08-05).
     // (The zoom out/in pair lived here for one day, 2026-08-01 to 2026-08-02;
     // the Navigation dropdown is those two commands' pointer home now.)
     //
@@ -2098,7 +2018,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // rule above, scoped to that mode alone — while the view stands, copy,
         // paste, bpm, iteration, follow and listen are consumed acts and say so,
         // while the S/T + W/P radios, the load-in-place opener, the history
-        // button itself, the revert act and the walk's two arrows stay live.
+        // button itself, the cumulative toggle, the revert act and the walk's
+        // two arrows stay live.
         // Which is which is DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
         // partition is inventoried); nothing here decides membership — which is
@@ -2106,12 +2027,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // others: its chord is admitted only while a diff flag is selected, and
         // the derivation reads that per frame like any other admission.
         //
-        // THE SAME FACE, WORN AT REST, IS THE WALK'S TWO ARROWS AND THE REVERT
-        // BUTTON OUTSIDE THE VIEW (architect 2026-08-05): the mode-scoped
-        // exception inverted, for the three buttons whose keys exist only inside
-        // it. Same blend, same pointer-dead press and same absent tooltip,
-        // decided at the same one predicate — so the row still has exactly one
-        // dead face, in two states of one mode rather than in two mechanisms.
+        // THE SAME FACE, WORN AT REST, IS THE WALK'S TWO ARROWS, THE REVERT
+        // BUTTON AND THE CUMULATIVE TOGGLE OUTSIDE THE VIEW (architect
+        // 2026-08-05 for the first three, 2026-08-08 for the fourth): the
+        // mode-scoped exception inverted, for the four buttons whose keys exist
+        // only inside it. Same blend, same pointer-dead press and same absent
+        // tooltip, decided at the same one predicate — so the row still has
+        // exactly one dead face, in two states of one mode rather than in two
+        // mechanisms. The Cumulative toggle is the first of the four that is
+        // also SELECTABLE at rest: its lamp reads a session bit the view does
+        // not own, so it wears the dimmed selected fill out here whenever the
+        // reading is cumulative (the rule below covers it with no new arm).
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
         // one disabled blend, row 2's rule applied to this row's glyph, letter
@@ -3457,7 +3383,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
         // THROUGH THE DISPLAYED-DELTA OWNER (AppState::HistoryMode), so the bar
         // follows the source axis as it always followed the reading one: on a
         // Local tab it shows where in the piece that undo step happened.
-        const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
+        const GuiHistoryCommitDelta* d =
+            app.history_mode.displayed_delta(app.history_compare());
         int64_t lo = 0, hi = 0;
         if (d && d->frame_span(lo, hi)) {
             bar_begin_frame = lo;
@@ -4076,7 +4003,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                 line += sha.substr(0, 7);
             }
         }
-        const GuiHistoryCommitDelta* d = app.history_mode.displayed_delta();
+        const GuiHistoryCommitDelta* d =
+            app.history_mode.displayed_delta(app.history_compare());
         // No unavailable-delta arm: walk membership is the strict whole-set
         // load (history_diff.h's gate, 2026-08-04), so every commit this line
         // can name has a real delta — the old `Ambiguous` token died with the
