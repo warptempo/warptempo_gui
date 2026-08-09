@@ -892,20 +892,28 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // commit failure leaves three written files sitting in the working tree, visible
 // to `git status` and committable by hand.
 //
-// NothingToCommit IS AN ESTABLISHED ANSWER, and only that (narrowed 2026-08-09):
-// the checkpoint paths are clean AND the branch tip's own tree was seen to carry
-// these bytes AND the remote-tracking ref was seen to carry that tip — committed
-// and published already, so no commit exists to make, nothing was left behind
-// and there is nothing to publish. It is the one clean ending beside Committed,
-// and the caller treats the two alike.
+// EVERY CLEAN-ARM ANSWER IS ABOUT THE CHECKPOINT COMMIT, never about the branch
+// tip (2026-08-09): the pre-flight names this piece's checkpoint on the branch —
+// the newest commit touching the three checkpoint paths and touching nothing
+// else — and every verdict below is a statement about THAT commit. A tip sitting
+// above it is the user's own work and no part of the answer.
 //
-// Unconfirmed IS WHAT THAT ANSWER USED TO SWALLOW, in TWO shapes (the second
-// split out 2026-08-09): the paths are clean but the tip could NOT be confirmed
-// to carry the checkpoint's bytes, so nothing was pushed; or git has a DETACHED
-// HEAD, which has no remote-tracking ref to observe at all and nothing to push
-// onto. Neither establishes content AND publication — in the detached case the
-// repository was never even asked about publication — and both are therefore
-// FAILING outcomes, not quiet successes. Reporting either as "nothing to commit"
+// NothingToCommit IS AN ESTABLISHED ANSWER, and only that (narrowed 2026-08-09):
+// the checkpoint paths are clean AND the named checkpoint commit's own tree was
+// seen to carry these bytes AND the remote-tracking ref was seen to carry that
+// commit — committed and published already, so no commit exists to make, nothing
+// was left behind and there is nothing to publish. It is the one clean ending
+// beside Committed, and the caller treats the two alike.
+//
+// Unconfirmed IS WHAT THAT ANSWER USED TO SWALLOW, in FOUR shapes (split out
+// 2026-08-09): the paths are clean but NO commit touching only those paths could
+// be named on this branch; the newest one that touches them is MIXED (it carries
+// foreign paths, which this act may not publish by sha); the named commit could
+// NOT be confirmed to carry the checkpoint's bytes; or git has a DETACHED HEAD,
+// which has no remote-tracking ref to observe at all and nothing to push onto.
+// None establishes content AND publication — in the detached case the repository
+// was never even asked about publication — and all are therefore FAILING
+// outcomes, not quiet successes. Reporting any of them as "nothing to commit"
 // told the user everything was done on the strength of a question that had gone
 // unanswered, which is exactly the reading the committed-but-unpushed arm below
 // exists to avoid. Each prints its own stderr line naming its own cause.
@@ -981,25 +989,38 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,
     const std::string& title);
 
-// IS `sha` OBSERVABLY MISSING FROM THE REMOTE? — one READ-ONLY question, asked
-// through the very containment reading the push verdict is made of (ref_carries
-// over `refs/remotes/origin/<branch>`, witnessed by the local branch ref, with
-// the tip-equality shortcut folded in), so "published" means here exactly what it
-// means there and there is no second spelling of it to drift.
+// IS A CHECKPOINT WAITING TO BE PUBLISHED FOR THIS PIECE? — one READ-ONLY
+// question in two reads, and THE ACT'S OWN TWO, in the act's own order: which
+// commit on the current branch IS this piece's checkpoint (the same selector the
+// act's clean pre-flight arm publishes from — newest by the three checkpoint
+// paths, and touching those paths alone), then whether the remote-tracking ref
+// carries THAT commit (the containment reading the push verdict is made of,
+// witnessed so an absent ref and an unreadable repository cannot share an
+// answer).
+//
+// ONE SELECTOR, ONE SUBJECT, and that is the whole point of taking the piece's
+// directory and base name rather than a sha: the caller cannot hand this a
+// different commit than the act will publish, because neither of them chooses
+// one — the same function does, from the same inputs. Passing the display walk's
+// newest member instead was a real divergence (that walk is era-agnostic over
+// `projects/**/<base>.*` while the act works the CURRENT directory's three exact
+// paths, so a directory move can make them name different commits), and it could
+// clear the bit on a commit the act never published.
 //
 // WHY IT EXISTS (2026-08-09): the checkpoint act's admission needs to know
 // whether a push is still owed, and the SESSION cannot be that memory — a
 // failure report is in-memory while the obligation is durable, so a quit and a
 // relaunch would strand the retry behind a greyed button. THE REPOSITORY IS THE
 // DURABLE STORE, and this is the read that asks it. Nothing is persisted
-// anywhere; the answer is re-derived at the mode's entry, where the caller
-// already has the newest walk member in hand.
+// anywhere; the answer is re-derived at the mode's entry.
 //
 // TRUE MEANS DEMONSTRATED ABSENCE AND NOTHING ELSE. Every unanswerable shape
-// answers FALSE — a detached HEAD (no remote-tracking ref to ask about), a ref
-// or a walk git could not read, an empty spelling — because the bit it feeds
-// ADMITS an act, and admitting one on a guess is worse than leaving it greyed
-// until the repository can answer. An ABSENT remote-tracking ref is not
-// unanswerable: it demonstrably carries nothing, so it answers TRUE, exactly as
-// the push verdict reads it.
-bool history_commit_is_unpushed(const std::string& sha);
+// answers FALSE — a detached HEAD (no remote-tracking ref to ask about), no such
+// commit, a MIXED one (touching foreign paths, which this act may not publish by
+// sha), a ref or a walk git could not read — because the bit it feeds ADMITS an
+// act, and admitting one on a guess is worse than leaving it greyed until the
+// repository can answer. An ABSENT remote-tracking ref is not unanswerable: it
+// demonstrably carries nothing, so it answers TRUE, exactly as the push verdict
+// reads it.
+bool history_checkpoint_push_pending(const std::string& project_directory,
+                                     const std::string& base_name);

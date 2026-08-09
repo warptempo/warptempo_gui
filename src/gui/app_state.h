@@ -3127,10 +3127,12 @@ struct AppState {
     // greyed on the next launch with the documented retry unreachable. The
     // repository is the durable store, so THE MODE'S ENTRY RE-DERIVES the bit
     // where it already measures the head delta (measure_history_head_delta): one
-    // read-only observation, does the remote-tracking ref carry the newest walk
-    // member (history_commit_is_unpushed, history_diff.h — the push verdict's own
-    // containment reading, not a second spelling of it). Nothing is written to
-    // disk, so nothing can be stale.
+    // read-only question in the act's own two reads — which commit is this
+    // piece's checkpoint on the branch, and does the remote carry THAT commit
+    // (history_checkpoint_push_pending, history_diff.h). It runs THE ACT'S OWN
+    // SELECTOR on the act's own inputs, so the bit and the act it admits cannot
+    // name different commits. Nothing is written to disk, so nothing can be
+    // stale.
     //
     // ITS EVENT-DRIVEN HALF IS A FAST PATH OVER THAT SAME TRUTH, for the session
     // that made the act — the window between a failed push and the next `h`,
@@ -3145,10 +3147,11 @@ struct AppState {
     // repository.
     //
     // UNANSWERABLE RESTS FALSE (the deriver's own rule, stated at
-    // history_commit_is_unpushed): a detached HEAD, an unreadable ref or a walk
-    // that could not run leaves the act GREYED rather than admitting a chord on a
-    // guess — the same conservative rest the head delta takes before the prefetch
-    // has delivered anything to measure.
+    // history_checkpoint_push_pending): a detached HEAD, no identifiable
+    // checkpoint commit, a MIXED one, an unreadable ref or a walk that could not
+    // run all leave the act GREYED rather than admitting a chord on a guess — the
+    // same conservative rest the head delta takes before the prefetch has
+    // delivered anything to measure.
     //
     // IT REVIVES THE ADMISSION, NOT THE REPORT. The critical chip beside it is
     // SESSION-scoped by ruling and stays event-driven: a relaunch shows no chip

@@ -2725,62 +2725,121 @@ std::string find_checkpoint_commit(const std::string&              source_ref,
     return {};
 }
 
-// THE NEWEST COMMIT ON `source_ref` THAT TOUCHED THE CHECKPOINT'S OWN PATHS —
-// the pre-flight's answer to "which commit IS the checkpoint here", for the arm
-// that has one to publish but did not make it (2026-08-09).
+// THE THREE COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
+// order (which is what pairs each path with its text). One owner, because the
+// selector below and the act itself must be talking about the same three files.
+std::vector<std::string> checkpoint_paths(const std::string& project_directory,
+                                          const std::string& base_name) {
+    std::vector<std::string> paths;
+    paths.reserve(3);
+    for (const char* ext : kSidecarExtensions) {
+        paths.push_back(project_directory + "/" + base_name + ext);
+    }
+    return paths;
+}
+
+// WHICH COMMIT IS THE CHECKPOINT ON THIS BRANCH — the ONE selector, and the ONE
+// answer to "what would a push publish here" (2026-08-09). TWO CALLERS AND THE
+// SAME SUBJECT BY CONSTRUCTION: the act's clean pre-flight arm, which publishes
+// this commit, and the GUI's entry-side derivation of the push-pending bit,
+// which asks whether this commit is published. They run this function on these
+// inputs, so the bit cannot come to admit an act about one commit while the act
+// goes on to publish another.
 //
 // WHY NOT find_checkpoint_commit ABOVE: that walk identifies a commit THIS ACT
 // JUST MADE, and both of its scoping terms are act-side — a `before..` range
 // captured moments earlier, and the act's own title. Neither exists for a
 // checkpoint some earlier act left unpushed: the range's floor is gone with that
 // act, and its title was whatever the user typed then. What survives is the
-// PATHS, so those are what this walks by, and the three legs that make a claim
-// about CONTENT (the caller runs commit_carries_our_bytes on the answer) are
-// unchanged in kind.
+// PATHS, so those are what this selects by.
 //
-// PATHSPEC-SCOPED AND CAPPED AT ONE, on the captured branch ref rather than the
-// symbolic HEAD for the reason every other source-side read here takes it: a
-// checkout mid-act must not let this name a commit from another branch's
-// history. The pathspecs are the act's own literal ones — the exact three paths
-// it writes — which is narrower than the commit walk's era-agnostic glob and
-// correct here: this asks about the CURRENT era's spelling, the only one the
-// bytes being compared could live at.
+// TWO LEGS, AND THEY ARE find_checkpoint_commit's OWN TWO minus the title:
+//   * NEWEST BY PATHSPEC — `log -n 1 <source_ref> -- <the three paths>`, the
+//     act's own literal pathspecs, which is narrower than the display walk's
+//     era-agnostic glob and correct here: this asks about the CURRENT era's
+//     spelling, the only one whose bytes could be compared to the act's.
+//   * TOUCHES ONLY THOSE PATHS — commit_touches_only, called rather than
+//     respelled. Without it "touched a sidecar" would pass a MIXED commit (a
+//     terminal commit carrying the current sidecar bytes alongside a source or
+//     doc change), and publishing that by sha would carry the foreign path into
+//     the remote — exactly the boundary the act's own attribution enforces.
+// A MIXED ANSWER STOPS THE SEARCH RATHER THAN WALKING DEEPER, deliberately: an
+// OLDER commit cannot carry the CURRENT bytes, so the caller's byte check would
+// refuse it anyway, and walking past the newest match would only trade a precise
+// refusal for a vague one.
 //
-// AN EMPTY ANSWER IS BOTH "no such commit" and "the read could not run", and the
-// caller treats them alike: with no identified checkpoint there is nothing this
-// act may publish.
-std::string newest_checkpoint_commit(
-        const std::string&              source_ref,
-        const std::vector<std::string>& pathspecs) {
+// THE REF IS THE CALLER'S — the act's captured branch, the deriver's current one
+// — never the symbolic HEAD, so a checkout cannot make either caller name a
+// commit out of another branch's history.
+//
+// AN EMPTY ANSWER COVERS "no such commit", "the read could not run" and "the
+// newest one is mixed"; `reason` says which, for the caller that prints a line.
+// Both callers treat every empty answer alike: with no identified checkpoint
+// there is nothing to publish and nothing to admit an act about.
+std::string checkpoint_commit_to_publish(const std::string& source_ref,
+                                         const std::string& project_directory,
+                                         const std::string& base_name,
+                                         std::string&       reason) {
+    reason.clear();
+    const std::vector<std::string> paths =
+        checkpoint_paths(project_directory, base_name);
     std::vector<std::string> args{"log", "--format=%H", "-n", "1", source_ref,
                                   "--"};
-    for (const std::string& p : pathspecs) args.push_back(p);
+    for (const std::string& p : paths) args.push_back(literal_pathspec(p));
     std::string out;
-    if (!git_output(args, out)) return {};
-    for (const std::string& line : split_lines(out)) {
-        const std::string sha = trim_trailing_ws(line);
-        if (!sha.empty()) return sha;
+    if (!git_output(args, out)) {
+        reason = "no commit touching the checkpoint paths was found";
+        return {};
     }
-    return {};
+    std::string sha;
+    for (const std::string& line : split_lines(out)) {
+        sha = trim_trailing_ws(line);
+        if (!sha.empty()) break;
+    }
+    if (sha.empty()) {
+        reason = "no commit touching the checkpoint paths was found";
+        return {};
+    }
+    if (!commit_touches_only(sha, paths)) {
+        reason = short_sha(sha) +
+                 " touches the checkpoint paths and other paths besides";
+        return {};
+    }
+    return sha;
 }
 
-}  // namespace
-
-// THE PUBLICATION QUESTION, READ-ONLY (the header owns the contract and the
-// conservative rule). It is the push verdict's own reading with no act around
-// it: the branch's remote-tracking ref, witnessed by the local branch ref so an
-// ABSENT ref and an unreadable repository cannot share an answer, and the
-// containment walk behind that. Every arm that cannot demonstrate absence
-// answers false.
-bool history_commit_is_unpushed(const std::string& sha) {
-    if (sha.empty()) return false;
-    const std::string branch = current_branch_name();
-    if (branch.empty()) return false;   // detached: nothing to observe
+// IS `sha` OBSERVABLY MISSING FROM `branch`'s REMOTE? The push verdict's own
+// containment reading with no act around it: the remote-tracking ref, witnessed
+// by the local branch ref so an ABSENT ref and an unreadable repository cannot
+// share an answer. Every arm that cannot DEMONSTRATE absence answers false.
+bool commit_is_unpushed(const std::string& branch, const std::string& sha) {
+    if (branch.empty() || sha.empty()) return false;
     bool unobserved = false;
     const bool carried = ref_carries("refs/remotes/origin/" + branch,
                                      "refs/heads/" + branch, sha, unobserved);
     if (unobserved) return false;       // could not ask: leave the act greyed
     return !carried;
+}
+
+}  // namespace
+
+// THE PUBLICATION QUESTION, READ-ONLY (the header owns the contract and the
+// conservative rule). It is the act's own two reads in the act's own order, with
+// no act around them: WHICH commit is the checkpoint on this branch
+// (checkpoint_commit_to_publish — the same selector the act's clean arm
+// publishes from, on the same inputs), then whether the remote carries THAT
+// commit. Every unanswerable shape — a detached HEAD, no such commit, a mixed
+// one, a ref or walk git could not read — answers false and leaves the act
+// greyed.
+bool history_checkpoint_push_pending(const std::string& project_directory,
+                                     const std::string& base_name) {
+    if (project_directory.empty() || base_name.empty()) return false;
+    const std::string branch = current_branch_name();
+    if (branch.empty()) return false;   // detached: nothing to observe
+    std::string reason;
+    const std::string sha = checkpoint_commit_to_publish(
+        "refs/heads/" + branch, project_directory, base_name, reason);
+    return commit_is_unpushed(branch, sha);
 }
 
 std::string history_checkpoint_title(const std::string& project_directory) {
@@ -2861,7 +2920,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // ref's range finds nothing, and the act returns CommitFailed having
     // published nothing. The clean arm reasons the same way: a checkout before
     // it makes this read report the captured branch's true state, so the retry
-    // pushes that branch's own tip bytes and never the other branch's.
+    // publishes THAT branch's own checkpoint commit — the newest one touching
+    // the checkpoint paths alone, never a tip and never the other branch's.
     //
     // A DETACHED HEAD KEEPS THE OLD SPELLING because it has no branch ref to
     // name, and it costs nothing: that arm publishes nothing at all (the push
@@ -2874,12 +2934,11 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string* texts[3] = {&bytes.warpmarkers_text,
                                    &bytes.phaseresetmarkers_text,
                                    &bytes.settings_text};
-    std::vector<std::string> paths;
-    paths.reserve(3);
-    for (std::size_t e = 0; e < 3; ++e) {
-        paths.push_back(project_directory + "/" + base_name +
-                        kSidecarExtensions[e]);
-    }
+    // Through the one owner, which the clean arm's selector also calls: the act
+    // and the question "which commit is the checkpoint" must be talking about
+    // the same three files.
+    const std::vector<std::string> paths =
+        checkpoint_paths(project_directory, base_name);
 
     // (a) The bytes. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
     // rename — so a checkpoint is never half-written, and into a directory that
@@ -3154,29 +3213,35 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // act's own scoped-publish property in the ordinary case it exists for: a
         // checkpoint fails its push, ANY unrelated commit lands on top (the
         // architect's own code wrapper does exactly that), and the retry then
-        // published that commit's whole ancestry uninvited. So the subject is the
-        // NEWEST COMMIT ON THE CAPTURED BRANCH THAT TOUCHED THE CHECKPOINT'S
-        // PATHS (newest_checkpoint_commit above), and "a commit on top of it
-        // stays the user's own to publish" holds on this route exactly as it does
-        // on the act's own.
+        // published that commit's whole ancestry uninvited. So the subject is
+        // checkpoint_commit_to_publish's answer — the newest commit on the
+        // captured branch touching the checkpoint's paths AND NOTHING ELSE — and
+        // "a commit on top of it stays the user's own to publish" holds on this
+        // route exactly as it does on the act's own.
+        //
+        // IT IS THE ONE SELECTOR, SHARED WITH THE GUI'S PUSH-PENDING DERIVATION,
+        // which is what makes "the bit admitted an act about the commit the act
+        // then published" true by construction rather than by argument (the
+        // selector's own comment owns that contract).
         //
         // IT IS THE CAPTURED BRANCH'S, not the symbolic HEAD's: a checkout
         // mid-act would otherwise have this arm confirm the OTHER branch's bytes
         // and publish out of that branch's history. Reading the captured ref
         // makes the answer the true state of the branch this act publishes on,
         // whatever git happens to have checked out.
-        const std::string checkpoint =
-            newest_checkpoint_commit(source_ref, pathspecs);
+        std::string       selection_reason;
+        const std::string checkpoint = checkpoint_commit_to_publish(
+            source_ref, project_directory, base_name, selection_reason);
         if (checkpoint.empty()) {
-            // No commit on this branch has ever touched these paths, or the walk
+            // No commit on this branch touches these paths alone, or the read
             // could not run. Either way there is no checkpoint to confirm and
-            // none to publish — and the paths being clean means there is nothing
-            // to commit either, so this establishes nothing at all.
+            // none this act may publish — and the paths being clean means there
+            // is nothing to commit either, so this establishes nothing at all.
             std::fprintf(stderr,
-                         "warptempo_gui: Could not confirm the checkpoint: no "
-                         "commit on '%s' was found touching the checkpoint "
-                         "paths, so nothing was pushed\n",
-                         branch.empty() ? "a detached HEAD" : branch.c_str());
+                         "warptempo_gui: Could not confirm the checkpoint on "
+                         "'%s': %s, so nothing was pushed\n",
+                         branch.empty() ? "a detached HEAD" : branch.c_str(),
+                         selection_reason.c_str());
             return GuiHistoryCommitOutcome::Unconfirmed;
         }
         // UNOBSERVABLE IS NOT PUBLISHED, and this arm is the reason that

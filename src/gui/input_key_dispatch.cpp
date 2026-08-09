@@ -904,9 +904,10 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // is left to checkpoint, this asks whether anything is left to PUBLISH. The
 // second question needs a durable answer — a push obligation outlives the
 // session that incurred it, while AppState does not — so it is DERIVED FROM THE
-// REPOSITORY rather than persisted anywhere: does the remote-tracking ref carry
-// the newest walk member (history_commit_is_unpushed, history_diff.h, which is
-// the push verdict's own containment reading with no act around it). That closes
+// REPOSITORY rather than persisted anywhere: which commit IS this piece's
+// checkpoint on the branch, and does the remote-tracking ref carry THAT commit
+// (history_checkpoint_push_pending, history_diff.h — the act's own selector and
+// the push verdict's own containment reading, with no act around them). That closes
 // the quit-and-relaunch hole: a checkpoint that committed and failed to push
 // left a greyed Save and Commit on the next launch, with the documented retry
 // unreachable and no route to it anywhere in the product.
@@ -933,21 +934,23 @@ void GuiInputHandler::measure_history_head_delta() {
     if (!head) return;
     app.history_mode.head_delta_empty    = head->is_empty();
     app.history_mode.head_delta_measured = true;
-    // THE TWO SIDES NAME THE SAME COMMIT BY CONSTRUCTION (2026-08-09): this asks
-    // about the walk's member 0 — the newest commit on the local branch touching
-    // this piece's sidecars — and the act's push-only arm publishes the newest
-    // PATH-LIMITED commit on that branch, which is member 0's own definition. So
-    // the bit is about the very commit the admission it feeds would publish. It
-    // was not true while that arm pushed the branch TIP: a commit landing on top
-    // of an unpushed checkpoint made the two different commits, and the act would
-    // have published the wrong one.
-    // (The walk's own LOAD GATE can hide a newer ineligible checkpoint, which
-    // would make member 0 older than the act's subject. The bit is then
-    // conservative in the safe direction — it reports the older commit's
-    // publication state, and the act re-observes for itself before publishing
-    // anything.)
-    app.checkpoint_push_pending =
-        history_commit_is_unpushed(app.history_mode.session.sha_at(0));
+    // THE SAME SUBJECT BY CONSTRUCTION, NOT BY ARGUMENT (2026-08-09): this hands
+    // over the piece's directory and base name, and the SELECTOR the act's own
+    // clean arm publishes from is what turns those into a commit. So the bit
+    // cannot be about one commit while the act publishes another — neither side
+    // chooses, and there is one function that does.
+    //
+    // IT DELIBERATELY DOES NOT PASS THE WALK'S NEWEST MEMBER, which is what it
+    // did until this was corrected. THE TWO SERVE DIFFERENT QUESTIONS: the walk
+    // is for DISPLAY and is era-agnostic (`projects/**/<base>.*`, so a piece
+    // whose directory moved is still followed), while PUBLICATION is about the
+    // three exact paths this act writes today. A directory move makes those two
+    // name different commits — a commit that copies the sidecars into the new
+    // directory, and a newer one that deletes the old copies — and the bit would
+    // then have derived from a commit the act would never publish.
+    app.checkpoint_push_pending = history_checkpoint_push_pending(
+        app.history_mode.session.project_directory(),
+        app.history_mode.session.sidecar_base_name());
 }
 
 // -- THE PREFETCH'S THREE EDGES (architect 2026-08-07) ----------------------
@@ -2337,9 +2340,10 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //   CommitFailed (the three files are written and uncommitted, in the working
 //   tree where `git status` shows them), CommittedNotPushed (the checkpoint
 //   exists locally and the remote does not have it) and, since 2026-08-09,
-//   Unconfirmed (the act established neither content nor publication — the paths
-//   are clean but the tip was not confirmed to carry these bytes, or git has a
-//   detached HEAD and there was no remote-tracking ref to ask at all — so
+//   Unconfirmed (the act established neither content nor publication — no commit
+//   touching the checkpoint paths alone could be named, or the named one was not
+//   confirmed to carry these bytes, or git has a detached HEAD and there was no
+//   remote-tracking ref to ask at all — so
 //   nothing was pushed). The texts differ exactly where the
 //   user's next move does, which is why the act distinguishes them at all. They
 //   are SHORT because the row is one line and the detail is already on stderr,
