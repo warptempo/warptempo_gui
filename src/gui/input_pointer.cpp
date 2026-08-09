@@ -2956,10 +2956,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // row 1 with the menu row's mode armed (the rule is at that hook, the band
     // predicate at point_in_menu_row_band). That the refusal would equally
     // prevent REPAIRING a kept face is why the hook keeps none on the hard
-    // capability-loss edge, where no return motion exists to repair it. Nothing else can move a face out there: the only
-    // writer of `hovered = true` is this walk, and the only other writers of
-    // false are the leave hook itself and the dropdown open edge, which no
-    // out-of-window event can reach.
+    // capability-loss edge, where no return motion exists to repair it. Nothing
+    // else can move a face out there: the only writer of `hovered = true` is
+    // this walk, and the only other writers of false are the leave hook itself
+    // and the dropdown open edge, which no out-of-window event can reach.
     // THE GUARD LIVES HERE, NOT AT THE WIRING, because this function is the
     // faces' one derivation — on_motion, the other caller, writes
     // app.pointer_in_window true at its top and seeds the coordinates in the same

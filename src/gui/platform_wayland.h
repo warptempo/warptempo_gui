@@ -61,14 +61,14 @@ inline constexpr int kGuiCursorKindCount = 7;
 //     that return motion to re-derive it.
 //   * CapabilityLoss is the seat losing wl_pointer: the hard end of the stream.
 //     No leave, no motion, no release will ever arrive on that object again, so
-//     NOTHING pointer-derived may be kept — anything left standing has no event
-//     left that could take it down, and a later capability RETURN is a new
-//     stream that must start cold rather than inherit the old one's state.
-//     THAT SENTENCE IS BIGGER THAN THIS HOOK, and its other half is the fire
-//     site's own: the same edge ends the LOGICAL LEFT HOLD in both its sources,
-//     the synthesized bare-`e` one included, because a surviving hold is state
-//     the returning stream would inherit just as visibly as a lit face would
-//     (on_seat_capabilities carries the argument).
+//     nothing may be KEPT DELIBERATELY across it — a consumer's keep has no
+//     event left to redeem it. WHAT THE EDGE PROMISES IS BOUNDED, and no more
+//     than the fire site does: the logical left hold ends in both its sources,
+//     the popup's claim drops, and every face clears ONCE. It does not promise a
+//     cold stream at a later capability return — a staged-motion flush can put
+//     `pointer_in_window` back and leave a hover face stale, which is a recorded
+//     ACCEPTED GLITCH (architect 2026-08-09; the record is at the fire site) and
+//     self-heals on the pointer's next entry.
 // The distinction exists for exactly one consumer today (main.cpp's hook body,
 // where the menu row's armed mode and its hovered button survive an ordinary
 // leave through row 1 and never survive the hard one); every other clear the
