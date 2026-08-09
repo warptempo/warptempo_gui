@@ -1021,6 +1021,11 @@ inline constexpr int kSettingsPopupItemCount =
 // the architect ordered kdenlive's accelerator column here (its own crop,
 // dropdown_full_hotkeys.png, is the anatomy). The spellings follow that crop's
 // convention — a bare letter uppercase, modifiers spelled out with `+`.
+// THAT UPPERCASE IS THIS SURFACE'S AND DELIBERATELY NOT THE TOOLTIPS' (architect
+// 2026-08-09): the roster's hints write a bare letter LOWERCASE, the key as
+// typed. Two sampled conventions on two surfaces, recorded at both ends so
+// neither reads as a defect in the other — the tooltip side's statement is at
+// RedesignTooltipText.
 //
 // AN ITEM NEVER GREYS OUT and never refuses here, WITH ONE RULED EXCEPTION: a
 // command that cannot act right now still dispatches and its own arm answers,
@@ -4083,6 +4088,23 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // buttons, which is not a coincidence to be maintained: it is asserted against
 // redesign_button_shift_admits below, so the hint cannot advertise a shift press
 // that does nothing (or stay silent about one that does).
+//
+// THE ACCELERATOR'S SPELLING, one rule for this whole table (architect
+// 2026-08-09): A BARE LETTER IS LOWERCASE — "(t)", "(p)", "(m)", "(h)", "(u)" —
+// because it is the key AS TYPED, and a capital would name a shifted press this
+// product does not bind on any of them. A CHORD KEEPS ITS CAPITAL and its
+// spelled-out modifiers — "(Ctrl+S)", "(Ctrl+Alt+R)", "(Ctrl+Shift+Z)" — that
+// being the chord vocabulary's own convention, which the rest of the product
+// writes the same way. Non-letter keys are simply themselves: "(,)", "(.)",
+// "(')". The table was mixed until this ruling (the eight row-4 bare letters
+// were capitals) and is uniform now.
+//
+// IT IS THIS SURFACE'S RULE AND NOT THE PRODUCT'S: the NAVIGATION DROPDOWN's
+// accelerator column deliberately writes a bare letter UPPERCASE ("C" for
+// center-on-focus), which is architect-ordered from its own kdenlive crop
+// (dropdown_full_hotkeys.png) and stated at kNavigationPopupItems. Two surfaces,
+// two sampled conventions, and neither is evidence about the other — so a
+// future harmonization of one must not be read as covering the other.
 struct RedesignTooltipText {
     const char* line1;   // nullptr -> no tooltip at all
     const char* line2;   // nullptr -> the one-line form
@@ -4116,17 +4138,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // constant chord. The lock's key is `o`, which HELP carries.
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
-        case RedesignButton::IconS:      return {"Source view (T)", nullptr};
-        case RedesignButton::IconT:      return {"Target view (T)", nullptr};
-        case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
-        case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
+        case RedesignButton::IconS:      return {"Source view (t)", nullptr};
+        case RedesignButton::IconT:      return {"Target view (t)", nullptr};
+        case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
+        case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
-        case RedesignButton::IconBpm:    return {"BPM editor (M)", nullptr};
-        case RedesignButton::IconIter:   return {"Iteration mode (I)", nullptr};
-        case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
-        case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
+        case RedesignButton::IconBpm:    return {"BPM editor (m)", nullptr};
+        case RedesignButton::IconIter:   return {"Iteration mode (i)", nullptr};
+        case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
+        case RedesignButton::IconListen: return {"Listen to renders (l)", nullptr};
         case RedesignButton::IconLoadInPlace:
             // "Load in place" not "Load render in place": the act loads A
             // STATE — a renders/ entry's sidecar set (the render name is
