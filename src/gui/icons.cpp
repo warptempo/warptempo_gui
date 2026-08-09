@@ -96,6 +96,16 @@ constexpr IconPath kMediaRecordPaths[] = {
 
 constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 
+// THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
+// written into its own file: `.ColorScheme-Accent`, which every Breeze file
+// carrying it resolves to #3daee9 — deep-history's curl-back arrow is this
+// tree's first and so far only user (2026-08-09). It is recorded the same way
+// kIconText and kIconPreviewOn are, as THE VALUE THAT FILE RESOLVES TO, and it
+// deliberately does NOT reference render.h's kRedesignAccent even though the two
+// are the same 0x3DAEE9: that coincidence is shared Breeze ancestry, and the two
+// would have to move independently if a crop ever disagreed with a scheme.
+constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
+
 constexpr IconPath kEditCopyPaths[] = {
     {kIconText,
      "M 3 3 L 3 17 L 7 17 L 7 19 L 17 19 L 17 10 L 13 6 L 12 6 L 9 3 L 3 3 Z M "
@@ -289,38 +299,70 @@ constexpr IconPath kDocumentRevertPaths[] = {
      "2 2s-.892 2-2 2h-10v-14h8v4h4v4h1v-5l-4-4z"},
 };
 
-// -- THE CUMULATIVE READING'S GLYPH (2026-08-08) -------------------------------
+// -- THE CUMULATIVE READING'S GLYPH (architect 2026-08-09) ---------------------
 //
-// office-chart-line-forecast, the history group's second button: bare `u` picks
-// the CUMULATIVE delta (the viewed member against the live now side) over the
-// iterative one (against the next-newer member). The glyph is the chart axis
-// with a rising trend that starts SOLID and continues as two detached DASHES —
-// accumulation projected forward, which is what the cumulative reading does:
-// carry everything so far through to where the session stands now, against a
-// reading that takes one step at a time.
+// deep-history, the history group's second button: bare `u` picks the CUMULATIVE
+// delta (the viewed member against the live now side) over the iterative one
+// (against the next-newer member). The glyph is a CLOCK FACE WITH A CURL-BACK
+// ARROW sweeping around it — reaching back across the whole span of history at
+// once, which is exactly what the cumulative reading does, against the iterative
+// reading's one step at a time.
 //
-// Transcribed VERBATIM from the committed file like every entry above, and it
-// resolves to the scheme's #fcfcfc. ONE PATH, whose three subpaths are the
-// axis-and-solid-leg outline and the two dash outlines; no transform, no
-// fill-opacity, nothing outside the interpreter's subset (m/v/h/l/z plus the
-// implicit-lineto repetition after m, and negative numbers as their own
-// separator).
+// THE SET'S FIRST TWO-COLOR ICON, and the architect chose it knowing that: path
+// 1 is the clock body and its hands in `.ColorScheme-Text`, path 2 the curl-back
+// arrow in `.ColorScheme-Accent`, so the arrow reads as the ACT over the dial it
+// sweeps. preview-render-on and media-record are two-COLORED but each carries
+// its second colour as a literal of its own; this is the first file whose second
+// colour comes from the scheme's OTHER class. Both literals are hard-coded here
+// from the file's own stylesheet, per the media-record precedent: kIconAccent is
+// #3daee9 because THIS FILE says so, not because the redesign's accent happens
+// to be the same value (it is, by shared Breeze ancestry — see kIconAccent).
 //
-// TWO EARLIER CANDIDATES WERE TRIED AND REJECTED, recorded so neither is
-// re-proposed: office-chart-area's rising area is TWO paths, the second at
-// fill-opacity 0.5, and this product composites nothing — rendered opaque the
-// two merge into a solid block, and its full-opacity path alone is an outlined
-// zigzag that is a smudge at the row's 22 px. view-sort-ascending is six sort
-// bars plus an arrow under a `transform="matrix(...)"`, and the interpreter
-// models TRANSLATE ONLY (flattening that matrix by hand would put numbers here
-// that are in no file).
-constexpr IconPath kOfficeChartLineForecastPaths[] = {
+// Transcribed VERBATIM from the committed file like every entry above. TWO
+// PATHS, one fill each, which is the table's existing shape and needed no change
+// anywhere. The `style="fill:currentColor;fill-opacity:1;stroke:none"` form both
+// paths use is the same one go-next, black_sum and document-save carry: this
+// table records only the `d` and the colour the file RESOLVES to, so the style
+// attribute has nothing to transcribe — and its fill-opacity is an explicit 1,
+// fully opaque, not a compositing alpha the palette rule would refuse.
+//
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, both paths against the subset
+// above: path 1 is m/c/v/h plus implicit repetition, path 2 is m/v/h/a with the
+// arc argument set repeating. Every family already has a committed producer —
+// relative cubics in edit-undo, edit-redo, unlock and document-revert, arcs in
+// media-record, preview-render-on, vcs-commit and vcs-diff — and NEITHER PATH
+// CLOSES WITH `z`, which is likewise already the case in six committed files
+// (edit-undo, edit-redo, go-next, go-previous, lock, unlock): a fill closes the
+// subpath implicitly, in cairo as in SVG. So nothing here asked the interpreter
+// for anything new.
+//
+// THE SUCCESSION, recorded so none of it is re-proposed without a new ruling.
+// office-chart-area was tried first and rejected: its rising area is TWO paths,
+// the second at fill-opacity 0.5, and this product composites nothing — rendered
+// opaque the two merge into a solid block, and its full-opacity path alone is an
+// outlined zigzag that smudges at the row's 22 px. view-sort-ascending was the
+// licensed fallback and could not be transcribed at all: six sort bars plus an
+// arrow under a `transform="matrix(...)"`, and the interpreter models TRANSLATE
+// ONLY. An AUTHORED three-ascending-bars glyph was then written in
+// office-chart-bar's construction and REVERTED the same day (2026-08-08), the
+// architect preferring a real Breeze file to an in-tree drawing. Its replacement,
+// office-chart-line-forecast, shipped and was RETIRED at the architect's live
+// pass on 2026-08-09: CHOPPY at row size, its dashes and thin axis breaking up.
+// deep-history is his pick off a rendered candidate sheet; PIN and
+// LAYER-VISIBLE-ON were the considered runners-up on that sheet and are not to
+// be re-proposed without a new ruling.
+constexpr IconPath kDeepHistoryPaths[] = {
     {kIconText,
-     "m4 3v14h-1v1h1v1h1v-1h14v-1h-14v-2h2.7070312l2.5-2.5-0.70703125-0.70"
-     "703125-2.2070312 2.2070312h-2.2929688v-11h-1zm13.5 "
-     "0.79296875-2.7070312 2.7070312 0.70703125 0.70703125 "
-     "2.7070312-2.7070312-0.70703125-0.70703125zm-4 4-2.7070312 2.7070312 "
-     "0.70703125 0.70703125 2.7070312-2.7070312-0.70703125-0.70703125z"},
+     "m11 3c-4.431998 0-8 3.568002-8 8 0 4.431998 3.568002 8 8 8 1.896399"
+     " 0 3.632791-.656291 5-1.751953v-1.248047h-.09375c-1.261408 "
+     "1.237774-2.99118 2-4.90625 2-3.877999 0-7-3.122001-7-7 0-3.877999 "
+     "3.122001-7 7-7 3.877999 0 7 3.122001 7 7 0 .696167-.105435 "
+     "1.366247-.292969 "
+     "2h1.033203c.163714-.639651.259766-1.307916.259766-2 "
+     "0-4.431998-3.568002-8-8-8m-1 2v7h1 5v-1h-5v-6h-1"},
+    {kIconAccent,
+     "m13.65625 14v1h.845703 1.998047a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1"
+     " -1.5 1.5v1a2.5 2.5 0 0 0 2.5 -2.5 2.5 2.5 0 0 0 -2.5 -2.5h-2.84375"},
 };
 
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
@@ -341,8 +383,7 @@ constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
-constexpr IconDef kOfficeChartLineForecast
-                                      {22.0, kOfficeChartLineForecastPaths, 1};
+constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -363,8 +404,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoPrevious:          return kGoPrevious;
         case Icon::GoNext:              return kGoNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
-        case Icon::OfficeChartLineForecast:
-                                        return kOfficeChartLineForecast;
+        case Icon::DeepHistory:         return kDeepHistory;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

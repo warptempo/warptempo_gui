@@ -54,13 +54,15 @@ enum class Icon {
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
-    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), the history group's second:
-    // Breeze's own office-chart-line-forecast — the chart axis with a rising
-    // trend that starts solid and continues as two dashes, accumulation
-    // projected forward, against the iterative reading's one step at a time.
-    // One path, no transform, no fill-opacity; the table's entry records the
-    // two candidates tried before it.
-    OfficeChartLineForecast,   // The cumulative reading (`u`)
+    // THE CUMULATIVE READING'S TOGGLE (architect 2026-08-09), the history
+    // group's second: Breeze's own deep-history — a clock face with a curl-back
+    // arrow sweeping around it, reaching across the whole span at once, against
+    // the iterative reading's one step at a time. THE SET'S FIRST TWO-COLOR
+    // ICON, knowingly: the dial is .ColorScheme-Text and the arrow
+    // .ColorScheme-Accent, so the arrow reads as the act over what it sweeps.
+    // The table's entry records both resolved literals, the command-coverage
+    // check and the four glyphs tried before it.
+    DeepHistory,               // The cumulative reading (`u`)
     // THE WALK'S TWO ARROWS (2026-08-05), the history group's other pair: the
     // checkpoint walk's older (`,`) and newer (`.`) steps. Breeze's own
     // go-previous / go-next chevrons — go-jump's own construction minus its
