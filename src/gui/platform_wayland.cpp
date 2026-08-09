@@ -1803,7 +1803,16 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // here or it stays on screen with no event left that could take it down.
         // WHAT the hook clears is main.cpp's hook body, the authoritative list —
         // more than the roster's hovered buttons, and not restated here.
-        if (pointer_left_hook_) pointer_left_hook_();
+        // THE REASON IS THE ARGUMENT and this site's whole stake in it: the body
+        // is shared with the ordinary leave, which is allowed to KEEP state
+        // across itself (the menu row's armed mode and its hovered button, on the
+        // titlebar trip out through row 1) precisely because a return motion will
+        // re-derive it. There is no such return here. Passing CapabilityLoss is
+        // what makes that exception — and any future one — inapplicable on this
+        // edge, so "everything goes" stays true by construction rather than by
+        // each consumer remembering it.
+        if (pointer_left_hook_)
+            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
 
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
@@ -2261,7 +2270,13 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // open dropdown's item hover/arm is one, and it rides this same edge:
     // main.cpp's hook widened 2026-08-03 to drop it alongside the roster's;
     // see clear_dropdown_pointer_state.)
-    if (pointer_left_hook_) pointer_left_hook_();
+    // OrdinaryLeave is the argument, and the sentence above is exactly what it
+    // buys the consumer: the stream continues, so this is the edge on which the
+    // hook body is permitted to keep state it expects a return motion to
+    // re-derive (2026-08-08 — the menu row's armed mode and its hovered button,
+    // on a leave whose last position was inside row 1's band).
+    if (pointer_left_hook_)
+        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
     // a drag that briefly skids outside the surface and returns
@@ -3134,7 +3149,7 @@ void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = st
 void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
-void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
+void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
 void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }

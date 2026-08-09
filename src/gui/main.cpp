@@ -1093,8 +1093,11 @@ int main(int argc, char** argv) {
     // here rather than each keeping a list that can drift (the setter contract
     // and the member comment in platform_wayland.h, and the capability-loss fire
     // site in platform_wayland.cpp).
-    // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03), and the difference
-    // is the reason none of the clears below may lean on "no later event". Only
+    // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03) — and SINCE
+    // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
+    // GuiPointerLeaveReason, because one effect below now differs between them.
+    // The difference itself is the reason none of the clears may lean on "no
+    // later event". Only
     // CAPABILITY LOSS ends that pointer stream outright — no motion and no
     // release will ever arrive on the object again. AN ORDINARY LEAVE has no
     // position event only WHILE the pointer stays outside: the platform PRESERVES
@@ -1102,7 +1105,9 @@ int main(int argc, char** argv) {
     // button releases normally afterward. WHAT MAKES EVERY CLEAR HERE SAFE is
     // that each drops a VISUAL FACE or a press CLAIM, so a later motion or
     // release lands unowned or as a harmless no-op — never an inability of those
-    // events to arrive.
+    // events to arrive. WHAT MAKES THE ONE KEPT FACE SAFE is the other half of
+    // the same sentence, and it holds on the soft edge ONLY: the return motion
+    // that re-derives it exists there and nowhere else.
     // The hover-driven faces must therefore be cleared here — EXCEPT on the one
     // leave named below, which keeps its button lit on purpose — or a pointer
     // that slides out of the window over a button leaves its pill / outline lit
@@ -1159,6 +1164,18 @@ int main(int argc, char** argv) {
     // its own early return, and a relayout is a real dismissal. Any OTHER leave —
     // below the row, or with the mode not armed — behaves exactly as it always
     // did.
+    // THE EXCEPTION IS SCOPED TO THE ORDINARY LEAVE, and that is a correctness
+    // term rather than tidiness (codex 2026-08-08): this body is shared with
+    // POINTER-CAPABILITY LOSS, the hard end of the stream, where no leave, no
+    // motion and no release will ever arrive again. Keeping anything there would
+    // strand it — a lit row-1 button with no event left to unlight it (the
+    // in-window refusal above, the very thing that protects the kept face, would
+    // then also be what prevents its repair), an armed mode with no pointer, and
+    // a later capability RETURN whose first motion over an anchor would spring a
+    // menu open with no click ever given. So the reason the platform hands in
+    // (GuiPointerLeaveReason) is the first term of the test: the ruled titlebar
+    // trip keeps its face and its mode, the hard end of the stream keeps nothing
+    // and runs the unconditional clear and disarm.
     // THE TOOLTIP GOES DOWN ON THIS EDGE TOO, and it must go down HERE rather
     // than be left to the tick's hover recompute: the hint hangs BELOW the top
     // strip, and hide_shift_tooltip is the only route that damages the box's own
@@ -1170,11 +1187,14 @@ int main(int argc, char** argv) {
     // erase and the unhover one edge — and the tick is not a fallback for it in
     // any case: that recompute refuses outright while the pointer is outside, so
     // this is the only hide the edge gets.
-    gui.set_pointer_left_hook([&] {
+    gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         // Read the band BEFORE the in-window flag goes false: the answer is about
         // the remembered position, which this hook does not touch, but the two
-        // reads belong together and the order says which leave this is.
+        // reads belong together and the order says which leave this is. The
+        // REASON is the first term: only the ordinary leave has the return motion
+        // the exception is built on.
         const bool through_menu_row =
+            reason == GuiPointerLeaveReason::OrdinaryLeave &&
             app.dropdown.menu_row_armed &&
             point_in_menu_row_band(app, app.last_mouse_x, app.last_mouse_y);
         app.pointer_in_window = false;

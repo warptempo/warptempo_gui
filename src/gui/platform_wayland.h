@@ -51,6 +51,28 @@ enum class GuiCursorKind {
 // enumerator count above.
 inline constexpr int kGuiCursorKindCount = 7;
 
+// WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's two fire
+// sites do not share, handed to the consumer because it changes what the drop
+// may leave standing (2026-08-08).
+//   * OrdinaryLeave is wl_pointer.leave: the stream is NOT over. No position
+//     event arrives WHILE the pointer stays outside, but a re-entry synthesizes
+//     a motion, a held button still releases, and the held state survives — so a
+//     consumer may knowingly KEEP a face or a mode across this edge and rely on
+//     that return motion to re-derive it.
+//   * CapabilityLoss is the seat losing wl_pointer: the hard end of the stream.
+//     No leave, no motion, no release will ever arrive on that object again, so
+//     NOTHING pointer-derived may be kept — anything left standing has no event
+//     left that could take it down, and a later capability RETURN is a new
+//     stream that must start cold rather than inherit the old one's state.
+// The distinction exists for exactly one consumer today (main.cpp's hook body,
+// where the menu row's armed mode and its hovered button survive an ordinary
+// leave through row 1 and never survive the hard one); every other clear the
+// hook performs is unconditional and reads this not at all.
+enum class GuiPointerLeaveReason {
+    OrdinaryLeave,
+    CapabilityLoss,
+};
+
 class GuiPlatform {
 public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
@@ -178,6 +200,12 @@ public:
     // and no position event will follow (outright, for capability loss; for the
     // ordinary leave, for as long as the pointer stays outside — it may re-enter
     // with a synthesized motion, and a held button still releases normally).
+    // WHICH EDGE FIRED IT IS THE ARGUMENT (GuiPointerLeaveReason, above the
+    // class; 2026-08-08). The body is shared, and the difference above is real:
+    // a consumer may keep pointer-derived state across the ordinary leave, where
+    // a return motion will re-derive it, and may keep NOTHING across the hard
+    // one, where no such event exists. Each fire site passes its own reason and
+    // neither infers it. The one consumer that reads it is named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
@@ -189,7 +217,7 @@ public:
     // lane in row 5. Widened 2026-08-03 to the open dropdown's pointer-derived
     // state — the roster's button faces are not the only such state this edge
     // drops any more; full story at clear_dropdown_pointer_state. Null-safe.
-    void set_pointer_left_hook(std::function<void()> cb);
+    void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
 
     // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
     // configure handler. The compositor re-sends the full state array on every
@@ -817,8 +845,10 @@ private:
     // re-resolve — permanently on capability loss, and for the duration of the
     // absence on an ordinary leave). Wired to everything derived from where the
     // pointer is, main.cpp's hook body holding the authoritative list; the marker
-    // hover popup it also dropped no longer exists. Null-safe.
-    std::function<void()> pointer_left_hook_;
+    // hover popup it also dropped no longer exists. It carries WHICH of the two
+    // edges fired it, because a consumer may keep state across the soft one and
+    // none across the hard one (GuiPointerLeaveReason). Null-safe.
+    std::function<void(GuiPointerLeaveReason)> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop

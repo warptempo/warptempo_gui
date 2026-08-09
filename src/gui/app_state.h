@@ -2057,7 +2057,11 @@ struct AppState {
     //       titlebar rather than out of the visit: the mode survives it and the
     //       hovered row-1 button keeps its face, exactly as an OPEN menu already
     //       survives the same edge (architect 2026-08-08). A leave anywhere
-    //       else — below the row, or with the mode not armed — disarms.
+    //       else — below the row, or with the mode not armed — disarms, AND SO
+    //       DOES EVERY POINTER-CAPABILITY LOSS whatever the position said: that
+    //       edge is the hard end of the stream, with no return motion to make
+    //       sense of a kept mode, so the hook reads the platform's leave REASON
+    //       ahead of the band (GuiPointerLeaveReason, platform_wayland.h).
     // Entries (2)-(4) share one gated writer, disarm_menu_row, which is inert
     // while a menu is open — there the popup's own routes decide, and (1) is
     // what they call. The ONE close that KEEPS the mode is the row-1 hover
@@ -2731,8 +2735,11 @@ struct AppState {
         char    entry_audio_view            = 'S';
 
         // THE TWO WALKS. `session` is the committed history (git, the strict
-        // load gate, the prefetch store); `local` is this session's own undo
-        // stack read through the same delta machinery. Both are bound at the ONE
+        // load gate, the prefetch store); `local` is this session's own STATE
+        // TIMELINE — every state undo and redo can reach plus the live one —
+        // read through the same delta machinery, its membership and indexing
+        // owned by GuiHistoryLocalWalk (history_diff.h) and not restated here.
+        // Both are bound at the ONE
         // entry owner and both measure against the SAME frozen now side — the
         // local walk takes it from the session rather than capturing a second
         // one (GuiHistoryDiff::now_side).

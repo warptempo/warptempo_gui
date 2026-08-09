@@ -2959,9 +2959,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // to give while it is out. Its per-TICK caller (main.cpp) keeps running after
     // a leave, and the refusal is what makes that call inert in both directions —
     // it can neither re-light a face the pointer-leave hook dropped nor CLEAR the
-    // one that hook deliberately KEEPS when the pointer left through row 1 with
-    // the menu row's mode armed (the rule is at that hook, the band predicate at
-    // point_in_menu_row_band). Nothing else can move a face out there: the only
+    // one that hook deliberately KEEPS when an ORDINARY leave went out through
+    // row 1 with the menu row's mode armed (the rule is at that hook, the band
+    // predicate at point_in_menu_row_band). That the refusal would equally
+    // prevent REPAIRING a kept face is why the hook keeps none on the hard
+    // capability-loss edge, where no return motion exists to repair it. Nothing else can move a face out there: the only
     // writer of `hovered = true` is this walk, and the only other writers of
     // false are the leave hook itself and the dropdown open edge, which no
     // out-of-window event can reach.
@@ -4073,9 +4075,10 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
 // that has left the window has left the VISIT, the band exit's own reason at a
 // coarser edge, NOT a claim that no motion can follow: a re-entry synthesizes
 // one, and it finds a cold row that takes a click again, which is the intent —
-// and that call is CONDITIONAL since 2026-08-08: a leave whose last position was
-// inside row 1's band is a step onto the titlebar, not out of the visit, so the
-// hook skips this call entirely there), ANY pointer press (on_button_press's
+// and that call is CONDITIONAL since 2026-08-08: an ORDINARY leave whose last
+// position was inside row 1's band is a step onto the titlebar, not out of the
+// visit, so the hook skips this call entirely there — while a pointer-CAPABILITY
+// loss, the hard end of the stream, always makes it), ANY pointer press (on_button_press's
 // top) and ANY key press (on_key's top). It damages nothing: the mode is
 // invisible, painting no face of its own; what it changes is what the NEXT
 // motion does.
@@ -4124,9 +4127,11 @@ void GuiInputHandler::disarm_menu_row() {
 // THE MENU ITSELF STAYS OPEN — leaving the window is not a dismissal — and the
 // row's armed mode is the leave hook's own question, asked beside this call:
 // with a menu open disarm_menu_row is inert (its no-menu-open gate), and with
-// none open the hook skips it altogether when the pointer left THROUGH row 1's
-// band, so the mode survives that leave the way the standing menu survives this
-// one.
+// none open the hook skips it altogether when an ORDINARY leave went out THROUGH
+// row 1's band, so the mode survives that leave the way the standing menu
+// survives this one. On CAPABILITY LOSS neither survives on this reasoning: the
+// popup does stay up, having no pointer-derived existence at all, but nothing
+// pointer-derived is kept there — the leave reason gates the exception.
 // THE PRESS CLAIM GOES ABOVE THE TRANSITION GATE: this is the button-LOST edge,
 // so a re-entry that still reports the button down must not resurrect an arm no
 // release will ever be attributed to. Coming back takes a fresh press, exactly

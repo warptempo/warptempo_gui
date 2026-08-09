@@ -447,7 +447,8 @@ struct GuiPaintHandler {
     //     distinguishes ONE MEMBER'S TWO DELTAS (iterative forward against the
     //     next-newer item, cumulative against the frozen now side), the SOURCE
     //     what distinguishes THE TWO WALKS (the committed history and the
-    //     session's own undo stack, whose positions are two different fields),
+    //     session's own STATE TIMELINE — the model is GuiHistoryLocalWalk's,
+    //     history_diff.h — whose positions are two different fields),
     //     and the selection hash what distinguishes two membership states of one
     //     shown delta (the mode's multi-selection, whose members wear the focus's
     //     own brightened face).
