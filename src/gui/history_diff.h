@@ -363,7 +363,7 @@ GuiHistoryNowSide build_history_now_side(const AppState& app);
 //
 // `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
 // entry has no name, and the corner reads the emptiness rather than inventing
-// one (the local tabs show `n/N` alone).
+// one (on the Local tab the corner shows `n/N` alone).
 GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
                                            const std::string& then_warp,
                                            const std::string& then_phase_reset,
@@ -654,8 +654,8 @@ private:
     // enum's own value.
     //
     // THE FOURTH READING DID NOT LAND HERE (2026-08-07), which retires this
-    // slot's old "adding a third reading is a one-line change" note: the two
-    // LOCAL tabs are the same two readings of ANOTHER WALK (GuiHistoryLocalWalk
+    // slot's old "adding a third reading is a one-line change" note: the LOCAL
+    // walk offers the same two readings over ANOTHER SOURCE (GuiHistoryLocalWalk
     // below), so what the view grew was a second source with its own two-slot
     // cache — not a third compare mode. A genuine third READING would still be
     // the one-line change the array shape suggests, in both classes.
@@ -767,8 +767,8 @@ public:
     // read only through the frozen sizes above.
     void init(const AppState& app, const GuiHistoryNowSide& now);
 
-    // How many STATES the timeline carries — U + R + 1, the `n/N` denominator on
-    // the two Local tabs, and fixed for the visit. It is never zero once init has
+    // How many STATES the timeline carries — U + R + 1, the `n/N` denominator
+    // the corner shows on the Local tab, and fixed for the visit. It is never zero once init has
     // run against a session: a session that has authored nothing answers 1, the
     // live state alone. Zero is the UNINITIALIZED answer (no visit has bound this
     // walk), which is the only way a Local tab can read `0/0`.
@@ -798,7 +798,7 @@ public:
     // through them to load it would put the strict parsers in a path that
     // needs no grammar at all.
     //
-    // ONE CONSUMER — the Local tabs' `'` load-in-place
+    // ONE CONSUMER — the Local tab's `'` load-in-place
     // (GuiInputHandler::load_history_local_entry_in_place). It COPIES all three
     // before it writes anything, which is what keeps the identity load (loading
     // the live member) from assigning a store to itself.

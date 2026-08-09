@@ -111,7 +111,7 @@ struct Viewport {
     //    the settings engine-scale commit, undo/redo, and ALL THREE LOAD-IN-PLACE
     //    BODIES (re-derived 2026-08-08: load_render_entry_in_place for `'` over a
     //    render entry, load_history_commit_in_place for the `h` view's commit
-    //    load, and load_history_local_entry_in_place for that view's LOCAL tabs,
+    //    load, and load_history_local_entry_in_place for that view's LOCAL walk,
     //    which puts a state of the session's own undo/redo timeline back — all
     //    three in input_key_dispatch.cpp).
     //    Each kicks so

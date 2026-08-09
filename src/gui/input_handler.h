@@ -1293,9 +1293,9 @@ private:
     // load_render_entry_in_place.
     //
     // THE `h` HISTORY MODE GIVES THE SAME EDITOR TWO MORE SUBJECTS, one per walk
-    // (2026-08-04 for the commit, 2026-08-08 for the local member): on the COMMIT
-    // tabs it takes a COMMIT SPELLING, opens prefilled with the viewed commit's
-    // SHA and loads it through load_history_commit_in_place; on the LOCAL tabs it
+    // (2026-08-04 for the commit, 2026-08-08 for the local member): on the REMOTE
+    // tab it takes a COMMIT SPELLING, opens prefilled with the viewed commit's
+    // SHA and loads it through load_history_commit_in_place; on the LOCAL tab it
     // takes a MEMBER NUMBER, opens prefilled with the viewed member's displayed
     // `n`, and loads that timeline state through
     // load_history_local_entry_in_place. The mode is the discriminator for the

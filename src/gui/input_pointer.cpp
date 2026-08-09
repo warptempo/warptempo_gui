@@ -432,7 +432,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // second bit is why this now takes the whole AppState rather than the mode
 // struct); and it admits CTRL+H only while a diff flag is selected, so the
 // REVERT button greys with an empty subject; and since 2026-08-08 it admits
-// bare `'` on the LOCAL tabs only while that walk is BOUND, which greys the
+// bare `'` on the LOCAL tab only while that walk is BOUND, which greys the
 // load-in-place button on the blank-lane state a live tab cannot reach. The
 // derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
@@ -451,8 +451,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   face until 2026-08-08, when the act moved onto the save it begins with),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), the load-editor opener (bare `'`, which in this mode loads THE
-//   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Commit tabs,
-//   the timeline state on the Local ones since 2026-08-08, and live on both:
+//   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
+//   the timeline state on the Local one since 2026-08-08, and live on both:
 //   its local arm is the THIRD session-dependent entry, dead only on an unbound
 //   walk), and the history button itself (bare `h`, the
 //   mode's own key,

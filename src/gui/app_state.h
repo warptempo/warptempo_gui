@@ -2230,7 +2230,7 @@ struct AppState {
     //   toggle_dropdown lockout's.
     //   LIT — Quit (Ctrl+Q), the view bar's three (bare 1/2/3), the
     //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the S/T + W/P radios (bare
-    //   `t` / `p`), all four row-3 tabs and the history button (Ctrl+Tab and
+    //   `t` / `p`), BOTH row-3 tabs and the history button (Ctrl+Tab and
     //   bare `h`, the mode's OWN vocabulary, which the derivation asks about
     //   first), the walk's two arrows (bare `,` / `.`, the same), and the
     //   NAVIGATION anchor since 2026-08-08 — the menu it opens works in here,
@@ -2240,8 +2240,9 @@ struct AppState {
     //   key and the face: Save greys with an empty head delta (or a checkpoint
     //   in flight), Revert greys with no diff flag selected, and the
     //   load-in-place opener greys only on an UNBOUND local walk (2026-08-08,
-    //   when the Local tabs got the act — the term is the blank-lane state a
-    //   live tab cannot reach, so in practice that button is lit on all four).
+    //   when the Local walk got the act — the term is the blank-lane state a
+    //   live tab cannot reach, so in practice that button is lit on both tabs
+    //   in either reading).
     // The partition is
     // DERIVED
     // from the two gates above (plus the Settings anchor's toggle_dropdown
@@ -2272,8 +2273,8 @@ struct AppState {
     // and each says why at its own site: the corner's SHA token (an undo entry
     // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS since
     // 2026-08-08 but FORKS ON THE SOURCE — the editor asks for a commit spelling
-    // on one pair of tabs and a member NUMBER on the other, and the act behind it
-    // is a different function per walk (the mode's two, at the opener and at
+    // on the Remote tab and a member NUMBER on the Local one, and the act behind
+    // it is a different function per walk (the mode's two, at the opener and at
     // load_editor_commit) — and SAVE-AND-COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
@@ -2289,8 +2290,8 @@ struct AppState {
     // own act, not an exception carved out of the allowlist's reasoning (the
     // second is Ctrl+S, further down, on the same reasoning). In the
     // mode that editor's subject CHANGES, AND IT CHANGES WITH THE WALK
-    // (2026-08-08, when the architect gave the Local tabs the act his 2026-08-07
-    // ruling had them consume). ON THE COMMIT TABS it opens prefilled with the
+    // (2026-08-08, when the architect gave the Local walk the act his 2026-08-07
+    // ruling had it consume). ON THE REMOTE TAB it opens prefilled with the
     // viewed commit's full SHA, takes any spelling git can resolve in its place,
     // and on Enter loads THAT COMMIT's three sidecars into the live session in
     // place, 1:1
@@ -2660,8 +2661,8 @@ struct AppState {
         // checkpoint, so stepping back to an older one must not offer to
         // "re-commit" it.
         //
-        // AND IT READS THE COMMIT WALK ALWAYS, which the two LOCAL tabs of
-        // 2026-08-07 change nothing about: the act publishes a checkpoint into
+        // AND IT READS THE COMMIT WALK ALWAYS, which the LOCAL walk of
+        // 2026-08-07 changes nothing about: the act publishes a checkpoint into
         // the repository, so "is there anything to checkpoint" is the live state
         // against the newest COMMIT whatever walk the lane happens to be
         // showing. Reading the undo stack here would grey the act on a session
@@ -4125,7 +4126,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // shifted twins jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
         // shift line deliberately does not name the member kind since
-        // 2026-08-08: the Local tabs' members are states of the session's own
+        // 2026-08-08: the Local walk's members are states of the session's own
         // undo/redo timeline, not checkpoints, so "checkpoint" would lie on half
         // the surface these arrows serve.
         // THEY ARE HOVERABLE HINTS EVERYWHERE, including outside the history

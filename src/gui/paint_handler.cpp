@@ -3990,7 +3990,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // timeline states with the same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
         // ALONE, and deliberately named rather than routed through an accessor:
         // an undo entry has no commit, so the token simply does not appear on
-        // the Local tabs — the empty-sha test below is that fact rather than a
+        // the Local tab — the empty-sha test below is that fact rather than a
         // second branch.
         std::string line;
         const std::size_t count = app.history_mode.walk_count();

@@ -801,7 +801,7 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // IT RIDES THE MODE, IT DOES NOT CARRY IT: entry is still gated on the
     // COMMIT walk's availability alone, so a piece with no committed history
     // cannot be opened to read its undo stack. That is deliberate — the view is
-    // the GitHub recheck, and the local tabs are a second reading inside it.
+    // the GitHub recheck, and the local walk is a second source inside it.
     fresh.local.init(app, fresh.session.now_side());
     // AND IT OPENS WHERE THE SESSION STANDS (architect 2026-08-08), which is the
     // one place the two walks' entry positions differ. The commit walk opens at
@@ -1378,8 +1378,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE ACTIVE WALK'S POSITION, never a named one (2026-08-07): the step reads
     // walk_count / walk_index and writes through set_walk_index, so the same body
     // walks the committed history or the session's own undo/redo timeline
-    // depending on which pair of tabs is lit, and each walk keeps the position
-    // the other one left alone. On the Local tabs `.` walks INTO FUTURE STATES
+    // depending on which tab is lit, and each walk keeps the position
+    // the other one left alone. On the Local tab `.` walks INTO FUTURE STATES
     // when redo entries exist, the walk opening at the live member rather than at
     // its newest one (GuiHistoryLocalWalk owns that model). A ONE-MEMBER walk —
     // a session that has authored nothing — clamps at both walls and every press
@@ -1669,10 +1669,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             chord.
 //                             IT IS ADMITTED ON BOTH WALKS since 2026-08-08
 //                             (architect, superseding the 2026-08-07 ruling that
-//                             the Local tabs consume it): the Commit tabs take a
-//                             COMMIT SPELLING and load its three sidecars
-//                             (load_history_commit_in_place), the Local tabs take
-//                             a member NUMBER and load that state of the
+//                             the Local walk consumes it): the REMOTE tab takes
+//                             a COMMIT SPELLING and loads its three sidecars
+//                             (load_history_commit_in_place), the LOCAL tab takes
+//                             a member NUMBER and loads that state of the
 //                             session's own timeline as a new undo entry
 //                             (load_history_local_entry_in_place). The local arm
 //                             is a FOURTH session-conditional admission, on the
@@ -1892,10 +1892,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
-    // the 2026-08-07 "the Local tabs consume it": a local member is a STATE of
+    // the 2026-08-07 "the Local walk consumes it": a local member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
     // act does). The two differ only in what the editor asks for — a commit
-    // spelling on the Commit tabs, a member NUMBER on the Local ones — and the
+    // spelling on the Remote tab, a member NUMBER on the Local one — and the
     // routing lives at load_editor_commit, not here.
     //
     // THE LOCAL ARM CARRIES ONE TERM: the walk must have members. It is the
@@ -3923,7 +3923,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // -- Load-in-place from a LOCAL HISTORY MEMBER (the `'` editor on a Local tab) -
 //
 // WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
-// superseding his own "the Local tabs consume `'`"), with A STATE OF THIS
+// superseding his own "the Local walk consumes `'`"), with A STATE OF THIS
 // SESSION'S OWN UNDO/REDO TIMELINE as its source. `text` is whatever the user
 // left in the load editor: the viewed member's displayed NUMBER, which the
 // opener prefilled, or any other member number he typed over it — the corner's
@@ -4100,8 +4100,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(
 // this one branch plus the routing at load_editor_commit: in the mode the
 // editor takes THE VIEWED WALK'S OWN VOCABULARY and opens PREFILLED with the
 // viewed member — a COMMIT SPELLING seeded with the full 40-char SHA on the
-// Commit tabs (load_history_commit_in_place), a MEMBER NUMBER seeded with the
-// corner's own displayed `n` on the Local tabs since 2026-08-08
+// Remote tab (load_history_commit_in_place), a MEMBER NUMBER seeded with the
+// corner's own displayed `n` on the Local tab since 2026-08-08
 // (load_history_local_entry_in_place). Both of the renders-side guards
 // drop with the
 // renders-side subject — an empty renders/ is no obstacle to loading a commit
@@ -4116,7 +4116,7 @@ void GuiInputHandler::open_load_editor() {
     std::string prefill;
     if (app.history_mode.active) {
         // THE SEED IS THE VIEWED MEMBER, IN THE ACTIVE WALK'S OWN SPELLING
-        // (2026-08-08, when the Local tabs got the act): the corner's displayed
+        // (2026-08-08, when the Local walk got the act): the corner's displayed
         // NUMBER on the local timeline, the commit's full 40-char SHA on the
         // committed one. The fork is here rather than in an accessor for the
         // reason the corner's own SHA token is spelled out: the two walks name
@@ -4265,8 +4265,8 @@ void GuiInputHandler::load_editor_autocomplete() {
 // answer (architect 2026-08-02).
 //
 // IN THE `h` HISTORY MODE THE SUBJECT IS A HISTORY MEMBER, not a render entry,
-// and WHICH KIND is the viewed walk's: a COMMIT SPELLING on the Commit tabs
-// (load_history_commit_in_place), a MEMBER NUMBER on the Local tabs since
+// and WHICH KIND is the viewed walk's: a COMMIT SPELLING on the Remote tab
+// (load_history_commit_in_place), a MEMBER NUMBER on the Local tab since
 // 2026-08-08 (load_history_local_entry_in_place). Each owns every refusal on its
 // own route and names each one on stderr. All three routes share this function's
 // SHAPE exactly — a true result closes the editor, a false one red-flashes and
