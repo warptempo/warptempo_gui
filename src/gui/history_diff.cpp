@@ -264,13 +264,16 @@ enum class GitCapture {
 // Run `git -C <repo> <args...>` and capture its stdout.
 //
 // THE ONLY SUBCOMMANDS THIS ENTRY POINT EVER PASSES ARE `log`, `show`,
-// `ls-tree`, `rev-parse`, `status`, `rev-list`, `diff-tree` AND `remote get-url`
-// (rev-parse joined 2026-08-04 with the load-in-place-from-a-commit path's
-// spelling
-// resolution, status the same day with the commit act's pre-flight probe, and
-// rev-list + diff-tree with the same act's ATTRIBUTION verdict — the bounded
-// `before..HEAD` walk, each candidate's own changed-path list, and rev-list
-// again for the push verdict's containment count) — all of them reads, and that
+// `ls-tree`, `rev-parse`, `status`, `rev-list` AND `remote get-url`
+// (re-derived from the invocations 2026-08-09): `log` and `ls-tree` are the
+// display walk's own reads, `show` reads a commit's blob, `remote get-url` is
+// the projects-home guard, `rev-parse` resolves a spelling — the
+// load-in-place-from-a-commit path's, the branch name, and the checkpoint act's
+// branch tip — `status` is that act's pre-flight probe, and `rev-list --count`
+// is the ONE containment read behind its clean arm and its push verify.
+// `diff-tree` LEFT THE LIST on 2026-08-09 with the attribution walk that was its
+// only caller (the strict act keeps no content signature; the act's own head
+// owns that ruling). All of these are reads, and that
 // constraint is meant to stay checkable by reading the call sites below rather
 // than by trusting a runtime guard. THE MUTATING SUBCOMMANDS HAVE THEIR OWN
 // ENTRY POINT, run_git_mutate directly below, which is the whole point of there
@@ -2195,13 +2198,20 @@ namespace {
 // which is how the push check below asks "does this remote-tracking ref exist
 // yet".
 //
-// THE TWO RETURNS ARE TWO DIFFERENT FACTS, and keeping them apart here is the
-// whole reason this form exists. `object_name` answers WHAT THE REF NAMES and is
-// empty when the ref did not resolve; the returned GitCapture answers WHETHER
-// THE INVOCATION RAN, which an empty name cannot carry and which no later probe
-// can reconstruct — a second question answered now proves the repository speaks
-// now, never that an earlier invocation ever executed. resolve_ref_witnessed is
-// the consumer that needs both, and its comment owns what it does with them.
+// THE TWO RETURNS ARE TWO DIFFERENT FACTS. `object_name` answers WHAT THE REF
+// NAMES and is empty when the ref did not resolve; the returned GitCapture
+// answers WHETHER THE INVOCATION RAN, which an empty name cannot carry and which
+// no later probe can reconstruct — a second question answered now proves the
+// repository speaks now, never that an earlier invocation ever executed.
+//
+// NOBODY NEEDS BOTH TODAY (re-derived 2026-08-09): the one caller is
+// resolved_object_name directly below, which takes the name and drops the
+// verdict. The grading consumer that wanted the pair — the witnessed ref read —
+// went with the checkpoint act's graded machinery, and the pair is kept here
+// rather than folded away because the DISTINCTION is real and the fold would be
+// the lossy direction: a future caller that must tell an absent ref from an
+// unreadable repository has the answer waiting, and no other function in this
+// file can reconstruct it.
 GitCapture resolve_ref_capture(const std::string& spelling,
                                std::string&       object_name) {
     std::string      out;
@@ -2214,10 +2224,13 @@ GitCapture resolve_ref_capture(const std::string& spelling,
 
 // The same read for the callers that need only the name, which collapses the two
 // answers on purpose: THE EMPTY ANSWER IS TWO ANSWERS — a ref that is absent and
-// a read that could not be made — and the callers that read this directly (the
-// act's own branch-tip reads) treat both as the same failure by design: no tip,
-// no act. A caller that must tell them apart calls resolve_ref_capture, or goes
-// through resolve_ref_witnessed which does.
+// a read that could not be made — and every caller treats both as the same
+// failure by design. Its three, re-derived 2026-08-09: the checkpoint act's
+// branch-tip read (no tip, no act), its clean arm's local-tip read, and
+// remote_carries, where an origin ref that is absent and one that cannot be read
+// both come back Unavailable — which under the strict model call for the same
+// thing, the act saying it could not confirm. A caller that must tell them apart
+// calls resolve_ref_capture above, which still hands back both.
 std::string resolved_object_name(const std::string& spelling) {
     std::string name;
     resolve_ref_capture(spelling, name);
