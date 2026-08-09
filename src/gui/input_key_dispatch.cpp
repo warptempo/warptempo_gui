@@ -933,8 +933,19 @@ void GuiInputHandler::measure_history_head_delta() {
     if (!head) return;
     app.history_mode.head_delta_empty    = head->is_empty();
     app.history_mode.head_delta_measured = true;
-    // The newest walk member is the newest checkpoint on the local branch, which
-    // is exactly the commit a push would be publishing.
+    // THE TWO SIDES NAME THE SAME COMMIT BY CONSTRUCTION (2026-08-09): this asks
+    // about the walk's member 0 — the newest commit on the local branch touching
+    // this piece's sidecars — and the act's push-only arm publishes the newest
+    // PATH-LIMITED commit on that branch, which is member 0's own definition. So
+    // the bit is about the very commit the admission it feeds would publish. It
+    // was not true while that arm pushed the branch TIP: a commit landing on top
+    // of an unpushed checkpoint made the two different commits, and the act would
+    // have published the wrong one.
+    // (The walk's own LOAD GATE can hide a newer ineligible checkpoint, which
+    // would make member 0 older than the act's subject. The bit is then
+    // conservative in the safe direction — it reports the older commit's
+    // publication state, and the act re-observes for itself before publishing
+    // anything.)
     app.checkpoint_push_pending =
         history_commit_is_unpushed(app.history_mode.session.sha_at(0));
 }
@@ -2418,10 +2429,14 @@ void GuiInputHandler::on_history_checkpoint_complete(
         break;
     }
 
-    // THE ROW'S OWN DAMAGE, unconditional across all six arms because all six
-    // WRITE the slot — the two established ones by clearing it, which erases a
-    // cell that was painting a moment ago and is exactly as much a change as
-    // setting one. This is the bottom strip's one invalidation
+    // THE ROW'S OWN DAMAGE, UNCONDITIONAL, and it is the DAMAGE that is
+    // unconditional rather than the write: five arms always write the slot (the
+    // two established ones by clearing it, which erases a cell that was painting
+    // a moment ago and is exactly as much a change as setting one), while
+    // Unconfirmed writes only into an empty slot and may well leave the row
+    // untouched. Damaging anyway costs one repaint of one row on a keypress-rare
+    // event and needs no arm to remember it. This is the bottom strip's one
+    // invalidation
     // (invalidate_timestamp_area — the row's damage owner since it carried only
     // the clock), the same call every transient-status writer makes. The Save
     // button's face needs nothing here: the push-pending bit reaches it through

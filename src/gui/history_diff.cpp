@@ -2725,6 +2725,45 @@ std::string find_checkpoint_commit(const std::string&              source_ref,
     return {};
 }
 
+// THE NEWEST COMMIT ON `source_ref` THAT TOUCHED THE CHECKPOINT'S OWN PATHS —
+// the pre-flight's answer to "which commit IS the checkpoint here", for the arm
+// that has one to publish but did not make it (2026-08-09).
+//
+// WHY NOT find_checkpoint_commit ABOVE: that walk identifies a commit THIS ACT
+// JUST MADE, and both of its scoping terms are act-side — a `before..` range
+// captured moments earlier, and the act's own title. Neither exists for a
+// checkpoint some earlier act left unpushed: the range's floor is gone with that
+// act, and its title was whatever the user typed then. What survives is the
+// PATHS, so those are what this walks by, and the three legs that make a claim
+// about CONTENT (the caller runs commit_carries_our_bytes on the answer) are
+// unchanged in kind.
+//
+// PATHSPEC-SCOPED AND CAPPED AT ONE, on the captured branch ref rather than the
+// symbolic HEAD for the reason every other source-side read here takes it: a
+// checkout mid-act must not let this name a commit from another branch's
+// history. The pathspecs are the act's own literal ones — the exact three paths
+// it writes — which is narrower than the commit walk's era-agnostic glob and
+// correct here: this asks about the CURRENT era's spelling, the only one the
+// bytes being compared could live at.
+//
+// AN EMPTY ANSWER IS BOTH "no such commit" and "the read could not run", and the
+// caller treats them alike: with no identified checkpoint there is nothing this
+// act may publish.
+std::string newest_checkpoint_commit(
+        const std::string&              source_ref,
+        const std::vector<std::string>& pathspecs) {
+    std::vector<std::string> args{"log", "--format=%H", "-n", "1", source_ref,
+                                  "--"};
+    for (const std::string& p : pathspecs) args.push_back(p);
+    std::string out;
+    if (!git_output(args, out)) return {};
+    for (const std::string& line : split_lines(out)) {
+        const std::string sha = trim_trailing_ws(line);
+        if (!sha.empty()) return sha;
+    }
+    return {};
+}
+
 }  // namespace
 
 // THE PUBLICATION QUESTION, READ-ONLY (the header owns the contract and the
@@ -3098,26 +3137,47 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // would tell the user everything is done while the remote has none of
         // it, with no route left that would ever retry the push.
         //
-        // So: clean AND the remote already carries the branch tip is the
-        // ordinary committed-twice non-failure. Clean AND the remote is BEHIND
+        // So: clean AND the remote already carries THE CHECKPOINT is the
+        // ordinary committed-twice non-failure. Clean AND the remote lacks it
         // means the work exists locally and only the push is missing, so this
         // arm pushes. It does not ask WHO made that commit and deliberately so
         // — the user may simply have committed from a terminal and left it
         // unpushed, and publishing it is the correct answer whoever made it (the
         // same content-identity contract find_checkpoint_commit states in full).
-        // What it DOES confirm first is that the tip carries the checkpoint's
-        // bytes, so the line it prints about "the checkpoint" names something
-        // real — and what it then publishes is that confirmed commit by sha.
+        // What it DOES confirm, on BOTH endings, is that the commit it is
+        // talking about carries the checkpoint's bytes — see the byte check
+        // below, which is what makes every line this arm prints a claim about
+        // CONTENT.
         //
-        // THE TIP IS THE CAPTURED BRANCH'S, not the symbolic HEAD's: a checkout
+        // THE SUBJECT IS THE CHECKPOINT COMMIT, NOT THE BRANCH TIP (2026-08-09).
+        // This arm read the tip and published the tip until then, which broke the
+        // act's own scoped-publish property in the ordinary case it exists for: a
+        // checkpoint fails its push, ANY unrelated commit lands on top (the
+        // architect's own code wrapper does exactly that), and the retry then
+        // published that commit's whole ancestry uninvited. So the subject is the
+        // NEWEST COMMIT ON THE CAPTURED BRANCH THAT TOUCHED THE CHECKPOINT'S
+        // PATHS (newest_checkpoint_commit above), and "a commit on top of it
+        // stays the user's own to publish" holds on this route exactly as it does
+        // on the act's own.
+        //
+        // IT IS THE CAPTURED BRANCH'S, not the symbolic HEAD's: a checkout
         // mid-act would otherwise have this arm confirm the OTHER branch's bytes
-        // and push that branch's tip onto the captured one. Reading the captured
-        // ref makes the answer the true state of the branch this act publishes
-        // on, whatever git happens to have checked out.
-        const std::string head = resolved_object_name(source_ref);
-        if (head.empty()) {
-            return commit_failed("could not read the branch tip while "
-                                 "confirming the existing checkpoint");
+        // and publish out of that branch's history. Reading the captured ref
+        // makes the answer the true state of the branch this act publishes on,
+        // whatever git happens to have checked out.
+        const std::string checkpoint =
+            newest_checkpoint_commit(source_ref, pathspecs);
+        if (checkpoint.empty()) {
+            // No commit on this branch has ever touched these paths, or the walk
+            // could not run. Either way there is no checkpoint to confirm and
+            // none to publish — and the paths being clean means there is nothing
+            // to commit either, so this establishes nothing at all.
+            std::fprintf(stderr,
+                         "warptempo_gui: Could not confirm the checkpoint: no "
+                         "commit on '%s' was found touching the checkpoint "
+                         "paths, so nothing was pushed\n",
+                         branch.empty() ? "a detached HEAD" : branch.c_str());
+            return GuiHistoryCommitOutcome::Unconfirmed;
         }
         // UNOBSERVABLE IS NOT PUBLISHED, and this arm is the reason that
         // distinction has to exist: "already published" is the answer that ENDS
@@ -3133,13 +3193,39 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         bool already_published = false;
         if (!branch.empty()) {
             already_published = ref_carries("refs/remotes/origin/" + branch,
-                                            source_ref, head, unobserved);
+                                            source_ref, checkpoint, unobserved);
+        }
+
+        // THE BYTE CHECK GATES BOTH ENDINGS, and it is what makes this arm's
+        // claim about CONTENT rather than about motion (2026-08-09). Every
+        // observation here is taken at a DIFFERENT INSTANT — `status` proved the
+        // paths clean, then this walk named a commit, then the containment read
+        // ran — and a terminal process advancing and pushing this same branch in
+        // that window is an ordinary thing to be doing. Without this check the
+        // published-tip arm would answer "already carries these bytes" about a
+        // commit nobody had compared to the act's own captured bytes, which is
+        // the DIFFERENT CONTENT IS NEVER BLESSED contract broken on its own
+        // route. With it, a window that moved the branch under the act comes out
+        // as Unconfirmed — the honest verdict for observations that no longer
+        // describe one state — instead of a clean ending.
+        //
+        // ITS SUBJECT IS THE COMMIT BEING PUBLISHED (or the one claimed already
+        // published), never the branch tip, so the thing confirmed and the thing
+        // acted on are one commit.
+        if (!commit_carries_our_bytes(checkpoint, base_name, paths, texts)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Could not confirm the checkpoint: the "
+                         "paths are clean, but %s does not carry these bytes, "
+                         "so nothing was pushed\n",
+                         short_sha(checkpoint).c_str());
+            return GuiHistoryCommitOutcome::Unconfirmed;
         }
 
         // OBSERVED PUBLICATION IS THE ONLY CLEAN ENDING HERE. `already_published`
         // is a DEMONSTRATED containment (ref_carries returns true for nothing
-        // less), so this arm has seen both halves of the answer: the paths are
-        // clean and the remote carries the tip.
+        // less), so this arm has now seen every half of the answer: the paths are
+        // clean, the named commit carries these bytes, and the remote carries
+        // that commit.
         if (already_published) {
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit: the checkpoint "
@@ -3170,23 +3256,17 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                          "unpublished\n",
                          branch.c_str());
         }
-        // UNCONFIRMED, NOT "NOTHING TO COMMIT" (2026-08-09). This arm answers
-        // that the repository did not confirm what the act needed to know — the
-        // paths are clean, but the tip's own tree was not seen to carry these
-        // bytes — so it established neither content nor publication and nothing
-        // was pushed. It returned NothingToCommit until this date, which told the
-        // caller a clean ending on the strength of an unanswered question and let
-        // a standing failure report be cleared by it. The line it prints is
-        // unchanged; only the verdict the caller reads is.
-        if (!commit_carries_our_bytes(head, base_name, paths, texts)) {
-            std::fprintf(stderr,
-                         "warptempo_gui: Nothing to commit: the checkpoint "
-                         "paths are clean, but the branch tip could not be "
-                         "confirmed to carry these bytes, so nothing was "
-                         "pushed\n");
-            return GuiHistoryCommitOutcome::Unconfirmed;
-        }
-        return push_branch(head, /*already_committed=*/true,
+        // THE PUSH PUBLISHES THE CHECKPOINT AND NOTHING ABOVE IT. `checkpoint`
+        // is confirmed to carry these bytes by the check above, and push_branch
+        // sends it BY SHA onto the captured branch — so a commit sitting on top
+        // of it is untouched and stays the user's own to publish, which is the
+        // act's standing scoped-publish property applied to a checkpoint this
+        // act did not make.
+        // (THE BYTE CHECK THAT USED TO SIT HERE moved above the published-tip
+        // arm on 2026-08-09: it gated only this leg, so the OTHER ending —
+        // "already carries these bytes" — was making a content claim nothing had
+        // checked. One check, both endings.)
+        return push_branch(checkpoint, /*already_committed=*/true,
                            /*publication_known=*/!unobserved);
     }
 
