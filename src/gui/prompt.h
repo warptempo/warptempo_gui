@@ -59,13 +59,22 @@ struct GuiPrompt {
     // non-positive-tempo-product class; marker arrangements always enter —
     // the parser resolver normalizes them, and trim plays no part), the
     // iteration-sweep cell-cap refusal, and since 2026-08-07 THE CHECKPOINT
-    // ACT'S FAILURE REPORT (the act runs on a worker now, so a failure has no
-    // gesture to refuse and needs a surface of its own). THAT ONE CALLER IS THE
-    // ONLY ASYNC ONE, so it is the only one that has to make room for itself:
-    // it defers the open while a prompt or an editor stands and CLOSES an open
-    // dropdown as it opens — GuiInputHandler::maybe_open_pending_history_notice
-    // owns both, and states why the two surfaces are treated differently. Every
-    // other caller here is a gesture whose own gate has already dealt with both.
+    // ACT'S FAILURE REPORT (the act runs on a worker, so its failure has no
+    // gesture of its own to refuse and needs a surface instead).
+    // THAT ONE CALLER IS THE ONLY ASYNC ONE — dispatched by no key and no
+    // gesture, and therefore past none of the gates that clear the way for the
+    // others — so it is the only one that has to make room for itself, which it
+    // does in three classes (re-derived 2026-08-09;
+    // GuiInputHandler::maybe_open_pending_history_notice owns the partition and
+    // the reasoning): it PARKS for a surface in use (a prompt, any of the five
+    // editors), CLOSES a transient popup (the open dropdown, with the floating
+    // hint), and PARKS for an act in flight (any live pointer gesture — it
+    // cannot be closed, gestures having no cancel by ruling, and force-ending
+    // one from a worker's clock would commit a drag the user never released).
+    // It also drops the two RELEASE-OWNED SCRAPS the force-end finalizer drops,
+    // since the prompt gate is about to swallow the release that owned them.
+    // Every other caller here rides a gesture or a key whose own gate has
+    // already dealt with all of it.
     void open_error_notice(std::string text);
 
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory

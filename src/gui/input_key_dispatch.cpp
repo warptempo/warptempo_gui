@@ -2363,10 +2363,13 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // sweep's cap refusal, Ctrl+Q's unsaved dialog) sit below on_key's popup gate,
 // which swallows every chord but Esc and Ctrl+Q while a menu is up; the pointer
 // ones sit below the presses that close it; the load-time env-hash prompt runs
-// before any row exists. This notice arrives on a WORKER'S CLOCK with no gesture
-// behind it, so it meets no gate at all — the async completion is exactly the
-// route that made "a prompt and a popup cannot stand together" an argument from
-// reachability rather than from structure.
+// before any row exists. This notice is DISPATCHED BY NO GESTURE AND NO KEY — it
+// arrives on a worker's clock — so it passes through none of those gates, which
+// is precisely why it must ask every question itself. It is emphatically NOT
+// true that no gesture is RUNNING when it lands: the user is free to be mid-drag
+// at that instant, and the park above is what makes that safe. The async
+// completion is exactly the route that made "a prompt cannot stand over a popup
+// or a gesture" an argument from reachability rather than from structure.
 void GuiInputHandler::maybe_open_pending_history_notice() {
     if (app.pending_history_notice.empty()) return;
     if (app.prompt.active) return;
@@ -2385,6 +2388,21 @@ void GuiInputHandler::maybe_open_pending_history_notice() {
     // the top strip the popup close damages.
     close_dropdown();
     hide_shift_tooltip();
+    // AND THE RELEASE-OWNED SCRAPS GO, the force-end finalizer's own pair and
+    // for its own reason (finalize_active_drags, input_pointer.cpp): the notice
+    // is about to make the prompt gate swallow the next release, so anything a
+    // release was owed must not survive to be consumed by a LATER, unrelated
+    // one. The GESTURES are parked for above — this is what is left when no
+    // gesture armed at all. The trim bar's press record is the live case: a
+    // plain trim-bar press arms nothing (an empty-band press, and every
+    // trim-bar press in the `h` view), so the park does not see it, and a
+    // stranded seed would turn some later release at that same point into a
+    // fresh framing double-click candidate with no valid pair behind it. The
+    // candidate goes with it under the standing rule that an interruption
+    // between two clicks breaks the pair — the same rule the on_key and
+    // on_wheel top-of-frame clears apply to every command.
+    app.trim_bar_press = TrimBarPressSeed{};
+    app.double_click   = DoubleClickCandidate{};
     prompt.open_error_notice(std::move(app.pending_history_notice));
     app.pending_history_notice.clear();
 }

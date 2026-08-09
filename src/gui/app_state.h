@@ -741,8 +741,12 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // context can never consume in another after an intervening keypress (Esc
 // included) or a wheel zoom/pan that moved content under the pointer. The
 // pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
-// and the force-end finalizer's clear (a force-end is not a clean click
-// sequence). Session-only.
+// the force-end finalizer's clear (a force-end is not a clean click sequence)
+// and — since 2026-08-09 — the CHECKPOINT NOTICE'S OPENER, the one modal raiser
+// that is dispatched by neither a key nor a gesture and so meets none of the
+// clears above (maybe_open_pending_history_notice, input_key_dispatch.cpp; it is
+// the same "an interruption between two clicks breaks the pair" rule the
+// keyboard and wheel halves apply). Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
@@ -760,7 +764,13 @@ struct DoubleClickCandidate {
 // point and no trim drag went live. That slack IS the motionless test: it equals
 // kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
 // the same condition by construction. Cleared at every left release (the release
-// consumes it) and by the force-end finalizer, beside the candidate's own clear.
+// consumes it), by the force-end finalizer, and by the CHECKPOINT NOTICE'S
+// OPENER — all three beside the candidate's own clear, and the third for the
+// reason the second exists (2026-08-09): that opener raises a modal whose gate
+// SWALLOWS the next release, and this record is the one thing a plain trim-bar
+// press leaves behind that no gesture park can see — such a press arms nothing
+// at all (an empty-band press, and every trim-bar press in the `h` view), so a
+// stranded seed would let a later unrelated release seed a framing candidate.
 // Session-only.
 struct TrimBarPressSeed {
     bool active  = false;
