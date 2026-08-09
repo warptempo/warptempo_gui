@@ -57,7 +57,11 @@ class GuiWaveformWorker;
 // bottom_row_sections since the 2026-08-01 relayout: the LEFT lead-in before the
 // modal span, the INTER-SECTION gap between that span and the timestamp's
 // reserved cell, and the RIGHT margin after that cell. The reuse is an
-// eye-consistency choice, stated there.
+// eye-consistency choice, stated there. Since 2026-08-09 the lead-in leads into
+// the CRITICAL CELL when one stands, and the same constant is the gap between
+// that cell and the modal span — a FOURTH use of the one pad, present only on
+// the rows that carry a critical message and byte-identical to the three above
+// on every other row.
 inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }

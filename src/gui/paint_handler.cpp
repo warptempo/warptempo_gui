@@ -72,7 +72,25 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // change. Every boundary is computed from SHAPED MAXIMA, never from the text
 // currently on screen.
 //
-//   pad | C: the modal / status span | pad | A: the timestamp | pad
+//   pad | CRITICAL | pad | C: the modal / status span | pad | A: the timestamp | pad
+//
+// THE CRITICAL CELL IS FIRST ON THE ROW (architect 2026-08-09), and it is
+// PRESENT ONLY WHILE THE CRITICAL MESSAGE IS NON-EMPTY: with the slot empty its
+// width is zero, C starts at the left lead-in exactly as it always did, and the
+// row's arithmetic is byte-identical to the pre-slot layout. When it is there,
+// C's pen and NOTHING ELSE moves right by the cell — "everything else happens to
+// the right of this message" — and A's reserved cell, C's clip boundary and the
+// pads are all untouched.
+//
+// IT IS THE ONE SECTION SIZED ON ITS OWN TEXT, which is a deliberate exception to
+// the fixed-sections rule above rather than a hole in it. The rule exists because
+// the CLOCK's digits change several times a second, and a section sized on live
+// text would make the row twitch. The critical message is the opposite kind of
+// string: it is written once by a checkpoint verdict and then stands for the rest
+// of the session (AppState::critical_error_message), so its width changes only on
+// the frame a checkpoint act ends — the same frame the row is being rewritten
+// anyway. Sizing it on a shaped maximum would mean reserving the widest possible
+// failure text on every row that has no failure at all.
 //
 // THE CLOCK IS ON THE RIGHT AND THE MODAL TEXT ON THE LEFT (architect, at the
 // live look — superseding the clock-first order the row shipped with a few
@@ -117,6 +135,11 @@ struct BottomRowSections {
     double a_x    = 0.0;   // the timestamp's pen (its reserved cell's left)
     double c_x    = 0.0;   // the modal / status span's pen
     double c_x1   = 0.0;   // and its clip boundary: one pad before A's cell
+    // The critical chip's TEXT pen, valid only when a critical message stands
+    // (crit_w > 0). The chip's own box is derived from it and the flag anatomy's
+    // pads, exactly as the editors' invalid flash derives its box from its run.
+    double crit_x = 0.0;
+    double crit_w = 0.0;   // that message's shaped width; 0 = no cell at all
 };
 
 // The shaped width the section arithmetic needs, MEMOISED ON THE FONT SIZE.
@@ -153,7 +176,8 @@ static const BottomRowTextMetrics& bottom_row_text_metrics(
 }
 
 static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
-                                             const GuiRect& lane) {
+                                             const GuiRect& lane,
+                                             std::string_view critical) {
     const double pad = static_cast<double>(bottom_row_pad_x());
     const BottomRowTextMetrics& m =
         bottom_row_text_metrics(font, redesign_font_size_px());
@@ -163,8 +187,25 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
     const double lane_x1 = static_cast<double>(lane.x) +
                            static_cast<double>(lane.w);
     s.a_x  = std::nearbyint(lane_x1 - pad - m.a_w);
-    s.c_x  = std::nearbyint(static_cast<double>(lane.x) + pad);
     s.c_x1 = std::nearbyint(s.a_x - pad);
+    // THE CRITICAL CELL, and with it C's pen. The chip's text sits one flag
+    // border plus one flag left-pad in from the lead-in, so the BOX's left edge —
+    // not its glyphs — is what the pad lands on, exactly as a marker flag seats
+    // its label. C then clears the box's right edge (the run plus the flag's
+    // right pad) by the row's one pad.
+    // EMPTY IS THE COMMON CASE AND COSTS NOTHING: no shaping runs, crit_w stays
+    // 0, and C's pen is the lead-in it has always been.
+    if (!critical.empty()) {
+        const double border = static_cast<double>(marker_flag_border_px());
+        const double pad_l  = static_cast<double>(marker_flag_pad_left_px());
+        const double pad_r  = static_cast<double>(marker_flag_pad_right_px());
+        s.crit_w = text_shape::shape_text_run(font, critical).width_px;
+        s.crit_x = std::nearbyint(static_cast<double>(lane.x) + pad +
+                                  border + pad_l);
+        s.c_x    = std::nearbyint(s.crit_x + s.crit_w + pad_r + pad);
+    } else {
+        s.c_x = std::nearbyint(static_cast<double>(lane.x) + pad);
+    }
     return s;
 }
 
@@ -3837,7 +3878,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     const double baseline = redesign_baseline(font,
                                               static_cast<double>(content.y),
                                               static_cast<double>(content.h));
-    const BottomRowSections sec = bottom_row_sections(font, lane);
+    const BottomRowSections sec =
+        bottom_row_sections(font, lane, app.critical_error_message);
 
     // The glyph ink band the editors' caret, selection and red flash share.
     cairo_font_extents_t fe;
@@ -3875,9 +3917,75 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                       format_timestamp(seconds), kRedesignLabel);
     }
 
+    // --- THE CRITICAL CELL, first on the row and painted before everything else
+    //     on it (architect 2026-08-09). ---
+    //
+    // WHAT IT IS: the product's one PERMANENT failure surface, and the only cell
+    // on this row that no input route can touch. A checkpoint failure is
+    // critical, so its report may be neither missed nor used to hijack the
+    // keyboard — it is a chip that simply stays, until a later checkpoint
+    // succeeds or the program closes (the contract, the one producer and the one
+    // clearing route are at AppState::critical_error_message).
+    //
+    // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
+    // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px left
+    // border, in the flag's own paint order and on the flag's own pads, height
+    // and baseline offset — the exact anatomy the four bottom-strip editors flash
+    // for an invalid commit (render_bottom_strip_editor, step 1). So there is ONE
+    // invalid red and ONE chip shape in the product, and a flag retune moves both
+    // surfaces together. The ink is the row's ordinary label colour, which is
+    // what that flash already shows on this same fill.
+    //
+    // IT CLIPS AT C'S OWN BOUNDARY, one pad before the timestamp's reserved cell:
+    // the row is one line and a too-small window is adversarial (the standing
+    // ruling at section C's clip), so a message longer than the row can hold is
+    // cut there like every other string on it. When the message is that long C's
+    // own span collapses to nothing and the degenerate guard below paints no C at
+    // all — the critical report is the last thing to be given up, which is the
+    // ordering the ruling asks for.
+    if (sec.crit_w > 0.0) {
+        const int pad_l    = marker_flag_pad_left_px();
+        const int pad_r    = marker_flag_pad_right_px();
+        const int edge_h   = marker_flag_edge_h_px();
+        const int border_w = marker_flag_border_px();
+        const int tx = static_cast<int>(std::nearbyint(sec.crit_x));
+        const int fw = pad_l +
+                       static_cast<int>(std::nearbyint(sec.crit_w)) + pad_r;
+        const int fx = tx - pad_l;
+        const int fy = static_cast<int>(std::nearbyint(baseline)) -
+                       marker_flag_baseline_px();
+        const int fh = marker_lane_h_px();
+        cairo_save(cr);
+        // The clip spans from the lane's left edge to C's boundary, so the chip
+        // and its text are bounded by the timestamp's reservation exactly as C's
+        // contents are.
+        cairo_rectangle(cr, static_cast<double>(lane.x),
+                        static_cast<double>(content.y),
+                        sec.c_x1 - static_cast<double>(lane.x),
+                        static_cast<double>(content.h));
+        cairo_clip(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                             kMarkerFlagBorder.b);
+        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
+                             kMarkerFlagFillRed.b);
+        cairo_rectangle(cr, fx, fy, fw, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
+                             kMarkerFlagEdgeRed.b);
+        cairo_rectangle(cr, fx, fy, fw, edge_h);
+        cairo_fill(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+        show_row_text(cr, font, sec.crit_x, baseline,
+                      app.critical_error_message, kRedesignLabel);
+        cairo_restore(cr);
+    }
+
     // --- Section C: the modal / editor / status chain, in the span that runs
-    //     from the left lead-in to one pad before the timestamp's reserved
-    //     cell. ---
+    //     from the critical cell (or the left lead-in, with no critical message
+    //     standing) to one pad before the timestamp's reserved cell. ---
     //
     // THE SPAN IS CLIPPED AT THE RESERVATION, and that clip is the whole
     // overrun mechanism (architect 2026-08-01: a screen too small to hold the

@@ -54,27 +54,26 @@ struct GuiPrompt {
     // `text` is displayed verbatim — callers pass the owner's own error
     // string, unmodified. While active it is modal exactly like the other
     // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
-    // Covers the environmental and tripwire-class refusals. Callers: the
-    // target-view entry gate (its resolve/build chain — the engine-metadata /
-    // non-positive-tempo-product class; marker arrangements always enter —
-    // the parser resolver normalizes them, and trim plays no part), the
-    // iteration-sweep cell-cap refusal, and since 2026-08-07 THE CHECKPOINT
-    // ACT'S FAILURE REPORT (the act runs on a worker, so its failure has no
-    // gesture of its own to refuse and needs a surface instead).
-    // THAT ONE CALLER IS THE ONLY ASYNC ONE — dispatched by no key and no
-    // gesture, and therefore past none of the gates that clear the way for the
-    // others — so it is the only one that has to make room for itself, which it
-    // does in three classes (re-derived 2026-08-09;
-    // GuiInputHandler::maybe_open_pending_history_notice owns the partition and
-    // the reasoning): it PARKS for a surface in use (a prompt, any of the five
-    // editors), CLOSES a transient popup (the open dropdown, with the floating
-    // hint), and PARKS for an act in flight (any live pointer gesture — it
-    // cannot be closed, gestures having no cancel by ruling, and force-ending
-    // one from a worker's clock would commit a drag the user never released).
-    // It also drops the two RELEASE-OWNED SCRAPS the force-end finalizer drops,
-    // since the prompt gate is about to swallow the release that owned them.
-    // Every other caller here rides a gesture or a key whose own gate has
-    // already dealt with all of it.
+    // Covers the environmental and tripwire-class refusals. TWO CALLERS
+    // (re-derived by grep 2026-08-09), and both are SYNCHRONOUS REFUSALS of a
+    // command the user just gave: the target-view entry gate (its resolve/build
+    // chain — the engine-metadata / non-positive-tempo-product class; marker
+    // arrangements always enter — the parser resolver normalizes them, and trim
+    // plays no part), and the iteration-sweep cell-cap refusal. Each rides a key
+    // whose own gate has already cleared the way for it — no popup, no editor
+    // and no live gesture can stand when either fires — so neither owes this
+    // surface anything on the way in.
+    //
+    // (THE CHECKPOINT ACT'S FAILURE REPORT WAS A THIRD CALLER from 2026-08-07,
+    // and the only ASYNCHRONOUS one: it arrived on a worker's clock, past every
+    // gate, and had to make room for itself — parking behind a prompt or an
+    // editor, closing an open dropdown, parking for a live pointer gesture whose
+    // release this prompt's own gate would have swallowed. On 2026-08-09 the
+    // architect replaced it with the bottom row's PERMANENT PAINT-ONLY CRITICAL
+    // SLOT — a critical failure must be impossible to miss and impossible to
+    // hijack with — and that whole family of guards went with it as
+    // producer-less. Every prompt in the product is again raised by a key or a
+    // gesture.)
     void open_error_notice(std::string text);
 
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory

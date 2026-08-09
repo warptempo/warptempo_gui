@@ -1923,9 +1923,11 @@ private:
     //     Its body owns the close partition (THE VIEW CLOSES IFF THE SAVE
     //     LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
-    //     the main thread: it clears the in-flight bit and, for the three
-    //     reporting outcomes, raises the acknowledge notice — deferring it into
-    //     AppState::pending_history_notice while another modal stands.
+    //     the main thread: it clears the in-flight bit and writes the CRITICAL
+    //     SLOT — the three failing verdicts set it, the two clean ones clear it
+    //     (AppState::critical_error_message owns the contract). It raised an
+    //     acknowledge modal until 2026-08-09; the slot is paint-only, so the
+    //     completion now needs nothing from the input layer at all.
     // THE REVERT ACT is the odd one out and deliberately so:
     //   * run_history_revert applies the SELECTED diff flags backwards into the
     //     live store of the active column and then closes the view. Its chord,
@@ -1982,9 +1984,4 @@ public:
     // exists, and damage the window so the lane and the `n/N` corner catch up
     // with a walk that just grew.
     void on_history_prefetch_ready();
-
-    // THE DEFERRED NOTICE'S POLL, called once per tick from main.cpp: if a
-    // checkpoint failure report is parked and the bottom strip is free, open it.
-    // Public for that one caller, like repeat_eligible above.
-    void maybe_open_pending_history_notice();
 };

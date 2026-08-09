@@ -1013,13 +1013,14 @@ int main(int argc, char** argv) {
         input_handler.finalize_active_drags();
         // THE HINT GOES DOWN WITH IT, and this is the SAME RULE AS THE KEY-PRESS
         // HIDE rather than a new one: no floating hint stands over a modal. Every
-        // KEYBOARD opener implements it at the top of on_key; the ASYNCHRONOUS
-        // modal openers — this compositor close, and since 2026-08-07 the
-        // checkpoint worker's failure notice — carry no key and no pointer event
-        // to hide with, so each needs its own call (the notice's is at
-        // GuiInputHandler::maybe_open_pending_history_notice, beside its own popup
-        // close) or the hint stands over the prompt until the tick's dwell
-        // refusal catches it a frame later. Ordered ABOVE request_close so the box's published rect is
+        // KEYBOARD opener implements it at the top of on_key; this compositor
+        // close is THE ONE modal opener that arrives asynchronously — it carries
+        // no key and no pointer event to hide with — so the rule needs its call
+        // here or the hint stands over the prompt until the tick's dwell refusal
+        // catches it a frame later. (The checkpoint worker's failure report was a
+        // second such opener from 2026-08-07 until 2026-08-09, when it became the
+        // bottom row's paint-only critical slot and stopped raising anything.)
+        // Ordered ABOVE request_close so the box's published rect is
         // damaged before the prompt's own repaint, and beside the popup close for
         // the reason below — the two floating surfaces go down together.
         input_handler.hide_shift_tooltip();
@@ -1035,13 +1036,12 @@ int main(int argc, char** argv) {
         // prompt outranks the dropdown" structural in all four input channels
         // instead of an ordering accident in two of them.
         // THE RESIZE PATH DOES THE EQUIVALENT for the same class of reason (a
-        // popup that cannot stay coherent through what follows), and so does THE
-        // CHECKPOINT NOTICE'S OPENER — the other asynchronous modal opener, which
-        // meets no gate at all and therefore owes this same pair (2026-08-08;
-        // maybe_open_pending_history_notice, input_key_dispatch.cpp, states the
-        // close-rather-than-park reasoning for it). Ctrl+Q needs
+        // popup that cannot stay coherent through what follows), and Ctrl+Q needs
         // no line of its own: it reaches the popup's own keyboard gate first,
-        // which closes the menu and only then lets the close route run.
+        // which closes the menu and only then lets the close route run. (The
+        // checkpoint notice's opener owed this same pair from 2026-08-08 until
+        // 2026-08-09; it raises no modal now, so these two routes are again the
+        // whole list.)
         input_handler.close_dropdown();
         prompt.request_close();
         // (The cursor re-resolve this callback used to end with is gone for the
@@ -1588,14 +1588,12 @@ int main(int argc, char** argv) {
             }
         }
 
-        // THE DEFERRED CHECKPOINT NOTICE (2026-08-07). The act finishes on a
-        // worker, so its failure report can arrive while a prompt or an editor
-        // owns the bottom strip; the completion parks the text and this poll
-        // opens it at the first tick the strip is free. It is a no-op with
-        // nothing parked, which is every tick but the few after a failure, and
-        // it sits ABOVE the loading/no-audio return below because a checkpoint
-        // launched before a load-in-place must still be able to report.
-        input_handler.maybe_open_pending_history_notice();
+        // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until
+        // 2026-08-09, when the architect replaced the acknowledge modal with the
+        // bottom row's PERMANENT CRITICAL SLOT. A paint-only cell needs no poll
+        // and no free strip to wait for: the completion writes the string and
+        // damages the row, and the next paint shows it — so the pump is gone with
+        // the modal it pumped.)
 
         if (app.loading || audio.total_frames() <= 0) return;
 

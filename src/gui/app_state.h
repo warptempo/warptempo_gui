@@ -741,12 +741,8 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // context can never consume in another after an intervening keypress (Esc
 // included) or a wheel zoom/pan that moved content under the pointer. The
 // pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
-// the force-end finalizer's clear (a force-end is not a clean click sequence)
-// and — since 2026-08-09 — the CHECKPOINT NOTICE'S OPENER, the one modal raiser
-// that is dispatched by neither a key nor a gesture and so meets none of the
-// clears above (maybe_open_pending_history_notice, input_key_dispatch.cpp; it is
-// the same "an interruption between two clicks breaks the pair" rule the
-// keyboard and wheel halves apply). Session-only.
+// and the force-end finalizer's clear (a force-end is not a clean click
+// sequence). Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
@@ -764,14 +760,13 @@ struct DoubleClickCandidate {
 // point and no trim drag went live. That slack IS the motionless test: it equals
 // kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
 // the same condition by construction. Cleared at every left release (the release
-// consumes it), by the force-end finalizer, and by the CHECKPOINT NOTICE'S
-// OPENER — all three beside the candidate's own clear, and the third for the
-// reason the second exists (2026-08-09): that opener raises a modal whose gate
-// SWALLOWS the next release, and this record is the one thing a plain trim-bar
-// press leaves behind that no gesture park can see — such a press arms nothing
-// at all (an empty-band press, and every trim-bar press in the `h` view), so a
-// stranded seed would let a later unrelated release seed a framing candidate.
-// Session-only.
+// consumes it) and by the force-end finalizer, beside the candidate's own clear.
+// (A THIRD CLEARER lived here for one day of 2026-08-09 — the checkpoint's
+// acknowledge modal, which could be raised from a worker's clock between this
+// press and its release and would have had that release swallowed at its own
+// prompt gate. It went with the modal, which became a paint-only slot: no
+// asynchronous route raises a prompt any more, so a release is never stolen and
+// this record is never stranded.) Session-only.
 struct TrimBarPressSeed {
     bool active  = false;
     int  press_x = 0;
@@ -2358,10 +2353,12 @@ struct AppState {
     // steps are a network act, and freezing the window for them was the one
     // place this product made the user wait on a remote. The act captures what
     // it needs by value, closes the view and hands the job to
-    // GuiHistoryCommitWorker; its three failing verdicts come back as an
-    // ACKNOWLEDGE NOTICE (the existing dismiss-only prompt, deferred while
-    // another modal stands), and its two clean ones say what they have to say on
-    // stderr.
+    // GuiHistoryCommitWorker; its three failing verdicts come back to THE
+    // BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09, replacing the
+    // acknowledge modal they raised until then: a critical failure must be
+    // impossible to miss and impossible to hijack the keyboard with, so the
+    // report is permanent and paint-only — critical_error_message, below), and
+    // its two clean ones say what they have to say on stderr and CLEAR the slot.
     //
     // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
     // superseding the checkpoint-in-the-repository partition of 2026-08-05,
@@ -3067,17 +3064,37 @@ struct AppState {
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
 
-    // THE DEFERRED FAILURE NOTICE (architect 2026-08-07). The checkpoint act now
-    // finishes on a background worker, so its failure report can arrive while a
-    // prompt or a bottom-strip editor already owns the strip — and a second
-    // modal opened over the first would steal the keyboard from an edit the user
-    // is in the middle of. So the completion parks its text here and the tick
-    // opens it at the first moment the bottom strip is free, clearing the slot
-    // as it does. Empty means nothing is waiting. Only the three reporting
-    // outcomes park anything (WriteFailed, CommitFailed, CommittedNotPushed);
-    // the two clean endings say what they have to say on stderr and leave this
-    // untouched.
-    std::string pending_history_notice;
+    // THE CRITICAL SLOT — the bottom row's leftmost cell, and the product's one
+    // permanent failure surface (architect 2026-08-09, REPLACING the acknowledge
+    // modal the checkpoint's failures used to raise). A critical failure must be
+    // IMPOSSIBLE TO MISS and IMPOSSIBLE TO HIJACK WITH: a modal is missable
+    // (it can be dismissed with a keystroke aimed at something else) and it is a
+    // hijack (it takes the keyboard from whatever the user was doing, on a
+    // clock he did not choose). This is neither. It is PAINT-ONLY — it owns no
+    // key, no chord, no click and no rect the pointer can reach — and it is
+    // PERMANENT: nothing in the input layer can clear it, there is no timer
+    // behind it, and there is nothing to dismiss.
+    //
+    // ITS ONE CLEARING ROUTE IS A LATER SUCCESS: a checkpoint act that ends
+    // Committed or NothingToCommit clears it, because a success supersedes the
+    // stale failure it replaces — the message says what the repository's last
+    // answer was, so a newer answer is what retires it. Otherwise it stands
+    // until the program closes.
+    //
+    // IT IS SESSION-SCOPED AND SURVIVES EVERYTHING BELOW IT: the history view's
+    // entry and exit, every view and tab switch, and BOTH load-in-places (a
+    // commit's or a timeline state's) leave it exactly as they found it. That is
+    // deliberate rather than incidental — loading another state in place does
+    // not un-fail the checkpoint that failed, and the row is global.
+    //
+    // GENERAL-PURPOSE IN SHAPE, ONE PRODUCER TODAY. The name and the contract say
+    // "critical", not "checkpoint", so a future critical producer can write it
+    // with no new surface; today the only writer is the checkpoint worker's
+    // completion (GuiInputHandler::on_history_checkpoint_complete), which sets it
+    // on the three failing verdicts and clears it on the two clean ones. Empty
+    // means nothing critical has happened, which is the resting state of every
+    // session that never publishes a checkpoint.
+    std::string critical_error_message;
 
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
@@ -3287,8 +3304,9 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// SIX CONSUMERS, re-derived by grep 2026-08-09, each stating the same
-// "nothing pops mid-gesture" boundary from its own side:
+// FIVE CONSUMERS, re-derived by grep 2026-08-09, each stating the same
+// "nothing pops mid-gesture" boundary from its own side — and EVERY ONE OF THEM
+// IS AN INPUT ROUTE, which is the shape this predicate is for:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
 //     the platform's per-frame sub-detent accumulator probe both route through
 //     it, so a wheel cannot shift the viewport out from under a gesture (the
@@ -3304,14 +3322,12 @@ inline int64_t snap_authored_frame(double frame) {
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
-//     contract is at pointer_cursor_kind's declaration, input_handler.h);
-//   * the CHECKPOINT NOTICE'S OPENER (maybe_open_pending_history_notice,
-//     input_key_dispatch.cpp, 2026-08-09) — the newest consumer and the only one
-//     that is not an INPUT route: a prompt raised over a live gesture would have
-//     the release that ends the gesture swallowed by its own modal gate, so the
-//     worker's report PARKS until the gesture is over rather than force-ending
-//     an act nobody asked to end. That opener states the whole park-or-close
-//     partition.
+//     contract is at pointer_cursor_kind's declaration, input_handler.h).
+// (A SIXTH CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
+// acknowledge modal, which asked this before raising itself from a worker's
+// clock, a prompt over a live gesture having its release swallowed at the
+// prompt's own gate. It went with the modal, which became a paint-only slot.
+// Nothing outside the input layer asks this question now.)
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||

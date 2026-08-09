@@ -873,7 +873,8 @@ private:
 // failed save refuses it before this module is reached at all), the CLOSE that
 // ends the view once THE SAVE has landed (2026-08-07, superseding the
 // checkpoint-in-the-repository partition), the dispatch onto the background
-// worker and the acknowledge notice its failures raise — lives at
+// worker and the CRITICAL SLOT its failures write (architect 2026-08-09,
+// replacing the acknowledge notice they used to raise) — lives at
 // GuiInputHandler::run_history_commit; what lives here is the act itself.
 
 // THE DEFAULT commit message: `Update <id>`, where the id is the piece

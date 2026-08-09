@@ -2111,7 +2111,9 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // open until then would be a modal wait dressed as a review. So a failed save
 // leaves the view exactly as it was (every refusal's shape) and a successful one
 // closes it, whatever the repository then says; the three failing verdicts
-// report through the acknowledge notice instead of through a view left standing.
+// report through the BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09,
+// superseding the acknowledge notice they reported through until then) instead
+// of through a view left standing.
 //
 // AND THE ACT IS ASYNCHRONOUS FROM THAT POINT (same ruling). The save is the
 // user's own bytes and stays synchronous; the checkpoint is `git add`, `git
@@ -2240,21 +2242,39 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // this owns is the ONE thing a background act cannot do for itself: telling the
 // user, at the window, when the checkpoint he asked for did not happen.
 //
+// IT WRITES THE CRITICAL SLOT (architect 2026-08-09, REPLACING the acknowledge
+// modal this raised from 2026-08-07): a failed checkpoint is critical, so its
+// report is PERMANENT and PAINT-ONLY — the bottom row's leftmost cell, in the
+// product's one invalid red, standing until a later checkpoint succeeds or the
+// program closes. AppState::critical_error_message owns the contract; this is
+// its one producer.
+//
 // THE PARTITION, over the act's five verdicts (GuiHistoryCommitOutcome,
 // history_diff.h):
-//   SILENT — Committed (made and published, the ordinary ending) and
-//   NothingToCommit (the newest checkpoint already carried these bytes, so the
-//   state the user wanted IS committed). Neither is a failure and neither needs
-//   a modal to acknowledge.
-//   THE NOTICE — WriteFailed (nothing reached the repository), CommitFailed (the
-//   three files are written and uncommitted, in the working tree where `git
-//   status` shows them) and CommittedNotPushed (the checkpoint exists locally
-//   and the remote does not have it). The three texts differ exactly where the
-//   user's next move does, which is why the act distinguishes them at all.
+//   SILENT, AND THEY CLEAR THE SLOT — Committed (made and published, the
+//   ordinary ending) and NothingToCommit (the newest checkpoint already carried
+//   these bytes, so the state the user wanted IS committed). Neither is a
+//   failure, and either one supersedes a failure the slot is still showing: the
+//   message describes the repository's last answer, and this is a newer one.
+//   THE THREE FAILURES — WriteFailed (nothing reached the repository),
+//   CommitFailed (the three files are written and uncommitted, in the working
+//   tree where `git status` shows them) and CommittedNotPushed (the checkpoint
+//   exists locally and the remote does not have it). The three texts differ
+//   exactly where the user's next move does, which is why the act distinguishes
+//   them at all. They are SHORT because the row is one line and the detail is
+//   already on stderr, verbatim and unchanged by this arc.
 //
-// IT IS ACKNOWLEDGE-ONLY (the architect's ruling on the notice): no retry key,
-// no repair offer. The retry is the act itself — a later Save and Commit finds
-// the committed-but-unpushed shape in its own pre-flight and pushes it.
+// THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE. The retry is the act itself
+// — a later Save and Commit finds the committed-but-unpushed shape in its own
+// pre-flight and pushes it — and that same act is what takes the message down.
+//
+// AND NOTHING ASYNCHRONOUS RAISES A MODAL ANY MORE, which is what retired a
+// whole family of guards this function used to owe (the parked notice, its three
+// park classes, the dropdown close and the release-owned scrap clears, all
+// deleted 2026-08-09 as producer-less): the product's remaining prompts are all
+// dispatched by a key or a gesture and so meet the gates that already clear the
+// way for them. A paint-only slot can be written from any clock at all, because
+// it takes nothing from anyone.
 void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome) {
     app.history_checkpoint_in_flight = false;
@@ -2274,137 +2294,30 @@ void GuiInputHandler::on_history_checkpoint_complete(
         kick_history_prefetch();
     }
 
-    std::string text;
     switch (outcome) {
     case GuiHistoryCommitOutcome::Committed:
     case GuiHistoryCommitOutcome::NothingToCommit:
-        return;
+        app.critical_error_message.clear();
+        break;
     case GuiHistoryCommitOutcome::WriteFailed:
-        text = "The checkpoint could not be written, so nothing was "
-               "committed. The piece itself is saved.";
+        app.critical_error_message = "Checkpoint failed: nothing was committed";
         break;
     case GuiHistoryCommitOutcome::CommitFailed:
-        text = "The checkpoint files were written but not committed. They "
-               "are in the working tree. The piece itself is saved.";
+        app.critical_error_message =
+            "Checkpoint failed: files written but not committed";
         break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
-        text = "The checkpoint is committed locally but the push failed. "
-               "The next save and commit publishes it.";
+        app.critical_error_message = "Checkpoint committed; push failed";
         break;
     }
 
-    // PARK IT WHILE THE USER IS BUSY. The completion arrives on its own clock,
-    // so it can land in the middle of a prompt he is answering, an edit he is
-    // typing or a DRAG he is halfway through; taking the keyboard — or the
-    // release — away from any of those would interrupt an act in progress. The
-    // tick polls the slot and opens the notice at the first frame nothing is in
-    // the way. An open DROPDOWN is the one surface that is CLOSED rather than
-    // waited for — the opener owns the whole fork and states why.
-    app.pending_history_notice = std::move(text);
-    maybe_open_pending_history_notice();
-}
-
-// The parked notice's one opener, called from the completion above and once per
-// tick from main.cpp. Both routes ask the same questions and take the same acts,
-// which is the point of there being one body: is anything parked, and if it
-// opens, the popup goes first. The slot clears as the notice opens, so it shows
-// exactly once.
-//
-// WHAT IS IN THE WAY DECIDES WHAT HAPPENS TO IT, and there are exactly three
-// classes (the third arrived 2026-08-09):
-//   * A SURFACE IN USE — a prompt, or any of the five text editors — PARKS the
-//     notice. The user is answering or typing into it, and opening over it would
-//     take the keyboard away mid-act.
-//   * A TRANSIENT POPUP — an open dropdown — is CLOSED (2026-08-08). It is
-//     closable at any instant and nobody is committed to it, while a notice that
-//     WAITED on one would sit parked for as long as an idle menu stayed up.
-//   * AN ACT IN FLIGHT — any live pointer gesture — PARKS, and parks precisely
-//     BECAUSE IT CANNOT BE CLOSED: pointer gestures have no cancel by ruling
-//     (the drag-modal gate, input_handler.cpp), so the only two things this
-//     could do to one are wait for it or FORCE-END it — and force-ending from a
-//     WORKER'S CLOCK would commit a drag mid-travel that the user never
-//     released. The force-end routes that do exist (Ctrl+Q, the resize, the WM
-//     close) are all acts the user or the compositor demanded at that instant;
-//     an unsolicited report is not one, and it has no deadline to justify one.
-// THE CLOSE BELONGS TO THE OPEN, NOT TO THE POLL, which is why it sits below
-// every park test: a frame that parks again leaves a menu the user is reading
-// alone. close_dropdown is THE ONE CLOSE OWNER — it disarms the menu-row mode
-// and drops the popup's published rect, item rects and hover/press faces with
-// its whole-struct reset, so no stranded hover survives under the notice.
-//
-// WHAT THE GESTURE PARK PREVENTS, concretely: ERROR_NOTICE raised over a live
-// drag would have the gesture's RELEASE swallowed at on_button_release's
-// `if (app.prompt.active) return;`, which sits ABOVE every gesture release arm —
-// physical release, the `e` keyup's synthesized one and the capability-loss
-// branch's owed one alike. The gesture structs would stay active with no
-// release left to end them: the keyboard drag-modal gate stays latched after the
-// notice is acknowledged, and on a capability return a later no-button motion
-// finalizes the stale strip drag against the new stream's coordinates and jumps
-// the viewport.
-//
-// THE PARK IS BOUNDED BY THE TICK, which is what makes waiting the cheap answer:
-// the same body runs once per frame, so the notice lands at the first
-// gesture-free, modal-free frame — the length of a drag at most.
-//
-// IT FOLLOWS THE WM-CLOSE ROUTE'S OWN PRECEDENT, which does exactly this pair —
-// close_dropdown() then prompt.request_close() (main.cpp) — and for exactly its
-// reason: with both surfaces standing, OWNERSHIP SPLITS. The prompt takes keys
-// and new presses (its gates are tested first), but MOTION still reaches the
-// dropdown branch, and a left RELEASE reaches finish_dropdown_release, which
-// sits ABOVE the prompt gate in on_button_release — so an item pressed and still
-// HELD when the notice arrived would fire on release and raise the settings
-// editor UNDERNEATH it. Even without that, acknowledging would leave the popup
-// standing.
-//
-// AND THIS IS THE ONE ROUTE THAT COULD REACH THAT STATE AT ALL, which is why the
-// line is owed here and nowhere else (re-derived by grep over the prompt
-// openers): every OTHER opener is downstream of a gate that has already ended
-// the popup — the keyboard ones (the target-view entry notice, the iteration
-// sweep's cap refusal, Ctrl+Q's unsaved dialog) sit below on_key's popup gate,
-// which swallows every chord but Esc and Ctrl+Q while a menu is up; the pointer
-// ones sit below the presses that close it; the load-time env-hash prompt runs
-// before any row exists. This notice is DISPATCHED BY NO GESTURE AND NO KEY — it
-// arrives on a worker's clock — so it passes through none of those gates, which
-// is precisely why it must ask every question itself. It is emphatically NOT
-// true that no gesture is RUNNING when it lands: the user is free to be mid-drag
-// at that instant, and the park above is what makes that safe. The async
-// completion is exactly the route that made "a prompt cannot stand over a popup
-// or a gesture" an argument from reachability rather than from structure.
-void GuiInputHandler::maybe_open_pending_history_notice() {
-    if (app.pending_history_notice.empty()) return;
-    if (app.prompt.active) return;
-    if (any_text_editor_active()) return;
-    // THE AGGREGATE, never a hand-written gesture list: any_pointer_gesture_active
-    // (app_state.h) is the product's one "some pointer gesture is in flight"
-    // query, pending drags included — a press held before its threshold owes a
-    // release exactly as a live drag does.
-    if (any_pointer_gesture_active(app)) return;
-    // THE TWO FLOATING SURFACES GO DOWN TOGETHER, the WM-close route's own
-    // pairing: no floating hint stands over a modal either, and a VISIBLE
-    // tooltip is not swept by the tick (the hover recompute stops the DWELL
-    // under a prompt but does not take a hint already up, and it refuses
-    // outright while the pointer is outside the window). This hide is also the
-    // only route that damages the box's own published rect, which hangs BELOW
-    // the top strip the popup close damages.
-    close_dropdown();
-    hide_shift_tooltip();
-    // AND THE RELEASE-OWNED SCRAPS GO, the force-end finalizer's own pair and
-    // for its own reason (finalize_active_drags, input_pointer.cpp): the notice
-    // is about to make the prompt gate swallow the next release, so anything a
-    // release was owed must not survive to be consumed by a LATER, unrelated
-    // one. The GESTURES are parked for above — this is what is left when no
-    // gesture armed at all. The trim bar's press record is the live case: a
-    // plain trim-bar press arms nothing (an empty-band press, and every
-    // trim-bar press in the `h` view), so the park does not see it, and a
-    // stranded seed would turn some later release at that same point into a
-    // fresh framing double-click candidate with no valid pair behind it. The
-    // candidate goes with it under the standing rule that an interruption
-    // between two clicks breaks the pair — the same rule the on_key and
-    // on_wheel top-of-frame clears apply to every command.
-    app.trim_bar_press = TrimBarPressSeed{};
-    app.double_click   = DoubleClickCandidate{};
-    prompt.open_error_notice(std::move(app.pending_history_notice));
-    app.pending_history_notice.clear();
+    // THE ROW'S OWN DAMAGE, unconditional across all five arms because all five
+    // WRITE the slot — the two clean ones by clearing it, which erases a cell
+    // that was painting a moment ago and is exactly as much a change as setting
+    // one. This is the bottom strip's one invalidation (invalidate_timestamp_area
+    // — the row's damage owner since it carried only the clock), the same call
+    // every transient-status writer makes.
+    viewport.invalidate_timestamp_area();
 }
 
 // -- THE REVERT ACT --------------------------------------------------------
