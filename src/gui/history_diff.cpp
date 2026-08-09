@@ -2727,6 +2727,23 @@ std::string find_checkpoint_commit(const std::string&              source_ref,
 
 }  // namespace
 
+// THE PUBLICATION QUESTION, READ-ONLY (the header owns the contract and the
+// conservative rule). It is the push verdict's own reading with no act around
+// it: the branch's remote-tracking ref, witnessed by the local branch ref so an
+// ABSENT ref and an unreadable repository cannot share an answer, and the
+// containment walk behind that. Every arm that cannot demonstrate absence
+// answers false.
+bool history_commit_is_unpushed(const std::string& sha) {
+    if (sha.empty()) return false;
+    const std::string branch = current_branch_name();
+    if (branch.empty()) return false;   // detached: nothing to observe
+    bool unobserved = false;
+    const bool carried = ref_carries("refs/remotes/origin/" + branch,
+                                     "refs/heads/" + branch, sha, unobserved);
+    if (unobserved) return false;       // could not ask: leave the act greyed
+    return !carried;
+}
+
 std::string history_checkpoint_title(const std::string& project_directory) {
     const std::size_t slash = project_directory.rfind('/');
     const std::string id    = (slash == std::string::npos)
@@ -3119,13 +3136,32 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                                             source_ref, head, unobserved);
         }
 
-        if (already_published || branch.empty()) {
-            // A detached HEAD has no remote-tracking ref to be behind, so it
-            // takes the unchanged answer rather than a guess.
+        // OBSERVED PUBLICATION IS THE ONLY CLEAN ENDING HERE. `already_published`
+        // is a DEMONSTRATED containment (ref_carries returns true for nothing
+        // less), so this arm has seen both halves of the answer: the paths are
+        // clean and the remote carries the tip.
+        if (already_published) {
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit: the checkpoint "
                          "already carries these bytes\n");
             return GuiHistoryCommitOutcome::NothingToCommit;
+        }
+        // A DETACHED HEAD OBSERVES NOTHING ABOUT PUBLICATION, so it cannot end
+        // the act cleanly (2026-08-09). It shared the arm above until then, on
+        // the reasoning that a detached HEAD has no remote-tracking ref to be
+        // BEHIND — true, and beside the point: no ref to be behind is not the
+        // same fact as a remote that carries this work, and the shared line
+        // reported a clean ending on a question nobody had asked. There is
+        // nothing to push either (a sha refspec would need a branch to publish
+        // onto), so the honest verdict is the one that says exactly that, and it
+        // gets ITS OWN LINE rather than borrowing a "nothing to commit" that
+        // would keep telling the user to stop looking.
+        if (branch.empty()) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Could not confirm the checkpoint: git "
+                         "has a detached HEAD, so there is no remote-tracking "
+                         "branch to check and nothing was pushed\n");
+            return GuiHistoryCommitOutcome::Unconfirmed;
         }
         if (unobserved) {
             std::fprintf(stderr,

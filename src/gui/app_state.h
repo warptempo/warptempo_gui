@@ -3121,13 +3121,41 @@ struct AppState {
     // paths clean and the remote behind and pushes the existing commit; with one,
     // it commits and pushes as usual. Nothing here predicts that.
     //
-    // ITS LIFECYCLE IS THE THREE ANSWERS THAT SETTLE THE QUESTION: SET by
-    // CommittedNotPushed (a commit exists and the remote lacks it), CLEARED by
-    // Committed and by NothingToCommit — which since 2026-08-09 means committed
-    // AND published, confirmed (history_diff.h's outcome contract). The other
-    // three leave it exactly as they found it: Unconfirmed settles nothing by
+    // IT IS DERIVED FROM THE REPOSITORY, NOT PERSISTED, and that is what makes it
+    // survive a relaunch: a push obligation is DURABLE while this session is not,
+    // so a checkpoint that committed and failed to push used to leave the act
+    // greyed on the next launch with the documented retry unreachable. The
+    // repository is the durable store, so THE MODE'S ENTRY RE-DERIVES the bit
+    // where it already measures the head delta (measure_history_head_delta): one
+    // read-only observation, does the remote-tracking ref carry the newest walk
+    // member (history_commit_is_unpushed, history_diff.h — the push verdict's own
+    // containment reading, not a second spelling of it). Nothing is written to
+    // disk, so nothing can be stale.
+    //
+    // ITS EVENT-DRIVEN HALF IS A FAST PATH OVER THAT SAME TRUTH, for the session
+    // that made the act — the window between a failed push and the next `h`,
+    // where there is no walk to re-derive from: SET by CommittedNotPushed (a
+    // commit exists and the remote lacks it), CLEARED by Committed and by
+    // NothingToCommit, which since 2026-08-09 means committed AND published,
+    // confirmed (history_diff.h's outcome contract). The other three outcomes
+    // leave it exactly as they found it: Unconfirmed settles nothing by
     // definition, and a later write or commit failure does not un-publish
-    // whatever an earlier act left unpushed.
+    // whatever an earlier act left unpushed. One deriver, one writer pair, and no
+    // way for them to disagree — they read the same fact about the same
+    // repository.
+    //
+    // UNANSWERABLE RESTS FALSE (the deriver's own rule, stated at
+    // history_commit_is_unpushed): a detached HEAD, an unreadable ref or a walk
+    // that could not run leaves the act GREYED rather than admitting a chord on a
+    // guess — the same conservative rest the head delta takes before the prefetch
+    // has delivered anything to measure.
+    //
+    // IT REVIVES THE ADMISSION, NOT THE REPORT. The critical chip beside it is
+    // SESSION-scoped by ruling and stays event-driven: a relaunch shows no chip
+    // even when this derives true, because the architect specced the slot's
+    // lifetime as the session's. What the derivation restores across a relaunch
+    // is the user's ROUTE to finishing the job, which is the thing that was
+    // unreachable.
     bool checkpoint_push_pending = false;
 
     // Tick backstop bookkeeping: last live-domain total observed by the

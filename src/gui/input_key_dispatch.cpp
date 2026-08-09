@@ -897,6 +897,33 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // so a later arrival can still answer. It is not a reachable state (an available
 // session's index 0 resolves whenever a member exists), and the resting TRUE is
 // the same conservative face the empty window wears.
+//
+// IT ALSO DERIVES THE PUSH-PENDING BIT (2026-08-09), on the same edge and under
+// the same guard, because the two are the act's two questions and both must be
+// true of THIS repository at THIS moment: the head delta asks whether anything
+// is left to checkpoint, this asks whether anything is left to PUBLISH. The
+// second question needs a durable answer — a push obligation outlives the
+// session that incurred it, while AppState does not — so it is DERIVED FROM THE
+// REPOSITORY rather than persisted anywhere: does the remote-tracking ref carry
+// the newest walk member (history_commit_is_unpushed, history_diff.h, which is
+// the push verdict's own containment reading with no act around it). That closes
+// the quit-and-relaunch hole: a checkpoint that committed and failed to push
+// left a greyed Save and Commit on the next launch, with the documented retry
+// unreachable and no route to it anywhere in the product.
+//
+// SO THE BIT HAS ONE DERIVER AND ONE EVENT-DRIVEN WRITER PAIR, and they cannot
+// disagree because they read the same fact: this entry-side observation is the
+// truth, and the completion's set (CommittedNotPushed) / clear (the two
+// established endings) is a FAST PATH over it for the session that made the act
+// — the window between a failed push and the next `h`, where there is no walk to
+// re-derive from. Nothing is written to disk, so nothing can go stale across a
+// relaunch.
+//
+// AND IT RESTS FALSE WHEN THE QUESTION CANNOT BE ANSWERED — a detached HEAD, a
+// ref git could not read, a walk that could not run — which is the SAME
+// conservative rest the head delta takes in its pre-arrival window, expressed in
+// that bit's own polarity: both leave the act GREYED while the repository is
+// silent, rather than admitting a chord on a guess.
 void GuiInputHandler::measure_history_head_delta() {
     if (!app.history_mode.active) return;
     if (app.history_mode.head_delta_measured) return;
@@ -906,6 +933,10 @@ void GuiInputHandler::measure_history_head_delta() {
     if (!head) return;
     app.history_mode.head_delta_empty    = head->is_empty();
     app.history_mode.head_delta_measured = true;
+    // The newest walk member is the newest checkpoint on the local branch, which
+    // is exactly the commit a push would be publishing.
+    app.checkpoint_push_pending =
+        history_commit_is_unpushed(app.history_mode.session.sha_at(0));
 }
 
 // -- THE PREFETCH'S THREE EDGES (architect 2026-08-07) ----------------------
@@ -2295,8 +2326,10 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //   CommitFailed (the three files are written and uncommitted, in the working
 //   tree where `git status` shows them), CommittedNotPushed (the checkpoint
 //   exists locally and the remote does not have it) and, since 2026-08-09,
-//   Unconfirmed (the paths are clean but the tip was not confirmed to carry
-//   these bytes, so nothing was pushed). The texts differ exactly where the
+//   Unconfirmed (the act established neither content nor publication — the paths
+//   are clean but the tip was not confirmed to carry these bytes, or git has a
+//   detached HEAD and there was no remote-tracking ref to ask at all — so
+//   nothing was pushed). The texts differ exactly where the
 //   user's next move does, which is why the act distinguishes them at all. They
 //   are SHORT because the row is one line and the detail is already on stderr,
 //   verbatim and unchanged by this arc.
@@ -2362,10 +2395,19 @@ void GuiInputHandler::on_history_checkpoint_complete(
             "Checkpoint failed: files written but not committed";
         break;
     case GuiHistoryCommitOutcome::Unconfirmed:
-        // NOTHING WAS ESTABLISHED HERE, so nothing is cleared here: neither the
-        // slot (a standing report stands) nor the pending bit (a push that was
-        // owed is still owed). It only ever ADDS its own report.
-        app.critical_error_message = "Checkpoint could not be confirmed";
+        // NOTHING WAS ESTABLISHED HERE, so nothing is DISPLACED here: it neither
+        // clears the pending bit (a push that was owed is still owed) nor
+        // overwrites a report already standing. THE OVERWRITE IS THE POINT OF
+        // THE CONDITION: the retry after a CommittedNotPushed is exactly the act
+        // most likely to come back unconfirmed, and it would replace that chip's
+        // actionable "committed; push failed" with this vaguer text — losing the
+        // one thing the user could act on, to an answer that added nothing. So
+        // it FILLS AN EMPTY SLOT and otherwise leaves the standing report alone,
+        // which is what "a standing report stands" has to mean for an outcome
+        // that establishes nothing.
+        if (app.critical_error_message.empty()) {
+            app.critical_error_message = "Checkpoint could not be confirmed";
+        }
         break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
         app.critical_error_message = "Checkpoint committed; push failed";
