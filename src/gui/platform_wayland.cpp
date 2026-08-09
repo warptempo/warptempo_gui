@@ -1758,6 +1758,15 @@ void GuiPlatform::forget_keyboard_state() {
 
     // A held synthesized-left button can never see its keycode-matched release
     // once the key stream has ended, so end it here.
+    // IT TOUCHES NO POINTER CAPTURE, and that is what keeps this edge correct
+    // for free where the pointer-side twin had to be ordered for it (2026-08-08):
+    // a lock's release REWRITES the tracked coordinates to the cursor restore
+    // hint, so a hold ended after one would deliver its release — and a moved
+    // strip drag's final apply — at the hint instead of the drag's real last
+    // position. Nothing above unlocks anything, so the release lands on the live
+    // travel and the GUI's own release body performs the restore from inside it,
+    // exactly as an ordinary release does. Do not add a capture teardown above
+    // this line; end the hold first if one is ever needed here.
     end_left_hold_source(/*physical=*/false);
 }
 
@@ -1787,33 +1796,18 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // when the manager is absent or the object already exists).
         create_relative_pointer_if_ready();
     } else if (!has_pointer && wl_pointer_) {
-        // A held strip-drag capture ends here on the hard end of the pointer
-        // stream: restore the cursor and destroy the lock while wl_pointer_ is
-        // still valid. The gesture-layer synthesized release below reaches
-        // end_pointer_capture again, harmlessly (idempotent).
-        end_pointer_capture();
-        // The relative pointer depends on the wl_pointer; destroy it first.
-        destroy_relative_pointer();
-        wl_pointer_release(wl_pointer_);
-        wl_pointer_ = nullptr;
-        pointer_focused_   = false;
-        // Same hook as wl_pointer.leave, and here the hard version of the reason:
-        // capability loss ends this pointer stream with no leave, no motion and
-        // no release to follow, so every pointer-derived face must be dropped
-        // here or it stays on screen with no event left that could take it down.
-        // WHAT the hook clears is main.cpp's hook body, the authoritative list —
-        // more than the roster's hovered buttons, and not restated here.
-        // THE REASON IS THE ARGUMENT and this site's whole stake in it: the body
-        // is shared with the ordinary leave, which is allowed to KEEP state
-        // across itself (the menu row's armed mode and its hovered button, on the
-        // titlebar trip out through row 1) precisely because a return motion will
-        // re-derive it. There is no such return here. Passing CapabilityLoss is
-        // what makes that exception — and any future one — inapplicable on this
-        // edge, so "everything goes" stays true by construction rather than by
-        // each consumer remembering it.
-        if (pointer_left_hook_)
-            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
-
+        // THE ORDER OF THIS BRANCH IS ONE RULE (2026-08-08): WHAT THE LIVE
+        // STREAM STILL OWES IS DELIVERED FIRST, and only then is the stream torn
+        // down. A capability loss is "this pointer ends now", and the one thing
+        // it still owes is the release for a logical left button that is down —
+        // so the hold ends lead, and every teardown below them (the capture, the
+        // relative pointer, the wl_pointer itself, the focus flag, the hook, the
+        // scroll carry) happens to a gesture that has already finished. That
+        // ordering is not a preference: it is the ORDINARY sequence, where a
+        // physical release is always delivered while the stream is alive and any
+        // leave comes after, and matching it here is what keeps this edge from
+        // having behaviour of its own.
+        //
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
         // matching button release or frame boundary) arrive on this object.
@@ -1844,17 +1838,74 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // synth_left_keycode_, which is what makes the later `e` KEYUP a
         // no-op: that handler matches on the owning keycode, and nothing owns
         // the hold any more.
+        //
+        // THE COORDINATES ARE WHY THE ENDS LEAD THE CAPTURE TEARDOWN, and the
+        // constraint is exact (codex 2026-08-08): unlocking a live pointer lock
+        // REWRITES pointer_x_/pointer_y_ and the virtual pair to the cursor
+        // RESTORE HINT — the anchor-stem column, y frozen at the press row
+        // (release_pointer_lock). Button events carry no coordinates, so the
+        // release delivered here — and any motion flush_deferred_motion sends
+        // immediately before it — reads exactly those fields, and a MOVED strip
+        // drag performs one final incremental apply from them. Torn down first,
+        // the capture would hand this release the restore hint instead of the
+        // drag's real last position, and the zoom/pan would jump or partly
+        // reverse in its final frame. Delivered first, the release sees the live
+        // travel, applies its true last delta, and the GUI's own release body
+        // tears the capture down from inside it — which is precisely the
+        // ordinary path's order, the same one the KEYBOARD's hard edges already
+        // get for free (forget_keyboard_state ends the synthesized hold and
+        // touches no capture at all).
         // THE ORDER OF THE TWO CALLS IS FREE and the pair delivers exactly ONE
         // release however they are ordered: each delivers only on the logical
         // OR's 1->0 edge, so with both sources held the first merely clears its
-        // bit and the second carries the edge. They sit BELOW the hook for the
-        // reason the hook body states — its clears drop press CLAIMS, so the
-        // release these may deliver lands unowned rather than resurrecting one.
-        // (The keyboard's own hard edges end the synthesized source through the
-        // same route, in forget_keyboard_state; this is the pointer-side twin,
-        // and neither can rely on the other having fired.)
+        // bit and the second carries the edge. (The keyboard's own hard edges end
+        // the synthesized source through the same route, in forget_keyboard_state;
+        // this is the pointer-side twin, and neither can rely on the other having
+        // fired.)
         end_left_hold_source(/*physical=*/true);
         end_left_hold_source(/*physical=*/false);
+
+        // THE CAPTURE'S BACKSTOP, and normally already a no-op: a captured
+        // gesture ends inside the release above, whose own body calls
+        // end_pointer_capture — so the hint, the tracked-position write and the
+        // cursor restore have run exactly once by the time this line is reached,
+        // and release_pointer_lock's idempotent guard returns immediately. This
+        // call is what covers a lock that no live hold owned (nothing to release
+        // above, so nothing tore it down): the cursor is restored and the lock
+        // destroyed here, while wl_pointer_ is still valid — which is the reason
+        // the whole teardown group stays above the wl_pointer_release below,
+        // and the reason this backstop is a CALL rather than an assertion.
+        end_pointer_capture();
+        // The relative pointer depends on the wl_pointer; destroy it first.
+        destroy_relative_pointer();
+        wl_pointer_release(wl_pointer_);
+        wl_pointer_ = nullptr;
+        pointer_focused_   = false;
+        // Same hook as wl_pointer.leave, and here the hard version of the reason:
+        // capability loss ends this pointer stream with no leave, no motion and
+        // no release to follow, so every pointer-derived face must be dropped
+        // here or it stays on screen with no event left that could take it down.
+        // WHAT the hook clears is main.cpp's hook body, the authoritative list —
+        // more than the roster's hovered buttons, and not restated here.
+        // THE REASON IS THE ARGUMENT and this site's whole stake in it: the body
+        // is shared with the ordinary leave, which is allowed to KEEP state
+        // across itself (the menu row's armed mode and its hovered button, on the
+        // titlebar trip out through row 1) precisely because a return motion will
+        // re-derive it. There is no such return here. Passing CapabilityLoss is
+        // what makes that exception — and any future one — inapplicable on this
+        // edge, so "everything goes" stays true by construction rather than by
+        // each consumer remembering it.
+        // IT FIRES AFTER THE HOLD ENDS ABOVE, which is the ordinary sequence
+        // again: a release always precedes the leave that follows it, so the
+        // gesture's own body has already dropped what a release drops and this
+        // hook's transition-gated clears find most of it done. What that order
+        // costs is one edge, and it is the no-cancel ruling paying it: a live
+        // press CLAIMED BY AN OPEN DROPDOWN now ACTIVATES its item on the way
+        // out, exactly as a physical release would, where the pre-2026-08-08
+        // order dropped the claim first and the release then owned nothing.
+        // Any end commits.
+        if (pointer_left_hook_)
+            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
 
         // A sub-detent carry and the staged half of a logical pointer frame
         // belong to the destroyed pointer object. They must not combine with
