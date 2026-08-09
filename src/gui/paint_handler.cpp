@@ -919,7 +919,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // right one button-width and costs nothing (one left-to-right accumulation
     // recomputed each paint, no rect or separator held anywhere).
     {RedesignButton::IconCumulative,
-     IconRowLead::Gap, nullptr, icons::Icon::OfficeChartBarAscending},
+     IconRowLead::Gap, nullptr, icons::Icon::OfficeChartLineForecast},
     // THE REVERT ACT (2026-08-05), left of the walk's two — the architect's own
     // order. Ordinary 2px Gap like the rest of the group. Unlike the two below
     // it, this insertion was NOT a pure append — it shifted Older and Newer one

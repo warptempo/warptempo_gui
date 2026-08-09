@@ -291,37 +291,36 @@ constexpr IconPath kDocumentRevertPaths[] = {
 
 // -- THE CUMULATIVE READING'S GLYPH (2026-08-08) -------------------------------
 //
-// office-chart-bar-ascending, the history group's second button: bare `u` picks
+// office-chart-line-forecast, the history group's second button: bare `u` picks
 // the CUMULATIVE delta (the viewed member against the live now side) over the
-// iterative one (against the next-newer member). Three ascending hollow bars on
-// the chart axis — running totals growing left to right, which is what
-// accumulation looks like, against a reading that takes one step at a time.
+// iterative one (against the next-newer member). The glyph is the chart axis
+// with a rising trend that starts SOLID and continues as two detached DASHES —
+// accumulation projected forward, which is what the cumulative reading does:
+// carry everything so far through to where the session stands now, against a
+// reading that takes one step at a time.
 //
-// THE ONE AUTHORED FILE IN assets/icons/breeze/, and the table's one row that is
-// not a verbatim copy of somebody else's icon. It is still Breeze GEOMETRY: the
-// construction is office-chart-bar.svg's exactly — the L-shaped axis with its
-// foot tick at x 3..4, the baseline band at y 17..18, hollow bars whose limbs
-// are ONE viewBox unit thick and whose interiors are subpaths wound against the
-// outline (nonzero winding, the same rule document-save's holes rely on) — with
-// three ASCENDING bars in place of that file's two unequal ones. The committed
-// file carries the same `d` and the same reasoning at its head, so the table's
-// standing property holds unchanged: a diff between this string and the file is
-// a transcription bug and nothing else.
+// Transcribed VERBATIM from the committed file like every entry above, and it
+// resolves to the scheme's #fcfcfc. ONE PATH, whose three subpaths are the
+// axis-and-solid-leg outline and the two dash outlines; no transform, no
+// fill-opacity, nothing outside the interpreter's subset (m/v/h/l/z plus the
+// implicit-lineto repetition after m, and negative numbers as their own
+// separator).
 //
-// WHY NOT A REAL BREEZE FILE, recorded because both candidates were tried:
-// office-chart-area's rising area is TWO paths, the second at fill-opacity 0.5,
-// and this product composites nothing — rendered opaque the two paths merge into
-// a solid block, and its full-opacity path alone is an outlined zigzag that is a
-// smudge at the row's 22 px. view-sort-ascending is six sort bars plus an arrow
-// under a `transform="matrix(...)"`, and the interpreter models TRANSLATE ONLY
-// (flattening that matrix by hand would put numbers here that are in no file).
-constexpr IconPath kOfficeChartBarAscendingPaths[] = {
+// TWO EARLIER CANDIDATES WERE TRIED AND REJECTED, recorded so neither is
+// re-proposed: office-chart-area's rising area is TWO paths, the second at
+// fill-opacity 0.5, and this product composites nothing — rendered opaque the
+// two merge into a solid block, and its full-opacity path alone is an outlined
+// zigzag that is a smudge at the row's 22 px. view-sort-ascending is six sort
+// bars plus an arrow under a `transform="matrix(...)"`, and the interpreter
+// models TRANSLATE ONLY (flattening that matrix by hand would put numbers here
+// that are in no file).
+constexpr IconPath kOfficeChartLineForecastPaths[] = {
     {kIconText,
-     "M 4 3 L 4 9 L 4 10 L 4 15 L 4 16 L 4 17 L 3 17 L 3 18 L 4 18 L 4 19 L 5 "
-     "19 L 5 18 L 19 18 L 19 17 L 19 5 L 16 5 L 16 17 L 14 17 L 14 9 L 11 9 L "
-     "11 17 L 9 17 L 9 13 L 6 13 L 6 17 L 5 17 L 5 16 L 5 15 L 5 10 L 5 9 L 5 3 "
-     "L 4 3 z M 7 14 L 8 14 L 8 17 L 7 17 L 7 14 z M 12 10 L 13 10 L 13 17 L 12 "
-     "17 L 12 10 z M 17 6 L 18 6 L 18 17 L 17 17 L 17 6 z "},
+     "m4 3v14h-1v1h1v1h1v-1h14v-1h-14v-2h2.7070312l2.5-2.5-0.70703125-0.70"
+     "703125-2.2070312 2.2070312h-2.2929688v-11h-1zm13.5 "
+     "0.79296875-2.7070312 2.7070312 0.70703125 0.70703125 "
+     "2.7070312-2.7070312-0.70703125-0.70703125zm-4 4-2.7070312 2.7070312 "
+     "0.70703125 0.70703125 2.7070312-2.7070312-0.70703125-0.70703125z"},
 };
 
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
@@ -342,8 +341,8 @@ constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
-constexpr IconDef kOfficeChartBarAscending
-                                      {22.0, kOfficeChartBarAscendingPaths, 1};
+constexpr IconDef kOfficeChartLineForecast
+                                      {22.0, kOfficeChartLineForecastPaths, 1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -364,8 +363,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoPrevious:          return kGoPrevious;
         case Icon::GoNext:              return kGoNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
-        case Icon::OfficeChartBarAscending:
-                                        return kOfficeChartBarAscending;
+        case Icon::OfficeChartLineForecast:
+                                        return kOfficeChartLineForecast;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

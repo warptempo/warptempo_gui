@@ -55,14 +55,12 @@ enum class Icon {
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
     // THE CUMULATIVE READING'S TOGGLE (2026-08-08), the history group's second:
-    // three ascending hollow bars on the chart axis, which is what accumulation
-    // looks like — running totals growing left to right, against the iterative
-    // reading's one step at a time. It is THE ONE AUTHORED FILE in
-    // assets/icons/breeze/, drawn in Breeze office-chart-bar's own construction
-    // (that file's axis, foot tick and 1-unit hollow bars) because Breeze ships
-    // no ascending-bars chart icon; the file says so at its head and the icon
-    // table's entry repeats why.
-    OfficeChartBarAscending,   // The cumulative reading (`u`)
+    // Breeze's own office-chart-line-forecast — the chart axis with a rising
+    // trend that starts solid and continues as two dashes, accumulation
+    // projected forward, against the iterative reading's one step at a time.
+    // One path, no transform, no fill-opacity; the table's entry records the
+    // two candidates tried before it.
+    OfficeChartLineForecast,   // The cumulative reading (`u`)
     // THE WALK'S TWO ARROWS (2026-08-05), the history group's other pair: the
     // checkpoint walk's older (`,`) and newer (`.`) steps. Breeze's own
     // go-previous / go-next chevrons — go-jump's own construction minus its
