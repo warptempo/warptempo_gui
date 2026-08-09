@@ -1796,18 +1796,52 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // when the manager is absent or the object already exists).
         create_relative_pointer_if_ready();
     } else if (!has_pointer && wl_pointer_) {
-        // THE ORDER OF THIS BRANCH IS ONE RULE (2026-08-08): WHAT THE LIVE
-        // STREAM STILL OWES IS DELIVERED FIRST, and only then is the stream torn
-        // down. A capability loss is "this pointer ends now", and the one thing
-        // it still owes is the release for a logical left button that is down —
-        // so the hold ends lead, and every teardown below them (the capture, the
-        // relative pointer, the wl_pointer itself, the focus flag, the hook, the
-        // scroll carry) happens to a gesture that has already finished. That
-        // ordering is not a preference: it is the ORDINARY sequence, where a
-        // physical release is always delivered while the stream is alive and any
-        // leave comes after, and matching it here is what keeps this edge from
-        // having behaviour of its own.
+        // THIS BRANCH'S ORDER IS RULED, and it is two constraints rather than a
+        // preference — the owed release sits BETWEEN them (2026-08-08):
+        //   (1) THE POPUP'S PRESS CLAIM DROPS FIRST, so the release below cannot
+        //       activate a menu item (the architect's ruling, at the hook call);
+        //   (2) THE RELEASE PRECEDES THE CAPTURE TEARDOWN, so a gesture commits
+        //       at its true coordinates rather than at the cursor restore hint
+        //       (codex; the argument is at the hold ends).
+        // The two are independent and compose: the hook, the only route to (1),
+        // leads; the hold ends follow it; the capture teardown follows them; and
+        // the wl_pointer itself goes last, because the gesture's own release body
+        // restores the cursor through it. What the live stream still OWES is
+        // delivered in the middle of its own teardown, and deliberately so.
         //
+        // Same hook as wl_pointer.leave, and here the hard version of the reason:
+        // capability loss ends this pointer stream with no leave, no motion and
+        // no release to follow, so every pointer-derived face must be dropped
+        // here or it stays on screen with no event left that could take it down.
+        // WHAT the hook clears is main.cpp's hook body, the authoritative list —
+        // more than the roster's hovered buttons, and not restated here.
+        // THE REASON IS THE ARGUMENT and this site's whole stake in it: the body
+        // is shared with the ordinary leave, which is allowed to KEEP state
+        // across itself (the menu row's armed mode and its hovered button, on the
+        // titlebar trip out through row 1) precisely because a return motion will
+        // re-derive it. There is no such return here. Passing CapabilityLoss is
+        // what makes that exception — and any future one — inapplicable on this
+        // edge, so "everything goes" stays true by construction rather than by
+        // each consumer remembering it.
+        //
+        // IT RUNS ABOVE THE HOLD ENDS SO A MENU ITEM CANNOT FIRE ON THE WAY OUT
+        // (architect 2026-08-08): A MENU ITEM IS A CLICK CONVENTION, NOT A DRAG
+        // COMMIT. The no-cancel ruling — any end commits — governs GESTURES, and
+        // they stay firmly on the other side of this line, committing below at
+        // their live coordinates; a popup item is the opposite kind of thing, and
+        // no toolkit fires one because the seat lost a device. The hook's
+        // clear_dropdown_pointer_state is what enforces it, and it is the right
+        // UNIT rather than the claim alone: finish_dropdown_release reads
+        // `press_began_on_item ? dropdown_item_at(x, y) : pressed_item`, so
+        // dropping the claim while a raised arm stood would just move the
+        // activation to the other branch. That clearer drops BOTH, which is
+        // exactly the invariant finish_dropdown_release states about every claim
+        // clearer — so the release below finds no claim AND no arm, derives
+        // nothing, and lands as the harmless unowned no-op the ordinary leave
+        // already produces.
+        if (pointer_left_hook_)
+            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
+
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
         // matching button release or frame boundary) arrive on this object.
@@ -1881,31 +1915,6 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
-        // Same hook as wl_pointer.leave, and here the hard version of the reason:
-        // capability loss ends this pointer stream with no leave, no motion and
-        // no release to follow, so every pointer-derived face must be dropped
-        // here or it stays on screen with no event left that could take it down.
-        // WHAT the hook clears is main.cpp's hook body, the authoritative list —
-        // more than the roster's hovered buttons, and not restated here.
-        // THE REASON IS THE ARGUMENT and this site's whole stake in it: the body
-        // is shared with the ordinary leave, which is allowed to KEEP state
-        // across itself (the menu row's armed mode and its hovered button, on the
-        // titlebar trip out through row 1) precisely because a return motion will
-        // re-derive it. There is no such return here. Passing CapabilityLoss is
-        // what makes that exception — and any future one — inapplicable on this
-        // edge, so "everything goes" stays true by construction rather than by
-        // each consumer remembering it.
-        // IT FIRES AFTER THE HOLD ENDS ABOVE, which is the ordinary sequence
-        // again: a release always precedes the leave that follows it, so the
-        // gesture's own body has already dropped what a release drops and this
-        // hook's transition-gated clears find most of it done. What that order
-        // costs is one edge, and it is the no-cancel ruling paying it: a live
-        // press CLAIMED BY AN OPEN DROPDOWN now ACTIVATES its item on the way
-        // out, exactly as a physical release would, where the pre-2026-08-08
-        // order dropped the claim first and the release then owned nothing.
-        // Any end commits.
-        if (pointer_left_hook_)
-            pointer_left_hook_(GuiPointerLeaveReason::CapabilityLoss);
 
         // A sub-detent carry and the staged half of a logical pointer frame
         // belong to the destroyed pointer object. They must not combine with
