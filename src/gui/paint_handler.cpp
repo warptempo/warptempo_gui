@@ -4149,6 +4149,66 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         render_bottom_strip_editor(cr, app, font, app.commit_title_editor,
                                    kCommitTitleEditorPrefix,
                                    sec.c_x, baseline, band_y, band_h);
+    // A MODAL SURFACE ALWAYS OUTRANKS THE PROGRESS MESSAGE (architect
+    // 2026-08-10). The three editors below used to sit UNDER
+    // queue_progress_text, and that inversion was a real freeze: an editor is
+    // MODAL — it holds the keyboard through route_modal_editor_key and swallows
+    // presses — so while an "Updating..." or a "Rendering..." stood, the editor
+    // was open and operating on input while painting NOTHING. Keys and clicks
+    // vanished into a surface the user could not see, which reads as a hung
+    // product even to someone who knows the system.
+    //
+    // THE RULE IS ONE SENTENCE AND IT IS SYMMETRIC: a modal must be VISIBLE to
+    // be operable, and the message is STATUS rather than interaction, so the
+    // modal wins the slot. Because this is an else-if chain, the message needs
+    // no cancel, no clear and no label machinery to give way — it simply is not
+    // reached while an editor stands, and it RETURNS THE INSTANT the editor
+    // closes, from its own live state, on the next frame. No state, no edge, no
+    // recovery. And it is symmetric across BOTH producers by construction: the
+    // preview's "Updating..." and the archival render's "Rendering N of M"
+    // share this one slot, so neither can hide a modal and neither is treated
+    // specially.
+    //
+    // THIS SUPERSEDES THE CANCEL-AT-OPEN RULING OF THE SAME DAY, whose
+    // machinery is deleted whole: the three openers no longer cancel the
+    // in-flight preview, and the tick edge that re-established the buffer that
+    // cancel left dirty is gone with it. DO NOT RE-PROPOSE either — a render
+    // now runs to completion behind the visible editor, so there is nothing to
+    // recover: an Esc abandon leaves a COMPLETED, current buffer, and a
+    // commit's own trigger kills and re-dispatches exactly as it always has.
+    //
+    // THE THREE EDITORS OUTRANK THE HISTORY LINE TOO, and that is the same rule
+    // rather than an extra one — the line is status like the message. It is
+    // REACHABLE with an editor open, verified rather than assumed: bare `'` is
+    // one of the mode's admitted mutator chords (is_load_in_place,
+    // input_key_dispatch.cpp) and it opens the LOAD editor inside the view, so
+    // ranking the line first would hide that editor exactly as the message did.
+    // The commit-title editor above already sat ahead of the line for this
+    // reason; the other editors now join it, which leaves the whole chain
+    // reading MODALS first, then STATUS.
+    } else if (text_editor::is_active(app.settings_editor)) {
+        // Settings prompt overlay: "setting: <pending>", through the shared
+        // shaped-editor body (which publishes the caret geometry and owns the
+        // parse-failure red flash).
+        render_bottom_strip_editor(cr, app, font, app.settings_editor,
+                                   kSettingsEditorPrefix,
+                                   sec.c_x, baseline, band_y, band_h);
+    } else if (text_editor::is_active(app.load_editor)) {
+        // Load prompt overlay: "Load: ./renders/<pending>", through
+        // the same shared body; its red flash is an unresolved / bad commit.
+        render_bottom_strip_editor(cr, app, font, app.load_editor,
+                                   kLoadEditorPrefix,
+                                   sec.c_x, baseline, band_y, band_h);
+    } else if (text_editor::is_active(app.top_flag_editor) &&
+               app.top_flag_editor.kind ==
+                   text_editor::Kind::BpmBracket) {
+        // BPM editor overlay, through the same bottom-strip
+        // editor helper as the settings branch above. top_flag_editor
+        // with kind==BpmBracket only ever paints here, never over the
+        // flag in the top strip.
+        render_bottom_strip_editor(cr, app, font, app.top_flag_editor,
+                                   kBpmEditorPrefix,
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
         // THE `h` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
         // four bottom-strip editors paint in. It ranks directly under the
@@ -4238,29 +4298,6 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // too (it is the only feedback there).
         show_row_text(cr, font, sec.c_x, baseline, app.queue_progress_text,
                       kRedesignLabel);
-    } else if (text_editor::is_active(app.settings_editor)) {
-        // Settings prompt overlay: "setting: <pending>", through the shared
-        // shaped-editor body (which publishes the caret geometry and owns the
-        // parse-failure red flash).
-        render_bottom_strip_editor(cr, app, font, app.settings_editor,
-                                   kSettingsEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.load_editor)) {
-        // Load prompt overlay: "Load: ./renders/<pending>", through
-        // the same shared body; its red flash is an unresolved / bad commit.
-        render_bottom_strip_editor(cr, app, font, app.load_editor,
-                                   kLoadEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.top_flag_editor) &&
-               app.top_flag_editor.kind ==
-                   text_editor::Kind::BpmBracket) {
-        // BPM editor overlay, through the same bottom-strip
-        // editor helper as the settings branch above. top_flag_editor
-        // with kind==BpmBracket only ever paints here, never over the
-        // flag in the top strip.
-        render_bottom_strip_editor(cr, app, font, app.top_flag_editor,
-                                   kBpmEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
         // "No renders to load in place", ...). It used to ride the two-row

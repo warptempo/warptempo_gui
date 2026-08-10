@@ -2798,29 +2798,6 @@ bool GuiInputHandler::modal_bottom_strip_editor_active() const {
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
-// THE MODAL-OPEN PREVIEW CANCEL'S RECOVERY EDGE. The declaration owns the rule,
-// the membership and the reasoning; this is the mechanism and nothing else.
-//
-// The membership is spelled here rather than routed through
-// modal_bottom_strip_editor_active because the two sets are NOT the same and
-// their difference is the point: that predicate includes the commit-title
-// editor, which ranks ABOVE queue_progress_text in the status slot and is
-// therefore never starved and never cancels. Sharing it would make this edge
-// fire on a surface that has no update to recover from.
-void GuiInputHandler::tick_modal_preview_recovery() {
-    const bool open = text_editor::is_active(app.settings_editor) ||
-                      text_editor::is_active(app.load_editor) ||
-                      (text_editor::is_active(app.top_flag_editor) &&
-                       app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
-    if (modal_preview_cancelled_ && !open && !target_render.is_updating()) {
-        // The closing edge, with nothing already running: ask the buffer's own
-        // question. Clean (or source view) and it is a no-op; dirty — which is
-        // where the cancel left it — and it dispatches.
-        target_render.ensure_ready();
-    }
-    modal_preview_cancelled_ = open;
-}
-
 // Any text editor consuming printable keys — the THREE bottom-strip editors
 // (the settings prompt, the load prompt and the commit-title editor)
 // plus the top-strip flag editor in EITHER kind (the FlagPayload editor takes
@@ -4254,12 +4231,6 @@ void GuiInputHandler::open_load_editor() {
     // modal blocked set, so once open, playback cannot restart until the editor
     // closes.
     playback_lifecycle.stop_playback_for_modal_open();
-    // AND THE RUNNING TARGET PREVIEW DIES WITH THE OPEN (architect 2026-08-10),
-    // for the reason at GuiSettingsEditor::open: this editor paints below
-    // queue_progress_text in the status slot, so an "Updating..." would leave it
-    // open, modal and invisible. Membership and the recovery edge are at
-    // tick_modal_preview_recovery.
-    target_render.cancel_in_flight_update();
     text_editor::enter(app.load_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",
@@ -4697,13 +4668,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // `m` leaves a listening session running. Space is inside the modal
         // blocked set, so playback cannot restart until the editor closes.
         playback_lifecycle.stop_playback_for_modal_open();
-        // AND THE RUNNING TARGET PREVIEW DIES WITH THE OPEN (architect
-        // 2026-08-10), for the reason at GuiSettingsEditor::open: the BPM
-        // editor is the third surface painting below queue_progress_text in the
-        // status slot. Same position argument as the stop above — every refusal
-        // has already returned, so a refused `m` cancels nothing. Membership
-        // and the recovery edge are at tick_modal_preview_recovery.
-        target_render.cancel_in_flight_update();
         flag_editor.enter_bpm_edit(owner);
         // The playhead land rides enter_text_edit (the shared open chokepoint):
         // it lands on `owner`, the EARLIEST selected, while the focus that built

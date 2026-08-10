@@ -1361,16 +1361,6 @@ int main(int argc, char** argv) {
         // clear lands in the same frame they do.
         target_render.tick_updating_hold();
 
-        // THE MODAL-OPEN PREVIEW CANCEL'S RECOVERY EDGE (architect 2026-08-10).
-        // A modal that starves the status slot cancels the running preview at
-        // its open; this notices the CLOSE and re-establishes the buffer the
-        // cancel left dirty. It rides the tick for the same reason the hold
-        // above does — the edge it watches has no single event site, the three
-        // editors closing through nineteen deactivate calls between them. Cheap
-        // and total: three is_active reads and a bool compare. The rule, the
-        // membership and the recovery route are at its declaration.
-        input_handler.tick_modal_preview_recovery();
-
         // Its sibling for the ARCHIVAL status message: promote the message
         // parked at dispatch once the worker reports that synthesis actually
         // began, so a render served by one of do_render's reuse rungs shows

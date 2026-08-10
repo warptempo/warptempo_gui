@@ -106,15 +106,6 @@ void GuiSettingsEditor::open() {
     // caller-side stop would have made the dropdown's refusal kill a live
     // audition and open nothing, which is not the consumed no-op this is.
     playback_lifecycle.stop_playback_for_modal_open();
-    // AND THE RUNNING TARGET PREVIEW DIES WITH THE OPEN (architect 2026-08-10).
-    // This editor paints in the bottom row's status slot BELOW
-    // queue_progress_text, so while an "Updating..." stands the editor is open,
-    // modal and INVISIBLE — keys and presses swallowed by a surface that shows
-    // nothing, which reads as a frozen product. Updates are cheap, so the modal
-    // wins the slot by cancelling the work rather than by out-ranking it or
-    // deferring itself. Membership and the recovery edge are at
-    // GuiInputHandler::tick_modal_preview_recovery.
-    target_render.cancel_in_flight_update();
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",

@@ -1836,7 +1836,6 @@ private:
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
-
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The
     // mode itself — what it shows, what opens and closes it, what it refuses and
@@ -1973,49 +1972,7 @@ private:
     // close_history_mode.
     bool deferred_history_prefetch_kick_ = false;
 
-    // The whole state behind tick_modal_preview_recovery: last tick's answer to
-    // "is one of the three progress-starved editors open?". False at
-    // construction, so the first tick of a session with no editor open sees no
-    // edge and does nothing.
-    bool modal_preview_cancelled_ = false;
-
 public:
-    // THE MODAL-OPEN PREVIEW CANCEL'S RECOVERY EDGE (architect 2026-08-10:
-    // "anything that launches a modal cancels the running update").
-    //
-    // THE MEMBERSHIP LIVES HERE, and it is NOT every modal — it is exactly the
-    // surfaces the "Updating..." readout OUTRANKS in the bottom row's status
-    // slot, derived from that painter's else-if chain (paint_handler.cpp): the
-    // SETTINGS editor, the LOAD editor and the BPM editor. Those three paint
-    // BELOW queue_progress_text, so a standing update leaves them open, modal
-    // and invisible — the freeze this whole rule exists for. The PROMPTS and the
-    // COMMIT-TITLE editor rank ABOVE it and are visible while an update runs, so
-    // they cancel nothing; the top-strip FLAG editor paints in another strip
-    // entirely and never contends for this slot at all — the same exemption it
-    // already holds at stop_playback_for_modal_open, for the same "it is not a
-    // bottom-strip surface" reason. Each of the three open sites calls
-    // GuiTargetRender::cancel_in_flight_update and points here.
-    //
-    // WHY AN EDGE ON THE TICK rather than a call at each close: the three
-    // editors close through NINETEEN deactivate sites between them (commit
-    // paths, Esc abandons, and the openers' own mutual-exclusion closes), and a
-    // recovery hung on each would be a membership to keep in step forever. The
-    // edge asks one question once — "was one of them open last tick and not
-    // now?" — and answers it in one place, which a new bottom-strip editor
-    // inherits for free.
-    //
-    // WHAT IT RECOVERS: the cancel leaves is_dirty_ SET (the edit that provoked
-    // the render is still unrendered — cancel_in_flight_update's own contract),
-    // and an Esc ABANDON runs no trigger, so without this the target buffer
-    // would rest stale-or-empty until the next edit or a T->S->T round trip —
-    // and Space in target view would then play stale audio, the silent-wrong
-    // class this project keeps guards for. ensure_ready() is exactly the right
-    // question ("is the buffer current?"): a no-op in source view and on a clean
-    // buffer, a dispatch otherwise. It is skipped while a render is already
-    // in flight so a COMMIT's own fresh trigger is never cancelled and
-    // re-dispatched by this edge one tick later.
-    void tick_modal_preview_recovery();
-
     // -- THE HISTORY PREFETCH'S THREE PUBLIC EDGES (2026-08-07) -------------
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
