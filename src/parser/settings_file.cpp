@@ -395,7 +395,7 @@ std::expected<SettingsFile, std::string> read_settings_file(
         } else if (key == "playback_speed") {
             out.playback_speed = gv.f;
         } else if (key == "gui_scale") {
-            // Range-checked into [100, 200] by validate_gui_setting above, so
+            // Range-checked into [50, 200] by validate_gui_setting above, so
             // the narrowing to int is exact (architect approval 2026-07-30).
             out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "audio_player") {
