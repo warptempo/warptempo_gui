@@ -281,7 +281,7 @@ constexpr IconPath kGoNextPaths[] = {
 
 // -- THE REVERT ACT'S GLYPH (2026-08-05) ---------------------------------------
 //
-// document-revert, the history group's fourth button: the checkpoint's own
+// document-revert, the history group's third button: the checkpoint's own
 // differences applied backwards into the live state. Transcribed verbatim from
 // the committed document-revert.svg like every entry above, and it resolves to
 // the scheme's #fcfcfc.

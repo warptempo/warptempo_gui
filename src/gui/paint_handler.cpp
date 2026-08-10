@@ -1005,9 +1005,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
     // button's group rather than opening a sixth: they are the same mode's
     // controls, and the row's one group boundary already said where that mode
-    // starts. So they take the ordinary 2px Gap, and the group reads History |
-    // Revert | Older | Newer left to right, the arrows pointing the way each one
-    // walks.
+    // starts. So they take the ordinary 2px Gap, and they close the group —
+    // which reads History | Cumulative | Revert | Older | Newer left to right
+    // (the Cumulative toggle joined between them and History on 2026-08-08),
+    // the arrows pointing the way each one walks.
     {RedesignButton::IconHistoryOlder,
      IconRowLead::Gap, nullptr, icons::Icon::GoPrevious},
     {RedesignButton::IconHistoryNewer,
@@ -3683,8 +3684,12 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // deleted. It is the coincident case ALONE that the always-paints clause loses:
 // the playhead still paints everywhere else, unconditionally, and the HEAD
 // paints even here (the architect expects it partly visible behind a coincident
-// flag; a ±1 column on a 19px head is invisible, which is exactly what a 1px
-// stem beside another 1px stem is not).
+// flag; a ±1 column is invisible against the HEAD, whose widest row is
+// 2 * playhead_head_half_px(0, s) + 1 — 9px at the 50% floor, 19 at 100%, 37 at
+// the 200% ceiling, so it is at least nine columns wide anywhere in the schema
+// and the ±1 never approaches half of it. That is exactly what a 1px stem
+// beside another 1px stem is not, at any scale: the stem is one column by
+// ruling and does not scale at all, so there the same ±1 is the whole object).
 //
 // WHY IT IS PRINCIPLED AGAIN, and why it was not on 2026-07-30: in the OLD
 // visual model only a selected SINGLETON stemmed, so suppressing the playhead

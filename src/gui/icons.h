@@ -71,7 +71,7 @@ enum class Icon {
     // geometry here and there is no stroke to set.
     GoPrevious,          // Older checkpoint (`,`)
     GoNext,              // Newer checkpoint (`.`)
-    // THE REVERT ACT'S GLYPH (2026-08-05), the history group's fourth: the
+    // THE REVERT ACT'S GLYPH (2026-08-05), the history group's third button: the
     // selected diff flags applied backwards into the live state (`Ctrl+H`).
     // Breeze's own document-revert — a page with an arrow curving back into it,
     // which is the act — and the FIRST committed file whose `d` uses the smooth

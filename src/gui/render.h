@@ -1369,8 +1369,13 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // requirement, and neither owns the other.
 //
 // RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD in the
-// marker lane is 19px wide (kPlayheadHeadHalf[0] = 9 either side), so this +/-7 reach
-// is NARROWER than the head that stands on the same column. It is harmless as
+// marker lane is WIDER than this reach at every scale. The head's widest row is
+// 2 * playhead_head_half_px(0, s) + 1 off kPlayheadHeadHalf[0] = 9 — 19px at
+// 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at the 200% ceiling,
+// which is the capacity the ruler's tick window already derives — against this
+// +/- 7-at-100% reach, which rides a different authored unit. Both scale, and
+// neither is a function of the other, so the gap is a fact at every scale
+// rather than a 100%-only observation. It is harmless as
 // the damage rule stands — narrow damage is reserved for the two per-frame
 // SCANNER sites, and the scanner is waveform-only and draws no head, while
 // every discrete CURSOR move takes full waveform-area damage (the rule and the
