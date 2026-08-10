@@ -395,11 +395,15 @@ GitCapture run_git_capture(const std::vector<std::string>& args,
 // that, so by the time the log runs the count has said there ARE commits and
 // silence from it is a contradiction rather than an empty history.
 //
-// THE CALLERS WHOSE QUESTION IS NOT THE OUTPUT'S CONTENT call run_git_capture
-// directly and read the tri-state instead — the load-in-place's blob reads, the
-// commit act's status pre-flight, the scan's `rev-list --count` witness and the
-// touched-directory evidence read, the last two because ran-with-empty is a real
-// answer for them ("0" commits, and a merge's suppressed diff).
+// FOUR CALLERS READ run_git_capture DIRECTLY INSTEAD, and only ONE of them does
+// so to accept an empty answer: the load-in-place's BLOB reads, where an empty
+// sidecar is a valid whole file in both marker grammars (the tree listing's
+// stated byte length is the second witness there). The other three take the
+// tri-state to judge the SHAPE of what arrived, which a length test cannot do —
+// the commit act's status pre-flight wants its `##` header, the scan's
+// `rev-list --count` wants a number ("0" is bytes, not silence), and the
+// touched-directory evidence read wants a NUL-framed set of this piece's own
+// sidecar paths, REFUSING an empty answer outright.
 bool git_output(const std::vector<std::string>& args, std::string& out) {
     return run_git_capture(args, out) == GitCapture::Ran && !out.empty();
 }
@@ -1156,13 +1160,17 @@ bool clone_is_projects_home(const std::string& projects_repo,
 // One commit's committed path and blob size for each of the three sidecars,
 // empty/-1 where that commit carries none. Indexed to match kSidecarExtensions.
 //
-// `ambiguous` is a REFUSAL, not a variant of "carries none": this commit's tree
-// holds the base name in several directories and none of them is the one HEAD
-// matched, so which piece the blobs belong to has no answer. All three paths
-// are empty in that state and read_commit_sidecars refuses on it — which the
-// walk's load gate counts as ineligibility (an ambiguous commit never enters
-// the walk) and the `'` act prints as its own refusal, the arm a pasted
-// spelling naming a commit outside the walk keeps live.
+// `ambiguous` is a REFUSAL, not a variant of "carries none": the commit CHANGED
+// this base name in two or more directories, so which piece the blobs belong to
+// has no answer (2026-08-09 — it was a tree-containment judgment against the
+// session's own directory until the evidence became commit-local; no checkpoint
+// this program makes touches two folders, so it is somebody's hand commit).
+// `no_touch_evidence` below is its sibling and the opposite fact — an answer
+// about the commit versus the absence of one. All three paths are empty in
+// either state and read_commit_sidecars refuses on both — which the walk's load
+// gate counts as ineligibility (neither kind ever enters the walk) and the `'`
+// act prints as its own refusal, the arm a pasted spelling naming a commit
+// outside the walk keeps live.
 struct GuiHistoryCommitPaths {
     std::string path[3];
     long long   size[3] = {-1, -1, -1};
@@ -1335,7 +1343,13 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& sha,
     // rather than a smaller one.
     std::vector<std::string> seen;
     for (const std::string& path : split_on(raw, '\0')) {
-        if (path.empty()) continue;
+        // AN EMPTY RECORD IS A DEVIATION LIKE ANY OTHER, not something to skip
+        // past: this split yields one for a LEADING NUL or either half of a
+        // DOUBLED one, and skipping it would let `<path>\0\0` pass the
+        // all-records grammar with the tail test satisfied. An ordinary single
+        // trailing NUL produces no trailing element here, so well-formed output
+        // never reaches this arm.
+        if (path.empty()) return GuiHistoryTouchedDirs{};
         const std::string dir = directory_of(path);
         if (dir.size() <= kProjectsPrefix.size() ||
             std::string_view(dir).substr(0, kProjectsPrefix.size()) !=
@@ -2151,15 +2165,16 @@ bool GuiHistoryDiff::init(const AppState&           app,
     }
 
     // A SCAN THAT COULD NOT READ REFUSES, and it is the one thing between the
-    // header and availability. The bound run ends NOT ok when its `git log`
-    // capture could not run at all, which is a repository this program cannot
-    // ask about rather than a piece with no checkpoints: an unread history must
-    // never establish an empty walk, because an empty walk is now a legal
-    // standing state that opens the view and tells Save and Commit there is
-    // everything to checkpoint. The failure travels as the store's own recorded
-    // reason and prints HERE, on the header refusal's one line and in its exact
-    // shape (GuiHistoryScanResult, history_diff.h, owns the ruling and the
-    // ran-versus-could-not-run distinction).
+    // header and availability. WHAT ENDS A RUN NOT OK IS ENUMERATED AT
+    // GuiHistoryScanResult (history_diff.h) and nowhere else — several arms, not
+    // one, and restating them here is how the two would drift. What matters at
+    // this site is the shared meaning: the run did not ANSWER, which is a
+    // repository this program cannot ask about rather than a piece with no
+    // checkpoints. An unread history must never establish an empty walk, an
+    // empty walk being a legal standing state that opens the view and tells Save
+    // and Commit there is everything to checkpoint. The failure travels as the
+    // store's own recorded reason and prints HERE, on the header refusal's one
+    // line and in its exact shape.
     //
     // IT STAYS REFUSED UNTIL A RUN ANSWERS, deliberately: the staleness test is
     // untouched, so a failed run is not re-kicked by pressing `h` again and the
