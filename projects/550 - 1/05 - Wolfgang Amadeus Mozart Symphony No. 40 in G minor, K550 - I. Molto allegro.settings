@@ -24,7 +24,3 @@ tab_b_read_only=false
 tab_b_viewport_start=0
 tab_b_zoom=9.569111886640775
 tab_b_playhead_cursor=0
-libm_hash=ea1f90bceba953a0
-libmvec_hash=600a42316996233c
-fftw3_hash=21c4c48f6f44d7db
-fftw3_threads_hash=1c5fd0138895db8f
