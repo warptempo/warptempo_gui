@@ -515,8 +515,9 @@ std::string read_history_branch_tip_sha();
 // the streaming possible: `on_header` fires once (with `ok` false and the reason
 // set when the piece cannot be found at all), `on_member` once per ELIGIBLE
 // commit in walk order (newest first) carrying the snapshots the gate read, and
-// `on_done` once at the end with the candidate and hidden counts — the counted
-// stderr line's own numbers. Ineligible candidates produce no member callback.
+// `on_done` once at the end with the HIDDEN count — the counted stderr line's
+// own number, and the only number a run reports. Ineligible candidates produce
+// no member callback.
 //
 // `abandoned` IS ASKED BETWEEN CANDIDATES, and nowhere else: a superseding kick
 // or a shutdown wants this run to stop, and a candidate boundary is the finest
@@ -532,7 +533,7 @@ void scan_history_walk(
     const std::function<bool()>&                        abandoned,
     const std::function<void(GuiHistoryWalkHeader)>&    on_header,
     const std::function<void(GuiHistoryCommitSidecars)>& on_member,
-    const std::function<void(int candidates, int hidden)>& on_done);
+    const std::function<void(int hidden)>&               on_done);
 
 // The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07,
 // superseding the list this used to build for itself at init) — each member
@@ -557,19 +558,21 @@ public:
     // before the worker's own header has arrived, two git calls and no strict
     // load — plus the now-side capture and the delta caches.
     //
-    // Returns available(). Every failure path is UNAVAILABLE with one stderr
-    // line and nothing else: the repo root missing, no `origin` remote, a
+    // Returns available(). EVERY FAILURE PATH IS THE HEADER'S — one stderr line
+    // and nothing else: the repo root missing, no `origin` remote, a
     // `projects_repo` that is empty or that names a different repository than
     // this clone's FETCH url or than any of its effective PUSH urls, no
     // committed file bearing this source's sidecar names, more than one
-    // directory bearing them, and — the TERMINAL ZERO cases, which only a
-    // FINISHED scan can state — no commit touching any of them, or every
-    // touching commit refusing the strict load.
+    // directory bearing them. Which repository, which piece, which source — and
+    // nothing about the walk that answering those questions then produced.
     //
-    // A SCAN STILL RUNNING WITH NO MEMBER YET IS AVAILABLE, not a refusal: the
-    // view opens on an empty walk (`0/0`, a blank lane) and populates live. The
-    // two zero answers above are the same shape a moment later, so refusing here
-    // would make entry a race.
+    // MEMBERSHIP IS NEVER A REFUSAL (architect 2026-08-09). A walk with no
+    // eligible commit is AVAILABLE whether its scan is still streaming or has
+    // FINISHED empty: the view opens at `0/0` over a blank lane, populating live
+    // in the first case and resting in the second. The two terminal zeros this
+    // once refused on — no commit touching the sidecars, and every touching
+    // commit refusing the strict load — are ordinary now, and the reasoning is
+    // at the site in the definition.
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
     bool               available() const { return available_; }
@@ -578,6 +581,19 @@ public:
     // How many eligible commits the bound store has DELIVERED so far. It only
     // ever grows within a visit.
     std::size_t commit_count() const;
+
+    // THE BOUND RUN IS FINISHED AND CARRIES NOTHING — the walk's terminal empty
+    // state, and a LEGAL standing one since 2026-08-09: the view opens on it at
+    // `0/0` over a blank lane rather than refusing, so this is the difference
+    // between "there is no eligible checkpoint" and "one may still arrive".
+    //
+    // ONE READER, GuiInputHandler::measure_history_head_delta, which answers
+    // COMMIT-WORTHY on a true — with no eligible baseline there is by definition
+    // everything to checkpoint, and the conservative greyed face it wears while
+    // a scan is still streaming would otherwise be permanent here. It asks
+    // through the binding rather than the store directly so a generation
+    // mismatch answers the same cold "no" the member list does.
+    bool walk_finished_empty() const;
 
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
@@ -986,9 +1002,11 @@ enum class GuiHistoryCommitOutcome {
 // `post-commit` hook reads as `CommitFailed`. The act's head in the .cpp owns
 // the ruling, the seven steps and the accepted consequences.
 //
-// IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
-// mode at all, so there is nothing to bootstrap from here — the first checkpoint
-// of a new piece stays a manual act.
+// IT CREATES NO DIRECTORY: `project_directory` comes from the header's tree
+// match, so it is a folder the branch already carries. An empty WALK is no
+// obstacle (the view opens on one, and this act is how it stops being empty);
+// a piece whose sidecars have never been committed at all has no directory
+// here, and its very first checkpoint stays a manual act.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,

@@ -798,10 +798,13 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // reason that matters: the now side it takes is the session's own capture,
     // so the two walks cannot come to disagree about what "now" is.
     //
-    // IT RIDES THE MODE, IT DOES NOT CARRY IT: entry is still gated on the
-    // COMMIT walk's availability alone, so a piece with no committed history
-    // cannot be opened to read its undo stack. That is deliberate — the view is
-    // the GitHub recheck, and the local walk is a second source inside it.
+    // IT RIDES THE MODE, IT DOES NOT CARRY IT: entry is gated on the COMMIT
+    // side's HEADER resolving and on nothing else — which repository, which
+    // piece, which source — never on how many members the walk turned out to
+    // have. So a piece whose every checkpoint refuses the strict load opens
+    // just as one with a hundred good ones does, and the local walk is read in
+    // there beside a blank Remote lane (architect 2026-08-09; the empty walk's
+    // ruling is at GuiHistoryDiff::init).
     fresh.local.init(app, fresh.session.now_side());
     // AND IT OPENS WHERE THE SESSION STANDS (architect 2026-08-08), which is the
     // one place the two walks' entry positions differ. The commit walk opens at
@@ -885,6 +888,15 @@ bool GuiInputHandler::open_history_mode_fresh() {
 // member 0 exists. `head_delta_measured` is what makes that "the first time":
 // after it, this is a no-op whatever else arrives.
 //
+// AND A FINISHED WALK WITH NO MEMBER AT ALL ANSWERS COMMIT-WORTHY (architect
+// 2026-08-09, with the empty walk becoming a legal standing state): the window
+// above closes when the run reports DONE, and if nothing arrived in it the
+// answer is not unknown any more — with no eligible baseline to measure
+// against there is BY DEFINITION everything to checkpoint, and the act must be
+// live or the view has no way to create the first member. It is a measurement
+// like any other, so the bit latches and the mid-scan greyed face stands until
+// the run says it is done.
+//
 // CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
 // compare mode rather than passing the session's bit: the act commits the LIVE
 // state, so the question is live-vs-newest whatever reading the lane shows.
@@ -900,7 +912,12 @@ bool GuiInputHandler::open_history_mode_fresh() {
 void GuiInputHandler::measure_history_head_delta() {
     if (!app.history_mode.active) return;
     if (app.history_mode.head_delta_measured) return;
-    if (app.history_mode.session.commit_count() == 0) return;
+    if (app.history_mode.session.commit_count() == 0) {
+        if (!app.history_mode.session.walk_finished_empty()) return;
+        app.history_mode.head_delta_empty    = false;
+        app.history_mode.head_delta_measured = true;
+        return;
+    }
     const GuiHistoryCommitDelta* head = app.history_mode.session.delta_at(
         0, GuiHistoryCompare::Cumulative);
     if (!head) return;
@@ -984,12 +1001,18 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //     cache's own fingerprint field, which is why an empty-walk entry's first
 //     member repaints rather than sitting blank.
 // FULL-WINDOW DAMAGE, the mode edges' own class: the corner and the lane are two
-// surfaces and neither is worth a rect. It fires only on a drain that APPENDED
-// something, so a header or a DONE arriving alone costs nothing.
+// surfaces and neither is worth a rect.
+//
+// TWO EDGES REACT, NOT ONE (2026-08-09): an APPEND, above, and the run BECOMING
+// DONE, which is the other moment the head delta can be answered — a scan that
+// finishes having delivered nothing turns the act from "unknown, so greyed" into
+// "everything to checkpoint" (measure_history_head_delta owns that rule), and the
+// Save button's face has to follow inside the same frame. A header arriving alone
+// still costs nothing.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
-    if (r.members_appended == 0) return;
+    if (r.members_appended == 0 && !r.became_done) return;
     measure_history_head_delta();
     viewport.invalidate_all();
 }
@@ -1686,11 +1709,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             (load_history_commit_in_place), the LOCAL tab takes
 //                             a member NUMBER and loads that state of the
 //                             session's own timeline as a new undo entry
-//                             (load_history_local_entry_in_place). The local arm
-//                             is a FOURTH session-conditional admission, on the
-//                             walk being bound — a term that is always true on a
-//                             live Local tab and is there for the unbound walk
-//                             alone (the term at the predicate says why).
+//                             (load_history_local_entry_in_place). It is a
+//                             FOURTH session-conditional admission, on THE ACTIVE
+//                             WALK CARRYING A MEMBER — one term for both walks
+//                             since 2026-08-09, when the empty Remote walk became
+//                             a legal standing state (the term at the predicate
+//                             says why).
 //   - Ctrl+S                → THE SAVE-AND-COMMIT ACT, the mode's second
 //                             admitted mutator, and in here it is the ONLY
 //                             meaning this chord has (architect 2026-08-08,
@@ -1891,8 +1915,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
 // FOUR admissions are conditional on session state (the commit act's — Ctrl+S
 // since 2026-08-08 — on head_delta_empty AND on no checkpoint already being in
-// flight, the revert act's, on a subject standing, and the load-in-place's local
-// arm, on the local walk being bound), and both readers hand it
+// flight, the revert act's, on a subject standing, and the load-in-place's, on
+// the active walk carrying a member), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
 // decision rather than two spellings of one. It took the HistoryMode struct
@@ -1917,17 +1941,21 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // spelling on the Remote tab, a member NUMBER on the Local one — and the
     // routing lives at load_editor_commit, not here.
     //
-    // THE LOCAL ARM CARRIES ONE TERM: the walk must have members. It is the
-    // head delta's shape — one decision refusing the key AND greying the icon
-    // row's load-in-place button — and it is STRUCTURALLY ALWAYS TRUE on a live
-    // Local tab, the walk carrying U + R + 1 members and the one entry owner
-    // binding it before the mode goes up. It is kept because it is the honest
-    // gate against the UNBOUND walk (the `0/0` blank-lane state), which is the
-    // one thing that would give the editor no member to prefill or to load.
+    // THE TERM IS THE ACTIVE WALK'S, AND IT IS ONE TERM FOR BOTH SINCE
+    // 2026-08-09: the walk must have a member. The act loads THE VIEWED ONE, so
+    // a walk with none has nothing to prefill and nothing to load, and one
+    // decision refuses the key and greys the icon row's load-in-place button —
+    // the head delta's own shape.
+    //
+    // IT WAS THE LOCAL ARM'S ALONE until the empty COMMIT walk became a legal
+    // standing state: the Local walk carries U + R + 1 members and can only be
+    // empty UNBOUND, while the Remote one now opens at `0/0` whenever a piece
+    // has no eligible checkpoint. So the honest gate against the blank-lane
+    // walk covers both, and the source fork this predicate carried for it is
+    // gone (the vocabulary fork stays where it always was, at the opener and at
+    // load_editor_commit).
     const bool is_load_in_place =
-        (key == GuiKeys::Apostrophe && bare &&
-         (mode.source == GuiHistoryWalkSource::Commit ||
-          mode.walk_count() > 0));
+        (key == GuiKeys::Apostrophe && bare && mode.walk_count() > 0);
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
     // SECOND session-conditional admission: Ctrl+H is admitted only while there
     // is a subject to revert — a selected diff flag, or the focused one — so
@@ -2057,9 +2085,9 @@ void GuiInputHandler::commit_title_editor_exit_no_commit() {
 // Enter: run the act under the typed title.
 //
 // A BLANK BUFFER IS A RED FLASH, not a commit: git would take an empty message
-// only under --allow-empty-message, the walk that attributes the checkpoint
-// matches on the title, and a checkpoint nobody can name is not a thing this
-// product writes. Whitespace-only counts as blank (ASCII whitespace in the "C"
+// only under --allow-empty-message, and a checkpoint nobody can name is not a
+// thing this product writes. Whitespace-only counts as blank (ASCII whitespace
+// in the "C"
 // locale — the settings editor's own trim rule), and the flash leaves the
 // editor open with the text in place to be corrected, which is every editor's
 // refusal shape here.
@@ -4121,11 +4149,13 @@ void GuiInputHandler::open_load_editor() {
         // their members in different vocabularies, and the editor asks for the
         // one the user is looking at.
         //
-        // The commit arm's out-of-range index answers with the empty string,
-        // which opens an empty editor the user can paste into — the honest cold
-        // answer, and unreachable in practice since the mode only opens with a
-        // non-empty walk and every step clamps. The local arm cannot be cold at
-        // all: `local_index` is always a bound walk's own position.
+        // NEITHER ARM CAN BE COLD, and since 2026-08-09 that is the ALLOWLIST's
+        // doing rather than the walk's: the mode opens on an EMPTY commit walk
+        // now, so the honest gate against a walk with no viewed member is the
+        // `'` admission's own term (history_mode_key_blocked — the chord is
+        // refused and the icon row's load button greys), and this opener is
+        // reached only with a member to name. Within a bound walk every step
+        // clamps, so the index is always in range.
         if (app.history_mode.source == GuiHistoryWalkSource::Local) {
             prefill = std::to_string(app.history_mode.local_index + 1);
         } else {

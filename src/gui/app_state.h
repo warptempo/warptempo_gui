@@ -2691,12 +2691,21 @@ struct AppState {
         // measurement site (GuiInputHandler::measure_history_head_delta), which
         // both the entry and the arrival hook call; `head_delta_measured` below
         // is what makes it once.
+        //
+        // AND THE WINDOW HAS A SECOND EXIT since 2026-08-09: a run that reports
+        // DONE having delivered NOTHING. The walk is then finished and empty —
+        // a legal standing state, the view resting at `0/0` — and the answer is
+        // no longer unknown but FALSE: with no eligible checkpoint to measure
+        // against there is by definition everything to checkpoint, and the act
+        // must be live or the empty walk could never gain its first member. Both
+        // exits latch through the same one site.
         bool head_delta_empty = true;
 
         // Whether the bit above is an ANSWER rather than the resting default.
-        // False until member 0 has been compared against the frozen now side;
-        // the one measurement site sets it and nothing clears it inside a visit
-        // (the whole-struct reset at both edges does).
+        // False until the walk has answered — either member 0 compared against
+        // the frozen now side, or the run finishing with no member at all; the
+        // one measurement site sets it and nothing clears it inside a visit (the
+        // whole-struct reset at both edges does).
         bool head_delta_measured = false;
 
         // THE EDITOR'S NAVIGATION BAND, PARKED FOR THE VISIT (architect
@@ -3688,8 +3697,8 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
 // IT TAKES THE WHOLE AppState because the gate it asks does: FOUR of that
 // gate's admissions are conditional on state (re-derived 2026-08-09 — the commit
 // act's, on head_delta_empty and on history_checkpoint_in_flight; the revert
-// act's, on history_mode_revert_subject_standing above; and the load-in-place's
-// local arm, on the local walk being bound), so both readers must
+// act's, on history_mode_revert_subject_standing above; and the load-in-place's,
+// on the active walk carrying a member), so both readers must
 // hand it the SAME state or the face
 // and the key would answer differently. The caller passes `a` and
 // restates none of its terms.

@@ -118,13 +118,14 @@ public:
         return members_;
     }
 
-    // True once the current run has reported DONE. `hidden_count` is how many
-    // candidates the strict load refused — the counted stderr line's number, and
-    // the terminal-zero entry refusal's — and `candidate_count` how many the
-    // `log` produced.
+    // True once the current run has reported DONE — the term that separates a
+    // walk that is merely still streaming from one that is FINISHED and empty,
+    // which is what the head-delta measurement reads to answer "there is
+    // everything to checkpoint" (GuiHistoryDiff::walk_finished_empty).
+    // `hidden_count` is how many candidates the strict load refused: the counted
+    // stderr line's number, and the only number a run reports.
     bool run_done() const { return done_; }
     int  hidden_count() const { return hidden_; }
-    int  candidate_count() const { return candidates_; }
 
     // A run is in flight for the current generation (kicked, no DONE drained
     // yet). It is what makes the staleness question answerable before the
@@ -154,8 +155,7 @@ private:
         GuiHistoryWalkHeader     header;
         std::string              tip_sha;
         GuiHistoryCommitSidecars member;
-        int                      candidates = 0;
-        int                      hidden     = 0;
+        int                      hidden = 0;
     };
 
     struct Run {
@@ -183,10 +183,9 @@ private:
     bool                                 header_seen_     = false;
     GuiHistoryWalkHeader                 header_;
     std::deque<GuiHistoryCommitSidecars> members_;
-    bool                                 done_       = false;
-    bool                                 running_    = false;
-    int                                  hidden_     = 0;
-    int                                  candidates_ = 0;
+    bool                                 done_    = false;
+    bool                                 running_ = false;
+    int                                  hidden_  = 0;
     std::string                          tip_sha_;
     std::string                          subject_path_;
     std::string                          subject_repo_;

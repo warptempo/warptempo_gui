@@ -1625,7 +1625,7 @@ void scan_history_walk(
         const std::function<bool()>&                           abandoned,
         const std::function<void(GuiHistoryWalkHeader)>&       on_header,
         const std::function<void(GuiHistoryCommitSidecars)>&   on_member,
-        const std::function<void(int candidates, int hidden)>& on_done) {
+        const std::function<void(int hidden)>&                 on_done) {
     GuiHistoryWalkHeader header =
         resolve_history_walk_header(source_audio_path, projects_repo);
     const std::string base_name         = header.base_name;
@@ -1635,8 +1635,8 @@ void scan_history_walk(
     if (!ok) {
         // A run whose header refuses is FINISHED, not merely stopped: the DONE
         // is what tells the store there is nothing more coming, and an entry
-        // reads the header's own reason rather than these zeroes.
-        on_done(0, 0);
+        // reads the header's own reason rather than this zero.
+        on_done(0);
         return;
     }
 
@@ -1675,10 +1675,12 @@ void scan_history_walk(
         }
     }
     // A `log` that ran and said nothing and a `log` that could not run are the
-    // same answer here — no candidate — and the entry's own "No commit touches"
-    // line is what states it. The count rides out in the DONE below.
+    // same answer here — no candidate, so no member, so a walk that opens the
+    // view at `0/0` over a blank lane. Nothing was hidden either, so the DONE
+    // carries a zero and the counted line stays silent: there is no count to
+    // explain, only a piece with no checkpoint behind it yet.
     if (candidates.empty()) {
-        on_done(0, 0);
+        on_done(0);
         return;
     }
 
@@ -1705,10 +1707,8 @@ void scan_history_walk(
     // three strict loads of tiny files, so a supersede or a quit waits out at
     // most that.
     int hidden = 0;
-    int done   = 0;
     for (const std::string& sha : candidates) {
         if (abandoned()) break;
-        ++done;
         GuiHistoryCommitLoad load;
         std::string          why;
         if (!load_commit_sidecars_strict(sha, base_name, project_directory,
@@ -1718,7 +1718,7 @@ void scan_history_walk(
         }
         on_member(std::move(load.sidecars));
     }
-    on_done(done, hidden);
+    on_done(hidden);
 }
 
 const std::deque<GuiHistoryCommitSidecars>& GuiHistoryDiff::members() const {
@@ -1728,6 +1728,15 @@ const std::deque<GuiHistoryCommitSidecars>& GuiHistoryDiff::members() const {
 }
 
 std::size_t GuiHistoryDiff::commit_count() const { return members().size(); }
+
+bool GuiHistoryDiff::walk_finished_empty() const {
+    // The generation test is members()' own, restated here only because the
+    // DONE bit lives on the store rather than in the deque: a store that has
+    // moved to another run is describing another walk, and this session's
+    // answer about its own is "not finished".
+    if (!store_ || store_->generation() != store_generation_) return false;
+    return store_->run_done() && store_->members().empty();
+}
 
 bool GuiHistoryDiff::init(const AppState&           app,
                           const GuiHistoryPrefetch& prefetch) {
@@ -1781,28 +1790,31 @@ bool GuiHistoryDiff::init(const AppState&           app,
         project_directory_ = h.project_directory;
     }
 
-    // THE TWO TERMINAL ZERO CASES, and only a FINISHED scan can state either:
-    // no commit touches the sidecars at all, or every one that does refuses the
-    // strict load. Both are today's exact lines. A scan still running with no
-    // member yet is NOT one of them — the view opens empty and populates — so
-    // the refusal is conditioned on done, never on emptiness alone.
+    // AN EMPTY WALK IS A LEGAL STANDING STATE (architect 2026-08-09), whether
+    // the scan is still streaming or has FINISHED with nothing: the view opens
+    // at `0/0` over a blank Remote lane, and the blank lane is the honest
+    // display of a piece with no eligible checkpoint behind it. Both terminal
+    // zeros — no commit touches the sidecars at all, and every touching commit
+    // refusing the strict load — open exactly like the mid-scan window does, so
+    // emptiness is nowhere a refusal and `done` is nowhere a term.
     //
-    // WHICH LEAVES ONE SHAPE WITH NO REFUSAL, recorded rather than closed: a
-    // visit that opened mid-scan whose run then finishes with zero eligible
-    // members rests at `0/0` with a blank lane until the user presses `h` again.
-    // It is a refusal that arrived too late to be one, and the alternative would
-    // be a NEW closer — the view closing itself under the reader — which is a
-    // bigger change than the case is worth (it needs a piece with committed
-    // sidecars whose every checkpoint refuses the strict load, and an `h` inside
-    // the second the scan takes to say so).
-    if (prefetch.run_done() && prefetch.members().empty()) {
-        return unavailable(
-            prefetch.candidate_count() == 0
-                ? ("No commit touches 'projects/**/" + base_name_ + ".*'")
-                : ("None of the " + std::to_string(prefetch.hidden_count()) +
-                   " commit(s) touching 'projects/**/" + base_name_ +
-                   ".*' passes the strict sidecar load"));
-    }
+    // WHAT THE OLD REFUSAL COST is why it went: SAVE AND COMMIT LIVES ONLY
+    // INSIDE THIS VIEW, so refusing entry on an empty walk made the one act that
+    // can CREATE an eligible member unreachable from the state that has none —
+    // a deadlock, and not a theoretical one: RETIRING A SETTINGS KEY EMPTIES
+    // EVERY PIECE'S WALK AT A STROKE, every committed sidecar then failing the
+    // strict load, so the whole corpus loses the act that would write the first
+    // checkpoint under the new schema. The first checkpoint after a schema
+    // change is an ordinary in-app act now.
+    //
+    // (The one bootstrap the HEADER still refuses is a piece whose sidecars have
+    // never been committed at all: there is then no `projects/<piece>/` in the
+    // tree to match, and the act writes into a directory rather than creating
+    // one — the note at commit_history_checkpoint.)
+    //
+    // THE COUNTED EXPLANATION IS THE PREFETCH'S, at its DONE and in one place
+    // (history_prefetch.cpp): the two message strings that stood here died with
+    // the refusal rather than becoming informational prints beside it.
 
     // The now side is captured once, here: every delta this session hands out
     // is measured against these exact bytes. (The delta caches are NOT sized
@@ -2566,9 +2578,14 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // — the content-signature attribution that did went with the graded machinery —
 // so it is written and never read back.
 //
-// IT CREATES NO DIRECTORY. A piece with no committed history cannot open the
-// mode at all, so there is nothing to bootstrap from here — the first checkpoint
-// of a new piece stays a manual act.
+// IT CREATES NO DIRECTORY, and the HEADER is what makes that safe rather than
+// the walk: `project_directory` is a directory the branch tip's tree already
+// carries (resolve_history_walk_header refuses the mode outright when no
+// committed file bears this source's sidecar names), so the act always writes
+// into a folder that exists. An empty WALK is no obstacle — a piece whose every
+// checkpoint refuses the strict load opens the view and checkpoints from it —
+// but a piece whose sidecars have never been committed AT ALL still has no
+// directory here, and its very first checkpoint stays a manual act.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,
@@ -2601,9 +2618,9 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
     // (2a) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
     // rename — so a checkpoint is never half-written, and into a directory that
-    // MUST ALREADY EXIST: nothing here creates one (a piece with no committed
-    // history cannot open the mode at all, so its first checkpoint is a manual
-    // act by design), and a missing directory simply fails the open below.
+    // MUST ALREADY EXIST: nothing here creates one (the header's tree match is
+    // what guarantees it — the paragraph above owns the reasoning), and a
+    // missing directory simply fails the open below.
     for (std::size_t e = 0; e < 3; ++e) {
         const std::string absolute =
             std::string(kRepoRoot) + "/" + paths[e];

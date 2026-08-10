@@ -58,10 +58,9 @@ void GuiHistoryPrefetch::kick(std::string source_audio_path,
     header_seen_ = false;
     header_      = GuiHistoryWalkHeader{};
     members_.clear();
-    done_       = false;
-    running_    = true;
-    hidden_     = 0;
-    candidates_ = 0;
+    done_    = false;
+    running_ = true;
+    hidden_  = 0;
     tip_sha_.clear();
     subject_path_ = source_audio_path;
     subject_repo_ = projects_repo;
@@ -111,16 +110,19 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             ++result.members_appended;
             break;
         case Message::Kind::Done:
-            done_               = true;
-            running_            = false;
-            candidates_         = m.candidates;
-            hidden_             = m.hidden;
-            result.became_done  = true;
+            done_              = true;
+            running_           = false;
+            hidden_            = m.hidden;
+            result.became_done = true;
             // THE COUNTED LINE, once per run and at its end — the same sentence
             // the eager init printed, moved to the moment the count is final.
-            // An empty walk says nothing here: the entry's own terminal-zero
-            // refusal names the number instead.
-            if (hidden_ > 0 && !members_.empty()) {
+            // IT PRINTS ON AN EMPTY WALK TOO (2026-08-09, with the terminal-zero
+            // refusal's deletion): a run that hid EVERY candidate is exactly
+            // when the number explains something, the view opening at `0/0` over
+            // a blank lane with no other account of why. It is the ONE
+            // explanation the feature offers — the entry's two refusal messages
+            // died with the refusal rather than moving here beside it.
+            if (hidden_ > 0) {
                 std::fprintf(stderr,
                              "warptempo_gui: History hid %d commit(s) whose "
                              "sidecars refuse the strict load\n",
@@ -193,11 +195,10 @@ void GuiHistoryPrefetch::worker_loop() {
                 m.member     = std::move(s);
                 push_message(std::move(m));
             },
-            [this, my_gen](int candidates, int hidden) {
+            [this, my_gen](int hidden) {
                 Message m;
                 m.kind       = Message::Kind::Done;
                 m.generation = my_gen;
-                m.candidates = candidates;
                 m.hidden     = hidden;
                 push_message(std::move(m));
             });

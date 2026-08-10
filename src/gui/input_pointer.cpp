@@ -431,15 +431,18 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
 // struct); and it admits CTRL+H only while a diff flag is selected, so the
-// REVERT button greys with an empty subject; and since 2026-08-08 it admits
-// bare `'` on the LOCAL tab only while that walk is BOUND, which greys the
-// load-in-place button on the blank-lane state a live tab cannot reach. The
-// derivation carries all of it
+// REVERT button greys with an empty subject; and it admits bare `'` only while
+// THE ACTIVE WALK CARRIES A MEMBER — one term for both walks since 2026-08-09,
+// when the empty Remote walk became a legal standing state — so the
+// load-in-place button greys over a blank lane, which the Remote tab reaches
+// whenever a piece has no eligible checkpoint and a live Local tab cannot reach
+// at all. The derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
-// cadence and that is the honest difference: the head delta is measured once at
-// entry and is static for the visit, the local walk's binding is fixed for the
-// visit too, while the revert subject moves with every click and the in-flight
-// bit falls when the worker reports.
+// cadence and that is the honest difference: the head delta is measured once
+// (at the entry, or at the drain that answers it) and is static for the visit,
+// while the active walk's count grows as the prefetch streams, the revert
+// subject moves with every click and the in-flight bit falls when the worker
+// reports.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05):
@@ -453,8 +456,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   switches), the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:
-//   its local arm is the THIRD session-dependent entry, dead only on an unbound
-//   walk), and the history button itself (bare `h`, the
+//   the THIRD session-dependent entry, dead on a walk with no member — the
+//   Remote tab's empty one, since 2026-08-09), and the history button itself
+//   (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
 //   and BOTH TABS since 2026-08-05 — live as the WALK SELECTOR rather than

@@ -349,14 +349,15 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //
 // THE SECOND TAKES THE WHOLE AppState, THE FIRST TAKES NOTHING BUT THE PRESS,
 // and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
-// while THREE allowlist admissions are conditional on state they are asked about
-// (re-derived 2026-08-07) — the commit act's, which is CTRL+S since 2026-08-08,
+// while FOUR allowlist admissions are conditional on state they are asked about
+// (re-derived 2026-08-09) — the commit act's, which is CTRL+S since 2026-08-08,
 // on head_delta_empty (a view whose
 // newest checkpoint already carries the session's authoring content has nothing
-// to commit) and on history_checkpoint_in_flight (one checkpoint at a time), and
-// the revert act's, on a subject standing
+// to commit) and on history_checkpoint_in_flight (one checkpoint at a time), the
+// revert act's, on a subject standing
 // (history_mode_revert_subject_standing — a selected diff flag, else the focused
-// one). Both readers hand it the
+// one), and the load-in-place's, on the active walk carrying a member. Both
+// readers hand it the
 // same `app` and neither restates a term of it, which is what
 // keeps the key and the face one decision. It took the HistoryMode struct alone
 // until the in-flight bit joined, that bit living on AppState because the act
@@ -1958,8 +1959,9 @@ private:
     void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome);
     void run_history_revert();
     // THE HEAD DELTA'S ONE MEASUREMENT SITE (2026-08-07). Called at the entry
-    // and again at every prefetch arrival while the view stands; it measures
-    // exactly once, when member 0 first exists, and is a no-op forever after.
+    // and again at every prefetch drain that appended a member or ended the
+    // run; it measures exactly once — when member 0 first exists, or when the
+    // run finishes having delivered none — and is a no-op forever after.
     void measure_history_head_delta();
     // A KICK THAT WOULD LAND WHILE THE VIEW STANDS IS DEFERRED to the exit —
     // the visit's list must not be swapped underneath it. Set here, flushed by
