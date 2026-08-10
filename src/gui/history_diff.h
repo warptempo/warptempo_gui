@@ -34,8 +34,11 @@ class GuiHistoryPrefetch;
 // by NAME: the source's sidecar base name is resolved against the COMMITTED
 // TREE of the checked-out branch, and whichever directory under `projects/`
 // holds files by that name is the piece's home, whatever it is called and
-// however deeply it nests. Exactly one directory may carry them — zero or
-// several is UNAVAILABLE — and the commit walk uses a `projects/`-rooted
+// however deeply it nests. AT MOST one directory may carry them — SEVERAL is
+// UNAVAILABLE, while ZERO is a piece with no checkpoint yet and the header names
+// it a folder instead (2026-08-09, the bootstrap: the source's own folder when
+// it sits under `projects/`, else a synthesized one) — and the commit walk uses
+// a `projects/`-rooted
 // basename pathspec, so a piece renamed at some point in the walked range is
 // still followed with no knowledge of what its folder used to be called. Each
 // commit's blobs are then read at the paths THAT commit's own tree gives, the
@@ -487,6 +490,14 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
 // projects-home guard, the source's base-name derivation and the tip-tree match,
 // two git calls and no strict load anywhere. `unavailable_reason` carries the
 // one line the mode prints when it refuses, in the exact shape it always had.
+//
+// `project_directory` IS ALWAYS NAMED ON AN OK HEADER AND NEED NOT EXIST YET
+// (2026-08-09, the bootstrap): the tip-tree match answers it when the piece has
+// committed sidecars, and when it has none the header falls to the folder the
+// SOURCE is sitting in under `projects/`, else to a synthesized
+// `projects/<base name>`. Repo-relative, no trailing slash, one form for all
+// three arms — the definition owns the precedence and the reasoning, and the
+// checkpoint act creates the directory before it writes.
 struct GuiHistoryWalkHeader {
     bool        ok = false;
     std::string unavailable_reason;
@@ -497,7 +508,9 @@ struct GuiHistoryWalkHeader {
 // Run that cheap half. TWO CALLERS, deliberately: the prefetch worker at the
 // head of every run, and GuiHistoryDiff::init when a visit opens before the
 // worker's header has arrived — so an entry refusal is the same answer computed
-// in the same place whichever thread asks.
+// in the same place whichever thread asks. It reads the repository and the
+// filesystem and writes neither: the folder it may NAME is created by the
+// checkpoint act, not here.
 GuiHistoryWalkHeader resolve_history_walk_header(
     const std::string& source_audio_path, const std::string& projects_repo);
 
@@ -590,9 +603,11 @@ public:
     // Returns available(). TWO FAMILIES OF FAILURE, one stderr line and nothing
     // else either way. THE HEADER'S: the repo root missing, no `origin` remote, a
     // `projects_repo` that is empty or that names a different repository than
-    // this clone's FETCH url or than any of its effective PUSH urls, no
-    // committed file bearing this source's sidecar names, more than one
-    // directory bearing them — which repository, which piece, which source. AND
+    // this clone's FETCH url or than any of its effective PUSH urls, an
+    // unreadable tree, more than one directory carrying this source's sidecar
+    // names — which repository, which piece, which source. (NO committed
+    // directory is no longer among them since 2026-08-09: the header names the
+    // piece a folder instead, and the bootstrap is an ordinary act.) AND
     // THE SCAN'S: the bound run's `git log` capture could not run, so this
     // program has not read the piece's history at all (GuiHistoryScanResult).
     // Both are questions that went UNANSWERED; neither is a fact about how many
@@ -661,13 +676,15 @@ public:
     const GuiHistoryCommitDelta* delta_at(std::size_t         index,
                                           GuiHistoryCompare   compare);
 
-    // What init() matched: the source's sidecar base name, and the committed
-    // DIRECTORY holding its sidecars on the branch's tip tree (e.g.
-    // "projects/550 - 1"). Both are empty when unavailable, and available() is
-    // the thing to test. The directory is ALWAYS under `projects/` and
-    // therefore never empty on an available session — the match narrowed to
-    // that folder in 2026-08-04, which is also what lets the commit act write
-    // its checkpoint into a directory this string names.
+    // What init() matched: the source's sidecar base name, and the piece's
+    // DIRECTORY (e.g. "projects/550 - 1"), repo-relative. Both are empty when
+    // unavailable, and available() is the thing to test. The directory is ALWAYS
+    // under `projects/` and therefore never empty on an available session — the
+    // match narrowed to that folder in 2026-08-04 — which is what lets the
+    // commit act write its checkpoint into a directory this string names. IT MAY
+    // NOT EXIST YET (2026-08-09): on a piece with no committed sidecar the
+    // header names the source's own folder or synthesizes one, and the act
+    // creates it before writing.
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
 
@@ -1041,11 +1058,13 @@ enum class GuiHistoryCommitOutcome {
 // `post-commit` hook reads as `CommitFailed`. The act's head in the .cpp owns
 // the ruling, the seven steps and the accepted consequences.
 //
-// IT CREATES NO DIRECTORY: `project_directory` comes from the header's tree
-// match, so it is a folder the branch already carries. An empty WALK is no
-// obstacle (the view opens on one, and this act is how it stops being empty);
-// a piece whose sidecars have never been committed at all has no directory
-// here, and its very first checkpoint stays a manual act.
+// IT CREATES THE PROJECT FOLDER (architect 2026-08-09): the header names one for
+// every piece — a committed match, the folder the source already sits in, or one
+// synthesized from the base name — and the last two need not exist yet, so
+// `create_directories` runs above the three writes and a failure there is
+// WriteFailed with nothing written and no git child spawned. So the first
+// checkpoint of a brand-new piece is an ordinary act of this view, exactly as
+// the first checkpoint after a schema change is.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,

@@ -932,15 +932,22 @@ std::vector<GuiHistoryTreeEntry> sidecar_entries_in_listing(
     return hits;
 }
 
-// The single directory carrying this source's sidecars, judged over the paths
-// above. Returns it (possibly "" for the repo root) via `out_dir`, or false
-// with `reason` set. Multiplicity is judged BY DIRECTORY: the three files are
-// expected to sit together, so three hits in one directory is the ordinary
-// success and a directory carrying only one of them still matches.
-bool sole_directory_of(const std::vector<GuiHistoryTreeEntry>& paths,
-                       const std::string&                      base_name,
-                       std::string&                            out_dir,
-                       std::string&                            reason) {
+// THE COMMITTED MATCH, JUDGED OVER THE PATHS ABOVE — three answers, because the
+// caller does three different things with them (2026-08-09, when the bootstrap
+// made NONE an ordinary outcome rather than a refusal): SOLE hands the directory
+// back through `out_dir`, AMBIGUOUS refuses with `reason` set, and NONE is
+// neither — the piece simply has no committed sidecar yet, which the header
+// answers by naming a directory of its own. Multiplicity is judged BY DIRECTORY:
+// the three files are expected to sit together, so three hits in one directory
+// is the ordinary success and a directory carrying only one of them still
+// matches.
+enum class GuiHistorySidecarMatch { None, Sole, Ambiguous };
+
+GuiHistorySidecarMatch sole_directory_of(
+        const std::vector<GuiHistoryTreeEntry>& paths,
+        const std::string&                      base_name,
+        std::string&                            out_dir,
+        std::string&                            reason) {
     std::vector<std::string> dirs;
     for (const GuiHistoryTreeEntry& e : paths) {
         std::string d = directory_of(e.path);
@@ -949,11 +956,7 @@ bool sole_directory_of(const std::vector<GuiHistoryTreeEntry>& paths,
         }
     }
 
-    if (dirs.empty()) {
-        reason = "No file committed under 'projects/' is named '" + base_name +
-                 ".warpmarkers' or its two siblings";
-        return false;
-    }
+    if (dirs.empty()) return GuiHistorySidecarMatch::None;
     if (dirs.size() > 1) {
         std::sort(dirs.begin(), dirs.end());
         std::string list;
@@ -963,10 +966,63 @@ bool sole_directory_of(const std::vector<GuiHistoryTreeEntry>& paths,
         }
         reason = "Sidecars named '" + base_name +
                  ".*' are committed in more than one directory: " + list;
-        return false;
+        return GuiHistorySidecarMatch::Ambiguous;
     }
     out_dir = dirs.front();
-    return true;
+    return GuiHistorySidecarMatch::Sole;
+}
+
+// THE PROJECT FOLDER THE SOURCE IS ALREADY SITTING IN, repo-relative, or empty
+// when it is not sitting in one. It is the bootstrap's SECOND arm and the
+// architect's own workflow read back: he makes `projects/550 - 4/` in a file
+// manager, drops the source WAV inside it, and expects the first checkpoint to
+// commit into THAT folder rather than into one the program invented beside it —
+// the coincident layout all his existing pieces already have.
+//
+// CONTAINMENT IS DECIDED ON CANONICAL PATHS, never on the spellings: a source
+// reached through a symlinked corpus, or named with `..` in the middle, is the
+// same file wherever it was typed from, and a naive prefix test on the strings
+// would answer no for the first and yes for a `projects/../../elsewhere` that
+// leaves the clone entirely. `weakly_canonical` resolves both sides without
+// requiring either to exist, and `relative` then does the containment and the
+// repo-relative conversion in one step — a path outside the clone comes back
+// leading with `..`, which fails the first-component test below like any other
+// non-match.
+//
+// THE PARENT MUST BE STRICTLY BELOW `projects/`, not `projects/` itself: the
+// layout convention is one folder per piece, and a source dropped loose in the
+// corpus root has no folder of its own to be the answer. That case falls through
+// to the synthesized arm, which gives it one.
+std::string coincident_project_directory(const std::string& source_audio_path) {
+    if (source_audio_path.empty()) return std::string();
+    std::error_code ec;
+    const std::filesystem::path root =
+        std::filesystem::weakly_canonical(std::filesystem::path(kRepoRoot), ec);
+    if (ec) return std::string();
+    // THE SOURCE IS CANONICALIZED WHOLE AND ITS PARENT TAKEN AFTERWARDS, not the
+    // other way about: a source named as a bare filename has no parent to
+    // canonicalize, and canonicalizing it first is what makes a program launched
+    // from inside the project folder answer that folder rather than falling
+    // through to a synthesized one beside it.
+    const std::filesystem::path source = std::filesystem::weakly_canonical(
+        std::filesystem::path(source_audio_path), ec);
+    if (ec) return std::string();
+    const std::filesystem::path rel =
+        std::filesystem::relative(source.parent_path(), root, ec);
+    if (ec || rel.empty()) return std::string();
+
+    const std::string_view folder =
+        kProjectsPrefix.substr(0, kProjectsPrefix.size() - 1);
+    std::filesystem::path::iterator it  = rel.begin();
+    std::filesystem::path::iterator end = rel.end();
+    if (it == end || std::string_view(it->native()) != folder) {
+        return std::string();
+    }
+    if (++it == end) return std::string();
+    // Forward slashes deliberately: this is a repo-relative path in git's own
+    // spelling, the exact form directory_of hands back for a committed match, so
+    // both arms feed checkpoint_paths the same shape.
+    return rel.generic_string();
 }
 
 // ---------------------------------------------------------------------------
@@ -1597,10 +1653,49 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         return unavailable("Could not read the committed tree at " +
                            std::string(kRepoRoot));
     }
+    // WHICH FOLDER IS THIS PIECE'S — THREE ARMS IN PRECEDENCE ORDER, first match
+    // winning (architect 2026-08-09, the bootstrap's second half). Only the
+    // first existed until then, and a piece with no committed sidecar refused
+    // the mode outright, which left the first checkpoint of anything new to the
+    // terminal — the deadlock's other half, and against the goal of managing the
+    // repository from the GUI alone.
+    //
+    //   (1) A COMMITTED MATCH. The sole directory under `projects/` carrying
+    //       this base name on the branch tip, exactly as before: it is where the
+    //       piece's history already is, so nothing else can be the answer.
+    //       AMBIGUITY STILL REFUSES — the base name committed under two
+    //       directories is two pieces' histories and no way to tell them apart —
+    //       and so does a tree read that could not run, above.
+    //   (2) THE SOURCE'S OWN FOLDER, when it lies under the clone's `projects/`.
+    //       The architect names his project folders himself and puts the source
+    //       inside them, so an uncommitted `projects/550 - 4/` holding the WAV is
+    //       already the piece's folder and the checkpoint belongs in it.
+    //   (3) `projects/<base name>`, synthesized. A source living outside the
+    //       clone has no folder here to honour, so the piece gets one named
+    //       after itself — the stem is a filesystem-safe name by construction,
+    //       being a filename already.
+    //
+    // THE NAME IS COSMETIC TO THE MACHINERY EITHER WAY: the walk matches by
+    // committed FILE name wherever under `projects/` it sits, so a folder the
+    // architect named and one this synthesized are indistinguishable to it, and
+    // his hand-named folders keep working through arm 1 exactly as they did.
+    // Arms 2 and 3 name a directory that need not exist yet; the checkpoint act
+    // creates it before writing (commit_history_checkpoint owns that step).
     std::string reason;
-    if (!sole_directory_of(sidecar_entries_in_listing(tip_listing, h.base_name),
-                           h.base_name, h.project_directory, reason)) {
+    const std::vector<GuiHistoryTreeEntry> committed =
+        sidecar_entries_in_listing(tip_listing, h.base_name);
+    switch (sole_directory_of(committed, h.base_name, h.project_directory,
+                              reason)) {
+    case GuiHistorySidecarMatch::Ambiguous:
         return unavailable(std::move(reason));
+    case GuiHistorySidecarMatch::Sole:
+        break;
+    case GuiHistorySidecarMatch::None:
+        h.project_directory = coincident_project_directory(source_audio_path);
+        if (h.project_directory.empty()) {
+            h.project_directory = std::string(kProjectsPrefix) + h.base_name;
+        }
+        break;
     }
 
     h.ok = true;
@@ -1853,10 +1948,13 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // checkpoint under the new schema. The first checkpoint after a schema
     // change is an ordinary in-app act now.
     //
-    // (The one bootstrap the HEADER still refuses is a piece whose sidecars have
-    // never been committed at all: there is then no `projects/<piece>/` in the
-    // tree to match, and the act writes into a directory rather than creating
-    // one — the note at commit_history_checkpoint.)
+    // AND THE OTHER HALF OF THE BOOTSTRAP CLOSED THE SAME DAY: a piece whose
+    // sidecars have never been committed at all opens here too. The header names
+    // it a folder rather than refusing — the one the source is already sitting
+    // in under `projects/`, else a synthesized `projects/<base name>` — and the
+    // checkpoint act creates that folder before writing into it. So there is no
+    // piece whose first checkpoint needs a terminal, which is the point of both
+    // halves together.
     //
     // THE COUNTED EXPLANATION IS THE PREFETCH'S, at its DONE and in one place
     // (history_prefetch.cpp): the two message strings that stood here died with
@@ -2624,14 +2722,14 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // — the content-signature attribution that did went with the graded machinery —
 // so it is written and never read back.
 //
-// IT CREATES NO DIRECTORY, and the HEADER is what makes that safe rather than
-// the walk: `project_directory` is a directory the branch tip's tree already
-// carries (resolve_history_walk_header refuses the mode outright when no
-// committed file bears this source's sidecar names), so the act always writes
-// into a folder that exists. An empty WALK is no obstacle — a piece whose every
-// checkpoint refuses the strict load opens the view and checkpoints from it —
-// but a piece whose sidecars have never been committed AT ALL still has no
-// directory here, and its very first checkpoint stays a manual act.
+// IT CREATES THE PROJECT FOLDER (architect 2026-08-09, SUPERSEDING "it creates
+// no directory" and closing the bootstrap): the header now names a folder for
+// every piece — the committed match, the folder the source is already sitting
+// in, or one synthesized from the base name — and the last two need not exist
+// yet, so the act makes the directory before it writes. THE FIRST CHECKPOINT OF
+// A NEW PIECE IS AN ORDINARY IN-APP ACT, which is the whole point: the goal is a
+// repository managed from this window, with no step that drops the user into a
+// terminal.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& project_directory, const std::string& base_name,
     const std::string& projects_repo, const GuiHistoryNowSide& bytes,
@@ -2662,11 +2760,34 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::vector<std::string> paths =
         checkpoint_paths(project_directory, base_name);
 
-    // (2a) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
-    // rename — so a checkpoint is never half-written, and into a directory that
-    // MUST ALREADY EXIST: nothing here creates one (the header's tree match is
-    // what guarantees it — the paragraph above owns the reasoning), and a
-    // missing directory simply fails the open below.
+    // (2a) THE FOLDER, before the bytes that go in it. `create_directories` is a
+    // no-op on one that already exists, which is every arm but the synthesized
+    // one and the architect's own named-folder workflow besides, so this is one
+    // call rather than a case analysis of which arm the header took. It is above
+    // the writes and therefore above the first git child by construction: a
+    // failure here is WriteFailed with nothing written and nothing spawned,
+    // the act's existing refusal shape.
+    const std::string absolute_directory =
+        std::string(kRepoRoot) + "/" + project_directory;
+    std::error_code directory_ec;
+    std::filesystem::create_directories(absolute_directory, directory_ec);
+    if (directory_ec) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Commit failed: could not create '%s': %s\n",
+                     project_directory.c_str(),
+                     directory_ec.message().c_str());
+        return GuiHistoryCommitOutcome::WriteFailed;
+    }
+
+    // (2b) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
+    // rename — so a checkpoint is never half-written. WHERE THE SOURCE LIVES IN
+    // THIS FOLDER these three paths COINCIDE with the ones the prelude save just
+    // wrote beside it, which is the recorded coincident double write: the same
+    // bytes through two atomic renames, deliberately not deduped, and race-free
+    // because every other save is locked out for the act's duration (the act's
+    // head and github-recheck.md own that reasoning). Nothing in it was ever
+    // about how the header found the folder, so the two new arms inherit it
+    // whole — arm 2 is precisely that layout.
     for (std::size_t e = 0; e < 3; ++e) {
         const std::string absolute =
             std::string(kRepoRoot) + "/" + paths[e];
@@ -2690,7 +2811,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return GuiHistoryCommitOutcome::CommitFailed;
     };
 
-    // (2b) THE PRE-FLIGHT, and THE ONE MID-ACT TRIPWIRE KEPT (see the head).
+    // (2c) THE PRE-FLIGHT, and THE ONE MID-ACT TRIPWIRE KEPT (see the head).
     // `git status` takes no ref and compares against whatever HEAD points at, so
     // it is the one source-side observation that cannot be pinned by spelling;
     // it is pinned by CHECKING instead, against the `##` header's own branch
