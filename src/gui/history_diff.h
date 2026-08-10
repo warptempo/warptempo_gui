@@ -53,9 +53,9 @@ class GuiHistoryPrefetch;
 // WRITES checkpoints now (the commit act below) and a checkpoint whose push
 // failed must still be visible history. `origin/main` would hide it until the
 // next successful push, which is exactly the moment the user most needs to see
-// that the commit exists. One spelling for all three uses — the tip listing,
-// the walk, and the push's destination — so "the branch" cannot mean two
-// things.
+// that the commit exists. One spelling for both uses — the walk and the push's
+// destination — so "the branch" cannot mean two things. (It was three until
+// 2026-08-09; the header's tip listing went with the three-arm resolution.)
 //
 // WHICH REPOSITORY IS THE PROJECTS HOME is the `projects_repo` setting's
 // answer, not this module's assumption. The guard compares it against this
@@ -488,9 +488,11 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
 // prefetch names none of the mutating one.
 
 // WHERE THE PIECE LIVES, or why it cannot be found — the walk's cheap half: the
-// projects-home guard, the source's base-name derivation and the tip-tree match,
-// two git calls and no strict load anywhere. `unavailable_reason` carries the
-// one line the mode prints when it refuses, in the exact shape it always had.
+// projects-home guard, the source's base-name derivation and the source's own
+// folder, and no strict load anywhere. Its only git is the guard's two `remote
+// get-url` reads (the tip-tree match went with the three-arm resolution on
+// 2026-08-09). `unavailable_reason` carries the one line the mode prints when it
+// refuses, in the exact shape it always had.
 //
 // `project_directory` IS THE SOURCE'S OWN PARENT FOLDER, and that is the whole
 // rule (architect 2026-08-09): repo-relative, no trailing slash, required to lie

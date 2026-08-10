@@ -388,9 +388,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // a closer may fire with the mode already down.
 //
 // THE CALLER INVENTORY, and the ONE authoritative site for it (re-derived by
-// grep 2026-08-08, when the third load-in-place arrived) — SIX callers, of which
-// FIVE can actually be running with a view up:
+// grep 2026-08-09, when the failed-scan closer arrived) — SEVEN callers, of
+// which SIX can actually be running with a view up:
 //   * handle_history_mode_key — bare `h`, the toggle's close arm;
+//   * on_history_prefetch_ready — THE ONE CLOSER THAT IS NOT A USER ACT
+//     (2026-08-09): a scan that finishes FAILED while the view stands ends the
+//     visit, the view's premise being that this session knows the piece's
+//     history. It is also the one closer that can fire with a POPUP up (below);
 //   * run_history_commit — the Save-and-Commit act, once its save has landed;
 //   * run_history_revert — Ctrl+H, which rewrites the state the now side was
 //     measured against and so must not leave the lane describing it;
@@ -401,8 +405,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     view standing: in the mode that editor's Enter routes to one of the two
 //     above. Its call is the idempotent no-op this function's early return
 //     exists for, placed at the mutator so the close travels with the act.
-// There is no pointer closer and no closer outside this file's two acts and the
-// three loads.
+// There is no pointer closer, and no closer outside this file's two acts, its
+// three loads and the prefetch arrival hook.
 //
 // IT ALSO PUTS THE EDITOR'S NAVIGATION BAND BACK (architect 2026-08-05): the
 // view is a VIEWER, so the pans, zooms and playhead landings a review made are
@@ -423,18 +427,20 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // that ever grew an early return past this point would leave a restored band
 // rather than the review's.
 //
-// NO CLOSER CAN FIRE WITH A DROPDOWN OPEN, so this owner does not close one and
-// carries no dead line for it. Since 2026-08-08 the Navigation menu DOES stand
-// inside the view (toggle_dropdown's lockout narrowed to Settings), which makes
-// the question real rather than vacuous — and the answer is positional, re-derived
-// by grepping every caller of this function (the inventory above): all of them
-// are KEYBOARD routes — bare `h`, the Ctrl+S checkpoint act, the Ctrl+H revert,
-// and the loads behind `'` — and every one of them dispatches BELOW on_key's popup gate,
-// which swallows every chord but Ctrl+Q while a menu is up. Ctrl+Q closes the
-// popup itself and then takes the close-window route, which ends the process
-// rather than the view; the WM close is the same. There is no pointer closer at
-// all. So a popup standing at the moment of a close is unreachable, and a
-// close_dropdown() here would be code no state can execute.
+// THIS OWNER DOES NOT CLOSE A DROPDOWN, and since 2026-08-09 that is a decision
+// rather than an unreachable case. EVERY USER-ACT CLOSER STILL CANNOT FIRE WITH
+// ONE UP, positionally: bare `h`, the Ctrl+S checkpoint act, the Ctrl+H revert
+// and the loads behind `'` are all KEYBOARD routes dispatching BELOW on_key's
+// popup gate, which swallows every chord but Ctrl+Q while a menu is up (Ctrl+Q
+// closes the popup itself and then takes the close-window route, which ends the
+// process rather than the view; the WM close is the same), and there is no
+// pointer closer at all. THE PREFETCH ARRIVAL IS THE EXCEPTION — it runs off a
+// poll, not a key, so the Navigation menu that has stood inside the view since
+// 2026-08-08 may be up when a failed scan ends the visit. A standing menu is
+// LEFT STANDING there, deliberately: it is row 1's own surface, its seven items
+// are live commands in the editor exactly as they were in the view, and nothing
+// about it named the mode. Closing it would be a second dismissal riding an
+// event the user did not cause.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
     // THE VIEW'S REGIONS ARE VIEW-LOCAL (architect 2026-08-05): a span drawn in
@@ -1009,9 +1015,31 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // "everything to checkpoint" (measure_history_head_delta owns that rule), and the
 // Save button's face has to follow inside the same frame. A header arriving alone
 // still costs nothing.
+//
+// AND A RUN THAT FINISHES FAILED ENDS THE VISIT (2026-08-09). The view's premise
+// is that this session knows the piece's history; a `git log` capture that could
+// not run means it does not, and the `0/0` blank lane would then be a LIE — it
+// says "no checkpoints" where the truth is "unknown" — with the act greyed and
+// no account anywhere of why. So the failure gets the refusal it would have got
+// a moment earlier: init's own one-line stderr shape, printed here from the
+// reason the store recorded, and the view CLOSED through the one exit owner, so
+// the parked band comes back and the lane republishes exactly as any other close
+// does. The next `h` meets init's stable refusal with the same line.
+//
+// IT IS NOT A MODAL and raises nothing: nothing asynchronous in this product
+// does. It is a visit ending because what it was reading stopped existing.
+//
+// ONE PRODUCER, and it is narrow: a view opened mid-scan whose run then fails.
+// A run that had already failed refuses at init and never opens a view at all.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
+    if (r.became_done && history_prefetch.run_failed()) {
+        std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
+                     history_prefetch.scan_failure_reason().c_str());
+        close_history_mode();
+        return;
+    }
     if (r.members_appended == 0 && !r.became_done) return;
     measure_history_head_delta();
     viewport.invalidate_all();

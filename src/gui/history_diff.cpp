@@ -56,8 +56,11 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 // makes this product a producer of checkpoints, and one whose push failed must
 // still be visible history rather than hidden until the next successful push.
 // `HEAD` is the spelling because it needs no name — it is whatever this clone
-// has checked out — and the same word serves the tip listing and the history
-// walk, so the mode's two readers cannot come to mean different things.
+// has checked out — and the same word serves the history WALK and the tip read
+// that keys its freshness, so the mode's readers cannot come to mean different
+// things. (It served the header's tip LISTING too until 2026-08-09, when the
+// three-arm folder resolution went and where the piece lives became a question
+// about the source path.)
 //
 // THE COMMIT ACT DOES NOT USE THIS SPELLING FOR ITS OBSERVATIONS. It reads HEAD
 // exactly once, to learn the branch NAME, and every source-side observation it
@@ -868,10 +871,12 @@ struct GuiHistoryTreeEntry {
 // with the path it belongs to — one subprocess still, one more field parsed.
 //
 // The folder test is a plain prefix compare and it is the ONLY geography here:
-// everything past it is the basename rule. Both callers take it — init's tip
-// listing and each commit's own tree — so "the corpus lives under projects/" is
-// one rule read in one place rather than a claim the walk and the per-commit
-// resolution could come to disagree about.
+// everything past it is the basename rule. ONE CALLER SINCE 2026-08-09 — each
+// commit's own tree, at resolve_commit_paths — the header's tip listing having
+// gone with the three-arm resolution, since where the piece lives is answered
+// from the source path now. It stays a shared rule in shape rather than in
+// arithmetic: the walk's pathspecs say the same "under projects/, by basename"
+// in git's own grammar (sidecar_glob_pathspecs), and the two must keep agreeing.
 //
 // The listing is NUL-separated rather than newline-separated on purpose: git
 // quotes paths containing unusual bytes when it writes them one per line
@@ -1156,17 +1161,96 @@ struct GuiHistoryCommitPaths {
 // either into one list. The old rule — most siblings, ties lexicographic — would
 // then silently display B's state as A's and let `'` load it in place.
 //
-// THE RULE IS THE SESSION'S OWN DIRECTORY FIRST. `head_directory` is the folder
-// the loaded SOURCE sits in (resolve_history_walk_header's one rule since
-// 2026-08-09 — it was the tip-tree match before), the one directory this session
-// means by "this piece"; if this commit's tree carries the base name there, that
-// is the answer whatever else it carries. Failing that, a SINGLE candidate
-// directory is unambiguous and is taken
-// (which is every ordinary pre-rename era: the piece sat somewhere else and
-// nowhere else). Anything left is genuinely ambiguous and REFUSES, through
-// read_commit_sidecars: the walk's load gate drops such a commit at entry —
-// it is never shown at all — and the `'` act, whose pasted spelling can name
-// a commit outside the walk, refuses it with its own line.
+// THE WALK'S THREE PATHSPECS, built once for every asking (2026-08-09, when the
+// touched-directory read below became a second consumer). `:(glob)` because the
+// `projects/**/` lead is a real wildcard and the base name is NOT — a source
+// legitimately called `take*.wav` would otherwise widen every asking to every
+// `take<anything>` sidecar in the corpus, which is what escape_glob prevents.
+// Glob magic and literal magic are mutually exclusive, so this is the one
+// pathspec family in the module that cannot be `:(literal)`.
+std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
+    const std::string        escaped = escape_glob(base_name);
+    std::vector<std::string> out;
+    out.reserve(3);
+    for (const char* ext : kSidecarExtensions) {
+        out.push_back(std::string(":(glob)") + std::string(kProjectsPrefix) +
+                      "**/" + escaped + ext);
+    }
+    return out;
+}
+
+// WHICH DIRECTORIES THIS COMMIT ACTUALLY TOUCHED for the base name — the
+// evidence the per-commit path resolution below is built on (2026-08-09).
+//
+// THE TREE ALONE CANNOT ANSWER "WHICH FOLDER IS THIS COMMIT ABOUT", and that is
+// the whole reason this exists: a commit CONTAINS every folder the piece has
+// ever lived in, because the checkpoint act is pathspec-scoped and never deletes
+// the folder a piece moved out of. So a commit made from a BACKUP copy still
+// carries the original's untouched blobs, and a commit made after a rename still
+// carries the pre-rename folder's. Choosing by containment showed the wrong
+// folder's state for the first and refused the second as ambiguous; choosing by
+// what the commit CHANGED answers both, because a checkpoint changes exactly the
+// folder it was made from.
+//
+// `--name-only` WITH `-z` AND AN EMPTY `--format` yields nothing but the matched
+// paths, NUL-terminated and unquoted, so `core.quotePath` cannot mangle a UTF-8
+// name and the split is the ls-tree reader's own. A ROOT COMMIT answers normally
+// (git diffs it against the empty tree). A MERGE COMMIT answers with NOTHING —
+// `git log` suppresses a merge's diff by default — and an empty answer is
+// therefore NO EVIDENCE rather than "touched nothing": the caller falls back to
+// containment there, which is where merges behaved acceptably all along.
+//
+// IT COSTS ONE EXTRA CHILD PER CANDIDATE in the prefetch scan, beside the
+// rev-parse, the ls-tree and the three shows the load gate already runs. That is
+// the deliberate price of ONE resolution owner: the walk and the `'` act reach
+// this through the same call, so a member can never display one folder's
+// snapshot and load another's — which is exactly the divergence the containment
+// rule produced.
+std::vector<std::string> touched_directories_of_commit(
+        const std::string& sha, const std::string& base_name) {
+    std::vector<std::string> dirs;
+    std::vector<std::string> args{"log", "-1", "-z", "--format=",
+                                  "--name-only", sha, "--"};
+    for (std::string& p : sidecar_glob_pathspecs(base_name)) {
+        args.push_back(std::move(p));
+    }
+    std::string out;
+    // Ran-with-empty-output IS an answer here (a merge), so the tri-state is
+    // read directly rather than through git_output's "said something" reading.
+    if (run_git_capture(args, out) != GitCapture::Ran) return dirs;
+    for (const std::string& path : split_on(out, '\0')) {
+        if (path.empty()) continue;
+        std::string d = directory_of(path);
+        if (std::find(dirs.begin(), dirs.end(), d) == dirs.end()) {
+            dirs.push_back(std::move(d));
+        }
+    }
+    return dirs;
+}
+
+// THE RULE IS THE DIRECTORY THIS COMMIT TOUCHED (2026-08-09, superseding "the
+// session's own directory first"). The old rule preferred `head_directory`
+// whenever the commit's tree carried the base name there — which it almost
+// always does, the act being pathspec-scoped and never deleting a folder the
+// piece has moved out of — so containment answered about folders the commit
+// never changed: a checkpoint made from a BACKUP copy displayed the ORIGINAL
+// folder's unchanged blobs as its own state, and after a rename the pre-rename
+// era's commits carried two candidate folders and hid as ambiguous. Both are
+// answered by asking what the commit CHANGED, since a checkpoint changes exactly
+// the folder it was made from (touched_directories_of_commit, above).
+//
+// SO THE ORDER IS: the sole TOUCHED directory, if there is one. TWO touched
+// directories at once is genuinely ambiguous and refuses — no checkpoint this
+// program makes touches two folders, so it is somebody's hand commit and there
+// is no honest answer. With NO touch evidence at all — a MERGE, whose diff `git
+// log` suppresses — it falls back to CONTAINMENT exactly as before: the session's
+// own `head_directory` when the tree carries the base name there, else a SINGLE
+// candidate directory, else ambiguous.
+//
+// AMBIGUITY REFUSES THROUGH read_commit_sidecars either way: the walk's load gate
+// drops such a commit at entry — it is never shown at all, counted on the one
+// hidden line — and the `'` act, whose pasted spelling can name a commit outside
+// the walk, refuses it with its own line.
 GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
                                            const std::string& base_name,
                                            const std::string& head_directory) {
@@ -1185,8 +1269,21 @@ GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
         }
     }
 
+    const std::vector<std::string> touched =
+        touched_directories_of_commit(sha, base_name);
     std::string chosen;
-    if (std::find(dirs.begin(), dirs.end(), head_directory) != dirs.end()) {
+    if (touched.size() > 1) {
+        out.ambiguous = true;
+        return out;
+    }
+    if (touched.size() == 1) {
+        // The touched folder must be IN the tree to be read from — it always is
+        // for a commit that added or changed files there, and a commit whose
+        // only touch was a DELETION leaves nothing to load, which the empty
+        // `path` entries below report as the missing sidecar it is.
+        chosen = touched.front();
+    } else if (std::find(dirs.begin(), dirs.end(), head_directory) !=
+               dirs.end()) {
         chosen = head_directory;
     } else if (dirs.size() == 1) {
         chosen = dirs.front();
@@ -1694,22 +1791,17 @@ void scan_history_walk(
     // OUTSIDE the corpus cannot pull commits into the walk that carry no
     // checkpoint of this piece at all.
     //
-    // THE BASE NAME IS ESCAPED INTO THE PATTERN (escape_glob): the `projects/**/`
-    // lead is a real wildcard and the name is not, and a source legitimately
-    // called `take*.wav` would otherwise widen the walk to every `take<anything>`
-    // sidecar in the corpus. This is the one pathspec here that cannot simply be
-    // `:(literal)` — glob magic and literal magic are mutually exclusive, and the
-    // walk needs the glob half.
+    // The three pathspecs are built by sidecar_glob_pathspecs, which owns the
+    // escaping and the reason for it — and which the per-commit touched-directory
+    // read shares, so the walk and the resolution can never disagree about what
+    // "this piece's files" means.
     //
     // AND IT IS UNCAPPED (2026-08-07): no `-n` term, so the pathspec walk
     // reaches the piece's first checkpoint. Everything else about it is
     // unchanged.
-    const std::string escaped_base = escape_glob(base_name);
     std::vector<std::string> log_args{"log", "--format=%H", kBranchRef, "--"};
-    for (const char* ext : kSidecarExtensions) {
-        log_args.push_back(std::string(":(glob)") +
-                           std::string(kProjectsPrefix) + "**/" + escaped_base +
-                           ext);
+    for (std::string& p : sidecar_glob_pathspecs(base_name)) {
+        log_args.push_back(std::move(p));
     }
     // A `log` THAT RAN AND A `log` THAT COULD NOT RUN ARE NO LONGER THE SAME
     // ANSWER (2026-08-09, with the empty walk becoming a legal standing state).
@@ -1719,8 +1811,18 @@ void scan_history_walk(
     // never answered must not reach that conclusion. The capture is a tri-state
     // by contract — could-not-exec is distinguishable from ran — and this is
     // where the walk's own end honours it.
+    //
+    // WHICH IS WHY THIS READS run_git_capture DIRECTLY and not git_output. That
+    // helper's reading is "ran AND said something", and a successful `git log`
+    // over a piece with no checkpoint yet exits 0 with ZERO BYTES — so routing
+    // the tri-state through it turned every genuinely empty history into a
+    // FAILED scan and made the empty-walk arm below unreachable, re-deadlocking
+    // the very bootstrap the empty walk exists for. Ran-with-empty-output IS the
+    // ruled empty success here. The helper's contract is untouched: its other
+    // callers ask questions the OUTPUT answers, where nothing said is nothing
+    // found.
     std::string log_out;
-    if (!git_output(log_args, log_out)) {
+    if (run_git_capture(log_args, log_out) != GitCapture::Ran) {
         GuiHistoryScanResult failed;
         failed.ok = false;
         failed.unavailable_reason =
@@ -1897,11 +1999,10 @@ bool GuiHistoryDiff::init(const AppState&           app,
     //
     // AND THE OTHER HALF OF THE BOOTSTRAP CLOSED THE SAME DAY: a piece whose
     // sidecars have never been committed at all opens here too. The header names
-    // it a folder rather than refusing — the one the source is already sitting
-    // in under `projects/`, else a synthesized `projects/<base name>` — and the
-    // checkpoint act creates that folder before writing into it. So there is no
-    // piece whose first checkpoint needs a terminal, which is the point of both
-    // halves together.
+    // it a folder rather than refusing — the folder its SOURCE is sitting in,
+    // which exists because the source is in it — so there is no piece whose
+    // first checkpoint needs a terminal, which is the point of both halves
+    // together.
     //
     // THE COUNTED EXPLANATION IS THE PREFETCH'S, at its DONE and in one place
     // (history_prefetch.cpp): the two message strings that stood here died with
