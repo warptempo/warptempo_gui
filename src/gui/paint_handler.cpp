@@ -905,12 +905,14 @@ AppState::RedesignButtonFace& publish_button_face(
 // ROW 4 — THE ICON ROW, measured at 100% off the five 32x32 state crops
 // (row_4_button_{rest,hover,click,selected,selectedhover}.png),
 // row_4_separator.png (1x34) and row_4_bottom_border.png. The lane metrics
-// (48 content + 1 border) live in render.h with rows 1-3's.
+// (46 content + 1 border, so a 47px lane at 100%) live in render.h with
+// rows 1-3's.
 //
 // THE VERTICAL STORY IS PURE CENTERING (and it is what resolves the architect's
 // 48-vs-6+34+6 discrepancy, recorded at kIconRowHeightPx): the 32px buttons
-// land at +8 and the 34px separators at +7, each centered in the 48px content
-// band by its own arithmetic rather than by a stated margin.
+// land at +7 and the 34px separators at +6, each centered in the 46px content
+// band by its own arithmetic rather than by a stated margin — which is exactly
+// what the stated margins were, so the centering reproduces them.
 //
 // THE HORIZONTAL WALK uses TWO different gaps, which is this row's own rule and
 // not row 2's: 2px between ADJACENT buttons, and 4px on each side of a
@@ -1083,10 +1085,21 @@ constexpr double kTooltipPadXPx      = 5.0;
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
 
-// THE DROPDOWN, in the architect's CSS terms. The item height is the ONE-LINE
-// TOOLTIP'S INTERIOR (26 total less its two 1px borders = 24), which is what
-// "pick a one-line item height from the tooltip's single-line anatomy" resolves
-// to and keeps the two floating surfaces built from one set of numbers.
+// THE DROPDOWN, in the architect's CSS terms. The item height is AUTHORED, not
+// derived: 29 at 100%, measured off dropdown_full.png, and it lives with
+// dropdown_h_px's other ingredients in render.h (see kPopupItemHeightPx there,
+// which owns that measurement).
+//
+// IT IS NOT THE TOOLTIP'S INTERIOR, though it was once written that way — as
+// "26 total less its two 1px borders = 24", from an era when the tooltip box was
+// an authored 26. Neither number survives: the tooltip's box is not authored at
+// all now, its height falling out of pad + band [+ gap + band] + pad on the
+// face's own extents (31 for one line at 100%, the record at
+// kTooltipShiftFontSizePt). The two floating surfaces share their CHROME — one
+// face box, one border, one radius — and not their heights. Do not re-derive
+// one from the other: that 31 - 2 == 29 is an arithmetic coincidence between a
+// font-driven quantity and a crop-measured one, and tying them together would
+// make the menu's row height move whenever the face's metrics did.
 //
 // The width derives rather than being authored: the widest shaped label, plus
 // the redesign's standing 10px label padding per side (rows 1 and 3's), plus the

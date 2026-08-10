@@ -936,12 +936,14 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the fifteen view/mode/action buttons). Measured
+// tabs (row 4 of the redesign: the SIXTEEN view/mode/action buttons — the
+// kIconRowButtons table is the count's one authority; icons::kIconCount is a
+// different number, the GLYPH set, which the row does not exhaust). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
-// Same CSS box model as rows 2 and 3: 48 is CONTENT, the 1px border-bottom sits
-// OUTSIDE it, and the LANE is their sum (49 at 100%).
+// Same CSS box model as rows 2 and 3: 46 is CONTENT, the 1px border-bottom sits
+// OUTSIDE it, and the LANE is their sum (47 at 100%).
 //
 // 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31, settling the
 // discrepancy this constant first recorded): the row was briefed as 48 tall
@@ -950,7 +952,8 @@ inline int tab_row_h_px() {
 // EXACT rather than absorbed — the 34px separator sits at +6 and the 32px
 // buttons at +7, both still placed by the standing vertical-centering rule, and
 // the centering now REPRODUCES the stated margins instead of papering over a
-// two-pixel gap.
+// two-pixel gap. (Those two offsets are what the painter's own centering
+// computes from the 46 band: (46-34)/2 == 6 and (46-32)/2 == 7.)
 inline constexpr int kIconRowHeightPx = 46;
 inline constexpr int kIconRowBorderPx = 1;
 inline int icon_row_border_h_px() {
@@ -1232,7 +1235,17 @@ inline int trim_middle_clear_px() {
 // ramp produces, so the pixels are transcribed and the table IS the drawing.
 // Painting it as integer rectangles keeps it hard-edged at every scale, which a
 // path fill would not.
-inline constexpr int kPlayheadHeadWidthPx  = 19;
+//
+// THE 19 IS PROVENANCE, NOT A CONSTANT (codex round 4, 2026-08-10). It WAS
+// kPlayheadHeadWidthPx, reader-less and independently authored beside the table
+// that already implies it (2 * kPlayheadHeadHalf[0] + 1). Scaled on its own it
+// would have disagreed with the width the painter actually lays down — 28
+// against 29 at 150%, the head's own rows being 2*half+1 off the ROUNDED half —
+// so it is deleted rather than left as a second truth to re-round from, exactly
+// like the tab lock slot, the trim inner square and the toolbar separator
+// height. The painted width at any scale is the table's own arithmetic through
+// playhead_head_half_px below; the crop's 19x12 stays recorded here, where a
+// number in prose cannot be scaled by mistake.
 inline constexpr int kPlayheadHeadHeightPx = 12;
 inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
     9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
