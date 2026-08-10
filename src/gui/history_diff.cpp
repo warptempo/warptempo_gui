@@ -1261,6 +1261,28 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // unreadable here. Nothing downstream can tell them apart and nothing should
 // try: each means this program cannot say which folder the commit is about.
 //
+// THE ANSWER IS ACCEPTED ONLY IN A WELL-FORMED SHAPE, and the shape is derived
+// from what a checkpoint can actually be rather than assumed. THE ACT WRITES ONE
+// FOLDER'S THREE SIDECARS AND COMMITS PATHSPEC-SCOPED TO EXACTLY THOSE THREE
+// (checkpoint_paths, and the commit argv beside it), SO THE COMMIT TOUCHES A
+// NONEMPTY SUBSET OF ONE FOLDER'S THREE — a SUBSET, not the three: `git commit`
+// records only what actually changed, and a checkpoint whose phase resets and
+// settings came out byte-identical touches ONE file. Measured, not reasoned: an
+// ordinary second checkpoint with only the warp markers moved reports exactly
+// one path. So "exactly three" would refuse the product's own commonest commit,
+// and the rule is instead every record RECOGNIZED, none repeated, and at most a
+// folder's three — plus the framing check below, which is what a truncation
+// actually breaks.
+//
+// THE RESIDUAL IS ADVERSARIAL AND ACCEPTED, recorded rather than defended: a
+// child that dies exactly ON a record boundary leaves a well-framed PREFIX, so a
+// multi-directory answer could still be read as the single directory it began
+// with. Reaching it needs an unsanctioned multi-directory commit AND a
+// deterministic death at exactly that byte — the hand-broken-repository
+// category, which the sanctioned-use ruling leaves alone. NO SECOND READ AND NO
+// FURTHER WITNESS is the deliberate stopping point: another child would be
+// another thing to disagree with itself.
+//
 // IT COSTS ONE EXTRA CHILD PER CANDIDATE in the prefetch scan, beside the
 // rev-parse, the ls-tree and the three shows the load gate already runs. That is
 // the deliberate price of ONE resolution owner: the walk and the `'` act reach
@@ -1268,11 +1290,14 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // snapshot and load another's — which is exactly the divergence the containment
 // rule produced.
 struct GuiHistoryTouchedDirs {
-    // The read ran AND named at least one directory. False covers a capture
-    // that could not run and a capture that answered nothing, deliberately
-    // together: the reader's comment owns why the three producers of an empty
-    // answer are one outcome.
+    // The read ran AND came back in the sanctioned shape, naming at least one
+    // directory. False covers a capture that could not run, one that answered
+    // nothing, and one whose answer was malformed or truncated — deliberately
+    // together: the reader's comment owns why those producers are indis-
+    // tinguishable and must be one outcome.
     bool                     ok = false;
+    // One entry per directory named, in first-seen order. Its SIZE is the whole
+    // decision at the caller: one is the answer, more is ambiguity.
     std::vector<std::string> dirs;
 };
 
@@ -1290,17 +1315,52 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& sha,
     // The tri-state is read directly rather than through git_output because the
     // helper's "said something" reading would fold a could-not-exec into an
     // empty answer — and here they are the same OUTCOME but the distinction is
-    // still not the helper's to make silently. `ok` goes up only once a
-    // directory has actually been named.
+    // still not the helper's to make silently.
     if (run_git_capture(args, raw) != GitCapture::Ran) return out;
+    if (raw.empty()) return out;
+
+    // THE FRAMING IS THE TRUNCATION WITNESS, and it is the one this reader can
+    // have. A nonempty answer that does not END in a NUL is a record git was
+    // still writing when the child died: `-z` terminates every path, so a
+    // well-formed stream cannot end any other way. Without this a PREFIX of a
+    // multi-directory answer read as a clean single-directory one — the
+    // truncated-log defect one layer down, and the reason a nonempty output is
+    // no longer trusted on its length alone.
+    if (raw.back() != '\0') return out;
+
+    // EVERY RECORD MUST BE ONE OF THIS PIECE'S SIDECARS, at a directory strictly
+    // below `projects/`, and no path may repeat — a partial path left by a death
+    // inside a record fails the extension match, a stray path fails the shape,
+    // and a duplicate is not something git emits. Any deviation is NOT AN ANSWER
+    // rather than a smaller one.
+    std::vector<std::string> seen;
     for (const std::string& path : split_on(raw, '\0')) {
         if (path.empty()) continue;
-        std::string d = directory_of(path);
-        if (std::find(out.dirs.begin(), out.dirs.end(), d) == out.dirs.end()) {
-            out.dirs.push_back(std::move(d));
+        const std::string dir = directory_of(path);
+        if (dir.size() <= kProjectsPrefix.size() ||
+            std::string_view(dir).substr(0, kProjectsPrefix.size()) !=
+                kProjectsPrefix) {
+            return GuiHistoryTouchedDirs{};
+        }
+        bool named = false;
+        for (const char* ext : kSidecarExtensions) {
+            if (path == dir + "/" + base_name + ext) { named = true; break; }
+        }
+        if (!named) return GuiHistoryTouchedDirs{};
+        if (std::find(seen.begin(), seen.end(), path) != seen.end()) {
+            return GuiHistoryTouchedDirs{};
+        }
+        seen.push_back(path);
+        if (std::find(out.dirs.begin(), out.dirs.end(), dir) ==
+            out.dirs.end()) {
+            out.dirs.push_back(dir);
         }
     }
-    out.ok = !out.dirs.empty();
+    if (out.dirs.empty()) return GuiHistoryTouchedDirs{};
+    // A DIRECTORY CANNOT CARRY MORE THAN ITS THREE SIDECARS, so more records
+    // than three per directory is a shape no repository state produces.
+    if (seen.size() > out.dirs.size() * 3) return GuiHistoryTouchedDirs{};
+    out.ok = true;
     return out;
 }
 

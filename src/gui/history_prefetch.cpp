@@ -127,12 +127,13 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             // explanation the feature offers — the entry's two refusal messages
             // died with the refusal rather than moving here beside it.
             //
-            // A FAILED RUN PRINTS NOTHING HERE, and needs no term of its own:
-            // the only failure arm is the `log` capture, which returns before a
-            // single candidate has been gated, so the count is structurally
-            // zero. Its own line is the mode's refusal at GuiHistoryDiff::init,
-            // the header refusal's shape exactly — the store records, the entry
-            // prints.
+            // A FAILED RUN PRINTS NOTHING HERE, and needs no term of its
+            // own: every arm that ends a run NOT ok returns before a single
+            // candidate has been gated (GuiHistoryScanResult, history_diff.h,
+            // enumerates them and is the one site that does), so the hidden
+            // count is structurally zero. Its own line is the mode's refusal at
+            // GuiHistoryDiff::init, the header refusal's shape exactly — the
+            // store records, the entry prints.
             if (hidden_ > 0) {
                 std::fprintf(stderr,
                              "warptempo_gui: History hid %d commit(s) whose "

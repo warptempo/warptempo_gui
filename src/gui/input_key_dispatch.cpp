@@ -3857,11 +3857,14 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     const std::string base_name =
         app.history_mode.session.sidecar_base_name();
 
-    // THE WHOLE VALIDATION IS THE ONE SHARED GATE. The session's matched
-    // directory goes with the spelling: it is what settles a commit whose tree
-    // carries this base name in more than one place (an older era's copy of
-    // another piece), and an unsettleable one refuses rather than acting on a
-    // guess.
+    // THE WHOLE VALIDATION IS THE ONE SHARED GATE, and the spelling is all it
+    // takes now: the session's matched directory was a parameter here until
+    // 2026-08-09, when the folder a commit is about became the folder that
+    // COMMIT TOUCHED rather than a tie the session could break. So a commit
+    // touching this base name in two directories refuses instead of resolving to
+    // whichever one this session happens to sit in, and one touching it nowhere
+    // — an ordinary non-piece commit, a merge, a read that did not answer —
+    // refuses too. Nothing is settled by a guess any more, which is the point.
     GuiHistoryCommitLoad loaded;
     std::string          reason;
     if (!load_commit_sidecars_strict(spelling, base_name, loaded, reason)) {

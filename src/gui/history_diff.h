@@ -539,10 +539,18 @@ std::string read_history_branch_tip_sha();
 // WHICH IS WHY THE EMPTY VERDICT RESTS ON AN OUTPUT-SHAPED WITNESS and not on a
 // silent `log`: exit codes are unreadable here, so a `log` that ran and found
 // nothing and a `log` that failed both say nothing at all. `rev-list --count`
-// prints "0" — bytes git printed — and that is the ruled empty history; an
-// unparseable or absent count is `ok` false, as is a could-not-exec capture. A
-// failed run is a terminal matter under the sanctioned-use ruling: the mode
-// refuses entry with
+// prints "0" — bytes git printed — and that is the ruled empty history.
+//
+// WHAT ENDS A RUN NOT OK — THE ONE ENUMERATION, every other site pointing here
+// (re-derived from scan_history_walk 2026-08-09): the count capture could not
+// run; the count answered nothing, non-digits, or more digits than a count can
+// have; the count was positive and the `log` then said nothing; a `log` line was
+// not a full object name; or the number of lines did not EQUAL the count. Every
+// one of them is two reads of one history disagreeing, or one read that never
+// answered — never a history that is empty. (A per-CANDIDATE failure is not on
+// this list and never ends the run: it hides that commit on the counted line's
+// terms, the walk's own load gate doing what it always did.) A failed run is a
+// terminal matter under the sanctioned-use ruling: the mode refuses entry with
 // `unavailable_reason` on one stderr line and stays refused until an ordinary
 // re-kick (the tip moving, a checkpoint completing, another source) runs a scan
 // that answers.
@@ -567,8 +575,8 @@ struct GuiHistoryScanResult {
 //
 // A HEADER REFUSAL ENDS `ok`, deliberately: the header carries its own reason and
 // init reads it from there, so the DONE says only that nothing more is coming.
-// The one arm that ends NOT ok is the `log` capture failing — the type's own
-// comment owns that distinction.
+// GuiHistoryScanResult's own comment ENUMERATES what ends a run NOT ok, and is
+// the one site that does.
 //
 // `abandoned` IS ASKED BETWEEN CANDIDATES, and nowhere else: a superseding kick
 // or a shutdown wants this run to stop, and a candidate boundary is the finest
