@@ -70,13 +70,6 @@ struct NonEngineSettingsSnapshot {
     // A reference member like audio_player: the caller's storage, borrowed for
     // the call. (architect approval 2026-08-03.)
     const std::string& projects_repo;
-    // The STORED render-environment hashes (AppState's four *_hash fields, or
-    // the dispatch-moment copies in AuthoringSnapshot) — never the current
-    // environment's: an unacknowledged mismatch must survive a save.
-    const std::string& libm_hash;
-    const std::string& libmvec_hash;
-    const std::string& fftw3_hash;
-    const std::string& fftw3_threads_hash;
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

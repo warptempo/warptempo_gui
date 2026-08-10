@@ -1448,7 +1448,7 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
 }
 
 // THE SETTINGS WRITER'S GUI HALF, HELD BY VALUE — the storable form of the
-// call-shaped NonEngineSettingsSnapshot (which borrows a ViewState pair and six
+// call-shaped NonEngineSettingsSnapshot (which borrows a ViewState pair and two
 // strings). It is opaque in the header because ViewState is app_state.h's and
 // this module is included BY that header; nothing outside this file needs its
 // shape.
@@ -1463,10 +1463,6 @@ struct GuiHistoryGuiSide {
     int         gui_scale           = 100;
     std::string audio_player;
     std::string projects_repo;
-    std::string libm_hash;
-    std::string libmvec_hash;
-    std::string fftw3_hash;
-    std::string fftw3_threads_hash;
 };
 
 std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
@@ -1496,10 +1492,6 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     gui->gui_scale           = app.gui_scale;
     gui->audio_player        = app.audio_player;
     gui->projects_repo       = app.projects_repo;
-    gui->libm_hash           = app.libm_hash;
-    gui->libmvec_hash        = app.libmvec_hash;
-    gui->fftw3_hash          = app.fftw3_hash;
-    gui->fftw3_threads_hash  = app.fftw3_threads_hash;
     return gui;
 }
 
@@ -1509,9 +1501,7 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
         gui.tab_a, gui.tab_b, gui.follow,
         gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
         gui.playback_speed, gui.gui_scale, gui.audio_player,
-        gui.projects_repo,
-        gui.libm_hash, gui.libmvec_hash,
-        gui.fftw3_hash, gui.fftw3_threads_hash};
+        gui.projects_repo};
     return format_settings_text(snap, engine);
 }
 

@@ -2,7 +2,6 @@
 #include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings
-#include "env_fingerprint.h"            // compute_render_env_hashes
 #include "settings_file.h"              // SettingsFile, read_settings_file
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
@@ -419,36 +418,6 @@ int main(int argc, char** argv) {
             /*encode_to_disk=*/true); !v) {
         std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
         return 1;
-    }
-
-    // --- render-environment advisory, placed AFTER the last input-validation
-    // gate (the projection refusal above) and immediately before render
-    // dispatch, so a malformed project produces ONLY its first load error —
-    // matching the GUI, which runs this comparison after load_file() fully
-    // succeeds. Compare the four STORED hashes against the running
-    // environment's. Detection only, never a refusal — a mismatch render is
-    // fully valid; the CLI never writes sidecars, so it prints ONE stderr line
-    // and continues (the GUI owns the acknowledge-and-restamp prompt). ---
-    {
-        const RenderEnvHashes& cur = compute_render_env_hashes();
-        std::string changed;
-        auto note = [&changed](const char* name) {
-            if (!changed.empty()) changed += ", ";
-            changed += name;
-        };
-        if (sf.libm_hash          != cur.libm)          note("libm");
-        if (sf.libmvec_hash       != cur.libmvec)       note("libmvec");
-        if (sf.fftw3_hash         != cur.fftw3)         note("fftw3");
-        if (sf.fftw3_threads_hash != cur.fftw3_threads) note("fftw3_threads");
-        if (!changed.empty()) {
-            std::fprintf(stderr,
-                "warptempo_cli: Render libraries changed since last save "
-                "(%s; glibc %s, fftw %s); output may differ from previous "
-                "renders\n",
-                changed.c_str(),
-                render_env_glibc_version().c_str(),
-                render_env_fftw_version().c_str());
-        }
     }
 
     // --- render into the buffer, then run the shared post-engine chain

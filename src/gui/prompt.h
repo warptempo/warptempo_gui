@@ -83,17 +83,6 @@ struct GuiPrompt {
     // that, rather than that nothing asynchronous raises one at all.
     void open_error_notice(std::string text);
 
-    // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory
-    // only. `changed_list` is the comma+space-joined subset of
-    // `libm, libmvec, fftw3, fftw3_threads` whose stored hash mismatched the
-    // running environment's. ONE response:
-    // 'o' stamps all four stored hashes to the current environment's
-    // (history-less, no-dirty GUI-kind state; the next ordinary Ctrl+S
-    // persists it). There is no dismiss-without-ack path — Esc is not a
-    // response key, so the prompt's key filter swallows it and acknowledging is
-    // the only way past the prompt. Never blocks or invalidates a render.
-    void open_env_hash_mismatch(const std::string& changed_list);
-
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor. Called from
     // activate_response on Esc, and from the Ctrl+Q interception in

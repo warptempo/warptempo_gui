@@ -1,7 +1,6 @@
 #include "settings_io.h"
 
 #include "app_state.h"
-#include "env_fingerprint.h"
 #include "frame_format.h"
 #include "value_format.h"
 
@@ -43,10 +42,6 @@ enum class SettingKind {
     ViewportStart_B,
     ZoomLevel_B,
     Playhead_B,
-    LibmHash,
-    LibmvecHash,
-    Fftw3Hash,
-    Fftw3ThreadsHash,
 };
 
 struct SettingDescriptor {
@@ -56,10 +51,9 @@ struct SettingDescriptor {
     // value. Valid only when kind == EnginePassthrough; ignored otherwise.
     EngineField field;
     // Template default for non-engine kinds. nullptr means "no fixed
-    // default": the four env-hash kinds stamp the CURRENT library hashes at
-    // template-build time, and the four TRIM kinds stamp the FULL WINDOW for
-    // the just-loaded source ([0, total-1] — the trim window is always set
-    // since 2026-07-30, and the source's frame count is not a compile-time
+    // default": the four TRIM kinds stamp the FULL WINDOW for the just-loaded
+    // source ([0, total-1] — the trim window is always set since 2026-07-30,
+    // and the source's frame count is not a compile-time
     // constant). Every other non-engine descriptor carries a fixed default. For
     // engine kinds, the template default comes from a default-constructed
     // EngineSettings and this field is unused.
@@ -123,16 +117,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
     { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "2" },
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
-    // Render-environment attestation, after the per-tab view-state section.
-    // The writer emits the STORED in-memory values (never silently the
-    // current environment's — an unacknowledged mismatch must survive a
-    // save); the first-open template alone stamps the four CURRENT hashes
-    // (below), so a fresh project starts matched. default_value nullptr
-    // marks the dynamic template stamp.
-    { "libm_hash",                   SettingKind::LibmHash,             EngineField::Title,                   nullptr },
-    { "libmvec_hash",                SettingKind::LibmvecHash,          EngineField::Title,                   nullptr },
-    { "fftw3_hash",                  SettingKind::Fftw3Hash,            EngineField::Title,                   nullptr },
-    { "fftw3_threads_hash",          SettingKind::Fftw3ThreadsHash,     EngineField::Title,                   nullptr },
 };
 
 // The on-disk value text for one non-engine descriptor kind, given the
@@ -212,18 +196,6 @@ std::optional<std::string> format_nonengine_value(
             std::snprintf(buf, sizeof(buf), "%lld",
                           static_cast<long long>(gui.tab_b.playhead_cursor_sample));
             return std::string(buf);
-        // The four env-hash kinds serialize the snapshot's STORED values
-        // verbatim (16 lowercase hex digits by construction) — never the
-        // current environment's, so an unacknowledged mismatch survives a
-        // save and the load-time warning returns until acknowledged.
-        case SettingKind::LibmHash:
-            return gui.libm_hash;
-        case SettingKind::LibmvecHash:
-            return gui.libmvec_hash;
-        case SettingKind::Fftw3Hash:
-            return gui.fftw3_hash;
-        case SettingKind::Fftw3ThreadsHash:
-            return gui.fftw3_threads_hash;
     }
     return std::nullopt;
 }
@@ -304,10 +276,6 @@ std::string format_default_settings_template(const std::string& stem,
                                              int64_t total_frames) {
     EngineSettings defaults{};
     defaults.title = default_render_title(stem);
-    // First-open env-hash stamp: the template records the CURRENT library
-    // hashes (the one place the current environment is written), so a fresh
-    // project starts matched and the load-time mismatch prompt stays quiet.
-    const RenderEnvHashes& env = compute_render_env_hashes();
     // First-open trim stamp: BOTH tabs get the FULL window [0, total-1] for the
     // just-loaded source — the trim window is always set (2026-07-30), and the
     // full window is exactly what the retired `-1` unset spelling used to mean.
@@ -331,16 +299,11 @@ std::string format_default_settings_template(const std::string& stem,
             s += desc.default_value;
             s += '\n';
         } else {
-            // The nullptr-default descriptors are exactly the four env-hash
-            // kinds and the four trim kinds — the two dynamic stamps; every
-            // other non-engine descriptor carries a fixed default above.
+            // The nullptr-default descriptors are exactly the four trim kinds
+            // — the one dynamic stamp; every other non-engine descriptor
+            // carries a fixed default above.
             const std::string* sv = nullptr;
-            const char* v = nullptr;
             switch (desc.kind) {
-                case SettingKind::LibmHash:         v = env.libm.c_str(); break;
-                case SettingKind::LibmvecHash:      v = env.libmvec.c_str(); break;
-                case SettingKind::Fftw3Hash:        v = env.fftw3.c_str(); break;
-                case SettingKind::Fftw3ThreadsHash: v = env.fftw3_threads.c_str(); break;
                 case SettingKind::TrimBegin_A:
                 case SettingKind::TrimBegin_B:      sv = &trim_begin_text; break;
                 case SettingKind::TrimEnd_A:
@@ -351,11 +314,6 @@ std::string format_default_settings_template(const std::string& stem,
                 s += desc.key;
                 s += '=';
                 s += *sv;
-                s += '\n';
-            } else if (v != nullptr) {
-                s += desc.key;
-                s += '=';
-                s += v;
                 s += '\n';
             }
         }
@@ -431,8 +389,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
         app.playback_speed, app.gui_scale, app.audio_player,
-        app.projects_repo,
-        app.libm_hash, app.libmvec_hash,
-        app.fftw3_hash, app.fftw3_threads_hash};
+        app.projects_repo};
     return format_nonengine_value(desc->kind, gui);
 }

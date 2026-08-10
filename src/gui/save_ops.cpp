@@ -103,11 +103,7 @@ bool GuiSaveOps::save() {
             app.playback_speed,
             app.gui_scale,
             app.audio_player,
-            app.projects_repo,
-            app.libm_hash,
-            app.libmvec_hash,
-            app.fftw3_hash,
-            app.fftw3_threads_hash};
+            app.projects_repo};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             std::fprintf(stderr,

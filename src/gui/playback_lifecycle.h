@@ -73,11 +73,13 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-07 — SEVEN sites:
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-09 — SIX sites:
     // GuiSettingsEditor::open (settings_editor.cpp), the `'` load editor,
     // the `m` bpm editor and the history view's COMMIT-TITLE editor
-    // (input_key_dispatch.cpp), and the THREE prompt opens
-    // (prompt.cpp: unsaved, error notice, env-hash mismatch).
+    // (input_key_dispatch.cpp), and the TWO prompt opens
+    // (prompt.cpp: unsaved, error notice). It went seven to six on 2026-08-09,
+    // when the render-library advisory prompt was deleted with the whole
+    // attestation surface.
     // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
     // — the `;` key (input_handler.cpp) and the Settings DROPDOWN item
     // (input_pointer.cpp), the one route onto that surface that reached no key

@@ -48,14 +48,6 @@ struct AuthoringSnapshot {
     // The projects-home repository name, carried into the entry's .settings
     // like every other always-emitted key. (architect approval 2026-08-03.)
     std::string projects_repo;
-    // Dispatch-moment STORED render-environment hashes (AppState's four
-    // *_hash fields), carried into the entry's .settings like every
-    // always-emitted key — the stored values, never the current
-    // environment's.
-    std::string libm_hash;
-    std::string libmvec_hash;
-    std::string fftw3_hash;
-    std::string fftw3_threads_hash;
 
     // Dispatch-time browse position, captured on the TARGET axis: the
     // entry's .settings persists active_audio_view=T, so the browse keys

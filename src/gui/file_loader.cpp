@@ -72,15 +72,6 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // the file's own value here and there is no "was it present" question to
     // ask. An empty value is legal and simply disables the feature.
     app.projects_repo       = sf.projects_repo;
-    // Render-environment attestation, assigned like every settings field
-    // (the load-in-place therefore applies an entry's stored hashes 1:1 with
-    // a load).
-    // The load-time mismatch compare against compute_render_env_hashes()
-    // runs caller-side, after the whole load succeeds.
-    app.libm_hash           = sf.libm_hash;
-    app.libmvec_hash        = sf.libmvec_hash;
-    app.fftw3_hash          = sf.fftw3_hash;
-    app.fftw3_threads_hash  = sf.fftw3_threads_hash;
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {

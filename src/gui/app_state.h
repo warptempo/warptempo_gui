@@ -1179,12 +1179,6 @@ enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
     ERROR_NOTICE,
-    // Load-time render-environment mismatch (GuiPrompt::open_env_hash_mismatch):
-    // advisory only — 'o', the sole response key, stamps the stored hashes to
-    // the current environment (history-less, no-dirty GUI-kind state that
-    // persists on the next ordinary save). No dismiss-without-ack path:
-    // acknowledging is the only way past the prompt.
-    ENV_HASH_MISMATCH,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom row's
@@ -1476,27 +1470,6 @@ struct AppState {
     // Persisted on Ctrl+S. No gesture: the settings editor
     // (`:projects_repo=<host/path>`) is its sole authoring surface.
     std::string projects_repo = kDefaultProjectsRepo;
-
-    // Render-environment attestation: the STORED per-library stat-identity
-    // digests (16 lowercase hex digits each, env_fingerprint.h) the loaded
-    // `.settings` recorded at its last save. Pre-load default is empty — never
-    // written as empty: the four keys are required, so a load always assigns
-    // them, and the first-open template stamps the four CURRENT hashes (a fresh
-    // project starts matched, no prompt). Compared against compute_render_env_hashes()
-    // once at source load; any mismatch opens the env-hash prompt, whose [o]k
-    // — the sole response — stamps all four LIVE hashes to the current
-    // environment's (no dismiss-without-ack path exists). The settings editor
-    // (`:libm_hash=<16hex>` etc.) is the manual authoring surface. These are
-    // history-less, no-dirty GUI-kind state: a restamp (prompt 'o' / editor
-    // commit) mutates only these live fields and never marks the file dirty;
-    // the new quartet persists on the next ordinary save (save_ops writes the
-    // live values verbatim), and a save-less session simply re-modals the
-    // mismatch on the next load by design (self-healing). Stored identity, not
-    // recipe: the render fingerprint never reads these.
-    std::string libm_hash;
-    std::string libmvec_hash;
-    std::string fftw3_hash;
-    std::string fftw3_threads_hash;
 
     // Companion files discovered alongside the loaded audio.
     std::string warpmarkers_path;
@@ -2928,8 +2901,7 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
     // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // gui_scale, audio_player, projects_repo, and the four *_hash
-    // env-attestation keys) — do
+    // gui_scale, audio_player, projects_repo) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
     // dirty, so quitting without saving simply drops them. Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but

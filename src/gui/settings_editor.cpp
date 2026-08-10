@@ -213,25 +213,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         target_render.trigger();
         applied(); return true;
     }
-    if (key == "libm_hash" || key == "libmvec_hash" ||
-        key == "fftw3_hash" || key == "fftw3_threads_hash") {
-        // Render-environment attestation: a trivial history-less chokepoint
-        // like audio_player's (assign directly, no gesture exists) — an
-        // ordinary GUI-kind commit that marks NOTHING dirty. The stored hashes
-        // are persisted identity that rides the next ordinary Ctrl+S; this
-        // commit pushes no undo entry and touches no dirty state. The grammar
-        // (exactly 16 lowercase hex digits) was already enforced by
-        // validate_gui_setting above; applied() prints the one stderr line and
-        // deactivates.
-        std::string& stored =
-            (key == "libm_hash")    ? app.libm_hash :
-            (key == "libmvec_hash") ? app.libmvec_hash :
-            (key == "fftw3_hash")   ? app.fftw3_hash :
-                                      app.fftw3_threads_hash;
-        if (gv.text == stored) { unchanged(); return true; }
-        stored = gv.text;
-        applied(); return true;
-    }
 
     // -- per-tab GUI keys ------------------------------------------------
     char tab_char = 0;

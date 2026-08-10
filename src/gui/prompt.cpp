@@ -1,7 +1,5 @@
 #include "prompt.h"
 
-#include "env_fingerprint.h"
-
 #include <utility>
 
 void GuiPrompt::proceed(DialogTrigger t) {
@@ -11,9 +9,7 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
-    case DialogTrigger::ENV_HASH_MISMATCH:
-        // All three are dispatched directly by activate_response, outside
-        // proceed.
+        // Both are dispatched directly by activate_response, outside proceed.
         break;
     }
 }
@@ -62,27 +58,6 @@ void GuiPrompt::open_error_notice(std::string text) {
     viewport.invalidate_all();
 }
 
-// Load-time render-environment mismatch, advisory only. ONE response key:
-// 'o' acknowledges by
-// restamping the four live hashes (history-less, no-dirty GUI-kind state).
-// There is deliberately NO dismiss-without-ack path — Esc is not a response
-// key, so the prompt's key filter swallows it like every other non-response
-// key, and acknowledging is the only way past the prompt.
-void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
-    // A modal surface is opening: the shared modal stop, same rule as every
-    // other prompt open (at the load-time call site playback is not running, but
-    // the chokepoint keeps the invariant unconditional).
-    playback_lifecycle.stop_playback_for_modal_open();
-    app.prompt.active          = true;
-    app.prompt.text            = "Render libraries changed since last save (" +
-                                 changed_list +
-                                 "). New renders may not match old ones.";
-    app.prompt.response_keys   = {'o'};
-    app.prompt.response_labels = {"[O]k"};
-    app.prompt.trigger         = DialogTrigger::ENV_HASH_MISMATCH;
-    viewport.invalidate_all();
-}
-
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
 // response. On a Save failure, the prompt mutates in place to a
@@ -99,27 +74,6 @@ void GuiPrompt::activate_response(char k) {
         if (k == '\x1b') {
             app.prompt.active = false;
             viewport.invalidate_all();
-        }
-        return;
-    }
-
-    if (trigger == DialogTrigger::ENV_HASH_MISMATCH) {
-        // 'o' is the SOLE response key (no dismiss-without-ack path exists;
-        // Esc never reaches here — it is not in response_keys, so the key
-        // filter swallows it). Acknowledge: stamp all four LIVE hashes to the
-        // current environment's. This is history-less, no-dirty GUI-kind state
-        // (like trim / view prefs): the restamp marks NOTHING dirty and simply
-        // persists on the next ordinary Ctrl+S. A save-less session drops it,
-        // so the next load re-fires this modal by design (self-healing).
-        if (k == 'o') {
-            const RenderEnvHashes& cur = compute_render_env_hashes();
-            app.libm_hash          = cur.libm;
-            app.libmvec_hash       = cur.libmvec;
-            app.fftw3_hash         = cur.fftw3;
-            app.fftw3_threads_hash = cur.fftw3_threads;
-            app.prompt.active = false;
-            viewport.invalidate_all();
-            return;
         }
         return;
     }

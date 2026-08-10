@@ -52,6 +52,14 @@ using warptempo_parse::prefix_line_error;
 // already carries the key, and the GUI's writer has emitted the line since the
 // key existed, so the population of files this refuses is the ones written
 // before then.
+//
+// THE FOUR RENDER-ENVIRONMENT ATTESTATION KEYS — `libm_hash`, `libmvec_hash`,
+// `fftw3_hash`, `fftw3_threads_hash` — LEFT THE SCHEMA 2026-08-09 (architect
+// approval 2026-08-09), with the load-time advisory notice they fed. The same
+// consequence applies to them as to `font_size` before them: a `.settings`
+// still carrying one of the four is load-fatal in both products by the
+// ordinary UNKNOWN-key refusal below, hand-edit is the whole recovery, and
+// there is no migration tool and no reader leniency.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
@@ -60,7 +68,6 @@ constexpr const char* kCanonicalSettingsKeys[] = {
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
     "tab_b_viewport_start", "tab_b_zoom", "tab_b_playhead_cursor",
-    "libm_hash", "libmvec_hash", "fftw3_hash", "fftw3_threads_hash",
 };
 
 }  // namespace
@@ -274,24 +281,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.i64 = v;
         return R(out);
     }
-    if (key == "libm_hash" || key == "libmvec_hash" ||
-        key == "fftw3_hash" || key == "fftw3_threads_hash") {
-        // Render-environment attestation values: exactly 16 lowercase hex
-        // digits, canonical spelling only — the exact bytes the writer emits
-        // (compute_render_env_hashes renders every digest, the absent-library
-        // sentinel included, in this one form). All four keys share the one
-        // grammar.
-        if (value.size() != 16) {
-            return err("must be exactly 16 lowercase hex digits");
-        }
-        for (char c : value) {
-            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
-                return err("must be exactly 16 lowercase hex digits");
-            }
-        }
-        out.text = value;
-        return R(out);
-    }
     if (key == "audio_player") {
         // GUI-kind launcher for the `l` render-listen command: an external
         // player binary name or path. Any value is accepted (no path/binary
@@ -408,14 +397,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
             // same-day grant that made the key required, comment-only — the
             // one-day optional story it used to tell is retired.)
             out.projects_repo = gv.text;
-        } else if (key == "libm_hash") {
-            out.libm_hash = gv.text;
-        } else if (key == "libmvec_hash") {
-            out.libmvec_hash = gv.text;
-        } else if (key == "fftw3_hash") {
-            out.fftw3_hash = gv.text;
-        } else if (key == "fftw3_threads_hash") {
-            out.fftw3_threads_hash = gv.text;
         }
         return {};
     });

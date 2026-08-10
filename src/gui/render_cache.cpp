@@ -1,6 +1,5 @@
 #include "render_cache.h"
 
-#include "env_fingerprint.h"
 #include "wav_io.h"
 
 #include <algorithm>
@@ -130,14 +129,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
     return parse_i64_exact(line.substr(p.size()), out);
 }
 
-// Canonical RENDER-IDENTITY fingerprint: the FULL recipe in this environment
-// — "would a fresh render of this recipe, in this environment, produce these
-// bytes". Serializes, in order: the content version; the computed
-// render-environment quartet (compute_render_env_hashes() — the four library
-// stat-identity digests actually mapped into THIS process, so a pre-upgrade
-// artifact can never match a post-upgrade recipe); the source path plus its
-// load-time source identity; the sample rate; EVERY EngineSettings field —
-// the five naming/provenance fields (title, bpm, notes, url, cover) included
+// Canonical RENDER-IDENTITY fingerprint: the FULL recipe — "would a fresh
+// render of this recipe produce these bytes". Serializes, in order: the
+// content version; the source path plus its load-time source identity; the
+// sample rate; EVERY EngineSettings field — the five naming/provenance
+// fields (title, bpm, notes, url, cover) included
 // by ruling (architect 2026-07-17: they change about once per movement, so a
 // provenance edit forcing a fresh render is accepted; the payoff is that no
 // inert-field classification exists anywhere, and a re-render refreshes the
@@ -150,7 +146,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // triggers this is what turns an inert marker edit's forced re-derive into a
 // cache hit). The key is a conservative over-approximation of byte identity,
 // and that direction is the point: a match guarantees byte-identical output;
-// a mismatch at worst re-renders redundantly.
+// a mismatch at worst re-renders redundantly. THE KEY NAMES AUTHORED STATE AND
+// RECIPE ONLY — the library-environment term is retired (2026-08-09, record in
+// settings.md), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
+// that crosses a glibc or FFTW upgrade may differ at the accepted inaudible
+// class rather than byte-exactly.
 // CALLERS OWN THE RESOLVE AND THE TRIM ARM: render_fingerprint is pure
 // serialization; each call site either threads an already-resolved product
 // through (do_render, arm selected by its own trim_plan) or runs its own
@@ -188,7 +188,18 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // unreachable, full-window ones included — a one-time cold cache, aged out by
 // the LRU budget on the cache side, warning-only on the sidecar side (single
 // user, renders/ transient).
-constexpr uint32_t kFingerprintVersion = 19;
+//
+// THE LIBRARY-ENVIRONMENT QUARTET'S RETIREMENT BUMPED IT 19 -> 20 (2026-08-09).
+// The key used to open with the stat-identity digests of the four libraries
+// mapped into the rendering process; it now names authored state and recipe
+// only, so a library upgrade no longer moves it and a reused preview may cross
+// one. The bump follows the rule the 18 -> 19 entry above states: ANY change to
+// the key's byte SHAPE forces a fresh namespace, because a pre-change key and a
+// post-change key naming different input could otherwise byte-collide — here a
+// post-change key beginning with the source path can equal a pre-change key
+// whose first digest happened to serialize those same bytes. Same accepted cost
+// as above.
+constexpr uint32_t kFingerprintVersion = 20;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -267,19 +278,6 @@ std::vector<uint8_t> render_fingerprint(
     fp.reserve(256 + resolved_warp_markers.size() * 64);
 
     put_u32(fp, kFingerprintVersion);
-
-    // Render environment: the four library stat-identity digests actually
-    // mapped into THIS process (per-process constants — one lazy computation for
-    // the process lifetime), in RenderEnvHashes declaration order. The
-    // COMPUTED quartet, deliberately not the .settings *_hash attestation
-    // keys: the fingerprint must name the libraries that would actually
-    // produce the bytes, so a pre-upgrade artifact can never match a
-    // post-upgrade recipe.
-    const RenderEnvHashes& env = compute_render_env_hashes();
-    put_str(fp, env.libm);
-    put_str(fp, env.libmvec);
-    put_str(fp, env.fftw3);
-    put_str(fp, env.fftw3_threads);
 
     put_str(fp, source_audio_path);
     put_bytes(fp, &source_identity.size, sizeof source_identity.size);

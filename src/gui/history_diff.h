@@ -320,7 +320,7 @@ struct GuiHistoryNowSide {
 
 // THE SETTINGS WRITER'S GUI HALF, CAPTURED — every non-engine key's value, held
 // by VALUE so it can outlive the read (NonEngineSettingsSnapshot borrows a
-// ViewState pair and six strings, which is a call-shaped type, not a storable
+// ViewState pair and two strings, which is a call-shaped type, not a storable
 // one). It is opaque here because its ViewState members belong to app_state.h,
 // which this header is included BY; the definition and the one overlay rule live
 // in the .cpp.

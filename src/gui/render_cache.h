@@ -43,15 +43,12 @@ struct ArtifactStatIdentity {
 };
 bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 
-// Canonical RENDER-IDENTITY fingerprint: "would a fresh render of this
-// recipe, in this environment, produce these bytes". The key serializes, in
-// order: the content version; the render-environment quartet
-// (compute_render_env_hashes() — the four library stat-identity digests
-// actually mapped into THIS process, so a pre-upgrade artifact can never match a
-// post-upgrade recipe); source path + source file identity; sample rate; every
-// EngineSettings field (full-recipe key — the exhaustive decision switch in
-// the serializer is the single drift guard); the trim
-// bounds (a NOT-trimmed render — the full window — writing the pre-always-set
+// Canonical RENDER-IDENTITY fingerprint: "would a fresh render of this recipe
+// produce these bytes". THE KEY NAMES AUTHORED STATE AND RECIPE ONLY: it
+// serializes, in order: the content version; source path + source file
+// identity; sample rate; every EngineSettings field (full-recipe key — the
+// exhaustive decision switch in the serializer is the single drift guard); the
+// trim bounds (a NOT-trimmed render — the full window — writing the pre-always-set
 // unset bytes, so it hashes like a pre-arc untrimmed render); and the
 // RESOLVED marker state — the exact engine inputs, not the raw stores:
 // resolve_warp_markers_for_render's survivors (per marker: frame, resolved
@@ -73,7 +70,10 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // resolve and its own plan_trim and accepts the resolver's per-resolve stderr
 // lines (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
-// by construction. Same inputs always produce byte-identical output; the
+// by construction. Same inputs always produce byte-identical output WITHIN ONE
+// LIBRARY EPOCH — the library-environment term is retired (2026-08-09, record
+// in settings.md), so a reuse crossing a glibc or FFTW upgrade may differ at
+// the accepted inaudible class rather than byte-exactly; the
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
 std::vector<uint8_t> render_fingerprint(

@@ -204,16 +204,6 @@ struct SettingsFile {
     // repeating the text so that a default-constructed SettingsFile names the
     // same repository the first-open template stamps.
     std::string projects_repo = kDefaultProjectsRepo;
-    // Render-environment attestation (env_fingerprint.h): the per-library
-    // stat-identity digests recorded at the last save, one 16-lowercase-hex-digit
-    // value per render-relevant shared library. Required keys like every
-    // other; the value grammar (exactly 16 lowercase hex digits) is enforced
-    // by validate_gui_setting in both products. These are stored identity,
-    // not recipe: the render fingerprint never reads them.
-    std::string libm_hash;
-    std::string libmvec_hash;
-    std::string fftw3_hash;
-    std::string fftw3_threads_hash;
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable
