@@ -741,13 +741,15 @@ void render_trim_flags(cairo_t* cr,
             //
             // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
             // square's height at face_h - 1, keeping one face row above it. The
-            // square goes non-square below 62% (2 wide x 1 tall at 50%), which
-            // is the accepted trade — the rim is the load-bearing silhouette
-            // feature and the squareness is not. THE WIDTH IS DELIBERATELY NOT
-            // TOUCHED: the horizontal closure inset + inner + inset == tile is
-            // exact at 50% (1 + 2 + 1 == 4) and stays the crop's own
-            // arithmetic. The square still hangs FLUSH ON THE BEVEL, so the
-            // crop relationship above is preserved at every scale.
+            // square goes non-square in BOTH collapse bands, one row short of
+            // square in each: 2x1 at 50, 3x2 across 51..61, 4x3 across 70..72.
+            // That is the accepted trade — the rim is the load-bearing
+            // silhouette feature and the squareness is not. THE WIDTH IS
+            // DELIBERATELY NOT TOUCHED: the horizontal closure
+            // inset + inner + inset == tile is exact at 50% (1 + 2 + 1 == 4)
+            // and stays the crop's own arithmetic. The square still hangs
+            // FLUSH ON THE BEVEL, so the crop relationship above is preserved
+            // at every scale.
             //
             // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
             // (inner 5 against face_h 7 at 100%, 10 against 14 at 200% — zero

@@ -1425,11 +1425,12 @@ struct AppState {
     // the value any more — a sidecar still holding it is load-fatal as an
     // unknown key, by the architect's explicit no-legacy instruction.)
 
-    // GUI rendering scale in PERCENT (the gui_scale setting; 100..200, default
+    // GUI rendering scale in PERCENT (the gui_scale setting; [50, 200], default
     // 100). 100 is the design baseline — 1920x1080, the one supported
-    // resolution — and 200 is the 4K case. A display preference: not engine
-    // input, not authoring state, persisted on Ctrl+S, applied at file load, and
-    // set through the settings editor (`:gui_scale=`, no hotkey). LIVE since
+    // resolution — 200 is the 4K case and 50 the half-size floor. A display
+    // preference: not engine input, not authoring state, persisted on Ctrl+S,
+    // applied at file load, and set through the settings editor
+    // (`:gui_scale=`, no hotkey). LIVE since
     // 2026-07-31: pushed to the renderer's file-scope state via
     // set_gui_scale_percent at all three application points (file load, the
     // settings-editor commit, the `'` load-in-place), and the editor commit

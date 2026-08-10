@@ -765,9 +765,24 @@ constexpr double kTabCornerRadiusPx  = 5.0;
 // is recorded because it is what the reference does, not because it is wanted:
 // our slot's act is a lock TOGGLE, not a destructive close, and no hover face
 // has been asked for. If one is ever wanted, this crop is its measurement.
+//
+// THE SLOT IS THE SUM OF THESE TWO AND IS NEVER AUTHORED SEPARATELY (codex
+// round 2, 2026-08-10). It WAS a third constant, kTabLockSlotPx = box + margin
+// = 24, scaled through scaled_px like the other two — and that is one rounding
+// too many: three independent nearbyints do not partition, so the derived
+// remainder slot - box - margin came out -1 at twelve legal scales (60, 72, 85,
+// 97, 110, 122, 135, 147, 160, 172, 185, 197) and +1 at twelve more. At -1 the
+// painted AND PUBLISHED lock rect started one pixel inside the LABEL field, so
+// a press in that column toggled the lock instead of switching the tab. The bug
+// predates the gui_scale floor arc — 110 and 122 are in the old [100, 200]
+// domain — and the fix is by construction rather than by clamp: the slot is
+// computed as the sum of the two ROUNDED accessors at the walk below, so
+// slot == box + margin holds exactly at every scale and the lock's origin lands
+// on the field boundary by arithmetic. 100%, 150% and 200% are byte-identical
+// (16 + 8 == 24 there); the twenty-four off-grid scales move a tab edge by 1px,
+// which is the correction.
 constexpr double kTabLockBoxPx     = 16.0;
-constexpr double kTabLockMarginPx  = 8.0;   // box's right edge to the tab's
-constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
+constexpr double kTabLockMarginPx  = 8.0;   // box's right edge to the tab's own
 
 // THE PAINTER'S HALF OF THE TAB ROSTER: each tab's roster id, its A/B letter
 // and its label. The press claim (input_pointer.cpp) reads the same ids out of
@@ -1721,7 +1736,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     const int min_w    = scaled_px(kTabMinWidthPx);
     const int lock_box = scaled_px(kTabLockBoxPx);
     const int lock_mar = scaled_px(kTabLockMarginPx);
-    const int slot_w   = scaled_px(kTabLockSlotPx);
+    // DERIVED FROM THE TWO ROUNDED PARTS, never scaled from a composite of its
+    // own — this is the whole partition fix (the record is at kTabLockBoxPx).
+    // Every reader of the slot goes through this one expression: the tab width
+    // below and the lock rect's origin at the paint site are then two spellings
+    // of the same arithmetic, so the field and the slot cannot overlap or gap.
+    const int slot_w   = lock_box + lock_mar;
     const int trim_h   = std::max(1, scaled_px(kTabTrimHeightPx));
     const int line_w   = std::max(1, scaled_px(kTabBorderPx));
     const double radius = std::nearbyint(kTabCornerRadiusPx * gui_scale_factor());
@@ -1910,6 +1930,13 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // pointer affordance left to lie about.
         if (!walk_selector) {
             const ViewState& vs = (def.letter == 'B') ? app.tab_b : app.tab_a;
+            // THE ORIGIN IS THE FIELD BOUNDARY, and now by arithmetic rather
+            // than by hope: tab_w is field_w + slot_w and slot_w IS
+            // lock_box + lock_mar, so this subtraction lands exactly on
+            // x + field_w at every scale. `lx` is the published hit rect's own
+            // origin too (below), which is why the partition had to be exact —
+            // a slot one pixel wide of its parts put the LOCK's press claim
+            // over the label field's last column (the record at kTabLockBoxPx).
             const int lx = x + tab_w - lock_mar - lock_box;
             const int ly = lane.y + (content_h - lock_box) / 2;
             if (vs.read_only) {
