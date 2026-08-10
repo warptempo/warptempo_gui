@@ -83,9 +83,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // responses.
     // EVERY response — letters, Delete, Escape alike — matches BARE ONLY
     // (architect 2026-07-28): no ctrl, no alt, and no shift. That is what stops
-    // Ctrl+S from picking `[S]ave` in the close prompt, Alt+Y from applying a
-    // confirmed paste, and Ctrl+O from acknowledging the render-environment
-    // prompt.
+    // Ctrl+S from picking `[S]ave` in the close prompt and Alt+Y from applying
+    // a confirmed paste.
     // CASE-SENSITIVITY IS THE CODEPOINT'S JOB, NOT !shift's (architect 2026-07-30):
     // the platform case-folds letter keysyms, so the GuiKey says `y` for every way
     // of typing a Y, and the old `!shift` spelling let CAPSLOCK deliver a

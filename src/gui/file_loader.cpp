@@ -425,8 +425,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, gui_scale, audio_player, the four stored
-        // render-environment hashes), VALUES ONLY. The
+        // playback_speed, gui_scale, audio_player, projects_repo),
+        // VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_scale_percent,
         // on_resize) stay below where they always ran. The render-entry
         // load-in-place

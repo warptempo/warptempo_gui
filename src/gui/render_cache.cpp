@@ -157,9 +157,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // resolve and its own plan_trim and accepts the resolver's per-resolve stderr
 // lines (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
-// by construction. Same inputs always produce byte-identical output; the
-// result is hashed to name a cache file and stored verbatim for an
-// exact-compare confirm on lookup.
+// by construction. The result is hashed to name a cache file and stored
+// verbatim for an exact-compare confirm on lookup.
 //
 // THE TRIM-AWARE PHASE-RESET COMPONENT BUMPED THIS VERSION 18 -> 19
 // (2026-08-01), and the bump is FORCED — the field it changed is not a

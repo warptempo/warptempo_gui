@@ -260,8 +260,8 @@ struct GuiHistoryCommitDelta {
 
     // THE SCALE IS THE ONLY SETTINGS KEY THIS MODE DISPLAYS (architect's
     // ruling) — a recorded asymmetry, not an oversight: every other settings
-    // delta (title, bpm, the whole per-tab view-state band, the environment
-    // hashes) is deliberately invisible here, so the mode shows authoring
+    // delta (title, bpm, the whole per-tab view-state band, the session prefs)
+    // is deliberately invisible here, so the mode shows authoring
     // history rather than session bookkeeping. The tokens are the `scale=`
     // value text VERBATIM from each side, empty where that side carried no
     // `scale=` line at all.

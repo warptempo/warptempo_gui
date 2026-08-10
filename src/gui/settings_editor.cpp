@@ -126,9 +126,7 @@ void GuiSettingsEditor::exit_no_commit() {
 // out-of-vocabulary value, and otherwise applies the typed value through the
 // key's own gesture chokepoint — no parallel state writer, no grammar spelled
 // twice. GUI-kind commits touch no undo history and no dirty state (launch/view
-// state, like audio_player) — the four *_hash keys included: their branch
-// assigns the live quartet directly and persists on the next ordinary save,
-// marking nothing dirty; a same-value commit no-op-deactivates like the
+// state, like audio_player); a same-value commit no-op-deactivates like the
 // engine no-op gate. Playback is already stopped (the editor is modal), so the
 // appliers need no playback special-casing. Returns false when `key` is not a
 // GUI-kind key, so the caller falls through to the engine-key path.

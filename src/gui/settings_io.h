@@ -43,9 +43,10 @@ ViewState view_state_from_settings_tab(const SettingsFileTab& t);
 // (title overridden to `<stem>-rendered`), an all-zero ViewState, and the FULL
 // trim window on both tabs. `total_frames` is the just-loaded source's frame
 // count: the full window is [0, total-1], which is not a compile-time constant,
-// so the trim keys are a dynamic template stamp like the four env hashes (the
-// `-1` unset spelling they used to carry died with the unset state 2026-07-30 —
-// a template still writing it would no longer load).
+// so the four trim keys are the template's ONE dynamic stamp — every other
+// non-engine key carries a fixed descriptor default (the `-1` unset spelling the
+// trim keys used to carry died with the unset state 2026-07-30 — a template
+// still writing it would no longer load).
 std::string format_default_settings_template(const std::string& stem,
                                              int64_t total_frames);
 

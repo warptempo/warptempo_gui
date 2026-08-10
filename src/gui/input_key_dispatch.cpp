@@ -3583,13 +3583,6 @@ bool GuiInputHandler::load_render_entry_in_place(
     // every other key. The one selection was cleared above, so landing on the
     // file's marker mode carries an empty selection, exactly as a fresh load's
     // empty-selection state.
-    //
-    // This replaces the four LIVE env hashes with the entry's. The hashes are
-    // history-less, no-dirty GUI-kind state (like the other loaded-in-place view
-    // prefs), so this replacement marks nothing dirty on its own; the
-    // load-in-place is dirty via its cross-file history push regardless, and
-    // the loaded-in-place hashes
-    // ride the next ordinary Ctrl+S.
     apply_settings_engine_and_prefs(app, *settings);
 
     // Clamp both loaded-in-place tab bands' playheads into the live domain (the
