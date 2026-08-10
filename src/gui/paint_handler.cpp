@@ -1513,7 +1513,11 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
     const int sep_margin  = scaled_px(kToolbarSepMarginPx);
-    const int sep_w       = scaled_px(kToolbarSepWidthPx);
+    // THE SEPARATOR IS A LINE, so its width floors at 1: one authored pixel
+    // rounds to 0 at gui_scale 50 and the group divider would simply vanish
+    // (the row would still lay out, one pixel narrower per separator, which is
+    // exactly the silent kind of loss a floor exists to stop).
+    const int sep_w       = scaled_px(kToolbarSepWidthPx, 1);
     const int sep_h       = scaled_px(kToolbarSepHeightPx);
     const int btn_margin_y = scaled_px(kToolbarBtnMarginYPx);
     const int btn_gap     = scaled_px(kToolbarBtnGapPx);
@@ -2030,7 +2034,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int btn      = scaled_px(kIconBtnPx);
     const int btn_gap  = scaled_px(kIconBtnGapPx);
     const int sep_gap  = scaled_px(kIconSepGapPx);
-    const int sep_w    = scaled_px(kIconSepWidthPx);
+    // Floored at 1 for the reason row 2's separator is (a line that rounds to 0
+    // at gui_scale 50 takes the five groups' dividers with it).
+    const int sep_w    = scaled_px(kIconSepWidthPx, 1);
     const int sep_h    = scaled_px(kIconSepHeightPx);
     const int glyph_px = scaled_px(kIconGlyphPx);
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
@@ -2732,7 +2738,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // out of bounds.
     constexpr int kHeadTickWindowCap = 48;
     std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
-    const int head_half_max = scaled_px(kPlayheadHeadHalf[0]);
+    const int head_half_max = playhead_head_half_px(0, gui_scale_factor());
     const double head_px_pre = playhead_pixel_x(app, basis.vp_start, basis.spp);
     const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
     int head_window = 2 * head_half_max + 1;
@@ -2880,6 +2886,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int col = static_cast<int>(std::nearbyint(cursor_px));
         if (col >= 0 && col < wave_w) {
             const double s   = gui_scale_factor();
+            // THE ROW COUNT NEEDS NO FLOOR: 12 authored rows reach 6 at the
+            // schema's own bottom (gui_scale 50), and only a factor below 1/24
+            // could empty the loop — outside the vocabulary entirely. The
+            // per-row HALF-WIDTH is where the floor lives (render.h).
             const int    rows = static_cast<int>(std::nearbyint(
                                     kPlayheadHeadHeightPx * s));
             // THE BAND IS THE MARKER LANE'S BOTTOM `rows`, tip ON the waveform
@@ -2896,12 +2906,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const int    head_bottom = marker.y + marker.h;
             const int    head_top    = head_bottom - rows;
             for (int r = 0; r < rows; ++r) {
-                // Each device row reads its SOURCE row's half-width, so the
-                // transcribed silhouette survives scaling as steps, not slopes.
-                const int src = std::min(kPlayheadHeadHeightPx - 1,
-                                         static_cast<int>(r / s));
-                const int half = static_cast<int>(std::nearbyint(
-                                     kPlayheadHeadHalf[src] * s));
+                // Each device row reads its SOURCE row's half-width through the
+                // ONE silhouette accessor (playhead_head_half_px, render.h),
+                // which also owns the tip's floor of 1 — shared verbatim with
+                // the tick pre-blend below, so the two cannot disagree about
+                // what the head's shape is.
+                const int half = playhead_head_half_px(r, s);
                 const int y0 = head_top + r;
                 const int x0 = lane.x + col - half;
                 const int w  = 2 * half + 1;
@@ -2966,10 +2976,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 const int y_lo = std::max(tick_top, head_top);
                 const int y_hi = std::min(tick_bottom, head_bottom);
                 for (int y = y_lo; y < y_hi; ++y) {
-                    const int src = std::min(kPlayheadHeadHeightPx - 1,
-                                             static_cast<int>((y - head_top) / s));
-                    const int half = static_cast<int>(std::nearbyint(
-                                         kPlayheadHeadHalf[src] * s));
+                    // The SAME accessor the silhouette pass filled with (floor
+                    // included), so the crossing clips to the pixels that are
+                    // actually there rather than to a second derivation.
+                    const int half = playhead_head_half_px(y - head_top, s);
                     if (dx < -half || dx > half) continue;
                     cairo_rectangle(cr, lane.x + tc, y, 1, 1);
                 }

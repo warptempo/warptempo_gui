@@ -755,17 +755,17 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 //
 // THE PRODUCT'S ONE SCALE AXIS since row 7 (it was the redesign's own, beside a
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
-// [100, 200] (100 = the 1920x1080 design baseline, 200 = the 4K case); the
-// current value lives as file-scope state in render.cpp, pushed by three
-// application points (file load, the settings editor's `gui_scale=` commit, the
-// `'` load-in-place).
+// [50, 200] (100 = the 1920x1080 design baseline, 200 = the 4K case, 50 = the
+// half-size floor since 2026-08-10); the current value lives as file-scope
+// state in render.cpp, pushed by three application points (file load, the
+// settings editor's `gui_scale=` commit, the `'` load-in-place).
 //
 // EVERY PAINTED DIMENSION IN THE TREE RIDES IT: crop-measured 100% values are
 // the authored constants, and every conversion rounds with std::nearbyint.
 void   set_gui_scale_percent(int percent);
 
-// Scale factor s = gui_scale / 100. Exactly 1.0 at the default (and never below
-// it: the setting's grammar floors at 100).
+// Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
+// 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
 // One authored 100%-scale length -> device pixels, the ONE conversion every
@@ -779,9 +779,17 @@ double gui_scale_factor();
 inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
 }
-// The floored form: `floor_px` is the PER-METRIC minimum the accessor states
-// (defensive at schema-legal scales, which never go below 100% — the floors
-// exist so a degenerate factor cannot zero a structural dimension).
+// The floored form: `floor_px` is the PER-METRIC minimum the accessor states,
+// so a small factor cannot zero a structural dimension.
+//
+// THE FLOORS ARE LIVE, NOT DEFENSIVE, SINCE 2026-08-10 (the gui_scale floor
+// 100->50). They were written when the schema's own floor was 100% and could
+// only fire on an out-of-domain factor; at s = 0.5 every AUTHORED 1 px rounds
+// to 0 — std::nearbyint is banker's rounding and takes 0.5 DOWN — so each 1px
+// border, edge, pad and separator in the tree reaches its floor and paints as
+// the one pixel that keeps the surface visible. A metric whose authored value
+// may legitimately vanish floors at 0 and says so at its own accessor
+// (trim_middle_inset_px / trim_middle_clear_px, the two grab tolerances).
 inline int scaled_px(double authored, int floor_px) {
     const int v = scaled_px(authored);
     return v < floor_px ? floor_px : v;
@@ -866,7 +874,8 @@ inline constexpr int kPlayheadUnitPx = 8;
 // All three size on gui_scale_factor() like every other lane in the tree (the
 // font axis the pre-redesign lanes used to ride is deleted — see the gui_scale
 // block above). Rounded with std::nearbyint and floored like every other lane
-// metric; the floors are defensive only, since gui_scale never goes below 100.
+// metric; the 1px MARGIN's floor is live at gui_scale 50 (it rounds to 0
+// there), the height floors are still far below the scaled heights.
 inline constexpr int kMenuRowHeightPx = 34;
 inline constexpr int kMenuRowMarginPx = 1;
 inline int menu_row_margin_h_px() {
@@ -1221,6 +1230,29 @@ inline constexpr int kPlayheadHeadHeightPx = 12;
 inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
     9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
 };
+// ONE DEVICE ROW'S HALF-WIDTH, and the ONE expression both readers in
+// paint_handler.cpp share — the silhouette pass that fills the rows, and the
+// tick pre-blend that clips its per-pixel repaint to the same silhouette. A
+// device row picks its SOURCE row by the inverse scale (so the transcribed
+// shape survives scaling as steps, not slopes) and that row's authored half
+// takes the tree's one conversion. `s` is the caller's gui_scale_factor(); it
+// is passed because the caller already holds it and only the row inverse needs
+// it, the width itself going through scaled_px like every other length.
+//
+// THE FLOOR OF 1 (architect 2026-08-10, with the gui_scale floor 100->50): the
+// table's last two rows are 1 authored px, which rounds to 0 at s = 0.5, and a
+// half of 0 is a 1px row — the head's tip would collapse onto the 1px stem and
+// stop reading as a tip at all. Floored, the bottom row is 3 px wide (width is
+// 2*half+1, always odd, so the centring stays structural and the shape stays
+// aliased integer rects). A FLOOR, NOT A PIN: at 100% and above every scaled
+// half is already >= 1, so nothing above the baseline moves and the tips keep
+// scaling.
+inline int playhead_head_half_px(int device_row, double s) {
+    int src = static_cast<int>(static_cast<double>(device_row) / s);
+    if (src > kPlayheadHeadHeightPx - 1) src = kPlayheadHeadHeightPx - 1;
+    if (src < 0) src = 0;
+    return scaled_px(kPlayheadHeadHalf[src], 1);
+}
 
 // THE HOVER TOOLTIP'S two SHARED numbers — a DAMAGE BOUND on its box height and
 // its dwell. They live out here, rather than with the rest of the tooltip's
@@ -1280,7 +1312,7 @@ inline int popup_item_margin_y_px() {
 // so every pixel is identical at every gui_scale. 8 at 100%. The floor of 2 was
 // the triangle's own ("always a tip row below a top row") and survives only to
 // hold the value byte-for-byte; it cannot fire while gui_scale rests in
-// [100, 200].
+// [50, 200] (8 px reaches 2 only below 19%).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
 }

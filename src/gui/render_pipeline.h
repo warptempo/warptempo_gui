@@ -43,7 +43,7 @@ struct AuthoringSnapshot {
     char        active_markers_view = 'W';   // 'W' or 'P'
     float       playback_speed      = 1.0f;
     bool        follow              = true;
-    int         gui_scale           = 100;   // percent, [100, 200]
+    int         gui_scale           = 100;   // percent, [50, 200]
     std::string audio_player;                // empty = unset
     // The projects-home repository name, carried into the entry's .settings
     // like every other always-emitted key. (architect approval 2026-08-03.)

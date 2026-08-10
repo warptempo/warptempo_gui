@@ -1542,9 +1542,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // CARET ROOM. The caret at end-of-text stands one column past the last
     // glyph, so the box must own a column the run does not; without it the
     // caret would sit on the right pad or, at the clamp, off the box entirely.
-    // One authored pixel, scaled like every other row-5 length.
-    const int caret_w = scaled_px(1.0);
-    const int caret_px = caret_w < 1 ? 1 : caret_w;
+    // One authored pixel, scaled like every other row-5 length, with the tree's
+    // own per-metric floor: it rounds to 0 at gui_scale 50, which would leave
+    // the caret no column to stand in. (The hand-rolled `< 1 ? 1 :` this used
+    // to spell is now the shared scaled_px floor form.)
+    const int caret_px = scaled_px(1.0, 1);
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
     int box_w = pad_l + run_w + caret_px + pad_r;
