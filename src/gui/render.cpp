@@ -696,7 +696,10 @@ void render_trim_flags(cairo_t* cr,
     // 9px tile, so the interior it needs grew with the mark; the clearance
     // matters more than it did, the tile's face being the endcaps' own colour
     // and merging with a cap it touched. Below the threshold it simply does not
-    // paint: no shrink, no clamp.
+    // paint: no shrink, no clamp of the TILE. (The INNER SQUARE's height is a
+    // separate matter — it IS clamped, to keep the tile's top rim from
+    // collapsing at small scales; that rule and its reasoning live at the paint
+    // site below.)
     {
         const int tile  = trim_middle_size_px();
         const int inner = trim_middle_inner_px();
@@ -722,11 +725,44 @@ void render_trim_flags(cairo_t* cr,
             // FACE's bottom edge — crop rows 2..6 of a 0..6 face, flush on the
             // bevel — which is the relationship that scales with the lane, and
             // it insets from the tile's left by the crop's 2px.
-            cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
-                                 kTrimLaneBar.b);
-            cairo_rectangle(cr, lane_x + x_lo + inset,
-                            lane_y + face_h - inner, inner, inner);
-            cairo_fill(cr);
+            //
+            // THE TOP RIM IS CLAMPED INTO EXISTENCE (codex round 1, 2026-08-10,
+            // with the gui_scale floor 100->50). The rim is a DERIVED
+            // DIFFERENCE, face_h - inner, and the hazard is that its two terms
+            // round INDEPENDENTLY: each is nonzero and each has its own floor,
+            // but nothing holds them apart, so wherever nearbyint(5s) lands on
+            // face_h the difference is 0 and the square starts at the face's
+            // own top row — the endcap-coloured rim of the ruled silhouette
+            // vanishes with no metric having gone to zero. It is not one
+            // low-scale band either: measured across [50, 200] it collapses at
+            // 50 (face 2, inner 2), across 51..61 (face 3, inner 3) and AGAIN
+            // at 70..72 (face 4, inner 4), so a threshold would not have fixed
+            // it — the difference itself has to be held open.
+            //
+            // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
+            // square's height at face_h - 1, keeping one face row above it. The
+            // square goes non-square below 62% (2 wide x 1 tall at 50%), which
+            // is the accepted trade — the rim is the load-bearing silhouette
+            // feature and the squareness is not. THE WIDTH IS DELIBERATELY NOT
+            // TOUCHED: the horizontal closure inset + inner + inset == tile is
+            // exact at 50% (1 + 2 + 1 == 4) and stays the crop's own
+            // arithmetic. The square still hangs FLUSH ON THE BEVEL, so the
+            // crop relationship above is preserved at every scale.
+            //
+            // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
+            // (inner 5 against face_h 7 at 100%, 10 against 14 at 200% — zero
+            // binding scales in [100, 200]), so every pixel there is what it
+            // was. The degenerate arm below face_h <= 1 is unreachable in
+            // [50, 200] and skips THE SQUARE ALONE — never the tile, whose own
+            // paint-or-not verdict is the fit test above and is unchanged.
+            const int inner_h = inner < face_h - 1 ? inner : face_h - 1;
+            if (inner_h > 0) {
+                cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
+                                     kTrimLaneBar.b);
+                cairo_rectangle(cr, lane_x + x_lo + inset,
+                                lane_y + face_h - inner_h, inner, inner_h);
+                cairo_fill(cr);
+            }
         }
     }
 
