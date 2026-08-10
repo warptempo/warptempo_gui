@@ -485,14 +485,27 @@ construction.
 |---|---|
 | shipped (contracting) vs baseline | 14.235% of output samples differ; max 378 LSB (−87 dBFS), RMS 14.019 LSB (−115.5 dBFS) |
 | `-ffp-contract=off` `-march=native` vs baseline | **byte-identical** |
-| baseline (GCC) vs clang/WASM (emscripten 6.0.6, scalar) | 67 of 40,198,472 samples differ, all ±1 LSB |
+| baseline vs Clang/WASM (emscripten 6.0.6, scalar) | 67 of 40,198,472 samples differ, all ±1 LSB |
 
-The parser's framemap outputs are byte-identical across all of them: the
-divergence was engine FP codegen and nothing else. Contraction is
-therefore the WHOLE of it — turning it off makes the vectorized
-`-march=native` build reproduce the scalar generic build exactly, and the
-67-sample cross-toolchain remainder is pure libm residue, the
-env-fingerprint modal's own domain rather than a codegen matter.
+All four builds' parser framemap outputs are byte-identical — both GCC
+codegens, contract-off, and the Clang/WASM build (each pair cmp'd
+directly): every divergence in the table is engine FP arithmetic and
+nothing else.
+Contraction is therefore the WHOLE of it — turning it off makes the
+vectorized `-march=native` build reproduce the generic build exactly.
+
+The third row is a WEAKER result than the other two and is to be quoted
+as such. It is ONE pair with everything varied at once — compiler,
+target architecture, C library (a musl-class libm) and FFTW version
+(3.3.10 vendored into the WASM build against the system's 3.3.11) — so
+nothing in it is attributed to any single term. It is the CROSS-TOOLCHAIN
+residue, toolchain and libraries together, not an isolated libm
+measurement. That the residue is 67 samples at ±1 LSB rather than a
+codegen-class divergence is consistent with the strict-IEEE reasoning —
+with contraction off the arithmetic has no freedom left, so only library
+rounding remains to differ, which would put it in the env-fingerprint
+modal's own domain — but that reading is a hypothesis this measurement
+does not separate.
 
 **It costs nothing.** Interleaved A/B wall times on the target host
 (i7-1255U, two P-cores, GCC 16.1.1) are statistically indistinguishable:
@@ -520,14 +533,25 @@ unchanged.
 **Accepted consequence**, one time only: renders made after the switch do
 not byte-match renders made before it. The envelope is the table's first
 row — −87 dBFS peak, −115.5 dBFS RMS, inaudible, and of the same
-knife-edge class §7 describes. What is bought is permanent: renders are
-byte-reproducible across rebuilds, machines and `-march` choices, and
-reproducible to the libm residue across compilers and architectures. This
-supersedes §11's clause listing "compiler's FMA-contraction choices"
-among the reasons renders do not cmp across machines; the ISA and
-glibc/libmvec terms of that sentence stand.
+knife-edge class §7 describes. What is bought, stated to the
+measurement's own scope: renders are byte-reproducible across rebuilds
+and across `-march` choices, under an unchanged toolchain, unchanged math
+libraries and one architecture. Extending that to another machine is a
+DERIVATION rather than a second measurement — the same compiler over the
+same libraries on the same ISA leaves strict IEEE arithmetic no freedom —
+and no cross-COMPILER claim is made at all, GCC-vs-Clang byte identity
+being untested here.
+
+This supersedes exactly one clause of §11: "compiler's FMA-contraction
+choices" is no longer among the reasons renders do not cmp across
+machines. That sentence's ISA and glibc/libmvec terms STAND — the
+`-march` result narrows nothing beyond x86-64 codegen choices, and a
+genuinely different architecture is outside everything measured here.
 
 **Provenance.** Hand-built control binaries over the repo's own source
 lists, driven by a local-only harness under gitignored `tmp/` (not
 checked in, in the scratchpad-microbenchmark tradition of §10); timing by
-interleaved runs on the target host.
+interleaved runs on the target host. No Clang toolchain is installed on
+this host, so the GCC-vs-Clang control was not run and no claim rests on
+one; the WASM figure comes from an emscripten build of the same sources,
+which is why it varies four things at once.

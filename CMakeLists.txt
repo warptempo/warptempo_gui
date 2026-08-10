@@ -281,16 +281,17 @@ endif()
 # same -O3 -march=native -ffp-contract=off everywhere. Each target is appended
 # only under its own guard.
 #
-# -ffp-contract=off forbids FMA contraction, which was measured as the SOLE
-# source of output divergence between builds of this engine: a contracting
-# -march=native build differs from a non-contracting one in 14% of output
-# samples, peaking at -87 dBFS. It costs nothing measurable — the vectorization
-# -march=native buys is worth ~5% and changes no output bit, while contraction
-# is worth no measurable time at all. With contraction off, -O3 and -march are
-# pure speed knobs: renders are byte-reproducible across rebuilds, hosts and
-# -march targets. Any future port compiles with contraction off as well; clang
-# contracts by default too. Measurement record in
-# docs/engineering/perf_campaign_2026_07.md §15.
+# -ffp-contract=off forbids FMA contraction, measured as the SOLE source of
+# output divergence between this engine's two x86-64 GCC codegens: a contracting
+# -march=native build differs from a non-contracting generic one in 14% of
+# output samples, peaking at -87 dBFS, and with contraction off the two are
+# byte-identical. It costs nothing measurable — the vectorization -march=native
+# buys is worth ~5% and changes no output bit, while contraction is worth no
+# measurable time at all. So -O3 and -march are pure speed knobs: renders are
+# byte-reproducible across rebuilds and -march targets under an unchanged
+# toolchain and unchanged math libraries. Any future port compiles with
+# contraction off as well; clang contracts by default too. Measurement record
+# and the claim's exact scope in docs/engineering/perf_campaign_2026_07.md §15.
 set(WARPTEMPO_OPT_TARGETS "")
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
