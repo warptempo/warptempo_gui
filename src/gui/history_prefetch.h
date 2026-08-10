@@ -14,8 +14,11 @@
 // THE HISTORY WALK'S PREFETCH STORE AND ITS WORKER (architect 2026-08-07).
 //
 // The `h` view's walk is LOAD-GATED — membership is the strict whole-set load
-// itself (history_diff.h) — so building it costs a `git log`, then a `rev-parse`
-// + `ls-tree` + three `show`s + three strict parses PER CANDIDATE. That ran
+// itself (history_diff.h) — so building it costs a `rev-list --count` and a
+// `git log`, then a `rev-parse` + `ls-tree` + a `show` for the touched directory
+// + three `show`s for the blobs + three strict parses PER CANDIDATE (six
+// children each since 2026-08-09, when the touched-directory evidence read
+// joined). That ran
 // synchronously at every `h`, which is what made the entry stall and what the
 // ruled depth of 20 was really buying. The architect's answer is this class: the
 // whole git half runs ONCE AT STARTUP on a background thread, UNCAPPED, and

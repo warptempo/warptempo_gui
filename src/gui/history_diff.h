@@ -432,8 +432,10 @@ struct GuiHistoryCommitSidecars {
 // hope.
 //
 // False with `reason` set when the spelling does not resolve to a commit, when
-// the commit is ambiguous, or when a blob could not be read whole. Nothing here
-// writes anything: this is `rev-parse`, `ls-tree` and `show`.
+// the directory it CHANGED could not be read, when it changed the base name in
+// more than one directory, or when a blob could not be read whole. Nothing here
+// writes anything: this is `rev-parse`, `ls-tree` and two `show`s — the
+// touched-directory evidence read joined the verb list on 2026-08-09.
 bool read_commit_sidecars(const std::string&         spelling,
                           const std::string&         base_name,
                           const std::string&         head_directory,
@@ -527,16 +529,21 @@ std::string read_history_branch_tip_sha();
 // ok-plus-reason shape reused because the question is the same one: did this
 // half of the walk ANSWER, and if not, what does the mode print when it refuses.
 //
-// `ok` FALSE IS A READ THAT DID NOT RUN, never a history that is empty. The two
-// are the arc's whole reason for this type: a `git log` that RAN and legitimately
-// listed nothing is the ruled empty success — the view opens at `0/0` and Save
-// and Commit is live — while a capture that could not exec, whose pipe broke, or
-// that outlived its deadline knows NOTHING about this piece's history, and
-// reading that silence as "no checkpoints" would establish an empty walk, latch
-// the head delta commit-worthy and let the act publish against a baseline nobody
-// ever read. The capture contract already says an empty output is never a
-// success witness; this carries that to the walk's own end. A failed run is a
-// terminal matter under the sanctioned-use ruling: the mode refuses entry with
+// `ok` FALSE IS A READ THAT DID NOT ANSWER, never a history that is empty. The
+// two are the arc's whole reason for this type: an empty history is the ruled
+// empty success — the view opens at `0/0` and Save and Commit is live — while a
+// read this program could not get an answer out of knows NOTHING about the
+// piece's history, and reading that silence as "no checkpoints" would establish
+// an empty walk, latch the head delta commit-worthy and let the act publish
+// against a baseline nobody ever read.
+//
+// WHICH IS WHY THE EMPTY VERDICT RESTS ON AN OUTPUT-SHAPED WITNESS and not on a
+// silent `log`: exit codes are unreadable here, so a `log` that ran and found
+// nothing and a `log` that failed both say nothing at all. `rev-list --count`
+// prints "0" — bytes git printed — and that is the ruled empty history; an
+// unparseable or absent count is `ok` false, as is a could-not-exec capture. A
+// failed run is a terminal matter under the sanctioned-use ruling: the mode
+// refuses entry with
 // `unavailable_reason` on one stderr line and stays refused until an ordinary
 // re-kick (the tip moving, a checkpoint completing, another source) runs a scan
 // that answers.

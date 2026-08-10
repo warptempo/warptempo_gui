@@ -387,11 +387,19 @@ GitCapture run_git_capture(const std::vector<std::string>& args,
 // THE ORDINARY READING — ran AND said something — which is what every caller
 // wants whose question is answered by the output itself: a `log` with no commits,
 // a `rev-parse` that resolved nothing and an `ls-tree` of a tree with no matching
-// path are all "no history here" and all correctly fail this. The two callers
-// whose question is NOT the output's content (the load-in-place's blob reads
-// and the
-// commit act's status pre-flight) call run_git_capture directly and read the
-// outcome.
+// path are all "no history here" and all correctly fail this. SEVEN CALL SITES
+// (re-derived by grep 2026-08-09): the guard's two `remote get-url` reads, the
+// per-commit `ls-tree`, two `rev-parse --verify`s, the walk's `log`, and
+// `rev-parse --abbrev-ref`. THE WALK'S `log` IS ONE OF THEM AGAIN, and only
+// because it is no longer the emptiness verdict: `rev-list --count` decides
+// that, so by the time the log runs the count has said there ARE commits and
+// silence from it is a contradiction rather than an empty history.
+//
+// THE CALLERS WHOSE QUESTION IS NOT THE OUTPUT'S CONTENT call run_git_capture
+// directly and read the tri-state instead — the load-in-place's blob reads, the
+// commit act's status pre-flight, the scan's `rev-list --count` witness and the
+// touched-directory evidence read, the last two because ran-with-empty is a real
+// answer for them ("0" commits, and a merge's suppressed diff).
 bool git_output(const std::vector<std::string>& args, std::string& out) {
     return run_git_capture(args, out) == GitCapture::Ran && !out.empty();
 }
@@ -1145,6 +1153,10 @@ struct GuiHistoryCommitPaths {
     std::string path[3];
     long long   size[3] = {-1, -1, -1};
     bool        ambiguous = false;
+    // The touched-directory evidence read could not run. Distinct from
+    // `ambiguous` because it is a different fact and deserves a different line:
+    // ambiguity is an answer about the commit, this is the absence of one.
+    bool        evidence_unreadable = false;
 };
 
 // Resolve where this commit kept the sidecars, from THAT COMMIT'S OWN TREE —
@@ -1192,13 +1204,34 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // what the commit CHANGED answers both, because a checkpoint changes exactly the
 // folder it was made from.
 //
+// IT IS `show`, NOT `log -1`, AND THAT IS THE WHOLE CORRECTNESS OF IT: `-1`
+// limits how many commits a WALK reports, not which commit is asked about, so
+// `git log -1 <sha> -- <pathspecs>` whose own commit touched nothing matching
+// walks on to the nearest ANCESTOR that did and reports ITS paths. Measured: on
+// a commit touching only unrelated files, `log -1` answered the previous
+// checkpoint's sidecar paths while `show` answered nothing. Through `'` with a
+// pasted spelling that is exactly a successful load of the WRONG snapshot — a
+// false established success, which this module refuses everywhere. `git show`
+// diffs the named commit against its FIRST PARENT and walks no ancestry at all.
+//
 // `--name-only` WITH `-z` AND AN EMPTY `--format` yields nothing but the matched
 // paths, NUL-terminated and unquoted, so `core.quotePath` cannot mangle a UTF-8
-// name and the split is the ls-tree reader's own. A ROOT COMMIT answers normally
-// (git diffs it against the empty tree). A MERGE COMMIT answers with NOTHING —
-// `git log` suppresses a merge's diff by default — and an empty answer is
-// therefore NO EVIDENCE rather than "touched nothing": the caller falls back to
-// containment there, which is where merges behaved acceptably all along.
+// name and the split is the ls-tree reader's own. Measured on every shape that
+// matters: a ROOT commit answers its own paths (git diffs it against the empty
+// tree), a commit touching TWO folders at once answers both (the ambiguity arm
+// below), a DELETION-only commit answers the folder it emptied (whose blobs are
+// then absent from the tree, which the missing-sidecar refusal reports), and a
+// MERGE answers NOTHING — `git show` suppresses a merge's diff exactly as `log`
+// does. An empty answer is therefore NO EVIDENCE rather than "touched nothing":
+// the caller falls back to containment there, which is where merges behaved
+// acceptably all along.
+//
+// A READ THAT DID NOT ANSWER IS NOT NO-EVIDENCE, and the two must never share a
+// return: falling back to containment on a failed child would silently
+// resurrect the very phantom this mechanism exists to kill, on exactly the
+// occasions when nothing can be verified. So the answer carries `ok`, and the
+// resolution turns a false into a refusal — the commit hides from the walk on
+// the counted line's own terms, and `'` refuses it with a plain reason.
 //
 // IT COSTS ONE EXTRA CHILD PER CANDIDATE in the prefetch scan, beside the
 // rev-parse, the ls-tree and the three shows the load gate already runs. That is
@@ -1206,26 +1239,32 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // this through the same call, so a member can never display one folder's
 // snapshot and load another's — which is exactly the divergence the containment
 // rule produced.
-std::vector<std::string> touched_directories_of_commit(
-        const std::string& sha, const std::string& base_name) {
-    std::vector<std::string> dirs;
-    std::vector<std::string> args{"log", "-1", "-z", "--format=",
-                                  "--name-only", sha, "--"};
+struct GuiHistoryTouchedDirs {
+    bool                     ok = false;  // the evidence read ANSWERED
+    std::vector<std::string> dirs;        // empty WITH ok = a merge, no evidence
+};
+
+GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& sha,
+                                                    const std::string& base_name) {
+    GuiHistoryTouchedDirs out;
+    std::vector<std::string> args{"show", "-z", "--format=", "--name-only",
+                                  sha, "--"};
     for (std::string& p : sidecar_glob_pathspecs(base_name)) {
         args.push_back(std::move(p));
     }
-    std::string out;
+    std::string raw;
     // Ran-with-empty-output IS an answer here (a merge), so the tri-state is
     // read directly rather than through git_output's "said something" reading.
-    if (run_git_capture(args, out) != GitCapture::Ran) return dirs;
-    for (const std::string& path : split_on(out, '\0')) {
+    if (run_git_capture(args, raw) != GitCapture::Ran) return out;
+    out.ok = true;
+    for (const std::string& path : split_on(raw, '\0')) {
         if (path.empty()) continue;
         std::string d = directory_of(path);
-        if (std::find(dirs.begin(), dirs.end(), d) == dirs.end()) {
-            dirs.push_back(std::move(d));
+        if (std::find(out.dirs.begin(), out.dirs.end(), d) == out.dirs.end()) {
+            out.dirs.push_back(std::move(d));
         }
     }
-    return dirs;
+    return out;
 }
 
 // THE RULE IS THE DIRECTORY THIS COMMIT TOUCHED (2026-08-09, superseding "the
@@ -1269,19 +1308,26 @@ GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
         }
     }
 
-    const std::vector<std::string> touched =
+    const GuiHistoryTouchedDirs touched =
         touched_directories_of_commit(sha, base_name);
     std::string chosen;
-    if (touched.size() > 1) {
+    if (!touched.ok) {
+        // NEVER CONTAINMENT ON A FAILED READ (the evidence reader's own rule):
+        // the fallback below is for a merge's honest silence, and using it here
+        // would answer confidently in the one state where nothing was verified.
+        out.evidence_unreadable = true;
+        return out;
+    }
+    if (touched.dirs.size() > 1) {
         out.ambiguous = true;
         return out;
     }
-    if (touched.size() == 1) {
+    if (touched.dirs.size() == 1) {
         // The touched folder must be IN the tree to be read from — it always is
         // for a commit that added or changed files there, and a commit whose
         // only touch was a DELETION leaves nothing to load, which the empty
         // `path` entries below report as the missing sidecar it is.
-        chosen = touched.front();
+        chosen = touched.dirs.front();
     } else if (std::find(dirs.begin(), dirs.end(), head_directory) !=
                dirs.end()) {
         chosen = head_directory;
@@ -1374,8 +1420,13 @@ bool read_commit_sidecars(const std::string&        spelling,
     // basename match the walk uses, applied to an arbitrary commit.
     const GuiHistoryCommitPaths paths =
         resolve_commit_paths(sha, base_name, head_directory);
+    if (paths.evidence_unreadable) {
+        reason = "could not read which directory commit " + short_sha(sha) +
+                 " changed";
+        return false;
+    }
     if (paths.ambiguous) {
-        reason = "commit " + short_sha(sha) + " carries '" + base_name +
+        reason = "commit " + short_sha(sha) + " changed '" + base_name +
                  ".*' in more than one directory, so which piece it names has "
                  "no answer";
         return false;
@@ -1803,26 +1854,38 @@ void scan_history_walk(
     for (std::string& p : sidecar_glob_pathspecs(base_name)) {
         log_args.push_back(std::move(p));
     }
-    // A `log` THAT RAN AND A `log` THAT COULD NOT RUN ARE NO LONGER THE SAME
-    // ANSWER (2026-08-09, with the empty walk becoming a legal standing state).
-    // They were folded together while an empty walk REFUSED entry, which made
-    // the two indistinguishable to the user anyway; now an empty walk OPENS and
-    // tells Save and Commit there is everything to checkpoint, so a capture that
-    // never answered must not reach that conclusion. The capture is a tri-state
-    // by contract — could-not-exec is distinguishable from ran — and this is
-    // where the walk's own end honours it.
+    // HOW MANY COMMITS TOUCHED THIS PIECE — AND THE WITNESS THAT THE READ RAN.
+    // `rev-list --count` prints a number ON SUCCESS, and that is the whole point
+    // of asking it (2026-08-09): exit codes are unreadable in this program
+    // (SIGCHLD is SIG_IGN, so waitpid answers ECHILD), so the capture layer's
+    // standing rule is that a success needs an OUTPUT-SHAPED WITNESS — and a
+    // bare `log` has none, an executed-but-FAILED `log` and a piece with no
+    // checkpoint both saying nothing at all. Reading that silence as the ruled
+    // empty history would open the view at `0/0` and light Save and Commit over
+    // a history nothing established was empty. A COUNT cannot be silent: "0" is
+    // bytes git printed, and it means the walk ran and found nothing.
     //
-    // WHICH IS WHY THIS READS run_git_capture DIRECTLY and not git_output. That
-    // helper's reading is "ran AND said something", and a successful `git log`
-    // over a piece with no checkpoint yet exits 0 with ZERO BYTES — so routing
-    // the tri-state through it turned every genuinely empty history into a
-    // FAILED scan and made the empty-walk arm below unreachable, re-deadlocking
-    // the very bootstrap the empty walk exists for. Ran-with-empty-output IS the
-    // ruled empty success here. The helper's contract is untouched: its other
-    // callers ask questions the OUTPUT answers, where nothing said is nothing
-    // found.
-    std::string log_out;
-    if (run_git_capture(log_args, log_out) != GitCapture::Ran) {
+    // SO THE VERDICT RESTS ON THE COUNT AND THE ENUMERATION IS ORDINARY. An
+    // unparseable or absent answer is the scan's failure arm; "0" is the ruled
+    // empty success, the view opening at `0/0` with the counted line silent;
+    // anything above zero means the `log` below MUST say something, which is
+    // exactly git_output's "ran and said something" reading, so the enumeration
+    // uses the helper and a contradiction between the two reads is a failure
+    // like any other. One extra child per RUN — not per candidate.
+    std::vector<std::string> count_args{"rev-list", "--count", kBranchRef, "--"};
+    for (std::string& p : sidecar_glob_pathspecs(base_name)) {
+        count_args.push_back(std::move(p));
+    }
+    std::string count_out;
+    long long   candidate_count = -1;
+    if (run_git_capture(count_args, count_out) == GitCapture::Ran) {
+        const std::string token = trim_trailing_ws(count_out);
+        if (!token.empty() &&
+            token.find_first_not_of("0123456789") == std::string::npos) {
+            candidate_count = std::strtoll(token.c_str(), nullptr, 10);
+        }
+    }
+    if (candidate_count < 0) {
         GuiHistoryScanResult failed;
         failed.ok = false;
         failed.unavailable_reason =
@@ -1831,17 +1894,39 @@ void scan_history_walk(
         on_done(std::move(failed));
         return;
     }
+    // A count of ZERO is the ruled empty success: no candidate, so no member, so
+    // a walk that opens the view at `0/0` over a blank lane. Nothing was hidden
+    // either, so the DONE carries a zero and the counted line stays silent —
+    // there is no count to explain, only a piece with no checkpoint behind it
+    // yet.
+    if (candidate_count == 0) {
+        on_done(GuiHistoryScanResult{});
+        return;
+    }
+
+    std::string log_out;
+    if (!git_output(log_args, log_out)) {
+        GuiHistoryScanResult failed;
+        failed.ok = false;
+        failed.unavailable_reason =
+            "Could not list the " + std::to_string(candidate_count) +
+            " commit(s) touching 'projects/**/" + base_name + ".*'";
+        on_done(std::move(failed));
+        return;
+    }
     std::vector<std::string> candidates;
     for (std::string& sha : split_lines(log_out)) {
         if (!sha.empty()) candidates.push_back(std::move(sha));
     }
-    // A `log` that RAN and listed nothing is the ruled empty success: no
-    // candidate, so no member, so a walk that opens the view at `0/0` over a
-    // blank lane. Nothing was hidden either, so the DONE carries a zero and the
-    // counted line stays silent — there is no count to explain, only a piece
-    // with no checkpoint behind it yet.
     if (candidates.empty()) {
-        on_done(GuiHistoryScanResult{});
+        // The count said there were commits and the enumeration listed none:
+        // the two reads contradict, so neither is an answer.
+        GuiHistoryScanResult failed;
+        failed.ok = false;
+        failed.unavailable_reason =
+            "The commit history for 'projects/**/" + base_name +
+            ".*' did not enumerate";
+        on_done(std::move(failed));
         return;
     }
 
@@ -1973,9 +2058,11 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // IT STAYS REFUSED UNTIL A RUN ANSWERS, deliberately: the staleness test is
     // untouched, so a failed run is not re-kicked by pressing `h` again and the
     // recovery is an ordinary re-kick (the branch tip moving, a checkpoint
-    // completing, another source) or a relaunch. A capture that cannot exec or
-    // outlives its deadline is a broken environment, and the sanctioned-use
-    // ruling puts that fix in the terminal rather than behind a retry in here.
+    // completing, another source) or a relaunch. A capture that cannot exec, or
+    // whose answer does not arrive in the shape it must, is a broken environment
+    // — captures carry no deadline, that being the MUTATING entry point's own
+    // fence — and the sanctioned-use ruling puts that fix in the terminal rather
+    // than behind a retry in here.
     if (prefetch.run_failed()) {
         return unavailable(prefetch.scan_failure_reason());
     }

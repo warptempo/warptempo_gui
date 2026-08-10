@@ -833,12 +833,16 @@ struct GuiInputHandler {
     // committed nothing. (The tempo drag was a fifth body here until 2026-07-29 —
     // the whole gesture is deleted, see marker_drag.h.)
     // No-op when nothing is live. Definition beside
-    // on_button_release in input_pointer.cpp (same bodies, same order). Callers:
-    // the Ctrl+Q hatch in on_key, and main.cpp's WM-close and resize callbacks
-    // (close ends the gestures before raising the prompt, so none is left live
-    // under it; resize ends them before the geometry rebuild, whose new
-    // samples-per-pixel would otherwise make the next motion derive its delta
-    // across two coordinate systems).
+    // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
+    // CALLERS: the Ctrl+Q hatch in on_key, main.cpp's WM-close and resize
+    // callbacks (close ends the gestures before raising the prompt, so none is
+    // left live under it; resize ends them before the geometry rebuild, whose
+    // new samples-per-pixel would otherwise make the next motion derive its
+    // delta across two coordinate systems), and — since 2026-08-09 —
+    // on_history_prefetch_ready's FAILED-SCAN closer, the product's one
+    // asynchronous closer, which bypasses on_key's drag-modal gate and so has to
+    // re-establish by hand the invariant every other closer gets from it (the
+    // reasoning is at that site).
     // NO CALLER OWES THE POINTER CURSOR ANYTHING — the cue has one owner, which
     // runs at the run loop's iteration boundary, past everything a caller does
     // after this returns (the prompt goes up, the layout is rebuilt). The three

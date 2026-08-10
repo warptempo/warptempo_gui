@@ -1029,6 +1029,21 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // IT IS NOT A MODAL and raises nothing: nothing asynchronous in this product
 // does. It is a visit ending because what it was reading stopped existing.
 //
+// AND IT SETTLES ANY HELD POINTER GESTURE FIRST, which is what makes it safe to
+// be the product's ONE ASYNCHRONOUS CLOSER. Every OTHER closer is a keyboard
+// route below on_key's DRAG-MODAL GATE, so none of them can run with a gesture
+// live — the whole reason close_history_mode ends none. This one arrives on a
+// poll and bypasses that gate, and the view has three gestures live in it (the
+// region drag, the ruler/ctrl strip drag and the alt pan): left held across the
+// reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
+// anchor the view took, or pan over the band the close just restored.
+// finalize_active_drags is the existing force-end — the same release bodies the
+// Ctrl+Q hatch and main.cpp's resize and WM-close callbacks run — so "any end
+// commits" stays true, no cancel semantics appear, and by the time the mode
+// resets the gate's invariant holds again exactly as it does for a key. It runs
+// BEFORE the close so each gesture ends against the state it was made in, and
+// the close's own region clear and band restore then land over the top.
+//
 // ONE PRODUCER, and it is narrow: a view opened mid-scan whose run then fails.
 // A run that had already failed refuses at init and never opens a view at all.
 void GuiInputHandler::on_history_prefetch_ready() {
@@ -1037,6 +1052,7 @@ void GuiInputHandler::on_history_prefetch_ready() {
     if (r.became_done && history_prefetch.run_failed()) {
         std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
                      history_prefetch.scan_failure_reason().c_str());
+        finalize_active_drags();
         close_history_mode();
         return;
     }
