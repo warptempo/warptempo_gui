@@ -9,9 +9,11 @@
 bool GuiSaveOps::save() {
     // NO SAVE WHILE A CHECKPOINT IS PUBLISHING (architect 2026-08-08). The
     // checkpoint worker writes the three sidecars into projects/<id>/ on its own
-    // thread, and in the coincident workflow — the loaded source living inside
-    // that same projects/<id>/ — those are EXACTLY the three paths this function
-    // writes, through the same fixed `<path>.tmp` temp name. Two writers on one
+    // thread, and that folder is the one the loaded SOURCE sits in — the
+    // coincident workflow when this landed, and since 2026-08-09 the only shape
+    // a checkpointable piece has, the source's folder BEING the project
+    // directory — so those are EXACTLY the three paths this function writes,
+    // through the same fixed `<path>.tmp` temp name. Two writers on one
     // temp name is a torn temp or a rename of captured-older bytes over a newer
     // save, so the window is closed by refusing the save rather than by naming
     // the temp files per-writer: with saves refused for the act's duration there
