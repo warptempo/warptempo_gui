@@ -3864,9 +3864,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // guess.
     GuiHistoryCommitLoad loaded;
     std::string          reason;
-    if (!load_commit_sidecars_strict(
-            spelling, base_name, app.history_mode.session.project_directory(),
-            loaded, reason)) {
+    if (!load_commit_sidecars_strict(spelling, base_name, loaded, reason)) {
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
         return false;

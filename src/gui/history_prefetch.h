@@ -15,10 +15,10 @@
 //
 // The `h` view's walk is LOAD-GATED — membership is the strict whole-set load
 // itself (history_diff.h) — so building it costs a `rev-list --count` and a
-// `git log`, then a `rev-parse` + `ls-tree` + a `show` for the touched directory
+// `git log`, then a `rev-parse` + a `show` for the touched directory + `ls-tree`
 // + three `show`s for the blobs + three strict parses PER CANDIDATE (six
 // children each since 2026-08-09, when the touched-directory evidence read
-// joined). That ran
+// joined; two where that evidence refuses). That ran
 // synchronously at every `h`, which is what made the entry stall and what the
 // ruled depth of 20 was really buying. The architect's answer is this class: the
 // whole git half runs ONCE AT STARTUP on a background thread, UNCAPPED, and

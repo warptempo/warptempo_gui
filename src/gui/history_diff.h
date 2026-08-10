@@ -408,15 +408,14 @@ struct GuiHistoryCommitSidecars {
 // hardening: a spelling starting with '-' reaches git as `-foo^{commit}`, which
 // matches no option spelling and simply fails to resolve.
 //
-// The sidecar paths are resolved from THAT COMMIT'S OWN TREE by base name, the
-// same era-agnostic rule the walk uses, so a commit from before a corpus rename
-// reads with no knowledge of what the directory used to be called.
-// `head_directory` is the session's own match (GuiHistoryDiff::project_directory)
-// and breaks the one tie that rule can hit: a commit carrying the base name in
-// several directories resolves to THIS piece's if it is among them, to a lone
-// candidate otherwise, and REFUSES when neither holds — an ambiguous commit may
-// belong to another piece entirely and a whole-state replace out of it would be
-// the worst kind of confident wrong.
+// The sidecar directory is the one THIS COMMIT TOUCHED for the base name, the
+// same rule the walk uses, so a commit from before a corpus rename reads with no
+// knowledge of what the directory used to be called. It takes no session
+// directory to break ties with and had one until 2026-08-09: a commit that
+// touches TWO directories, or NONE, simply refuses — one may belong to another
+// piece entirely and a whole-state replace out of it would be the worst kind of
+// confident wrong (resolve_commit_paths owns the rules and why the session's own
+// directory stopped being an answer).
 //
 // A resolved commit that carries none of the three is NOT a failure here — every
 // blob comes back with an empty path and the CALLER decides what a missing
@@ -432,13 +431,14 @@ struct GuiHistoryCommitSidecars {
 // hope.
 //
 // False with `reason` set when the spelling does not resolve to a commit, when
-// the directory it CHANGED could not be read, when it changed the base name in
-// more than one directory, or when a blob could not be read whole. Nothing here
-// writes anything: this is `rev-parse`, `ls-tree` and two `show`s — the
-// touched-directory evidence read joined the verb list on 2026-08-09.
+// it CHANGED none of this piece's sidecars, when it changed them in more than
+// one directory, or when a blob could not be read whole. Nothing here writes
+// anything: this is `rev-parse`, then a `show` for the touched directory, then
+// `ls-tree` and three `show`s for the blobs — six children on the happy path,
+// and TWO where the evidence refuses, the tree listing being asked only once a
+// directory has been named.
 bool read_commit_sidecars(const std::string&         spelling,
                           const std::string&         base_name,
-                          const std::string&         head_directory,
                           GuiHistoryCommitSidecars&  out,
                           std::string&               reason);
 
@@ -477,7 +477,6 @@ struct GuiHistoryCommitLoad {
 // every exit.
 bool load_commit_sidecars_strict(const std::string&    spelling,
                                  const std::string&    base_name,
-                                 const std::string&    head_directory,
                                  GuiHistoryCommitLoad& out,
                                  std::string&          reason);
 

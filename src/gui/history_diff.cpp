@@ -847,6 +847,20 @@ void pair_changes_by_frame(std::vector<Entry>&  removed,
 // unrelated copy, a pre-`projects/` era — can no longer make the match
 // ambiguous or drag legacy commits into the walk.
 
+// A FULL OBJECT NAME, in git's own lower-case hex spelling. Two readers, and
+// both are checking git's answer against the SHAPE it promised rather than
+// validating user input: read_commit_sidecars, where `rev-parse --verify` with
+// the peel suffix yields exactly one, and the walk's enumeration, where every
+// `--format=%H` line is one.
+bool is_hex40(const std::string& s) {
+    if (s.size() != 40) return false;
+    for (const char c : s) {
+        const bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+        if (!ok) return false;
+    }
+    return true;
+}
+
 // The directory part of a committed path. Every path this module considers has
 // passed the `projects/` prefix test, so there is always a separator and the
 // answer is never empty — the repo-root case the tree-wide match had to model
@@ -1153,10 +1167,14 @@ struct GuiHistoryCommitPaths {
     std::string path[3];
     long long   size[3] = {-1, -1, -1};
     bool        ambiguous = false;
-    // The touched-directory evidence read could not run. Distinct from
-    // `ambiguous` because it is a different fact and deserves a different line:
-    // ambiguity is an answer about the commit, this is the absence of one.
-    bool        evidence_unreadable = false;
+    // The commit named NO directory it touched for this base name. Distinct
+    // from `ambiguous` because it is a different fact and deserves a different
+    // line: ambiguity is an answer about the commit, this is the absence of one.
+    // It is ONE flag for all of its producers (a commit that touches none of
+    // these paths, a merge git would not diff, a `show` that ran and failed),
+    // which the evidence reader's comment argues are indistinguishable by
+    // design and must not be guessed between.
+    bool        no_touch_evidence = false;
 };
 
 // Resolve where this commit kept the sidecars, from THAT COMMIT'S OWN TREE —
@@ -1209,29 +1227,39 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // `git log -1 <sha> -- <pathspecs>` whose own commit touched nothing matching
 // walks on to the nearest ANCESTOR that did and reports ITS paths. Measured: on
 // a commit touching only unrelated files, `log -1` answered the previous
-// checkpoint's sidecar paths while `show` answered nothing. Through `'` with a
-// pasted spelling that is exactly a successful load of the WRONG snapshot — a
-// false established success, which this module refuses everywhere. `git show`
-// diffs the named commit against its FIRST PARENT and walks no ancestry at all.
+// checkpoint's sidecar paths while `show` answered nothing. `git show` names one
+// commit and walks no ancestry.
+//
+// THE RENAME CONFIG IS PINNED IN THE ARGV, `-c diff.renames=false` (the push's
+// pinned pushurl is the precedent for injecting config a read must not inherit).
+// Rename DETECTION would otherwise make this answer depend on the user's own
+// `diff.renames`: measured, a `git mv` of a project folder answers the NEW
+// directory alone with detection on and BOTH the old and the new with it off.
+// Pinned off is raw adds and deletes with no inference — one answer whatever the
+// clone is configured to do — and IT COSTS THE SANCTIONED PATH NOTHING, verified
+// end to end: a folder renamed in a FILE MANAGER makes no commit at all, and the
+// act's next checkpoint is pathspec-scoped to the three NEW paths, so it ADDS
+// them and deletes nothing (the old folder stays in the tree, which is what keeps
+// the pre-rename era's own commits resolvable). That commit answers the new
+// directory alone under the pin. A `git mv` done by hand in a terminal answers
+// two directories and takes the ambiguity arm — unsanctioned, blunt, correct.
 //
 // `--name-only` WITH `-z` AND AN EMPTY `--format` yields nothing but the matched
 // paths, NUL-terminated and unquoted, so `core.quotePath` cannot mangle a UTF-8
-// name and the split is the ls-tree reader's own. Measured on every shape that
-// matters: a ROOT commit answers its own paths (git diffs it against the empty
-// tree), a commit touching TWO folders at once answers both (the ambiguity arm
-// below), a DELETION-only commit answers the folder it emptied (whose blobs are
-// then absent from the tree, which the missing-sidecar refusal reports), and a
-// MERGE answers NOTHING — `git show` suppresses a merge's diff exactly as `log`
-// does. An empty answer is therefore NO EVIDENCE rather than "touched nothing":
-// the caller falls back to containment there, which is where merges behaved
-// acceptably all along.
+// name and the split is the ls-tree reader's own. Measured: a ROOT commit answers
+// its own paths (git diffs it against the empty tree), a commit touching TWO
+// folders at once answers both, and a DELETION-only commit answers the folder it
+// emptied.
 //
-// A READ THAT DID NOT ANSWER IS NOT NO-EVIDENCE, and the two must never share a
-// return: falling back to containment on a failed child would silently
-// resurrect the very phantom this mechanism exists to kill, on exactly the
-// occasions when nothing can be verified. So the answer carries `ok`, and the
-// resolution turns a false into a refusal — the commit hides from the walk on
-// the counted line's own terms, and `'` refuses it with a plain reason.
+// AN EMPTY ANSWER IS NOT A MERGE, AND NOT ANY OTHER SINGLE THING — it is the
+// module's own "no answer", and the caller treats it as one. THREE PRODUCERS,
+// INDISTINGUISHABLE BY DESIGN: a commit that genuinely touched none of these
+// paths, a merge whose diff git suppressed (usually — the default merge display
+// is a COMBINED diff, so an EVIL merge that changed a sidecar relative to both
+// parents does emit the path, which is why silence was never a witness for
+// "this is a merge"), and a `show` that ran and FAILED, exit status being
+// unreadable here. Nothing downstream can tell them apart and nothing should
+// try: each means this program cannot say which folder the commit is about.
 //
 // IT COSTS ONE EXTRA CHILD PER CANDIDATE in the prefetch scan, beside the
 // rev-parse, the ls-tree and the three shows the load gate already runs. That is
@@ -1240,23 +1268,31 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // snapshot and load another's — which is exactly the divergence the containment
 // rule produced.
 struct GuiHistoryTouchedDirs {
-    bool                     ok = false;  // the evidence read ANSWERED
-    std::vector<std::string> dirs;        // empty WITH ok = a merge, no evidence
+    // The read ran AND named at least one directory. False covers a capture
+    // that could not run and a capture that answered nothing, deliberately
+    // together: the reader's comment owns why the three producers of an empty
+    // answer are one outcome.
+    bool                     ok = false;
+    std::vector<std::string> dirs;
 };
 
 GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& sha,
                                                     const std::string& base_name) {
     GuiHistoryTouchedDirs out;
-    std::vector<std::string> args{"show", "-z", "--format=", "--name-only",
-                                  sha, "--"};
+    std::vector<std::string> args{"-c",     "diff.renames=false",
+                                  "show",   "-z",
+                                  "--format=", "--name-only",
+                                  sha,      "--"};
     for (std::string& p : sidecar_glob_pathspecs(base_name)) {
         args.push_back(std::move(p));
     }
     std::string raw;
-    // Ran-with-empty-output IS an answer here (a merge), so the tri-state is
-    // read directly rather than through git_output's "said something" reading.
+    // The tri-state is read directly rather than through git_output because the
+    // helper's "said something" reading would fold a could-not-exec into an
+    // empty answer — and here they are the same OUTCOME but the distinction is
+    // still not the helper's to make silently. `ok` goes up only once a
+    // directory has actually been named.
     if (run_git_capture(args, raw) != GitCapture::Ran) return out;
-    out.ok = true;
     for (const std::string& path : split_on(raw, '\0')) {
         if (path.empty()) continue;
         std::string d = directory_of(path);
@@ -1264,79 +1300,72 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& sha,
             out.dirs.push_back(std::move(d));
         }
     }
+    out.ok = !out.dirs.empty();
     return out;
 }
 
-// THE RULE IS THE DIRECTORY THIS COMMIT TOUCHED (2026-08-09, superseding "the
-// session's own directory first"). The old rule preferred `head_directory`
-// whenever the commit's tree carried the base name there — which it almost
-// always does, the act being pathspec-scoped and never deleting a folder the
-// piece has moved out of — so containment answered about folders the commit
-// never changed: a checkpoint made from a BACKUP copy displayed the ORIGINAL
-// folder's unchanged blobs as its own state, and after a rename the pre-rename
-// era's commits carried two candidate folders and hid as ambiguous. Both are
-// answered by asking what the commit CHANGED, since a checkpoint changes exactly
-// the folder it was made from (touched_directories_of_commit, above).
+// THE RULE IS THE DIRECTORY THIS COMMIT TOUCHED, AND THERE IS NO OTHER RULE
+// (2026-08-09). It superseded "the session's own directory first", which
+// preferred `head_directory` whenever the commit's TREE carried the base name
+// there — which it almost always does, the act being pathspec-scoped and never
+// deleting a folder the piece has moved out of, so containment answered about
+// folders the commit never changed: a checkpoint made from a BACKUP copy
+// displayed the ORIGINAL folder's unchanged blobs as its own state, and after a
+// rename the pre-rename era's commits carried two candidates and hid as
+// ambiguous.
 //
-// SO THE ORDER IS: the sole TOUCHED directory, if there is one. TWO touched
-// directories at once is genuinely ambiguous and refuses — no checkpoint this
-// program makes touches two folders, so it is somebody's hand commit and there
-// is no honest answer. With NO touch evidence at all — a MERGE, whose diff `git
-// log` suppresses — it falls back to CONTAINMENT exactly as before: the session's
-// own `head_directory` when the tree carries the base name there, else a SINGLE
-// candidate directory, else ambiguous.
+// AND THEN THE CONTAINMENT FALLBACK WENT TOO, the same day and for the same
+// reason carried one step further: kept as the answer for "no touch evidence",
+// it LAUNDERED SILENCE INTO SUCCESS on every shape that produced silence.
+// Measured, both: a pasted spelling naming an ordinary commit that touched only
+// unrelated files answered nothing, fell back, found `head_directory` in that
+// commit's tree and loaded all three blobs — reporting a SUCCESSFUL load of a
+// snapshot the commit is not about; and a `show` that RAN AND FAILED is
+// Ran-with-empty too, so the same fallback fired with nothing verified at all.
+// Under sanctioned use every candidate is an act-made commit touching exactly
+// one folder's three files, so the fallback only ever served shapes the model
+// does not have — which makes deleting it the conversion rather than guarding it.
 //
-// AMBIGUITY REFUSES THROUGH read_commit_sidecars either way: the walk's load gate
-// drops such a commit at entry — it is never shown at all, counted on the one
-// hidden line — and the `'` act, whose pasted spelling can name a commit outside
-// the walk, refuses it with its own line.
+// SO THE EVIDENCE RULES ARE EXHAUSTIVE AND THERE ARE THREE:
+//   ONE directory  — that is the answer.
+//   TWO OR MORE    — genuinely ambiguous, and no checkpoint this program makes
+//                    touches two folders, so it is somebody's hand commit; the
+//                    walk hides it on the counted line's terms and `'` refuses.
+//   NONE           — NOT AN ANSWER, whatever produced it (the reader's comment
+//                    owns the three indistinguishable producers). Same hide,
+//                    same refusal, one message.
+// `head_directory` is gone from this function and from the two above it, having
+// no other reader; the ls-tree STAYS, its blob sizes being the truncation
+// witness read_commit_sidecars checks each `show` against.
+//
+// THE WALK-SIDE CONSEQUENCE IS NEARLY UNREACHABLE, and that is the point: a
+// candidate came off a `log` over these very pathspecs, so it touched one of
+// them by construction, and an empty answer there is a CONTRADICTION — object
+// damage, or a merge git listed and then would not diff. Hidden, counted, blunt.
 GuiHistoryCommitPaths resolve_commit_paths(const std::string& sha,
-                                           const std::string& base_name,
-                                           const std::string& head_directory) {
+                                           const std::string& base_name) {
     GuiHistoryCommitPaths out;
-    std::string           listing;
-    if (!git_output({"ls-tree", "-r", "-z", "-l", sha}, listing)) return out;
-    const std::vector<GuiHistoryTreeEntry> hits =
-        sidecar_entries_in_listing(listing, base_name);
-    if (hits.empty()) return out;
-
-    std::vector<std::string> dirs;
-    for (const GuiHistoryTreeEntry& e : hits) {
-        const std::string d = directory_of(e.path);
-        if (std::find(dirs.begin(), dirs.end(), d) == dirs.end()) {
-            dirs.push_back(d);
-        }
-    }
-
     const GuiHistoryTouchedDirs touched =
         touched_directories_of_commit(sha, base_name);
-    std::string chosen;
     if (!touched.ok) {
-        // NEVER CONTAINMENT ON A FAILED READ (the evidence reader's own rule):
-        // the fallback below is for a merge's honest silence, and using it here
-        // would answer confidently in the one state where nothing was verified.
-        out.evidence_unreadable = true;
+        out.no_touch_evidence = true;
         return out;
     }
     if (touched.dirs.size() > 1) {
         out.ambiguous = true;
         return out;
     }
-    if (touched.dirs.size() == 1) {
-        // The touched folder must be IN the tree to be read from — it always is
-        // for a commit that added or changed files there, and a commit whose
-        // only touch was a DELETION leaves nothing to load, which the empty
-        // `path` entries below report as the missing sidecar it is.
-        chosen = touched.dirs.front();
-    } else if (std::find(dirs.begin(), dirs.end(), head_directory) !=
-               dirs.end()) {
-        chosen = head_directory;
-    } else if (dirs.size() == 1) {
-        chosen = dirs.front();
-    } else {
-        out.ambiguous = true;
-        return out;
-    }
+    // The touched folder must be IN the tree to be read from — it always is for
+    // a commit that added or changed files there, and a commit whose only touch
+    // was a DELETION leaves nothing to load, which the empty `path` entries
+    // below report as the missing sidecar it is.
+    const std::string& chosen = touched.dirs.front();
+
+    std::string listing;
+    if (!git_output({"ls-tree", "-r", "-z", "-l", sha}, listing)) return out;
+    const std::vector<GuiHistoryTreeEntry> hits =
+        sidecar_entries_in_listing(listing, base_name);
+    if (hits.empty()) return out;
 
     for (const GuiHistoryTreeEntry& hit : hits) {
         if (directory_of(hit.path) != chosen) continue;
@@ -1374,7 +1403,6 @@ bool read_snapshot_at(const std::string& sha, const std::string& path,
 
 bool read_commit_sidecars(const std::string&        spelling,
                           const std::string&        base_name,
-                          const std::string&        head_directory,
                           GuiHistoryCommitSidecars& out,
                           std::string&              reason) {
     out    = GuiHistoryCommitSidecars{};
@@ -1402,14 +1430,6 @@ bool read_commit_sidecars(const std::string&        spelling,
     // Defensive shape check on git's own answer: --verify with the peel suffix
     // yields exactly one full object name, so anything else means the assumption
     // broke rather than that the user typed something odd.
-    auto is_hex40 = [](const std::string& s) {
-        if (s.size() != 40) return false;
-        for (const char c : s) {
-            const bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
-            if (!ok) return false;
-        }
-        return true;
-    };
     if (!is_hex40(sha)) {
         reason = "'" + spelling + "' did not resolve to a single commit";
         return false;
@@ -1419,10 +1439,10 @@ bool read_commit_sidecars(const std::string&        spelling,
     // That commit's OWN tree decides where the sidecars sit — the same
     // basename match the walk uses, applied to an arbitrary commit.
     const GuiHistoryCommitPaths paths =
-        resolve_commit_paths(sha, base_name, head_directory);
-    if (paths.evidence_unreadable) {
-        reason = "could not read which directory commit " + short_sha(sha) +
-                 " changed";
+        resolve_commit_paths(sha, base_name);
+    if (paths.no_touch_evidence) {
+        reason = "commit " + short_sha(sha) + " does not touch this piece's "
+                 "sidecars";
         return false;
     }
     if (paths.ambiguous) {
@@ -1494,13 +1514,12 @@ struct ScratchDirGuard {
 // same bytes.
 bool load_commit_sidecars_strict(const std::string&    spelling,
                                  const std::string&    base_name,
-                                 const std::string&    head_directory,
                                  GuiHistoryCommitLoad& out,
                                  std::string&          reason) {
     out = GuiHistoryCommitLoad{};
     reason.clear();
 
-    if (!read_commit_sidecars(spelling, base_name, head_directory,
+    if (!read_commit_sidecars(spelling, base_name,
                               out.sidecars, reason)) {
         return false;
     }
@@ -1818,9 +1837,13 @@ void scan_history_walk(
         const std::function<void(GuiHistoryScanResult)>&       on_done) {
     GuiHistoryWalkHeader header =
         resolve_history_walk_header(source_audio_path, projects_repo);
-    const std::string base_name         = header.base_name;
-    const std::string project_directory = header.project_directory;
-    const bool        ok                = header.ok;
+    const std::string base_name = header.base_name;
+    const bool        ok        = header.ok;
+    // The header's project_directory is deliberately not copied here: the scan
+    // needs the base NAME (the pathspecs and the load gate) and nothing about
+    // where the piece currently lives, each candidate's own touched directory
+    // being what resolves its blobs since 2026-08-09. The header still carries
+    // it for the checkpoint act, which writes there.
     on_header(std::move(header));
     if (!ok) {
         // A run whose header refuses is FINISHED, not merely stopped: the DONE
@@ -1880,9 +1903,18 @@ void scan_history_walk(
     long long   candidate_count = -1;
     if (run_git_capture(count_args, count_out) == GitCapture::Ran) {
         const std::string token = trim_trailing_ws(count_out);
-        if (!token.empty() &&
+        // ALL DIGITS IS NOT ENOUGH: strtoll saturates at LLONG_MAX on overflow
+        // and would hand back a "valid" count for a token of a thousand nines.
+        // A malformed answer is malformed however long it is, so the length
+        // bound refuses it before the conversion and ERANGE catches whatever the
+        // bound would let through. (A real repository's count is a handful of
+        // digits; eighteen is already absurd and safely inside the type.)
+        constexpr std::size_t kMaxCountDigits = 18;
+        if (!token.empty() && token.size() <= kMaxCountDigits &&
             token.find_first_not_of("0123456789") == std::string::npos) {
-            candidate_count = std::strtoll(token.c_str(), nullptr, 10);
+            errno                = 0;
+            const long long v    = std::strtoll(token.c_str(), nullptr, 10);
+            if (errno == 0 && v >= 0) candidate_count = v;
         }
     }
     if (candidate_count < 0) {
@@ -1914,18 +1946,32 @@ void scan_history_walk(
         on_done(std::move(failed));
         return;
     }
+    // THE ENUMERATION MUST MATCH THE WITNESS, EXACTLY. A `log` that prints a
+    // PREFIX and then dies is the shape this catches, and it is measured rather
+    // than imagined: with an older object damaged, `git log --format=%H` printed
+    // the newest SHA and exited 128. Nothing here can see that exit status, and
+    // a non-empty answer alone would have accepted the truncation — a walk
+    // silently missing its older half, which then reads as a piece with fewer
+    // checkpoints than it has. So EVERY line must be a full object name and the
+    // COUNT of them must equal the count that witnessed the read. Either
+    // failing is a contradiction between two reads of one history, and a
+    // contradiction is not an answer.
     std::vector<std::string> candidates;
+    bool malformed_line = false;
     for (std::string& sha : split_lines(log_out)) {
-        if (!sha.empty()) candidates.push_back(std::move(sha));
+        if (sha.empty()) continue;
+        if (!is_hex40(sha)) { malformed_line = true; break; }
+        candidates.push_back(std::move(sha));
     }
-    if (candidates.empty()) {
-        // The count said there were commits and the enumeration listed none:
-        // the two reads contradict, so neither is an answer.
+    if (malformed_line ||
+        static_cast<long long>(candidates.size()) != candidate_count) {
         GuiHistoryScanResult failed;
         failed.ok = false;
         failed.unavailable_reason =
             "The commit history for 'projects/**/" + base_name +
-            ".*' did not enumerate";
+            ".*' did not enumerate: " + std::to_string(candidate_count) +
+            " commit(s) counted, " + std::to_string(candidates.size()) +
+            " listed";
         on_done(std::move(failed));
         return;
     }
@@ -1957,7 +2003,7 @@ void scan_history_walk(
         if (abandoned()) break;
         GuiHistoryCommitLoad load;
         std::string          why;
-        if (!load_commit_sidecars_strict(sha, base_name, project_directory,
+        if (!load_commit_sidecars_strict(sha, base_name,
                                          load, why)) {
             ++hidden;
             continue;
