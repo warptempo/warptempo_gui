@@ -2212,10 +2212,12 @@ struct AppState {
     //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
     //   key and the face: Save greys with an empty head delta (or a checkpoint
     //   in flight), Revert greys with no diff flag selected, and the
-    //   load-in-place opener greys only on an UNBOUND local walk (2026-08-08,
-    //   when the Local walk got the act — the term is the blank-lane state a
-    //   live tab cannot reach, so in practice that button is lit on both tabs
-    //   in either reading).
+    //   load-in-place opener greys on a walk with NO MEMBER — one term for both
+    //   walks since 2026-08-09, the act loading the VIEWED member and a blank
+    //   lane offering none. The Local walk cannot reach it on a live tab (U + R
+    //   + 1 members, bound before the mode goes up), so the REMOTE walk is where
+    //   it shows: a piece whose every checkpoint refuses the strict load opens
+    //   the view at `0/0`, and that button is the one greyed there.
     // The partition is
     // DERIVED
     // from the two gates above (plus the Settings anchor's toggle_dropdown
@@ -2245,7 +2247,8 @@ struct AppState {
     // the active walk's position, never a named walk. THREE surfaces are not,
     // and each says why at its own site: the corner's SHA token (an undo entry
     // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS since
-    // 2026-08-08 but FORKS ON THE SOURCE — the editor asks for a commit spelling
+    // 2026-08-08 wherever the active walk carries a member and FORKS ON THE
+    // SOURCE — the editor asks for a commit spelling
     // on the Remote tab and a member NUMBER on the Local one, and the act behind
     // it is a different function per walk (the mode's two, at the opener and at
     // load_editor_commit) — and SAVE-AND-COMMIT, whose reach
@@ -2255,9 +2258,12 @@ struct AppState {
     // about where they came from, so selecting part of one undo event and
     // putting just that part back is the feature working.
     //
-    // ENTRY IS STILL GATED ON THE COMMIT WALK ALONE — the local walk RIDES the
-    // mode, it does not carry it — so a piece with no committed history cannot
-    // be opened to read its undo stack.
+    // ENTRY IS GATED ON THE COMMIT SIDE ALONE — the local walk RIDES the mode,
+    // it does not carry it — and on that side it is the HEADER and the scan
+    // ANSWERING, never the member count (2026-08-09): a piece the header cannot
+    // place, or one whose history could not be read, cannot be opened to read
+    // its undo stack, while a piece whose walk is merely EMPTY opens with the
+    // Local tab reading normally beside a blank Remote lane.
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the

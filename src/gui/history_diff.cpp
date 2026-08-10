@@ -1625,7 +1625,7 @@ void scan_history_walk(
         const std::function<bool()>&                           abandoned,
         const std::function<void(GuiHistoryWalkHeader)>&       on_header,
         const std::function<void(GuiHistoryCommitSidecars)>&   on_member,
-        const std::function<void(int hidden)>&                 on_done) {
+        const std::function<void(GuiHistoryScanResult)>&       on_done) {
     GuiHistoryWalkHeader header =
         resolve_history_walk_header(source_audio_path, projects_repo);
     const std::string base_name         = header.base_name;
@@ -1634,9 +1634,11 @@ void scan_history_walk(
     on_header(std::move(header));
     if (!ok) {
         // A run whose header refuses is FINISHED, not merely stopped: the DONE
-        // is what tells the store there is nothing more coming, and an entry
-        // reads the header's own reason rather than this zero.
-        on_done(0);
+        // is what tells the store there is nothing more coming. It ends OK —
+        // the run did what it could and the header carries the refusal, which is
+        // what init reads; `ok` false is reserved for a read that did not answer
+        // (the type's own comment owns the distinction).
+        on_done(GuiHistoryScanResult{});
         return;
     }
 
@@ -1667,20 +1669,35 @@ void scan_history_walk(
                            std::string(kProjectsPrefix) + "**/" + escaped_base +
                            ext);
     }
+    // A `log` THAT RAN AND A `log` THAT COULD NOT RUN ARE NO LONGER THE SAME
+    // ANSWER (2026-08-09, with the empty walk becoming a legal standing state).
+    // They were folded together while an empty walk REFUSED entry, which made
+    // the two indistinguishable to the user anyway; now an empty walk OPENS and
+    // tells Save and Commit there is everything to checkpoint, so a capture that
+    // never answered must not reach that conclusion. The capture is a tri-state
+    // by contract — could-not-exec is distinguishable from ran — and this is
+    // where the walk's own end honours it.
     std::string log_out;
-    std::vector<std::string> candidates;
-    if (git_output(log_args, log_out)) {
-        for (std::string& sha : split_lines(log_out)) {
-            if (!sha.empty()) candidates.push_back(std::move(sha));
-        }
+    if (!git_output(log_args, log_out)) {
+        GuiHistoryScanResult failed;
+        failed.ok = false;
+        failed.unavailable_reason =
+            "Could not read the commit history for 'projects/**/" + base_name +
+            ".*'";
+        on_done(std::move(failed));
+        return;
     }
-    // A `log` that ran and said nothing and a `log` that could not run are the
-    // same answer here — no candidate, so no member, so a walk that opens the
-    // view at `0/0` over a blank lane. Nothing was hidden either, so the DONE
-    // carries a zero and the counted line stays silent: there is no count to
-    // explain, only a piece with no checkpoint behind it yet.
+    std::vector<std::string> candidates;
+    for (std::string& sha : split_lines(log_out)) {
+        if (!sha.empty()) candidates.push_back(std::move(sha));
+    }
+    // A `log` that RAN and listed nothing is the ruled empty success: no
+    // candidate, so no member, so a walk that opens the view at `0/0` over a
+    // blank lane. Nothing was hidden either, so the DONE carries a zero and the
+    // counted line stays silent — there is no count to explain, only a piece
+    // with no checkpoint behind it yet.
     if (candidates.empty()) {
-        on_done(0);
+        on_done(GuiHistoryScanResult{});
         return;
     }
 
@@ -1718,7 +1735,9 @@ void scan_history_walk(
         }
         on_member(std::move(load.sidecars));
     }
-    on_done(hidden);
+    GuiHistoryScanResult done;
+    done.hidden = hidden;
+    on_done(std::move(done));
 }
 
 const std::deque<GuiHistoryCommitSidecars>& GuiHistoryDiff::members() const {
@@ -1735,6 +1754,12 @@ bool GuiHistoryDiff::walk_finished_empty() const {
     // moved to another run is describing another walk, and this session's
     // answer about its own is "not finished".
     if (!store_ || store_->generation() != store_generation_) return false;
+    // A FAILED RUN IS NOT AN EMPTY HISTORY. It ends DONE with an empty deque
+    // like a genuinely empty walk does, and answering true here would latch the
+    // head delta commit-worthy off a history nothing ever read. The mode refuses
+    // entry on that run anyway (init, below), so this term guards the state a
+    // run that fails WHILE THE VIEW STANDS would otherwise reach.
+    if (store_->run_failed()) return false;
     return store_->run_done() && store_->members().empty();
 }
 
@@ -1788,6 +1813,27 @@ bool GuiHistoryDiff::init(const AppState&           app,
         if (!h.ok) return unavailable(h.unavailable_reason);
         base_name_         = h.base_name;
         project_directory_ = h.project_directory;
+    }
+
+    // A SCAN THAT COULD NOT READ REFUSES, and it is the one thing between the
+    // header and availability. The bound run ends NOT ok when its `git log`
+    // capture could not run at all, which is a repository this program cannot
+    // ask about rather than a piece with no checkpoints: an unread history must
+    // never establish an empty walk, because an empty walk is now a legal
+    // standing state that opens the view and tells Save and Commit there is
+    // everything to checkpoint. The failure travels as the store's own recorded
+    // reason and prints HERE, on the header refusal's one line and in its exact
+    // shape (GuiHistoryScanResult, history_diff.h, owns the ruling and the
+    // ran-versus-could-not-run distinction).
+    //
+    // IT STAYS REFUSED UNTIL A RUN ANSWERS, deliberately: the staleness test is
+    // untouched, so a failed run is not re-kicked by pressing `h` again and the
+    // recovery is an ordinary re-kick (the branch tip moving, a checkpoint
+    // completing, another source) or a relaunch. A capture that cannot exec or
+    // outlives its deadline is a broken environment, and the sanctioned-use
+    // ruling puts that fix in the terminal rather than behind a retry in here.
+    if (prefetch.run_failed()) {
+        return unavailable(prefetch.scan_failure_reason());
     }
 
     // AN EMPTY WALK IS A LEGAL STANDING STATE (architect 2026-08-09), whether

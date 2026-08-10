@@ -119,13 +119,25 @@ public:
     }
 
     // True once the current run has reported DONE — the term that separates a
-    // walk that is merely still streaming from one that is FINISHED and empty,
-    // which is what the head-delta measurement reads to answer "there is
-    // everything to checkpoint" (GuiHistoryDiff::walk_finished_empty).
-    // `hidden_count` is how many candidates the strict load refused: the counted
-    // stderr line's number, and the only number a run reports.
+    // walk that is merely still streaming from one that is FINISHED, which is
+    // what the head-delta measurement reads to answer "there is everything to
+    // checkpoint" (GuiHistoryDiff::walk_finished_empty).
     bool run_done() const { return done_; }
-    int  hidden_count() const { return hidden_; }
+
+    // AND WHETHER THAT FINISH WAS AN ANSWER. A run whose `git log` capture could
+    // not run ends DONE and NOT ok, carrying the one line the mode prints when
+    // it refuses: an unread history is not an empty one, and with an empty walk
+    // now OPENING the view and telling Save and Commit there is everything to
+    // checkpoint, the two had to stop being the same state (GuiHistoryScanResult,
+    // history_diff.h, owns the ruling). Both are reset at kick(), so a later run
+    // that answers clears the failure with nothing to remember.
+    //
+    // TWO READERS, and they are the two halves of the same refusal:
+    // GuiHistoryDiff::init, which returns UNAVAILABLE with this reason when the
+    // run it bound to failed, and GuiHistoryDiff::walk_finished_empty, which
+    // answers false so the head delta keeps its conservative greyed face.
+    bool               run_failed() const { return failed_; }
+    const std::string& scan_failure_reason() const { return failure_reason_; }
 
     // A run is in flight for the current generation (kicked, no DONE drained
     // yet). It is what makes the staleness question answerable before the
@@ -155,7 +167,7 @@ private:
         GuiHistoryWalkHeader     header;
         std::string              tip_sha;
         GuiHistoryCommitSidecars member;
-        int                      hidden = 0;
+        GuiHistoryScanResult     result;
     };
 
     struct Run {
@@ -185,6 +197,8 @@ private:
     std::deque<GuiHistoryCommitSidecars> members_;
     bool                                 done_    = false;
     bool                                 running_ = false;
+    bool                                 failed_  = false;
+    std::string                          failure_reason_;
     int                                  hidden_  = 0;
     std::string                          tip_sha_;
     std::string                          subject_path_;

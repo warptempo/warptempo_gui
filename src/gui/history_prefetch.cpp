@@ -60,6 +60,8 @@ void GuiHistoryPrefetch::kick(std::string source_audio_path,
     members_.clear();
     done_    = false;
     running_ = true;
+    failed_  = false;
+    failure_reason_.clear();
     hidden_  = 0;
     tip_sha_.clear();
     subject_path_ = source_audio_path;
@@ -112,7 +114,9 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
         case Message::Kind::Done:
             done_              = true;
             running_           = false;
-            hidden_            = m.hidden;
+            failed_            = !m.result.ok;
+            failure_reason_    = std::move(m.result.unavailable_reason);
+            hidden_            = m.result.hidden;
             result.became_done = true;
             // THE COUNTED LINE, once per run and at its end — the same sentence
             // the eager init printed, moved to the moment the count is final.
@@ -122,6 +126,13 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             // a blank lane with no other account of why. It is the ONE
             // explanation the feature offers — the entry's two refusal messages
             // died with the refusal rather than moving here beside it.
+            //
+            // A FAILED RUN PRINTS NOTHING HERE, and needs no term of its own:
+            // the only failure arm is the `log` capture, which returns before a
+            // single candidate has been gated, so the count is structurally
+            // zero. Its own line is the mode's refusal at GuiHistoryDiff::init,
+            // the header refusal's shape exactly — the store records, the entry
+            // prints.
             if (hidden_ > 0) {
                 std::fprintf(stderr,
                              "warptempo_gui: History hid %d commit(s) whose "
@@ -195,11 +206,11 @@ void GuiHistoryPrefetch::worker_loop() {
                 m.member     = std::move(s);
                 push_message(std::move(m));
             },
-            [this, my_gen](int hidden) {
+            [this, my_gen](GuiHistoryScanResult r) {
                 Message m;
                 m.kind       = Message::Kind::Done;
                 m.generation = my_gen;
-                m.hidden     = hidden;
+                m.result     = std::move(r);
                 push_message(std::move(m));
             });
     }

@@ -507,6 +507,29 @@ GuiHistoryWalkHeader resolve_history_walk_header(
 // the old one.
 std::string read_history_branch_tip_sha();
 
+// HOW A SCAN RUN ENDED — the DONE callback's whole payload, and the header's own
+// ok-plus-reason shape reused because the question is the same one: did this
+// half of the walk ANSWER, and if not, what does the mode print when it refuses.
+//
+// `ok` FALSE IS A READ THAT DID NOT RUN, never a history that is empty. The two
+// are the arc's whole reason for this type: a `git log` that RAN and legitimately
+// listed nothing is the ruled empty success — the view opens at `0/0` and Save
+// and Commit is live — while a capture that could not exec, whose pipe broke, or
+// that outlived its deadline knows NOTHING about this piece's history, and
+// reading that silence as "no checkpoints" would establish an empty walk, latch
+// the head delta commit-worthy and let the act publish against a baseline nobody
+// ever read. The capture contract already says an empty output is never a
+// success witness; this carries that to the walk's own end. A failed run is a
+// terminal matter under the sanctioned-use ruling: the mode refuses entry with
+// `unavailable_reason` on one stderr line and stays refused until an ordinary
+// re-kick (the tip moving, a checkpoint completing, another source) runs a scan
+// that answers.
+struct GuiHistoryScanResult {
+    bool        ok = true;
+    std::string unavailable_reason;  // set iff !ok
+    int         hidden = 0;          // the counted stderr line's number
+};
+
 // ONE PREFETCH RUN, WHOLE — the header, the UNCAPPED `git log` over the same
 // `:(glob)projects/**/<base>.<ext>` pathspecs, and per candidate the strict
 // whole-set load gate, in that order.
@@ -515,9 +538,15 @@ std::string read_history_branch_tip_sha();
 // the streaming possible: `on_header` fires once (with `ok` false and the reason
 // set when the piece cannot be found at all), `on_member` once per ELIGIBLE
 // commit in walk order (newest first) carrying the snapshots the gate read, and
-// `on_done` once at the end with the HIDDEN count — the counted stderr line's
-// own number, and the only number a run reports. Ineligible candidates produce
-// no member callback.
+// `on_done` once at the end with a GuiHistoryScanResult — whether the run's own
+// reads ANSWERED, the refusal reason when they did not, and the HIDDEN count,
+// the counted stderr line's number and the only number a run reports. Ineligible
+// candidates produce no member callback.
+//
+// A HEADER REFUSAL ENDS `ok`, deliberately: the header carries its own reason and
+// init reads it from there, so the DONE says only that nothing more is coming.
+// The one arm that ends NOT ok is the `log` capture failing — the type's own
+// comment owns that distinction.
 //
 // `abandoned` IS ASKED BETWEEN CANDIDATES, and nowhere else: a superseding kick
 // or a shutdown wants this run to stop, and a candidate boundary is the finest
@@ -533,7 +562,7 @@ void scan_history_walk(
     const std::function<bool()>&                        abandoned,
     const std::function<void(GuiHistoryWalkHeader)>&    on_header,
     const std::function<void(GuiHistoryCommitSidecars)>& on_member,
-    const std::function<void(int hidden)>&               on_done);
+    const std::function<void(GuiHistoryScanResult)>&     on_done);
 
 // The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07,
 // superseding the list this used to build for itself at init) — each member
@@ -558,13 +587,16 @@ public:
     // before the worker's own header has arrived, two git calls and no strict
     // load — plus the now-side capture and the delta caches.
     //
-    // Returns available(). EVERY FAILURE PATH IS THE HEADER'S — one stderr line
-    // and nothing else: the repo root missing, no `origin` remote, a
+    // Returns available(). TWO FAMILIES OF FAILURE, one stderr line and nothing
+    // else either way. THE HEADER'S: the repo root missing, no `origin` remote, a
     // `projects_repo` that is empty or that names a different repository than
     // this clone's FETCH url or than any of its effective PUSH urls, no
     // committed file bearing this source's sidecar names, more than one
-    // directory bearing them. Which repository, which piece, which source — and
-    // nothing about the walk that answering those questions then produced.
+    // directory bearing them — which repository, which piece, which source. AND
+    // THE SCAN'S: the bound run's `git log` capture could not run, so this
+    // program has not read the piece's history at all (GuiHistoryScanResult).
+    // Both are questions that went UNANSWERED; neither is a fact about how many
+    // checkpoints there turned out to be.
     //
     // MEMBERSHIP IS NEVER A REFUSAL (architect 2026-08-09). A walk with no
     // eligible commit is AVAILABLE whether its scan is still streaming or has
@@ -572,7 +604,9 @@ public:
     // in the first case and resting in the second. The two terminal zeros this
     // once refused on — no commit touching the sidecars, and every touching
     // commit refusing the strict load — are ordinary now, and the reasoning is
-    // at the site in the definition.
+    // at the site in the definition. Which is exactly why the scan failure had
+    // to become its own answer: with emptiness no longer refusing, an unread
+    // history would otherwise have passed for a read one.
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
     bool               available() const { return available_; }
@@ -593,6 +627,11 @@ public:
     // a scan is still streaming would otherwise be permanent here. It asks
     // through the binding rather than the store directly so a generation
     // mismatch answers the same cold "no" the member list does.
+    //
+    // A RUN THAT FAILED ANSWERS FALSE, on the same reasoning turned around: it
+    // finishes with an empty deque too, and an unread history must not be worth
+    // committing against. init refuses such a run outright, so what this term
+    // covers is a run failing WHILE THE VIEW STANDS.
     bool walk_finished_empty() const;
 
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
