@@ -1199,18 +1199,25 @@ inline int trim_endcap_w_px() {
 // here), an INNER square 5x5, and the crop's 2px INSET placing that square at
 // cols 2..6 / rows 2..6. Plus the CLEARANCE the visibility rule demands on each
 // side of the whole tile. All of them scale with the lane like every other
-// length in this row, and the three tile lengths stay consistent under the
-// rounding by construction (inset + inner + inset == tile at 100% and 200%, and
-// the painter derives the right margin as what is left rather than re-rounding).
+// length in this row.
+//
+// THE INNER SQUARE HAS NO LENGTH OF ITS OWN ANY MORE (codex round 3,
+// 2026-08-10). It WAS a third constant, kTrimMiddleInnerPx = 5, read through a
+// trim_middle_inner_px() accessor and rounded independently of the tile and the
+// inset — and three independent nearbyints do not partition a symmetric ring:
+// the left rim was `inset` while the right was the leftover tile - inset -
+// inner, and the two disagreed at 71 legal scales (2/1 at 75%, 1/2 at 62%). The
+// painter DERIVES the width as tile - 2 * inset now, so both side rims are
+// exactly `inset` at every scale by construction, and the constant and its
+// accessor are deleted rather than left as a second truth someone could
+// re-round from. 100% / 150% / 200% are byte-identical (9-2*2 == 5,
+// 14-2*3 == 8, 18-2*4 == 10). The derivation and the height's own clamp are at
+// the paint site (render.cpp).
 inline constexpr int kTrimMiddleSizePx  = 9;   // the tile's width
-inline constexpr int kTrimMiddleInnerPx = 5;   // the dark square inside it
 inline constexpr int kTrimMiddleInsetPx = 2;   // the crop's offset to that square
 inline constexpr int kTrimMiddleClearPx = 2;
 inline int trim_middle_size_px() {
     return scaled_px(kTrimMiddleSizePx, 1);
-}
-inline int trim_middle_inner_px() {
-    return scaled_px(kTrimMiddleInnerPx, 1);
 }
 inline int trim_middle_inset_px() {
     return scaled_px(kTrimMiddleInsetPx, 0);
@@ -1796,7 +1803,9 @@ inline int trim_endcap_grab_px() {
 // columns, so it cannot flicker, and below the threshold it simply does not
 // paint (no shrink, no clamp). It is otherwise INFORMATIONAL: no hit rect, no
 // gesture, no routing change anywhere. Its lengths are trim_middle_size_px /
-// _inner_px / _inset_px / _clear_px and its four colours are the lane's own
+// _inset_px / _clear_px — the inner square's own width is DERIVED from the
+// first two at the paint site, not authored — and its four colours are the
+// lane's own
 // endcap + bar surfaces; the pixel-by-pixel derivation from the crop is at the
 // paint site (render.cpp).
 void render_trim_flags(cairo_t* cr,

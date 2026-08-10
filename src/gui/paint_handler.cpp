@@ -648,10 +648,23 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
 // had to draw ink at 16 units wide inside a 16px box — no margin at all, which
 // no Breeze icon has. Both readings put the same pixels in the same places for
 // the LABEL; only the icon changed size, and the crop settles which is right.
+// THE SEPARATOR'S HEIGHT IS THE ROW'S REMAINDER, not a length of its own (codex
+// round 3, 2026-08-10 — the tab lock slot's fix again, on row 2's vertical
+// contract). It WAS kToolbarSepHeightPx = 34, the crop's measured height,
+// scaled independently of the 44 content band and the 5px margin it sits in;
+// three roundings of one partition 44 = 5 + 34 + 5 do not close, and since the
+// line is PLACED from the rounded top margin the error all landed at the
+// bottom — the separator was vertically off-centre in its own row at 77 legal
+// scales (at 150% it read 8 above / 7 below, at 50% 2 above / 3 below). The
+// walk derives it as content_h - 2 * margin now, so both margins ARE the
+// margin at every scale. Byte-identical at 100% (44 - 2*5 == 34) and at 200%
+// (88 - 2*10 == 68); the off-grid scales move the line's bottom edge by 1px,
+// which is the correction. The BUTTON stack beside it already worked this way
+// — its 32px box is the same 44 minus twice kToolbarBtnMarginYPx — so this is
+// the row's own existing precedent, not a new idea.
 constexpr double kToolbarRowPadLeftPx  = 5.0;
 constexpr double kToolbarSepMarginPx   = 5.0;   // all four sides
 constexpr double kToolbarSepWidthPx    = 1.0;
-constexpr double kToolbarSepHeightPx   = 34.0;
 constexpr double kToolbarBtnMarginYPx  = 6.0;   // top and bottom -> 32 tall
 constexpr double kToolbarBtnGapPx      = 2.0;   // the invisible separator
 constexpr double kToolbarBtnPadLeftPx  = 9.0;
@@ -782,7 +795,8 @@ constexpr double kTabCornerRadiusPx  = 5.0;
 // (16 + 8 == 24 there); the twenty-four off-grid scales move a tab edge by 1px,
 // which is the correction.
 constexpr double kTabLockBoxPx     = 16.0;
-constexpr double kTabLockMarginPx  = 8.0;   // box's right edge to the tab's own
+// box's right edge to the tab's own right edge
+constexpr double kTabLockMarginPx  = 8.0;
 
 // THE PAINTER'S HALF OF THE TAB ROSTER: each tab's roster id, its A/B letter
 // and its label. The press claim (input_pointer.cpp) reads the same ids out of
@@ -1533,7 +1547,13 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
     // (the row would still lay out, one pixel narrower per separator, which is
     // exactly the silent kind of loss a floor exists to stop).
     const int sep_w       = scaled_px(kToolbarSepWidthPx, 1);
-    const int sep_h       = scaled_px(kToolbarSepHeightPx);
+    // DERIVED FROM THE ROW'S OWN BAND, so the line's two margins are equal by
+    // arithmetic rather than by three roundings agreeing (the record is at
+    // kToolbarSepMarginPx). It is placed at lane.y + sep_margin below, so this
+    // is exactly the height that leaves the same margin underneath. Floored at
+    // 1: a line, like sep_w above.
+    const int sep_h_raw   = content_h - 2 * sep_margin;
+    const int sep_h       = sep_h_raw < 1 ? 1 : sep_h_raw;
     const int btn_margin_y = scaled_px(kToolbarBtnMarginYPx);
     const int btn_gap     = scaled_px(kToolbarBtnGapPx);
     const int pad_left    = scaled_px(kToolbarBtnPadLeftPx);
@@ -2064,6 +2084,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Floored at 1 for the reason row 2's separator is (a line that rounds to 0
     // at gui_scale 50 takes the five groups' dividers with it).
     const int sep_w    = scaled_px(kIconSepWidthPx, 1);
+    // AUTHORED, NOT DERIVED — deliberately unlike row 2's separator, and
+    // measured before deciding (codex round 3, 2026-08-10). Row 2 places its
+    // line from a rounded TOP MARGIN, so a third rounding put the whole error
+    // under the line and it sat off-centre; this row places EVERYTHING by the
+    // centering rule below, which splits the remainder itself. The residual is
+    // the integer-centering remainder alone — at most 1px, at 72 scales — and
+    // the row's own 32px BUTTONS carry exactly the same residual at 74 scales
+    // by the same expression. Deriving this one height would make the
+    // separator the only element in the row not placed by the shared rule, so
+    // the crop's 34 stays authored.
     const int sep_h    = scaled_px(kIconSepHeightPx);
     const int glyph_px = scaled_px(kIconGlyphPx);
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));

@@ -702,9 +702,23 @@ void render_trim_flags(cairo_t* cr,
     // site below.)
     {
         const int tile  = trim_middle_size_px();
-        const int inner = trim_middle_inner_px();
         const int inset = trim_middle_inset_px();
         const int clear = trim_middle_clear_px();
+        // THE INNER SQUARE'S WIDTH IS THE PARTITION'S REMAINDER, never its own
+        // rounding (codex round 3, 2026-08-10 — the tab lock slot's fix applied
+        // to the crop's other composite). The crop's ring is symmetric,
+        // inset + inner + inset == tile, and it USED to be three independent
+        // nearbyints: the left rim was `inset` and the right rim was whatever
+        // tile - inset - inner happened to leave, so the two disagreed at 71
+        // legal scales (at 75% the ring read 2 left / 1 right, at 62% 1 left /
+        // 2 right — a mark that is visibly off-centre in a 6px tile). Derived,
+        // both rims ARE `inset` at every scale by construction and the mark is
+        // centred by arithmetic. Byte-identical where the ring already closed:
+        // 9 - 2*2 == 5 at 100%, 14 - 2*3 == 8 at 150%, 18 - 2*4 == 10 at 200%.
+        // The >= 1 guard mirrors the height's below; measured, it never fires
+        // in [50, 200] (the tightest tile is 4 columns at 50%, giving 2).
+        const int inner_w_raw = tile - 2 * inset;
+        const int inner_w = inner_w_raw < 1 ? 1 : inner_w_raw;
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
         const int vis_lo = std::max(gap.lo, 0);
@@ -715,7 +729,7 @@ void render_trim_flags(cairo_t* cr,
             viewport_start_sample, viewport_end_sample, lane_w);
         const int x_lo = mc.col - tile / 2;    // waveform-relative, inclusive
         const int x_hi = x_lo + tile;          // exclusive
-        if (mc.in_viewport && inner <= face_h &&
+        if (mc.in_viewport && inner_w <= face_h &&
             x_lo >= vis_lo + clear && x_hi <= vis_hi - clear) {
             // The tile's own column run, bevel included — the endcap surface at
             // the midpoint, which is what rows 0..8 of the crop are.
@@ -727,42 +741,50 @@ void render_trim_flags(cairo_t* cr,
             // it insets from the tile's left by the crop's 2px.
             //
             // THE TOP RIM IS CLAMPED INTO EXISTENCE (codex round 1, 2026-08-10,
-            // with the gui_scale floor 100->50). The rim is a DERIVED
-            // DIFFERENCE, face_h - inner, and the hazard is that its two terms
-            // round INDEPENDENTLY: each is nonzero and each has its own floor,
-            // but nothing holds them apart, so wherever nearbyint(5s) lands on
-            // face_h the difference is 0 and the square starts at the face's
-            // own top row — the endcap-coloured rim of the ruled silhouette
-            // vanishes with no metric having gone to zero. It is not one
-            // low-scale band either: measured across [50, 200] it collapses at
-            // 50 (face 2, inner 2), across 51..61 (face 3, inner 3) and AGAIN
-            // at 70..72 (face 4, inner 4), so a threshold would not have fixed
-            // it — the difference itself has to be held open.
+            // with the gui_scale floor 100->50). The top rim is the one length
+            // here that is NOT handed over by the partition — the square hangs
+            // flush on the bevel, so the rim is whatever face_h - inner_h
+            // leaves, and face_h is the LANE's arithmetic while inner_h is the
+            // TILE's. Nothing holds the two apart: wherever the derived width
+            // reaches face_h the difference is 0, the square starts on the
+            // face's own top row, and the endcap-coloured rim of the ruled
+            // silhouette vanishes with no metric having gone to zero. Measured,
+            // that is the whole band 50..74 — the lane is simply too shallow
+            // for the tile's own width until 75%.
             //
             // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
-            // square's height at face_h - 1, keeping one face row above it. The
-            // square goes non-square in BOTH collapse bands, one row short of
-            // square in each: 2x1 at 50, 3x2 across 51..61, 4x3 across 70..72.
-            // That is the accepted trade — the rim is the load-bearing
-            // silhouette feature and the squareness is not. THE WIDTH IS
-            // DELIBERATELY NOT TOUCHED: the horizontal closure
-            // inset + inner + inset == tile is exact at 50% (1 + 2 + 1 == 4)
-            // and stays the crop's own arithmetic. The square still hangs
-            // FLUSH ON THE BEVEL, so the crop relationship above is preserved
-            // at every scale.
+            // square's height at face_h - 1, keeping one face row above it. In
+            // that band the mark is one row short of square — 2x1 at 50, 3x2
+            // across 51..61, 4x3 across 62..72, 5x4 across 73..74 — which is
+            // the accepted trade, the rim being the load-bearing silhouette
+            // feature where the squareness is not. THE WIDTH IS UNTOUCHED BY
+            // THE CLAMP: it is the partition's own remainder above, so the two
+            // side rims stay exactly `inset` even where the height gives way,
+            // and the square still hangs FLUSH ON THE BEVEL. From 75% up the
+            // mark is square with all three rims equal to `inset`, which is the
+            // crop relationship exactly.
             //
             // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
-            // (inner 5 against face_h 7 at 100%, 10 against 14 at 200% — zero
-            // binding scales in [100, 200]), so every pixel there is what it
-            // was. The degenerate arm below face_h <= 1 is unreachable in
-            // [50, 200] and skips THE SQUARE ALONE — never the tile, whose own
-            // paint-or-not verdict is the fit test above and is unchanged.
-            const int inner_h = inner < face_h - 1 ? inner : face_h - 1;
+            // (5 against face_h 7 at 100%, 10 against 14 at 200% — zero binding
+            // scales in [100, 200]), so every pixel there is what it was. The
+            // degenerate arm below face_h <= 1 is unreachable in [50, 200] and
+            // skips THE SQUARE ALONE — never the tile, whose own paint-or-not
+            // verdict is the fit test above and is unchanged.
+            // THE HEIGHT RIDES THE DERIVED WIDTH and keeps its own clamp, which
+            // is a MEASURED choice rather than a preference: the alternative
+            // spelling — deriving the height as face_h - inset, the vertical
+            // mirror of the width's derivation — produces the IDENTICAL value
+            // at all 151 legal scales, and this one needs no extra guard (a min
+            // is bounded where a subtraction is not). Either way the top rim
+            // comes out exactly `inset` at every scale in [50, 200], so the
+            // crop's vertical relationship is now a consequence of the
+            // partition rather than a coincidence of two roundings.
+            const int inner_h = inner_w < face_h - 1 ? inner_w : face_h - 1;
             if (inner_h > 0) {
                 cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
                                      kTrimLaneBar.b);
                 cairo_rectangle(cr, lane_x + x_lo + inset,
-                                lane_y + face_h - inner_h, inner, inner_h);
+                                lane_y + face_h - inner_h, inner_w, inner_h);
                 cairo_fill(cr);
             }
         }
