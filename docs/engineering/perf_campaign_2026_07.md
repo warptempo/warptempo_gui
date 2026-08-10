@@ -465,3 +465,69 @@ epoch: rebuild, GUI-vs-CLI cmp, one ear pass, at a project boundary only.
 The static fftw prefix (~/.warptempo/fftw-3.3.11-static) is inert and
 removable. Net lesson of postscripts 1-3: for this project the correct
 stability boundary is the PACKAGE MANAGER, not the linker.
+
+## 15. Addendum 2026-08-09: FMA contraction off (`-ffp-contract=off`)
+
+The campaign's closed status is unchanged; its own reopening criterion —
+new measured data — landed exactly one flag. `-ffp-contract=off` joins
+`-O3 -march=native` on every target, and the reason is reproducibility,
+not speed.
+
+**The measurement.** Reference corpus 550-1 K550-I (the §1 workload:
+25,448,052 source frames, 40,198,472 output samples, 24-bit). Three CLI
+builds over the repo's own source lists: the shipped `-O3 -march=native`
+(GCC's default is `-ffp-contract=fast`), the same with
+`-ffp-contract=off`, and a generic x86-64 baseline — which carries no FMA
+instruction to contract into, so it is a non-contracting reference by
+construction.
+
+| pair | result |
+|---|---|
+| shipped (contracting) vs baseline | 14.235% of output samples differ; max 378 LSB (−87 dBFS), RMS 14.019 LSB (−115.5 dBFS) |
+| `-ffp-contract=off` `-march=native` vs baseline | **byte-identical** |
+| baseline (GCC) vs clang/WASM (emscripten 6.0.6, scalar) | 67 of 40,198,472 samples differ, all ±1 LSB |
+
+The parser's framemap outputs are byte-identical across all of them: the
+divergence was engine FP codegen and nothing else. Contraction is
+therefore the WHOLE of it — turning it off makes the vectorized
+`-march=native` build reproduce the scalar generic build exactly, and the
+67-sample cross-toolchain remainder is pure libm residue, the
+env-fingerprint modal's own domain rather than a codegen matter.
+
+**It costs nothing.** Interleaved A/B wall times on the target host
+(i7-1255U, two P-cores, GCC 16.1.1) are statistically indistinguishable:
+
+| build | interleaved runs |
+|---|---|
+| shipped (contracting) | 8.15 / 9.86 / 9.91 s |
+| `-ffp-contract=off` | 8.10 / 9.96 / 10.11 s |
+
+The ~5% the baseline gives up is attributable to VECTORIZATION, which
+`-march=native` keeps and which changes no output bit; contraction buys
+no measurable time on top of it. So with the flag on, `-O3` and
+`-march=native` become pure speed knobs with no reference consequence.
+
+Control: the scoped `-ffast-math` on `synth_spectrum_trig.cpp` (§5.3)
+changes no output byte on this host — verified against a build without
+it — so it stays, and the TU repeats `-ffp-contract=off` after it so the
+ban is explicit rather than resting on GCC's option interaction.
+
+**The ruling** (architect, 2026-08-09): contraction is off for this
+engine everywhere, forever. Every build, every target, and any future
+port — clang contracts by default too, so a port carries the flag
+unchanged.
+
+**Accepted consequence**, one time only: renders made after the switch do
+not byte-match renders made before it. The envelope is the table's first
+row — −87 dBFS peak, −115.5 dBFS RMS, inaudible, and of the same
+knife-edge class §7 describes. What is bought is permanent: renders are
+byte-reproducible across rebuilds, machines and `-march` choices, and
+reproducible to the libm residue across compilers and architectures. This
+supersedes §11's clause listing "compiler's FMA-contraction choices"
+among the reasons renders do not cmp across machines; the ISA and
+glibc/libmvec terms of that sentence stand.
+
+**Provenance.** Hand-built control binaries over the repo's own source
+lists, driven by a local-only harness under gitignored `tmp/` (not
+checked in, in the scratchpad-microbenchmark tradition of §10); timing by
+interleaved runs on the target host.
