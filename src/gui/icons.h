@@ -3,12 +3,23 @@
 // THE IN-TREE BREEZE ICON RENDERER — the redesign's icon path, and the reason
 // no SVG library enters this tree.
 //
-// The kdenlive rows draw Breeze icons, and a Breeze icon is a handful of filled
-// paths in a square viewBox: no gradients, no strokes, no transforms, no
-// references. That is small enough to interpret directly, and interpreting it
-// keeps the icons as SOURCE (a `d` string beside its color) rather than as
-// pixels baked at one scale — so an icon is crisp at every gui_scale, exactly
-// like every other redesigned dimension.
+// The kdenlive rows draw Breeze icons, and a Breeze icon is a handful of paths
+// in a square viewBox: no gradients, no references. That is small enough to
+// interpret directly, and interpreting it keeps the icons as SOURCE (a `d`
+// string beside its color) rather than as pixels baked at one scale — so an
+// icon is crisp at every gui_scale, exactly like every other redesigned
+// dimension.
+//
+// THE INTERPRETER HAS GROWN EXACTLY THREE FEATURES past the plain filled path
+// it started as, each with a committed producer and each taken so that the `d`
+// string in the table stays VERBATIM rather than being flattened by hand:
+//   - a per-path TRANSFORM (dialog-ok-apply's and dialog-cancel's translate,
+//     generalized to a full matrix for distortionfx, 2026-08-11);
+//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05);
+//   - a STROKED path (distortionfx, 2026-08-11 — the set's first, whose one
+//     path is `fill="none" stroke="currentColor"`).
+// Each is described where it is implemented (icons.cpp's table header and its
+// `d`-interpreter header).
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
@@ -46,6 +57,28 @@ enum class Icon {
     VcsCommit,           // Save, in the history view and while publishing
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
+    //
+    // THE FOUR VIEW RADIOS' FACES (architect-picked 2026-08-11 off a rendered
+    // candidate sheet): the S/T audio pair and the W/P marker pair wore shaped
+    // LETTER GLYPHS from the row's first day until then — the row's only
+    // non-icon buttons, and the reason the architect briefly ruled the radios
+    // deleted altogether ("ugly letter blips"); he reversed that the same day
+    // and gave them real glyphs instead, which is what killed the letter arm
+    // (no producer left; the painter's shaped-letter branch went with it).
+    //   SOURCE / TARGET are document-export / document-import, the arrow
+    //   LEAVING a document and ENTERING one — his own metaphor, the source
+    //   being where the audio comes FROM.
+    //   WARP is distortionfx, the spiral: time bends. Picked over speedometer
+    //   (his own first pick, reversed in the same breath) and player-time.
+    //   PHASE RESET is chronometer-start, the stopwatch with the solid play
+    //   triangle in its dial: start the clock anew. Picked over
+    //   chronometer-reset and view-refresh — indistinguishable from each other
+    //   at row size, and chronometer-reset's dial does not survive the
+    //   rendering — and over the bare chronometer.
+    DocumentExport,      // Source audio view (bare `t`)
+    DocumentImport,      // Target audio view (bare `t`)
+    DistortionFx,        // Warp markers (bare `p`)
+    ChronometerStart,    // Phase reset markers (bare `p`)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
@@ -120,11 +153,12 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 28;
+inline constexpr int kIconCount = 32;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
-// filling each of its paths in that path's OWN color (the colors are the SVGs'
-// and are hard-coded per the redesign color ruling — see the table).
+// painting each of its paths in that path's OWN color — filled, or STROKED
+// where the file strokes (the colors are the SVGs' and are hard-coded per the
+// redesign color ruling — see the table).
 //
 // Uniform scale, no aspect fitting: every icon here is square by construction
 // (viewBox 0 0 22 22). Cairo state is saved and restored; the caller's source,

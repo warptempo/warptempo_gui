@@ -894,21 +894,26 @@ enum class IconRowLead {
 };
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, what leads it,
-// and its content — a LETTER GLYPH (shaped sans, centered on both axes) or a
-// 22px breeze ICON. Exactly one of the two is used: a non-null `glyph` selects
-// the letter and `icon` is then never read. The press claim's chord table
+// and its content, a 22px breeze ICON. The press claim's chord table
 // (input_pointer.cpp) is the other half; both key off the same ids.
+//
+// EVERY BUTTON IN THIS ROW IS AN ICON BUTTON since 2026-08-11. The struct
+// carried a `glyph` string too — a shaped sans LETTER centered on both axes,
+// selected by being non-null — for the four view radios, which were the row's
+// only letter faces from its first day. The architect gave them real Breeze
+// glyphs that day (the picks and their runners-up are at icons.h's enum), which
+// left the letter arm with no producer, so the field and the painter's shaped
+// branch below went with it rather than standing as a facility nothing uses.
 struct IconRowDef {
     RedesignButton id;
     IconRowLead    lead;
-    const char*    glyph;   // nullptr -> draw `icon` instead
     icons::Icon    icon;
 };
 constexpr IconRowDef kIconRowButtons[] = {
-    {RedesignButton::IconS,      IconRowLead::First,     "S", icons::Icon::EditCopy},
-    {RedesignButton::IconT,      IconRowLead::Gap,       "T", icons::Icon::EditCopy},
-    {RedesignButton::IconW,      IconRowLead::Separator, "W", icons::Icon::EditCopy},
-    {RedesignButton::IconP,      IconRowLead::Gap,       "P", icons::Icon::EditCopy},
+    {RedesignButton::IconS,      IconRowLead::First,     icons::Icon::DocumentExport},
+    {RedesignButton::IconT,      IconRowLead::Gap,       icons::Icon::DocumentImport},
+    {RedesignButton::IconW,      IconRowLead::Separator, icons::Icon::DistortionFx},
+    {RedesignButton::IconP,      IconRowLead::Gap,       icons::Icon::ChronometerStart},
     // (THE ZOOM PAIR SAT HERE, in its own separator-flanked group, from
     // 2026-08-01 until 2026-08-02: the architect ruled out duplicate commands on
     // the GUI when the Navigation dropdown gave `-` and `=` a home there, so the
@@ -918,25 +923,25 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and its group took three more 2026-08-05, the revert act and the walk's
     // older / newer steps; the Cumulative reading's toggle joined that group
     // 2026-08-08, leaving the row at SIXTEEN buttons in five groups.)
-    {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
-    {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
-    {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
-    {RedesignButton::IconIter,   IconRowLead::Gap,       nullptr, icons::Icon::BlackSum},
+    {RedesignButton::IconCopy,   IconRowLead::Separator, icons::Icon::EditCopy},
+    {RedesignButton::IconPaste,  IconRowLead::Gap,       icons::Icon::EditPaste},
+    {RedesignButton::IconBpm,    IconRowLead::Gap,       icons::Icon::MusicNote16th},
+    {RedesignButton::IconIter,   IconRowLead::Gap,       icons::Icon::BlackSum},
     // Follow's icon walked twice: the provisional "F" letter, then
     // media-seek-forward (2026-07-31), then go-jump (2026-08-01) — the architect
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
-    {RedesignButton::IconFollow, IconRowLead::Gap,   nullptr, icons::Icon::GoJump},
-    {RedesignButton::IconListen, IconRowLead::Separator, nullptr, icons::Icon::PreviewRenderOn},
+    {RedesignButton::IconFollow, IconRowLead::Gap,       icons::Icon::GoJump},
+    {RedesignButton::IconListen, IconRowLead::Separator, icons::Icon::PreviewRenderOn},
     {RedesignButton::IconLoadInPlace,
-     IconRowLead::Gap, nullptr, icons::Icon::DialogOkApply},
+     IconRowLead::Gap, icons::Icon::DialogOkApply},
     // THE HISTORY MODE'S BUTTON (2026-08-04) — the row's twelfth, and a GROUP OF
     // ITS OWN: the architect asked for "a separation there and then another
     // button", and this row's vocabulary for a group boundary is exactly one
     // thing, IconRowLead::Separator (4px, the 1px line, 4px). It reads the same
     // way the four existing boundaries do rather than inventing a second kind of
     // gap that would have to be explained.
-    {RedesignButton::IconHistory, IconRowLead::Separator, nullptr, icons::Icon::VcsDiff},
+    {RedesignButton::IconHistory, IconRowLead::Separator, icons::Icon::VcsDiff},
     // THE CUMULATIVE READING'S TOGGLE (2026-08-08), immediately right of the
     // button that opens the view — the architect's placement, and the group now
     // reads History | Cumulative | Revert | Older | Newer: the view, how it
@@ -946,13 +951,13 @@ constexpr IconRowDef kIconRowButtons[] = {
     // right one button-width and costs nothing (one left-to-right accumulation
     // recomputed each paint, no rect or separator held anywhere).
     {RedesignButton::IconCumulative,
-     IconRowLead::Gap, nullptr, icons::Icon::DeepHistory},
+     IconRowLead::Gap, icons::Icon::DeepHistory},
     // THE REVERT ACT (2026-08-05), left of the walk's two — the architect's own
     // order. Ordinary 2px Gap like the rest of the group. Unlike the two below
     // it, this insertion was NOT a pure append — it shifted Older and Newer one
     // button-width right — and that cost nothing, for the reason above.
     {RedesignButton::IconRevert,
-     IconRowLead::Gap, nullptr, icons::Icon::DocumentRevert},
+     IconRowLead::Gap, icons::Icon::DocumentRevert},
     // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
     // button's group rather than opening a sixth: they are the same mode's
     // controls, and the row's one group boundary already said where that mode
@@ -961,9 +966,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // (the Cumulative toggle joined between them and History on 2026-08-08),
     // each dial's triangle pointing the way that step walks.
     {RedesignButton::IconHistoryOlder,
-     IconRowLead::Gap, nullptr, icons::Icon::KeyframePrevious},
+     IconRowLead::Gap, icons::Icon::KeyframePrevious},
     {RedesignButton::IconHistoryNewer,
-     IconRowLead::Gap, nullptr, icons::Icon::KeyframeNext},
+     IconRowLead::Gap, icons::Icon::KeyframeNext},
 };
 
 // THE TOOLBAR'S ICON, by state — redesign_button_label's sibling (app_state.h,
@@ -2046,11 +2051,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_rectangle(cr, lane.x, lane.y + content_h, lane.w, border_h);
     cairo_fill(cr);
 
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-
+    // (NO FONT IS SELECTED HERE, and that is the row's own fact since
+    // 2026-08-11: this lane paints geometry and icons only. The sans face and
+    // its scaled font were set for the four view radios' shaped LETTER faces,
+    // which the architect replaced with real Breeze glyphs that day.)
     const int btn      = scaled_px(kIconBtnPx);
     const int btn_gap  = scaled_px(kIconBtnGapPx);
     const int sep_gap  = scaled_px(kIconSepGapPx);
@@ -2134,9 +2138,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // reading is cumulative (the rule below covers it with no new arm).
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
-        // one disabled blend, row 2's rule applied to this row's glyph, letter
-        // and box: everything retains that fraction of itself over what sits
-        // under it, so a dead button dims as ONE object. A dead SELECTED toggle
+        // one disabled blend, row 2's rule applied to this row's glyph and
+        // box: everything retains that fraction of itself over what sits under
+        // it, so a dead button dims as ONE object. A dead SELECTED toggle
         // (iteration or follow left on) keeps its fill and outline muted rather
         // than dropped: the mode cannot change that state, so hiding it would be
         // a lie, and dimming it says "true, but not yours right now". Colour
@@ -2185,31 +2189,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             if (has_fill) under = fill;
         }
 
-        if (def.glyph != nullptr) {
-            // A LETTER BUTTON: the shaped glyph centered on BOTH axes — the
-            // width from the run itself (never a font metric guess) and the
-            // baseline from the shared extents solver.
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, def.glyph);
-            const GuiColor letter_c = mix_color(kRedesignLabel, under, keep);
-            cairo_set_source_rgb(cr, letter_c.r, letter_c.g, letter_c.b);
-            text_shape::show_shaped_run(
-                cr, run,
-                static_cast<double>(x) +
-                    std::nearbyint((static_cast<double>(btn) - run.width_px) *
-                                   0.5),
-                redesign_baseline(font, static_cast<double>(btn_y),
-                                  static_cast<double>(btn)));
-        } else {
-            // An ICON BUTTON: the 22px box centered in the 32px button (+5 at
-            // 100%), each path in its own color from the icon table. The dimming
-            // term is the mode-scoped dead face's and is inert (keep == 1, the
-            // table's colors bit-identical) in every other state.
-            icons::draw(cr, def.icon,
-                        static_cast<double>(x + (btn - glyph_px) / 2),
-                        static_cast<double>(btn_y + (btn - glyph_px) / 2),
-                        static_cast<double>(glyph_px), keep, under);
-        }
+        // THE 22px ICON BOX centered in the 32px button (+5 at 100%), each path
+        // in its own color from the icon table. The dimming term is the
+        // mode-scoped dead face's and is inert (keep == 1, the table's colors
+        // bit-identical) in every other state.
+        //
+        // EVERY BUTTON TAKES THIS ARM since 2026-08-11 — the four view radios'
+        // shaped LETTER faces were the only other kind, and they took real
+        // Breeze glyphs that day (kIconRowButtons carries the record). The row
+        // paints no text at all now, which is why nothing here selects a font.
+        icons::draw(cr, def.icon,
+                    static_cast<double>(x + (btn - glyph_px) / 2),
+                    static_cast<double>(btn_y + (btn - glyph_px) / 2),
+                    static_cast<double>(glyph_px), keep, under);
 
         x += btn;
     }

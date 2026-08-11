@@ -12,8 +12,9 @@ namespace {
 // -- The icon table ---------------------------------------------------------
 //
 // One row per committed SVG (assets/icons/breeze/), each holding that file's
-// path elements in file order. `d` is copied VERBATIM from the file; `fill` is
-// the color the file resolves to.
+// path elements in file order. `d` is copied VERBATIM from the file; `ink` is
+// the color the file resolves to — the FILL source for an ordinary path and the
+// STROKE source for a stroked one (`stroked`, below).
 //
 // THE COLORS ARE HARD-CODED, per the redesign's color ruling (the carve-out is
 // recorded at render.h's palette-block header): they are the SVGs' own values,
@@ -25,25 +26,52 @@ namespace {
 // which coincides with the marker-red ring's value by shared Breeze ancestry
 // and by nothing else; it is not a reference to that key either.
 //
-// EVERY ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO winding
-// rule — which is the SVG default too, and what makes document-save's holes
-// (the body cutout and the lid slot) come out as holes: its subpaths wind
+// NEARLY EVERY ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
+// winding rule — which is the SVG default too, and what makes document-save's
+// holes (the body cutout and the lid slot) come out as holes: its subpaths wind
 // against the outline. Filling subpath-by-subpath would flood them.
-// `tx`/`ty` carry the path element's own SVG `transform="translate(tx, ty)"`,
-// applied around the path so `d` can stay VERBATIM. TWO committed files need it
-// — dialog-ok-apply.svg, whose author drew the check mark at its document
-// coordinates and translated it back into the viewBox, and dialog-cancel.svg
-// (row 8, 2026-08-11), whose `translate(-1-1)` spells the glued-negative form
-// the SVG grammar admits — and baking either offset into the numbers by hand
-// would destroy the property that a
-// diff between this table and the file is a transcription bug and nothing else.
-// It is a TRANSLATE ONLY: no scale, rotate or matrix appears in any committed
-// file, so none is modelled and none is silently accepted.
+//
+// THE SET'S ONE STROKED PATH is distortionfx's (row 4's Warp radio since
+// 2026-08-11): its file says `fill="none" stroke="currentColor"` and takes the
+// SVG default stroke-width of 1 in its own path units. `stroked` selects that
+// arm in draw(), which sets a line width of 1 INSIDE the path's own transform
+// so cairo's CTM scales the pen exactly as it scales the geometry — the same
+// thing SVG does, and what keeps the spiral's weight riding gui_scale like
+// every filled limb in this table.
+//
+// `xform` carries the path element's own SVG `transform` attribute, applied
+// around the path so `d` can stay VERBATIM — baking a transform into the
+// numbers by hand would destroy the property that a diff between this table and
+// the file is a transcription bug and nothing else. THREE committed files need
+// one: dialog-ok-apply.svg, whose author drew the check mark at its document
+// coordinates and translated it back into the viewBox; dialog-cancel.svg (row
+// 8, 2026-08-11), whose `translate(-1-1)` spells the glued-negative form the
+// SVG grammar admits; and distortionfx.svg (row 4, the same day), a full
+// `matrix(...)` — a rotation and a 1.2074206 scale — which is what generalized
+// this field from the translate pair it was. The two spellings are named
+// constructors below rather than one raw six-number field at every site, so a
+// translate still READS as a translate.
+struct IconTransform {
+    // Cairo's matrix components, which take SVG's matrix(a b c d e f) in that
+    // exact argument order (a=xx, b=yx, c=xy, d=yy, e=x0, f=y0 in both) — so a
+    // matrix transcribes componentwise, like the `d` string beside it.
+    double xx = 1.0, yx = 0.0, xy = 0.0, yy = 1.0, x0 = 0.0, y0 = 0.0;
+};
+
+constexpr IconTransform icon_translate(double tx, double ty) {
+    return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
+}
+
+constexpr IconTransform icon_matrix(double a, double b, double c, double d,
+                                    double e, double f) {
+    return IconTransform{a, b, c, d, e, f};
+}
+
 struct IconPath {
-    GuiColor    fill;
-    const char* d;
-    double      tx = 0.0;
-    double      ty = 0.0;
+    GuiColor      ink;      // fill source, or stroke source when `stroked`
+    const char*   d;
+    IconTransform xform{};  // identity unless the file carries a transform
+    bool          stroked = false;
 };
 
 struct IconDef {
@@ -169,7 +197,7 @@ constexpr IconPath kPreviewRenderOnPaths[] = {
      "m 10,8 a 3,3 0 0 0 -3,3 3,3 0 0 0 3,3 l 0,-6 z"},
 };
 
-// THE ONE TRANSLATED PATH in the set — the file's own
+// THE SET'S FIRST TRANSLATED PATH — the file's own
 // transform="translate(-364.57143 -525.79075)", carried as data so the `d`
 // string stays byte-identical to dialog-ok-apply.svg.
 constexpr IconPath kDialogOkApplyPaths[] = {
@@ -177,7 +205,82 @@ constexpr IconPath kDialogOkApplyPaths[] = {
      "m382.8643 530.79077l-10.43876 10.56644-4.14699-4.19772-.70712.71578 "
      "4.14699 4.1977-.002.002.70713.71577.002-.002.002.002.70711-.71577-.002-.002 "
      "10.43877-10.56645-.70712-.71576z",
-     -364.57143, -525.79075},
+     icon_translate(-364.57143, -525.79075)},
+};
+
+// -- ROW 4'S FOUR VIEW RADIOS (architect-picked 2026-08-11) --------------------
+//
+// The S/T audio pair and the W/P marker pair, which wore shaped LETTER GLYPHS
+// from the row's first day until this pick (icons.h's enum carries the
+// architect's metaphors and the runners-up; the letter arm died with them,
+// having no producer left). Same rules as every entry above: `d` verbatim from
+// the committed file, the colour hard-coded to what that file resolves to — all
+// four are `.ColorScheme-Text` = #fcfcfc.
+//
+// CHRONOMETER-START'S STYLE BLOCK DEFINES `.ColorScheme-Accent` TOO and its one
+// path never uses it (the path is `.ColorScheme-Text`), so nothing accent-
+// coloured is missing from the entry below — stated here so a future diff
+// against the file does not read the absence as a transcription bug. It is the
+// only committed file that declares a class it does not use.
+//
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
+// precedent: document-export and document-import are absolute M/L/Z only;
+// chronometer-start is absolute M/L/C with lowercase `z` (and its trailing
+// space, kept like document-save's); distortionfx is `m` plus one long run of
+// relative `c` by implicit repetition, with negative numbers acting as their own
+// separators throughout ("2.2028653-1.305359") — every family has a committed
+// producer already, so the strings needed nothing new from the parser.
+constexpr IconPath kDocumentExportPaths[] = {
+    {kIconText,
+     "M 11 16 L 16.293 16 L 14 18.293 L 14.707 19 L 18.207 15.5 L 14.707 12 "
+     "L 14 12.707 L 16.293 15 L 11 15 L 11 16 Z M 5 18 L 5 4 L 13 4 L 13 8 L "
+     "17 8 L 17 13 L 18 13 L 18 7 L 14 3 L 4 3 L 4 19 L 13 19 L 13 18 L 5 18 "
+     "Z"},
+};
+
+constexpr IconPath kDocumentImportPaths[] = {
+    {kIconText,
+     "M 4 3 L 4 19 L 11 19 L 11 18 L 5 18 L 5 4 L 13 4 L 13 8 L 17 8 L 17 15 "
+     "L 12.707 15 L 15 12.707 L 14.293 12 L 10.793 15.5 L 14.293 19 L 15 "
+     "18.293 L 12.707 16 L 18 16 L 18 7 L 14 3 L 4 3 Z"},
+};
+
+// THE SET'S FIRST STROKED PATH, AND ITS FIRST MATRIX — both grown for this one
+// file (the reasoning is at IconPath, above, and the stroke arm is in draw()).
+// The spiral is drawn as an OPEN stroked curve with no `z`: filling it would
+// give a snail shell, so this is not a case the fill arm could have covered by
+// looking the other way. The file's own matrix is a quarter turn (0, s, -s, 0)
+// at s = 1.2074206 plus a translate that brings the rotated curve back into the
+// viewBox, and it is transcribed componentwise in SVG's own argument order.
+constexpr IconPath kDistortionFxPaths[] = {
+    {kIconText,
+     "m11.634657 8.8861029c0.552985-0.3853403 1.258126 0.070243 1.477937 "
+     "0.6133618 0.379461 0.9375863-0.310798 1.9289563-1.214091 "
+     "2.2028653-1.305359 "
+     "0.395829-2.6098329-0.551482-2.9277924-1.8148215-0.4201295-1.6692878 "
+     "0.7918673-3.2947188 2.4155504-3.6527199 2.031877-0.4480026 3.981632 "
+     "1.0320287 4.377648 3.0162804 0.477767 2.39387-1.272046 "
+     "4.669716-3.61701 5.102575-2.7555531 "
+     "0.50865-5.3585413-1.511971-5.8275028-4.21774-0.5402455-3.117056 "
+     "1.7518334-6.0478627 4.8184698-6.5524298 3.478447-0.5723242 6.737535 "
+     "1.9916529 7.277357 5.4191991 0.41598 2.6412177-0.808245 "
+     "5.3270537-3.00795 6.8235667",
+     icon_matrix(0.0, 1.2074206, -1.2074206, 0.0, 22.608572, -3.9083109),
+     true},
+};
+
+constexpr IconPath kChronometerStartPaths[] = {
+    {kIconText,
+     "M 6.8769531 3 C 5.2125198 3.8561715 3.8561715 5.2125198 3 6.8769531 L "
+     "3 7 L 3.921875 7.3066406 C 4.6764786 5.8567461 5.8567461 4.6764786 "
+     "7.3066406 3.921875 L 7 3 L 6.8769531 3 z M 15.005859 3 L 14.699219 "
+     "3.921875 C 16.149109 4.676485 17.329374 5.8567506 18.083984 7.3066406 "
+     "L 19.005859 7 L 19.005859 6.8769531 C 18.149689 5.2125231 16.793336 "
+     "3.85617 15.128906 3 L 15.005859 3 z M 11 5 C 7.1220048 5 4 8.1220048 4 "
+     "12 C 4 15.877995 7.1220048 19 11 19 C 14.877995 19 18 15.877995 18 12 "
+     "C 18 8.1220048 14.877995 5 11 5 z M 11 6 C 14.323996 6 17 8.676004 17 "
+     "12 C 17 15.323996 14.323996 18 11 18 C 7.676004 18 5 15.323996 5 12 C "
+     "5 8.676004 7.676004 6 11 6 z M 9 9 L 9 15 L 14 12 L 9 9 z "},
 };
 
 // THE READ-ONLY TAB'S PADLOCK, from track-head/lock.svg — one path, currentColor
@@ -215,8 +318,8 @@ constexpr IconPath kUnlockPaths[] = {
 // element, vcs-commit carries the identical pair ONCE on a `<g>` that encloses
 // all three of its paths. A group attribute is inherited by the children and
 // nothing else, so both resolve to the same #fcfcfc per path — the `<g>` is a
-// spelling, not a transform, and there is nothing about it to model (the one
-// transform this table does model is dialog-ok-apply's, above).
+// spelling, not a transform, and there is nothing about it to model (the files
+// that DO carry one are inventoried at IconPath's `xform`, above).
 constexpr IconPath kVcsCommitPaths[] = {
     {kIconText, "m10 4h1v5h-1z"},
     {kIconText, "m10 14h1v5h-1z"},
@@ -392,9 +495,12 @@ constexpr IconPath kDocumentRevertPaths[] = {
 // the second at fill-opacity 0.5, and this product composites nothing — rendered
 // opaque the two merge into a solid block, and its full-opacity path alone is an
 // outlined zigzag that smudges at the row's 22 px. view-sort-ascending was the
-// licensed fallback and could not be transcribed at all: six sort bars plus an
-// arrow under a `transform="matrix(...)"`, and the interpreter models TRANSLATE
-// ONLY. An AUTHORED three-ascending-bars glyph was then written in
+// licensed fallback and could not be transcribed AT THE TIME: six sort bars plus
+// an arrow under a `transform="matrix(...)"`, and the interpreter then modelled
+// TRANSLATE ONLY (it models a full matrix since 2026-08-11, distortionfx having
+// grown the field — so that particular obstacle is gone, which changes nothing
+// about a candidate the architect has already passed over). An AUTHORED
+// three-ascending-bars glyph was then written in
 // office-chart-bar's construction and REVERTED the same day (2026-08-08), the
 // architect preferring a real Breeze file to an in-tree drawing. Its replacement,
 // office-chart-line-forecast, shipped and was RETIRED at the architect's live
@@ -472,7 +578,7 @@ constexpr IconPath kDialogCancelPaths[] = {
      "-1.71875 4.5625-1.71875m-5.28125 2.4375l9.84375 9.84375c-1.228232 "
      "1.065535-2.80884 1.71875-4.5625 1.71875-3.86599 0-7-3.13401-7-7 "
      "0-1.75366.653215-3.334269 1.71875-4.5625",
-     -1.0, -1.0},
+     icon_translate(-1.0, -1.0)},
 };
 
 constexpr IconPath kGoDownPaths[] = {
@@ -492,6 +598,10 @@ constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
 constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
+constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
+constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
+constexpr IconDef kDistortionFx       {22.0, kDistortionFxPaths,        1};
+constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
@@ -523,6 +633,10 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditUndo:            return kEditUndo;
         case Icon::EditRedo:            return kEditRedo;
         case Icon::MediaRecord:         return kMediaRecord;
+        case Icon::DocumentExport:      return kDocumentExport;
+        case Icon::DocumentImport:      return kDocumentImport;
+        case Icon::DistortionFx:        return kDistortionFx;
+        case Icon::ChronometerStart:    return kChronometerStart;
         case Icon::EditCopy:            return kEditCopy;
         case Icon::EditPaste:           return kEditPaste;
         case Icon::MusicNote16th:       return kMusicNote16th;
@@ -568,6 +682,12 @@ const IconDef& icon_def(Icon icon) {
 // GENERALLY (endpoint->center conversion plus a quarter-arc bezier split) even
 // though media-record's four arcs are circular: arcs recur in this icon set and
 // a circle-only shortcut would be a trap for the next icon.
+//
+// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other two
+// grown features are the PATH ELEMENT's, not the string's, and live where they
+// are used: the per-path transform at IconPath's `xform` (a translate at first,
+// a full matrix since distortionfx) and the stroked arm in draw(). Neither can
+// reach this walk, which appends geometry in the path's own units either way.
 struct PathCursor {
     const char* p;
     const char* end;
@@ -892,11 +1012,19 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
     cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
     for (int i = 0; i < def.path_count; ++i) {
         const IconPath& p = def.paths[i];
-        // The path element's own translate, saved/restored around it so it
-        // cannot leak into a sibling path (only one file uses one, but a
-        // per-path transform that escaped its path would be a silent bug).
+        // The path element's own transform, applied INSIDE cairo's CTM (on top
+        // of the viewBox mapping above) and saved/restored around the path so it
+        // cannot leak into a sibling — three files carry one, and a per-path
+        // transform that escaped its path would be a silent bug. Applied
+        // UNCONDITIONALLY, identity included: multiplying by the identity is
+        // exact in doubles, so an untransformed path's pixels are what they were
+        // when this field could only hold a translate, and there is no
+        // "has a transform" branch to get wrong.
         cairo_save(cr);
-        if (p.tx != 0.0 || p.ty != 0.0) cairo_translate(cr, p.tx, p.ty);
+        cairo_matrix_t m;
+        cairo_matrix_init(&m, p.xform.xx, p.xform.yx, p.xform.xy, p.xform.yy,
+                          p.xform.x0, p.xform.y0);
+        cairo_transform(cr, &m);
         cairo_new_path(cr);
         // Cannot fail: the dry run proved every path in this icon parses (on
         // this call, or on the earlier call whose pass `validated` latched),
@@ -906,10 +1034,33 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         // The path's own color, retained by keep_own and made up with
         // mixed_with — the disabled face. keep_own == 1 (the default every
         // enabled caller takes) returns the table's color bit-identically, so
-        // the enabled path is unchanged by the existence of this one.
-        const GuiColor c = mix_color(p.fill, mixed_with, keep_own);
+        // the enabled path is unchanged by the existence of this one. It is the
+        // SOURCE either way, so a stroked path dims exactly as a filled one
+        // does and the disabled face needs no arm of its own.
+        const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        cairo_fill(cr);
+        if (p.stroked) {
+            // THE STROKED ARM (distortionfx, the set's one member): a line width
+            // of 1 in PATH units — the SVG default its file takes — set inside
+            // the transform above, so cairo's CTM scales the PEN exactly as it
+            // scales the geometry. That is what SVG itself does with
+            // stroke-width, and it is what keeps the spiral's weight on the
+            // gui_scale axis like every filled limb in the table.
+            //
+            // The pen is SET rather than inherited, every parameter of it: this
+            // cairo_t is the caller's and its stroke state is not ours to
+            // assume. Butt cap and miter join are SVG's defaults and cairo's
+            // both; the miter limit differs (SVG 4, cairo 10) and is stated for
+            // fidelity rather than for appearance — this path is one smooth open
+            // curve with nothing to miter.
+            cairo_set_line_width(cr, 1.0);
+            cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+            cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+            cairo_set_miter_limit(cr, 4.0);
+            cairo_stroke(cr);
+        } else {
+            cairo_fill(cr);
+        }
         cairo_restore(cr);
     }
     cairo_restore(cr);
