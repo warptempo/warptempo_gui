@@ -231,7 +231,41 @@ struct Viewport {
 
     // Invalidation.
     void invalidate_waveform_area();
-    void invalidate_timestamp_area();
+    // ROW 9, the status lane: section C's whole precedence chain and the
+    // critical chip. The bottom strip's high-traffic owner — the editors and
+    // their carets, the queue / render / transient strings, the selection
+    // readout — and the DEFAULT for anything writing a string down there.
+    void invalidate_status_row_area();
+    // ROW 8's clock cell, and the authoritative inventory of who wants it
+    // (2026-08-11, when the timestamp moved off the status line and the one
+    // owner split in two — the rects and the split's reasoning are at
+    // clock_invalidate_rect, app_state.h). MEMBERSHIP IS "THIS ROUTE MOVES THE
+    // PLAYHEAD OR THE SCANNER", the only two values the clock reads, and the
+    // list below is re-derived by grep rather than inherited:
+    //
+    //   CLOCK ALONE — Viewport's own five (move_playhead_to,
+    //   clamp_display_state_to_live_domain, apply_zoom_change,
+    //   apply_strip_drag_zoom, apply_zoom_to_start, the last three through
+    //   their playhead clamp), the playback lifecycle's stop and launch (each
+    //   flipping which value the clock reads), main.cpp's three tick sites (the
+    //   pre-paint scanner advance, the heartbeat's offscreen fallback and the
+    //   resize/total-change repair), and input_pointer's two direct cursor
+    //   writes (land_playhead_on_source_frame and on_motion's sliver release).
+    //
+    //   BOTH LANES — the routes that land a playhead AND rewrite the readout,
+    //   each calling the two owners in turn: the A/B tab switch (active_views,
+    //   which restores the entering tab's own playhead), the undo/redo restore
+    //   (undo), the position nudges' shared tail (position_nudge), and the three
+    //   load-in-place tails (render entry, history commit, history local
+    //   member).
+    //
+    // Every OTHER route on the status lane is a string writer and takes that
+    // lane alone; a marker mutation reaches the clock only through the nudge
+    // tail it already shares. THE `p` MARKER-VIEW TOGGLE IS THE NEAR MISS worth
+    // naming, since it sits beside the tab switch and answers differently: it
+    // damages the READOUT (its coincidence auto-select can change the selection)
+    // and moves no playhead at all, so it takes the status lane alone.
+    void invalidate_clock_area();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
     // COLUMNS' rects. The columns must be resolved on the PLATE basis — the
     // playheads' pixels are plate-registered, and damage follows the basis of

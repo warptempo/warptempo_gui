@@ -101,10 +101,10 @@ void Selection::set_single_selection(int idx) {
     app.last_selected_marker = (idx >= 0) ? idx : -1;
     viewport.invalidate_top_strip();
     // The bottom-strip pass/ref readout now shows for the last-selected marker
-    // too (not only on hover), so a selection change damages the timestamp area
+    // too (not only on hover), so a selection change damages the status lane
     // as well; the flags' own selected/unselected colour swap rides the
     // top-strip damage (through the flag cache's selection fingerprint).
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     damage_overlay_on_subject_change(old_subject);
 }
 
@@ -116,7 +116,7 @@ void Selection::clear_selection() {
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     // Clearing the focus erases any overlay it annotated (subject frame -> none).
     damage_overlay_on_subject_change(old_subject);
 }
@@ -143,7 +143,7 @@ void Selection::collapse_to_focused() {
     // 2026-07-23) and move the whole selection's images rigidly.
     // last_selected_marker
     // is untouched — it stays the focus. Callers that full-invalidate afterward
-    // make the top-strip / timestamp damage here redundant (a benign damage-union,
+    // make the top-strip / status-lane damage here redundant (a benign damage-union,
     // accepted).
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     // No focus -> nothing to collapse TO. Both surviving classes depend on the
@@ -161,7 +161,7 @@ void Selection::collapse_to_focused() {
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
     viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     // The phase-reset overlay's own P+target repaint rides its subject owner,
     // which the 2+ -> 1 case here triggers. (A collapse used to owe the
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
@@ -186,7 +186,7 @@ bool Selection::toggle_selection_membership(int idx) {
         added = false;
     }
     viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     // (When repair_last_selected fired above it double-fires its own overlay
     // damage, a benign damage-union.)
     damage_overlay_on_subject_change(old_subject);
@@ -228,14 +228,14 @@ void Selection::select_range_from_anchor(int idx) {
         // Nothing focused either: the click anchors the interaction on its own
         // marker (selection = {idx}). Cannot delegate to
         // set_single_selection: that method CLEARS the anchor, and we must set
-        // it. Mirror its body (clear + insert + last + the top-strip/timestamp
+        // it. Mirror its body (clear + insert + last + the top-strip/status-lane
         // damage pair) and additionally anchor on idx.
         app.selected_markers.clear();
         app.selected_markers.insert(idx);
         app.last_selected_marker = idx;
         app.shift_range_anchor   = idx;
         viewport.invalidate_top_strip();
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         damage_overlay_on_subject_change(old_subject);
             return;
     }
@@ -255,7 +255,7 @@ void Selection::select_range_from_anchor(int idx) {
     for (int i = lo; i <= hi; ++i) app.selected_markers.insert(i);
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     damage_overlay_on_subject_change(old_subject);
 }
 

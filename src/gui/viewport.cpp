@@ -68,9 +68,14 @@ void Viewport::invalidate_waveform_area() {
     gui.invalidate_region(0, y0, app.width, y1 - y0);
 }
 
-void Viewport::invalidate_timestamp_area() {
-    const GuiRect t = timestamp_invalidate_rect(app);
+void Viewport::invalidate_status_row_area() {
+    const GuiRect t = status_row_invalidate_rect(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+}
+
+void Viewport::invalidate_clock_area() {
+    const GuiRect c = clock_invalidate_rect(app);
+    gui.invalidate_region(c.x, c.y, c.w, c.h);
 }
 
 void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
@@ -151,7 +156,7 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         // per-site shape table at playhead_pixel_x (app_state.h).
         invalidate_waveform_area();
     }
-    invalidate_timestamp_area();
+    invalidate_clock_area();
     if (playback.is_playing()) playback.resync_predictor();
 }
 
@@ -186,7 +191,7 @@ void Viewport::clamp_display_state_to_live_domain() {
     if (clamped != app.playhead_cursor_sample) {
         app.playhead_cursor_sample = clamped;
         invalidate_waveform_area();
-        invalidate_timestamp_area();
+        invalidate_clock_area();
     }
 
     // REGION: a live region's endpoints are active-domain frames. If the domain
@@ -257,7 +262,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();
-    invalidate_timestamp_area();
+    invalidate_clock_area();
     // Flags live in the top strip — rect positions change when the viewport
     // scale changes. (The hovered marker's lane text renders in the top strip's
     // marker lane's flags, covered by this top-strip invalidation; the
@@ -334,7 +339,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
         app.follow_overridden_for_session = true;
 
     invalidate_waveform_area();
-    invalidate_timestamp_area();
+    invalidate_clock_area();
     // Flags live in the top strip — rect positions change when the viewport
     // scale or start changes.
     const GuiRect ts = top_strip_area(app);
@@ -380,7 +385,7 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     }
 
     invalidate_waveform_area();
-    invalidate_timestamp_area();
+    invalidate_clock_area();
     // Flags live in the top strip — rect positions change with the viewport.
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);

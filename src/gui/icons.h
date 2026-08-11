@@ -63,14 +63,24 @@ enum class Icon {
     // The table's entry records both resolved literals, the command-coverage
     // check and the four glyphs tried before it.
     DeepHistory,               // The cumulative reading (`u`)
-    // THE WALK'S TWO ARROWS (2026-08-05), the history group's other pair: the
-    // checkpoint walk's older (`,`) and newer (`.`) steps. Breeze's own
-    // go-previous / go-next chevrons — go-jump's own construction minus its
-    // destination dot, ONE closed outline per file whose limbs are one viewBox
-    // unit thick, so the weight rides the icon's scale like every other
-    // geometry here and there is no stroke to set.
-    GoPrevious,          // Older checkpoint (`,`)
-    GoNext,              // Newer checkpoint (`.`)
+    // THE WALK'S TWO ARROWS (2026-08-05 as go-previous / go-next, REGLYPHED
+    // 2026-08-11): the checkpoint walk's older (`,`) and newer (`.`) steps wear
+    // Breeze's keyframe-previous / keyframe-next — a stopwatch dial with a
+    // solid triangle pointing into the past or the future. The architect's
+    // reason is their neighbour: Deep-History is a CLOCK, so the steps beside it
+    // read as clock steps. The chevrons they yielded are row 8's left and right
+    // arrows now, and the succession with its runners-up is recorded at the
+    // table entry.
+    KeyframePrevious,    // Older checkpoint (`,`)
+    KeyframeNext,        // Newer checkpoint (`.`)
+    // The chevron pair, go-jump's own construction minus its destination dot:
+    // ONE closed outline per file whose limbs are one viewBox unit thick, so
+    // the weight rides the icon's scale like every other geometry here and
+    // there is no stroke to set. Row 8's horizontal arrows are their whole
+    // consumer list since 2026-08-11 (they served the walk 2026-08-05..11, and
+    // both buttons at once for the few hours row 8 shared them).
+    GoPrevious,          // The left arrow (bare Left)
+    GoNext,              // The right arrow (bare Right)
     // THE REVERT ACT'S GLYPH (2026-08-05), the history group's third button: the
     // selected diff flags applied backwards into the live state (`Ctrl+H`).
     // Breeze's own document-revert — a page with an arrow curving back into it,
@@ -78,10 +88,12 @@ enum class Icon {
     // cubic (`s`), the one command the interpreter grew for it.
     DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
     // Row 8, the transport row (2026-08-11, the touch arc's first surface):
-    // SEVEN new glyphs for its eight buttons — the four cardinal arrows REUSE
-    // the walk pair's GoPrevious / GoNext for left and right (an Icon is a
-    // GLYPH, not a button: VcsCommit already serves two faces), and GoUp /
-    // GoDown below complete the chevron family, so all four arrows are the
+    // SEVEN new glyphs for its eight buttons — the four cardinal arrows took
+    // GoPrevious / GoNext for left and right, SHARED with the walk pair at
+    // first (an Icon is a GLYPH, not a button: VcsCommit already serves two
+    // faces) and theirs alone since the walk reglyphed to the keyframe pair
+    // later that day — with GoUp / GoDown below completing the chevron family,
+    // so all four arrows are the
     // same Breeze construction — one closed outline whose limbs are one
     // viewBox unit thick, no stroke to set. The transport four are Breeze's
     // own media-* set (the universal transport vocabulary; media-playback-
@@ -108,7 +120,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 26;
+inline constexpr int kIconCount = 28;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

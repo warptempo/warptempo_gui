@@ -29,7 +29,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // event. The rule and the per-site shape table live at playhead_pixel_x
     // (app_state.h).
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_clock_area();
     app.follow_overridden_for_session = false;
 }
 
@@ -73,7 +73,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // So the two collapsed onto
         // this one call, which takes the same QUIESCENCE FENCE through its own
         // playback.stop() and then deactivates the scanner and damages the
-        // waveform + timestamp areas.
+        // waveform area and the clock cell.
         stop_playback_if_playing();
         return;
     }
@@ -264,7 +264,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // sufficient regardless of whether the user has follow mode toggled on,
     // so always run it on press.
     viewport.follow_scroll_if_needed();
-    // Damage the waveform area and the timestamp area NOW, in the success tail
+    // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
     // advancing — otherwise waits for the next tick-driven paint opportunity
@@ -289,7 +289,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // sub-tick window between the audio thread's natural end and the tick that
     // deactivates the scanner), so no stale line can survive a relaunch.
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_clock_area();
     const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     playback.play(start, end);

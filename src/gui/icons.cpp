@@ -281,6 +281,55 @@ constexpr IconPath kGoNextPaths[] = {
      "1.167969-6.125 6.125.707031.707031 6.125-6.125 1.875-1.875-1.875-1.875-6.125-6.125"},
 };
 
+// -- THE WALK'S TWO ARROWS, SINCE 2026-08-11 -----------------------------------
+//
+// keyframe-previous and keyframe-next, the icon row's older / newer checkpoint
+// buttons. Transcribed verbatim from the committed keyframe-previous.svg /
+// keyframe-next.svg, and both resolve to the scheme's #fcfcfc.
+//
+// THEY TOOK THE PAIR OVER FROM go-previous / go-next, which the walk had worn
+// since 2026-08-05 and which now serve row 8's left and right arrows alone (an
+// Icon is a GLYPH, not a button — the two entries above are unchanged and
+// simply have one consumer each again). The architect's reason is the group's
+// own vocabulary: its neighbour Deep-History is a CLOCK, so the walk's steps
+// should read as clock steps rather than as bare direction. Breeze's
+// keyframe-previous / keyframe-next are exactly that — a stopwatch dial with a
+// solid triangle pointing into the past or the future — and they are the
+// theme's ONLY DIRECTIONAL CLOCK PAIR (planner survey; the runners-up were
+// chronometer-start / chronometer-reset, document-open-recent and
+// edit-undo-history, and none of them is directional as a pair, which is what
+// an older / newer step needs above everything else).
+//
+// ONE PATH EACH, dial and triangle together, so both are single-colour like
+// every entry above and unlike Deep-History's two. Their `d` uses m/v/h/c/s/l
+// (the lineto implicit after `m`) and `z` — all of it already in the
+// interpreter, document-revert having been the `s` that grew it, so neither
+// string was flattened by hand.
+constexpr IconPath kKeyframePreviousPaths[] = {
+    {kIconText,
+     "m11 5v1h2v1.0507812c-2.237959 0.2537455-4 2.1467332-4 4.4492188 0 "
+     "2.473437 2.026563 4.5 4.5 4.5s4.5-2.026563 "
+     "4.5-4.5c0-1.059095-0.385401-2.0209801-1.005859-2.7871094l0.755859-0.755859 "
+     "0.396484 0.396484 0.707031-0.7089844-1.501953-1.4980469-0.705078 "
+     "0.7070313 0.396485 0.396485-0.751953 "
+     "0.7519525c-0.646025-0.510828-1.432052-0.8537803-2.291016-0.9511719v-1.0507812h2v-1zm-4 "
+     "1-4 5 4 5zm6.5 2c1.932997 0 3.5 1.5670034 3.5 3.5 0 1.932997-1.567003 "
+     "3.5-3.5 3.5s-3.5-1.567003-3.5-3.5c0-1.9329966 1.567003-3.5 3.5-3.5z"},
+};
+
+constexpr IconPath kKeyframeNextPaths[] = {
+    {kIconText,
+     "m5 5v1h2v1.0507812c-2.2379593 0.2537455-4 2.1467332-4 4.4492188 0 "
+     "2.473437 2.0265633 4.5 4.5 4.5 2.473437 0 4.5-2.026563 4.5-4.5 "
+     "0-1.059095-0.385401-2.0209801-1.005859-2.7871094l0.754297-0.7542968 "
+     "0.398046 0.3949218 0.707031-0.7089844-1.501953-1.4980469-0.705078 "
+     "0.7070313 0.394922 0.3980469-0.75039 "
+     "0.7503906c-0.6460254-0.510828-1.432052-0.8537803-2.291016-0.9511719v-1.0507812h2v-1zm10 "
+     "1v10l4-5zm-7.5 2c1.932997 0 3.5 1.5670034 3.5 3.5 0 1.932997-1.567003 "
+     "3.5-3.5 3.5-1.9329966 0-3.5-1.567003-3.5-3.5 0-1.9329966 1.5670034-3.5 "
+     "3.5-3.5z"},
+};
+
 // -- THE REVERT ACT'S GLYPH (2026-08-05) ---------------------------------------
 //
 // document-revert, the history group's third button: the checkpoint's own
@@ -456,6 +505,8 @@ constexpr IconDef kVcsCommit          {22.0, kVcsCommitPaths,           3};
 constexpr IconDef kVcsDiff            {22.0, kVcsDiffPaths,             6};
 constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
+constexpr IconDef kKeyframePrevious   {22.0, kKeyframePreviousPaths,    1};
+constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
@@ -484,6 +535,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::VcsDiff:             return kVcsDiff;
         case Icon::GoPrevious:          return kGoPrevious;
         case Icon::GoNext:              return kGoNext;
+        case Icon::KeyframePrevious:    return kKeyframePrevious;
+        case Icon::KeyframeNext:        return kKeyframeNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::DeepHistory:         return kDeepHistory;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;

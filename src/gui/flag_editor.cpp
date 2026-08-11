@@ -541,7 +541,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // render recipe) and lands on dispatch_render_now's reuse rungs.
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     // No synchronous re-warp: the flag editor is a warp authoring surface that
     // exists only in warp's SOURCE home view (the home-view binding, architect
     // 2026-07-22 — both open routes gate on active_column_authoring_allowed, and
@@ -632,7 +632,7 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
     // draws in the bottom strip. Invalidate it so the freshly opened editor
     // actually paints.
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 // Commit the BPM editor's pending buffer. Strict syntax via
@@ -651,7 +651,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     const auto& mv_const = app.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
         text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         return false;
     }
     const std::string& s = app.top_flag_editor.pending;
@@ -659,7 +659,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     double lo = 0.0, hi = 0.0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         app.top_flag_editor.red = true;
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         std::fprintf(stderr,
             "warptempo_gui: BPM edit rejected: invalid syntax: %s\n",
             s.c_str());
@@ -697,7 +697,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 (!compute_base_tempo_scale(duration_seconds, beats, lo) ||
                  !compute_base_tempo_scale(duration_seconds, beats, hi))) {
                 app.top_flag_editor.red = true;
-                viewport.invalidate_timestamp_area();
+                viewport.invalidate_status_row_area();
                 std::fprintf(stderr,
                     "warptempo_gui: BPM edit rejected: derived tempo or "
                     "scale outside its bracket (tempo [%s, %s], scale "
@@ -732,7 +732,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     proposed[idx].bpm_hi    = hi;
     app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     return true;
 }
 
@@ -801,5 +801,5 @@ void GuiFlagEditor::exit_bpm_mode() {
     app.bpm_mode_enabled = false;
     wipe_bpm_state();
     viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }

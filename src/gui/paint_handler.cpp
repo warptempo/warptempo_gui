@@ -26,23 +26,28 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// MONOSPACE IS GONE FROM THE PRODUCT (architect 2026-08-01: "I wanted to get rid
-// of monospace altogether — the last row should be the same font as the rest").
-// Every string on the bottom line — the timestamp, the prompts, the
-// queue/render/transient status, the resolved readout and the four editors'
-// own text — is the redesign's sans at the redesign's size, shaped and painted
+// THE STATUS LINE IS SANS, AND MONOSPACE LIVES ON EXACTLY ONE SURFACE
+// (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
+// to get rid of monospace altogether — the last row should be the same font as
+// the rest"): monospace RETURNS, BOLD, for the CLOCK alone, which moved that
+// same day off this line into the centre of row 8 (paint_transport_row, which
+// owns the face, the size and the cell). The reversal is scoped to that one
+// surface and nothing else in the product may take it.
+//
+// EVERY STRING THIS LINE STILL CARRIES — the prompts, the queue/render/transient
+// status, the resolved readout, the critical chip and the four editors' own
+// text — is the redesign's sans at the redesign's size, shaped and painted
 // through the ONE chokepoint like every other redesigned row. (The dirty mark
 // used to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which
 // labwc paints — see GuiPlatform::apply_window_title.)
 //
-// WHAT THE TIMESTAMP LOST AND HOW IT IS REPLACED: a monospace face guaranteed
-// the clock could not wiggle as its digits changed. Two facts replace that
-// guarantee, and both are stronger than the face was. (1) Liberation Sans's
-// lining digits are TABULAR — verified by shaping, every digit 0-9 advances
-// exactly 9.0px at 16px, so "270:32.999" and "000:00.000" measure the same 80px
-// — so the clock's own glyphs never move. (2) The line is laid out in FIXED
-// SECTIONS (bottom_row_sections below), so nothing after the clock can move
-// either, whatever the clock says.
+// WHAT THE ROW KEEPS FROM THE CLOCK'S TENANCY is the FIXED-SECTION layout
+// (bottom_row_sections below): the sections are still computed from shaped
+// maxima and the row's own edges rather than from the text currently on screen,
+// which is what stops C jumping as its precedence chain switches strings.
+// The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen — went
+// with the clock and is at row 8's own metrics, re-derived there on the new
+// face rather than trusted to it.
 
 // The bottom row's ONE face, selected on `cr`. Returns the scaled font every
 // shape and paint on the row must share — the text_shape precondition is that a
@@ -68,11 +73,17 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 }
 
 // THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01, RELAID
-// OUT the same day): nothing on the row moves when the timestamp's digits
-// change. Every boundary is computed from SHAPED MAXIMA, never from the text
-// currently on screen.
+// OUT the same day and cut down to two on 2026-08-11 when the clock left for
+// row 8): nothing on the row moves when the span's contents change. Every
+// boundary is computed from the lane's own edges, never from the text currently
+// on screen.
 //
-//   pad | CRITICAL | pad | C: the modal / status span | pad | A: the timestamp | pad
+//   pad | CRITICAL | pad | C: the modal / status span | pad
+//
+// SECTION A IS GONE WITH THE CLOCK. Its reserved cell was the row's right-hand
+// anchor and C ended one pad before it; C now runs to the RIGHT MARGIN — the
+// same one pad in from the lane's right edge that A's cell used to sit at — so
+// the span is strictly wider than it was and nothing else about the row moved.
 //
 // THE CRITICAL CELL IS FIRST ON THE ROW (architect 2026-08-09), and it is
 // PRESENT ONLY WHILE THE CRITICAL MESSAGE IS NON-EMPTY: with the slot empty its
@@ -92,53 +103,27 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // anyway. Sizing it on a shaped maximum would mean reserving the widest possible
 // failure text on every row that has no failure at all.
 //
-// THE CLOCK IS ON THE RIGHT AND THE MODAL TEXT ON THE LEFT (architect, at the
-// live look — superseding the clock-first order the row shipped with a few
-// hours earlier). The DIRTY DOT'S SECTION IS GONE from the line entirely: the
-// dot now rides the WINDOW TITLE beside the project name, where labwc paints it
+// THE MODAL TEXT RUNS THE WHOLE ROW since the clock left it (2026-08-11). The
+// DIRTY DOT'S SECTION IS GONE from the line too: the dot rides the WINDOW TITLE
+// beside the project name, where labwc paints it
 // (GuiPlatform::apply_window_title).
 //
-// A IS SIZED ON THE WIDEST DIGIT, not on a specimen that assumes the face
-// (architect 2026-08-01: "use the widest digit in Liberation Sans or the avg
-// linux sans"). The ten digits are shaped at the CURRENT scaled font, the widest
-// advance wins, and the section is a specimen built from THAT digit —
-// "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit slots — shaped through the
-// same one-run path the painted clock takes. On Liberation Sans the digits are
-// tabular (all ten advance identically, verified on the resolved face), so this
-// degenerates to exactly the width the clock paints; the derivation is what
-// keeps it right if hinting at some scale, or a face swap, ever makes one digit
-// wider than another.
+// THE ONE 13px PAD IS USED TWICE ON AN ORDINARY ROW (re-derived at the clock's
+// move; it was three uses while section A stood): the left lead-in and the
+// right margin C clips at. A ROW CARRYING A CRITICAL MESSAGE USES IT A THIRD
+// TIME, between the chip and C — the lead-in then leads into the critical chip
+// instead of into C, and the gap the chip's right edge takes is the same
+// constant again (the same inventory is recorded at bottom_row_pad_x,
+// paint_handler.h). One constant, two uses or three, an eye-consistency choice
+// either way.
 //
-// TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
-// are at format_timestamp, time_format.h). The section is that format's width
-// and no wider.
-//
-// A IS RIGHT-ALIGNED AGAINST THE WINDOW: its cell's RIGHT edge sits one pad in
-// from the lane's right edge, so the cell — not the text — is what is anchored,
-// and the clock's own glyphs still cannot walk (the cell is the widest specimen
-// and the text inside it keeps starting at the cell's left pen, exactly as it
-// did when the cell sat on the left).
-//
-// THE ONE 13px PAD IS USED THREE TIMES ON AN ORDINARY ROW, unchanged from the
-// shipped row and deliberately: the left lead-in, the inter-section gap before
-// A's reserved cell, and the right margin after it. A ROW CARRYING A CRITICAL
-// MESSAGE USES IT A FOURTH TIME, between that cell and C — the lead-in then
-// leads into the critical chip instead of into C, and the gap the chip's right
-// edge takes is the same constant again (re-derived 2026-08-09, and the same
-// inventory is recorded at bottom_row_pad_x, paint_handler.h). One constant,
-// three uses or four, an eye-consistency choice either way.
-//
-// A'S CELL IS RESERVED WHETHER OR NOT THE CLOCK PAINTS, and C ends where that
-// reservation begins — so C never jumps and never collides. C is CLIPPED at
-// that boundary; if the modal text does not fit, it clips (architect: a screen
-// too small for the line is a user problem, not a layout one). See
-// paint_bottom_strip's clip block.
-static constexpr const char* kTimestampShape = "DD:DD.DDD";
+// C IS CLIPPED AT THE RIGHT MARGIN; if the modal text does not fit, it clips
+// (architect: a screen too small for the line is a user problem, not a layout
+// one). See paint_bottom_strip's clip block.
 
 struct BottomRowSections {
-    double a_x    = 0.0;   // the timestamp's pen (its reserved cell's left)
     double c_x    = 0.0;   // the modal / status span's pen
-    double c_x1   = 0.0;   // and its clip boundary: one pad before A's cell
+    double c_x1   = 0.0;   // and its clip boundary: the lane's right margin
     // The critical chip's TEXT pen, valid only when a critical message stands
     // (crit_w > 0). The chip's own box is derived from it and the flag anatomy's
     // pads, exactly as the editors' invalid flash derives its box from its run.
@@ -146,52 +131,16 @@ struct BottomRowSections {
     double crit_w = 0.0;   // that message's shaped width; 0 = no cell at all
 };
 
-// The shaped width the section arithmetic needs, MEMOISED ON THE FONT SIZE.
-// Deriving A costs eleven tiny shaping passes (ten digits plus the specimen) and
-// they answer the same thing on every frame: the face is fixed ("sans") and the
-// size is the only variable, so the size is the whole key. Single-threaded paint
-// state — the waveform worker never reaches this file's bottom-row tier.
-//
-// ONE WIDTH, down from three: the dirty mark's cell and the shaped space that
-// separated it from the clock died with the mark's move to the window title.
-struct BottomRowTextMetrics {
-    double px      = -1.0;   // the size these were measured at
-    double a_w     = 0.0;    // the widest timestamp's shaped width
-};
-static BottomRowTextMetrics g_bottom_metrics;
-
-static const BottomRowTextMetrics& bottom_row_text_metrics(
-        cairo_scaled_font_t* font, double size_px) {
-    if (g_bottom_metrics.px == size_px) return g_bottom_metrics;
-    // The widest of the ten digits at this size, by shaped advance.
-    char widest = '0';
-    double widest_w = -1.0;
-    for (char d = '0'; d <= '9'; ++d) {
-        const char one[2] = {d, '\0'};
-        const double w = text_shape::shape_text_run(font, one).width_px;
-        if (w > widest_w) { widest_w = w; widest = d; }
-    }
-    std::string specimen(kTimestampShape);
-    for (char& c : specimen) if (c == 'D') c = widest;
-
-    g_bottom_metrics.a_w     = text_shape::shape_text_run(font, specimen).width_px;
-    g_bottom_metrics.px      = size_px;
-    return g_bottom_metrics;
-}
-
 static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
                                              const GuiRect& lane,
                                              std::string_view critical) {
     const double pad = static_cast<double>(bottom_row_pad_x());
-    const BottomRowTextMetrics& m =
-        bottom_row_text_metrics(font, redesign_font_size_px());
     BottomRowSections s;
     // Every boundary lands on an integer pen so the hinted glyphs stay crisp,
     // the same rounding convention the redesigned rows' label origins take.
     const double lane_x1 = static_cast<double>(lane.x) +
                            static_cast<double>(lane.w);
-    s.a_x  = std::nearbyint(lane_x1 - pad - m.a_w);
-    s.c_x1 = std::nearbyint(s.a_x - pad);
+    s.c_x1 = std::nearbyint(lane_x1 - pad);
     // THE CRITICAL CELL, and with it C's pen. The chip's text sits one flag
     // border plus one flag left-pad in from the lead-in, so the BOX's left edge —
     // not its glyphs — is what the pad lands on, exactly as a marker flag seats
@@ -235,8 +184,10 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
 //
 // WHAT THE 2026-08-01 RELAYOUT CHANGED ABOUT THAT CLAUSE, stated plainly: the
 // editors used to run off the RIGHT EDGE OF THE WINDOW, because C ran to the
-// window edge and nothing clipped it. C now ends one pad before the timestamp's
-// reserved cell and the whole section is CLIPPED there (paint_bottom_strip), so
+// window edge and nothing clipped it. C now ends at the lane's RIGHT MARGIN —
+// one pad in from its right edge, the boundary the timestamp's reserved cell
+// used to hold until the clock left for row 8 — and the whole section is
+// CLIPPED there (paint_bottom_strip), so
 // an over-long editor string is cut at that boundary instead of at the window's.
 // The intent is unchanged in substance — the editor still does not scroll and
 // still has no view offset — and only the boundary moved: an editor is modal
@@ -1008,11 +959,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // starts. So they take the ordinary 2px Gap, and they close the group —
     // which reads History | Cumulative | Revert | Older | Newer left to right
     // (the Cumulative toggle joined between them and History on 2026-08-08),
-    // the arrows pointing the way each one walks.
+    // each dial's triangle pointing the way that step walks.
     {RedesignButton::IconHistoryOlder,
-     IconRowLead::Gap, nullptr, icons::Icon::GoPrevious},
+     IconRowLead::Gap, nullptr, icons::Icon::KeyframePrevious},
     {RedesignButton::IconHistoryNewer,
-     IconRowLead::Gap, nullptr, icons::Icon::GoNext},
+     IconRowLead::Gap, nullptr, icons::Icon::KeyframeNext},
 };
 
 // THE TOOLBAR'S ICON, by state — redesign_button_label's sibling (app_state.h,
@@ -2269,12 +2220,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // ROW 8 — THE TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
 // first surface): the permanent bottom toolbar between the waveform and the
 // status line, on every host — ordinary mouse-clickable buttons, no touch
-// mode, no flag, no detection. Eight icon buttons in two groups:
+// mode, no flag, no detection. Eight icon buttons in two groups, and since
+// later that same day THE CLOCK between them:
 //
 //   THE TRANSPORT, left-anchored in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
 //   buttons: Play greyed while an audition runs, Stop while none is), and
 //   skip-forward (bare End);
+//   THE CLOCK, centred in the lane — the timestamp, which moved here off the
+//   status line in BOLD MONOSPACE (the architect's ruling, the face, the size
+//   and the no-wiggle cell are all at kClockShape below);
 //   THE CARDINAL ARROWS, right-anchored, VIM ORDER left-to-right — left,
 //   down, up, right (bare Left/Down/Up/Right), a single line and not a d-pad,
 //   press-fire with hold-to-repeat like their keys.
@@ -2360,15 +2315,71 @@ constexpr TransportRowDef kTransportGroup[] = {
     {RedesignButton::TransportStop,        icons::Icon::MediaPlaybackStop},
     {RedesignButton::TransportSkipForward, icons::Icon::MediaSkipForward},
 };
-// Vim order, the architect's: h j k l reads left / down / up / right, and the
-// left and right chevrons REUSE the walk pair's glyphs (GoPrevious / GoNext —
-// an icon is a glyph, not a button), GoDown / GoUp completing the family.
+// Vim order, the architect's: h j k l reads left / down / up / right. All four
+// are Breeze's chevron family — GoPrevious / GoNext for the horizontals, GoDown
+// / GoUp for the verticals — so the group is one construction. The horizontal
+// pair was SHARED with the icon row's walk arrows for a few hours on 2026-08-11
+// (an icon is a glyph, not a button) and is this row's alone since the walk took
+// the keyframe dials that afternoon.
 constexpr TransportRowDef kTransportArrowGroup[] = {
     {RedesignButton::TransportLeft,        icons::Icon::GoPrevious},
     {RedesignButton::TransportDown,        icons::Icon::GoDown},
     {RedesignButton::TransportUp,          icons::Icon::GoUp},
     {RedesignButton::TransportRight,       icons::Icon::GoNext},
 };
+
+// THE CLOCK — ROW 8'S CENTRE CELL, AND THE PRODUCT'S ONE MONOSPACE SURFACE
+// (architect 2026-08-11, moving the timestamp off the status line and reversing
+// his own 2026-08-01 "monospace is gone from the product" in the same breath —
+// the reversal is scoped to this cell and the status line stays sans, which is
+// stated at that row's own header block).
+//
+// THE FACE IS "monospace" BOLD, which fontconfig resolves to Liberation Mono on
+// this host. THE SIZE IS THE REDESIGN'S ONE SIZE (redesign_font_size_px, so it
+// rides gui_scale like every other string): a planner default, RETUNABLE — it
+// is not sampled from any crop, unlike this row's geometry.
+//
+// THE NO-WIGGLE GUARANTEE IS BY CONSTRUCTION, NOT BY FACE TRUST, which is why
+// the widest-digit derivation came along from row 9 rather than dying with
+// section A: a monospace face is a strong reason to believe every digit
+// advances alike, and this measures it instead. The ten digits are shaped at
+// the CURRENT scaled font, the widest advance wins, and the cell is a specimen
+// built from THAT digit — "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit
+// slots — shaped through the same one-run path the painted clock takes. The
+// cell is then CENTERED in the lane and the live text starts at its LEFT pen,
+// so the reserved box moves only with the window and the glyphs never walk
+// inside it.
+//
+// TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
+// are at format_timestamp, time_format.h). The cell is that format's width and
+// no wider.
+constexpr const char* kClockShape = "DD:DD.DDD";
+
+// The clock's cell width, MEMOISED ON THE FONT SIZE — eleven tiny shaping
+// passes (ten digits plus the specimen) that answer the same thing on every
+// frame, the face being fixed and the size the only variable. Single-threaded
+// paint state; the waveform worker never reaches this file's text tiers.
+struct TransportClockMetrics {
+    double px     = -1.0;   // the size this was measured at
+    double cell_w = 0.0;    // the widest specimen's shaped width
+};
+static TransportClockMetrics g_clock_metrics;
+
+static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
+    if (g_clock_metrics.px == size_px) return g_clock_metrics.cell_w;
+    char widest = '0';
+    double widest_w = -1.0;
+    for (char d = '0'; d <= '9'; ++d) {
+        const char one[2] = {d, '\0'};
+        const double w = text_shape::shape_text_run(font, one).width_px;
+        if (w > widest_w) { widest_w = w; widest = d; }
+    }
+    std::string specimen(kClockShape);
+    for (char& c : specimen) if (c == 'D') c = widest;
+    g_clock_metrics.cell_w = text_shape::shape_text_run(font, specimen).width_px;
+    g_clock_metrics.px     = size_px;
+    return g_clock_metrics.cell_w;
+}
 
 void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     const GuiRect lane = bottom_transport_row_area(app);
@@ -2439,13 +2450,24 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
                     static_cast<double>(glyph_px), keep, under);
     };
 
-    // THE TWO ANCHORS. Left: the transport walks from the row's pad. Right:
-    // the arrows close against the mirrored pad. At the 640px defensive
-    // floor with gui_scale at its 200 ceiling the groups clear each other by
-    // 168px (re-derived at the ruled numbers — the 44 moved nothing on this
-    // axis: 52px buttons, 4px gaps, 16px pads — the transport ends at 236, the
-    // arrows start at 404); no collision
-    // rule exists, matching row 1's floats.
+    // THE TWO ANCHORS AND THE CENTRED CELL BETWEEN THEM. Left: the transport
+    // walks from the row's pad. Right: the arrows close against the mirrored
+    // pad. The clock is centred in the LANE, not in the gap the two groups
+    // leave, so it sits on the window's own midline whatever the groups do.
+    //
+    // THE THREE CAN OVERLAP AT THE FLOOR, and the row accepts it exactly as
+    // row 1's floats do — no collision rule anywhere in the redesign
+    // (re-derived 2026-08-11, with the clock): at the 640px defensive floor
+    // with gui_scale at its 100 default the groups clear each other by 404px
+    // (26px buttons, 2px gaps, 8px pads — the transport ends at 118, the arrows
+    // start at 522) and the 9-glyph cell is 86px wide about the midline, 277 to
+    // 363, so nothing meets. At that floor with gui_scale at its 200 CEILING
+    // the groups still clear by 168px (52px buttons, 4px gaps, 16px pads — 236
+    // to 404) but the cell doubles with them to 173px, 234 to 406, and it
+    // overlaps each group by about 2px. That combination is a 640px window at
+    // double scale — the floor exists to keep the program running, not to lay
+    // out well, and the same crop-at-the-floor allowance is recorded at
+    // kMinWindowWidthPx.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
@@ -2457,6 +2479,53 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     for (const TransportRowDef& def : kTransportArrowGroup) {
         paint_button(def, x);
         x += btn + btn_gap;
+    }
+
+    // THE CLOCK. Its own face on this context, contained by the save/restore
+    // this body already opened; nothing else on the row draws text.
+    {
+        cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
+                               CAIRO_FONT_WEIGHT_BOLD);
+        const double size_px = redesign_font_size_px();
+        cairo_set_font_size(cr, size_px);
+        cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+        const double cell_w = clock_cell_width_px(font, size_px);
+        const int cell_x = lane.x +
+            static_cast<int>(std::nearbyint(
+                (static_cast<double>(lane.w) - cell_w) * 0.5));
+
+        // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
+        // app_state.h — the stash contract is at the field). One pixel of slack
+        // on each side: the reserved width is an ADVANCE sum and a glyph's ink
+        // may sit a hair outside it, and the band is the row's content height,
+        // which contains the baseline's ascent and descent by construction.
+        app.clock_cell_rect = GuiRect{
+            cell_x - 1, content_y,
+            static_cast<int>(std::ceil(cell_w)) + 2, content_h};
+
+        // THE SPLIT-PLAYHEAD READ, carried over from the status line whole:
+        // track the SCANNER during playback (what the user hears), the CURSOR
+        // otherwise — the scanner's value is meaningful only while active, so
+        // the ternary takes the cursor at rest. The sample rate is the loaded
+        // file's and the playhead samples are source frames. There is no
+        // paint-site clamp: one owner caps the clock and it is format_timestamp
+        // (at 59:59.999 — a longer source truncates, the architect's ruling,
+        // recorded there).
+        const int64_t ts_sample = app.playhead_scanner_active
+            ? app.playhead_scanner_sample
+            : app.playhead_cursor_sample;
+        const int sr = audio.sample_rate();
+        double seconds = 0.0;
+        if (sr > 0) {
+            seconds = static_cast<double>(ts_sample) /
+                      static_cast<double>(sr);
+        }
+        if (seconds < 0.0) seconds = 0.0;
+        show_row_text(cr, font, static_cast<double>(cell_x),
+                      redesign_baseline(font,
+                                        static_cast<double>(content_y),
+                                        static_cast<double>(content_h)),
+                      format_timestamp(seconds), kRedesignLabel);
     }
 
     cairo_restore(cr);
@@ -4192,29 +4261,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // leaves nothing behind for the pointer path to grab.
     app.bottom_editor_text = AppState::BottomEditorText{};
 
-    // --- Section A: the timestamp, RIGHT-ALIGNED — its reserved cell's right
-    //     edge one pad in from the window's right edge (architect 2026-08-01).
-    //     sr is the loaded file's sample rate and the
-    //     playhead samples are source-frames. Split-playhead: track the scanner
-    //     during playback (what the user hears), the cursor otherwise (the
-    //     scanner is meaningful only while active, so the ternary takes the
-    //     cursor at rest). The old paint-site clamp at 5999.999 is GONE: one
-    //     owner caps the clock, and it is format_timestamp (at 59:59.999 — a
-    //     longer source truncates, the architect's ruling, recorded there).
-    //     Unclipped: the cell is inside the lane by construction.
-    {
-        const int64_t ts_sample = app.playhead_scanner_active
-            ? app.playhead_scanner_sample
-            : app.playhead_cursor_sample;
-        double seconds = 0.0;
-        if (sr > 0) {
-            seconds = static_cast<double>(ts_sample) /
-                      static_cast<double>(sr);
-        }
-        if (seconds < 0.0) seconds = 0.0;
-        show_row_text(cr, font, sec.a_x, baseline,
-                      format_timestamp(seconds), kRedesignLabel);
-    }
+    // (SECTION A — THE TIMESTAMP — LEFT THIS ROW 2026-08-11 for the centre of
+    //  row 8, in bold monospace: the painter, the split-playhead read and the
+    //  no-wiggle specimen all moved to paint_transport_row's clock block.)
 
     // --- THE CRITICAL CELL, first on the row and painted before everything else
     //     on it (architect 2026-08-09). ---
@@ -4235,7 +4284,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // surfaces together. The ink is the row's ordinary label colour, which is
     // what that flash already shows on this same fill.
     //
-    // IT CLIPS AT C'S OWN BOUNDARY, one pad before the timestamp's reserved cell:
+    // IT CLIPS AT C'S OWN BOUNDARY, the lane's right margin:
     // the row is one line and a too-small window is adversarial (the standing
     // ruling at section C's clip), so a message longer than the row can hold is
     // cut there like every other string on it. When the message is that long C's
@@ -4256,8 +4305,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         const int fh = marker_lane_h_px();
         cairo_save(cr);
         // The clip spans from the lane's left edge to C's boundary, so the chip
-        // and its text are bounded by the timestamp's reservation exactly as C's
-        // contents are.
+        // and its text are bounded by the right margin exactly as C's contents
+        // are.
         cairo_rectangle(cr, static_cast<double>(lane.x),
                         static_cast<double>(content.y),
                         sec.c_x1 - static_cast<double>(lane.x),
@@ -4284,14 +4333,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 
     // --- Section C: the modal / editor / status chain, in the span that runs
     //     from the critical cell (or the left lead-in, with no critical message
-    //     standing) to one pad before the timestamp's reserved cell. ---
+    //     standing) to the lane's RIGHT MARGIN — one pad in from its right
+    //     edge, the boundary the clock's reserved cell held until 2026-08-11. ---
     //
-    // THE SPAN IS CLIPPED AT THE RESERVATION, and that clip is the whole
+    // THE SPAN IS CLIPPED AT THAT MARGIN, and that clip is the whole
     // overrun mechanism (architect 2026-08-01: a screen too small to hold the
     // line is a user problem — "too small screen is adversarial" — so there is
-    // no ellipsis, no shrink and no scroll here). The reservation holds even
-    // on the frames where the clock is momentarily absent, so C's right edge
-    // never moves and its text never jumps.
+    // no ellipsis, no shrink and no scroll here). The margin is a function of
+    // the lane alone, so C's right edge never moves and its text never jumps.
     //
     // The clip covers the row's whole content band vertically, so the editors'
     // caret, selection highlight and red flash clip on the same boundary as

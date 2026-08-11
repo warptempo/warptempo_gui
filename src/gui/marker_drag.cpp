@@ -452,7 +452,7 @@ void MarkerDragOps::commit_drag() {
                                 std::move(touched_live));
         }
         undo.recompute_dirty();
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         // The flag pack/elision walks visual x order (overlay-effective
         // during a drag, live store at rest) — repaint the top strip so
         // the committed layout, computed from the reordered live store,

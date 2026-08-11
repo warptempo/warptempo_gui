@@ -1253,9 +1253,8 @@ enum class DialogTrigger {
 };
 
 // In-window modal prompt state. When `active` is true, the bottom row's
-// left-hand modal/status span carries the prompt's text and response options
-// (the timestamp keeps its own reserved cell at the row's right edge, and the
-// span clips where that reservation begins).
+// modal/status span carries the prompt's text and response options (the span
+// runs to the row's right margin and clips there).
 // Input is owned by the prompt: only the response keys (and Esc, which
 // activates the rightmost response) do anything; everything else is
 // swallowed. `response_keys` holds lowercase letters and the match is
@@ -1992,6 +1991,21 @@ struct AppState {
         std::vector<double> byte_x;
     };
     BottomEditorText bottom_editor_text;
+
+    // THE CLOCK'S RESERVED CELL, published by paint_transport_row (2026-08-11,
+    // when the timestamp moved off the status line into row 8's centre in bold
+    // monospace). It is a PAINTER STASH in the roster's own model — the rect
+    // that was drawn, never re-measured elsewhere — because the cell's width is
+    // a SHAPED specimen on the monospace face at the live size, which only the
+    // painter is holding a scaled font for.
+    //
+    // ITS ONE CONSUMER IS DAMAGE: clock_invalidate_rect (below) hands it to
+    // every route that moves the playhead or the scanner, so a clock advance
+    // dirties the cell instead of the whole transport lane and the eight
+    // buttons' draws fall outside on_redraw's clip. Zero before the row's first
+    // paint, which that owner answers with the lane itself — the first frame
+    // paints everything anyway.
+    GuiRect clock_cell_rect{0, 0, 0, 0};
 
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
@@ -3736,7 +3750,31 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
-GuiRect timestamp_invalidate_rect(const AppState& a);
+// THE BOTTOM STRIP'S TWO DAMAGE OWNERS, one per lane, and which one a route
+// wants is decided by WHICH PIXELS IT ERASES — the product's standing rule that
+// damage follows the basis of what it repaints (playhead_pixel_x above states
+// the same rule for the waveform's two bases). The two lanes carried one owner
+// until 2026-08-11, when the clock left the status line for row 8's centre and
+// the two families it had served stopped sharing a rect.
+//
+//   status_row_invalidate_rect — ROW 9, the status lane: section C's whole
+//   precedence chain (the prompt, the four bottom-strip editors and their
+//   carets, the queue / render / transient status strings, the selection
+//   readout) and the critical chip. Reached through
+//   Viewport::invalidate_status_row_area, which is where its callers are; the
+//   great majority of them write a STRING into C.
+//
+//   clock_invalidate_rect — ROW 8's reserved clock cell, and nothing else on
+//   that lane: every route that moves the PLAYHEAD or the SCANNER, which is the
+//   only thing the clock reads. Reached through
+//   Viewport::invalidate_clock_area, whose declaration carries the caller
+//   inventory (viewport.h).
+//
+// A route doing both — a load-in-place, an undo restore, a view switch — calls
+// both, spelling the two lanes it dirties rather than widening to one rect that
+// covers them.
+GuiRect status_row_invalidate_rect(const AppState& a);
+GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);

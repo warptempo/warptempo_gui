@@ -192,11 +192,11 @@ void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
     // Invalidate the status lane before clearing queue_progress_text.
-    // timestamp_invalidate_rect() covers the status lane — the whole bottom
+    // status_row_invalidate_rect() covers the status lane — the whole bottom
     // strip until row 8 stacked the transport row above it (2026-08-11) — and
     // the label lives nowhere else; keep this
     // ordering consistent with the other status-clear paths.
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     app.queue_progress_text.clear();
     // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
     // DIE HERE or a rung-served run — which never promoted, so this clear of the
@@ -232,7 +232,7 @@ void GuiInputHandler::park_render_status(std::string text) {
     if (status_promoted_) {
         // Invalidate before clearing, the ordering every status-clear path here
         // keeps.
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         app.queue_progress_text.clear();
         status_promoted_ = false;
     }
@@ -308,7 +308,7 @@ void GuiInputHandler::tick_promote_render_status() {
     // the next park retract it and keeps that retraction from touching another
     // owner's message.
     status_promoted_ = true;
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {

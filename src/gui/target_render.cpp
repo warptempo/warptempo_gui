@@ -264,7 +264,7 @@ void GuiTargetRender::stamp_updating() {
         return;
     }
     app.queue_progress_text = "Updating...";
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 void GuiTargetRender::tick_updating_hold() {
@@ -294,7 +294,7 @@ void GuiTargetRender::tick_updating_hold() {
     // arriving late. Guarded on the text being OURS — an archival "Rendering..."
     // in the shared slot belongs to a live session and is not ours to erase.
     if (app.queue_progress_text == "Updating...") {
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         app.queue_progress_text.clear();
     }
 }
@@ -329,7 +329,7 @@ void GuiTargetRender::dispatch_render_now() {
         // still on screen.
         run_active_ = false;
         if (app.queue_progress_text == "Updating...") {
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             app.queue_progress_text.clear();
         }
         return;
@@ -529,7 +529,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 
     if (outcome != RenderOutcome::Success && !run_active_) {
         // Clear status. Match finalize_render_run by invalidating the status
-        // lane before clearing queue_progress_text; timestamp_invalidate_rect()
+        // lane before clearing queue_progress_text; status_row_invalidate_rect()
         // covers the status lane, which is the label's whole home (the bottom
         // strip's second lane, row 8's transport row, carries no status).
         //
@@ -538,7 +538,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // pending — clearing here would blink the label off between two renders
         // of one continuous gesture. The run's own end clears it
         // (tick_updating_hold, once the quiet window passes with the work idle).
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         app.queue_progress_text.clear();
     }
 
@@ -584,7 +584,7 @@ void GuiTargetRender::complete_successful_buffer() {
     }
 
     // Clear status. Match finalize_render_run by invalidating the status lane
-    // before clearing queue_progress_text; timestamp_invalidate_rect() covers
+    // before clearing queue_progress_text; status_row_invalidate_rect() covers
     // the status lane, the label's whole home. GUARDED on a non-empty slot, like the two sibling
     // clears (dispatch_render_now's early refusal and cancel_in_flight_update):
     // the reuse rungs reach this tail with the label NEVER stamped — a
@@ -599,7 +599,7 @@ void GuiTargetRender::complete_successful_buffer() {
     // with the work idle). Outside a run this is the ordinary immediate clear it
     // has always been.
     if (!run_active_ && !app.queue_progress_text.empty()) {
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         app.queue_progress_text.clear();
     }
 }
@@ -735,7 +735,7 @@ void GuiTargetRender::cancel_in_flight_update() {
     // to is going away, so any run goes with it and this clear is unheld.
     run_active_ = false;
     if (app.queue_progress_text == "Updating...") {
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         app.queue_progress_text.clear();
     }
 }

@@ -90,7 +90,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // erase. See AppState::transient_status_message.
     if (!app.transient_status_message.empty()) {
         app.transient_status_message.clear();
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
     }
 
     // Bottom-strip prompt owns input while active. Only the prompt's
@@ -608,7 +608,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         vs.read_only = !vs.read_only;
         // The bottom row still repaints here: it is cheap, and the row-2/row-4
         // enabled faces below share this flag's fate frame for frame.
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         // AND THE TOP STRIP (2026-08-01): the active tab now WEARS its lock — a
         // padlock in the tab's close-icon slot, drawn iff that tab is read-only.
         // The tick comparator cannot cover it: it stashes
@@ -1199,7 +1199,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // marker-lane-owns-the-playhead rule and the caller inventory live). This
     // site hand-copied that recipe; now it calls it. NOT move_playhead_to, which
     // would scroll the viewport a second time before the centering below.
-    // The owner OWNS the damage: full waveform area + timestamp on a land that
+    // The owner OWNS the damage: full waveform area + the clock cell on a land that
     // MOVES, and an early return on a land onto the sample the playhead already
     // holds — nothing moved there, so nothing needs erasing. What stays HERE is
     // exactly what the owner does not provide: the stop above, the region clear,

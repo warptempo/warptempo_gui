@@ -744,7 +744,7 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // epoch. Rule and per-site shape table at playhead_pixel_x
     // (app_state.h).
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_clock_area();
 }
 
 // COINCIDENCE AUTO-SELECT (architect 2026-07-29, the entry half of THE SELECTION
@@ -1361,7 +1361,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                     text_editor::select_word_at(
                         *g.ed, editor_byte_index_at(g, x));
-                    if (g.bottom_strip) viewport.invalidate_timestamp_area();
+                    if (g.bottom_strip) viewport.invalidate_status_row_area();
                     else                viewport.invalidate_top_strip();
                     return;
                 }
@@ -1370,7 +1370,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // pointer then moves.
                 g.ed->selection_anchor = g.ed->cursor_pos;
                 app.editor_text_drag.active = true;
-                if (g.bottom_strip) viewport.invalidate_timestamp_area();
+                if (g.bottom_strip) viewport.invalidate_status_row_area();
                 else                viewport.invalidate_top_strip();
                 return;
             }
@@ -2631,7 +2631,7 @@ void GuiInputHandler::finalize_editor_text_drag() {
         // matching the existing click-to-caret.
         if (g.ed->selection_anchor == g.ed->cursor_pos)
             g.ed->selection_anchor = -1;
-        if (g.bottom_strip) viewport.invalidate_timestamp_area();
+        if (g.bottom_strip) viewport.invalidate_status_row_area();
         else                viewport.invalidate_top_strip();
     }
     app.editor_text_drag.active = false;
@@ -4646,7 +4646,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // The anchor set at press stays put; moving cursor_pos extends
             // the selection.
             set_editor_caret_from_x(g, mouse_x);
-            if (g.bottom_strip) viewport.invalidate_timestamp_area();
+            if (g.bottom_strip) viewport.invalidate_status_row_area();
             else                viewport.invalidate_top_strip();
         }
         // !g.valid (only an invalid editor target — the lane text stays
@@ -4930,7 +4930,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // (there is no cancel) — accepted.
         app.playhead_cursor_sample = far_frame;
         viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_clock_area();
         return;
     }
     // (No tempo-drag motion arms: the target-view tempo drag and its pending are

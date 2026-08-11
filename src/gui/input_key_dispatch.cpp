@@ -2119,12 +2119,12 @@ void GuiInputHandler::open_history_commit_editor() {
     app.commit_title_editor.selection_anchor = 0;
     app.commit_title_editor.cursor_pos =
         static_cast<int>(app.commit_title_editor.pending.size());
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 void GuiInputHandler::commit_title_editor_exit_no_commit() {
     if (!text_editor::is_active(app.commit_title_editor)) return;
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     text_editor::deactivate(app.commit_title_editor);
 }
 
@@ -2154,11 +2154,11 @@ void GuiInputHandler::commit_title_editor_commit() {
                        std::string::npos;
     if (blank) {
         app.commit_title_editor.red = true;
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         return;
     }
     text_editor::deactivate(app.commit_title_editor);
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     run_history_commit(title);
 }
 
@@ -2173,7 +2173,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
         [this] { commit_title_editor_commit(); },
         [this] { commit_title_editor_exit_no_commit(); },
         [this] { commit_title_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_timestamp_area(); });
+        [this] { viewport.invalidate_status_row_area(); });
 }
 
 // THEN DO IT — the commit-title editor's Enter, and the only caller.
@@ -2486,9 +2486,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // untouched. Damaging anyway costs one repaint of one row on a keypress-rare
     // event and needs no arm to remember it. This is the bottom strip's one
     // invalidation
-    // (invalidate_timestamp_area — the row's damage owner since it carried only
+    // (invalidate_status_row_area — the row's damage owner since it carried only
     // the clock), the same call every transient-status writer makes.
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 // -- THE REVERT ACT --------------------------------------------------------
@@ -3720,7 +3720,8 @@ bool GuiInputHandler::load_render_entry_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
+    viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing: it marks the
     // buffer stale and dispatches the loaded-in-place state's target preview,
@@ -3986,7 +3987,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
+    viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing.
     target_render.trigger();
@@ -4159,7 +4161,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
+    viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing.
     target_render.trigger();
@@ -4224,14 +4227,14 @@ void GuiInputHandler::open_load_editor() {
         // batch may be irreplaceable queued work; Esc is the explicit cancel.
         if (app.queue_running || app.pending_archival.armed) {
             app.transient_status_message = "Render running; Esc cancels it";
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             return;
         }
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
             app.transient_status_message = "No renders to load in place";
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             return;
         }
     }
@@ -4259,12 +4262,12 @@ void GuiInputHandler::open_load_editor() {
         app.load_editor.cursor_pos =
             static_cast<int>(app.load_editor.pending.size());
     }
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 void GuiInputHandler::load_editor_exit_no_commit() {
     if (!text_editor::is_active(app.load_editor)) return;
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     text_editor::deactivate(app.load_editor);
 }
 
@@ -4336,7 +4339,7 @@ void GuiInputHandler::load_editor_autocomplete() {
         static_cast<int>(app.load_editor.pending.size());
     app.load_editor.selection_anchor = -1;
     app.load_editor.red              = false;
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
 }
 
 // Enter handler: resolve the pending to exactly one entry and load it in place.
@@ -4363,7 +4366,7 @@ void GuiInputHandler::load_editor_commit() {
 
     auto reject = [&]() {
         app.load_editor.red = true;
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
     };
 
     if (app.history_mode.active) {
@@ -4372,7 +4375,7 @@ void GuiInputHandler::load_editor_commit() {
                 ? load_history_local_entry_in_place(pending)
                 : load_history_commit_in_place(pending);
         if (loaded) {
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             text_editor::deactivate(app.load_editor);
         } else {
             reject();
@@ -4396,7 +4399,7 @@ void GuiInputHandler::load_editor_commit() {
     // the copy is self-contained (paths + basename), so it stays valid.
     const AppState::RenderEntry entry = *found;
     if (load_render_entry_in_place(entry)) {
-        viewport.invalidate_timestamp_area();
+        viewport.invalidate_status_row_area();
         text_editor::deactivate(app.load_editor);
     } else {
         reject();
@@ -4418,7 +4421,7 @@ void GuiInputHandler::load_editor_commit() {
 // them at all — the on_key gate swallows it first.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the four
-// bottom-strip surfaces pass invalidate_timestamp_area, the top-strip flag editor
+// bottom-strip surfaces pass invalidate_status_row_area, the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
@@ -4474,7 +4477,7 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
         [this] { load_editor_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_timestamp_area(); });
+        [this] { viewport.invalidate_status_row_area(); });
 }
 
 // P / I / M letter-key handlers. See the declaration for the chord list.
@@ -4712,14 +4715,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         if (app.audio_player.empty()) {
             app.transient_status_message = "No audio_player set";
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             return true;
         }
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
             app.transient_status_message = "No renders to play";
-            viewport.invalidate_timestamp_area();
+            viewport.invalidate_status_row_area();
             return true;
         }
         std::vector<std::string> wavs;
@@ -4923,7 +4926,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] {
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
-                viewport.invalidate_timestamp_area();
+                viewport.invalidate_status_row_area();
             },
             [this] {
                 // Ctrl+Q tears the editor and the mode down together
@@ -4931,7 +4934,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
             },
-            [this] { viewport.invalidate_timestamp_area(); });
+            [this] { viewport.invalidate_status_row_area(); });
     }
     // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
     // on a red-flash EDGE. The invalid-commit flash reaches the marker's STEM
@@ -4979,5 +4982,5 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { settings_editor.exit_no_commit(); },
-        [this] { viewport.invalidate_timestamp_area(); });
+        [this] { viewport.invalidate_status_row_area(); });
 }

@@ -866,7 +866,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // its own value. The engine-key settings COMMIT's twin re-land died the same way
     // (settings_editor.cpp). Every other op_mode still lands through the visual tail
     // above, on its restored focus in both arms.
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
+    viewport.invalidate_clock_area();
     // Unconditional by ruling — rationale at GuiTargetRender::trigger; an
     // undo/redo restoring only normalization-inert state (e.g. a disabled-
     // marker-only restore) stops playback and re-previews through

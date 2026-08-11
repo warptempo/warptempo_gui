@@ -373,12 +373,14 @@ GuiRect top_marker_row_area(const AppState& a) {
 // THE BOTTOM STRIP IS TWO LANES since row 8 (2026-08-11). Lane 0 — the window
 // edge — is the STATUS row (ROW 9 in the architect's numbering since row 8
 // landed; it landed as row 7, architect 2026-08-01): the status row and
-// the modal/editor row collapsed into a single line carrying, left to right, the
-// active modal / editor / prompt / status text when one applies, and the
-// timestamp in its reserved cell at the right edge (the dirty flag moved off the
-// row entirely — it is the window title's dot now). Lane 1, inward of it and
+// the modal/editor row collapsed into a single line carrying the
+// active modal / editor / prompt / status text when one applies, plus the
+// critical chip ahead of it (the dirty flag moved off the
+// row entirely — it is the window title's dot now, and the TIMESTAMP left for
+// row 8's centre on 2026-08-11). Lane 1, inward of it and
 // flush under the waveform, is the TRANSPORT ROW (row 8, the touch arc's first
-// surface): the nine-button bottom toolbar, whose accessor is below.
+// surface): the eight-button bottom toolbar and the clock between its two
+// groups, whose accessor is below.
 // bottom_row_area is that lane INCLUDING both 1px borders,
 // as the strip stack allocates it; bottom_row_content_area is the ground between
 // them, the band every painter and baseline works in.
@@ -674,16 +676,31 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The timestamp and the modal/editor/status chain share the STATUS LANE —
-// bottom lane 0 (row 7), the whole bottom strip until row 8 stacked the
-// transport row above it (2026-08-11) — so the invalidation region is that
-// lane's own rect, borders included, since the lane owns them; the transport
-// row damages itself through its own face writers and must not repaint on
-// every timestamp advance. (The dirty flag is no longer one
-// of the sharers: it lives in the window title, which the compositor repaints,
-// so a dirty transition damages nothing of ours.)
-GuiRect timestamp_invalidate_rect(const AppState& a) {
+// THE STATUS LANE'S RECT — bottom lane 0 (row 9), borders included, since the
+// lane owns them. What lives on it is section C's precedence chain and the
+// critical chip; the TIMESTAMP left it for row 8 on 2026-08-11, so a clock
+// advance no longer touches this lane at all (the two lanes' owners are
+// contrasted at the declaration, app_state.h). The transport row above damages
+// itself through its own face writers and the clock cell below.
+// (The dirty flag is not a sharer either: it lives in the window title, which
+// the compositor repaints, so a dirty transition damages nothing of ours.)
+GuiRect status_row_invalidate_rect(const AppState& a) {
     return bottom_row_area(a);
+}
+
+// THE CLOCK'S RECT — row 8's reserved centre cell as the painter last drew it
+// (AppState::clock_cell_rect, whose stash contract is at the field). Narrow by
+// construction: on_redraw clips to the damage region, so paint_transport_row
+// runs but its eight buttons fall outside the clip and cost nothing, which is
+// what makes this affordable at the pre-paint hook's per-frame cadence.
+//
+// BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
+// transport lane — the honest widening, and unreachable in practice: the first
+// frame damages the window entire.
+GuiRect clock_invalidate_rect(const AppState& a) {
+    const GuiRect cell = a.clock_cell_rect;
+    if (cell.w <= 0 || cell.h <= 0) return bottom_transport_row_area(a);
+    return cell;
 }
 
 
@@ -759,8 +776,8 @@ int main(int argc, char** argv) {
     // -- Viewport + invalidation helpers ------------------------------------
     //
     // The viewport-mutation and invalidation helpers are methods on the
-    // Viewport struct (viewport.{cpp,h}), including the
-    // timestamp invalidation helper invalidate_timestamp_area. Every other
+    // Viewport struct (viewport.{cpp,h}), including the bottom strip's two
+    // lane owners, invalidate_status_row_area and invalidate_clock_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
     // below — stop_playback_if_playing / toggle_playback / set_playback_speed
     // on playback_lifecycle, save on save_ops, request_close /
@@ -951,7 +968,8 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
-    auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
+    auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
+    auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
@@ -1461,7 +1479,7 @@ int main(int argc, char** argv) {
                 if (app.zoom_level != old_zoom ||
                     app.viewport_start_sample != old_vp) {
                     viewport.invalidate_waveform_area();
-                    viewport.invalidate_timestamp_area();
+                    viewport.invalidate_clock_area();
                     viewport.kick_waveform_sync();
                 }
             }
@@ -1617,19 +1635,19 @@ int main(int argc, char** argv) {
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
                 if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
-                    invalidate_timestamp_area();
+                    invalidate_status_row_area();
                 else
                     invalidate_top_strip();
             }
         }
         // Same shape for the bottom-strip settings prompt; invalidate the
-        // timestamp area on each visibility flip.
+        // status lane on each visibility flip.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
-                invalidate_timestamp_area();
+                invalidate_status_row_area();
             }
         }
         // Same shape for the bottom-strip load prompt.
@@ -1638,7 +1656,7 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.load_editor);
             if (now_visible != app.load_editor_blink_last) {
                 app.load_editor_blink_last = now_visible;
-                invalidate_timestamp_area();
+                invalidate_status_row_area();
             }
         }
         // And for the history view's commit-title editor.
@@ -1647,7 +1665,7 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.commit_title_editor);
             if (now_visible != app.commit_title_editor_blink_last) {
                 app.commit_title_editor_blink_last = now_visible;
-                invalidate_timestamp_area();
+                invalidate_status_row_area();
             }
         }
 
@@ -1673,11 +1691,11 @@ int main(int argc, char** argv) {
             // sampling on the paint clock; reading it on the tick too
             // would reintroduce the tick/paint sampling-rate mismatch
             // that stutters playhead motion at high zoom. While the
-            // scanner column is onscreen the timestamp area is
+            // scanner column is onscreen the CLOCK CELL is
             // invalidated only by the pre-paint hook (when the
             // predictor advances past app.playhead_scanner_sample),
             // never by the tick — the tick fires ~2x per frame, so
-            // duplicating the timestamp rect there is wasted on_redraw
+            // duplicating the clock rect there is wasted on_redraw
             // work.
             // PLATE basis, not live: the scanner's pixels are plate-registered
             // (paint_scanner), so its damage resolves there too — the rule and
@@ -1703,15 +1721,15 @@ int main(int argc, char** argv) {
             // can never come back. So ask the rect builder rather than
             // re-derive its bounds test here (the tick damages one
             // column, so that single rect decides it), and when it yields
-            // nothing, damage the bottom strip instead: it is always
+            // nothing, damage the CLOCK CELL instead: row 8 is always
             // onscreen, so a paint is always produced, and it is the
-            // honest rect — the status line tracks the SCANNER's time
+            // honest rect — the clock tracks the SCANNER's time
             // while playing, so it is frozen alongside the line for
             // exactly the same stretch. Follow mode is untouched: no
             // viewport work is added here, and a chasing viewport keeps
             // the column onscreen so the fallback simply never fires.
             if (playhead_invalidate_rect(waveform_area(app), px).w <= 0)
-                invalidate_timestamp_area();
+                invalidate_clock_area();
             return;
         }
 
@@ -1838,7 +1856,7 @@ int main(int argc, char** argv) {
         // scheduling a redundant frame callback (platform layer handles
         // that via its in_pre_paint_ flag).
         invalidate_playhead_columns(old_px, new_px);
-        invalidate_timestamp_area();
+        invalidate_clock_area();
         if (app.follow_mode && !app.follow_overridden_for_session)
             follow_scroll_if_needed();
     });

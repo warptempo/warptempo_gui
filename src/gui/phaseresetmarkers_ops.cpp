@@ -50,7 +50,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
     // create path is the lead-in drop below (bare `s` and the empty-lane
     // double-click both take it), which authors N/2 BEFORE the playhead, so the
@@ -127,7 +127,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     target_render.trigger();
 }
 
@@ -151,7 +151,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
+    viewport.invalidate_status_row_area();
     target_render.trigger();
 }
 
