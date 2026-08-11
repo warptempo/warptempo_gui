@@ -10,16 +10,15 @@
 // icon is crisp at every gui_scale, exactly like every other redesigned
 // dimension.
 //
-// THE INTERPRETER HAS GROWN EXACTLY THREE FEATURES past the plain filled path
-// it started as, each with a committed producer and each taken so that the `d`
+// THE INTERPRETER HAS GROWN EXACTLY TWO FEATURES past the plain filled path it
+// started as, each with a committed producer and each taken so that the `d`
 // string in the table stays VERBATIM rather than being flattened by hand:
-//   - a per-path TRANSFORM (dialog-ok-apply's and dialog-cancel's translate,
-//     generalized to a full matrix for distortionfx, 2026-08-11);
-//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05);
-//   - a STROKED path (distortionfx, 2026-08-11 — the set's first, whose one
-//     path is `fill="none" stroke="currentColor"`).
+//   - a per-path TRANSLATE (dialog-ok-apply's and dialog-cancel's transform);
+//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05).
 // Each is described where it is implemented (icons.cpp's table header and its
-// `d`-interpreter header).
+// `d`-interpreter header). A general matrix and a stroked-path arm were grown
+// for distortionfx on 2026-08-11 and deleted hours later with it, that file
+// being the only producer either ever had; git history holds both.
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
@@ -68,8 +67,11 @@ enum class Icon {
     //   SOURCE / TARGET are document-export / document-import, the arrow
     //   LEAVING a document and ENTERING one — his own metaphor, the source
     //   being where the audio comes FROM.
-    //   WARP is distortionfx, the spiral: time bends. Picked over speedometer
-    //   (his own first pick, reversed in the same breath) and player-time.
+    //   WARP is speedometer, the gauge with the needle: warping IS a speed
+    //   change, and "change speed" is kdenlive's own word for it. It was his
+    //   FIRST pick, reversed to distortionfx (the spiral, "time bends") in the
+    //   same breath, and RESTORED at his second look later the same day, which
+    //   leaves distortionfx the recorded runner-up beside player-time.
     //   PHASE RESET is chronometer-start, the stopwatch with the solid play
     //   triangle in its dial: start the clock anew. Picked over
     //   chronometer-reset and view-refresh — indistinguishable from each other
@@ -77,7 +79,7 @@ enum class Icon {
     //   rendering — and over the bare chronometer.
     DocumentExport,      // Source audio view (bare `t`)
     DocumentImport,      // Target audio view (bare `t`)
-    DistortionFx,        // Warp markers (bare `p`)
+    Speedometer,         // Warp markers (bare `p`)
     ChronometerStart,    // Phase reset markers (bare `p`)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
@@ -156,9 +158,8 @@ enum class Icon {
 inline constexpr int kIconCount = 32;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
-// painting each of its paths in that path's OWN color — filled, or STROKED
-// where the file strokes (the colors are the SVGs' and are hard-coded per the
-// redesign color ruling — see the table).
+// filling each of its paths in that path's OWN color (the colors are the SVGs'
+// and are hard-coded per the redesign color ruling — see the table).
 //
 // Uniform scale, no aspect fitting: every icon here is square by construction
 // (viewBox 0 0 22 22). Cairo state is saved and restored; the caller's source,

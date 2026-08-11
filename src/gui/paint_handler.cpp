@@ -29,7 +29,7 @@
 // THE STATUS LINE IS SANS, AND MONOSPACE LIVES ON EXACTLY ONE SURFACE
 // (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
 // to get rid of monospace altogether — the last row should be the same font as
-// the rest"): monospace RETURNS, BOLD, for the CLOCK alone, which moved that
+// the rest"): monospace RETURNS for the CLOCK alone, which moved that
 // same day off this line into the centre of row 8 (paint_transport_row, which
 // owns the face, the size and the cell). The reversal is scoped to that one
 // surface and nothing else in the product may take it.
@@ -912,7 +912,7 @@ struct IconRowDef {
 constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconS,      IconRowLead::First,     icons::Icon::DocumentExport},
     {RedesignButton::IconT,      IconRowLead::Gap,       icons::Icon::DocumentImport},
-    {RedesignButton::IconW,      IconRowLead::Separator, icons::Icon::DistortionFx},
+    {RedesignButton::IconW,      IconRowLead::Separator, icons::Icon::Speedometer},
     {RedesignButton::IconP,      IconRowLead::Gap,       icons::Icon::ChronometerStart},
     // (THE ZOOM PAIR SAT HERE, in its own separator-flanked group, from
     // 2026-08-01 until 2026-08-02: the architect ruled out duplicate commands on
@@ -2220,7 +2220,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   buttons: Play greyed while an audition runs, Stop while none is), and
 //   skip-forward (bare End);
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
-//   status line in BOLD MONOSPACE (the architect's ruling, the face, the size
+//   status line in MONOSPACE (the architect's ruling, the face, the size
 //   and the no-wiggle cell are all at kClockShape below);
 //   THE CARDINAL ARROWS, right-anchored, VIM ORDER left-to-right — left,
 //   down, up, right (bare Left/Down/Up/Right), a single line and not a d-pad,
@@ -2326,8 +2326,11 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // the reversal is scoped to this cell and the status line stays sans, which is
 // stated at that row's own header block).
 //
-// THE FACE IS "monospace" BOLD, which fontconfig resolves to Liberation Mono on
-// this host. THE SIZE IS THE REDESIGN'S ONE SIZE (redesign_font_size_px, so it
+// THE FACE IS "monospace" at NORMAL weight, which fontconfig resolves to
+// Liberation Mono on this host (it shipped BOLD for the row's first hours and
+// the architect dropped the weight at his second look — keep the face, lose the
+// bold; the specimen derivation below is weight-agnostic and the memoised
+// metrics key on size, so nothing else about the cell moved). THE SIZE IS THE REDESIGN'S ONE SIZE (redesign_font_size_px, so it
 // rides gui_scale like every other string): a planner default, RETUNABLE — it
 // is not sampled from any crop, unlike this row's geometry.
 //
@@ -2477,7 +2480,7 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     // this body already opened; nothing else on the row draws text.
     {
         cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_BOLD);
+                               CAIRO_FONT_WEIGHT_NORMAL);
         const double size_px = redesign_font_size_px();
         cairo_set_font_size(cr, size_px);
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
@@ -4254,7 +4257,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     app.bottom_editor_text = AppState::BottomEditorText{};
 
     // (SECTION A — THE TIMESTAMP — LEFT THIS ROW 2026-08-11 for the centre of
-    //  row 8, in bold monospace: the painter, the split-playhead read and the
+    //  row 8, in monospace: the painter, the split-playhead read and the
     //  no-wiggle specimen all moved to paint_transport_row's clock block.)
 
     // --- THE CRITICAL CELL, first on the row and painted before everything else

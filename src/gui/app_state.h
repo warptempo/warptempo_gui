@@ -1993,7 +1993,7 @@ struct AppState {
     BottomEditorText bottom_editor_text;
 
     // THE CLOCK'S RESERVED CELL, published by paint_transport_row (2026-08-11,
-    // when the timestamp moved off the status line into row 8's centre in bold
+    // when the timestamp moved off the status line into row 8's centre in
     // monospace). It is a PAINTER STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen on the monospace face at the live size, which only the
