@@ -1958,8 +1958,10 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // THE HARD END OF THE TOUCH STREAM: no motion, up, or cancel will
         // arrive on this object again. The contract is wl_touch.cancel's,
         // shared whole (hard_end_touch_stream): a live pointer translation
-        // commits — release delivered at the last position, then the ordinary
-        // leave — a live two-finger gesture ends through its end path, an
+        // commits — release delivered at the last position, then the
+        // focus-forked translation end (deliver_touch_translation_end: the
+        // ordinary leave, or a restore motion at a focused mouse) — a live
+        // two-finger gesture ends through its end path, an
         // unresolved disambiguation window drops silently, and all touch state
         // is forgotten. The pointer- and keyboard-capability edges above
         // deliberately do not reach in here: each input source dies on its own
@@ -2840,7 +2842,8 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // entry motion at the ORIGINAL down point (the pointer enter's own shape —
     // the first "the pointer is here" notification), the left press there, and
     // any queued motion. Shared by all three resolutions; the tap's caller
-    // delivers the release and the leave itself, immediately after.
+    // delivers the release and the focus-forked translation end itself
+    // (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;
     // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION (codex round 2): the finger
     // has factually been down since the window opened, so EVERY delivery in
@@ -3065,7 +3068,7 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             // A TAP: the finger lifted inside the window, so the whole burst
             // delivers now — the resolution's enter-motion + press (+ any
             // queued sub-slop motion), then the Pointer arm below adds the
-            // release and the leave immediately after.
+            // release and the focus-forked translation end immediately after.
             resolve_touch_window_to_pointer();
             [[fallthrough]];
         case TouchPhase::Pointer:

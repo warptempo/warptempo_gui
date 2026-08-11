@@ -55,10 +55,15 @@ inline constexpr int kGuiCursorKindCount = 7;
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
 //   * OrdinaryLeave is wl_pointer.leave — and, since touch phase 1
-//     (2026-08-11), every end of a touch POINTER TRANSLATION: the finger
-//     leaving the glass IS a leave, delivered after its release (the fires are
-//     the touch up, wl_touch.cancel and touch-capability loss — the edge
-//     inventory at the touch state block). Either way the stream is NOT over.
+//     (2026-08-11), a touch POINTER TRANSLATION ending WITH NO PHYSICAL
+//     POINTER FOCUSED: the finger left the glass and no mouse rests in the
+//     window, so the pointer is gone (delivered after the release; the fires
+//     are the touch up, wl_touch.cancel and touch-capability loss — the edge
+//     inventory at the touch state block). A translation ending with the
+//     physical pointer FOCUSED fires this hook NOT AT ALL — it delivers a
+//     restore MOTION at the mouse's own position instead (the codex round-3
+//     fork; the one statement is at deliver_touch_translation_end's
+//     definition). Either way the stream is NOT over.
 //     No position event arrives WHILE the pointer stays outside, but a
 //     re-entry (or the next touch) synthesizes
 //     a motion, a held button still releases, and the held state survives — so a
@@ -206,9 +211,12 @@ public:
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
     // Fired when the pointer LEAVES the surface (wl_pointer.leave), at
-    // pointer-capability loss, and — since touch phase 1 — at every end of a
-    // touch pointer translation (as OrdinaryLeave, after the release: the
-    // finger left the glass). The edges drop pointer focus
+    // pointer-capability loss, and — since touch phase 1 — at a touch pointer
+    // translation's end on its NO-FOCUS arm only (as OrdinaryLeave, after the
+    // release: the finger left the glass and no mouse rests in the window; a
+    // FOCUSED physical pointer gets a restore motion instead and this hook
+    // stays silent — the round-3 fork, stated at
+    // deliver_touch_translation_end). The edges drop pointer focus
     // and no position event will follow (outright, for capability loss; for the
     // ordinary leaves, for as long as the pointer stays outside — it may
     // re-enter
@@ -1075,10 +1083,12 @@ private:
     TextEditorProbe      text_editor_active_probe_;
     RepeatEligibleProbe  repeat_eligible_probe_;
     // The one owner of the pointer-leave drop: fired at wl_pointer.leave, at
-    // pointer-capability loss, and at every end of a touch pointer translation
-    // (the focus-dropping edges with no motion to
+    // pointer-capability loss, and at a touch translation end's NO-FOCUS arm
+    // (the round-3 fork at deliver_touch_translation_end — a focused mouse
+    // gets a restore motion, not this hook): the focus-dropping edges with no
+    // motion to
     // re-resolve — permanently on capability loss, and for the duration of the
-    // absence on an ordinary leave). Wired to everything derived from where the
+    // absence on an ordinary leave. Wired to everything derived from where the
     // pointer is, main.cpp's hook body holding the authoritative list; the marker
     // hover popup it also dropped no longer exists. It carries WHICH of the two
     // edges fired it, because a consumer may keep state across the soft one and
@@ -1250,7 +1260,8 @@ private:
     // deliver the synthesized enter-motion at the ORIGINAL down point, the
     // left press there (on the logical OR's 0->1 edge), then any queued
     // motion. Shared by the three resolutions — expiry, slop crossing, and
-    // the tap (whose caller then delivers the release + leave itself).
+    // the tap (whose caller then delivers the release + the translation end
+    // itself, through deliver_touch_translation_end).
     void resolve_touch_window_to_pointer();
     // Sample the Pending window's deadline. Called from the timerfd tick
     // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
@@ -1295,9 +1306,10 @@ private:
     // iff an update was delivered.
     void end_touch_nav_gesture(bool deliver_final_frame);
     // THE HARD-END CONTRACT, shared verbatim by wl_touch.cancel and
-    // touch-capability loss (the edge inventory names it): commit-and-leave a
-    // live Pointer translation, end a live Nav gesture, drop a Pending window
-    // silently, forget all touch state.
+    // touch-capability loss (the edge inventory names it): commit-and-END a
+    // live Pointer translation (the release, then the focus-forked translation
+    // end through deliver_touch_translation_end), end a live Nav gesture, drop
+    // a Pending window silently, forget all touch state.
     void hard_end_touch_stream();
     // Reset every touch field to its rest value (the one forget, so a new
     // edge cannot land with one field remembered).

@@ -1163,9 +1163,14 @@ int main(int argc, char** argv) {
     // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03) — and SINCE
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
     // GuiPointerLeaveReason, because one effect below now differs between them.
-    // (SINCE TOUCH PHASE 1, 2026-08-11, every end of a touch pointer
-    // translation fires this hook too, always as OrdinaryLeave — the finger
-    // left the glass, delivered after its release. The body needed no change:
+    // (SINCE TOUCH PHASE 1, 2026-08-11, a touch pointer translation's end
+    // fires this hook too — as OrdinaryLeave, and ONLY on its no-focus arm
+    // since codex round 3: with the physical pointer focused, the platform
+    // delivers a restore MOTION at the mouse's own position instead and this
+    // body never runs — the ordinary motion path re-derives hover and the
+    // settled cursor from truth (the fork's one statement is at
+    // deliver_touch_translation_end, platform_wayland.cpp). On the arm that
+    // DOES fire, the body needed no change:
     // clearing hover faces where a finger last was is precisely what the
     // no-hover-under-touch consequence asks for, and the row-1 keep below
     // reads the remembered position exactly as it does for a mouse. The fire
