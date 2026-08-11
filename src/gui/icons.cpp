@@ -30,10 +30,12 @@ namespace {
 // (the body cutout and the lid slot) come out as holes: its subpaths wind
 // against the outline. Filling subpath-by-subpath would flood them.
 // `tx`/`ty` carry the path element's own SVG `transform="translate(tx, ty)"`,
-// applied around the path so `d` can stay VERBATIM. Exactly ONE committed file
-// needs it — dialog-ok-apply.svg, whose author drew the check mark at its
-// document coordinates and translated it back into the viewBox — and baking the
-// offset into its twenty-odd numbers by hand would destroy the property that a
+// applied around the path so `d` can stay VERBATIM. TWO committed files need it
+// — dialog-ok-apply.svg, whose author drew the check mark at its document
+// coordinates and translated it back into the viewBox, and dialog-cancel.svg
+// (row 8, 2026-08-11), whose `translate(-1-1)` spells the glued-negative form
+// the SVG grammar admits — and baking either offset into the numbers by hand
+// would destroy the property that a
 // diff between this table and the file is a transcription bug and nothing else.
 // It is a TRANSLATE ONLY: no scale, rotate or matrix appears in any committed
 // file, so none is modelled and none is silently accepted.

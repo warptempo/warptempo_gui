@@ -985,11 +985,13 @@ inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneHeightPx, 5);
 }
 
-// Authored pixel geometry of THE BOTTOM ROW — the bottom strip's ONE lane
-// (row 7 of the redesign: the status line). Measured off row_7_text.png
+// Authored pixel geometry of THE BOTTOM ROW — the bottom strip's window-edge
+// lane (row 7 of the redesign: the status line; bottom lane 0). Measured off
+// row_7_text.png
 // (407x33). The bottom strip COLLAPSED FROM TWO LANES TO ONE here (architect
-// 2026-08-01): the status row and the modal/editor row became a single line, so
-// this accessor is the whole bottom strip's height.
+// 2026-08-01) — the status row and the modal/editor row became a single line,
+// and this accessor was the whole bottom strip's height until row 8 stacked
+// the TRANSPORT ROW above it (2026-08-11, the accessors below this block).
 //
 // THE CSS BOX MODEL, WITH A BORDER ON BOTH EDGES: 31 is CONTENT, and the two 1px
 // borders sit OUTSIDE it — the TOP one under the waveform area, the BOTTOM one

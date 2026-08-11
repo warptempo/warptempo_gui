@@ -608,19 +608,22 @@ private:
     // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
-    // THE FOUR REDESIGNED ROWS — the MENU ROW (top lane 0, row 1: the flat
+    // THE FIVE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
+    // flat
     // sampled ground plus the "Quit" and "Settings" buttons), the TOOLBAR ROW
     // (top lane 1,
     // row 2: the same ground, its border-bottom, its separators and the four
-    // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
-    // "A"/"B" Breeze tabs, their frame and its broken border-bottom) and the
+    // Save/Undo/Redo/Render buttons), the TAB ROW (top lane 2, row 3: the
+    // "A"/"B" Breeze tabs, their frame and its broken border-bottom), the
     // ICON ROW (top lane 3, row 4: the sixteen view/mode/action buttons, their
-    // separators and its border-bottom).
-    // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
+    // separators and its border-bottom), and the TRANSPORT ROW (bottom lane 1,
+    // row 8: the nine transport / Esc / arrow buttons, declared below).
+    // All five PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
-    // doctrine) — and all three stash the ENABLED VECTOR they painted beside it
-    // for main.cpp's staleness comparator, plus (row 4) the SELECTED bits.
+    // doctrine) — and every one stashes the ENABLED and SELECTED bits it
+    // painted beside them, through the one publisher (publish_button_face),
+    // for main.cpp's staleness comparator.
     //
     // All five are called from on_redraw OUTSIDE the loading / total>0
     // branches, each gated on its OWN exposure — they are the passes with no

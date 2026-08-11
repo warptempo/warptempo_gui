@@ -1970,8 +1970,10 @@ struct AppState {
     // shaped-geometry contract one row down, for the settings / load /
     // BPM editors after row 7 took them off the monospace grid (2026-08-01).
     // There is no BOX to publish: those editors have no chip around them any
-    // more (the press region is the whole bottom strip, as it has always been),
-    // so this carries only what click-to-byte needs.
+    // more (the press region is the STATUS LANE, bottom_row_area — the whole
+    // bottom strip until row 8 split the strip in two, 2026-08-11; the
+    // transport lane above it belongs to the button rows' claim), so this
+    // carries only what click-to-byte needs.
     //
     // `text_origin_x` is the window x of PENDING's byte 0 — the prefix's own
     // shaped width is already spent in it — and `byte_x` holds pending.size()+1

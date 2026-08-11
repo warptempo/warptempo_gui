@@ -671,13 +671,16 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The timestamp and the modal/editor/status chain share the bottom strip's ONE
-// lane (row 7), so the invalidation region is the whole bottom strip rect —
-// borders included, since the lane owns them. (The dirty flag is no longer one
+// The timestamp and the modal/editor/status chain share the STATUS LANE —
+// bottom lane 0 (row 7), the whole bottom strip until row 8 stacked the
+// transport row above it (2026-08-11) — so the invalidation region is that
+// lane's own rect, borders included, since the lane owns them; the transport
+// row damages itself through its own face writers and must not repaint on
+// every timestamp advance. (The dirty flag is no longer one
 // of the sharers: it lives in the window title, which the compositor repaints,
 // so a dirty transition damages nothing of ours.)
 GuiRect timestamp_invalidate_rect(const AppState& a) {
-    return bottom_strip_area(a);
+    return bottom_row_area(a);
 }
 
 

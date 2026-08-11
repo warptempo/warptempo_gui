@@ -4642,7 +4642,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND its 2px black
         //      top/bottom borders (above, unconditional).
-        //   3. the four redesigned top rows and the bottom row, each on its own
+        //   3. the four redesigned top rows, the transport row (row 8, bottom
+        //      lane 1) and the bottom row, each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
         //   4. region ground -> waveform plate -> phase-reset overlay ring.
