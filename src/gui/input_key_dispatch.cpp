@@ -2317,8 +2317,9 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     job.title         = title;
     job.bytes         = build_history_now_side(app);
 
-    // THE VIEW CLOSES ON THE SAVE, and the session's two strings are already
-    // captured above, so the close cannot take them with it.
+    // THE VIEW CLOSES ON THE SAVE, and the session's three strings — the derived
+    // clone, the project directory and the base name — are already captured
+    // above, so the close cannot take them with it.
     close_history_mode();
 
     // THE BIT GOES UP AFTER THE SAVE, WHICH IS THE WHOLE EXEMPTION the act's own

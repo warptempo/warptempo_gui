@@ -545,9 +545,11 @@ struct GuiHistoryWalkHeader {
 //
 // `ok` false with `read_failed` false is the ruled "not inside a git clone"; with
 // `read_failed` true it is a read that did not answer. `reason` is the one line
-// the caller prints. THREE CALLERS: resolve_history_walk_header below (which
-// makes the refusal the header's own), read_history_branch_tip_sha, and nothing
-// else — every other consumer takes the root that came out of one of those.
+// the caller prints. TWO CALLERS (re-derived by grep 2026-08-11):
+// resolve_history_walk_header below, which makes the refusal the header's own,
+// and read_history_branch_tip_sha, whose own two callers ask before any header
+// exists. Nothing else — every other consumer takes the root that came out of one
+// of those, which is what keeps this derivation the one owner.
 struct GuiHistoryRepoRoot {
     bool        ok          = false;
     bool        read_failed = false;

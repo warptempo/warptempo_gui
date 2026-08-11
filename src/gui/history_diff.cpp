@@ -411,17 +411,28 @@ GitCapture run_git_capture(const std::string&              root,
 // that, so by the time the log runs the count has said there ARE commits and
 // silence from it is a contradiction rather than an empty history.
 //
-// FIVE CALLERS READ run_git_capture DIRECTLY INSTEAD (re-derived by grep
-// 2026-08-11), and only ONE of them does so to accept an empty answer: the
-// load-in-place's BLOB reads, where an empty sidecar is a valid whole file in
-// both marker grammars (the tree listing's stated byte length is the second
-// witness there). The other four take the tri-state to judge the SHAPE of what
-// arrived, which a length test cannot do — the commit act's status pre-flight
-// wants its `##` header, the scan's `rev-list --count` wants a number ("0" is
-// bytes, not silence), the touched-directory evidence read wants a NUL-framed set
-// of this piece's own sidecar paths, REFUSING an empty answer outright, and the
-// ROOT DERIVATION wants to tell a `rev-parse` that could not run from one that
-// ran and printed nothing, those being its two different refusals.
+// SEVEN CALLERS READ run_git_capture DIRECTLY INSTEAD (re-derived by grep
+// 2026-08-11 — the count stood at four and then five while the list was EDITED
+// rather than RE-DERIVED, which is the retell rule's own failure mode caught in
+// this very comment), and they fall in three groups.
+//
+// ONE ACCEPTS AN EMPTY ANSWER AS CONTENT: the load-in-place's BLOB reads
+// (read_snapshot_at), where an empty sidecar is a valid whole file in both marker
+// grammars — the tree listing's stated byte length is the second witness there.
+//
+// FOUR JUDGE THE SHAPE of what arrived, which git_output's length test cannot do:
+// the commit act's status pre-flight wants its `##` header (status_of_paths), the
+// scan's `rev-list --count` wants a number ("0" is bytes, not silence), the push
+// verify's containment walk wants a number for the same reason (ref_containment,
+// where an empty or non-numeric answer must never read as a yes), and the
+// touched-directory evidence read wants a NUL-framed set of this piece's own
+// sidecar paths, REFUSING an empty answer outright.
+//
+// TWO WANT THE RAN-VERSUS-COULD-NOT-RUN BIT ITSELF, which is not a question about
+// the output at all: the ROOT DERIVATION, whose two refusals ARE those two states
+// (a `rev-parse` that could not run against one that ran and printed nothing), and
+// resolve_ref_capture, which hands the verdict on beside the object name because
+// the distinction is real even where its one caller today drops it.
 bool git_output(const std::string& root, const std::vector<std::string>& args,
                 std::string& out) {
     return run_git_capture(root, args, out) == GitCapture::Ran && !out.empty();
