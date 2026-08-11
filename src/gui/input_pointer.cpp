@@ -3372,7 +3372,14 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         // start a render from a button that says Cancel. The click face above
         // is already armed, correctly: this is a press acting.
         if (tc.id == RedesignButton::Render && app.render_cancel_face) {
-            cancel_archival_session();
+            // BOTH HALVES OF THE FACE-MIRRORS-THE-ACT HONESTY (the contract is
+            // at the bit's declaration): the CLAIM reads the painted bit, so a
+            // press on a painted Cancel never dispatches a render; the ACT is
+            // gated on the LIVE explicit-act bit, so on the stale edge it is a
+            // consumed no-op and can never reach a PREVIEW session through
+            // cancel_archival_session's wider is_busy branch — the face never
+            // advertised one.
+            if (app.queue_running) cancel_archival_session();
             return true;
         }
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the

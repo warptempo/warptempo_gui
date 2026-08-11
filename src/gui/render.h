@@ -986,7 +986,9 @@ inline int marker_lane_h_px() {
 }
 
 // Authored pixel geometry of THE BOTTOM ROW — the bottom strip's window-edge
-// lane (row 7 of the redesign: the status line; bottom lane 0). Measured off
+// lane, the STATUS LINE: ROW 9 of the redesign since the transport row became
+// row 8 (architect's numbering, 2026-08-11); it LANDED as row 7, the name its
+// crops and history keep. Measured off
 // row_7_text.png
 // (407x33). The bottom strip COLLAPSED FROM TWO LANES TO ONE here (architect
 // 2026-08-01) — the status row and the modal/editor row became a single line,
@@ -1027,15 +1029,20 @@ inline int bottom_row_h_px() {
 // boxes are the row's own sampled kdenlive transport sizes (kTransportBtnPx /
 // kTransportGlyphPx, paint_handler.cpp).
 //
-// THE HEIGHT IS THE ICON ROW'S OWN 46 BY RULING (the brief's "icon-row-height
-// on the gui_scale axis"), stated as this row's own constant rather than read
-// through kIconRowHeightPx so the two rows can move independently if a ruling
-// ever splits them. Same CSS box model as rows 2-4, with the border on the
+// THE HEIGHT IS A RULED 44 (architect 2026-08-11, his live-look tune-up,
+// superseding the first cut's icon-row 46 and the sampled ~46 band that
+// justified it). THE RULED "44 PIXELS TALL" IS READ AS CONTENT, with the
+// existing 1px border-top OUTSIDE it (a 45px lane at 100%) — the CSS box
+// model every stated row height already takes — and the arithmetic is what
+// confirms the reading: the ruled 26px button boxes center in 44 at exactly
+// (44-26)/2 = 9px margins, where a 43px content band would center at a
+// fractional 8.5. Stated as this row's own constant rather than read through
+// any other row's so the rows move independently. The border sits on the
 // TOP edge — the waveform side, the mirror of the icon row's border-bottom:
 // the bottom strip's chrome grows from the window edge inward, so the border
 // that separates a lane from the waveform is the one facing it. The waveform
 // area loses exactly this lane's height (architect-accepted).
-inline constexpr int kTransportRowHeightPx = 46;
+inline constexpr int kTransportRowHeightPx = 44;
 inline constexpr int kTransportRowBorderPx = 1;
 inline int transport_row_border_h_px() {
     return scaled_px(kTransportRowBorderPx, 1);

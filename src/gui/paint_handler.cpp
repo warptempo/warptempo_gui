@@ -2284,29 +2284,45 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // cross out"; the mid-render CANCEL lives on the RENDER button now, and bare
 // Esc is keyboard-only again.)
 //
-// THE GROUPS ARE SEPARATED BY DISTANCE, NOT BY PAINTED SEPARATORS: the icon
-// row's separator vocabulary (4px / 1px line / 4px) divides ADJACENT groups in
-// one left-to-right walk, and this row's two groups are anchored to opposite
+// THE GROUPS ARE SEPARATED BY DISTANCE, NOT BY PAINTED SEPARATORS: this row's
+// two groups are anchored to opposite
 // edges of the window — the anchoring IS the group boundary, so a
-// painted line would divide nothing. Within a group the gap is the icon row's
-// own 2px, and the row opens and closes with its 8px pad (kIconRowPadLeftPx,
+// painted line would divide nothing. Within a group the gap is a RULED 2px
+// (kTransportBtnGapPx below — the architect's own number since the 2026-08-11
+// tune-up, no longer inherited from the icon row it happens to equal), and the
+// row opens and closes with its 8px pad (kIconRowPadLeftPx,
 // mirrored on the right).
 //
-// THE BUTTONS ARE KDENLIVE'S OWN TRANSPORT SIZE, NOT THE ICON ROW'S (architect
-// 2026-08-11, from his live pass: kdenlive's transport buttons are smaller).
-// Sampled off transport.png (the Project Monitor's transport cluster, the
-// established crop-sampling practice): the hovered skip-backward button's
+// THE SEPARATOR, FORWARD SPEC ONLY (architect 2026-08-11 — nothing draws one
+// today, the two groups being distance-divided, but the first one to land must
+// land on these ruled numbers rather than a re-derivation): the SOURCE is
+// tmp/screenshots/kdenlive/redesign/row_8_separator.png, 1x32 — a single flat
+// column sampling #4c4e51, which IS kRedesignTabLine (the same grey the icon
+// row's separators paint; recorded as the sampled value, per the palette
+// rule) — so a row-8 separator is a 1px-wide, 32-tall kRedesignTabLine line,
+// centered in the content band like every separator in the family, with FIVE
+// pixels from a button to the separator on each side (the ruled
+// button-to-separator metric, against the icon row's 4).
+//
+// THE GEOMETRY IS RULED WHOLE (architect 2026-08-11, his live-look tune-up):
+// the row is 44 TALL (read as CONTENT beside its 1px border-top — the reading
+// and its arithmetic at kTransportRowHeightPx, render.h), the buttons 26x26 ON
+// THE OUTLINE (the button box), the glyphs 16, TWO pixels between buttons, and
+// FIVE pixels from a button to a separator (the forward spec below). The 26/16
+// pair was first SAMPLED off transport.png (the Project Monitor's transport
+// cluster): the hovered skip-backward button's
 // outline box measures 26x26 exactly ((1569,367)-(1594,392)), and the glyph
 // inks measure 13x12 / 11x12 / 13x12 — the ink geometry of Breeze's own 16px
 // media icons (media-skip-backward at viewBox 16 inks full-width x by y 2..14
 // = 12 tall; media-playback-start inks 12x12), so the GLYPH BOX is 16 (the
 // row-2 precedent: derive the box from the ink via the file's own viewBox
-// geometry, never read ink as box). Our 22-viewBox transcriptions scale onto
+// geometry, never read ink as box) — and the ruling then adopted both numbers.
+// Our 22-viewBox transcriptions scale onto
 // the 16px box with the same optical result (ink 16*16/22 = 12 tall), so the
-// glyph SOURCE files are untouched. THE LANE STAYS 46: the sampled monitor
-// band itself measures ~46 (y358..403), matching our authored content height
-// exactly, so only the button and glyph boxes shrank — 26px buttons centered
-// at +10, 16px glyphs at +5 inside them. ALL EIGHT BUTTONS TAKE THE ONE SIZE
+// glyph SOURCE files are untouched. In the ruled 44 the 26px buttons center
+// at +9 exactly and the 16px glyphs at +5 inside them (the first cut's 46 —
+// and the sampled ~46 monitor band that justified it — are superseded by the
+// ruled number). ALL EIGHT BUTTONS TAKE THE ONE SIZE
 // (planner's uniformity choice, architect can revise: kdenlive sizes only its
 // transport this way, but mixed box sizes in one lane would read as noise).
 //
@@ -2322,10 +2338,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // edge inward, so the border facing the waveform is the mirror of the icon
 // row's border-bottom.
 
-// THE ROW'S OWN TWO SIZES, sampled as above; every other metric is the icon
-// row's, read from its constants.
-constexpr double kTransportBtnPx   = 26.0;   // button box, both axes
-constexpr double kTransportGlyphPx = 16.0;   // icon box inside the button
+// THE ROW'S OWN RULED METRICS (2026-08-11); the pads, stroke and radius are
+// still the icon row's, read from its constants.
+constexpr double kTransportBtnPx    = 26.0;  // button box, both axes (outline)
+constexpr double kTransportGlyphPx  = 16.0;  // icon box inside the button
+constexpr double kTransportBtnGapPx = 2.0;   // between adjacent buttons, ruled
+// (The separator's numbers — 1px wide, 32 tall, kRedesignTabLine, 5px gaps —
+// are the forward spec in the header above; no constant until a consumer
+// exists.)
 
 // The painter's half of the row's roster: two groups, painted left to right.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
@@ -2374,7 +2394,7 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     cairo_fill(cr);
 
     const int btn      = scaled_px(kTransportBtnPx);
-    const int btn_gap  = scaled_px(kIconBtnGapPx);
+    const int btn_gap  = scaled_px(kTransportBtnGapPx);
     const int pad      = scaled_px(kIconRowPadLeftPx);
     const int glyph_px = scaled_px(kTransportGlyphPx);
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
@@ -2422,8 +2442,9 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     // THE TWO ANCHORS. Left: the transport walks from the row's pad. Right:
     // the arrows close against the mirrored pad. At the 640px defensive
     // floor with gui_scale at its 200 ceiling the groups clear each other by
-    // 168px (re-derived at the sampled 26px box: 52px buttons, 4px gaps, 16px
-    // pads — the transport ends at 236, the arrows start at 404); no collision
+    // 168px (re-derived at the ruled numbers — the 44 moved nothing on this
+    // axis: 52px buttons, 4px gaps, 16px pads — the transport ends at 236, the
+    // arrows start at 404); no collision
     // rule exists, matching row 1's floats.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {

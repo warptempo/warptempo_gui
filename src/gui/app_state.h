@@ -2065,22 +2065,38 @@ struct AppState {
     };
     TransportArrowRepeat transport_repeat;
 
-    // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect 2026-08-11:
-    // "change the render button into a cancel button when there's something
-    // rendering... it doesn't need to exist while nothing's rendering") — and
-    // this bit is that face's ONE fact: a per-tick MIRROR of the cancel act's
-    // own predicate (cancel_archival_session's two branches,
-    // async_renderer.is_busy() || queue_running), maintained by
-    // tick_render_cancel_face (input_render_dispatch.cpp), which damages the
-    // top strip on each transition — the drift-comparator pattern for a face
-    // input the comparator's enabled/selected vector cannot see. It is a
-    // MIRROR rather than a live read because the face functions here are
-    // AppState-only and the worker is not; the one-tick staleness is the
-    // comparator model's own cadence, and the CLICK reads this same bit so the
-    // press can never do something the painted face did not advertise (on the
-    // stale edge — render finished, click landed before the next tick — the
-    // press cancels an already-finished render, a no-op, rather than
-    // dispatching a render the face never promised).
+    // THE RENDER BUTTON IS CANCEL WHILE AN EXPLICIT RENDER ACT IS LIVE
+    // (architect 2026-08-11: "change the render button into a cancel button
+    // when there's something rendering... it doesn't need to exist while
+    // nothing's rendering"; NARROWED the same day at his live look): the face
+    // covers THE ACTS THAT WRITE FILES — the single Ctrl+Alt+R render, the
+    // iteration sweep, the archival queue — and deliberately NOT the automatic
+    // target-view preview updates ("Updating..."). HIS RATIONALE, recorded: a
+    // preview needs no cancel surface because it overrides nothing and any
+    // map-mutating interaction already cancels-and-redispatches it as the
+    // user's own intent; Cancel exists to call off the explicit acts.
+    // THE PREDICATE IS queue_running ALONE — re-derived from ownership, not
+    // from the progress hint: queue_running's own writers are exactly the two
+    // explicit dispatchers (dispatch_single_archival_render and
+    // start_render_batch, cleared by finalize_render_run), and the preview
+    // path (GuiTargetRender) never touches it, so the bit IS "an explicit
+    // archival act is in flight" — the same scoping its declaration already
+    // records the Esc handler using. This field mirrors it per tick
+    // (tick_render_cancel_face, input_render_dispatch.cpp) for ONE remaining
+    // reason: the TRANSITION DAMAGE — finalize_render_run flips queue_running
+    // from an async completion with no top-strip damage of its own, and the
+    // mirror's edge is what repaints the face (the drift-comparator pattern
+    // for an input that vector cannot see).
+    // FACE-MIRRORS-THE-ACT HONESTY, both halves at the click
+    // (dispatch_redesign_chord's Render arm): a press on a painted Cancel
+    // never dispatches a render (the arm claims on THIS bit), and the ACT is
+    // gated on the LIVE queue_running — so on the stale edge (the explicit
+    // render finished, the click landed before the next tick) the press is a
+    // consumed no-op, and it can NEVER reach a preview session through
+    // cancel_archival_session's wider is_busy branch: a preview that happens
+    // to be the busy session when queue_running is false is exactly what the
+    // face never advertised. Keyboard Esc's render-cancel binding is untouched
+    // and keeps its own wider reach.
     // READERS: redesign_button_label (the "Cancel" label, ranked above the
     // iteration label), redesign_button_icon (Icon::DialogCancel), the
     // stateful tooltip overload, and dispatch_redesign_chord's Render arm —
@@ -4420,7 +4436,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   term, whose mirror this face is). Three literal dots, not an ellipsis
 //   character — the product's text is ASCII in every label.
 //
-//   RENDER, WITH A RENDER OR SWEEP LIVE → "Cancel", the dialog-cancel glyph,
+//   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
+//   the queue — never the automatic preview) → "Cancel", the dialog-cancel
+//   glyph,
 //   and THE ROSTER'S ONE CHORD DIVERGENCE: its click runs the cancel act
 //   itself (architect 2026-08-11 — the ruling, the rank over the iteration
 //   label and the bit are at AppState::render_cancel_face and the divergence
@@ -4462,8 +4480,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
 inline constexpr const char* kSaveCommitLabel       = "Save and Commit";
 inline constexpr const char* kSaveCommittingLabel   = "Committing...";
-// RENDER'S MID-RENDER FACE (architect 2026-08-11): while a render or iteration
-// sweep is live the button reads "Cancel" — sentence case, the ordinary
+// RENDER'S MID-RENDER FACE (architect 2026-08-11): while an EXPLICIT render
+// act is live (render_cancel_face — the narrowing and its rationale are at
+// that bit) the button reads "Cancel" — sentence case, the ordinary
 // convention, one word — wears Icon::DialogCancel, and ITS CLICK CANCELS (the
 // divergence from its chord is the ruled exception recorded at
 // dispatch_redesign_chord's Render arm). RANKED ABOVE THE ITERATION LABEL

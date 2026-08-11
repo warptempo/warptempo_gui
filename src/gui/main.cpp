@@ -207,11 +207,13 @@ int top_lane_height(int lane) {
     }
 }
 // The bottom strip's TWO lanes, indexed from the window edge inward like the
-// top strip's: lane 0 is the STATUS line (row 7 — its 1px top border and its
+// top strip's: lane 0 is the STATUS line (ROW 9 in the architect's numbering
+// since the transport row became row 8; it landed as row 7 — its 1px top
+// border and its
 // 1px bottom border on the window's last row), lane 1 is the TRANSPORT ROW
-// (row 8, 2026-08-11 — the nine-button bottom toolbar and its 1px border-top
-// on the waveform side). The bottom strip was ONE lane from row 7 (2026-08-01)
-// until row 8 opened the touch arc.
+// (row 8, 2026-08-11 — the eight-button bottom toolbar and its 1px border-top
+// on the waveform side). The bottom strip was ONE lane from the 2026-08-01
+// collapse until row 8 opened the touch arc.
 int bottom_lane_height(int lane) {
     switch (lane) {
         case 0: return bottom_row_h_px();       // status line (+ both borders)
@@ -369,7 +371,8 @@ GuiRect top_marker_row_area(const AppState& a) {
 }
 
 // THE BOTTOM STRIP IS TWO LANES since row 8 (2026-08-11). Lane 0 — the window
-// edge — is the STATUS row (row 7, architect 2026-08-01): the status row and
+// edge — is the STATUS row (ROW 9 in the architect's numbering since row 8
+// landed; it landed as row 7, architect 2026-08-01): the status row and
 // the modal/editor row collapsed into a single line carrying, left to right, the
 // active modal / editor / prompt / status text when one applies, and the
 // timestamp in its reserved cell at the right edge (the dirty flag moved off the
