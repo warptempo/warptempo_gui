@@ -1015,6 +1015,34 @@ inline int bottom_row_h_px() {
     return bottom_row_content_h_px() + 2 * bottom_row_border_h_px();
 }
 
+// Authored pixel geometry of THE TRANSPORT ROW — row 8 of the redesign
+// (architect-ratified 2026-08-11, the touch arc's first surface): the bottom
+// strip's SECOND lane, between the waveform and the status line, permanent on
+// every host — ordinary mouse-clickable buttons, no touch mode, no flag, no
+// detection. Nine buttons in three groups: the transport (skip-back / play /
+// stop / skip-forward, left-anchored), Esc (centered), and the four cardinal
+// arrows in vim order left-to-right (right-anchored).
+//
+// THE HEIGHT IS THE ICON ROW'S OWN 46 BY RULING (the brief's "icon-row-height
+// on the gui_scale axis"), stated as this row's own constant rather than read
+// through kIconRowHeightPx so the two rows can move independently if a ruling
+// ever splits them. Same CSS box model as rows 2-4, with the border on the
+// TOP edge — the waveform side, the mirror of the icon row's border-bottom:
+// the bottom strip's chrome grows from the window edge inward, so the border
+// that separates a lane from the waveform is the one facing it. The waveform
+// area loses exactly this lane's height (architect-accepted).
+inline constexpr int kTransportRowHeightPx = 46;
+inline constexpr int kTransportRowBorderPx = 1;
+inline int transport_row_border_h_px() {
+    return scaled_px(kTransportRowBorderPx, 1);
+}
+inline int transport_row_content_h_px() {
+    return scaled_px(kTransportRowHeightPx, 5);
+}
+inline int transport_row_h_px() {
+    return transport_row_content_h_px() + transport_row_border_h_px();
+}
+
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — and since row 7 the ONLY
 // text size in the product. Every row's text is 12pt through the existing
 // points*4/3 convention = 16px at 100%, scaled on gui_scale_factor(). It lives

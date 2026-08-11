@@ -821,8 +821,22 @@ struct GuiInputHandler {
     // already cleared and does nothing, which is what makes clearing early safe
     // rather than the events being unable to come. Transition-gated, one
     // invalidate_top_strip when it fires. Rows 1 and 3 never set the state it
-    // clears (their buttons carry click_face=false); rows 2 and 4 do.
+    // clears (their buttons carry click_face=false); rows 2, 4 and 8 do (row
+    // 8's damage is its own bottom-strip lane, the row's standing fork). It
+    // ALSO disarms row 8's arrow hold-repeat, unconditionally and above its
+    // own early return — the repeat rides the same physical hold the face
+    // does, so every edge that ends one ends both.
     void clear_redesign_button_press();
+
+    // ROW 8's ARROW HOLD-REPEAT, the tick's firing body (2026-08-11): while a
+    // transport-row arrow button is held (armed at the press by
+    // dispatch_redesign_chord, disarmed by clear_redesign_button_press) and
+    // the pointer rests on it, synthesize the arrow's chord through on_key on
+    // the keyboard repeat's labwc-matching cadence, stamped
+    // GuiInputState::synthesized_repeat so the undo coalescing is the held
+    // key's own rule. Cheap when idle (one int compare); every firing
+    // condition lives in the body.
+    void tick_transport_arrow_repeat();
 
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated

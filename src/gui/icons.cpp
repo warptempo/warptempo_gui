@@ -365,6 +365,78 @@ constexpr IconPath kDeepHistoryPaths[] = {
      " -1.5 1.5v1a2.5 2.5 0 0 0 2.5 -2.5 2.5 2.5 0 0 0 -2.5 -2.5h-2.84375"},
 };
 
+// -- Row 8's seven (2026-08-11, the transport row) -----------------------------
+//
+// Same rules as every entry above: `d` verbatim from the committed file, the
+// fill hard-coded to what that file resolves to — all seven are pure
+// `.ColorScheme-Text` = #fcfcfc. The four cardinal arrows are completed by
+// GoUp / GoDown below plus the REUSED kGoPrevious / kGoNext already in this
+// table (left and right — a def is a glyph, and several buttons may wear one).
+//
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
+// precedent, each path against the subset below: the three media-skip /
+// playback-start strings are m/v/h/l with implicit lineto after m and
+// implicit repetition ("m2 8 10 8" is a moveto and a relative lineto);
+// media-playback-stop is m/h/v; dialog-cancel is m/c/l with long implicit
+// cubic runs and chained leading-dot decimals (".22478-.375" splits on the
+// second dot — the parser's own rule, with committed producers since
+// edit-undo); go-down is m/l relative; go-up is absolute M/L with implicit
+// absolute-lineto repetition ("L11 7.707 9.832 8.875 3.707 15" is three
+// linetos). go-down, go-up and dialog-cancel close no subpath with `z` —
+// the fill closes implicitly, six committed files' precedent.
+//
+// DIALOG-CANCEL IS THE SECOND TRANSLATED PATH in the set (dialog-ok-apply is
+// the first): the file's own transform="translate(-1-1)" — the SVG grammar
+// admits the glued negative — carried as tx/ty data so the `d` stays
+// byte-identical to the committed file.
+
+constexpr IconPath kMediaSkipBackwardPaths[] = {
+    {kIconText,
+     "m0 3v16h2v-16zm2 8 10 8v-16zm10 0 10 8v-16z"},
+};
+
+constexpr IconPath kMediaPlaybackStartPaths[] = {
+    {kIconText,
+     "m3 3v16l16-8z"},
+};
+
+constexpr IconPath kMediaPlaybackStopPaths[] = {
+    {kIconText,
+     "m3 3h16v16h-16z"},
+};
+
+constexpr IconPath kMediaSkipForwardPaths[] = {
+    {kIconText,
+     "m0 3v16l10-8zm10 8v8l10-8-10-8zm10 0v8h2v-16h-2z"},
+};
+
+constexpr IconPath kDialogCancelPaths[] = {
+    {kIconText,
+     "m12 4c-2.027598 0-3.87132.756694-5.28125 2-.126239.11132-.25603.22478"
+     "-.375.34375l-.34375.375c-1.243306 1.40993-2 3.253652-2 5.28125 0 4.41828 "
+     "3.58172 8 8 8 2.027598 0 3.87132-.756694 5.28125-2l.375-.34375c.11897"
+     "-.11897.23243-.248761.34375-.375 1.243306-1.40993 2-3.253652 2-5.28125 "
+     "0-4.41828-3.58172-8-8-8m0 1c3.86599 0 7 3.13401 7 7 0 1.75366-.653215 "
+     "3.334268-1.71875 4.5625l-9.84375-9.84375c1.228231-1.065535 2.80884"
+     "-1.71875 4.5625-1.71875m-5.28125 2.4375l9.84375 9.84375c-1.228232 "
+     "1.065535-2.80884 1.71875-4.5625 1.71875-3.86599 0-7-3.13401-7-7 "
+     "0-1.75366.653215-3.334269 1.71875-4.5625",
+     -1.0, -1.0},
+};
+
+constexpr IconPath kGoDownPaths[] = {
+    {kIconText,
+     "m3.707031 7l-.707031.707031 6.125 6.125 1.875 1.875 1.875-1.875 6.125"
+     "-6.125-.707031-.707031-6.125 6.125-1.167969 1.167969-1.167969-1.167969"
+     "-6.125-6.125"},
+};
+
+constexpr IconPath kGoUpPaths[] = {
+    {kIconText,
+     "M3.707 15L3 14.293l6.125-6.125L11 6.293l1.875 1.875L19 14.293l-.707.707"
+     "-6.125-6.125L11 7.707 9.832 8.875 3.707 15"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -384,6 +456,13 @@ constexpr IconDef kGoPrevious         {22.0, kGoPreviousPaths,          1};
 constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
+constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
+constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
+constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
+constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
+constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
+constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
+constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -405,6 +484,13 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoNext:              return kGoNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::DeepHistory:         return kDeepHistory;
+        case Icon::MediaSkipBackward:   return kMediaSkipBackward;
+        case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
+        case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
+        case Icon::MediaSkipForward:    return kMediaSkipForward;
+        case Icon::DialogCancel:        return kDialogCancel;
+        case Icon::GoDown:              return kGoDown;
+        case Icon::GoUp:                return kGoUp;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

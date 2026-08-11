@@ -66,10 +66,10 @@ namespace {
 // below are paint-handler-independent and stay file-local.
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
-// the eight authored gui_scale row heights (menu_row_h_px() ... the row-5 trio,
-// plus bottom_row_h_px()), kRowGapPx and kFlagBottomLiftPx (see the geometry
-// helpers below); nothing is window-proportional, and since row 7 nothing is
-// font-proportional either.
+// the nine authored gui_scale row heights (menu_row_h_px() ... the row-5 trio,
+// plus bottom_row_h_px() and transport_row_h_px()), kRowGapPx and
+// kFlagBottomLiftPx (see the geometry helpers below); nothing is
+// window-proportional, and since row 7 nothing is font-proportional either.
 
 // The pointer grab tolerances live beside the surfaces they belong to —
 // kMarkerStemGrabPx in app_state.h (reached by the hit_test_* free functions
@@ -132,10 +132,13 @@ namespace {
 // row-5 live test, though the ruler painter still draws it, needing the tick
 // columns), whose bottom edge is the
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
-// font-scaled lanes in this strip. The BOTTOM strip is ONE lane since row 7
-// (2026-08-01) — the status row and the editor/modal row COLLAPSED INTO ONE
-// LINE, which is bottom_row_h_px() tall and rides the gui_scale axis like every
-// other redesigned row, so no lane anywhere is font-scaled any more.
+// font-scaled lanes in this strip. The BOTTOM strip is TWO lanes since row 8
+// (2026-08-11): the TRANSPORT ROW (transport_row_h_px(), the nine-button
+// bottom toolbar, flush under the waveform) over the STATUS row — which was
+// the strip's ONE lane from row 7 (2026-08-01), when the status row and the
+// editor/modal row COLLAPSED INTO ONE LINE, bottom_row_h_px() tall. Both ride
+// the gui_scale axis like every other redesigned row, so no lane anywhere is
+// font-scaled any more.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
@@ -182,7 +185,7 @@ namespace {
 // bottom lane BOTH its borders (the CSS box model: the architect's stated
 // content height excludes its borders, and the lane owns every pixel it paints).
 constexpr int kTopLaneCount    = 7;
-constexpr int kBottomLaneCount = 1;
+constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
         case 0: return menu_row_h_px();          // menu row (proportional text)
@@ -203,16 +206,24 @@ int top_lane_height(int lane) {
         default: return 0;
     }
 }
-// The bottom strip's ONE lane (row 7): the status line, its 1px top border and
-// its 1px bottom border on the window's last row.
-int bottom_lane_height() {
-    return bottom_row_h_px();
+// The bottom strip's TWO lanes, indexed from the window edge inward like the
+// top strip's: lane 0 is the STATUS line (row 7 — its 1px top border and its
+// 1px bottom border on the window's last row), lane 1 is the TRANSPORT ROW
+// (row 8, 2026-08-11 — the nine-button bottom toolbar and its 1px border-top
+// on the waveform side). The bottom strip was ONE lane from row 7 (2026-08-01)
+// until row 8 opened the touch arc.
+int bottom_lane_height(int lane) {
+    switch (lane) {
+        case 0: return bottom_row_h_px();       // status line (+ both borders)
+        case 1: return transport_row_h_px();    // transport row (+ border-top)
+        default: return 0;
+    }
 }
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
     for (int i = 0; i < lanes; ++i)
-        sum += top_strip ? top_lane_height(i) : bottom_lane_height();
+        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i);
     sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
     return sum;
 }
@@ -258,7 +269,7 @@ GuiRect waveform_area(const AppState& a) {
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: gui_scale at its 200
-    // ceiling doubles all eight lanes (roughly 250 px of top strip plus 66 of
+    // ceiling doubles all nine lanes (roughly 250 px of top strip plus 160 of
     // bottom), which the supported 1080-tall window still holds — but the guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves and the lane set is one the redesign keeps adding to. If
@@ -307,11 +318,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
     clamp_dims(w, h);
     int inset = static_cast<int>(kFlagBottomLiftPx);
     for (int i = 0; i < lane_from_window_edge; ++i) {
-        inset += top_strip ? top_lane_height(i) : bottom_lane_height();
+        inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
         inset += static_cast<int>(kRowGapPx);
     }
     const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
-                                 : bottom_lane_height();
+                                 : bottom_lane_height(lane_from_window_edge);
     const int y = top_strip ? inset : (h - inset - lane_h);
     return GuiRect{0, y, w, lane_h};
 }
@@ -357,11 +368,14 @@ GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 6);
 }
 
-// THE BOTTOM STRIP IS ONE LANE (row 7, architect 2026-08-01): the status row and
+// THE BOTTOM STRIP IS TWO LANES since row 8 (2026-08-11). Lane 0 — the window
+// edge — is the STATUS row (row 7, architect 2026-08-01): the status row and
 // the modal/editor row collapsed into a single line carrying, left to right, the
 // active modal / editor / prompt / status text when one applies, and the
 // timestamp in its reserved cell at the right edge (the dirty flag moved off the
-// row entirely — it is the window title's dot now).
+// row entirely — it is the window title's dot now). Lane 1, inward of it and
+// flush under the waveform, is the TRANSPORT ROW (row 8, the touch arc's first
+// surface): the nine-button bottom toolbar, whose accessor is below.
 // bottom_row_area is that lane INCLUDING both 1px borders,
 // as the strip stack allocates it; bottom_row_content_area is the ground between
 // them, the band every painter and baseline works in.
@@ -376,6 +390,14 @@ GuiRect bottom_row_content_area(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
     const int b = bottom_row_border_h_px();
     return GuiRect{lane.x, lane.y + b, lane.w, lane.h - 2 * b};
+}
+
+// THE TRANSPORT ROW (row 8, 2026-08-11): bottom lane 1, directly under the
+// waveform area — the lane INCLUDING its 1px border-top, as the strip stack
+// allocates it. Paint and hit agree through this one accessor exactly as the
+// top rows' do through theirs.
+GuiRect bottom_transport_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/false, 1);
 }
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
@@ -1463,28 +1485,58 @@ int main(int argc, char** argv) {
         if (!app.redesign_tooltip.visible && app.redesign_tooltip.hover_ms != 0 &&
             monotonic_ms() - app.redesign_tooltip.hover_ms >= kTooltipDelayMs) {
             app.redesign_tooltip.visible = true;
-            invalidate_top_strip();
-            // The box hangs from a button INSIDE the top strip and is at most
-            // tooltip_damage_h_px() tall, so everything it can reach below the strip
-            // lies in this one full-width band — damaged here because the show
-            // edge cannot know the box's own rect yet (the paint that publishes
-            // it is the frame this schedules). The HIDE edge has the published
-            // rect and damages exactly that.
-            const GuiRect ts = top_strip_area(app);
-            viewport.invalidate_rect(
-                GuiRect{0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
+            // The show edge cannot know the box's own rect yet (the paint that
+            // publishes it is the frame this schedules), so it damages the
+            // owner's strip plus the full-width band the box can hang into —
+            // at most tooltip_damage_h_px() tall. The band's SIDE follows the
+            // owner: a top-row tooltip hangs BELOW the top strip, a transport-
+            // row one (row 8, 2026-08-11) hangs ABOVE its lane, the painter's
+            // own flip. The HIDE edge has the published rect and damages
+            // exactly that.
+            if (app.redesign_tooltip.owner >= 0 &&
+                redesign_button_in_transport_row(static_cast<RedesignButton>(
+                    app.redesign_tooltip.owner))) {
+                const GuiRect tr = bottom_transport_row_area(app);
+                viewport.invalidate_rect(tr);
+                viewport.invalidate_rect(GuiRect{
+                    0, tr.y - tooltip_damage_h_px(), app.width,
+                    tooltip_damage_h_px()});
+            } else {
+                invalidate_top_strip();
+                const GuiRect ts = top_strip_area(app);
+                viewport.invalidate_rect(
+                    GuiRect{0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
+            }
         }
 
         {
-            bool drift = false;
-            for (int i = 0; i < kRedesignButtonCount && !drift; ++i) {
+            // Row 8's damage fork, here too (2026-08-11): a drifting transport
+            // face damages its own bottom-strip lane, everything else the top
+            // strip. Each strip pays only for its own drift — the walk keeps
+            // going until both verdicts are known (or the roster ends). The
+            // play/stop pair is this comparator's newest customer: a natural
+            // end-of-song clears playhead_scanner_active with no damage of its
+            // own, and this is what swaps the pair's faces back.
+            bool drift_top       = false;
+            bool drift_transport = false;
+            for (int i = 0;
+                 i < kRedesignButtonCount && !(drift_top && drift_transport);
+                 ++i) {
                 const RedesignButton id = static_cast<RedesignButton>(i);
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
-                drift = f.enabled  != redesign_button_enabled(
-                                          app, audio.total_frames(), id) ||
-                        f.selected != redesign_button_selected(app, id);
+                const bool drifted =
+                    f.enabled  != redesign_button_enabled(
+                                      app, audio.total_frames(), id) ||
+                    f.selected != redesign_button_selected(app, id);
+                if (!drifted) continue;
+                if (redesign_button_in_transport_row(id))
+                    drift_transport = true;
+                else
+                    drift_top = true;
             }
-            if (drift) invalidate_top_strip();
+            if (drift_top) invalidate_top_strip();
+            if (drift_transport)
+                viewport.invalidate_rect(bottom_transport_row_area(app));
         }
 
         // HOVER IS NO LONGER MOTION-ONLY. It is resolved from the pointer's last
@@ -1511,6 +1563,17 @@ int main(int argc, char** argv) {
         // deliberately keeps when the pointer left through the menu row.
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
+
+        // ROW 8's ARROW HOLD-REPEAT (2026-08-11): while a transport-row arrow
+        // button is physically held, this synthesizes its chord on the
+        // keyboard repeat's labwc-matching cadence, stamped as a repeat so the
+        // undo coalescing is the held key's own rule. One int compare when
+        // idle; every firing condition (the hold, the pointer on the button,
+        // the enabled bit, the schedule) lives in the body. Deliberately NOT
+        // gated on any_pointer_gesture_active: the held button IS a live
+        // pointer act, and the rows' presses arm no gesture that predicate
+        // names.
+        input_handler.tick_transport_arrow_repeat();
 
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position

@@ -89,10 +89,19 @@ struct ToolbarChord {
     // both, so consuming at the claim keeps the pressed interior from ever
     // painting over a lit button. One rule, two justifications.
     bool           radio;
-    // CLICK_FACE: rows 2 and 4 and the view bar show a pressed interior; row 1's
+    // CLICK_FACE: rows 2, 4 and 8 and the view bar show a pressed interior;
+    // row 1's
     // two left-floating buttons and row 3 have two faces by scope and show
     // nothing new on a press.
     bool           click_face;
+    // REPEATS: a held press on this button synthesizes key repeats (row 8's
+    // four cardinal arrows and nothing else, 2026-08-11) — the pointer twin of
+    // holding the key. The press dispatches once and arms
+    // AppState::transport_repeat; the tick fires the same chord with
+    // GuiInputState::synthesized_repeat set, so the undo coalescing is the
+    // repeat-identity rule the keyboard already has. Defaulted so the thirty
+    // rows that do not repeat need no ninth column.
+    bool           repeats = false;
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
@@ -195,7 +204,51 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Comma,  false, false, false, false, true},                             // bare ,
     {RedesignButton::IconHistoryNewer,
      GuiKeys::Period, false, false, false, false, true},                             // bare .
+    // Row 8 — the transport row (architect-ratified 2026-08-11, the touch
+    // arc's first surface). Nine chords, every one BARE, every one already
+    // bound: the row adds no semantics anywhere — each button is its key,
+    // through this one table like the rest of the roster, so the keyboard-
+    // modal editor gate, the history-mode allowlists, the read-only gate and
+    // every refusal apply by construction, a refusal being a consumed no-op on
+    // click exactly as on key.
+    //
+    // PLAY AND STOP SHARE THE ONE Space BINDING — two buttons over one chord,
+    // the state-mirrored pair whose enabled split (redesign_button_enabled)
+    // makes exactly one live at a time; neither is a radio (`radio` would
+    // consume a press on a SELECTED button, and this pair's split is on the
+    // ENABLED bit, which the disabled-press consume above already reads).
+    //
+    // THE FOUR ARROWS SET `repeats` — the table's only four: a held press
+    // synthesizes the key's own repeats (tick_transport_arrow_repeat below).
+    // Esc and the transport four are one-shot by ruling.
+    {RedesignButton::TransportSkipBack,
+     GuiKeys::Home,   false, false, false, false, true},                             // bare Home
+    {RedesignButton::TransportPlay,
+     GuiKeys::Space,  false, false, false, false, true},                             // bare Space
+    {RedesignButton::TransportStop,
+     GuiKeys::Space,  false, false, false, false, true},                             // bare Space
+    {RedesignButton::TransportSkipForward,
+     GuiKeys::End,    false, false, false, false, true},                             // bare End
+    {RedesignButton::TransportEsc,
+     GuiKeys::Escape, false, false, false, false, true},                             // bare Esc
+    {RedesignButton::TransportLeft,
+     GuiKeys::Left,   false, false, false, false, true, true},                       // bare Left
+    {RedesignButton::TransportDown,
+     GuiKeys::Down,   false, false, false, false, true, true},                       // bare Down
+    {RedesignButton::TransportUp,
+     GuiKeys::Up,     false, false, false, false, true, true},                       // bare Up
+    {RedesignButton::TransportRight,
+     GuiKeys::Right,  false, false, false, false, true, true},                       // bare Right
 };
+
+// THE ARROWS' HOLD-REPEAT CADENCE — the labwc-matching defaults, mirroring the
+// target laptop's own compositor keyboard-repeat values (575 ms delay, then 25
+// repeats per second) so a held arrow BUTTON walks at exactly the speed a held
+// arrow KEY does. Named constants rather than a compositor query on purpose:
+// the repeat is ours (the compositor repeats keys, not buttons), and these are
+// its authored defaults.
+constexpr int64_t kArrowRepeatDelayMs    = 575;
+constexpr int64_t kArrowRepeatIntervalMs = 40;   // 1000 / 25
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
 // every RedesignButton but the two menu anchors carries a chord here, so the
@@ -1414,7 +1467,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
     }
 
-    // THE FOUR REDESIGNED ROWS (top lanes 0..3), claimed ABOVE the
+    // THE FIVE REDESIGNED BUTTON ROWS (top lanes 0..3 plus the bottom strip's
+    // transport row, whose claim closes the block), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
     // the loaded audio. They sit BELOW the modal gates on purpose: a press while
@@ -1423,7 +1477,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // are no exception, and every one of their chords reaches the same route
     // from the keyboard anyway).
     //
-    // ONE BAND-CLAIM SHAPE FOR ALL FOUR ROWS: the exact half-open row band, a
+    // ONE BAND-CLAIM SHAPE FOR ALL FIVE ROWS: the exact half-open row band, a
     // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
     // only where the chord table admits one, and any press in the band that is
     // not on a button is a consumed nothing. Each band differs ONLY in its rect
@@ -1612,6 +1666,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     {
         const GuiRect icon_row = top_icon_row_area(app);
         if (rect_contains(icon_row, x, y)) {
+            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
+            return;
+        }
+    }
+    // ROW 8 — THE TRANSPORT ROW (2026-08-11), the same band-claim shape as the
+    // four top rows and a member of the same block: claimed above the
+    // loading/empty guard (its buttons must stay claimable chrome on a blank
+    // state, exactly as the top rows' are — their chords' own loading refusals
+    // answer), below the modal gates (a prompt or a bottom-strip editor owns
+    // the pointer here too), and every press in the band that is not on a
+    // button is a consumed nothing. The band is the BOTTOM strip's lane 1 —
+    // between the waveform and the status row — and the dispatch is the one
+    // shared body, driven by the table's per-button flags like every other
+    // row's; the arrows' hold-repeat arm lives inside that body
+    // (ToolbarChord::repeats), not here.
+    {
+        const GuiRect transport_row = bottom_transport_row_area(app);
+        if (rect_contains(transport_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
@@ -2929,23 +3002,36 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs and row 4's sixteen — the stash is
+// four, row 3's two tabs, row 4's sixteen and row 8's nine — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
-// them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
-// the playhead columns' carve-out stays the sole exception), which also makes
-// the common transition (leaving one button for its neighbour, two booleans
-// flipping) cost the same single damage as any other. The rects are the
+// them pays exactly ONE damage call PER STRIP TOUCHED — the strip idiom (no
+// narrow rects; the playhead columns' carve-out stays the sole exception),
+// forked per row-8's home since 2026-08-11: a transport face damages its own
+// bottom-strip lane, every other face the top strip, and the common transition
+// (leaving one button for its neighbour, two booleans flipping) still costs
+// one damage when both live in one strip. The rects are the
 // painter's stashes, so a hovered region is the painted button and nothing is
 // measured here.
 void GuiInputHandler::clear_redesign_button_hover() {
-    bool changed = false;
-    for (AppState::RedesignButtonFace& f : app.redesign_buttons) {
+    // Row 8's pixels live in the bottom strip, so a cleared transport face
+    // damages its own lane where every other face damages the top strip — the
+    // row's standing damage fork, per changed face (each strip pays only when
+    // one of its own faces moved).
+    bool changed_top       = false;
+    bool changed_transport = false;
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         if (!f.hovered) continue;
         f.hovered = false;
-        changed = true;
+        if (redesign_button_in_transport_row(static_cast<RedesignButton>(i)))
+            changed_transport = true;
+        else
+            changed_top = true;
     }
-    if (changed) viewport.invalidate_top_strip();
+    if (changed_top)       viewport.invalidate_top_strip();
+    if (changed_transport)
+        viewport.invalidate_rect(bottom_transport_row_area(app));
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
@@ -2982,7 +3068,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // stamp itself.
     const bool modal_owns_the_keyboard =
         app.prompt.active || keyboard_modal_editor_active();
-    bool changed     = false;
+    bool changed_top       = false;
+    bool changed_transport = false;
     int  hovered_tip = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         AppState::RedesignButtonFace& f = app.redesign_buttons[i];
@@ -3008,13 +3095,20 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             redesign_button_enabled(app, audio.total_frames(), id);
         if (f.hovered != inside) {
             f.hovered = inside;
-            changed   = true;
+            if (redesign_button_in_transport_row(id))
+                changed_transport = true;
+            else
+                changed_top = true;
         }
         if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
             redesign_button_tooltip(app, id).line1 != nullptr)
             hovered_tip = i;
     }
-    if (changed) viewport.invalidate_top_strip();
+    // Row 8's damage fork: a transport face damages its own bottom-strip lane,
+    // every other face the top strip — each strip pays only for its own.
+    if (changed_top)       viewport.invalidate_top_strip();
+    if (changed_transport)
+        viewport.invalidate_rect(bottom_transport_row_area(app));
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
@@ -3222,7 +3316,26 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         if (tc.click_face &&
             app.redesign_pressed != redesign_button_index(tc.id)) {
             app.redesign_pressed = redesign_button_index(tc.id);
-            viewport.invalidate_top_strip();
+            // DAMAGE FOLLOWS THE ROW'S HOME STRIP (row 8, 2026-08-11): the
+            // transport row's pixels live in the BOTTOM strip, so its click
+            // face damages its own lane where every other row damages the top
+            // strip — the same fork every face writer takes.
+            if (redesign_button_in_transport_row(tc.id))
+                viewport.invalidate_rect(bottom_transport_row_area(app));
+            else
+                viewport.invalidate_top_strip();
+        }
+        // THE ARROWS' HOLD-REPEAT ARMS AT THE PRESS (row 8, 2026-08-11), after
+        // every refusal above has had its say — a consumed press arms nothing —
+        // and BEFORE the dispatch, deliberately: on_key's route can do anything,
+        // and the arm is about the PHYSICAL hold that is already standing. The
+        // schedule is the keyboard's own: one dispatch now (below), the first
+        // synthesized repeat kArrowRepeatDelayMs later, then the interval
+        // (tick_transport_arrow_repeat, which also owns every firing condition).
+        if (tc.repeats) {
+            app.transport_repeat.owner = redesign_button_index(tc.id);
+            app.transport_repeat.next_due_ms =
+                monotonic_ms() + kArrowRepeatDelayMs;
         }
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // pointer's — well-defined because no row sets both (see shift_admits),
@@ -4193,9 +4306,72 @@ void GuiInputHandler::hide_shift_tooltip() {
 // rather than any inability of the release to arrive. Transition-gated
 // like the hover clear beside it, and one invalidate_top_strip when it fires.
 void GuiInputHandler::clear_redesign_button_press() {
+    // THE ARROWS' HOLD-REPEAT ENDS WITH THE SAME HOLD (row 8, 2026-08-11), so
+    // its disarm lives here, ABOVE the face's own early return: the repeat and
+    // the click face ride one physical hold, and every edge that ends the hold
+    // for the face — the release, the pointer leave, capability loss — ends
+    // the repeat with it, with no second edge list to keep in step. (The face
+    // gate below cannot cover it: a disabled-mid-hold button could drop its
+    // face while the schedule stood.)
+    app.transport_repeat.owner = -1;
     if (app.redesign_pressed < 0) return;
+    const bool transport = redesign_button_in_transport_row(
+        static_cast<RedesignButton>(app.redesign_pressed));
     app.redesign_pressed = -1;
-    viewport.invalidate_top_strip();
+    if (transport)
+        viewport.invalidate_rect(bottom_transport_row_area(app));
+    else
+        viewport.invalidate_top_strip();
+}
+
+// THE ARROWS' HOLD-REPEAT, fired from the run loop's tick (row 8, 2026-08-11):
+// while one of the transport row's four cardinal arrows is physically held,
+// synthesize its chord on the keyboard repeat's own cadence — the labwc-
+// matching delay and rate above — stamped GuiInputState::synthesized_repeat,
+// so the undo side sees exactly a held key: the physical press pushed the
+// entry (dispatch_redesign_chord, synthesized_repeat false), every repeat
+// coalesces by repeat identity, and no new undo semantics exist.
+//
+// THE HOLD'S RECORD IS THE CLICK FACE (app.redesign_pressed): the arm rides
+// the same physical hold, and clear_redesign_button_press — the release, the
+// pointer leave and capability loss — disarms both together, so "the face is
+// standing on the armed button" IS "the hold is standing". A repeat fires only
+// with the pointer STILL ON the button (the scrollbar-button rule): sliding
+// off pauses the schedule silently and sliding back on resumes it, the hold
+// standing throughout — a leave that exits the WINDOW ends the hold outright
+// through the hook, and a re-entry mid-hold does not re-arm (no new press).
+// Each fire re-checks the enabled bit — the disabled-press consume's mirror,
+// so a button that went dead under the hold (the history view opening, say)
+// pauses exactly as the claim would refuse — and dispatches through on_key,
+// where every gate answers as it would for the held key itself. One fire per
+// due tick, the next scheduled from NOW rather than accumulated, so a stalled
+// frame yields one repeat and no burst.
+void GuiInputHandler::tick_transport_arrow_repeat() {
+    AppState::TransportArrowRepeat& rep = app.transport_repeat;
+    if (rep.owner < 0) return;
+    if (app.redesign_pressed != rep.owner) {   // hold gone under the schedule
+        rep.owner = -1;
+        return;
+    }
+    const int64_t now = monotonic_ms();
+    if (now < rep.next_due_ms) return;
+    rep.next_due_ms = now + kArrowRepeatIntervalMs;
+    const AppState::RedesignButtonFace& f =
+        app.redesign_buttons[static_cast<size_t>(rep.owner)];
+    if (!app.pointer_in_window ||
+        !rect_contains(f.rect, app.last_mouse_x, app.last_mouse_y))
+        return;                                // paused off the button
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (redesign_button_index(tc.id) != rep.owner) continue;
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id)) return;
+        GuiInputState chord{};
+        chord.ctrl               = tc.ctrl;
+        chord.shift              = tc.shift;
+        chord.alt                = tc.alt;
+        chord.synthesized_repeat = true;
+        on_key(tc.key, chord);
+        return;
+    }
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,

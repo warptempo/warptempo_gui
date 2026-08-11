@@ -1556,8 +1556,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // sub-detent accumulator from growing remainder over them.
     {
         const GuiRect bands[] = {
-            top_menu_row_area(app), top_toolbar_row_area(app),
-            top_tab_row_area(app),  top_icon_row_area(app),
+            top_menu_row_area(app),  top_toolbar_row_area(app),
+            top_tab_row_area(app),   top_icon_row_area(app),
+            // Row 8 joined the family's inert band list 2026-08-11, exactly as
+            // the rule above promises a future row would. It is a bottom-strip
+            // lane, so the top-strip area test below would never have routed it
+            // anyway; membership here is what stops the sub-detent accumulator
+            // growing remainder over it, like its four siblings.
+            bottom_transport_row_area(app),
         };
         for (const GuiRect& b : bands) {
             if (rect_contains(b, x, y)) return -1;

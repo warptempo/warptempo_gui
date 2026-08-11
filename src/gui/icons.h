@@ -77,6 +77,25 @@ enum class Icon {
     // which is the act — and the FIRST committed file whose `d` uses the smooth
     // cubic (`s`), the one command the interpreter grew for it.
     DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
+    // Row 8, the transport row (2026-08-11, the touch arc's first surface):
+    // SEVEN new glyphs for its nine buttons — the four cardinal arrows REUSE
+    // the walk pair's GoPrevious / GoNext for left and right (an Icon is a
+    // GLYPH, not a button: VcsCommit already serves two faces), and GoUp /
+    // GoDown below complete the chevron family, so all four arrows are the
+    // same Breeze construction — one closed outline whose limbs are one
+    // viewBox unit thick, no stroke to set. The transport four are Breeze's
+    // own media-* set (the universal transport vocabulary; media-playback-
+    // pause was the considered runner-up for the stop slot and lost — Space
+    // STOPS, it does not pause, and the face must not promise a resume).
+    // dialog-cancel (the circle-slash) is Esc's — Breeze's one "cancel" glyph,
+    // no runner-up considered.
+    MediaSkipBackward,   // Go to start (bare Home)
+    MediaPlaybackStart,  // Play (bare Space, the pair's live-while-stopped half)
+    MediaPlaybackStop,   // Stop (bare Space, the pair's live-while-playing half)
+    MediaSkipForward,    // Go to end (bare End)
+    DialogCancel,        // Esc (bare Escape)
+    GoDown,              // The down arrow (bare Down)
+    GoUp,                // The up arrow (bare Up)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
     // the closed padlock for a read-only tab and the OPEN one for a writable
     // one (the slot's contract is at the tab painter).
@@ -87,7 +106,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 19;
+inline constexpr int kIconCount = 26;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

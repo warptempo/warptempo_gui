@@ -870,15 +870,46 @@ enum class RedesignButton {
     // exception is spelled at redesign_button_enabled below, beside the
     // history mode's own. (Revert above joined them the same day, the
     // Cumulative toggle on 2026-08-08, making that family FOUR.)
-    IconHistoryOlder, IconHistoryNewer
+    IconHistoryOlder, IconHistoryNewer,
+    // Row 8, the TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
+    // first surface): the permanent bottom toolbar between the waveform and
+    // the status line, on every host — no touch mode, no flag, no detection.
+    // Nine buttons in three groups, in painted order (the enum order is the
+    // painted order, and row 8 paints below rows 1-4, so the roster's tail is
+    // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
+    // the ONE bare Space binding split over two state-mirrored buttons,
+    // skip-forward = bare End), then ESC (bare Escape — the six Esc bindings
+    // decide what it means, the button adds no seventh semantics), then the
+    // four CARDINAL ARROWS in vim order left-to-right — left, down, up, right
+    // (bare Left/Down/Up/Right), which inherit the bare arrows' whole
+    // semantics by dispatching through on_key like every other chord button.
+    //
+    // PLAY AND STOP ARE THE ROSTER'S FIRST STATE-MIRRORED PAIR: one chord,
+    // two buttons, the enabled predicate splitting them on the live audition
+    // bit (playhead_scanner_active) — Play wears the disabled face while an
+    // audition runs, Stop while none does — so exactly one of the pair is
+    // ever live and the pair reads as a transport rather than as a toggle.
+    // The arm is at redesign_button_enabled below.
+    //
+    // THE FOUR ARROWS HOLD-REPEAT (the row's own affordance, matching the
+    // keyboard's): the press dispatches once and arms
+    // AppState::transport_repeat; the tick then synthesizes repeats stamped
+    // GuiInputState::synthesized_repeat, so the undo coalescing is the held
+    // key's own repeat-identity rule with nothing new. Transport and Esc do
+    // not repeat. Machinery at tick_transport_arrow_repeat (input_pointer.cpp).
+    TransportSkipBack, TransportPlay, TransportStop, TransportSkipForward,
+    TransportEsc,
+    TransportLeft, TransportDown, TransportUp, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: six in row 1, four
-// in row 2, two in row 3 and sixteen in row 4 — 28. Of those, TWENTY-SIX carry
-// a chord in kToolbarChords and TWO are the dropdown anchors (Settings and
-// Navigation), which is the split the chord table's own static_assert checks.
-// It was 29 until 2026-08-08, when row 3's compare-only pair was deleted and
-// row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 28;
+// in row 2, two in row 3, sixteen in row 4 and nine in row 8 — 37. Of those,
+// THIRTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
+// (Settings and Navigation), which is the split the chord table's own
+// static_assert checks. It was 28 until 2026-08-11, when row 8 — the transport
+// row, the touch arc's first surface — joined with its nine; 29 before
+// 2026-08-08, when row 3's compare-only pair was deleted and row 4 gained the
+// Cumulative toggle.
+inline constexpr int kRedesignButtonCount = 37;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -947,9 +978,46 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconRevert:
         case RedesignButton::IconHistoryOlder:
         case RedesignButton::IconHistoryNewer:
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportPlay:
+        case RedesignButton::TransportStop:
+        case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportEsc:
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportDown:
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportRight:
             break;
     }
     return false;
+}
+
+// WHICH BUTTONS ARE ROW 8'S — the bottom transport toolbar (2026-08-11). Named
+// once because its consumers are all about the ROW'S HOME STRIP rather than
+// about any one button: row 8's pixels live in the BOTTOM strip, so every
+// damage decision the other rows answer with invalidate_top_strip must answer
+// with the transport row's own rect for these nine — the hover recompute, the
+// click-face arm and clear, the tick comparator, and the tooltip, which also
+// FLIPS ABOVE the button here (below it would hang off the window's foot).
+// A membership predicate like redesign_button_is_tab, deliberately NOT the
+// exhaustive-switch shape: redesign_button_in_menu_row above is the roster's
+// one classification chokepoint (a new button fails to compile there until its
+// row is stated), and one chokepoint is enough.
+inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportPlay:
+        case RedesignButton::TransportStop:
+        case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportEsc:
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportDown:
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportRight:
+            return true;
+        default:
+            return false;
+    }
 }
 
 // WHICH BUTTONS ARE ROW 3'S — the two tabs, which are the A/B pair ordinarily
@@ -1935,9 +2003,30 @@ struct AppState {
     // where the pointer IS. After an ordinary leave the release still arrives
     // normally and simply finds nothing to clear. WHICH buttons have it is the
     // chord table's
-    // `click_face` column (rows 2 and 4 do; rows 1 and 3 keep two faces), not a
+    // `click_face` column (rows 2, 4 and 8 do; rows 1 and 3 keep two faces),
+    // not a
     // fact restated here.
     int redesign_pressed = -1;
+
+    // THE ARROW BUTTONS' HOLD-REPEAT (row 8, 2026-08-11): a pointer press on
+    // one of the transport row's four cardinal arrows dispatches its chord
+    // once at the press and arms this; holding past the delay then synthesizes
+    // repeats stamped GuiInputState::synthesized_repeat, so the undo
+    // coalescing is the held KEY's own repeat-identity rule — the physical
+    // press pushes, the repeats coalesce, nothing new. `owner` is the roster
+    // index of the held arrow (-1 = none), `next_due_ms` the CLOCK_MONOTONIC
+    // stamp of the next repeat. It RIDES THE SAME PHYSICAL HOLD the click face
+    // does: armed only where the chord table's `repeats` flag says so
+    // (dispatch_redesign_chord), disarmed unconditionally wherever the click
+    // face drops (clear_redesign_button_press — the release, the pointer
+    // leave, and capability loss), and the tick's firing body is
+    // tick_transport_arrow_repeat (input_pointer.cpp), which also owns the
+    // pause-while-off-the-button rule.
+    struct TransportArrowRepeat {
+        int     owner       = -1;
+        int64_t next_due_ms = 0;
+    };
+    TransportArrowRepeat transport_repeat;
 
     // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
     // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
@@ -3258,6 +3347,9 @@ GuiRect top_marker_row_area(const AppState& a);
 // them.
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+// ROW 8's transport row (2026-08-11): the bottom strip's second lane, flush
+// under the waveform — the lane including its 1px border-top.
+GuiRect bottom_transport_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The pure level→spp exponent: ms_per_px = 0.625 * 2^(level - 1), fully
@@ -3834,7 +3926,41 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // refusal is already a consumed no-op with its own stderr line. So the
         // button joins the row's arm on the row's own terms.
         case RedesignButton::IconHistory:
+        // ROW 8 MIRRORS NOTHING EITHER, except its one ruled pair below: the
+        // transport's two skips, Esc and the four arrows take the icon row's
+        // own model — presses always dispatch and the CHORDS' refusals answer
+        // (the loading/blank return, the lane model's own refusal shapes, the
+        // six Esc bindings' "nothing to do" no-ops), inherited through on_key
+        // and never mirrored here. The brief's own words: do NOT invent
+        // refusal-predicting grey states. The `h` history view's derived
+        // partition at the top of this body is what greys them in there —
+        // Space and the bare arrows are consumed in the view, so Play, Stop
+        // and the arrows wear the dead face; Home/End are the mode's own
+        // vocabulary and Esc is on its allowlist, so the two skips and Esc
+        // stay live — all derived, nothing hand-listed.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportEsc:
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportDown:
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportRight:
             return true;
+        // THE PLAY/STOP PAIR IS THE ROSTER'S FIRST STATE-MIRRORED PAIR
+        // (architect 2026-08-11, with the row): ONE chord — bare Space — split
+        // over two buttons whose faces read the live audition bit, so exactly
+        // one is ever live and the pair reads as a transport. Play is dead
+        // while an audition runs (its press would STOP, a lie about its face),
+        // Stop while none does. The bit is the GUI-side playback mirror
+        // (playhead_scanner_active — set at every launch, cleared by the one
+        // stop owner); a natural end-of-song flips it with no damage of its
+        // own, which the tick comparator repairs exactly as it repairs row
+        // 2's faces. In the history view the derived partition above has
+        // already greyed both (Space is consumed there).
+        case RedesignButton::TransportPlay:
+            return !a.playhead_scanner_active;
+        case RedesignButton::TransportStop:
+            return a.playhead_scanner_active;
         // THE WALK'S TWO STEPS ARE THE ROW'S SECOND FACE EXCEPTION, and the
         // only one that is not mode-SCOPED but mode-INVERTED (architect
         // 2026-08-05): they REST DISABLED and come alive inside the history
@@ -4019,6 +4145,20 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true.
         case RedesignButton::IconHistoryOlder:
         case RedesignButton::IconHistoryNewer:
+        // ROW 8 IS MOMENTARY WHOLE: every button is an act that completes.
+        // Play and Stop deliberately carry no lamp — whether an audition runs
+        // is the moving scanner's own statement, and the pair already says it
+        // with the enabled split (one live, one dead); a lit Play beside a
+        // dead Play would be the same fact said twice.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportPlay:
+        case RedesignButton::TransportStop:
+        case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportEsc:
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportDown:
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportRight:
             break;
     }
     return false;
@@ -4174,6 +4314,29 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // whenever nothing is selected — in all three states it shows this hint,
         // per the same ruling.
         case RedesignButton::IconRevert: return {"Revert (Ctrl+H)", nullptr};
+        // ROW 8 — the transport row (2026-08-11), all one-line forms: no
+        // button on it admits shift. The names are the ratified sentence-case
+        // labels, the accelerators the table's own convention (non-letter keys
+        // are themselves). Play and Stop each name their own half of the one
+        // Space binding — the button IS its face's half, so the hint says the
+        // half rather than "toggle".
+        case RedesignButton::TransportSkipBack:
+            return {"Go to start (Home)", nullptr};
+        case RedesignButton::TransportPlay:
+            return {"Play (Space)", nullptr};
+        case RedesignButton::TransportStop:
+            return {"Stop (Space)", nullptr};
+        case RedesignButton::TransportSkipForward:
+            return {"Go to end (End)", nullptr};
+        case RedesignButton::TransportEsc:
+            return {"Cancel (Esc)", nullptr};
+        // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
+        // the key IS the direction, so "Left (Left)" would name the same word
+        // twice — the hint keeps only the sentence-case direction.
+        case RedesignButton::TransportLeft:  return {"Left", nullptr};
+        case RedesignButton::TransportDown:  return {"Down", nullptr};
+        case RedesignButton::TransportUp:    return {"Up", nullptr};
+        case RedesignButton::TransportRight: return {"Right", nullptr};
     }
     return {nullptr, nullptr};
 }

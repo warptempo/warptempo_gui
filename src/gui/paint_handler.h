@@ -622,7 +622,7 @@ private:
     // doctrine) — and all three stash the ENABLED VECTOR they painted beside it
     // for main.cpp's staleness comparator, plus (row 4) the SELECTED bits.
     //
-    // All four are called from on_redraw OUTSIDE the loading / total>0
+    // All five are called from on_redraw OUTSIDE the loading / total>0
     // branches, each gated on its OWN exposure — they are the passes with no
     // dependence on the loaded audio, so a button is visible exactly whenever it
     // is clickable (their press claims sit above the pointer path's loading
@@ -634,6 +634,12 @@ private:
     void paint_toolbar_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
+    // ROW 8 — the transport row (2026-08-11), the family's fifth button-row
+    // painter and the one whose lane is in the BOTTOM strip: the nine icon
+    // buttons between the waveform and the status line, on the icon row's own
+    // face rules. Same exposure gating and the same audio-independence as the
+    // four above.
+    void paint_transport_row(cairo_t* cr);
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
     // overlap the rows they hang over. They cannot coexist, and the claim rests

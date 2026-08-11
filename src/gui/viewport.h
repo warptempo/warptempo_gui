@@ -260,7 +260,11 @@ struct Viewport {
     // invalidate_top_strip alone would leave their overhang stale. Show and hide
     // edges damage the strip AND the surface's own published rect — two cheap
     // calls the platform coalesces — rather than growing a union helper that
-    // only these two callers would ever use. A zero/negative rect is a no-op.
+    // only these two callers would ever use. Since row 8 (2026-08-11) it is
+    // also the TRANSPORT ROW'S damage entry: that row's faces live in the
+    // bottom strip, so every face writer's damage fork passes
+    // bottom_transport_row_area here where the top rows call
+    // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
 
     // THE MARKER HOVER IS GONE (row 5, 2026-08-01). clear_hover_popup and

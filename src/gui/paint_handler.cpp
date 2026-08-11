@@ -2258,6 +2258,162 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+// ROW 8 — THE TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
+// first surface): the permanent bottom toolbar between the waveform and the
+// status line, on every host — ordinary mouse-clickable buttons, no touch
+// mode, no flag, no detection. Nine 32x32 icon buttons in three groups:
+//
+//   THE TRANSPORT, left-anchored in the standard order — skip-back (bare
+//   Home), play and stop (the ONE bare Space binding over two state-mirrored
+//   buttons: Play greyed while an audition runs, Stop while none is), and
+//   skip-forward (bare End);
+//   ESC, centered in the window — bare Escape through the one dispatch route,
+//   the six Esc bindings deciding what it means;
+//   THE CARDINAL ARROWS, right-anchored, VIM ORDER left-to-right — left,
+//   down, up, right (bare Left/Down/Up/Right), a single line and not a d-pad,
+//   press-fire with hold-to-repeat like their keys.
+//
+// THE GROUPS ARE SEPARATED BY DISTANCE, NOT BY PAINTED SEPARATORS: the icon
+// row's separator vocabulary (4px / 1px line / 4px) divides ADJACENT groups in
+// one left-to-right walk, and this row's three groups are anchored to three
+// different points of the window — the anchoring IS the group boundary, so a
+// painted line would divide nothing. Within a group the gap is the icon row's
+// own 2px, and the row opens and closes with its 8px pad (kIconRowPadLeftPx,
+// mirrored on the right).
+//
+// EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL, shared constants included (the
+// 32px button, the 22px glyph, the outline stroke, the corner radius, the
+// centering rule): same ground, same five faces, same one disabled blend —
+// worn here by the play/stop pair's resting halves and by whatever the `h`
+// history view's derived partition greys (Space and the bare arrows are
+// consumed in the view, so Play, Stop and the four arrows grey; Home/End are
+// the mode's own vocabulary and Esc is on its allowlist, so the two skips and
+// Esc stay live — all at redesign_button_enabled, nothing decided here). The
+// ONE box-model difference is the border edge: this lane's 1px border is on
+// TOP, the waveform side — the bottom strip's chrome grows from the window
+// edge inward, so the border facing the waveform is the mirror of the icon
+// row's border-bottom.
+
+// The painter's half of the row's roster: three groups, painted left to right.
+// The press claim's chord table (input_pointer.cpp) is the other half; both
+// key off the same ids.
+struct TransportRowDef {
+    RedesignButton id;
+    icons::Icon    icon;
+};
+constexpr TransportRowDef kTransportGroup[] = {
+    {RedesignButton::TransportSkipBack,    icons::Icon::MediaSkipBackward},
+    {RedesignButton::TransportPlay,        icons::Icon::MediaPlaybackStart},
+    {RedesignButton::TransportStop,        icons::Icon::MediaPlaybackStop},
+    {RedesignButton::TransportSkipForward, icons::Icon::MediaSkipForward},
+};
+constexpr TransportRowDef kTransportEscGroup[] = {
+    {RedesignButton::TransportEsc,         icons::Icon::DialogCancel},
+};
+// Vim order, the architect's: h j k l reads left / down / up / right, and the
+// left and right chevrons REUSE the walk pair's glyphs (GoPrevious / GoNext —
+// an icon is a glyph, not a button), GoDown / GoUp completing the family.
+constexpr TransportRowDef kTransportArrowGroup[] = {
+    {RedesignButton::TransportLeft,        icons::Icon::GoPrevious},
+    {RedesignButton::TransportDown,        icons::Icon::GoDown},
+    {RedesignButton::TransportUp,          icons::Icon::GoUp},
+    {RedesignButton::TransportRight,       icons::Icon::GoNext},
+};
+
+void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
+    const GuiRect lane = bottom_transport_row_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+
+    const int border_h  = transport_row_border_h_px();
+    const int content_h = lane.h - border_h;
+    if (content_h <= 0) return;
+    const int content_y = lane.y + border_h;
+
+    cairo_save(cr);
+
+    // The border-TOP runs the entire window width — the seam against the
+    // waveform above, this row's one box-model difference from row 4.
+    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                         kRedesignTabLine.b);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, border_h);
+    cairo_fill(cr);
+
+    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                         kRedesignTabGround.b);
+    cairo_rectangle(cr, lane.x, content_y, lane.w, content_h);
+    cairo_fill(cr);
+
+    const int btn      = scaled_px(kIconBtnPx);
+    const int btn_gap  = scaled_px(kIconBtnGapPx);
+    const int pad      = scaled_px(kIconRowPadLeftPx);
+    const int glyph_px = scaled_px(kIconGlyphPx);
+    const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double radius = std::nearbyint(kIconCornerRadiusPx *
+                                         gui_scale_factor());
+    const int btn_y = content_y + (content_h - btn) / 2;
+
+    // One button, the icon row's face logic verbatim minus the letter arm and
+    // the selected states this row cannot reach (selected is constant false
+    // over the nine, so the shared expressions still read it rather than
+    // assuming it).
+    const auto paint_button = [&](const TransportRowDef& def, int x) {
+        AppState::RedesignButtonFace& face = publish_button_face(
+            app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
+
+        const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
+        const bool hovered = face.hovered && face.enabled;
+        const bool pressed =
+            face.enabled &&
+            app.redesign_pressed == redesign_button_index(def.id);
+
+        const bool has_fill = pressed || face.selected;
+        const bool has_line = hovered || pressed || face.selected;
+        GuiColor under = kRedesignTabGround;
+        if (has_fill || has_line) {
+            const GuiColor fill = mix_color(
+                pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                                    kRedesignClickMix)
+                        : kRedesignSelectedFill,
+                kRedesignTabGround, keep);
+            const GuiColor line = mix_color(
+                (hovered || pressed) ? kRedesignAccent : kRedesignLine,
+                kRedesignTabGround, keep);
+            redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
+                              has_fill ? &fill : nullptr,
+                              has_line ? &line : nullptr);
+            if (has_fill) under = fill;
+        }
+        icons::draw(cr, def.icon,
+                    static_cast<double>(x + (btn - glyph_px) / 2),
+                    static_cast<double>(btn_y + (btn - glyph_px) / 2),
+                    static_cast<double>(glyph_px), keep, under);
+    };
+
+    // THE THREE ANCHORS. Left: the transport walks from the row's pad. Center:
+    // Esc sits at the window's midline (its single button centered exactly).
+    // Right: the arrows close against the mirrored pad. At the 640px defensive
+    // floor with gui_scale at its 200 ceiling the three still clear each other
+    // (re-derived: 64px buttons, 4px gaps, 16px pads — the transport ends at
+    // 284, Esc spans 288..352, the arrows start at 356); no collision rule
+    // exists, matching row 1's floats.
+    int x = lane.x + pad;
+    for (const TransportRowDef& def : kTransportGroup) {
+        paint_button(def, x);
+        x += btn + btn_gap;
+    }
+
+    paint_button(kTransportEscGroup[0], lane.x + (lane.w - btn) / 2);
+
+    const int arrows_n = static_cast<int>(std::size(kTransportArrowGroup));
+    x = lane.x + lane.w - pad - (arrows_n * btn + (arrows_n - 1) * btn_gap);
+    for (const TransportRowDef& def : kTransportArrowGroup) {
+        paint_button(def, x);
+        x += btn + btn_gap;
+    }
+
+    cairo_restore(cr);
+}
+
 
 // -- The floating surfaces ---------------------------------------------------
 
@@ -2358,12 +2514,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
                   2 * pad_y;
 
-    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT, then CLAMPED FULLY ON-WINDOW so a
+    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the transport
+    // row's nine (row 8, 2026-08-11), whose lane rests on the window's foot:
+    // below them is only the status line and the window edge, so the hint
+    // hangs upward there, the same box flipped about the button. Then CLAMPED
+    // FULLY ON-WINDOW so a
     // button near an edge cannot push it off. The clamp is a pure position fix —
     // the box never shrinks, because a truncated hint would be worse than one
     // that shifted.
     int x = btn.x;
-    int y = btn.y + btn.h;
+    int y = redesign_button_in_transport_row(static_cast<RedesignButton>(hovered))
+                ? btn.y - h
+                : btn.y + btn.h;
     if (x + w > app.width)  x = app.width - w;
     if (x < 0) x = 0;
     if (y + h > app.height) y = app.height - h;
@@ -4408,7 +4570,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE FOUR REDESIGNED TOP ROWS AND THE BOTTOM ROW PAINT ON EVERY FRAME
+    // THE FOUR REDESIGNED TOP ROWS, THE TRANSPORT ROW AND THE BOTTOM ROW PAINT
+    // ON EVERY FRAME
     // CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
     // dependence on the loaded audio, and their buttons are claimed ABOVE the
@@ -4444,6 +4607,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
+        }
+        // ROW 8 (2026-08-11) joins the family on the family's own terms: the
+        // transport row is audio-independent chrome exactly like the four top
+        // rows — its press claim sits above the pointer path's loading guard —
+        // and it publishes the hit rects the claim reads, so it must paint on
+        // every frame class its lane is exposed on.
+        if (rects_intersect(exposed, bottom_transport_row_area(app))) {
+            paint_transport_row(cr);
         }
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr, audio.sample_rate());
