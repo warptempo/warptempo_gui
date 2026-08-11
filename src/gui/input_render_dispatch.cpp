@@ -191,8 +191,10 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the bottom strip before clearing queue_progress_text.
-    // timestamp_invalidate_rect() covers the whole bottom strip; keep this
+    // Invalidate the status lane before clearing queue_progress_text.
+    // timestamp_invalidate_rect() covers the status lane — the whole bottom
+    // strip until row 8 stacked the transport row above it (2026-08-11) — and
+    // the label lives nowhere else; keep this
     // ordering consistent with the other status-clear paths.
     viewport.invalidate_timestamp_area();
     app.queue_progress_text.clear();
@@ -240,6 +242,21 @@ void GuiInputHandler::park_render_status(std::string text) {
     // cell following a synthesis cell would otherwise do.
     synthesis_started_.store(false);
     pending_status_text_ = std::move(text);
+}
+
+// THE RENDER BUTTON'S CANCEL FACE, maintained per tick (architect 2026-08-11;
+// the contract, the readers and the one-tick-staleness argument live at
+// AppState::render_cancel_face). A TRANSITION WRITER on the drift-comparator
+// pattern: the live fact is the cancel act's own predicate — the exact two
+// branches cancel_archival_session tests — and each flip pays one
+// invalidate_top_strip, which is what repaints Render's label, icon and hint
+// on the edges no other damage covers (a render finishing is an async event
+// with no top-strip damage of its own).
+void GuiInputHandler::tick_render_cancel_face() {
+    const bool now = async_renderer.is_busy() || app.queue_running;
+    if (now == app.render_cancel_face) return;
+    app.render_cancel_face = now;
+    viewport.invalidate_top_strip();
 }
 
 void GuiInputHandler::tick_promote_render_status() {

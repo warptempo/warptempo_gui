@@ -617,7 +617,7 @@ private:
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom), the
     // ICON ROW (top lane 3, row 4: the sixteen view/mode/action buttons, their
     // separators and its border-bottom), and the TRANSPORT ROW (bottom lane 1,
-    // row 8: the nine transport / Esc / arrow buttons, declared below).
+    // row 8: the eight transport / arrow buttons, declared below).
     // All five PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
@@ -638,10 +638,10 @@ private:
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
     // ROW 8 — the transport row (2026-08-11), the family's fifth button-row
-    // painter and the one whose lane is in the BOTTOM strip: the nine icon
+    // painter and the one whose lane is in the BOTTOM strip: the eight icon
     // buttons between the waveform and the status line, on the icon row's own
-    // face rules. Same exposure gating and the same audio-independence as the
-    // four above.
+    // face rules at the row's own sampled kdenlive sizes. Same exposure gating
+    // and the same audio-independence as the four above.
     void paint_transport_row(cairo_t* cr);
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they

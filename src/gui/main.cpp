@@ -1397,6 +1397,7 @@ int main(int argc, char** argv) {
         // compare, and keeping them adjacent keeps the two status owners' tick
         // work in one place.
         input_handler.tick_promote_render_status();
+        input_handler.tick_render_cancel_face();
 
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either

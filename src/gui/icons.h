@@ -78,7 +78,7 @@ enum class Icon {
     // cubic (`s`), the one command the interpreter grew for it.
     DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
     // Row 8, the transport row (2026-08-11, the touch arc's first surface):
-    // SEVEN new glyphs for its nine buttons — the four cardinal arrows REUSE
+    // SEVEN new glyphs for its eight buttons — the four cardinal arrows REUSE
     // the walk pair's GoPrevious / GoNext for left and right (an Icon is a
     // GLYPH, not a button: VcsCommit already serves two faces), and GoUp /
     // GoDown below complete the chevron family, so all four arrows are the
@@ -87,13 +87,15 @@ enum class Icon {
     // own media-* set (the universal transport vocabulary; media-playback-
     // pause was the considered runner-up for the stop slot and lost — Space
     // STOPS, it does not pause, and the face must not promise a resume).
-    // dialog-cancel (the circle-slash) is Esc's — Breeze's one "cancel" glyph,
-    // no runner-up considered.
+    // dialog-cancel (the circle-slash) is Breeze's one "cancel" glyph, no
+    // runner-up considered — transcribed for the row's short-lived Esc button
+    // (deleted the same day at the architect's live pass) and kept as the
+    // RENDER button's mid-render Cancel face (redesign_button_icon).
     MediaSkipBackward,   // Go to start (bare Home)
     MediaPlaybackStart,  // Play (bare Space, the pair's live-while-stopped half)
     MediaPlaybackStop,   // Stop (bare Space, the pair's live-while-playing half)
     MediaSkipForward,    // Go to end (bare End)
-    DialogCancel,        // Esc (bare Escape)
+    DialogCancel,        // Render's mid-render Cancel face (row 2)
     GoDown,              // The down arrow (bare Down)
     GoUp,                // The up arrow (bare Up)
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:

@@ -60,6 +60,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // every key that opens a modal. Gated inside disarm_menu_row: with a popup
     // OPEN this is inert and the popup's own keyboard gate below decides.
     disarm_menu_row();
+    // ANY KEY ARRIVAL ENDS THE TRANSPORT ARROWS' HOLD-REPEAT — the keyboard
+    // member of the three-edge disarm list at AppState::transport_repeat's
+    // declaration, which MIRRORS THE PLATFORM'S OWN LAYER-1 REPEAT CONTRACT
+    // (maybe_fire_repeat: a key repeat's stored intent dies on every
+    // intervening key press, pointer-button press, and completed wheel
+    // emission). The mirror is LOAD-BEARING FOR UNDO, not hand-feel: the
+    // coalescer merges a synthesized repeat into the last entry BY KIND ALONE,
+    // with no subject test, on the premise that NO COMMAND CAN RUN between a
+    // burst's physical press and its repeats — a Tab moving the focus mid-hold
+    // would otherwise have the next tick repeat nudging the NEW focus into the
+    // OLD marker's entry. Synthesized repeats are exempt (a burst must not
+    // kill itself — neither the platform's own key repeats, which found this
+    // hold already dead at their press, nor the transport tick's, which carry
+    // the same stamp); internal chord dispatches (a button, a menu item)
+    // arrive here non-synthesized and disarm correctly — each IS an
+    // intervening command — and the transport press's own arm lands AFTER its
+    // on_key returns (dispatch_redesign_chord), so this line cannot eat it.
+    if (!mods.synthesized_repeat) app.transport_repeat.owner = -1;
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -1602,6 +1620,14 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // dismissal happens on the very frame the wheel arrives.
     close_dropdown();
     hide_shift_tooltip();
+    // A COMPLETED WHEEL EMISSION ENDS THE TRANSPORT ARROWS' HOLD-REPEAT — the
+    // wheel member of the three-edge disarm list at AppState::transport_repeat's
+    // declaration (the platform layer-1 mirror; the undo-adjacency reasoning is
+    // at the on_key member). Every call here IS a completed detent — the
+    // platform accumulates sub-detent remainder itself — so this placement is
+    // exactly the platform's own edge, and sub-detent accumulation deliberately
+    // does not disarm, matching it.
+    app.transport_repeat.owner = -1;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
     // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans

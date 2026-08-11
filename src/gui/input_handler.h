@@ -963,6 +963,12 @@ struct GuiInputHandler {
     // per tick when nothing is parked.
     void tick_promote_render_status();
 
+    // Per-iteration transition writer for the Render button's mid-render
+    // CANCEL face (AppState::render_cancel_face — the contract is at the bit),
+    // wired from main.cpp's on_tick beside tick_promote_render_status. One
+    // bool compare per tick at rest.
+    void tick_render_cancel_face();
+
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
     // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and

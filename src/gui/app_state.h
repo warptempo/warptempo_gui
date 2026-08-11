@@ -874,15 +874,19 @@ enum class RedesignButton {
     // Row 8, the TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
     // first surface): the permanent bottom toolbar between the waveform and
     // the status line, on every host — no touch mode, no flag, no detection.
-    // Nine buttons in three groups, in painted order (the enum order is the
+    // Eight buttons in two groups, in painted order (the enum order is the
     // painted order, and row 8 paints below rows 1-4, so the roster's tail is
     // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
     // the ONE bare Space binding split over two state-mirrored buttons,
-    // skip-forward = bare End), then ESC (bare Escape — the six Esc bindings
-    // decide what it means, the button adds no seventh semantics), then the
+    // skip-forward = bare End), then the
     // four CARDINAL ARROWS in vim order left-to-right — left, down, up, right
     // (bare Left/Down/Up/Right), which inherit the bare arrows' whole
     // semantics by dispatching through on_key like every other chord button.
+    // (A ninth button — ESC, bare Escape, centered between the groups — shipped
+    // with the row and was DELETED the same day at the architect's live pass:
+    // "looks like a missing button with that cross out". The mid-render CANCEL
+    // moved onto the RENDER button instead — the toolbar's stateful-face
+    // precedent — and bare Esc stays keyboard-only.)
     //
     // PLAY AND STOP ARE THE ROSTER'S FIRST STATE-MIRRORED PAIR: one chord,
     // two buttons, the enabled predicate splitting them on the live audition
@@ -895,21 +899,22 @@ enum class RedesignButton {
     // keyboard's): the press dispatches once and arms
     // AppState::transport_repeat; the tick then synthesizes repeats stamped
     // GuiInputState::synthesized_repeat, so the undo coalescing is the held
-    // key's own repeat-identity rule with nothing new. Transport and Esc do
+    // key's own repeat-identity rule with nothing new. The transport four do
     // not repeat. Machinery at tick_transport_arrow_repeat (input_pointer.cpp).
     TransportSkipBack, TransportPlay, TransportStop, TransportSkipForward,
-    TransportEsc,
     TransportLeft, TransportDown, TransportUp, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: six in row 1, four
-// in row 2, two in row 3, sixteen in row 4 and nine in row 8 — 37. Of those,
-// THIRTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
+// in row 2, two in row 3, sixteen in row 4 and eight in row 8 — 36. Of those,
+// THIRTY-FOUR carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (Settings and Navigation), which is the split the chord table's own
 // static_assert checks. It was 28 until 2026-08-11, when row 8 — the transport
-// row, the touch arc's first surface — joined with its nine; 29 before
+// row, the touch arc's first surface — joined with nine buttons, and 37 only
+// within that day (the row's Esc button was deleted at the architect's live
+// pass); 29 before
 // 2026-08-08, when row 3's compare-only pair was deleted and row 4 gained the
 // Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 37;
+inline constexpr int kRedesignButtonCount = 36;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -982,7 +987,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::TransportPlay:
         case RedesignButton::TransportStop:
         case RedesignButton::TransportSkipForward:
-        case RedesignButton::TransportEsc:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -996,7 +1000,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: row 8's pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the transport row's own rect for these nine — the hover recompute, the
+// with the transport row's own rect for these eight — the hover recompute, the
 // click-face arm and clear, the tick comparator, and the tooltip, which also
 // FLIPS ABOVE the button here (below it would hang off the window's foot).
 // A membership predicate like redesign_button_is_tab, deliberately NOT the
@@ -1009,7 +1013,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::TransportPlay:
         case RedesignButton::TransportStop:
         case RedesignButton::TransportSkipForward:
-        case RedesignButton::TransportEsc:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -2017,18 +2020,61 @@ struct AppState {
     // coalescing is the held KEY's own repeat-identity rule — the physical
     // press pushes, the repeats coalesce, nothing new. `owner` is the roster
     // index of the held arrow (-1 = none), `next_due_ms` the CLOCK_MONOTONIC
-    // stamp of the next repeat. It RIDES THE SAME PHYSICAL HOLD the click face
-    // does: armed only where the chord table's `repeats` flag says so
-    // (dispatch_redesign_chord), disarmed unconditionally wherever the click
-    // face drops (clear_redesign_button_press — the release, the pointer
-    // leave, and capability loss), and the tick's firing body is
-    // tick_transport_arrow_repeat (input_pointer.cpp), which also owns the
-    // pause-while-off-the-button rule.
+    // stamp of the next repeat.
+    //
+    // THE HOLD JOINS THE PLATFORM'S OWN KEY-REPEAT CONTRACT WHOLE (codex round
+    // 3, 2026-08-11), both layers, and this is the AUTHORITATIVE INVENTORY of
+    // its edges (every site carries its own member plus a pointer here):
+    //   ARMING is judged under the PRESS-TIME context by the keyboard's own
+    //   predicate SHARED, not mirrored — repeat_eligible, exactly what the
+    //   platform's arming probe asks for a physical key — evaluated before the
+    //   press's own on_key dispatch (dispatch_redesign_chord), so a press a
+    //   modal context consumes arms no burst that would start firing when the
+    //   modal closes under a held button.
+    //   THE STORED INTENT DIES ON THE PLATFORM'S THREE LAYER-1 EDGES, mirrored
+    //   at the GUI's own chokepoints: any non-synthesized KEY arrival (on_key's
+    //   top), any POINTER-BUTTON press (on_button_press's top — the arrow's own
+    //   press re-arms after its dispatch), and any COMPLETED WHEEL emission
+    //   (on_wheel's top). The mirror is LOAD-BEARING FOR UNDO, not hand-feel:
+    //   Undo::coalesce_gesture merges a synthesized repeat by KIND ALONE, no
+    //   subject test, on the premise that no command can run between a burst's
+    //   physical press and its repeats — the platform's disarms are what make
+    //   that true for held keys, and these are what make it true for held
+    //   buttons.
+    //   EACH FIRE RE-CHECKS the press-time predicate and the enabled bit
+    //   (layer 2's shape), and PAUSES while the pointer is off the button.
+    //   THE HOLD'S OWN ENDS — the release, the pointer leave, capability loss —
+    //   disarm through clear_redesign_button_press, the click face's edges,
+    //   which the repeat rides.
+    // The firing body is tick_transport_arrow_repeat (input_pointer.cpp).
     struct TransportArrowRepeat {
         int     owner       = -1;
         int64_t next_due_ms = 0;
     };
     TransportArrowRepeat transport_repeat;
+
+    // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect 2026-08-11:
+    // "change the render button into a cancel button when there's something
+    // rendering... it doesn't need to exist while nothing's rendering") — and
+    // this bit is that face's ONE fact: a per-tick MIRROR of the cancel act's
+    // own predicate (cancel_archival_session's two branches,
+    // async_renderer.is_busy() || queue_running), maintained by
+    // tick_render_cancel_face (input_render_dispatch.cpp), which damages the
+    // top strip on each transition — the drift-comparator pattern for a face
+    // input the comparator's enabled/selected vector cannot see. It is a
+    // MIRROR rather than a live read because the face functions here are
+    // AppState-only and the worker is not; the one-tick staleness is the
+    // comparator model's own cadence, and the CLICK reads this same bit so the
+    // press can never do something the painted face did not advertise (on the
+    // stale edge — render finished, click landed before the next tick — the
+    // press cancels an already-finished render, a no-op, rather than
+    // dispatching a render the face never promised).
+    // READERS: redesign_button_label (the "Cancel" label, ranked above the
+    // iteration label), redesign_button_icon (Icon::DialogCancel), the
+    // stateful tooltip overload, and dispatch_redesign_chord's Render arm —
+    // the roster's ONE ruled exception to THE BUTTON IS ITS CHORD (the
+    // divergence is recorded at that arm).
+    bool render_cancel_face = false;
 
     // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
     // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
@@ -3938,11 +3984,10 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // partition at the top of this body is what greys them in there —
         // Space and the bare arrows are consumed in the view, so Play, Stop
         // and the arrows wear the dead face; Home/End are the mode's own
-        // vocabulary and Esc is on its allowlist, so the two skips and Esc
+        // vocabulary, so the two skips
         // stay live — all derived, nothing hand-listed.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
-        case RedesignButton::TransportEsc:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -4156,7 +4201,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportPlay:
         case RedesignButton::TransportStop:
         case RedesignButton::TransportSkipForward:
-        case RedesignButton::TransportEsc:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -4330,8 +4374,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Stop (Space)", nullptr};
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)", nullptr};
-        case RedesignButton::TransportEsc:
-            return {"Cancel (Esc)", nullptr};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps only the sentence-case direction.
@@ -4366,7 +4408,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   term, whose mirror this face is). Three literal dots, not an ellipsis
 //   character — the product's text is ASCII in every label.
 //
-//   RENDER, WITH ITERATION MODE ON → "Render Iterations", the sweep, and its own
+//   RENDER, WITH A RENDER OR SWEEP LIVE → "Cancel", the dialog-cancel glyph,
+//   and THE ROSTER'S ONE CHORD DIVERGENCE: its click runs the cancel act
+//   itself (architect 2026-08-11 — the ruling, the rank over the iteration
+//   label and the bit are at AppState::render_cancel_face and the divergence
+//   record at dispatch_redesign_chord's Render arm; Ctrl+Alt+R on the keyboard
+//   keeps its own kill-and-redispatch semantics unchanged).
+//
+//   RENDER, WITH ITERATION MODE ON (and nothing live) → "Render Iterations",
+//   the sweep, and its own
 //   one-line hint. The history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary
 //   label and icon over the derived disabled face.
@@ -4400,6 +4450,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
 inline constexpr const char* kSaveCommitLabel       = "Save and Commit";
 inline constexpr const char* kSaveCommittingLabel   = "Committing...";
+// RENDER'S MID-RENDER FACE (architect 2026-08-11): while a render or iteration
+// sweep is live the button reads "Cancel" — sentence case, the ordinary
+// convention, one word — wears Icon::DialogCancel, and ITS CLICK CANCELS (the
+// divergence from its chord is the ruled exception recorded at
+// dispatch_redesign_chord's Render arm). RANKED ABOVE THE ITERATION LABEL
+// wherever both could apply: "Render Iterations" names what a press would
+// START, and while one is LIVE a press starts nothing — it cancels — so the
+// in-flight face is the outer truth exactly as Save's "Committing..." outranks
+// its view label.
+inline constexpr const char* kRenderCancelLabel     = "Cancel";
 // ROW 3'S TWO WALK-SELECTOR WORDS, while the `h` view stands and the tabs
 // select the walk instead of being the A/B pair (architect 2026-08-05 for the
 // repurposing, 2026-08-08 for what the words say). Sentence case, the ordinary
@@ -4460,6 +4520,19 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // with its chord, so in the view Render is an ordinary dead button and shows
     // its ordinary two-line hint — what it does and where it works, which is the
     // same thing the four resting-disabled row-4 buttons show.
+    // RENDER'S MID-RENDER HINT, ranked above its iteration form like the
+    // label: one line, "Cancel", NO KEY NAMED — deliberately. The act is the
+    // button's own (the ruled chord divergence at dispatch_redesign_chord),
+    // and naming Esc would lie whenever a region rests: bare Esc ranks the
+    // region clear above the render cancel, so the key and the button part
+    // company in exactly that state. NO SHIFT LINE either: while the face is
+    // Cancel a shift press cancels too — one face, one act — and the hint
+    // exists only where shift does something DIFFERENT (the static_assert's
+    // rule, met here by the stateful form exactly as iteration mode's already
+    // does).
+    if (b == RedesignButton::Render && a.render_cancel_face) {
+        return {"Cancel", nullptr};
+    }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return {"Render Iterations (Ctrl+Alt+R)", nullptr};
     }
@@ -4497,6 +4570,13 @@ inline const char* redesign_button_label(const AppState& a, RedesignButton b,
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
         return kSaveCommitLabel;
+    }
+    // RENDER'S TWO STATES, in-flight first (the rank rule is at
+    // kRenderCancelLabel): a live render makes the button the CANCEL act, in
+    // iteration mode as out of it; idle, the iteration bit picks the sweep
+    // label as before.
+    if (b == RedesignButton::Render && a.render_cancel_face) {
+        return kRenderCancelLabel;
     }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return kRenderIterationsLabel;

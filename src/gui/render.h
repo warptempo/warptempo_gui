@@ -1021,9 +1021,11 @@ inline int bottom_row_h_px() {
 // (architect-ratified 2026-08-11, the touch arc's first surface): the bottom
 // strip's SECOND lane, between the waveform and the status line, permanent on
 // every host — ordinary mouse-clickable buttons, no touch mode, no flag, no
-// detection. Nine buttons in three groups: the transport (skip-back / play /
-// stop / skip-forward, left-anchored), Esc (centered), and the four cardinal
-// arrows in vim order left-to-right (right-anchored).
+// detection. Eight buttons in two groups: the transport (skip-back / play /
+// stop / skip-forward, left-anchored) and the four cardinal
+// arrows in vim order left-to-right (right-anchored); the button and glyph
+// boxes are the row's own sampled kdenlive transport sizes (kTransportBtnPx /
+// kTransportGlyphPx, paint_handler.cpp).
 //
 // THE HEIGHT IS THE ICON ROW'S OWN 46 BY RULING (the brief's "icon-row-height
 // on the gui_scale axis"), stated as this row's own constant rather than read

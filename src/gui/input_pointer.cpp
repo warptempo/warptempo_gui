@@ -206,12 +206,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconHistoryNewer,
      GuiKeys::Period, false, false, false, false, true},                             // bare .
     // Row 8 — the transport row (architect-ratified 2026-08-11, the touch
-    // arc's first surface). Nine chords, every one BARE, every one already
+    // arc's first surface). Eight chords, every one BARE, every one already
     // bound: the row adds no semantics anywhere — each button is its key,
     // through this one table like the rest of the roster, so the keyboard-
     // modal editor gate, the history-mode allowlists, the read-only gate and
     // every refusal apply by construction, a refusal being a consumed no-op on
-    // click exactly as on key.
+    // click exactly as on key. (A ninth chord — bare Escape, the row's Cancel
+    // button — shipped and was deleted the same day with its button; the
+    // mid-render Cancel is the RENDER button's stateful face now, spelled in
+    // this body below.)
     //
     // PLAY AND STOP SHARE THE ONE Space BINDING — two buttons over one chord,
     // the state-mirrored pair whose enabled split (redesign_button_enabled)
@@ -221,7 +224,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // THE FOUR ARROWS SET `repeats` — the table's only four: a held press
     // synthesizes the key's own repeats (tick_transport_arrow_repeat below).
-    // Esc and the transport four are one-shot by ruling.
+    // The transport four are one-shot by ruling.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlay,
@@ -230,8 +233,6 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Space,  false, false, false, false, true},                             // bare Space
     {RedesignButton::TransportSkipForward,
      GuiKeys::End,    false, false, false, false, true},                             // bare End
-    {RedesignButton::TransportEsc,
-     GuiKeys::Escape, false, false, false, false, true},                             // bare Esc
     {RedesignButton::TransportLeft,
      GuiKeys::Left,   false, false, false, false, true, true},                       // bare Left
     {RedesignButton::TransportDown,
@@ -1286,6 +1287,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // It is gated inside disarm_menu_row: with a popup OPEN this is inert, and
     // the press then belongs to the popup, whose own routes decide the mode.
     disarm_menu_row();
+    // ANY POINTER PRESS ENDS THE TRANSPORT ARROWS' HOLD-REPEAT — the pointer
+    // member of the three-edge disarm list at AppState::transport_repeat's
+    // declaration (the platform layer-1 mirror; the undo-adjacency reasoning
+    // is at the on_key member). Unconditional on the disarm_menu_row
+    // precedent: the one press that must keep a hold — an arrow's own — re-arms
+    // through dispatch_redesign_chord a few lines later, and every other press
+    // (a right button mid-hold included) is an intervening event.
+    app.transport_repeat.owner = -1;
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
@@ -1293,49 +1302,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Marker / EmptyLane at the press). One closed instrumentation point — the clear covers
     // every non-consuming press (a strip/region/trim arm, a modal swallow)
     // without a clear scattered on each path. It sits ABOVE the prompt swallow
-    // since row 8 hoisted its claim over the modal gates (2026-08-11): the
-    // transport claim below must not leave a stale candidate behind, and the
-    // move also makes this comment's "a modal swallow" clause fully true — the
-    // prompt swallow was the one press that did not clear.
+    // (2026-08-11), which is what makes the "a modal swallow" clause fully
+    // true — the prompt swallow was the one press that did not clear. (The
+    // row-8 claim that briefly stood between this clear and the prompt gate is
+    // gone: it existed for the row's Cancel button, which the architect
+    // deleted the same day, and the transport claim is back in the band block
+    // below with its four siblings.)
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
 
-    // ROW 8 — THE TRANSPORT ROW'S BAND CLAIM (2026-08-11), HOISTED ABOVE THE
-    // MODAL GATES, and the ordering is the row's whole point: every button IS
-    // its bare chord through on_key, so the KEYBOARD-MODAL GATES MUST BE THE
-    // ONES THAT DECIDE — with a prompt up or an editor open, the Cancel button
-    // must reach the very Esc binding the physical key reaches (the prompt
-    // abandon, the editor discard), while the other eight dispatch chords those
-    // gates consume, exactly as the physical keys are consumed. Claimed BELOW
-    // this claim, those surfaces' pointer swallows would eat the press before
-    // any gate could answer, making the button a lie in exactly the states a
-    // Cancel exists for. The claim is the TRANSPORT LANE'S RECTANGLE ONLY, so
-    // it steals nothing a modal surface owns: the prompt and the editors keep
-    // every press outside this band (the editors' own text region is the
-    // STATUS lane, disjoint by construction), and the flag editor's keyboard
-    // modality answers through on_key like every other gate — a press here
-    // closes no editor, exactly as a row 1-4 button press never did.
-    //
-    // THE ONE EXCEPTION IS AN OPEN DROPDOWN, and it is a fall-through rather
-    // than a swallow: DISMISSAL IS A PRESS ACT in this product, so a press
-    // down here while a menu stands must CLOSE the menu and be consumed — the
-    // popup claim below owns exactly that — not dispatch a chord into the
-    // menu's key handling, where a key the menu ignores leaves it standing.
-    // For the Cancel button the two roads agree (Esc closes the menu; so does
-    // the press), so nothing the row advertises is lost by yielding.
-    {
-        const GuiRect transport_row = bottom_transport_row_area(app);
-        if (!app.dropdown.open() && rect_contains(transport_row, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
-            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
-            return;
-        }
-    }
-
     // Prompt-modal input handling: while the bottom-strip prompt is
-    // active, all mouse events are swallowed (the transport row above is the
-    // one surface claimed first — its buttons are chords, and the prompt's own
-    // keyboard gate answers them). Responses go through the keyboard.
+    // active, all mouse events are swallowed. Responses go through
+    // the keyboard.
     if (app.prompt.active) return;
 
     // F2.1: mouse drag-to-select inside the active text editor. A press on
@@ -1354,8 +1332,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // THE STATUS LANE, not the whole bottom strip: the strip is
                 // TWO lanes since row 8 (2026-08-11), and the editors' text
                 // lives in the status lane alone — the transport row above it
-                // is the button rows' surface, whose lane the hoisted claim
-                // near the top of this function owns. Claiming the whole strip
+                // is the button rows' surface, whose band claim sits with the
+                // other rows' below. Claiming the whole strip
                 // here would map a transport-lane press to an editor byte.
                 in_region = rect_contains(bottom_row_area(app), x, y);
             } else {
@@ -1511,18 +1489,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
     }
 
-    // THE FOUR REDESIGNED TOP ROWS (top lanes 0..3), claimed ABOVE the
+    // THE FIVE REDESIGNED BUTTON ROWS (top lanes 0..3 plus the bottom strip's
+    // transport row, whose claim closes the block), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
     // the loaded audio. They sit BELOW the modal gates on purpose: a press while
     // a prompt or a bottom-strip editor is up is swallowed there, exactly as it
     // is for every other pointer target (a modal owns the pointer; these buttons
     // are no exception, and every one of their chords reaches the same route
-    // from the keyboard anyway). ROW 8's TRANSPORT CLAIM IS THE ONE THAT IS
-    // NOT HERE: it takes the same band shape but sits ABOVE the modal gates,
-    // near the top of this function, because its buttons must reach the
-    // keyboard-modal gates that decide them (the ordering rationale is at that
-    // claim).
+    // from the keyboard anyway). (Row 8's claim stood ABOVE the modal gates for
+    // part of 2026-08-11, for the sake of its Cancel/Esc button — the one
+    // button that had to reach the keyboard-modal Esc bindings; the architect
+    // deleted that button the same day and the claim came home to this block
+    // with its justification.)
     //
     // ONE BAND-CLAIM SHAPE FOR ALL FIVE ROWS: the exact half-open row band, a
     // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
@@ -1533,7 +1512,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // driven by the table's per-button flags.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
-    // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row) —
+    // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row /
+    // paint_transport_row) —
     // never re-shaped here, so the clickable rect is the painted one. The action
     // FIRES ON PRESS: nothing on these rows drags, so there is no arm, no
     // threshold and no release body, and no double-click surface either. The one
@@ -1718,6 +1698,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
     }
+    // ROW 8 — THE TRANSPORT ROW (2026-08-11), the block's fifth member on the
+    // block's own terms: the band is the BOTTOM strip's lane 1, between the
+    // waveform and the status row, and everything else is the shape above —
+    // below the modal gates (a prompt or a bottom-strip editor swallows the
+    // press; the pointer-transparent flag editor does not, and its KEYBOARD
+    // modality then answers the dispatched chord exactly as it answers the
+    // key), above the loading/empty guard, ctrl/alt strict no-ops, and every
+    // press in the band that is not on a button a consumed nothing. The
+    // arrows' hold-repeat arm lives inside the shared dispatch body
+    // (ToolbarChord::repeats), not here.
+    {
+        const GuiRect transport_row = bottom_transport_row_area(app);
+        if (rect_contains(transport_row, x, y)) {
+            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
+            return;
+        }
+    }
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
@@ -1795,8 +1793,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // GATE PROFILE — IDENTICAL TO THE LEFT SCRUB'S, by position: everything that
     // stops the left press before it reaches scrub_press_at has already run
     // above (the prompt swallow, the four bottom-strip modal editors, the open
-    // dropdown, the transport row's hoisted claim and the four top rows' band
-    // claims, the loading / empty-audio
+    // dropdown, the five redesigned rows' band claims, the loading / empty-audio
     // return). Read-only tabs scrub as ever (playback is navigation), the
     // selection / cursor / region / follow are untouched, and no double-click
     // candidate is seeded.
@@ -3357,17 +3354,26 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
             else
                 viewport.invalidate_top_strip();
         }
-        // THE ARROWS' HOLD-REPEAT ARMS AT THE PRESS (row 8, 2026-08-11), after
-        // every refusal above has had its say — a consumed press arms nothing —
-        // and BEFORE the dispatch, deliberately: on_key's route can do anything,
-        // and the arm is about the PHYSICAL hold that is already standing. The
-        // schedule is the keyboard's own: one dispatch now (below), the first
-        // synthesized repeat kArrowRepeatDelayMs later, then the interval
-        // (tick_transport_arrow_repeat, which also owns every firing condition).
-        if (tc.repeats) {
-            app.transport_repeat.owner = redesign_button_index(tc.id);
-            app.transport_repeat.next_due_ms =
-                monotonic_ms() + kArrowRepeatDelayMs;
+        // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
+        // 2026-08-11) — THE ROSTER'S ONE RULED EXCEPTION TO "THE BUTTON IS ITS
+        // CHORD": while app.render_cancel_face stands (the painted face's own
+        // bit — the mirror of cancel_archival_session's predicate, contract at
+        // its declaration) a press here runs THE CANCEL ACT ITSELF, the Esc
+        // arm's own body, and dispatches no chord at all. The divergence is
+        // his ruling, both halves: the KEYBOARD keeps Ctrl+Alt+R's own
+        // semantics unchanged (a dispatch kills the running render and starts
+        // a new one — the render-dispatch rule), while the BUTTON "doesn't
+        // need to exist while nothing's rendering" and so becomes the cancel;
+        // and the dispatched chord could not be bare Esc either, because Esc
+        // ranks the region clear ABOVE the render cancel — a Cancel button
+        // that cleared a resting region instead of cancelling would be a lie.
+        // A SHIFT press cancels too: one face, one act — while the button IS
+        // Cancel, letting shift slip through to the miscellaneous render would
+        // start a render from a button that says Cancel. The click face above
+        // is already armed, correctly: this is a press acting.
+        if (tc.id == RedesignButton::Render && app.render_cancel_face) {
+            cancel_archival_session();
+            return true;
         }
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // pointer's — well-defined because no row sets both (see shift_admits),
@@ -3376,7 +3382,30 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         chord.ctrl  = tc.ctrl;
         chord.shift = tc.shift || mods.shift;
         chord.alt   = tc.alt;
+        // THE ARROWS' HOLD-REPEAT ARM, in three ordered pieces (codex round 3,
+        // 2026-08-11). ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT, and
+        // it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
+        // repeat_eligible is exactly what the platform's arming probe asks for
+        // the physical key, so the button's hold arms in precisely the
+        // contexts a held key would (and refuses in the ones it refuses — a
+        // press the flag editor's gate consumes must not arm a burst that
+        // starts firing when the editor closes under a held button). Asked
+        // BEFORE on_key, which is what "press-time" means — the dispatch below
+        // can change the context (open an editor, close one), and the
+        // platform's probe is likewise evaluated pre-dispatch. The ARM itself
+        // then lands AFTER on_key, because on_key's top disarms the transport
+        // hold on every non-synthesized key arrival (the M2 mirror, below) and
+        // must not eat the arm it is part of establishing.
+        const bool arm_repeat = tc.repeats && repeat_eligible(tc.key, chord);
         on_key(tc.key, chord);
+        // The schedule is the keyboard's own: one dispatch above, the first
+        // synthesized repeat kArrowRepeatDelayMs later, then the interval
+        // (tick_transport_arrow_repeat, which owns every firing condition).
+        if (arm_repeat) {
+            app.transport_repeat.owner = redesign_button_index(tc.id);
+            app.transport_repeat.next_due_ms =
+                monotonic_ms() + kArrowRepeatDelayMs;
+        }
         return true;
     }
     return false;
@@ -4364,7 +4393,10 @@ void GuiInputHandler::clear_redesign_button_press() {
 // entry (dispatch_redesign_chord, synthesized_repeat false), every repeat
 // coalesces by repeat identity, and no new undo semantics exist.
 //
-// THE HOLD'S RECORD IS THE CLICK FACE (app.redesign_pressed): the arm rides
+// THE HOLD'S EDGES ARE THE PLATFORM KEY-REPEAT CONTRACT'S, SHARED AND
+// MIRRORED — the authoritative inventory is at AppState::transport_repeat's
+// declaration; this body carries only its own members. THE HOLD'S RECORD IS
+// THE CLICK FACE (app.redesign_pressed): the arm rides
 // the same physical hold, and clear_redesign_button_press — the release, the
 // pointer leave and capability loss — disarms both together, so "the face is
 // standing on the armed button" IS "the hold is standing". A repeat fires only
@@ -4372,7 +4404,9 @@ void GuiInputHandler::clear_redesign_button_press() {
 // off pauses the schedule silently and sliding back on resumes it, the hold
 // standing throughout — a leave that exits the WINDOW ends the hold outright
 // through the hook, and a re-entry mid-hold does not re-arm (no new press).
-// Each fire re-checks the enabled bit — the disabled-press consume's mirror,
+// Each fire re-checks the press-time eligibility predicate (layer 2's mirror,
+// at the check below) and the enabled bit — the disabled-press consume's
+// mirror,
 // so a button that went dead under the hold (the history view opening, say)
 // pauses exactly as the claim would refuse — and dispatches through on_key,
 // where every gate answers as it would for the held key itself. One fire per
@@ -4395,11 +4429,22 @@ void GuiInputHandler::tick_transport_arrow_repeat() {
         return;                                // paused off the button
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_index(tc.id) != rep.owner) continue;
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id)) return;
         GuiInputState chord{};
-        chord.ctrl               = tc.ctrl;
-        chord.shift              = tc.shift;
-        chord.alt                = tc.alt;
+        chord.ctrl  = tc.ctrl;
+        chord.shift = tc.shift;
+        chord.alt   = tc.alt;
+        // LAYER 2's MIRROR (codex round 3): each fire re-checks the press-time
+        // predicate, exactly as the platform's maybe_fire_repeat re-checks its
+        // own eligibility per fire. The three event-edge disarms cover every
+        // context change an INPUT causes; this covers the ones none does — the
+        // WM close raising the quit prompt is the live case — and it DISARMS
+        // rather than pauses: a context that revoked the burst's eligibility
+        // ends the burst, it does not park it.
+        if (!repeat_eligible(tc.key, chord)) {
+            rep.owner = -1;
+            return;
+        }
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id)) return;
         chord.synthesized_repeat = true;
         on_key(tc.key, chord);
         return;

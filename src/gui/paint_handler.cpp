@@ -1030,6 +1030,14 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         (app.history_checkpoint_in_flight || app.history_mode.active)) {
         return icons::Icon::VcsCommit;
     }
+    // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph while
+    // a render or sweep is live — dialog-cancel, the circle-slash, transcribed
+    // for row 8's short-lived Esc button and kept for exactly this face when
+    // that button was deleted. The bit, its rank over the iteration label and
+    // the click's divergence are all at AppState::render_cancel_face.
+    if (b == RedesignButton::Render && app.render_cancel_face) {
+        return icons::Icon::DialogCancel;
+    }
     return table_icon;
 }
 
@@ -2261,40 +2269,65 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // ROW 8 — THE TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
 // first surface): the permanent bottom toolbar between the waveform and the
 // status line, on every host — ordinary mouse-clickable buttons, no touch
-// mode, no flag, no detection. Nine 32x32 icon buttons in three groups:
+// mode, no flag, no detection. Eight icon buttons in two groups:
 //
 //   THE TRANSPORT, left-anchored in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
 //   buttons: Play greyed while an audition runs, Stop while none is), and
 //   skip-forward (bare End);
-//   ESC, centered in the window — bare Escape through the one dispatch route,
-//   the six Esc bindings deciding what it means;
 //   THE CARDINAL ARROWS, right-anchored, VIM ORDER left-to-right — left,
 //   down, up, right (bare Left/Down/Up/Right), a single line and not a d-pad,
 //   press-fire with hold-to-repeat like their keys.
 //
+// (A CENTERED ESC BUTTON shipped between the groups and was DELETED at the
+// architect's live pass the same day — "looks like a missing button with that
+// cross out"; the mid-render CANCEL lives on the RENDER button now, and bare
+// Esc is keyboard-only again.)
+//
 // THE GROUPS ARE SEPARATED BY DISTANCE, NOT BY PAINTED SEPARATORS: the icon
 // row's separator vocabulary (4px / 1px line / 4px) divides ADJACENT groups in
-// one left-to-right walk, and this row's three groups are anchored to three
-// different points of the window — the anchoring IS the group boundary, so a
+// one left-to-right walk, and this row's two groups are anchored to opposite
+// edges of the window — the anchoring IS the group boundary, so a
 // painted line would divide nothing. Within a group the gap is the icon row's
 // own 2px, and the row opens and closes with its 8px pad (kIconRowPadLeftPx,
 // mirrored on the right).
 //
-// EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL, shared constants included (the
-// 32px button, the 22px glyph, the outline stroke, the corner radius, the
-// centering rule): same ground, same five faces, same one disabled blend —
-// worn here by the play/stop pair's resting halves and by whatever the `h`
-// history view's derived partition greys (Space and the bare arrows are
+// THE BUTTONS ARE KDENLIVE'S OWN TRANSPORT SIZE, NOT THE ICON ROW'S (architect
+// 2026-08-11, from his live pass: kdenlive's transport buttons are smaller).
+// Sampled off transport.png (the Project Monitor's transport cluster, the
+// established crop-sampling practice): the hovered skip-backward button's
+// outline box measures 26x26 exactly ((1569,367)-(1594,392)), and the glyph
+// inks measure 13x12 / 11x12 / 13x12 — the ink geometry of Breeze's own 16px
+// media icons (media-skip-backward at viewBox 16 inks full-width x by y 2..14
+// = 12 tall; media-playback-start inks 12x12), so the GLYPH BOX is 16 (the
+// row-2 precedent: derive the box from the ink via the file's own viewBox
+// geometry, never read ink as box). Our 22-viewBox transcriptions scale onto
+// the 16px box with the same optical result (ink 16*16/22 = 12 tall), so the
+// glyph SOURCE files are untouched. THE LANE STAYS 46: the sampled monitor
+// band itself measures ~46 (y358..403), matching our authored content height
+// exactly, so only the button and glyph boxes shrank — 26px buttons centered
+// at +10, 16px glyphs at +5 inside them. ALL EIGHT BUTTONS TAKE THE ONE SIZE
+// (planner's uniformity choice, architect can revise: kdenlive sizes only its
+// transport this way, but mixed box sizes in one lane would read as noise).
+//
+// EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
+// radius, the centering rule): same ground, same five faces, same one disabled
+// blend — worn here by the play/stop pair's resting halves and by whatever the
+// `h` history view's derived partition greys (Space and the bare arrows are
 // consumed in the view, so Play, Stop and the four arrows grey; Home/End are
-// the mode's own vocabulary and Esc is on its allowlist, so the two skips and
-// Esc stay live — all at redesign_button_enabled, nothing decided here). The
+// the mode's own vocabulary, so the two skips
+// stay live — all at redesign_button_enabled, nothing decided here). The
 // ONE box-model difference is the border edge: this lane's 1px border is on
 // TOP, the waveform side — the bottom strip's chrome grows from the window
 // edge inward, so the border facing the waveform is the mirror of the icon
 // row's border-bottom.
 
-// The painter's half of the row's roster: three groups, painted left to right.
+// THE ROW'S OWN TWO SIZES, sampled as above; every other metric is the icon
+// row's, read from its constants.
+constexpr double kTransportBtnPx   = 26.0;   // button box, both axes
+constexpr double kTransportGlyphPx = 16.0;   // icon box inside the button
+
+// The painter's half of the row's roster: two groups, painted left to right.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
@@ -2306,9 +2339,6 @@ constexpr TransportRowDef kTransportGroup[] = {
     {RedesignButton::TransportPlay,        icons::Icon::MediaPlaybackStart},
     {RedesignButton::TransportStop,        icons::Icon::MediaPlaybackStop},
     {RedesignButton::TransportSkipForward, icons::Icon::MediaSkipForward},
-};
-constexpr TransportRowDef kTransportEscGroup[] = {
-    {RedesignButton::TransportEsc,         icons::Icon::DialogCancel},
 };
 // Vim order, the architect's: h j k l reads left / down / up / right, and the
 // left and right chevrons REUSE the walk pair's glyphs (GoPrevious / GoNext —
@@ -2343,10 +2373,10 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
     cairo_rectangle(cr, lane.x, content_y, lane.w, content_h);
     cairo_fill(cr);
 
-    const int btn      = scaled_px(kIconBtnPx);
+    const int btn      = scaled_px(kTransportBtnPx);
     const int btn_gap  = scaled_px(kIconBtnGapPx);
     const int pad      = scaled_px(kIconRowPadLeftPx);
-    const int glyph_px = scaled_px(kIconGlyphPx);
+    const int glyph_px = scaled_px(kTransportGlyphPx);
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
@@ -2389,20 +2419,17 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
                     static_cast<double>(glyph_px), keep, under);
     };
 
-    // THE THREE ANCHORS. Left: the transport walks from the row's pad. Center:
-    // Esc sits at the window's midline (its single button centered exactly).
-    // Right: the arrows close against the mirrored pad. At the 640px defensive
-    // floor with gui_scale at its 200 ceiling the three still clear each other
-    // (re-derived: 64px buttons, 4px gaps, 16px pads — the transport ends at
-    // 284, Esc spans 288..352, the arrows start at 356); no collision rule
-    // exists, matching row 1's floats.
+    // THE TWO ANCHORS. Left: the transport walks from the row's pad. Right:
+    // the arrows close against the mirrored pad. At the 640px defensive
+    // floor with gui_scale at its 200 ceiling the groups clear each other by
+    // 168px (re-derived at the sampled 26px box: 52px buttons, 4px gaps, 16px
+    // pads — the transport ends at 236, the arrows start at 404); no collision
+    // rule exists, matching row 1's floats.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
         x += btn + btn_gap;
     }
-
-    paint_button(kTransportEscGroup[0], lane.x + (lane.w - btn) / 2);
 
     const int arrows_n = static_cast<int>(std::size(kTransportArrowGroup));
     x = lane.x + lane.w - pad - (arrows_n * btn + (arrows_n - 1) * btn_gap);
