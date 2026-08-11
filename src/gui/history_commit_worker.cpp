@@ -97,8 +97,8 @@ void GuiHistoryCommitWorker::worker_loop() {
         // about them — which now print from this thread, which is fine, they
         // are the same lines in the same order.
         last_outcome_ = commit_history_checkpoint(
-            job.project_directory, job.base_name, job.projects_repo, job.bytes,
-            job.title);
+            job.repo_root, job.project_directory, job.base_name,
+            job.projects_repo, job.bytes, job.title);
 
         state_.store(static_cast<int>(State::CompletionPending));
         signal_completion();

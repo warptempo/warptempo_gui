@@ -39,6 +39,9 @@
 // render and even load in place while a checkpoint publishes, and what lands is
 // what was on screen when the act ran.
 struct GuiHistoryCommitJob {
+    // The clone the act runs in, derived from the loaded source and captured on
+    // the main thread with everything else (history_diff.h owns the derivation).
+    std::string       repo_root;
     std::string       project_directory;  // e.g. "projects/550 - 1"
     std::string       base_name;          // the sidecar base name
     std::string       projects_repo;      // the setting's value, verbatim

@@ -188,7 +188,7 @@ void GuiHistoryPrefetch::worker_loop() {
         // THE TIP THE RUN IS BUILT AGAINST, read once here — the store's
         // staleness key, carried out with the header so a reader never sees a
         // tip without the walk it describes.
-        std::string tip = read_history_branch_tip_sha();
+        std::string tip = read_history_branch_tip_sha(run.source_audio_path);
 
         scan_history_walk(
             run.source_audio_path, run.projects_repo, abandoned,

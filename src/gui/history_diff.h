@@ -437,7 +437,11 @@ struct GuiHistoryCommitSidecars {
 // `ls-tree` and three `show`s for the blobs — six children on the happy path,
 // and TWO where the evidence refuses, the tree listing being asked only once a
 // directory has been named.
-bool read_commit_sidecars(const std::string&         spelling,
+//
+// `repo_root` is the clone to read in — the session's own derived root
+// (GuiHistoryWalkHeader::repo_root), never a constant.
+bool read_commit_sidecars(const std::string&         repo_root,
+                          const std::string&         spelling,
                           const std::string&         base_name,
                           GuiHistoryCommitSidecars&  out,
                           std::string&               reason);
@@ -475,7 +479,12 @@ struct GuiHistoryCommitLoad {
 // prints the reason; the walk's init counts refusals silently and reports one
 // total. Nothing here writes anywhere but the scratch, which is removed on
 // every exit.
-bool load_commit_sidecars_strict(const std::string&    spelling,
+//
+// `repo_root` is the clone to read in — the session's own derived root
+// (GuiHistoryWalkHeader::repo_root), which the scan carries into its per-candidate
+// gating and GuiHistoryDiff::repo_root() hands to the `'` act.
+bool load_commit_sidecars_strict(const std::string&    repo_root,
+                                 const std::string&    spelling,
                                  const std::string&    base_name,
                                  GuiHistoryCommitLoad& out,
                                  std::string&          reason);
@@ -489,32 +498,73 @@ bool load_commit_sidecars_strict(const std::string&    spelling,
 // prefetch names none of the mutating one.
 
 // WHERE THE PIECE LIVES, or why it cannot be found — the walk's cheap half: the
-// projects-home guard, the source's base-name derivation and the source's own
-// folder, and no strict load anywhere. Its only git is the guard's two `remote
-// get-url` reads (the tip-tree match went with the three-arm resolution on
-// 2026-08-09). `unavailable_reason` carries the one line the mode prints when it
-// refuses, in the exact shape it always had.
+// CLONE the source is in, the projects-home guard, the source's base-name
+// derivation and the source's own folder, and no strict load anywhere. Its git is
+// the root derivation's one `rev-parse --show-toplevel` and the guard's two
+// `remote get-url` reads. `unavailable_reason` carries the one line the mode
+// prints when it refuses, in the exact shape it always had.
+//
+// `repo_root` IS DERIVED FROM THE SOURCE (architect 2026-08-11, superseding the
+// compiled-in absolute path): the clone containing the loaded file, canonical and
+// absolute, and the root every git call this module makes runs against. Every
+// consumer takes it from here — it is a value that travels, never a global — and
+// the two ways the derivation can refuse are the header's own first refusal.
+//
+// `read_failed` DISTINGUISHES THE TWO, and only for the scan's benefit: a source
+// simply not inside a git clone is an ordinary header refusal (fix: a clone, or a
+// file move), while a `rev-parse` that could not RUN or answered unreadably is a
+// READ THAT DID NOT ANSWER, which scan_history_walk turns into a not-ok
+// GuiHistoryScanResult so an unread repository can never pass for a read one.
+// Both refuse the view with the same one stderr line; init prints the header's
+// reason either way, having read it before it reaches the scan's.
 //
 // `project_directory` IS THE SOURCE'S OWN PARENT FOLDER, and that is the whole
 // rule (architect 2026-08-09): repo-relative, no trailing slash, required to lie
-// strictly under the clone's `projects/`, and existing by construction because
-// the source is in it. A source anywhere else REFUSES the view — the header's
-// one source-side refusal, whose fix is a file move. The definition owns the law
-// and the accepted trade.
+// strictly under the derived clone's `projects/`, and existing by construction
+// because the source is in it. A source anywhere else REFUSES the view — the
+// header's one source-side refusal, whose fix is a file move. The definition owns
+// the law and the accepted trade.
 struct GuiHistoryWalkHeader {
     bool        ok = false;
+    bool        read_failed = false;
     std::string unavailable_reason;
+    std::string repo_root;
     std::string base_name;
     std::string project_directory;
 };
 
+// THE CLONE A SOURCE IS IN — the ONE derivation of the repository root, and the
+// only route to it anywhere in the product (architect 2026-08-11).
+//
+// `git -C <the source's parent> rev-parse --show-toplevel`, canonicalized. It is
+// the folder law carried one level up: the folder you open from is the folder
+// that commits, so the CLONE you open from is the clone that commits. There is no
+// fallback search, no environment variable, no walk up from the binary and no
+// cached global — the answer travels as a value, which is also what makes it safe
+// for the prefetch worker and the checkpoint worker to ask on their own threads.
+//
+// `ok` false with `read_failed` false is the ruled "not inside a git clone"; with
+// `read_failed` true it is a read that did not answer. `reason` is the one line
+// the caller prints. THREE CALLERS: resolve_history_walk_header below (which
+// makes the refusal the header's own), read_history_branch_tip_sha, and nothing
+// else — every other consumer takes the root that came out of one of those.
+struct GuiHistoryRepoRoot {
+    bool        ok          = false;
+    bool        read_failed = false;
+    std::string path;
+    std::string reason;
+};
+GuiHistoryRepoRoot resolve_repo_root_for_source(
+    const std::string& source_audio_path);
+
 // Run that cheap half. TWO CALLERS, deliberately: the prefetch worker at the
 // head of every run, and GuiHistoryDiff::init when a visit opens before the
 // worker's header has arrived — so an entry refusal is the same answer computed
-// in the same place whichever thread asks. Its only git is the projects-home
-// guard's two `remote get-url` reads — the tip-tree listing went with the
-// three-arm resolution on 2026-08-09, so where the piece lives is now answered
-// from the source path and the filesystem alone. It writes nothing.
+// in the same place whichever thread asks. Its git is the root derivation's one
+// `rev-parse --show-toplevel` and the projects-home guard's two `remote get-url`
+// reads — the tip-tree listing went with the three-arm resolution on 2026-08-09,
+// so where the piece lives is answered from the source path and the filesystem
+// alone. It writes nothing.
 GuiHistoryWalkHeader resolve_history_walk_header(
     const std::string& source_audio_path, const std::string& projects_repo);
 
@@ -522,7 +572,13 @@ GuiHistoryWalkHeader resolve_history_walk_header(
 // prefetch store's STALENESS key: a run describes the repository as of one tip,
 // and an entry that finds the tip moved kicks a fresh run rather than trusting
 // the old one.
-std::string read_history_branch_tip_sha();
+//
+// IT TAKES THE SOURCE, NOT A ROOT, and derives the clone itself — both its
+// callers (the prefetch worker before a run, the `h` entry's staleness test) ask
+// before any header exists, so there is no root in hand for them to pass. A
+// derivation that refuses answers the empty string, which is the same "could not
+// be read" the tip read itself answers with, and the caller treats them alike.
+std::string read_history_branch_tip_sha(const std::string& source_audio_path);
 
 // HOW A SCAN RUN ENDED — the DONE callback's whole payload, and the header's own
 // ok-plus-reason shape reused because the question is the same one: did this
@@ -542,12 +598,16 @@ std::string read_history_branch_tip_sha();
 // prints "0" — bytes git printed — and that is the ruled empty history.
 //
 // WHAT ENDS A RUN NOT OK — THE ONE ENUMERATION, every other site pointing here
-// (re-derived from scan_history_walk 2026-08-09): the count capture could not
-// run; the count answered nothing, non-digits, or more digits than a count can
-// have; the count was positive and the `log` then said nothing; a `log` line was
-// not a full object name; or the number of lines did not EQUAL the count. Every
-// one of them is two reads of one history disagreeing, or one read that never
-// answered — never a history that is empty. (A per-CANDIDATE failure is not on
+// (re-derived from scan_history_walk 2026-08-11): the ROOT DERIVATION could not
+// ask git which clone holds the source, or named something that is not a
+// directory (GuiHistoryWalkHeader::read_failed, the header's own refusal carried
+// through — 2026-08-11); the count capture could not run; the count answered
+// nothing, non-digits, or more digits than a count can have; the count was
+// positive and the `log` then said nothing; a `log` line was not a full object
+// name; or the number of lines did not EQUAL the count. Every one of them is two
+// reads of one history disagreeing, or one read that never answered — never a
+// history that is empty. (A source simply NOT IN A CLONE is not on this list: it
+// is an ordinary header refusal, an answer rather than the absence of one.) (A per-CANDIDATE failure is not on
 // this list and never ends the run: it hides that commit on the counted line's
 // terms, the walk's own load gate doing what it always did.) A failed run is a
 // terminal matter under the sanctioned-use ruling: the mode refuses entry with
@@ -693,13 +753,20 @@ public:
     const GuiHistoryCommitDelta* delta_at(std::size_t         index,
                                           GuiHistoryCompare   compare);
 
-    // What init() resolved: the source's sidecar base name, and the piece's
-    // DIRECTORY (e.g. "projects/550 - 1"), repo-relative — the folder the SOURCE
-    // is in. Both are empty when unavailable, and available() is the thing to
-    // test. The directory is ALWAYS strictly under `projects/` and therefore
-    // never empty on an available session, which is what lets the commit act
-    // write its checkpoint into a directory this string names, and it always
-    // EXISTS, the source being in it.
+    // What init() resolved: the CLONE the source is in, the source's sidecar
+    // base name, and the piece's DIRECTORY (e.g. "projects/550 - 1"),
+    // repo-relative — the folder the SOURCE is in. All three are empty when
+    // unavailable, and available() is the thing to test. The directory is ALWAYS
+    // strictly under `projects/` and therefore never empty on an available
+    // session, which is what lets the commit act write its checkpoint into a
+    // directory this string names, and it always EXISTS, the source being in it.
+    //
+    // `repo_root()` is the absolute, canonical root every git call this session
+    // makes runs against (architect 2026-08-11 — derived from the loaded source,
+    // never compiled in). It is what the view's two mutating routes take: the `'`
+    // load-in-place hands it to load_commit_sidecars_strict, and Save and Commit
+    // carries it onto the checkpoint worker.
+    const std::string& repo_root() const { return repo_root_; }
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
 
@@ -725,6 +792,7 @@ private:
 
     bool              available_ = false;
     std::string       unavailable_reason_;
+    std::string       repo_root_;
     std::string       base_name_;
     std::string       project_directory_;
     GuiHistoryNowSide now_;
@@ -1031,12 +1099,15 @@ enum class GuiHistoryCommitOutcome {
     Committed,
 };
 
-// WRITE THE THREE SIDECARS AND COMMIT THEM. `project_directory` and `base_name`
-// are the session's own match (so the destination is the CURRENT era's spelling,
-// the directory the branch tip carries the sidecars in) and `bytes` is what the
-// three files are to contain. Every step states its own failure on stderr in one
-// line, and this returns how far it got; it prints its own success line too, so
-// the caller reports nothing.
+// WRITE THE THREE SIDECARS AND COMMIT THEM. `repo_root` is the clone the act runs
+// in — the session's own derived root (GuiHistoryWalkHeader::repo_root, carried
+// onto the worker with everything else), which is what the three absolute writes
+// resolve against and what every `git -C` here names. `project_directory` and
+// `base_name` are the session's own match (so the destination is the CURRENT
+// era's spelling, the directory the branch tip carries the sidecars in) and
+// `bytes` is what the three files are to contain. Every step states its own
+// failure on stderr in one line, and this returns how far it got; it prints its
+// own success line too, so the caller reports nothing.
 //
 // `title` IS THE COMMIT MESSAGE, and the caller's (the commit-title editor's
 // buffer, seeded from history_checkpoint_title). It is written and never read
@@ -1079,6 +1150,6 @@ enum class GuiHistoryCommitOutcome {
 // own folder under `projects/` and Save and Commit does the rest — exactly as
 // the first checkpoint after a schema change is.
 GuiHistoryCommitOutcome commit_history_checkpoint(
-    const std::string& project_directory, const std::string& base_name,
-    const std::string& projects_repo, const GuiHistoryNowSide& bytes,
-    const std::string& title);
+    const std::string& repo_root, const std::string& project_directory,
+    const std::string& base_name, const std::string& projects_repo,
+    const GuiHistoryNowSide& bytes, const std::string& title);

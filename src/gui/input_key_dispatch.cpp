@@ -977,9 +977,10 @@ void GuiInputHandler::kick_history_prefetch() {
 // arrived while a view stood is flushed at the exit before any later entry can
 // reach this line.
 //
-// THE TIP READ IS ONE `rev-parse` on this thread — the whole of what an ordinary
-// entry now pays in git, against the log plus a strict load per candidate it
-// used to.
+// THE TIP READ IS TWO `rev-parse`s on this thread — one deriving the clone from
+// the loaded source (2026-08-11: there is no compiled-in root to read against any
+// more) and one for the tip itself — which is still the whole of what an ordinary
+// entry pays in git, against the log plus a strict load per candidate it used to.
 void GuiInputHandler::kick_history_prefetch_if_stale() {
     const bool same_subject =
         history_prefetch.subject_source_path() == app.source_audio_path &&
@@ -987,7 +988,8 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
     if (same_subject) {
         if (history_prefetch.running()) return;
         if (!history_prefetch.tip_sha().empty() &&
-            history_prefetch.tip_sha() == read_history_branch_tip_sha()) {
+            history_prefetch.tip_sha() ==
+                read_history_branch_tip_sha(app.source_audio_path)) {
             return;
         }
     }
@@ -2291,9 +2293,13 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // callback that event runs.)
     if (history_commit_worker.is_busy()) return;
     GuiHistoryCommitJob job;
+    job.repo_root         = app.history_mode.session.repo_root();
     job.project_directory = app.history_mode.session.project_directory();
     job.base_name         = app.history_mode.session.sidecar_base_name();
-    if (job.project_directory.empty() || job.base_name.empty()) return;
+    if (job.repo_root.empty() || job.project_directory.empty() ||
+        job.base_name.empty()) {
+        return;
+    }
 
     if (!save_ops.save()) {
         std::fprintf(stderr,
@@ -3856,6 +3862,10 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     if (!app.history_mode.active) return false;
     const std::string base_name =
         app.history_mode.session.sidecar_base_name();
+    // THE CLONE IS THE SESSION'S OWN, derived from the loaded source at init
+    // (history_diff.h): the `'` act reads the same repository the lane was
+    // built from, on the same one derivation.
+    const std::string repo_root = app.history_mode.session.repo_root();
 
     // THE WHOLE VALIDATION IS THE ONE SHARED GATE, and the spelling is all it
     // takes now: the session's matched directory was a parameter here until
@@ -3867,7 +3877,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // refuses too. Nothing is settled by a guess any more, which is the point.
     GuiHistoryCommitLoad loaded;
     std::string          reason;
-    if (!load_commit_sidecars_strict(spelling, base_name, loaded, reason)) {
+    if (!load_commit_sidecars_strict(repo_root, spelling, base_name, loaded,
+                                     reason)) {
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
         return false;
