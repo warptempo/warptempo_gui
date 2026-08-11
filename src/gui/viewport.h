@@ -244,32 +244,74 @@ struct Viewport {
     // ROW 8's clock cell, and the authoritative inventory of who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one
     // owner split in two — the rects and the split's reasoning are at
-    // clock_invalidate_rect, app_state.h). MEMBERSHIP IS "THIS ROUTE MOVES THE
-    // PLAYHEAD OR THE SCANNER", the only two values the clock reads, and the
-    // list below is re-derived by grep rather than inherited:
+    // clock_invalidate_rect, app_state.h). MEMBERSHIP IS "THIS ROUTE CHANGES
+    // WHAT THE CLOCK SHOWS" — a write to the playhead or the scanner, the
+    // only two values the clock reads, or a flip of WHICH of the two it
+    // reads (the playback edges). The list below is re-derived by grep
+    // rather than inherited, each member with its own reason:
     //
-    //   CLOCK ALONE — Viewport's own five (move_playhead_to,
-    //   clamp_display_state_to_live_domain, apply_zoom_change,
-    //   apply_strip_drag_zoom, apply_zoom_to_start, the last three through
-    //   their playhead clamp), the playback lifecycle's stop and launch (each
-    //   flipping which value the clock reads), main.cpp's three tick sites (the
-    //   pre-paint scanner advance, the heartbeat's offscreen fallback and the
-    //   resize/total-change repair), and input_pointer's two direct cursor
-    //   writes (land_playhead_on_source_frame and on_motion's sliver release).
+    //   CLOCK ALONE —
+    //   * Viewport's two CURSOR WRITERS: move_playhead_to (the live
+    //     chokepoint) and clamp_display_state_to_live_domain's playhead
+    //     repair.
+    //   * Viewport's three ZOOM APPLIERS (apply_zoom_change,
+    //     apply_strip_drag_zoom, apply_zoom_to_start): HARMLESS OVER-DAMAGE,
+    //     kept as truth-over-churn. All three move the VIEWPORT AND ZOOM
+    //     ONLY — none contains a playhead write or a playhead clamp (the
+    //     earlier "through their playhead clamp" description here was
+    //     false), and keyboard zoom's centering ON the scanner READS the
+    //     value without moving it — so the clock's value cannot change under
+    //     them. The calls are 66d2ec58's rename-in-place of the
+    //     whole-status-lane damage these sites carried while the timestamp
+    //     lived on that lane; one small always-clean rect per discrete zoom
+    //     is cheaper than the churn of removing them.
+    //   * The playback lifecycle's stop and launch: each flips which value
+    //     the clock reads (scanner vs cursor).
+    //   * target_render's TRIGGER-FREEZE stop (the target-view edit halt),
+    //     the same flip: reachable mid-audition by the W+target cent step —
+    //     the one mutator the keyboard stop rule lets through un-stopped —
+    //     whose re-land is idempotent and whose stop the tick's catch-up
+    //     branch cannot see (both flags already false). The ensure_ready /
+    //     rebind_to_source conditional stops are recorded dead-in-practice
+    //     backstops behind the S/T toggle's own lifecycle stop
+    //     (input_handler.cpp's "before mutating playhead state" call) and
+    //     deliberately carry no clock call.
+    //   * main.cpp's three tick sites: the pre-paint scanner advance (the
+    //     value advances), the playing heartbeat's OFFSCREEN FALLBACK (the
+    //     always-onscreen honest rect that keeps the paint clock running
+    //     when the scanner column yields no damage), and the
+    //     resize/total-change repair's geometry-moved arm (over-damage like
+    //     the zoom appliers'; the cursor clamp that CAN move the value
+    //     damages the clock itself inside clamp_display_state_to_live_domain).
+    //   * input_pointer's two direct cursor writes:
+    //     land_playhead_on_source_frame — the land owner every marker land,
+    //     Tab/`c` jump and history diff-flag click ride — and on_motion's
+    //     sliver release.
     //
     //   BOTH LANES — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,
     //   which restores the entering tab's own playhead), the undo/redo restore
-    //   (undo), the position nudges' shared tail (position_nudge), and the three
+    //   (undo), the position nudges' shared tail (position_nudge), the three
     //   load-in-place tails (render entry, history commit, history local
-    //   member).
+    //   member), and the TRIM COMMIT WRITERS (input_trim:
+    //   commit_trim_mutation and handle_trim_clear_both damage the waveform +
+    //   status lane at their own sites and reach the clock inside
+    //   park_playhead_at_trim_start — the trim family's one cursor writer,
+    //   where the damage sits beside the write rather than copied per
+    //   caller).
     //
     // Every OTHER route on the status lane is a string writer and takes that
-    // lane alone; a marker mutation reaches the clock only through the nudge
-    // tail it already shares. THE `p` MARKER-VIEW TOGGLE IS THE NEAR MISS worth
-    // naming, since it sits beside the tab switch and answers differently: it
-    // damages the READOUT (its coincidence auto-select can change the selection)
-    // and moves no playhead at all, so it takes the status lane alone.
+    // lane alone; routes that damage the WHOLE window (the S/T audio-view
+    // toggle's full-window invalidate, the loads, the resize path) cover the
+    // cell as a superset and are deliberately unlisted; routes that funnel
+    // through a listed owner (the settings editor's active-tab playhead
+    // commit through move_playhead_to, every marker land through
+    // land_playhead_on_source_frame, the nudges through their shared tail)
+    // need no row of their own. THE `p` MARKER-VIEW TOGGLE IS THE NEAR MISS
+    // worth naming, since it sits beside the tab switch and answers
+    // differently: it damages the READOUT (its coincidence auto-select can
+    // change the selection) and moves no playhead at all, so it takes the
+    // status lane alone.
     void invalidate_clock_area();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
     // COLUMNS' rects. The columns must be resolved on the PLATE basis — the

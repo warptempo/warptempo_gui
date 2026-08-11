@@ -262,11 +262,14 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();
+    // Harmless over-damage: a zoom moves the viewport, never the playhead or
+    // the scanner, so the clock's value cannot change here — the true-reason
+    // record for all three zoom appliers is at invalidate_clock_area's
+    // inventory (viewport.h).
     invalidate_clock_area();
     // Flags live in the top strip — rect positions change when the viewport
-    // scale changes. (The hovered marker's lane text renders in the top strip's
-    // marker lane's flags, covered by this top-strip invalidation; the
-    // resolved readout is covered by the bottom-strip invalidation above.)
+    // scale changes (the selected marker's lane text rides its flag there;
+    // the bottom-strip readout does not change on a zoom).
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     if (playback.is_playing()) playback.resync_predictor();
@@ -341,6 +344,8 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
         app.follow_overridden_for_session = true;
 
     invalidate_waveform_area();
+    // Harmless over-damage, like apply_zoom_change's (the record is at
+    // invalidate_clock_area's inventory, viewport.h).
     invalidate_clock_area();
     // Flags live in the top strip — rect positions change when the viewport
     // scale or start changes.
@@ -387,6 +392,8 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     }
 
     invalidate_waveform_area();
+    // Harmless over-damage, like apply_zoom_change's (the record is at
+    // invalidate_clock_area's inventory, viewport.h).
     invalidate_clock_area();
     // Flags live in the top strip — rect positions change with the viewport.
     const GuiRect ts = top_strip_area(app);

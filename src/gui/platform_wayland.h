@@ -850,8 +850,12 @@ private:
     //   * touch UP, owner, Pointer  — staged motion flushed, release on the
     //     logical left 1->0 edge at the last position, ordinary leave;
     //     -> Drain if ignored fingers remain, else Idle.
-    //   * touch UP, either nav finger — nav end (commits through the end
-    //     hook iff an update was delivered); -> Drain / Idle.
+    //   * touch UP, either nav finger — the staged dirty frame DELIVERS
+    //     first (Wayland orders the up before the wl_touch.frame that closes
+    //     its batch, and that motion is the user's own final leg — the
+    //     any-end-commits family; the end split at end_touch_nav_gesture),
+    //     then the nav end (commits through the end hook iff an update was
+    //     delivered); -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — resolve
@@ -862,10 +866,13 @@ private:
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
-    //     ordinary leave; a live Nav gesture ends through its end path
-    //     (commits); an unresolved Pending window is dropped silently
-    //     (nothing was delivered, so there is nothing to end); all touch
-    //     state forgotten either way.
+    //     ordinary leave; a live Nav gesture DROPS its staged dirty frame
+    //     (the compositor's claim means that motion retroactively was not
+    //     ours — the recorded asymmetry with the Pointer release, which MUST
+    //     deliver; the end split at end_touch_nav_gesture) and ends through
+    //     its end path (commits iff an update was delivered); an unresolved
+    //     Pending window is dropped silently (nothing was delivered, so
+    //     there is nothing to end); all touch state forgotten either way.
     //   * TOUCH capability loss — the cancel contract above, then the
     //     wl_touch proxy is released. The pointer- and keyboard-capability
     //     edges do NOT touch this state (each source dies on its own
@@ -1222,20 +1229,28 @@ private:
     // against the resolved state.
     void maybe_resolve_touch_window();
     // Deliver the staged Pointer-phase motion (wl_touch.frame coalescing) —
-    // the touch twin of flush_deferred_motion, called at the frame boundary
-    // and ahead of every touch button delivery.
+    // the touch twin of flush_deferred_motion, called at the frame boundary,
+    // ahead of every touch button delivery, and UNCONDITIONALLY at every end
+    // of the touch hold (the flush-vs-clear invariant is at the definition).
     void flush_touch_frame_motion();
-    // End the touch source's contribution to the logical left hold: flush
-    // both staged motions while the bit still reads held, clear it, deliver
-    // the release at the owner's last position only on the logical 1->0 edge
-    // (the end_left_hold_source ordering, third source).
+    // End the touch source's contribution to the logical left hold: flush the
+    // staged TOUCH motion unconditionally while the bit still reads held (it
+    // is independent of the logical-left OR — the flush owner's invariant),
+    // flush the deferred POINTER motion on the delivering edge, clear the
+    // bit, then deliver the release at the owner's last position only on the
+    // logical 1->0 edge (the end_left_hold_source ordering, third source).
     void end_touch_left_hold();
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract
     // is at set_touch_nav_hooks).
     void deliver_touch_nav_frame();
-    // End a live Nav gesture: fire the end hook iff an update was delivered.
-    void end_touch_nav_gesture();
+    // End a live Nav gesture. deliver_final_frame selects the END SPLIT
+    // (recorded at the definition): the finger's own lift delivers the staged
+    // dirty frame first (true — the user's final motion, the any-end-commits
+    // family), the hard ends drop it (false — the compositor's claim means
+    // that motion retroactively was not ours). Either way the end hook fires
+    // iff an update was delivered.
+    void end_touch_nav_gesture(bool deliver_final_frame);
     // THE HARD-END CONTRACT, shared verbatim by wl_touch.cancel and
     // touch-capability loss (the edge inventory names it): commit-and-leave a
     // live Pointer translation, end a live Nav gesture, drop a Pending window

@@ -195,6 +195,16 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     app.playhead_cursor_sample = clamp_playhead_to_live_domain(
         source_frame_to_active_domain(app, audio, app.trim.begin_frame),
         app, audio);
+    // THE CLOCK RIDES THE WRITE (2026-08-11, the row-8 cell): row 8's clock
+    // shows this cursor whenever no scanner is active, and since the
+    // timestamp left the status line the two callers' own damage (waveform +
+    // status lane) no longer covers it. The call sits HERE, beside the one
+    // cursor write, rather than copied per caller — this helper is the trim
+    // family's single playhead writer (both trim-commit callers ride it),
+    // the same damage-beside-the-write shape land_playhead_on_source_frame
+    // carries. Caller inventory at Viewport::invalidate_clock_area
+    // (viewport.h).
+    viewport.invalidate_clock_area();
     // A PLAYHEAD-MOVING COMMAND TAKES A RESTING SPAN WITH IT (the clear-site
     // rule at clear_region_highlight, input_handler.h). For `x` this is also
     // the CONSUMPTION of the span it just read; for every other trim write it

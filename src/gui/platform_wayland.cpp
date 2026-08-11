@@ -2880,6 +2880,16 @@ void GuiPlatform::flush_touch_frame_motion() {
     // coalesced to the wl_touch.frame boundary, and a button delivery in the
     // same frame must see the latest position first (delivered while the hold
     // still reads held, so the motion takes the live-drag path).
+    // THE INVARIANT, stated once here (the flush owner): the staged motion is
+    // the FINGER's own and is independent of the logical-left OR's edge, so
+    // every end of the touch translation FLUSHES it rather than clearing it —
+    // end_touch_left_hold flushes UNCONDITIONALLY, ahead of its release
+    // decision, because a sibling source (physical BTN_LEFT / bare-`e`) still
+    // holding suppresses only the RELEASE, never the motion. The only bare
+    // clears of touch_frame_motion_pending_ are resets of state already
+    // flushed or never deliverable: the resolution's replay tail (Pending
+    // never stages this flag) and forget_touch_state (which runs after the
+    // hard-end contract has already ended the hold through the flush here).
     if (touch_frame_motion_pending_ && on_motion_) {
         on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
                    static_cast<int>(std::nearbyint(touch_last_y_)),
@@ -2890,16 +2900,22 @@ void GuiPlatform::flush_touch_frame_motion() {
 
 void GuiPlatform::end_touch_left_hold() {
     if (!touch_left_held_) return;
+    // The staged TOUCH motion flushes UNCONDITIONALLY, before the release
+    // decision and while this bit still reads held: the finger's final
+    // position is owed to on_motion whatever the logical-left OR says,
+    // because a sibling source (physical BTN_LEFT / bare-`e`) staying held
+    // suppresses only the RELEASE edge, never the motion (the invariant at
+    // flush_touch_frame_motion, the flush owner). Gating this on the edge
+    // made a shared drag silently stop short of the finger whenever the
+    // mouse kept the OR true through the finger's last frame.
+    flush_touch_frame_motion();
     // The end_left_hold_source ordering for the third source: deliver only on
-    // the logical 1->0 edge (neither sibling source held); flush BOTH staged
-    // motions FIRST, while this bit still reads held; then clear; then deliver
-    // at the owner's last position.
+    // the logical 1->0 edge (neither sibling source held); the deferred
+    // POINTER motion flushes ahead of the delivery it exists for; then clear;
+    // then deliver at the owner's last position.
     const bool deliver_release =
         !pointer_left_held_ && !synth_left_held_ && on_button_release_;
-    if (deliver_release) {
-        flush_touch_frame_motion();
-        flush_deferred_motion();
-    }
+    if (deliver_release) flush_deferred_motion();
     touch_left_held_ = false;
     if (deliver_release) {
         on_button_release_(GuiMouseButton::Left,
@@ -2985,8 +3001,11 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             [[fallthrough]];
         case TouchPhase::Pointer:
             if (id != touch_owner_id_) break;  // an ignored finger lifting
+            // end_touch_left_hold flushes the staged motion unconditionally
+            // (the invariant at flush_touch_frame_motion), so there is
+            // nothing to clear here — a bare clear at this site would be the
+            // swallow the flush owner forbids.
             end_touch_left_hold();
-            touch_frame_motion_pending_ = false;
             // EVERY touch-up that ends a pointer translation is an ORDINARY
             // pointer leave: the finger left the glass, which IS a leave —
             // this is what keeps hover faces from resting lit where a finger
@@ -3006,8 +3025,10 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
         case TouchPhase::Nav:
             if (id != touch_owner_id_ && id != touch_nav_id2_) break;
             // One finger lifting ENDS the gesture (any end commits); the
-            // survivor is IGNORED until all fingers lift — the drain.
-            end_touch_nav_gesture();
+            // survivor is IGNORED until all fingers lift — the drain. The
+            // finger's own lift DELIVERS the staged dirty frame first (the
+            // end split's finger-up clause, at end_touch_nav_gesture).
+            end_touch_nav_gesture(/*deliver_final_frame=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
             break;
@@ -3117,7 +3138,30 @@ void GuiPlatform::deliver_touch_nav_frame() {
                                dx, ratio);
 }
 
-void GuiPlatform::end_touch_nav_gesture() {
+void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
+    // THE END SPLIT (recorded here, at the one owner; each caller passes its
+    // own clause and the edge inventory at the touch state block names both):
+    // Wayland orders the terminating up/cancel BEFORE the wl_touch.frame that
+    // closes its batch, so motion batched with the end is still staged in
+    // touch_nav_frame_dirty_ when this runs.
+    //   * FINGER-UP (true): the staged frame is the user's own FINAL MOTION
+    //     and DELIVERS first — the any-end-commits family. This is what lets
+    //     a short pinch whose only latch-crossing motion batches with the up
+    //     act at all: with no prior update delivered, dropping that frame
+    //     would erase the crossing, owe no end hook, and make the whole
+    //     gesture silently do nothing.
+    //   * HARD ENDS (wl_touch.cancel / touch-capability loss, false): the
+    //     staged frame is DROPPED deliberately — the compositor's claim means
+    //     that motion retroactively was not ours — and the end hook still
+    //     fires iff an update was delivered. The asymmetry with the POINTER
+    //     translation's hard end is deliberate: that release MUST deliver (a
+    //     vanished hold would latch the drag-modal gate with no event left to
+    //     lift it), while dropped nav motion wedges nothing — the gesture is
+    //     stateless per frame and holds nothing in the GUI open.
+    if (deliver_final_frame && touch_nav_frame_dirty_) {
+        touch_nav_frame_dirty_ = false;
+        deliver_touch_nav_frame();
+    }
     touch_nav_frame_dirty_ = false;
     // The end hook is owed a commit only if an update was ever delivered — a
     // sub-latch two-finger touch costs the GUI nothing at all.
@@ -3145,8 +3189,10 @@ void GuiPlatform::hard_end_touch_stream() {
                 pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
             break;
         case TouchPhase::Nav:
-            // A live two-finger gesture ends through its end path (commits).
-            end_touch_nav_gesture();
+            // A live two-finger gesture ends through its end path (commits
+            // iff anything was applied), DROPPING its staged dirty frame —
+            // the end split's hard-end clause, at end_touch_nav_gesture.
+            end_touch_nav_gesture(/*deliver_final_frame=*/false);
             break;
         case TouchPhase::Pending:
             // Nothing was delivered, so there is nothing to end.
@@ -3167,6 +3213,9 @@ void GuiPlatform::forget_touch_state() {
     touch_window_deadline_us_ = 0;
     touch_window_moved_       = false;
     touch_left_held_          = false;  // any delivering edge already ended it
+    // A reset, not a swallow: every delivering end flushed this already (the
+    // invariant at flush_touch_frame_motion); only never-delivered phases can
+    // still reach here with it clear.
     touch_frame_motion_pending_ = false;
     touch_nav_id2_ = 0;
     touch_nav_x1_ = touch_nav_y1_ = 0.0;

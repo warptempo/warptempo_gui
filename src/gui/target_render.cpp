@@ -180,6 +180,20 @@ void GuiTargetRender::trigger() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
+        // The clock flips from the scanner's time to the resting cursor's on
+        // this edge, and nothing else damages row 8's cell on the reachable
+        // route (a W+target cent step during a live audition — the one
+        // mutator the keyboard stop rule lets through un-stopped): the
+        // step's re-land is idempotent (the focused marker's own
+        // target-domain position does not move when its tempo changes), and
+        // the tick's catch-up branch early-returns once BOTH flags are
+        // false, which this write has just made true. Every other stop edge
+        // reaches the clock through stop_playback_if_playing; this freeze is
+        // its own stop and owes the same repaint. No waveform damage is
+        // added: the scanner line's teardown rides the completion's own
+        // full repaint moments later, but nothing later repaints the clock.
+        // Caller inventory at Viewport::invalidate_clock_area (viewport.h).
+        viewport.invalidate_clock_area();
     }
 
     // A render dispatch kills the running render. Any running archival

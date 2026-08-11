@@ -4175,33 +4175,42 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    // ROW 7 — THE BOTTOM STRIP IS ONE LINE (architect 2026-08-01). The status
-    // row and the modal/editor row collapsed into a single lane of TWO FIXED
-    // SECTIONS: the active modal / editor / prompt / status text on the LEFT and
-    // the TIMESTAMP on the RIGHT. The boundaries come from shaped maxima and
-    // never from the current text, so nothing on the line moves when the clock
-    // grows a digit (bottom_row_sections, at the top of this file, with the
-    // layout).
+    // ROW 9 — THE STATUS LANE IS ONE LINE (architect 2026-08-01, as the
+    // then-row 7; the strip is row 9 in the numbering since row 8 landed,
+    // 2026-08-11). THE LAYOUT since the clock left this row (2026-08-11):
+    // pad | CRITICAL chip | pad | SECTION C, the modal / editor / status
+    // span, CLIPPED AT THE LANE'S RIGHT MARGIN — one pad in from its right
+    // edge. There is NO SECTION A any more: the timestamp, its reserved
+    // widest-digit cell and the no-wiggle specimen all moved to ROW 8's
+    // centre (paint_transport_row's clock block), so nothing on this line
+    // reserves space for digits, and bottom_row_sections computes from the
+    // lane's own edges alone (plus the one own-text-sized exception, the
+    // critical chip, whose ruling is at its block below).
     //
-    // WHAT DIED WITH THE COLLAPSE, and why it is not missing: the S/T · W/P ·
-    // A/B view readout and the "(read-only)" token. Rows 3 and 4 display all
-    // three view states as lit buttons and tabs, and the tab locks show
-    // read-only, so the letters were restating what the redesigned rows say in
-    // their own vocabulary. WHAT LEFT LATER THE SAME DAY: the dirty mark's own
-    // section, which moved to the WINDOW TITLE beside the project name
-    // (GuiPlatform::apply_window_title) — the title is the mark's only home now.
+    // WHAT DIED WITH THE 2026-08-01 COLLAPSE, and why it is not missing: the
+    // S/T · W/P · A/B view readout and the "(read-only)" token. Rows 3 and 4
+    // display all three view states as lit buttons and tabs, and the tab
+    // locks show read-only, so the letters were restating what the redesigned
+    // rows say in their own vocabulary. The dirty mark's section moved to the
+    // WINDOW TITLE beside the project name (GuiPlatform::apply_window_title)
+    // — the title is the mark's only home now.
     //
-    // PRECEDENCE IN THE MODAL SPAN, highest first: prompt > queue /
-    // loading status > settings editor > load editor > BPM editor > transient
-    // status message > the resolved-value readout. MODAL TEXT WINS OVER THE
-    // READOUT (the planner's call at the row-7 brief, FLAGGED for the architect):
-    // the readout is a passive description of the selection, the others are
-    // things the user is doing or waiting on, and only one span exists. The
-    // transient message sits directly above the readout for the same reason and
-    // cannot collide with an editor in practice — it is cleared by the next key
-    // press, and opening any editor is one.
+    // PRECEDENCE IN SECTION C, highest first — MODALS FIRST, THEN STATUS
+    // (architect 2026-08-10, 0b7492b6, superseding the original
+    // status-over-editor order; the freeze that forced it and the full rule
+    // are recorded at the chain's modal block below): prompt > the history
+    // mode's two editors (the in-mode load editor, the commit-title editor)
+    // > settings editor > load editor > BPM editor > the history mode's line
+    // > queue / loading status > transient status message > the
+    // resolved-value readout. A modal must be VISIBLE to be operable — an
+    // editor holds the keyboard, so status painted over it read as a hung
+    // product — while the readout stays the lowest tier: a passive
+    // description of the selection under everything the user is doing or
+    // waiting on. The transient message sits directly above it for the same
+    // reason and cannot collide with an editor in practice — it is cleared
+    // by the next key press, and opening any editor is one.
     //
-    // The row paints on EVERY frame class (loading, blank, loaded) like the four
+    // The row paints on EVERY frame class (loading, blank, loaded) like the
     // redesigned rows above it: the line is audio-independent, and the loading
     // status is one of the things it carries.
     const GuiRect lane    = bottom_row_area(app);
