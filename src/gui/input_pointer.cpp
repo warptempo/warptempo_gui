@@ -3094,7 +3094,8 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs, row 4's sixteen and row 8's nine — the stash is
+// four, row 3's two tabs, row 4's sixteen and row 8's eight — 36, the enum's
+// own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE damage call PER STRIP TOUCHED — the strip idiom (no
@@ -4622,22 +4623,38 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the frame the button lights on: with the popup already gone,
         // redesign_button_hoverable's dropdown refusal no longer applies and the
         // button under the pointer resolves to hovered in the very same call.
-        for (int i = 0; i < kRedesignButtonCount; ++i) {
-            const RedesignButton id = static_cast<RedesignButton>(i);
-            if (!redesign_button_in_menu_row(id)) continue;
-            if (id == dropdown_anchor_button(DropdownMenu::Settings) ||
-                id == dropdown_anchor_button(DropdownMenu::Navigation)) continue;
-            if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
-            close_dropdown();
-            // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the other
-            // half of the same behaviour): sliding onto Quit puts the menu away
-            // but leaves the row ARMED, so sliding BACK onto Settings or
-            // Navigation opens that menu again with no click. This is a step
-            // across the bar, not a dismissal, and close_dropdown disarms by
-            // default — so the exception is spelled here, at the only site that
-            // needs it.
-            app.dropdown.menu_row_armed = true;
-            break;
+        //
+        // THE FAMILY RULE, stated here at its first member in this branch (codex
+        // rounds 2-3 built it one member at a time): NO ROW-1 HOVER ACT FIRES
+        // WHILE THE PRIMARY BUTTON IS HELD — the armed hover-OPEN (on_motion's
+        // no-gesture tail), the open-menu anchor-SWITCH (the walk below), and
+        // this hover CLOSE, its last unguarded member. A held button is not a
+        // resting hover at any of the three. For the TOUCH resolution burst's
+        // held entry motion the tap's outcome is unchanged by guarding the
+        // close: press-anywhere-closes at on_button_press already closes the
+        // menu on the burst's own press, so the tap nets the same result by the
+        // cleaner path. For the MOUSE, a mid-press slide across a non-anchor
+        // keeps the popup's live press claim exactly as the switch guard keeps
+        // it. The unheld hover close is untouched.
+        if (!mods.primary_button_held) {
+            for (int i = 0; i < kRedesignButtonCount; ++i) {
+                const RedesignButton id = static_cast<RedesignButton>(i);
+                if (!redesign_button_in_menu_row(id)) continue;
+                if (id == dropdown_anchor_button(DropdownMenu::Settings) ||
+                    id == dropdown_anchor_button(DropdownMenu::Navigation))
+                    continue;
+                if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
+                close_dropdown();
+                // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the
+                // other half of the same behaviour): sliding onto Quit puts the
+                // menu away but leaves the row ARMED, so sliding BACK onto
+                // Settings or Navigation opens that menu again with no click.
+                // This is a step across the bar, not a dismissal, and
+                // close_dropdown disarms by default — so the exception is
+                // spelled here, at the only site that needs it.
+                app.dropdown.menu_row_armed = true;
+                break;
+            }
         }
         // The roster's own faces. While a popup is up this re-derives false for
         // the WHOLE roster (redesign_button_hoverable refuses every button then —
@@ -4663,13 +4680,32 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // outright — no re-open, no close, no damage. A row-1 button owning no
         // dropdown never reaches here at all: the close rule above consumed it
         // and the menu is already down.
-        for (const DropdownMenu m : {DropdownMenu::Settings,
-                                     DropdownMenu::Navigation}) {
-            if (m == app.dropdown.menu) continue;
-            if (!redesign_button_hit(app, dropdown_anchor_button(m),
-                                     mouse_x, mouse_y)) continue;
-            toggle_dropdown(m);
-            break;
+        //
+        // THE SWITCH REFUSES UNDER A HELD PRIMARY BUTTON (codex round 3) — the
+        // family rule's second member (the three-member statement is at the
+        // close walk above; the armed hover-open is the first) — a held
+        // button is not a resting hover here either, on the same two producers:
+        // the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
+        // and the other anchor tapped, that motion reached this walk, switched
+        // menus, and the burst's press then found its own menu already open and
+        // toggle-closed it — the tap closed the popup instead of switching to
+        // it; guarded, the switch is the PRESS's own toggle_dropdown), and the
+        // MOUSE's own latent case, which this guard fixes too: press-hold an
+        // item (or the anchor press's drag-into-the-box claim) and slide across
+        // the OTHER anchor — the switch fired mid-press, and toggle_dropdown's
+        // close wipes the whole Dropdown struct, destroying the popup's live
+        // press claim (pressed_item / press_began_on_item) out from under the
+        // held button, so the coming release acted on a menu the press never
+        // touched. The ordinary unheld hover-switch is unchanged.
+        if (!mods.primary_button_held) {
+            for (const DropdownMenu m : {DropdownMenu::Settings,
+                                         DropdownMenu::Navigation}) {
+                if (m == app.dropdown.menu) continue;
+                if (!redesign_button_hit(app, dropdown_anchor_button(m),
+                                         mouse_x, mouse_y)) continue;
+                toggle_dropdown(m);
+                break;
+            }
         }
         // The popup's own item hover AND its armed item, beside row 1's — the
         // two are the whole hover answer while a menu is up, and they cannot
@@ -5078,7 +5114,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // under the new popup, which is the correct answer for a pointer the
         // popup has taken.
         // ONE CONDITION IS RESTATED FOR THE OPEN (codex round 2): a HELD PRIMARY
-        // BUTTON refuses the hover-open. A held button is not a resting hover,
+        // BUTTON refuses the hover-open. This is the FIRST MEMBER of the row-1
+        // hover-act family rule — no row-1 hover act fires while the primary
+        // button is held; the three-member statement lives at the open-dropdown
+        // branch's close walk, beside its siblings (the anchor-switch and the
+        // hover close, codex round 3). A held button is not a resting hover,
         // and it does NOT return above — a held motion with no armed gesture
         // reaches this tail, on two producers: the TOUCH resolution burst's
         // pre-press entry motion (the platform raises the touch hold before

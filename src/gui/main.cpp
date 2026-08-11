@@ -133,7 +133,7 @@ namespace {
 // columns), whose bottom edge is the
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is TWO lanes since row 8
-// (2026-08-11): the TRANSPORT ROW (transport_row_h_px(), the nine-button
+// (2026-08-11): the TRANSPORT ROW (transport_row_h_px(), the eight-button
 // bottom toolbar, flush under the waveform) over the STATUS row — which was
 // the strip's ONE lane from row 7 (2026-08-01), when the status row and the
 // editor/modal row COLLAPSED INTO ONE LINE, bottom_row_h_px() tall. Both ride

@@ -828,10 +828,11 @@ private:
     //   * Pointer — the translation is live: the owning finger's motion is
     //     pointer motion (coalesced to the wl_touch.frame boundary, the
     //     pointer-frame precedent), its lift is the release on the logical
-    //     left 1->0 edge AND an ORDINARY pointer leave ON THAT SAME EDGE
-    //     (the finger left the glass, which IS a leave — what keeps hover
+    //     left 1->0 edge AND the TRANSLATION END ON THAT SAME EDGE — an
+    //     ordinary leave, or a restore motion at the mouse when the physical
+    //     pointer has focus (the finger left the glass; what keeps hover
     //     faces from resting lit where a finger last was; a sibling-held
-    //     logical left suppresses BOTH — see the UP clauses below). A second
+    //     logical left suppresses ALL of it — see the UP clauses below). A second
     //     finger landing here is IGNORED whole —
     //     recorded, not routed: mid-gesture finger-count changes do not
     //     mutate a committed gesture (the any-end-commits family).
@@ -848,17 +849,24 @@ private:
     // states only its own clause):
     //   * touch UP, owner, Pending  — a TAP: resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
-    //     ordinary leave on the release's own edge; -> Idle (a lone finger
+    //     translation end on the release's own edge; -> Idle (a lone finger
     //     cannot leave a survivor).
     //   * touch UP, owner, Pointer  — staged motion flushed, release on the
-    //     logical left 1->0 edge at the last position, ordinary leave ON THAT
-    //     SAME EDGE (codex round 2): a sibling source (physical BTN_LEFT /
-    //     bare-`e`) still holding suppresses the release AND the leave — the
-    //     unified pointer has not left, the mouse is mid-press, and the leave
-    //     hook's clears (the row-8 held-arrow repeat, the popup's press
-    //     claim) belong to that still-held press. A suppressed leave can
-    //     strand a hover face where the finger last was — the accepted-glitch
-    //     class, self-healing on the next pointer event;
+    //     logical left 1->0 edge at the last position, THE TRANSLATION END ON
+    //     THAT SAME EDGE (codex round 2; one owner,
+    //     deliver_touch_translation_end), which FORKS ON PHYSICAL POINTER
+    //     FOCUS (codex round 3): the ordinary leave when no mouse rests in
+    //     the window, an ordinary restore MOTION at pointer_x_/pointer_y_
+    //     when one does — the finger lifted, so the unified pointer is where
+    //     the mouse is, and the motion re-derives hover and the settled
+    //     cursor from truth (the cursor-residue fix). A sibling source
+    //     (physical BTN_LEFT / bare-`e`) still holding suppresses the
+    //     release, the leave AND the restore — the unified pointer has not
+    //     left, the mouse is mid-press, and the leave hook's clears (the
+    //     row-8 held-arrow repeat, the popup's press claim) belong to that
+    //     still-held press. A suppressed end can strand a hover face where
+    //     the finger last was — the accepted-glitch class, self-healing on
+    //     the next pointer event;
     //     -> Drain if ignored fingers remain, else Idle.
     //   * touch UP, either nav finger — the staged dirty frame DELIVERS
     //     first (Wayland orders the up before the wl_touch.frame that closes
@@ -876,8 +884,9 @@ private:
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
-    //     ordinary leave on the release's own edge (the UP clause's
-    //     sibling-suppression rule applies here identically); a live Nav
+    //     translation end on the release's own edge (the UP clause's
+    //     focus fork and sibling-suppression rule apply here identically —
+    //     one owner); a live Nav
     //     gesture DROPS its staged dirty frame
     //     (the compositor's claim means that motion retroactively was not
     //     ours — the recorded asymmetry with the Pointer release, which MUST
@@ -899,8 +908,12 @@ private:
     // pointer" view lives in the DELIVERIES while each device's platform
     // state stays self-consistent. For the same reason touch does not clear
     // pointer_position_unknown_ (a touch says nothing about where the mouse
-    // cursor is) and does not gate on pointer_focused_ (wl_touch delivers
-    // only to the touched surface).
+    // cursor is) and gates NO DELIVERY on pointer_focused_ (wl_touch delivers
+    // only to the touched surface). The split has ONE deliberate reader since
+    // codex round 3: deliver_touch_translation_end reads pointer_focused_ —
+    // and pointer_x_/pointer_y_ on the focused arm — because the translation's
+    // END is a MOUSE question ("is the mouse resting in the window, and
+    // where"), not a touch delivery to gate.
     struct wl_touch* wl_touch_ = nullptr;
     enum class TouchPhase { Idle, Pending, Pointer, Nav, Drain };
     TouchPhase touch_phase_       = TouchPhase::Idle;
@@ -1256,11 +1269,20 @@ private:
     // flush the deferred POINTER motion on the delivering edge, clear the
     // bit, then deliver the release at the owner's last position only on the
     // logical 1->0 edge (the end_left_hold_source ordering, third source).
-    // RETURNS whether the release was delivered — the ordinary leave's own
-    // edge: both callers fire the leave iff the release fired (a
-    // sibling-suppressed release means the unified pointer has not left; the
-    // rationale is at the definition and the touch-up site).
+    // RETURNS whether the release was delivered — the translation end's own
+    // edge: both end sites go through deliver_touch_translation_end below,
+    // which acts iff the release fired (a sibling-suppressed release means
+    // the unified pointer has not left; the rationale is at the definition).
     bool end_touch_left_hold();
+    // The one owner of the translation's END, called by the touch-up site
+    // and the hard-end contract: end the touch hold, and on the delivering
+    // edge FORK ON PHYSICAL POINTER FOCUS (codex round 3) — a mouse resting
+    // in the window gets an ordinary restore MOTION at its last
+    // platform-tracked position instead of the leave (the finger lifted, so
+    // the unified pointer is where the mouse is; the cursor-residue fix), no
+    // mouse focus gets the ordinary leave as before. Rationale, edges and
+    // the armed-anchor judgment at the definition.
+    void deliver_touch_translation_end();
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract
     // is at set_touch_nav_hooks).

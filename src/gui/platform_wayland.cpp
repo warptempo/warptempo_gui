@@ -2935,13 +2935,63 @@ bool GuiPlatform::end_touch_left_hold() {
                            static_cast<int>(std::nearbyint(touch_last_y_)),
                            current_mods());
     }
-    // The return is the LEAVE'S OWN EDGE (codex round 2): both callers fire
-    // the ordinary leave iff the release was delivered — a sibling-suppressed
-    // release means the unified pointer has NOT left (the mouse is still
-    // there, mid-press), and the leave hook's clears belong to that still-held
-    // press (the row-8 held-arrow repeat, the popup's press claim), not to the
-    // finger that lifted.
+    // The return is the END'S OWN EDGE (codex round 2): both callers end the
+    // translation through deliver_touch_translation_end, which acts iff the
+    // release was delivered — a sibling-suppressed release means the unified
+    // pointer has NOT left (the mouse is still there, mid-press), and the
+    // leave hook's clears belong to that still-held press (the row-8
+    // held-arrow repeat, the popup's press claim), not to the finger that
+    // lifted.
     return deliver_release;
+}
+
+void GuiPlatform::deliver_touch_translation_end() {
+    // The release's own edge first (codex round 2): a sibling-held logical
+    // left suppressed the release, and then NOTHING below fires either — the
+    // mouse is mid-press, and neither a leave nor a restore motion is this
+    // stream's to deliver. A suppressed end can strand a hover face where the
+    // finger last was — the accepted-glitch class, self-healing on the next
+    // pointer event.
+    if (!end_touch_left_hold()) return;
+    // THE END FORKS ON PHYSICAL POINTER FOCUS (codex round 3, the
+    // cursor-residue fix): a resolved touch drives the GUI's remembered
+    // position to the finger, and the loop-settled cursor owner applies the
+    // finger zone's kind to the REAL wl_pointer — so before this fork a mouse
+    // resting in the window kept the finger's cue (Arrow/resize over a
+    // Scrub zone, say) until its own next motion. The finger lifting means
+    // the unified pointer is now wherever the MOUSE is:
+    //   * physical pointer FOCUSED (wl_pointer enter/leave, which touch never
+    //     writes) — synthesize an ordinary MOTION at its last
+    //     platform-tracked position (pointer_x_/pointer_y_, wl_pointer's own
+    //     fields under the recorded split; after a touch-armed capture the
+    //     release already rewrote them to the warp-restore position, so the
+    //     value is the cursor's honest whereabouts) INSTEAD of the leave: the
+    //     motion re-derives hover, the menu-row mode's own exit test and the
+    //     settled cursor from truth. It runs the ordinary motion path WHOLE —
+    //     deliberately unmarked, so every consequence of the pointer standing
+    //     at the mouse's resting spot is the standing rules' own: with the
+    //     menu row ARMED and the mouse resting on an anchor, the hover-open
+    //     opens that menu; with a menu OPEN and the mouse resting on the
+    //     OTHER anchor, the hover switch switches to it. Those are the armed
+    //     mode's defining semantics for a pointer at that position, not
+    //     surprises to suppress — suppression would need a "restore" mark on
+    //     the motion, a device branch in spirit (judgment recorded here and
+    //     in touch.md).
+    //   * physical pointer NOT focused — the ordinary leave, as before: no
+    //     mouse rests in the window, so the finger's lift IS the pointer
+    //     leaving.
+    // The mods are current_mods() at delivery: the touch bit is already down
+    // and the delivering edge means neither sibling holds, so the motion
+    // honestly reads unheld — an ordinary resting motion.
+    // THIS IS THE ONE DELIBERATE TOUCH-SIDE READER OF pointer_focused_ (the
+    // state block's recorded split): it asks a MOUSE question — "is the mouse
+    // resting in the window" — and gates no touch delivery.
+    if (pointer_focused_) {
+        if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+        return;
+    }
+    if (pointer_left_hook_)
+        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
 }
 
 void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
@@ -3024,23 +3074,16 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             // (the invariant at flush_touch_frame_motion), so there is
             // nothing to clear here — a bare clear at this site would be the
             // swallow the flush owner forbids.
-            // THE LEAVE RIDES THE RELEASE'S OWN EDGE (codex round 2): a
-            // touch-up that DELIVERED the logical release is a pointer that
-            // left — the ordinary leave clears hover faces so nothing rests
-            // lit where a finger last was, and the remembered-position
-            // machinery and the menu-row band rules handle it with nothing
-            // special-cased. When a SIBLING source (physical BTN_LEFT /
-            // bare-`e`) still holds the logical left, the release was
-            // suppressed and the leave must be too: the unified pointer has
-            // NOT left — the mouse is still there, mid-press — and the leave
-            // hook's clears are not mere hover cleanup (they disarm the row-8
-            // held-arrow repeat and destroy the popup's live press claim,
-            // state that belongs to the still-held press, not to the finger
-            // that lifted). A suppressed leave can strand a hover face where
-            // the finger last was — the accepted-glitch class, self-healing
-            // on the next pointer event.
-            if (end_touch_left_hold() && pointer_left_hook_)
-                pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+            // THE TRANSLATION END RIDES THE RELEASE'S OWN EDGE (codex round
+            // 2), and since round 3 it FORKS on physical pointer focus — the
+            // ordinary leave when no mouse rests in the window, a restore
+            // MOTION at the mouse's own position when one does (the finger
+            // lifted, so the unified pointer is where the mouse is). The
+            // fork, the sibling-suppression rule (a still-held mouse press
+            // suppresses release, leave and restore alike) and the rationale
+            // live at deliver_touch_translation_end, the one owner both this
+            // site and the hard end call.
+            deliver_touch_translation_end();
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
             break;
@@ -3204,15 +3247,15 @@ void GuiPlatform::hard_end_touch_stream() {
             // A live translation COMMITS — one delivered release on the
             // logical edge, at the last position (the pointer-capability-loss
             // precedent: a vanished hold would latch the drag-modal gate with
-            // no event left to lift it) — then the ordinary leave ON THE
+            // no event left to lift it) — then the translation end ON THE
             // RELEASE'S OWN EDGE, exactly as the finger's own lift delivers
-            // the pair (the edge rule at the touch-up site): a sibling-held
-            // logical left suppresses the release here too, and the leave
-            // with it — whatever happened to the glass, the mouse is still
-            // there, mid-press, and its live press claim is not this
-            // stream's to destroy.
-            if (end_touch_left_hold() && pointer_left_hook_)
-                pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+            // it: the ordinary leave, or the focus-forked restore motion when
+            // a mouse rests in the window (the round-3 fork), through the one
+            // owner. A sibling-held logical left suppresses the release here
+            // too, and the end with it — whatever happened to the glass, the
+            // mouse is still there, mid-press, and its live press claim is
+            // not this stream's to destroy.
+            deliver_touch_translation_end();
             break;
         case TouchPhase::Nav:
             // A live two-finger gesture ends through its end path (commits
