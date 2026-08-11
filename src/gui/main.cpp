@@ -1250,6 +1250,21 @@ int main(int argc, char** argv) {
         viewport.invalidate_top_strip();
     });
 
+    // THE PLATFORM'S CONSUMED KEYBOARD EDGES end the transport arrows'
+    // hold-repeat (codex round 4, 2026-08-11): keyboard leave / keyboard-
+    // capability loss and every Super-swallowed press are key events the GUI's
+    // three chokepoint disarms can never see — the platform consumes them
+    // without calling on_key — so the platform reports them through this one
+    // hook instead of the application growing a second, partial list. The fire
+    // classes and the per-swallowed-delivery decision are at the setter's
+    // contract (platform_wayland.h); the consumer's authoritative edge
+    // inventory is at AppState::transport_repeat. The body is the disarm
+    // itself: no damage (the hold has no face of its own — the click face is
+    // cleared by its own edges) and no other state.
+    gui.set_keyboard_intent_cancel_hook([&] {
+        app.transport_repeat.owner = -1;
+    });
+
     // THE SETTLED BOUNDARY AND ITS TWO CONSUMERS (architect 2026-08-03,
     // replacing the per-site model). The run loop fires this at the TAIL of every
     // iteration it is not leaving, so whatever is derived here is derived once per

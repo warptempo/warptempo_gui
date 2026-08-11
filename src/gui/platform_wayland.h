@@ -233,6 +233,31 @@ public:
     // other event to carry its repaint). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
 
+    // THE KEYBOARD-INTENT CANCELLATION HOOK (codex round 4, 2026-08-11): fired
+    // wherever the platform ENDS OR CONSUMES the keyboard stream WITHOUT a
+    // delivery, so application-side key intent — the transport arrows'
+    // hold-repeat, whose three GUI-chokepoint disarms can only see events that
+    // reach the application — dies on the same edges the platform's own
+    // key-repeat state does. TWO fire classes, each stated at its site:
+    //   * forget_keyboard_state — wl_keyboard.leave and keyboard-capability
+    //     loss, the edges that clear repeat_key_ itself: a keyboard-driven
+    //     focus change must not leave a pointer-held arrow authoring into an
+    //     unfocused window;
+    //   * deliver_key's SUPER DROP, per swallowed NON-SYNTHESIZED press: the
+    //     swallowed press is an intervening key ARRIVAL the application's
+    //     on_key disarm never sees, and the platform's own layer-1 disarms its
+    //     armed repeat at that very press (the arming else-branch in
+    //     on_keyboard_key runs BEFORE the drop) — per-delivery is the faithful
+    //     mirror. Deliberately NOT at Super's press edge: the Super keysym
+    //     itself "disarms nothing" platform-side, and a bare Super hold with no
+    //     key pressed runs no command (adjacency stands), while the hold
+    //     itself is a POINTER act, which the Super ruling explicitly scopes
+    //     out (Super+click clicks).
+    // ONE hook rather than another application-side list, so a platform edge
+    // added later joins by firing it. The full edge inventory the consumer
+    // rides is at AppState::transport_repeat. Null-safe.
+    void set_keyboard_intent_cancel_hook(std::function<void()> cb);
+
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
     // the iteration's FULLY SETTLED state. That placement is the whole point: a
@@ -856,6 +881,9 @@ private:
     std::function<void(GuiPointerLeaveReason)> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
+    // Fired at the platform's consumed keyboard edges (see
+    // set_keyboard_intent_cancel_hook). Null-safe at each fire site.
+    std::function<void()> keyboard_intent_cancel_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop
     // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
     // capture hooks, so the fire site needs no null test.

@@ -2384,7 +2384,7 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
 
     // One button, the icon row's face logic verbatim minus the letter arm and
     // the selected states this row cannot reach (selected is constant false
-    // over the nine, so the shared expressions still read it rather than
+    // over the eight, so the shared expressions still read it rather than
     // assuming it).
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
@@ -2542,7 +2542,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                   2 * pad_y;
 
     // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the transport
-    // row's nine (row 8, 2026-08-11), whose lane rests on the window's foot:
+    // row's eight (row 8, 2026-08-11), whose lane rests on the window's foot:
     // below them is only the status line and the window edge, so the hint
     // hangs upward there, the same box flipped about the button. Then CLAMPED
     // FULLY ON-WINDOW so a

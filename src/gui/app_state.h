@@ -2041,6 +2041,18 @@ struct AppState {
     //   physical press and its repeats — the platform's disarms are what make
     //   that true for held keys, and these are what make it true for held
     //   buttons.
+    //   AND ON THE PLATFORM'S OWN CONSUMED KEYBOARD EDGES (codex round 4,
+    //   2026-08-11), which the three chokepoints above can never see because
+    //   the platform consumes them without calling on_key — reported through
+    //   ONE wired cancellation hook (set_keyboard_intent_cancel_hook,
+    //   platform_wayland.h, whose contract carries the per-edge reasoning;
+    //   main.cpp wires it to this field's disarm): wl_keyboard.leave and
+    //   keyboard-capability loss (forget_keyboard_state — a keyboard-driven
+    //   focus change must not leave a pointer-held arrow authoring into an
+    //   unfocused window), and every SUPER-SWALLOWED non-synthesized key press
+    //   (deliver_key's drop — an intervening key arrival on_key never sees,
+    //   disarmed per swallowed delivery because that is the platform's own
+    //   edge for its own repeats, deliberately not at Super's press edge).
     //   EACH FIRE RE-CHECKS the press-time predicate and the enabled bit
     //   (layer 2's shape), and PAUSES while the pointer is off the button.
     //   THE HOLD'S OWN ENDS — the release, the pointer leave, capability loss —
@@ -3975,11 +3987,11 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // button joins the row's arm on the row's own terms.
         case RedesignButton::IconHistory:
         // ROW 8 MIRRORS NOTHING EITHER, except its one ruled pair below: the
-        // transport's two skips, Esc and the four arrows take the icon row's
+        // transport's two skips and the four arrows take the icon row's
         // own model — presses always dispatch and the CHORDS' refusals answer
-        // (the loading/blank return, the lane model's own refusal shapes, the
-        // six Esc bindings' "nothing to do" no-ops), inherited through on_key
-        // and never mirrored here. The brief's own words: do NOT invent
+        // (the loading/blank return, the lane model's own refusal shapes),
+        // inherited through on_key
+        // and never mirrored here. The ratified rule: do NOT invent
         // refusal-predicting grey states. The `h` history view's derived
         // partition at the top of this body is what greys them in there —
         // Space and the bare arrows are consumed in the view, so Play, Stop

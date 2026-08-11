@@ -1755,6 +1755,12 @@ void GuiPlatform::forget_keyboard_state() {
     mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_   = 0;
     scroll_accum_ = 0.0;
+    // The key stream is over (or its modeled state untrustworthy), and the
+    // application's own held key intent must die with the platform's: this is
+    // the keyboard-intent cancellation hook's first fire class (contract at
+    // set_keyboard_intent_cancel_hook; the consumer's edge inventory at
+    // AppState::transport_repeat).
+    if (keyboard_intent_cancel_hook_) keyboard_intent_cancel_hook_();
 
     // A held synthesized-left button can never see its keycode-matched release
     // once the key stream has ended, so end it here.
@@ -2197,7 +2203,21 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // the kLeftClickKey synthesized button: `e` IS the left mouse button at this
     // boundary and returns above without reaching this function, so Super+`e`
     // behaves exactly like Super+click, which binds nothing here either way.
-    if (mod_super_) return;
+    if (mod_super_) {
+        // THE DROPPED PRESS IS STILL AN INTERVENING KEY ARRIVAL for the
+        // application's held transport intent — the on_key disarm never sees
+        // it — and the platform's own layer-1 disarmed its armed repeat at
+        // this very press (the arming else-branch above, which runs before
+        // this drop). So the keyboard-intent cancellation hook fires per
+        // swallowed NON-SYNTHESIZED press, the faithful mirror of that edge
+        // (contract and the not-at-Super's-press-edge decision at
+        // set_keyboard_intent_cancel_hook). A swallowed synthesized repeat
+        // fires nothing, exactly as it disarms nothing anywhere else — a
+        // burst must not kill a burst.
+        if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
+            keyboard_intent_cancel_hook_();
+        return;
+    }
     if (on_key_) on_key_(key, mods);
 }
 
@@ -3259,6 +3279,7 @@ void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
+void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { keyboard_intent_cancel_hook_ = std::move(cb); }
 void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
