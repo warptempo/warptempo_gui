@@ -827,10 +827,12 @@ private:
     //     the window's whole purpose).
     //   * Pointer — the translation is live: the owning finger's motion is
     //     pointer motion (coalesced to the wl_touch.frame boundary, the
-    //     pointer-frame precedent), its lift is the release AND then an
-    //     ORDINARY pointer leave (the finger left the glass, which IS a
-    //     leave — what keeps hover faces from resting lit where a finger
-    //     last was). A second finger landing here is IGNORED whole —
+    //     pointer-frame precedent), its lift is the release on the logical
+    //     left 1->0 edge AND an ORDINARY pointer leave ON THAT SAME EDGE
+    //     (the finger left the glass, which IS a leave — what keeps hover
+    //     faces from resting lit where a finger last was; a sibling-held
+    //     logical left suppresses BOTH — see the UP clauses below). A second
+    //     finger landing here is IGNORED whole —
     //     recorded, not routed: mid-gesture finger-count changes do not
     //     mutate a committed gesture (the any-end-commits family).
     //   * Nav     — two fingers drive the touch-nav hooks (contract at
@@ -846,9 +848,17 @@ private:
     // states only its own clause):
     //   * touch UP, owner, Pending  — a TAP: resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
-    //     ordinary leave; -> Idle (a lone finger cannot leave a survivor).
+    //     ordinary leave on the release's own edge; -> Idle (a lone finger
+    //     cannot leave a survivor).
     //   * touch UP, owner, Pointer  — staged motion flushed, release on the
-    //     logical left 1->0 edge at the last position, ordinary leave;
+    //     logical left 1->0 edge at the last position, ordinary leave ON THAT
+    //     SAME EDGE (codex round 2): a sibling source (physical BTN_LEFT /
+    //     bare-`e`) still holding suppresses the release AND the leave — the
+    //     unified pointer has not left, the mouse is mid-press, and the leave
+    //     hook's clears (the row-8 held-arrow repeat, the popup's press
+    //     claim) belong to that still-held press. A suppressed leave can
+    //     strand a hover face where the finger last was — the accepted-glitch
+    //     class, self-healing on the next pointer event;
     //     -> Drain if ignored fingers remain, else Idle.
     //   * touch UP, either nav finger — the staged dirty frame DELIVERS
     //     first (Wayland orders the up before the wl_touch.frame that closes
@@ -866,7 +876,9 @@ private:
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
-    //     ordinary leave; a live Nav gesture DROPS its staged dirty frame
+    //     ordinary leave on the release's own edge (the UP clause's
+    //     sibling-suppression rule applies here identically); a live Nav
+    //     gesture DROPS its staged dirty frame
     //     (the compositor's claim means that motion retroactively was not
     //     ours — the recorded asymmetry with the Pointer release, which MUST
     //     deliver; the end split at end_touch_nav_gesture) and ends through
@@ -1195,16 +1207,21 @@ private:
     // first.
     void flush_deferred_motion();
 
-    // Ends ONE source's contribution to the logical left hold (logical left =
-    // pointer_left_held_ || synth_left_held_; see the OR-edge model). Delivers
-    // the release only on the logical 1->0 edge — i.e. when the OTHER source is
-    // not held — and encodes the ordering invariant ONCE: flush the deferred
-    // motion FIRST, while this source's bit still reads held, so the flushed
-    // motion observes the pre-release held state and takes the live-drag path,
-    // not the button-lost teardown; then clear the bit; then deliver at the
-    // last known pointer coordinates with current_mods(). When no edge occurs
-    // (the other source still holds), just clear — the other source's later
-    // release delivers the single edge. physical selects pointer_left_held_
+    // Ends one of the two KEYBOARD-ADJACENT sources' contribution to the
+    // logical left hold. The logical left is a THREE-source OR —
+    // pointer_left_held_ || synth_left_held_ || touch_left_held_ — whose one
+    // authoritative statement is the OR-edge model at synth_left_held_'s
+    // declaration; this helper ends the physical or the synth bit only (the
+    // TOUCH bit has its own end, end_touch_left_hold, which takes the same
+    // ordering). Delivers the release only on the logical 1->0 edge — i.e.
+    // when NEITHER sibling source is still held — and encodes the ordering
+    // invariant ONCE: flush the deferred motion FIRST, while this source's
+    // bit still reads held, so the flushed motion observes the pre-release
+    // held state and takes the live-drag path, not the button-lost teardown;
+    // then clear the bit; then deliver at the last known pointer coordinates
+    // with current_mods(). When no edge occurs (a sibling source still
+    // holds), just clear — the last surviving source's own end delivers the
+    // single edge. physical selects pointer_left_held_
     // (true) vs synth_left_held_ (false, which also clears synth_left_keycode_).
     void end_left_hold_source(bool physical);
 
@@ -1239,7 +1256,11 @@ private:
     // flush the deferred POINTER motion on the delivering edge, clear the
     // bit, then deliver the release at the owner's last position only on the
     // logical 1->0 edge (the end_left_hold_source ordering, third source).
-    void end_touch_left_hold();
+    // RETURNS whether the release was delivered — the ordinary leave's own
+    // edge: both callers fire the leave iff the release fired (a
+    // sibling-suppressed release means the unified pointer has not left; the
+    // rationale is at the definition and the touch-up site).
+    bool end_touch_left_hold();
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract
     // is at set_touch_nav_hooks).

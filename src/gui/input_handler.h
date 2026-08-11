@@ -750,8 +750,10 @@ struct GuiInputHandler {
     //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
     //     OPEN and no modal or gesture owns the pointer, which that placement
     //     guarantees — the open-dropdown branch returns far above the tail, and
-    //     so do the prompt, the bottom-strip editors and every live gesture,
-    //     which is exactly the reachability the anchors' own PRESS claim has;
+    //     so do the prompt, the bottom-strip editors and every live gesture —
+    //     plus ONE condition the call site restates because nothing above
+    //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
+    //     the two held-motion producers are recorded at the call);
     //   * update_menu_row_exit is "the pointer left row 1, go cold", called from
     //     the TOP of on_motion so that it runs under every one of those branches
     //     too. A modal owning the pointer is a reason not to open a menu, and no

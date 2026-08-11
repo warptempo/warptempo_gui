@@ -4162,6 +4162,10 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_row_area();
+    // HARMLESS OVER-DAMAGE, not a cursor land: a timeline state carries no
+    // band, so this tail never writes the live playhead (the auto-select above
+    // fires only where the land is a provable no-op) — the clock inventory
+    // (viewport.h) records the class beside the zoom appliers'.
     viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing.

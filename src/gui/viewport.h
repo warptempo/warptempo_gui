@@ -291,9 +291,17 @@ struct Viewport {
     //   BOTH LANES — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,
     //   which restores the entering tab's own playhead), the undo/redo restore
-    //   (undo), the position nudges' shared tail (position_nudge), the three
-    //   load-in-place tails (render entry, history commit, history local
-    //   member), and the TRIM COMMIT WRITERS (input_trim:
+    //   (undo), the position nudges' shared tail (position_nudge), two of the
+    //   three load-in-place tails (render entry and history commit — each
+    //   applies the loaded sidecar's own band, playhead included; the HISTORY
+    //   LOCAL member's tail calls the same two owners but its clock half is
+    //   HARMLESS OVER-DAMAGE like the zoom appliers': a timeline state
+    //   carries no band, so that tail never writes the live playhead — its
+    //   coincidence auto-select fires only where the land is a provable no-op
+    //   (auto_select_marker_at_playhead's equality predicate is the land's
+    //   own) — and the small always-clean rect is kept as truth-over-churn
+    //   beside the tail's real status-lane rewrite), and the TRIM COMMIT
+    //   WRITERS (input_trim:
     //   commit_trim_mutation and handle_trim_clear_both damage the waveform +
     //   status lane at their own sites and reach the clock inside
     //   park_playhead_at_trim_start — the trim family's one cursor writer,

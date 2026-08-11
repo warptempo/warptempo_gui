@@ -4291,10 +4291,14 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // tail and nowhere else, so the conditions the re-open must not fire under are
 // the branches that already return above it — an open dropdown (which owns the
 // motion outright), the prompt, the editor text drag, the two bottom-strip
-// keyboard-modal editors, and every live gesture and pending. No condition is
-// restated here, and none is worth adding: that tail is exactly the reachability
-// the anchors' own PRESS claim has, so the hover opens a menu in precisely the
-// states in which a click opens one. (The pointer-transparent FLAG editor gates
+// keyboard-modal editors, and every live gesture and pending — PLUS THE ONE
+// condition the call site restates (codex round 2): a HELD PRIMARY BUTTON,
+// which does not return above (a held motion that armed no gesture reaches the
+// tail — the touch resolution burst's pre-press entry motion, and a mouse
+// press-hold sliding along the armed row; the producers are recorded at the
+// call). With that guard the hover opens a menu in precisely the states in
+// which a click opens one — a held-button motion could never be a fresh press
+// anyway. (The pointer-transparent FLAG editor gates
 // neither route, by its own ruling — see the press claim; the open it leads to
 // ENDS that edit, which is toggle_dropdown's business and not restated here.)
 // IT TESTS NO BAND. Every anchor rect lies inside row 1 by construction, so a
@@ -5073,7 +5077,23 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // clears them, and the recompute then re-derives the whole roster false
         // under the new popup, which is the correct answer for a pointer the
         // popup has taken.
-        open_menu_row_anchor_on_hover(mouse_x, mouse_y);
+        // ONE CONDITION IS RESTATED FOR THE OPEN (codex round 2): a HELD PRIMARY
+        // BUTTON refuses the hover-open. A held button is not a resting hover,
+        // and it does NOT return above — a held motion with no armed gesture
+        // reaches this tail, on two producers: the TOUCH resolution burst's
+        // pre-press entry motion (the platform raises the touch hold before
+        // delivering it, so this guard is what stops that motion hover-opening
+        // an armed anchor's menu one event before the press toggle-closes it —
+        // the tap then opens the menu through the press path, as intended), and
+        // a MOUSE press that armed no gesture sliding along row 1 (press-hold an
+        // anchor — its menu opens armed — slide onto a non-anchor row-1 button,
+        // whose close rule re-arms with the menu down, then back onto an anchor:
+        // springing a menu open under a held button would hand the coming
+        // release to an item that was never pressed). The mode itself is
+        // untouched — the row stays armed; only the OPEN waits for a free
+        // button, and the next resting motion performs it.
+        if (!mods.primary_button_held)
+            open_menu_row_anchor_on_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }

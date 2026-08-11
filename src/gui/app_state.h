@@ -2205,7 +2205,9 @@ struct AppState {
     // means something while the popup is CLOSED: once a menu has been opened
     // from the row, the row answers the pointer alone — entering either anchor's
     // rect opens that anchor's menu with no click (on_motion's no-gesture tail,
-    // open_menu_row_anchor_on_hover), which is what every desktop's menu bar
+    // open_menu_row_anchor_on_hover; a RESTING pointer only — a held primary
+    // button refuses the open at the call site, codex round 2), which is what
+    // every desktop's menu bar
     // does; the "pointer left the row" half is a separate entry with the
     // opposite guard list (update_menu_row_exit, at the top of on_motion). COLD,
     // an anchor answers a CLICK and nothing else, and that is the whole reason

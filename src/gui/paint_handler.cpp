@@ -4386,10 +4386,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // THE BRANCH IS MODE-SCOPED, above the mode's line and therefore above
         // the queue status too, which is the ranking the mode already has:
         // while it stands, this span is the mode's, and an editor the mode
-        // itself opened inherits that standing. OUTSIDE the mode the chain is
-        // untouched — the ordinary load editor keeps its old rank below the
-        // queue status, where the opener's own running-render guard means the
-        // two never contend anyway.
+        // itself opened inherits that standing. OUTSIDE the mode the ordinary
+        // load-editor branch below paints instead, with the ./renders/
+        // prefix — and it too ranks ABOVE the queue status since the
+        // modals-first rewrite (0b7492b6, the chain contract below): a modal
+        // must be visible to be operable, so no editor sits below status
+        // anywhere in this chain. What is mode-scoped here is the prefix and
+        // the rank over the mode's own line, not the rank over status.
         //
         // ITS PREFIX IS THE SUBJECT'S: `Load: ` with no ./renders/ lead-in,
         // since what the buffer holds is a commit spelling.
@@ -4474,12 +4477,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    sec.c_x, baseline, band_y, band_h);
     } else if (app.history_mode.active) {
         // THE `h` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
-        // four bottom-strip editors paint in. It ranks directly under the
-        // PROMPT (Ctrl+Q's quit dialog can still be raised over it) and the
-        // in-mode load editor above, and over the queue status, the remaining
-        // editors and the readout, because while the mode stands this line is
-        // what the strip is for. Those remaining editors cannot arrive here at
-        // all: the mode's keyboard allowlist admits no opener but `'`.
+        // four bottom-strip editors paint in. It ranks under the PROMPT
+        // (Ctrl+Q's quit dialog can still be raised over it) and under EVERY
+        // modal editor — the two in-mode editors above and the
+        // settings/load/BPM branches between them and this one — because the
+        // line is STATUS, and the chain reads MODALS first, then STATUS (the
+        // contract above, 0b7492b6); it ranks over the queue status and the
+        // readout, because while the mode stands this line is what the strip
+        // is for whenever no modal claims the cell. The three editors between
+        // cannot arrive here while the mode stands (its keyboard allowlist
+        // admits no opener but `'` and Ctrl+S, and the Settings menu is locked
+        // out), so their rank over this line is unobservable — the chain keeps
+        // the one modals-first shape rather than encoding reachability.
         //
         // THE SHAPE: the commit's position in the walk and its short SHA, then
         // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
