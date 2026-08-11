@@ -1241,6 +1241,73 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     viewport.invalidate_waveform_area();
 }
 
+// THE TWO-FINGER TOUCH NAVIGATION BODY — contract, delivery-shape
+// justification and refusal rationale at the declaration (input_handler.h).
+// One delivered frame = one placement through the strip-drag family's own
+// application chokepoint.
+void GuiInputHandler::apply_touch_nav_update(int x, int y, double dx,
+                                             double dist_ratio) {
+    // The refusal answer, per frame: the wheel's own routing predicate at the
+    // current centroid. <= 0 covers both the modal refusals (-1) and the
+    // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
+    // navigates exactly the wheel's two surfaces.
+    if (wheel_context(x, y) <= 0) return;
+    // Defensive only: the platform guarantees a positive ratio (a degenerate
+    // finger distance delivers 1.0).
+    if (!(dist_ratio > 0.0)) dist_ratio = 1.0;
+
+    const GuiRect wf_area = waveform_area(app);
+    const double  W       = static_cast<double>(wf_area.w);
+    const int64_t total   = live_total_frames(app, audio);
+    if (W <= 0.0 || total <= 0) return;
+
+    // An applied navigation frame moves content between two taps, so a
+    // pending double-click candidate must not survive it (the C8 rule the
+    // wheel applies at on_wheel's top).
+    app.double_click = DoubleClickCandidate{};
+
+    // The content under the PREVIOUS centroid column (x - dx) is what the
+    // fingers hold; the anchor column convention is arm_strip_drag_at's own
+    // (window x against the live viewport — the waveform starts at the window
+    // edge, and no clamp into [0, W-1] is needed: there is no persistent
+    // anchor for an off-area column to corrupt, and the placement below runs
+    // through the viewport chokepoint's own clamps either way).
+    const double spp_old = current_samples_per_pixel(app, audio);
+    const double anchor_sample =
+        static_cast<double>(app.viewport_start_sample) +
+        (static_cast<double>(x) - dx) * spp_old;
+
+    // The distance ratio maps to the level LOGARITHMICALLY — spreading the
+    // fingers by 2x is one level in (spp halves, so the content between the
+    // fingers scales with the finger gap; no feel constant). Pre-clamped into
+    // the same [kMinZoom, effective ceiling] window clamp_viewport_start
+    // re-applies, exactly as apply_strip_drag_at pre-clamps — the chokepoint's
+    // level_changed compare requires a real request (its contract names both
+    // callers).
+    double new_level = app.zoom_level - std::log2(dist_ratio);
+    const double max_l =
+        effective_max_zoom_level(W, total, audio.sample_rate());
+    if (new_level < kMinZoom) new_level = kMinZoom;
+    if (new_level > max_l)    new_level = max_l;
+
+    // One placement does both axes: the anchor lands at the CURRENT centroid
+    // column under the new level, so the centroid delta pans and the ratio
+    // zooms about the centroid. Everything downstream is the strip drag's own
+    // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
+    // either-axis follow suppression, and the mid-gesture true-no-op skip.
+    viewport.apply_strip_drag_zoom(new_level, anchor_sample,
+                                   static_cast<double>(x),
+                                   /*final=*/false);
+}
+
+void GuiInputHandler::end_touch_nav() {
+    // Any end commits, and every applied frame already rebuilt synchronously;
+    // the one deferred piece is the playback predictor (mid-gesture frames
+    // skip the resync exactly as the strip drag's do) — the grab-pan release's
+    // own tail.
+    if (playback.is_playing()) playback.resync_predictor();
+}
+
 // The flag editor's guard-free close, shared by the left and right press arms
 // (contract at the declaration, input_handler.h). The box is the painter's
 // published rect, the same one the F2.1 caret block tests, so "outside" means

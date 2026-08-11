@@ -51,11 +51,16 @@ enum class GuiCursorKind {
 // enumerator count above.
 inline constexpr int kGuiCursorKindCount = 7;
 
-// WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's two fire
+// WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
-//   * OrdinaryLeave is wl_pointer.leave: the stream is NOT over. No position
-//     event arrives WHILE the pointer stays outside, but a re-entry synthesizes
+//   * OrdinaryLeave is wl_pointer.leave — and, since touch phase 1
+//     (2026-08-11), every end of a touch POINTER TRANSLATION: the finger
+//     leaving the glass IS a leave, delivered after its release (the fires are
+//     the touch up, wl_touch.cancel and touch-capability loss — the edge
+//     inventory at the touch state block). Either way the stream is NOT over.
+//     No position event arrives WHILE the pointer stays outside, but a
+//     re-entry (or the next touch) synthesizes
 //     a motion, a held button still releases, and the held state survives — so a
 //     consumer may knowingly KEEP a face or a mode across this edge and rely on
 //     that return motion to re-derive it.
@@ -200,10 +205,13 @@ public:
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
-    // Fired when the pointer LEAVES the surface (wl_pointer.leave) and at
-    // pointer-capability loss — the two edges on which pointer focus is dropped
+    // Fired when the pointer LEAVES the surface (wl_pointer.leave), at
+    // pointer-capability loss, and — since touch phase 1 — at every end of a
+    // touch pointer translation (as OrdinaryLeave, after the release: the
+    // finger left the glass). The edges drop pointer focus
     // and no position event will follow (outright, for capability loss; for the
-    // ordinary leave, for as long as the pointer stays outside — it may re-enter
+    // ordinary leaves, for as long as the pointer stays outside — it may
+    // re-enter
     // with a synthesized motion, and a held button still releases normally).
     // WHICH EDGE FIRED IT IS THE ARGUMENT (GuiPointerLeaveReason, above the
     // class; 2026-08-08). The body is shared, and the difference above is real:
@@ -257,6 +265,42 @@ public:
     // added later joins by firing it. The full edge inventory the consumer
     // rides is at AppState::transport_repeat. Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
+
+    // THE TWO-FINGER NAVIGATION HOOKS (touch phase 1, 2026-08-11). ONE finger on
+    // the glass IS the pointer — translated whole inside this class, so the GUI
+    // sees ordinary pointer deliveries and cannot tell which device produced
+    // them (the bare-`e` precedent applied to glass; the translation contract
+    // lives at the touch state block below). TWO fingers are the one gesture
+    // that never delivers pointer events: per-frame centroid pan plus
+    // distance-ratio zoom about the centroid, the strip drag's own dual-axis
+    // semantics, handed to the GUI through these hooks (the
+    // set_keyboard_intent_cancel_hook wiring precedent — main.cpp wires them to
+    // the input handler's touch-nav body, which drives the strip-drag family's
+    // viewport chokepoint).
+    //
+    //   * update(x, y, dx, dist_ratio): fired at most once per wl_touch.frame
+    //     while a two-finger gesture is live and past its latch. (x, y) is the
+    //     CURRENT centroid in surface px; dx is the centroid's horizontal delta
+    //     since the previous delivered update (fractional — sub-pixel centroid
+    //     motion must accumulate rather than truncate away); dist_ratio is the
+    //     finger-distance ratio current/previous, > 0 always (a degenerate
+    //     distance under 1 px on either side delivers 1.0 — no zoom that
+    //     frame). The latch is the platform's: nothing is delivered until the
+    //     centroid has travelled kTouchSlopPx (Chebyshev) from the two-finger
+    //     start OR the finger distance has changed by that same slop, and the
+    //     crossing update folds the whole accumulated delta — the strip drag's
+    //     own press-becomes-drag model, so a two-finger tap navigates nothing.
+    //   * end(): the gesture ended — a finger lifted (any end commits; the
+    //     survivor is ignored until all fingers lift), wl_touch.cancel, or
+    //     touch-capability loss. Fired ONLY if at least one update was
+    //     delivered, so a sub-latch two-finger touch costs the GUI nothing.
+    //
+    // The hooks carry no modifier state: the GUI body reads nothing modal from
+    // them, and its refusal answer is its own (the wheel-context predicate — the
+    // gesture is the wheel's navigation-class sibling). Null-safe.
+    void set_touch_nav_hooks(
+        std::function<void(int x, int y, double dx, double dist_ratio)> update,
+        std::function<void()> end);
 
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
@@ -747,12 +791,140 @@ private:
     // is held as a synthesized left button; synth_left_keycode_ is the xkb
     // keycode that owns the hold, so the release is matched by keycode
     // exactly like repeat cancellation is. The logical left button is
-    // (pointer_left_held_ || synth_left_held_): a press is delivered only on
-    // the 0->1 edge of that OR and a release only on the 1->0 edge (the evdev
-    // model for two devices sharing BTN_LEFT), so physical and synthesized
-    // sources never double-deliver.
+    // (pointer_left_held_ || synth_left_held_ || touch_left_held_): a press is
+    // delivered only on the 0->1 edge of that OR and a release only on the
+    // 1->0 edge (the evdev model for devices sharing BTN_LEFT), so the
+    // physical, synthesized and touch sources never double-deliver. Each
+    // source's hold ends on its OWN stream's edges and never on a sibling's
+    // (the keyboard edges end the synth hold, the pointer-capability loss ends
+    // the physical and synth holds, the touch edges end the touch hold).
     bool     synth_left_held_    = false;
     uint32_t synth_left_keycode_ = 0;
+
+    // -- Touch (wl_touch as the pointer; touch phase 1, 2026-08-11) --
+    //
+    // THE UNIFIED-MODE PREMISE, made literal at this boundary: ONE finger IS
+    // the pointer, translated whole here so the GUI sees ordinary pointer
+    // deliveries — enter-motion, left press, motion, release — and cannot tell
+    // which device produced an event (no touch mode, no flag, no GUI-side
+    // branch; the bare-`e` precedent applied to glass). TWO fingers are the
+    // navigation gesture, delivered through the touch-nav hooks and NEVER as
+    // pointer events. wl_touch is CORE protocol (wl_seat's third capability —
+    // the wl_data_device_manager precedent: same wayland.xml, no new library,
+    // no generated stub), bound from the seat listener when
+    // WL_SEAT_CAPABILITY_TOUCH is advertised and NOT required: absence is
+    // silence — no stderr, nothing degraded (the authoring laptop simply has
+    // no glass; the target rig's panel does).
+    //
+    // THE PHASES:
+    //   * Idle    — no touch points.
+    //   * Pending — the DISAMBIGUATION WINDOW: the first finger is down and
+    //     NOTHING has been delivered. The window exists only to tell one
+    //     finger from two (kTouchDisambiguateMs); it resolves to Pointer on
+    //     expiry, on motion beyond kTouchSlopPx, or on the finger lifting
+    //     inside it (a tap), and to Nav on a second finger landing inside it
+    //     (in which case no press was ever delivered — nothing to unwind,
+    //     the window's whole purpose).
+    //   * Pointer — the translation is live: the owning finger's motion is
+    //     pointer motion (coalesced to the wl_touch.frame boundary, the
+    //     pointer-frame precedent), its lift is the release AND then an
+    //     ORDINARY pointer leave (the finger left the glass, which IS a
+    //     leave — what keeps hover faces from resting lit where a finger
+    //     last was). A second finger landing here is IGNORED whole —
+    //     recorded, not routed: mid-gesture finger-count changes do not
+    //     mutate a committed gesture (the any-end-commits family).
+    //   * Nav     — two fingers drive the touch-nav hooks (contract at
+    //     set_touch_nav_hooks). A third finger is ignored. One finger
+    //     lifting ends the gesture (any end commits) and the survivor is
+    //     ignored until all fingers lift (Drain).
+    //   * Drain   — waiting for every remaining (ignored) finger to lift;
+    //     nothing is delivered. Entered from Pointer and Nav ends that
+    //     leave ignored fingers on the glass.
+    //
+    // THE EDGE INVENTORY — every route that ends or transforms touch state,
+    // authoritative here (the transport_repeat precedent; each fire site
+    // states only its own clause):
+    //   * touch UP, owner, Pending  — a TAP: resolve (enter-motion + press at
+    //     the down point, any queued motion), then the release, then the
+    //     ordinary leave; -> Idle (a lone finger cannot leave a survivor).
+    //   * touch UP, owner, Pointer  — staged motion flushed, release on the
+    //     logical left 1->0 edge at the last position, ordinary leave;
+    //     -> Drain if ignored fingers remain, else Idle.
+    //   * touch UP, either nav finger — nav end (commits through the end
+    //     hook iff an update was delivered); -> Drain / Idle.
+    //   * touch UP, ignored finger  — bookkeeping only.
+    //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
+    //     deadline, and lazily at every touch event's arrival) — resolve
+    //     Pending to Pointer.
+    //   * motion beyond kTouchSlopPx inside the window — resolve Pending to
+    //     Pointer (the crossing position delivered as the queued motion).
+    //   * second DOWN inside the window — Pending -> Nav, nothing delivered.
+    //   * wl_touch.cancel — the compositor claims the touches. One contract
+    //     with capability loss: a live Pointer translation gets its release
+    //     DELIVERED at the last position (a commit, not a vanish) then the
+    //     ordinary leave; a live Nav gesture ends through its end path
+    //     (commits); an unresolved Pending window is dropped silently
+    //     (nothing was delivered, so there is nothing to end); all touch
+    //     state forgotten either way.
+    //   * TOUCH capability loss — the cancel contract above, then the
+    //     wl_touch proxy is released. The pointer- and keyboard-capability
+    //     edges do NOT touch this state (each source dies on its own
+    //     stream's edges), and shutdown releases the proxy with no
+    //     deliveries (destroy_wayland_state is not an input edge — the
+    //     pointer and keyboard teardowns there deliver nothing either).
+    //
+    // TOUCH NEVER WRITES pointer_x_/pointer_y_ (a deliberate split): those
+    // fields are wl_pointer's own — the wheel emits there, the bare-`e` press
+    // lands there, the capture machinery rewrites them — and every touch
+    // delivery carries its own explicit coordinates, so the unified "one
+    // pointer" view lives in the DELIVERIES while each device's platform
+    // state stays self-consistent. For the same reason touch does not clear
+    // pointer_position_unknown_ (a touch says nothing about where the mouse
+    // cursor is) and does not gate on pointer_focused_ (wl_touch delivers
+    // only to the touched surface).
+    struct wl_touch* wl_touch_ = nullptr;
+    enum class TouchPhase { Idle, Pending, Pointer, Nav, Drain };
+    TouchPhase touch_phase_       = TouchPhase::Idle;
+    // ALL live touch points, the ignored ones included — the Drain exit test.
+    int        touch_point_count_ = 0;
+    // Pending/Pointer: the translating finger. Positions are surface-local
+    // doubles (touch positions are fractional on real panels); deliveries
+    // round through std::nearbyint, the project's one fractional->integer
+    // conversion rule.
+    int32_t    touch_owner_id_    = 0;
+    double     touch_down_x_      = 0.0;
+    double     touch_down_y_      = 0.0;
+    double     touch_last_x_      = 0.0;
+    double     touch_last_y_      = 0.0;
+    // Pending only: the disambiguation deadline (monotonic; event timestamps
+    // ride a base this program never compares against) and whether any
+    // sub-slop motion arrived inside the window (the queued motion the
+    // resolution replays).
+    uint64_t   touch_window_deadline_us_ = 0;
+    bool       touch_window_moved_       = false;
+    // The logical left's third source (see the OR-edge model above).
+    bool       touch_left_held_          = false;
+    // Pointer: a motion staged for the wl_touch.frame boundary (the
+    // pointer-frame coalescing precedent; flushed ahead of the release).
+    bool       touch_frame_motion_pending_ = false;
+    // Nav: the second finger and the per-finger latest positions.
+    int32_t    touch_nav_id2_   = 0;
+    double     touch_nav_x1_    = 0.0;
+    double     touch_nav_y1_    = 0.0;
+    double     touch_nav_x2_    = 0.0;
+    double     touch_nav_y2_    = 0.0;
+    // Nav: the two-finger START (the latch reference) and the last DELIVERED
+    // centroid/distance (the per-frame delta basis).
+    double     touch_nav_start_cx_   = 0.0;
+    double     touch_nav_start_cy_   = 0.0;
+    double     touch_nav_start_dist_ = 0.0;
+    double     touch_nav_last_cx_    = 0.0;
+    double     touch_nav_last_dist_  = 0.0;
+    bool       touch_nav_latched_    = false;
+    // An update hook fired — the end hook is owed a commit.
+    bool       touch_nav_delivered_  = false;
+    // Positions moved this wl_touch frame (compute + deliver at the frame).
+    bool       touch_nav_frame_dirty_ = false;
 
     // Accumulated vertical scroll carry, in value120 units (120 = one
     // detent). on_pointer_frame() folds the per-frame delta (arbitrated
@@ -870,8 +1042,9 @@ private:
     WheelContextProbe    wheel_context_probe_;
     TextEditorProbe      text_editor_active_probe_;
     RepeatEligibleProbe  repeat_eligible_probe_;
-    // The one owner of the pointer-leave drop: fired at wl_pointer.leave and at
-    // pointer-capability loss (the two focus-dropping edges with no motion to
+    // The one owner of the pointer-leave drop: fired at wl_pointer.leave, at
+    // pointer-capability loss, and at every end of a touch pointer translation
+    // (the focus-dropping edges with no motion to
     // re-resolve — permanently on capability loss, and for the duration of the
     // absence on an ordinary leave). Wired to everything derived from where the
     // pointer is, main.cpp's hook body holding the authoritative list; the marker
@@ -884,6 +1057,10 @@ private:
     // Fired at the platform's consumed keyboard edges (see
     // set_keyboard_intent_cancel_hook). Null-safe at each fire site.
     std::function<void()> keyboard_intent_cancel_hook_;
+    // The two-finger navigation hooks (see set_touch_nav_hooks). Null-safe at
+    // each fire site.
+    std::function<void(int, int, double, double)> touch_nav_update_hook_;
+    std::function<void()>                         touch_nav_end_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop
     // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
     // capture hooks, so the fire site needs no null test.
@@ -1001,10 +1178,14 @@ private:
     // the flag so on_pointer_frame's trailing delivery does not double-fire.
     // Every button-delivery site calls this immediately before delivering; the
     // classes, re-derived by grep: the wl_pointer button listener, the
-    // kLeftClickKey synth edges, and the HARD-EDGE hold ends — keyboard leave /
+    // kLeftClickKey synth edges, the HARD-EDGE hold ends — keyboard leave /
     // keyboard-capability loss (forget_keyboard_state) and pointer-capability
-    // loss (on_seat_capabilities, which ends BOTH sources) — all of which reach
-    // it inside end_left_hold_source rather than calling it themselves.
+    // loss (on_seat_capabilities, which ends BOTH keyboard-adjacent sources) —
+    // which reach it inside end_left_hold_source rather than calling it
+    // themselves, and the TOUCH translation's two delivery sites (the
+    // resolution press in resolve_touch_window_to_pointer and the release in
+    // end_touch_left_hold), which also flush their own staged touch motion
+    // first.
     void flush_deferred_motion();
 
     // Ends ONE source's contribution to the logical left hold (logical left =
@@ -1019,6 +1200,50 @@ private:
     // release delivers the single edge. physical selects pointer_left_held_
     // (true) vs synth_left_held_ (false, which also clears synth_left_keycode_).
     void end_left_hold_source(bool physical);
+
+    // -- Touch handlers (wl_touch as the pointer; the phase machine and edge
+    // inventory are at the touch state block above) --
+    void on_touch_down(uint32_t serial, uint32_t time, int32_t id,
+                       int32_t fx, int32_t fy);
+    void on_touch_up(uint32_t serial, uint32_t time, int32_t id);
+    void on_touch_motion(uint32_t time, int32_t id, int32_t fx, int32_t fy);
+    void on_touch_frame();
+    void on_touch_cancel();
+    // Resolve the Pending disambiguation window to the POINTER translation:
+    // deliver the synthesized enter-motion at the ORIGINAL down point, the
+    // left press there (on the logical OR's 0->1 edge), then any queued
+    // motion. Shared by the three resolutions — expiry, slop crossing, and
+    // the tap (whose caller then delivers the release + leave itself).
+    void resolve_touch_window_to_pointer();
+    // Sample the Pending window's deadline. Called from the timerfd tick
+    // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
+    // so expiry lands within one tick of the 60 ms mark) and lazily at every
+    // touch event's arrival, so an event past the deadline is processed
+    // against the resolved state.
+    void maybe_resolve_touch_window();
+    // Deliver the staged Pointer-phase motion (wl_touch.frame coalescing) —
+    // the touch twin of flush_deferred_motion, called at the frame boundary
+    // and ahead of every touch button delivery.
+    void flush_touch_frame_motion();
+    // End the touch source's contribution to the logical left hold: flush
+    // both staged motions while the bit still reads held, clear it, deliver
+    // the release at the owner's last position only on the logical 1->0 edge
+    // (the end_left_hold_source ordering, third source).
+    void end_touch_left_hold();
+    // Compute + deliver the Nav frame's centroid/distance update through the
+    // update hook (latch, fold-at-crossing, per-frame deltas — the contract
+    // is at set_touch_nav_hooks).
+    void deliver_touch_nav_frame();
+    // End a live Nav gesture: fire the end hook iff an update was delivered.
+    void end_touch_nav_gesture();
+    // THE HARD-END CONTRACT, shared verbatim by wl_touch.cancel and
+    // touch-capability loss (the edge inventory names it): commit-and-leave a
+    // live Pointer translation, end a live Nav gesture, drop a Pending window
+    // silently, forget all touch state.
+    void hard_end_touch_stream();
+    // Reset every touch field to its rest value (the one forget, so a new
+    // edge cannot land with one field remembered).
+    void forget_touch_state();
 
     // -- Pointer-capture helpers --
     // Create relative_pointer_ once both wl_pointer_ and the manager exist

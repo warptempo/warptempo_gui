@@ -174,9 +174,14 @@ struct Viewport {
     void apply_zoom_change(double new_zoom_level);
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
-    // rather than centering on the playhead the way apply_zoom_change does. The
-    // caller (apply_strip_drag_at) has already panned the viewport for this
-    // event; this places the anchor at the new level and clamps. For a pure pan
+    // rather than centering on the playhead the way apply_zoom_change does.
+    // TWO callers since 2026-08-11: apply_strip_drag_at (which has already
+    // panned the viewport for this event and hands the anchor's drifted,
+    // edge-rebindable column) and the two-finger touch-nav body
+    // apply_touch_nav_update (which folds its pan into the placement itself —
+    // the anchor is the content under the previous finger centroid, placed at
+    // the current one). Both pre-clamp the level; this places the anchor at
+    // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport
     // exactly. Never touches the playhead or selection. Repaint dispatch: a
     // mid-gesture event (final=false) with the level AND viewport both unchanged

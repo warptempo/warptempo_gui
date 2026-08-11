@@ -328,8 +328,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: the sole caller
-    // (apply_strip_drag_at) pre-clamps new_level into the same
+    // `level_changed` reports a real move, not a request: BOTH callers —
+    // apply_strip_drag_at and the two-finger touch-nav body
+    // (apply_touch_nav_update, which joined 2026-08-11 driving this same
+    // chokepoint per touch frame) — pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
     // below, so the pre-assignment compare cannot read a wall-saturated no-op as
     // movement. A both-unchanged frame suppresses nothing either way — mid-gesture

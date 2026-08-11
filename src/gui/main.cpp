@@ -968,6 +968,22 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
+    // The two-finger touch navigation (touch phase 1, 2026-08-11): the
+    // platform's centroid-pan + pinch-zoom frames drive the input handler's
+    // touch-nav body, which runs the strip-drag family's own viewport
+    // chokepoint — the set_keyboard_intent_cancel_hook wiring precedent, one
+    // narrow platform-to-GUI hook set. ONE finger needs no wiring at all: it
+    // is translated into the ordinary pointer deliveries above, and nothing on
+    // this side can tell which device produced them. Contracts at
+    // GuiPlatform::set_touch_nav_hooks (the platform half) and at
+    // apply_touch_nav_update's declaration (the GUI half, including why the
+    // gesture stops short of the strip drag's pointer-press arm).
+    gui.set_touch_nav_hooks(
+        [&](int x, int y, double dx, double dist_ratio) {
+            input_handler.apply_touch_nav_update(x, y, dx, dist_ratio);
+        },
+        [&]() { input_handler.end_touch_nav(); });
+
     auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
@@ -1147,6 +1163,13 @@ int main(int argc, char** argv) {
     // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03) — and SINCE
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
     // GuiPointerLeaveReason, because one effect below now differs between them.
+    // (SINCE TOUCH PHASE 1, 2026-08-11, every end of a touch pointer
+    // translation fires this hook too, always as OrdinaryLeave — the finger
+    // left the glass, delivered after its release. The body needed no change:
+    // clearing hover faces where a finger last was is precisely what the
+    // no-hover-under-touch consequence asks for, and the row-1 keep below
+    // reads the remembered position exactly as it does for a mouse. The fire
+    // sites are the touch edge inventory's, platform_wayland.h.)
     // The difference itself is the reason none of the clears may lean on "no
     // later event". Only
     // CAPABILITY LOSS ends that pointer stream outright — no motion and no

@@ -580,6 +580,64 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
+    // THE TWO-FINGER TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11): the
+    // platform's touch-nav update hook lands here — a PUBLIC entry point like
+    // on_key and on_motion above, because main.cpp's hook wiring calls it (the
+    // set_keyboard_intent_cancel_hook wiring precedent). Per delivered frame:
+    // (x, y) is the CURRENT finger centroid, dx the centroid's horizontal
+    // travel since the previous delivered frame (fractional), dist_ratio the
+    // finger-distance ratio current/previous (> 0; 1.0 = no zoom). The
+    // semantics are the strip drag's own dual axes, PER-FRAME ANCHORED: the
+    // content under the PREVIOUS centroid column is placed at the CURRENT
+    // centroid column under the new level, so the centroid delta pans and the
+    // distance ratio zooms about the centroid in one placement. The level maps
+    // a distance ratio LOGARITHMICALLY (new_level = level - log2(ratio)) — no
+    // feel constant: doubling the finger gap is exactly one zoom level in, so
+    // the content between the fingers tracks the fingers.
+    //
+    // IT DRIVES THE STRIP-DRAG FAMILY'S OWN APPLICATION CHOKEPOINT,
+    // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
+    // synchronous per-frame rebuild, and the either-axis follow suppression
+    // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
+    // The recorded justification for stopping short of arm_strip_drag_at /
+    // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
+    // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture
+    // hides and locks the mouse cursor, and the release warps the mouse to the
+    // gesture's restore x and rewrites the platform's tracked pointer position
+    // to it — real mouse state corrupted from glass); (2) a strip_drag.active
+    // gesture is TERMINATED by on_motion's button-lost arm the moment any real
+    // mouse motion arrives without a held button (mods.primary_button_held is
+    // false during a two-finger touch), so a nudged mouse would kill a live
+    // pinch. Both are structural, so the arm is pointer-coupled in exactly the
+    // sense the ruling anticipated.
+    //
+    // THE REFUSAL ANSWER IS THE WHEEL'S, not the press path's, and per frame
+    // rather than at entry: the gesture is the wheel's navigation-class
+    // sibling (it never delivers pointer events, punches through the
+    // keyboard-modal flag editor exactly as the wheel does, and navigates the
+    // same two surfaces), so wheel_context — the SINGLE wheel routing
+    // predicate — is asked at each frame's centroid, refusing under the
+    // prompt, an open dropdown, the bottom-strip modal editors, loading/empty
+    // audio and any live pointer gesture, and applying only over the waveform
+    // or the top strip. A modal opening MID-gesture therefore freezes it (the
+    // wheel's own behavior), and a live mouse gesture freezes it too (no two
+    // writers). The wheel's dismissal pair (dropdown close, tooltip hide) is
+    // deliberately NOT copied — this is a refusal, not a press act — but the
+    // DOUBLE-CLICK CANDIDATE IS CLEARED on every applied frame (the C8 rule: a
+    // navigation that moves content between two clicks must not let the second
+    // consume as a double-click).
+    //
+    // Navigation-class whole: no playhead, no selection, no region, allowed in
+    // read-only, and a mid-audition frame suppresses follow through the
+    // chokepoint's own either-axis line. Implemented beside the strip drag in
+    // input_pointer.cpp.
+    void apply_touch_nav_update(int x, int y, double dx, double dist_ratio);
+    // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
+    // or touch-capability loss; the platform fires this only if an update was
+    // delivered): one predictor resync, the grab-pan release's own tail — each
+    // applied frame already rebuilt synchronously, so nothing else is owed.
+    void end_touch_nav();
+
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every
     // rule about WHAT the cue means, are at pointer_cursor_kind below.
@@ -1527,6 +1585,12 @@ private:
     // synchronously too — one full rebuild per pointer frame whether the level
     // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
+
+    // (THE TWO-FINGER TOUCH-NAV BODY IS NOT HERE: apply_touch_nav_update and
+    // end_touch_nav are PUBLIC entry points — main.cpp's hook wiring calls
+    // them, like on_key and on_motion — declared beside those siblings above;
+    // their implementation lives beside the strip drag's in
+    // input_pointer.cpp, whose application chokepoint they share.)
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs

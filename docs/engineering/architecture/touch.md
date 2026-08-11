@@ -1,0 +1,83 @@
+# Touch: One Unified Mode (wl_touch as the Pointer)
+
+> Touch phase 1, architect-ratified 2026-08-11 — the touch arc's first CODE surface (row 8, the bottom toolbar, was its first GUI surface). This file is the arc's record the way kdenlive-redesign.md is the redesign's. The code shipped UNVERIFIED ON SILICON: the authoring laptop has no touchscreen and the target is the Pi rig's ROADOM panel (arrival imminent), so everything here was written to be inert without the capability and correct by construction, with every judgment call recorded. Retune the constants on glass, not on argument.
+
+### The Unified-Mode Ruling
+
+THE PREMISE IS ONE UNIFIED MODE, the architect's one settled ruling for the arc: same look, same behavior, same interaction language for mouse and touch. Phase 1 makes it literal — TOUCH IS THE POINTER, translated whole at the platform boundary (`platform_wayland.cpp`), and the GUI cannot tell which device produced an event. No touch mode, no flag, no detection, no GUI-side branch. Everything inherits by construction: every gate, refusal, modal claim, read-only rule, hit test and gesture the pointer has applies to a finger with zero new GUI semantics — stated here once rather than re-proven per gesture.
+
+### The Binding
+
+`wl_touch` is CORE protocol — wl_seat's third capability, the `wl_data_device_manager` precedent: the same wayland.xml, no new library, no pkg-config entry, no generated stub. It is bound from the existing seat listener when `WL_SEAT_CAPABILITY_TOUCH` is advertised and released on capability loss (through the hard-end contract below). It is NOT a required global and NOT a required capability: absence is SILENCE — no stderr, nothing degraded. The laptop simply has no glass; a seat without touch is the ordinary case, not a poor environment. Touch events arrive batched under `wl_touch.frame` and are processed per frame like pointer frames: down/up edges dispatch at arrival (the button model), motion coalesces to the frame boundary (the captured-relative-motion model), so a sensor-rate panel costs one delivery per frame.
+
+### The Translation Contract (One Finger IS the Pointer)
+
+The bare-`e` precedent — a key translated at the boundary into the left mouse button — applied to glass. The translation state is the platform's own, keyed on the touch id; the GUI sees ordinary pointer deliveries. The phase machine and the AUTHORITATIVE edge inventory live at the touch state block in `platform_wayland.h` (the `transport_repeat` precedent: one list at the state, each fire site keeping only its own clause); the shape:
+
+- FIRST touch-down (no touch state live) opens the DISAMBIGUATION WINDOW: {id, position, deadline} remembered, NOTHING delivered. The window exists only to tell one finger from two.
+- The window RESOLVES TO POINTER on: expiry (`kTouchDisambiguateMs`), motion beyond the slop (`kTouchSlopPx`), or the finger lifting inside it (a tap). Resolution delivers the synthesized enter-motion at the ORIGINAL down point, then the left press there, then any queued motion — and for the tap, the release immediately after. From then on touch motion is pointer motion and touch up is the release.
+- EVERY touch-up that ends a pointer translation delivers the release and then an ORDINARY pointer leave (`GuiPointerLeaveReason::OrdinaryLeave`): the finger left the glass, which IS a leave — this is what keeps hover faces from resting lit where a finger last was. The remembered-position machinery and the menu-row band rules already handle ordinary leaves; nothing special-cases them.
+- THE LOGICAL LEFT BUTTON IS ONE BIT WITH THREE SOURCES: `pointer_left_held_ || synth_left_held_ || touch_left_held_` — the evdev model for devices sharing BTN_LEFT, extended from the bare-`e` pair. A press is delivered only on the OR's 0→1 edge and a release only on its 1→0 edge, so the sources never double-deliver, and `current_mods()` ORs all three into `primary_button_held` (without which a touch drag would tear on its first motion). Each source's hold ends on ITS OWN stream's edges only: the keyboard edges end the synth hold, pointer-capability loss ends the physical and synth holds, the touch edges end the touch hold.
+- The resolution press is a pointer-button press in full: it kills an armed key repeat (layer 1 of the repeat contract — the edge list at `on_keyboard_key` now names three press producers) and flushes both staged motions ahead of itself (the `flush_deferred_motion` invariant, which the touch delivery sites joined).
+- Physical keyboard modifiers ride along to touch deliveries exactly as to a mouse: `current_mods()` is the one modifier truth, so Shift+tap is a Shift+click with no new code.
+
+### The Disambiguation Constants (Ruled Retunables)
+
+Both live in `platform_wayland.cpp`'s anonymous namespace, with the full tuning rationale at the site:
+
+- `kTouchDisambiguateMs` = 60 — the one-finger-or-two window. Sampled on the timerfd tick beside the key-repeat deadline (the run loop's one deadline-sampling spot) plus lazily at every touch event's arrival, so expiry lands within one tick (≤ ~16 ms) of the mark; the window is a feel bound, not an exact timer.
+- `kTouchSlopPx` = 8.0 — physical px; resolves the window early on motion (a finger already dragging should not wait the window out) and, reused, is the two-finger gesture's latch. It DELIBERATELY EQUALS the GUI's one generic press-becomes-drag gate (`kDragMovedThresholdPx`; stated rather than shared — the platform sits below the GUI model), so a slop-crossing resolution's queued motion crosses the GUI's own drag gate in the same burst as the press: a touch drag becomes a drag the moment it resolves.
+
+### Two Fingers = Pan + Zoom (Navigation-Class)
+
+Both fingers down inside the window (or landing in one frame) is the NAVIGATION gesture: per-frame centroid horizontal delta pans, per-frame finger-distance ratio zooms ABOUT THE CENTROID's column — the strip drag's dual-axis semantics. The gesture never delivers pointer events.
+
+THE DELIVERY SHAPE TAKEN, and why (the phase-1 brief offered the strip-drag pointer entries as the preferred shape with a recorded fallback; this is the fallback, taken at the family's deepest shared point): a narrow platform-to-GUI hook set wired in main.cpp (`GuiPlatform::set_touch_nav_hooks` → `GuiInputHandler::apply_touch_nav_update` / `end_touch_nav`, the `set_keyboard_intent_cancel_hook` wiring precedent) whose per-frame update drives `Viewport::apply_strip_drag_zoom` — the strip-drag family's own application chokepoint — so the level clamp, the viewport clamp (`clamp_viewport_start`), the synchronous per-frame rebuild and the either-axis follow suppression all come from the one owner. The family's POINTER-PRESS ARM (`arm_strip_drag_at` / `StripDragState`) is deliberately not driven, for two structural reasons recorded at the declaration: (1) the arm unconditionally CAPTURES THE REAL POINTER — it would hide and lock the mouse cursor during a touch gesture, and the capture's release warps the mouse and rewrites the platform's tracked pointer position to the gesture's restore x, corrupting real mouse state from glass; (2) a `strip_drag.active` gesture is TERMINATED by `on_motion`'s button-lost arm the moment any real mouse motion arrives without a held button — which is every mouse motion during a two-finger touch — so a nudged mouse would kill a live pinch. No ctrl-modified pointer press is faked anywhere (modifier state belongs to xkb).
+
+The mechanics, all at their sites:
+
+- The ZOOM mapping is LOGARITHMIC and constant-free: `new_level = level − log2(dist_ratio)`, so doubling the finger gap is exactly one zoom level in and the content between the fingers scales with the fingers. Pre-clamped into `[kMinZoom, effective_max_zoom_level]` exactly as `apply_strip_drag_at` pre-clamps (the chokepoint's `level_changed` contract names both callers).
+- The PAN is folded into the same placement: the content under the PREVIOUS centroid column is placed at the CURRENT centroid column under the new level — one `apply_strip_drag_zoom` call does both axes. PER-FRAME ANCHORED (the ratified semantics), so there is no persistent song anchor and no edge-trick rebind to need.
+- THE LATCH is the platform's, the strip drag's own press-becomes-drag model in the touch's own unit: nothing is delivered until the centroid travels `kTouchSlopPx` (Chebyshev) from the two-finger start OR the finger distance changes by that same slop, and the crossing update folds the whole accumulated delta — so a two-finger tap navigates nothing and costs the GUI nothing (the end hook fires only if an update was delivered).
+- THE REFUSAL ANSWER IS THE WHEEL'S, per frame: the gesture is the wheel's navigation-class sibling — it delivers no pointer events, punches through the keyboard-modal flag editor exactly as the wheel does, and navigates the wheel's two surfaces — so `wheel_context` (the SINGLE wheel routing predicate) is asked at each frame's centroid. That refuses under the prompt, an open dropdown, the bottom-strip modal editors, loading/empty audio and ANY live pointer gesture, and applies only over the waveform or the top strip. A modal opening mid-gesture freezes it (the wheel's own behavior), and a live mouse gesture freezes it too, so two devices cannot write the viewport at once in that direction; the converse — a mouse gesture ARMING while a touch gesture is mid-flight — is accepted as the user's own two-handed act (each writer is incremental over live state and every write clamps through the one chokepoint). The wheel's dismissal pair (dropdown close, tooltip hide) is deliberately NOT copied — this is a refusal, not a press act — but every applied frame CLEARS THE DOUBLE-CLICK CANDIDATE (the C8 rule: navigation that moves content between two taps must not let the second tap consume as a double-click).
+- One finger lifting ENDS the gesture (any end commits); the survivor is IGNORED until all fingers lift (the drain phase). A third finger is ignored. No pinch-vs-pan mode split: both axes live simultaneously, the strip drag's own model. The end is the grab-pan release's own tail — one predictor resync; each applied frame already rebuilt synchronously.
+- The gesture joins neither the platform's key-repeat disarm list nor the transport hold's edge list: those are ruled event-edge enumerations (key press / pointer press / completed wheel emission) and a two-finger frame is none of them. Recorded as a judgment rather than an omission — a codex round can contest it.
+
+### The Ignore Rules
+
+- A SECOND finger landing while a pointer translation is LIVE (post-resolution) is IGNORED whole — recorded (the touch-point count), not routed: mid-gesture finger-count changes do not mutate a committed gesture (the any-end-commits family).
+- A second finger landing INSIDE the window resolves to the two-finger gesture, and no press was ever delivered — nothing to unwind, the window's whole purpose.
+- A THIRD finger during the navigation gesture is ignored; a finger landing during the drain is ignored.
+- When the translating finger lifts while an ignored finger is still down, the remaining fingers are DRAINED — ignored until the glass is clear — rather than opening a fresh window: the survivor of a committed gesture does not become a new gesture (a judgment recorded at the phase machine; the alternative would let a sloppy two-finger lift re-arm as a fresh press).
+
+### The Hard Ends
+
+`wl_touch.cancel` (the compositor claims the touches) and TOUCH capability loss share ONE contract (`hard_end_touch_stream`, the pointer-capability-loss precedent):
+
+- a live pointer translation gets its release DELIVERED at the last position — one delivered release on the logical edge, a commit, not a vanish (a vanished hold would latch the drag-modal gate with no event left to lift it) — then the ordinary leave, exactly as the finger's own lift would have delivered;
+- a live two-finger gesture ENDS through its end path (commits, iff anything was applied);
+- an unresolved disambiguation window is dropped silently (nothing was delivered, so there is nothing to end);
+- all touch state is forgotten either way, through the one forget (`forget_touch_state`).
+
+The leave delivered on every touch end is ORDINARY, never CapabilityLoss — that reason names the wl_pointer stream's own death, and a touch edge says nothing about the mouse. Shutdown (`destroy_wayland_state`) is NOT an input edge: the proxy is released with no deliveries, exactly as the keyboard and pointer teardowns there deliver nothing. The pointer- and keyboard-capability edges never reach into touch state, and touch edges never reach into theirs.
+
+### Touch Never Writes the Pointer's Fields
+
+A deliberate split, recorded at the state block: `pointer_x_`/`pointer_y_` are wl_pointer's own — the wheel emits there, the bare-`e` press lands there, the capture machinery rewrites them — and every touch delivery carries its own explicit coordinates, so the unified "one pointer" view lives in the DELIVERIES while each device's platform state stays self-consistent. Touch likewise does not clear `pointer_position_unknown_` (a touch says nothing about where the mouse cursor is drawn) and does not gate on `pointer_focused_` (wl_touch delivers only to the touched surface; a mouse-focus bit is not its business). Consequence, accepted: a stray mouse click during a touch session routes at the MOUSE's last known position, which is that click's honest answer.
+
+### No Hover Under Touch — Cues, Not Functions
+
+A finger has no resting position: contact is a press (after the window) and lift is a leave, so the hover-derived surfaces simply never fire from glass — button hover faces, the 700 ms shift-tooltip dwell, the menu-row armed-hover open all want a pointer that rests where nothing is pressed, and a finger never supplies one. These are CUES, not functions: every act they advertise is reachable by its chord or its press, so nothing is lost, and nothing was special-cased to make this true — it falls out of the leave-on-lift contract. Two recorded edges of the same coin: whatever a resting HELD pointer does today (a pressed button's face, a dwell that elapses under a held press) a held finger does identically — the unified premise means there is no touch-specific answer either way — and a finger lifting fires the same leave hook a mouse's window-exit does, so a mouse cursor coincidentally resting on a hover zone loses its lit face to a tap's leave until its own next motion re-derives it (the accepted-glitch class, self-healing on the next pointer event).
+
+One inherited oddity, recorded rather than guarded: a ONE-FINGER drag on the ruler band IS the strip drag (the unified premise working as ratified), and that gesture's own machinery captures the real pointer — so a touch ruler-drag hides the mouse cursor for its duration and the release warps the mouse to the anchor stem's column. That is the gesture behaving as the gesture, not a defect in the translation; the two-finger path avoids the capture because it never enters the pointer-press arm at all.
+
+### Out of Scope — Deliberately
+
+None of these constrains phase 1's shape:
+
+- LONG-PRESS: reserved, binds nothing. (Note for the eventual design: under the current contract a long-press is simply a held left button after the 60 ms window.)
+- SYNTHESIZED SHIFT / shift-variant buttons: the architect's open question.
+- RIGHT-CLICK SYNTHESIS: the lower-half plain press already scrubs; the full-height right-press stays mouse-only for now.
+- TEXT ENTRY / wvkbd.
+- THE RENDER-TO-STICK BUTTON.
+- ANY TRIM-GESTURE REDESIGN.

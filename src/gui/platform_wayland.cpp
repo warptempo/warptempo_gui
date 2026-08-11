@@ -163,6 +163,34 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
     if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
+// THE TOUCH DISAMBIGUATION CONSTANTS, both RULED RETUNABLES (touch phase 1,
+// 2026-08-11 — feel constants shipping unverified ahead of the target panel's
+// arrival; retune on silicon, not on argument).
+//
+// kTouchDisambiguateMs is the window between the FIRST finger's down and the
+// commitment to the one-finger pointer translation — it exists ONLY to tell
+// one finger from two, so a second finger landing inside it becomes the
+// navigation gesture with no press ever delivered and nothing to unwind. 60 ms
+// is short enough that a deliberate tap feels immediate and long enough that
+// the two fingers of an intended pinch, which land a frame or two apart, are
+// seen as a pair. The deadline is sampled on the timerfd tick (the key-repeat
+// precedent), so expiry lands within one tick (<= ~16 ms) of the mark — the
+// window is a feel bound, not an exact timer.
+//
+// kTouchSlopPx is the physical-pixel travel that resolves the window EARLY to
+// the pointer (a finger that is already dragging should not wait out the
+// window) and, reused, the two-finger gesture's latch (centroid travel or
+// finger-distance change past it starts navigating; under it a two-finger
+// tap navigates nothing). 8 px DELIBERATELY EQUALS the GUI's one generic
+// press-becomes-drag gate (kDragMovedThresholdPx, app_state.h — not included
+// here; the platform sits below the GUI model, so the twin value is stated
+// rather than shared): a slop-crossing resolution delivers its crossing
+// motion in the same burst as the press, and that motion crosses the GUI's
+// own drag gate by construction, so a touch drag becomes a drag the moment
+// it resolves.
+constexpr int    kTouchDisambiguateMs = 60;
+constexpr double kTouchSlopPx         = 8.0;
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -341,6 +369,36 @@ struct WaylandListeners {
     static void pointer_axis_relative_direction(void*, struct wl_pointer*,
                                                 uint32_t, uint32_t) {}
 
+    // wl_touch (touch phase 1: one finger is the pointer, two are the
+    // navigation gesture — the machine lives in the on_touch_* members).
+    // shape and orientation are v6+ slots; the seat binds at v8, so they can
+    // be dispatched and get do-nothing stubs (the abort-on-NULL rule). The
+    // panel's contact geometry is nothing this program reads — a touch is a
+    // point here, exactly as a pointer is.
+    static void touch_down(void* data, struct wl_touch*, uint32_t serial,
+                           uint32_t time, struct wl_surface* /*surface*/,
+                           int32_t id, wl_fixed_t x, wl_fixed_t y) {
+        static_cast<GuiPlatform*>(data)->on_touch_down(serial, time, id, x, y);
+    }
+    static void touch_up(void* data, struct wl_touch*, uint32_t serial,
+                         uint32_t time, int32_t id) {
+        static_cast<GuiPlatform*>(data)->on_touch_up(serial, time, id);
+    }
+    static void touch_motion(void* data, struct wl_touch*, uint32_t time,
+                             int32_t id, wl_fixed_t x, wl_fixed_t y) {
+        static_cast<GuiPlatform*>(data)->on_touch_motion(time, id, x, y);
+    }
+    static void touch_frame(void* data, struct wl_touch*) {
+        static_cast<GuiPlatform*>(data)->on_touch_frame();
+    }
+    static void touch_cancel(void* data, struct wl_touch*) {
+        static_cast<GuiPlatform*>(data)->on_touch_cancel();
+    }
+    static void touch_shape(void*, struct wl_touch*, int32_t,
+                            wl_fixed_t, wl_fixed_t) {}
+    static void touch_orientation(void*, struct wl_touch*, int32_t,
+                                  wl_fixed_t) {}
+
     // zwp_relative_pointer_v1
     static void relative_motion(void* data, struct zwp_relative_pointer_v1*,
                                 uint32_t /*utime_hi*/, uint32_t /*utime_lo*/,
@@ -495,6 +553,16 @@ const struct wl_pointer_listener s_pointer_listener = {
     WaylandListeners::pointer_axis_discrete,
     WaylandListeners::pointer_axis_value120,
     WaylandListeners::pointer_axis_relative_direction,
+};
+
+const struct wl_touch_listener s_touch_listener = {
+    WaylandListeners::touch_down,
+    WaylandListeners::touch_up,
+    WaylandListeners::touch_motion,
+    WaylandListeners::touch_frame,
+    WaylandListeners::touch_cancel,
+    WaylandListeners::touch_shape,
+    WaylandListeners::touch_orientation,
 };
 
 const struct zwp_relative_pointer_v1_listener s_relative_pointer_listener = {
@@ -832,6 +900,13 @@ void GuiPlatform::destroy_wayland_state() {
     if (wl_pointer_) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
+    }
+    // Shutdown is not an input edge: the touch proxy is released with no
+    // deliveries, exactly as the keyboard and pointer teardowns above deliver
+    // nothing (the edge inventory at the touch state block records this).
+    if (wl_touch_) {
+        wl_touch_release(wl_touch_);
+        wl_touch_ = nullptr;
     }
     if (wl_seat_) {
         // wl_seat.release is a v5+ request. We now bind at v8, but
@@ -1401,6 +1476,10 @@ void GuiPlatform::run() {
             (void)read(timerfd_, &expirations, sizeof(expirations));
             if (on_tick_) on_tick_();
             maybe_fire_repeat();
+            // The touch disambiguation window's deadline rides the same tick
+            // the key-repeat deadline does (its lazy twin runs at each touch
+            // event's arrival; granularity is recorded at the constant).
+            maybe_resolve_touch_window();
         }
 
         if (worker_completion_fd_ >= 0 && (pfds[2].revents & POLLIN)) {
@@ -1826,8 +1905,10 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // the GESTURES below. THE HOLDS END NEXT, both sources — the synthesized
         // bare-`e` one included, its gesture being a pointer gesture in all but
         // origin — because an undelivered release would latch the drag-modal gate
-        // with no event left to lift it; the pair delivers exactly one release
-        // (each fires only on the logical OR's 1->0 edge) and zeroes
+        // with no event left to lift it; the pair delivers AT MOST one release
+        // (each fires only on the logical OR's 1->0 edge, and a live TOUCH
+        // hold — the OR's third source — keeps the logical button down, its
+        // own stream owning the eventual release) and zeroes
         // synth_left_keycode_, so the later `e` keyup matches nothing. THEY
         // PRECEDE end_pointer_capture because unlocking rewrites pointer_x_/y_ to
         // the cursor restore hint, and the release — with a moved strip drag's
@@ -1865,7 +1946,28 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         frame_have_axis_    = false;
         frame_have_relmotion_ = false;
     }
-    // Touch capability bit remains ignored.
+
+    const bool has_touch = (caps & WL_SEAT_CAPABILITY_TOUCH) != 0;
+    if (has_touch && !wl_touch_) {
+        // wl_touch is NOT a required capability and its absence is SILENCE — no
+        // stderr, nothing degraded: a seat without glass is the ordinary case
+        // on the authoring laptop, not a poor environment.
+        wl_touch_ = wl_seat_get_touch(wl_seat_);
+        wl_touch_add_listener(wl_touch_, &s_touch_listener, this);
+    } else if (!has_touch && wl_touch_) {
+        // THE HARD END OF THE TOUCH STREAM: no motion, up, or cancel will
+        // arrive on this object again. The contract is wl_touch.cancel's,
+        // shared whole (hard_end_touch_stream): a live pointer translation
+        // commits — release delivered at the last position, then the ordinary
+        // leave — a live two-finger gesture ends through its end path, an
+        // unresolved disambiguation window drops silently, and all touch state
+        // is forgotten. The pointer- and keyboard-capability edges above
+        // deliberately do not reach in here: each input source dies on its own
+        // stream's edges.
+        hard_end_touch_stream();
+        wl_touch_release(wl_touch_);
+        wl_touch_ = nullptr;
+    }
 }
 
 void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
@@ -2037,7 +2139,10 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
             // The synthesized button is a button: this press is a context event
             // that kills an armed key repeat (layer 1), same as a physical one.
             repeat_key_ = 0;
-            const bool was_held = pointer_left_held_;   // logical, synth is false
+            // Logical state before this source's edge: synth is false here, so
+            // the OR is the other two sources (a touch hold counts — three
+            // devices sharing BTN_LEFT never double-deliver).
+            const bool was_held = pointer_left_held_ || touch_left_held_;
             synth_left_held_    = true;
             synth_left_keycode_ = xkb_keycode;
             if (!was_held && on_button_press_) {
@@ -2058,8 +2163,9 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     // command is one-shot, and an ineligible press disarms any armed repeat.
     // The repeat contract is two layers: (1) the stored intent dies on exactly
     // three input edges — a different key press (which re-arms or disarms here
-    // via press-time eligibility), a pointer-button PRESS (physical or the
-    // synthesized `e`), and a COMPLETED wheel emission — each clearing
+    // via press-time eligibility), a pointer-button PRESS (physical, the
+    // synthesized `e`, or the touch translation's resolution press), and a
+    // COMPLETED wheel emission — each clearing
     // repeat_key_ at its platform input chokepoint; pointer motion, button
     // release, and sub-detent scroll accumulation deliberately do not disarm;
     // (2) each fire additionally re-checks the level conditions (eligibility
@@ -2167,10 +2273,12 @@ GuiInputState GuiPlatform::current_mods() const {
     s.ctrl  = mod_ctrl_;
     s.shift = mod_shift_;
     s.alt   = mod_alt_;
-    // Logical left button: either the physical BTN_LEFT or the kLeftClickKey
-    // synthesized hold. Drags consult this bit on motion; without the OR a
-    // synthesized-key drag tears on the first motion event.
-    s.primary_button_held = pointer_left_held_ || synth_left_held_;
+    // Logical left button: the physical BTN_LEFT, the kLeftClickKey
+    // synthesized hold, or the touch translation's hold. Drags consult this
+    // bit on motion; without the OR a synthesized-key or touch drag tears on
+    // the first motion event.
+    s.primary_button_held =
+        pointer_left_held_ || synth_left_held_ || touch_left_held_;
     return s;
 }
 
@@ -2434,11 +2542,14 @@ void GuiPlatform::flush_deferred_motion() {
 void GuiPlatform::end_left_hold_source(bool physical) {
     const bool held = physical ? pointer_left_held_ : synth_left_held_;
     if (!held) return;
-    // Deliver only on the logical OR 1->0 edge: this source going up while the
-    // OTHER source is not held. Flush the deferred motion FIRST (see the header)
-    // while this source's bit still reads held, then clear, then deliver.
-    const bool deliver_release =
-        (physical ? !synth_left_held_ : !pointer_left_held_) && on_button_release_;
+    // Deliver only on the logical OR 1->0 edge: this source going up while
+    // NEITHER other source is held (the touch translation is the third — its
+    // own end lives in end_touch_left_hold, which tests these two the same
+    // way). Flush the deferred motion FIRST (see the header) while this
+    // source's bit still reads held, then clear, then deliver.
+    const bool others_held =
+        (physical ? synth_left_held_ : pointer_left_held_) || touch_left_held_;
+    const bool deliver_release = !others_held && on_button_release_;
     if (deliver_release) flush_deferred_motion();
     if (physical) {
         pointer_left_held_ = false;
@@ -2485,8 +2596,9 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     // of the button-lost teardown, so an unmoved-until-now fast drag commits and
     // a fast trim-bar click seeds its double-click candidate.
     if (button == BTN_LEFT) {
-        const bool was_held = pointer_left_held_ || synth_left_held_;
-        const bool now_held = pressed || synth_left_held_;
+        const bool was_held =
+            pointer_left_held_ || synth_left_held_ || touch_left_held_;
+        const bool now_held = pressed || synth_left_held_ || touch_left_held_;
         if (now_held == was_held) {
             pointer_left_held_ = pressed;   // keep the source bit current
             return;                          // no logical edge — swallow
@@ -2707,6 +2819,363 @@ void GuiPlatform::on_pointer_frame() {
     frame_have_axis_  = false;
     frame_have_relmotion_ = false;
 }
+// ---------------------------------------------------------------------------
+// Touch event handlers (wl_touch as the pointer; touch phase 1, 2026-08-11)
+//
+// The phase machine, the translation contract and the AUTHORITATIVE edge
+// inventory live at the touch state block in platform_wayland.h; each body
+// below states only its own clause. The GUI sees ordinary pointer deliveries
+// (one finger) or the touch-nav hooks (two fingers) and nothing else.
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::maybe_resolve_touch_window() {
+    if (touch_phase_ != TouchPhase::Pending) return;
+    if (monotonic_us() < touch_window_deadline_us_) return;
+    // The window EXPIRED with one finger down: it is the pointer.
+    resolve_touch_window_to_pointer();
+}
+
+void GuiPlatform::resolve_touch_window_to_pointer() {
+    // Pending -> Pointer, delivering what the window withheld: the synthesized
+    // entry motion at the ORIGINAL down point (the pointer enter's own shape —
+    // the first "the pointer is here" notification), the left press there, and
+    // any queued motion. Shared by all three resolutions; the tap's caller
+    // delivers the release and the leave itself, immediately after.
+    touch_phase_ = TouchPhase::Pointer;
+    // std::nearbyint at every delivery: touch positions are fractional on real
+    // panels, and this is the project's one fractional->integer conversion.
+    const int down_x = static_cast<int>(std::nearbyint(touch_down_x_));
+    const int down_y = static_cast<int>(std::nearbyint(touch_down_y_));
+    if (on_motion_) on_motion_(down_x, down_y, current_mods());
+    // A pointer-button press is a context event that kills an armed key repeat
+    // (layer 1 of the repeat contract), exactly as the physical BTN_LEFT and
+    // the synthesized-`e` presses do at their own delivery sites.
+    repeat_key_ = 0;
+    // The logical left's OR-edge model, third source: the press is delivered
+    // only on the 0->1 edge, with the bit set first so the press reads held
+    // (the on_pointer_button ordering).
+    const bool was_held = pointer_left_held_ || synth_left_held_;
+    touch_left_held_ = true;
+    if (!was_held && on_button_press_) {
+        flush_deferred_motion();
+        on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods());
+    }
+    // The queued motion: sub-slop drift for the expiry and tap resolutions,
+    // the slop-crossing position itself for the motion one — either way the
+    // finger's latest position, delivered after the press so a drag armed by
+    // the press sees its first motion in the same burst.
+    if (touch_window_moved_ &&
+        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_) &&
+        on_motion_) {
+        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
+                   static_cast<int>(std::nearbyint(touch_last_y_)),
+                   current_mods());
+    }
+    touch_window_moved_         = false;
+    touch_frame_motion_pending_ = false;
+}
+
+void GuiPlatform::flush_touch_frame_motion() {
+    // The touch twin of flush_deferred_motion: Pointer-phase motion is
+    // coalesced to the wl_touch.frame boundary, and a button delivery in the
+    // same frame must see the latest position first (delivered while the hold
+    // still reads held, so the motion takes the live-drag path).
+    if (touch_frame_motion_pending_ && on_motion_) {
+        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
+                   static_cast<int>(std::nearbyint(touch_last_y_)),
+                   current_mods());
+    }
+    touch_frame_motion_pending_ = false;
+}
+
+void GuiPlatform::end_touch_left_hold() {
+    if (!touch_left_held_) return;
+    // The end_left_hold_source ordering for the third source: deliver only on
+    // the logical 1->0 edge (neither sibling source held); flush BOTH staged
+    // motions FIRST, while this bit still reads held; then clear; then deliver
+    // at the owner's last position.
+    const bool deliver_release =
+        !pointer_left_held_ && !synth_left_held_ && on_button_release_;
+    if (deliver_release) {
+        flush_touch_frame_motion();
+        flush_deferred_motion();
+    }
+    touch_left_held_ = false;
+    if (deliver_release) {
+        on_button_release_(GuiMouseButton::Left,
+                           static_cast<int>(std::nearbyint(touch_last_x_)),
+                           static_cast<int>(std::nearbyint(touch_last_y_)),
+                           current_mods());
+    }
+}
+
+void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
+                                int32_t id, int32_t fx, int32_t fy) {
+    maybe_resolve_touch_window();   // an event past the deadline sees Pointer
+    ++touch_point_count_;
+    const double x = wl_fixed_to_double(fx);
+    const double y = wl_fixed_to_double(fy);
+    switch (touch_phase_) {
+        case TouchPhase::Idle:
+            // The FIRST finger opens the disambiguation window: remember
+            // {id, position, deadline} and deliver NOTHING — the window exists
+            // only to tell one finger from two (the constants above own the
+            // tuning rationale). The deadline is monotonic, not the event
+            // timestamp (whose base this program never compares against).
+            touch_phase_    = TouchPhase::Pending;
+            touch_owner_id_ = id;
+            touch_down_x_ = touch_last_x_ = x;
+            touch_down_y_ = touch_last_y_ = y;
+            touch_window_deadline_us_ =
+                monotonic_us() +
+                static_cast<uint64_t>(kTouchDisambiguateMs) * 1000ull;
+            touch_window_moved_ = false;
+            break;
+        case TouchPhase::Pending: {
+            if (id == touch_owner_id_) break;  // protocol nonsense; ignore
+            // A SECOND finger inside the window: the two-finger navigation
+            // gesture, and no press was ever delivered — nothing to unwind,
+            // which is the window's whole purpose. The pair is seeded from the
+            // owner's latest position and the new point; the latch reference
+            // and the per-frame delta basis both start here.
+            touch_phase_   = TouchPhase::Nav;
+            touch_nav_id2_ = id;
+            touch_nav_x1_  = touch_last_x_;
+            touch_nav_y1_  = touch_last_y_;
+            touch_nav_x2_  = x;
+            touch_nav_y2_  = y;
+            const double cx = 0.5 * (touch_nav_x1_ + touch_nav_x2_);
+            const double cy = 0.5 * (touch_nav_y1_ + touch_nav_y2_);
+            const double d  = std::hypot(touch_nav_x2_ - touch_nav_x1_,
+                                         touch_nav_y2_ - touch_nav_y1_);
+            touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
+            touch_nav_start_cy_   = cy;
+            touch_nav_start_dist_ = touch_nav_last_dist_ = d;
+            touch_nav_latched_     = false;
+            touch_nav_delivered_   = false;
+            touch_nav_frame_dirty_ = false;
+            break;
+        }
+        case TouchPhase::Pointer:
+            // A second finger during a live translation is IGNORED whole —
+            // recorded (the count above), not routed: mid-gesture finger-count
+            // changes do not mutate a committed gesture (the any-end-commits
+            // family).
+            break;
+        case TouchPhase::Nav:    // a third finger is ignored
+        case TouchPhase::Drain:  // fingers landing mid-drain are ignored
+            break;
+    }
+}
+
+void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
+                              int32_t id) {
+    maybe_resolve_touch_window();
+    if (touch_point_count_ > 0) --touch_point_count_;
+    switch (touch_phase_) {
+        case TouchPhase::Idle:
+            break;
+        case TouchPhase::Pending:
+            if (id != touch_owner_id_) break;  // only the owner exists here
+            // A TAP: the finger lifted inside the window, so the whole burst
+            // delivers now — the resolution's enter-motion + press (+ any
+            // queued sub-slop motion), then the Pointer arm below adds the
+            // release and the leave immediately after.
+            resolve_touch_window_to_pointer();
+            [[fallthrough]];
+        case TouchPhase::Pointer:
+            if (id != touch_owner_id_) break;  // an ignored finger lifting
+            end_touch_left_hold();
+            touch_frame_motion_pending_ = false;
+            // EVERY touch-up that ends a pointer translation is an ORDINARY
+            // pointer leave: the finger left the glass, which IS a leave —
+            // this is what keeps hover faces from resting lit where a finger
+            // last was. The remembered-position machinery and the menu-row
+            // band rules already handle ordinary leaves; nothing here
+            // special-cases them. Fired even when the release itself was
+            // swallowed by a sibling source's live hold (the finger still
+            // left). A mouse cursor happening to rest on a hover zone loses
+            // its lit face to this clear until its next motion re-derives it
+            // — the accepted-glitch class, self-healing on the next pointer
+            // event.
+            if (pointer_left_hook_)
+                pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+            touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
+                                                  : TouchPhase::Idle;
+            break;
+        case TouchPhase::Nav:
+            if (id != touch_owner_id_ && id != touch_nav_id2_) break;
+            // One finger lifting ENDS the gesture (any end commits); the
+            // survivor is IGNORED until all fingers lift — the drain.
+            end_touch_nav_gesture();
+            touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
+                                                  : TouchPhase::Idle;
+            break;
+        case TouchPhase::Drain:
+            break;
+    }
+    if (touch_phase_ == TouchPhase::Drain && touch_point_count_ == 0)
+        touch_phase_ = TouchPhase::Idle;
+}
+
+void GuiPlatform::on_touch_motion(uint32_t /*time*/, int32_t id,
+                                  int32_t fx, int32_t fy) {
+    maybe_resolve_touch_window();
+    const double x = wl_fixed_to_double(fx);
+    const double y = wl_fixed_to_double(fy);
+    switch (touch_phase_) {
+        case TouchPhase::Pending:
+            if (id != touch_owner_id_) break;
+            touch_last_x_ = x;
+            touch_last_y_ = y;
+            touch_window_moved_ = true;
+            // Motion beyond the slop resolves the window EARLY — a finger
+            // already dragging should not wait the window out. The crossing
+            // position is the queued motion the resolution replays, and at
+            // kTouchSlopPx == the GUI's own drag gate it crosses that gate in
+            // the same burst as the press (the constants' comment).
+            if (std::max(std::abs(x - touch_down_x_),
+                         std::abs(y - touch_down_y_)) >= kTouchSlopPx) {
+                resolve_touch_window_to_pointer();
+            }
+            break;
+        case TouchPhase::Pointer:
+            if (id != touch_owner_id_) break;   // ignored fingers stay ignored
+            touch_last_x_ = x;
+            touch_last_y_ = y;
+            // Coalesced to the wl_touch.frame boundary — the pointer-frame
+            // precedent: a panel can report at sensor rate, and the strip
+            // drag's synchronous per-event repaint wants one delivery per
+            // frame. Button deliveries flush this first.
+            touch_frame_motion_pending_ = true;
+            break;
+        case TouchPhase::Nav:
+            if (id == touch_owner_id_) {
+                touch_nav_x1_ = x;
+                touch_nav_y1_ = y;
+            } else if (id == touch_nav_id2_) {
+                touch_nav_x2_ = x;
+                touch_nav_y2_ = y;
+            } else {
+                break;                          // a third finger's motion
+            }
+            touch_nav_frame_dirty_ = true;
+            break;
+        case TouchPhase::Idle:
+        case TouchPhase::Drain:
+            break;
+    }
+}
+
+void GuiPlatform::on_touch_frame() {
+    // The per-frame drain, the wl_pointer.frame precedent: one motion delivery
+    // (Pointer) or one nav update (Nav) per logical touch frame, whatever the
+    // sensor rate.
+    maybe_resolve_touch_window();
+    if (touch_phase_ == TouchPhase::Pointer) {
+        flush_touch_frame_motion();
+    } else if (touch_phase_ == TouchPhase::Nav && touch_nav_frame_dirty_) {
+        touch_nav_frame_dirty_ = false;
+        deliver_touch_nav_frame();
+    }
+}
+
+void GuiPlatform::deliver_touch_nav_frame() {
+    const double cx   = 0.5 * (touch_nav_x1_ + touch_nav_x2_);
+    const double cy   = 0.5 * (touch_nav_y1_ + touch_nav_y2_);
+    const double dist = std::hypot(touch_nav_x2_ - touch_nav_x1_,
+                                   touch_nav_y2_ - touch_nav_y1_);
+    if (!touch_nav_latched_) {
+        // The LATCH: nothing navigates until the centroid has travelled the
+        // slop (Chebyshev, the drag gate's own metric) or the finger distance
+        // has changed by it — so a two-finger tap navigates nothing. The
+        // crossing folds the whole accumulated delta (the strip drag's own
+        // crossing model): last_cx/last_dist still hold the two-finger start.
+        const bool travel =
+            std::max(std::abs(cx - touch_nav_start_cx_),
+                     std::abs(cy - touch_nav_start_cy_)) >= kTouchSlopPx;
+        const bool pinch =
+            std::abs(dist - touch_nav_start_dist_) >= kTouchSlopPx;
+        if (!travel && !pinch) return;
+        touch_nav_latched_ = true;
+    }
+    // A pair collapsed under 1 px on either end of the ratio zooms nothing
+    // that frame — a degenerate distance has no ratio.
+    constexpr double kMinNavDistPx = 1.0;
+    const double ratio =
+        (touch_nav_last_dist_ >= kMinNavDistPx && dist >= kMinNavDistPx)
+            ? dist / touch_nav_last_dist_
+            : 1.0;
+    const double dx = cx - touch_nav_last_cx_;
+    touch_nav_last_cx_   = cx;
+    touch_nav_last_dist_ = dist;
+    if (dx == 0.0 && ratio == 1.0) return;  // a no-op frame delivers nothing
+    touch_nav_delivered_ = true;
+    if (touch_nav_update_hook_)
+        touch_nav_update_hook_(static_cast<int>(std::nearbyint(cx)),
+                               static_cast<int>(std::nearbyint(cy)),
+                               dx, ratio);
+}
+
+void GuiPlatform::end_touch_nav_gesture() {
+    touch_nav_frame_dirty_ = false;
+    // The end hook is owed a commit only if an update was ever delivered — a
+    // sub-latch two-finger touch costs the GUI nothing at all.
+    if (touch_nav_delivered_ && touch_nav_end_hook_) touch_nav_end_hook_();
+    touch_nav_delivered_ = false;
+    touch_nav_latched_   = false;
+}
+
+void GuiPlatform::on_touch_cancel() {
+    // The compositor claims the touches (its own gesture recognition, a grab).
+    // One contract with touch-capability loss, in full.
+    hard_end_touch_stream();
+}
+
+void GuiPlatform::hard_end_touch_stream() {
+    switch (touch_phase_) {
+        case TouchPhase::Pointer:
+            // A live translation COMMITS — one delivered release on the
+            // logical edge, at the last position (the pointer-capability-loss
+            // precedent: a vanished hold would latch the drag-modal gate with
+            // no event left to lift it) — then the ordinary leave, exactly as
+            // the finger's own lift would have delivered.
+            end_touch_left_hold();
+            if (pointer_left_hook_)
+                pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+            break;
+        case TouchPhase::Nav:
+            // A live two-finger gesture ends through its end path (commits).
+            end_touch_nav_gesture();
+            break;
+        case TouchPhase::Pending:
+            // Nothing was delivered, so there is nothing to end.
+            break;
+        case TouchPhase::Idle:
+        case TouchPhase::Drain:
+            break;
+    }
+    forget_touch_state();
+}
+
+void GuiPlatform::forget_touch_state() {
+    touch_phase_       = TouchPhase::Idle;
+    touch_point_count_ = 0;
+    touch_owner_id_    = 0;
+    touch_down_x_ = touch_down_y_ = 0.0;
+    touch_last_x_ = touch_last_y_ = 0.0;
+    touch_window_deadline_us_ = 0;
+    touch_window_moved_       = false;
+    touch_left_held_          = false;  // any delivering edge already ended it
+    touch_frame_motion_pending_ = false;
+    touch_nav_id2_ = 0;
+    touch_nav_x1_ = touch_nav_y1_ = 0.0;
+    touch_nav_x2_ = touch_nav_y2_ = 0.0;
+    touch_nav_start_cx_ = touch_nav_start_cy_ = touch_nav_start_dist_ = 0.0;
+    touch_nav_last_cx_ = touch_nav_last_dist_ = 0.0;
+    touch_nav_latched_ = touch_nav_delivered_ = touch_nav_frame_dirty_ = false;
+}
+
 // ---------------------------------------------------------------------------
 // Strip-drag pointer capture
 // ---------------------------------------------------------------------------
@@ -3280,6 +3749,12 @@ void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eli
 void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
 void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { keyboard_intent_cancel_hook_ = std::move(cb); }
+void GuiPlatform::set_touch_nav_hooks(
+    std::function<void(int x, int y, double dx, double dist_ratio)> update,
+    std::function<void()> end) {
+    touch_nav_update_hook_ = std::move(update);
+    touch_nav_end_hook_    = std::move(end);
+}
 void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
