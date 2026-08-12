@@ -755,8 +755,10 @@ private:
     // coordinates in the protocol and are delivered at pointer_x_/pointer_y_,
     // and the unlock warp comes back as no wl_pointer.motion, so a click made
     // before the user next moved was routed at the travel's end. The full
-    // account of the defect (a ruler zoom drag, then a click that flipped the
-    // marker view from the icon row) is at release_pointer_lock.
+    // account of the defect (a ruler zoom drag — that entry is history now,
+    // the strip drag arming from the ctrl-waveform press alone — then a click
+    // that flipped the marker view from the icon row) is at
+    // release_pointer_lock.
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;

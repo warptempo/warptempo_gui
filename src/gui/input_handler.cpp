@@ -235,8 +235,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         finalize_editor_text_drag();
         // THE HATCH IS A GESTURE END: this drag holds the cursor down to the
         // Arrow through any_pointer_gesture_active, so pressing Esc over the
-        // ruler or the waveform's lower half must come back showing the Zoom or
-        // the Scrub — which it does at this iteration's tail, once the editor
+        // waveform's lower half must come back showing the Scrub
+        // — which it does at this iteration's tail, once the editor
         // below has closed and everything else this call does has settled.
         // (The TOP FLAG EDITOR is in it too, by a different route: it is
         // pointer-transparent, so its own modality never forced the Arrow — the

@@ -971,12 +971,32 @@ inline int icon_row_h_px() {
 // at 57 — so the marker lane's bottom edge IS the waveform top, with no gap.
 // These replace the four legacy lanes (trim chip / marker text / flag /
 // triangle) and, like every redesigned row, ride gui_scale_factor() rather than
-// the monospace font's axis.
+// the monospace font's axis. (The trim lane ADDITIONALLY scales by its own
+// factor below, so the crop's y-map holds for the ruler and marker lanes while
+// the trim lane is taller than its measured 9 rows now.)
+//
+// THE TRIM BAR'S OWN SCALE FACTOR (architect 2026-08-12, the sixth glass
+// ruling's pointer half): the trim bar lane is "a little too small for a
+// finger", so it — AND IT ALONE among the lanes — grows by this percent, a
+// RULED RETUNABLE. The architect offered himself 150 or 200 and picked 150
+// ("let's try 150"); a retune is this one constant. It COMPOSES with gui_scale
+// inside trim_lane_h_px (the crop-measured 9 is still the authored value; the
+// factor multiplies it before the one scaled_px conversion), and it reaches
+// every consumer through the LANE RECT alone: top_trim_row_area's height is
+// this accessor, and the endcap rects (trim_endcap_rect takes the lane rect's
+// y/h), the bridge y-gate, the framing double-click band and the painted bar
+// (render_trim_flags' trim_bar parameter) all read that one rect — so paint
+// and hit grow together by construction and no second site scales anything.
+// The lane's INTERIOR widths (the endcap's 2px, the bevel pair, the midpoint
+// tile's 9) deliberately keep their own crop metrics: the factor buys a taller
+// finger TARGET, not a re-proportioned glyph set.
+inline constexpr int kTrimBarScalePercent = 150;
 inline constexpr int kTrimLaneHeightPx   = 9;
 inline constexpr int kRulerLaneHeightPx  = 28;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
-    return scaled_px(kTrimLaneHeightPx, 3);
+    return scaled_px(
+        kTrimLaneHeightPx * (kTrimBarScalePercent / 100.0), 3);
 }
 inline int ruler_lane_h_px() {
     return scaled_px(kRulerLaneHeightPx, 5);
@@ -1227,7 +1247,11 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 }
 
 // THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
-// shade of whatever surface owns the column. Scales with the lane.
+// shade of whatever surface owns the column. Rides gui_scale like every
+// authored length; deliberately NOT kTrimBarScalePercent — the lane's interior
+// metrics keep their crop values (the factor grows the finger target, so the
+// extra rows go to the FACE above the bevel; the rule at the factor's own
+// comment).
 inline int trim_bevel_h_px() {
     return scaled_px(2.0, 2);
 }
@@ -1238,10 +1262,12 @@ inline int trim_endcap_w_px() {
 }
 // THE MIDPOINT MARK IS THE 9x9 CROP, so its lengths are the crop's own: a TILE
 // 9 columns wide at 100% (its height is the lane's, which is what 9 rows means
-// here), an INNER square 5x5, and the crop's 2px INSET placing that square at
+// here — and the lane rides kTrimBarScalePercent since 2026-08-12, so the tile
+// stands taller than the crop's square while its widths keep the crop), an
+// INNER square 5x5, and the crop's 2px INSET placing that square at
 // cols 2..6 / rows 2..6. Plus the CLEARANCE the visibility rule demands on each
-// side of the whole tile. All of them scale with the lane like every other
-// length in this row.
+// side of the whole tile. All the widths ride gui_scale alone, like every
+// interior length in this lane.
 //
 // THE INNER SQUARE HAS NO LENGTH OF ITS OWN ANY MORE (codex round 3,
 // 2026-08-10). It WAS a third constant, kTrimMiddleInnerPx = 5, read through a

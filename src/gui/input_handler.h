@@ -183,7 +183,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     authoritative inventory being RegionState's in app_state.h): dissolves any
 //     resting highlight at
 //     mouse-down, before the gesture is known to be a click or a fresh region
-//     drag — all four share this exact dissolve shape;
+//     drag — all four share this exact dissolve shape. The RULER former (the
+//     same arm's fifth entry, 2026-08-12) clears through the arm too but at
+//     the THRESHOLD CROSSING instead of mouse-down — its motionless click is
+//     a consumed nothing by standing rule, so the dissolve waits for the
+//     gesture to become a drag (the crossing act, on_motion);
 //   * MARKER CLICKS, all three (the plain single-select and both multi-select
 //     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
 //     carried died with the extent owner, so every marker click clears;
@@ -475,8 +479,9 @@ struct GuiInputHandler {
     // or the compositor lacks the managers, end is idempotent — so a strip drag
     // that never captured (degraded compositor) still calls end harmlessly.
     // BEGIN CARRIES THE GESTURE'S OWN CURSOR KIND, which is the kind the capture
-    // release hands back: Zoom for the strip drag (both entries arm inside the
-    // Zoom zones), Pan for the alt-pan. A capture hides the cursor and makes the
+    // release hands back: Zoom for the strip drag (its one entry, the
+    // ctrl-waveform press, arms inside the
+    // Zoom zone), Pan for the alt-pan. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
     // reasoning, and why the stamp rides the lock-REQUEST path only, are at
@@ -865,8 +870,10 @@ struct GuiInputHandler {
     // the two buttons outside it are Settings and Navigation, whose action is a
     // dropdown toggle — not a chord, since no keyboard chord opens or closes a
     // popup.
-    // Arm the dual-axis strip drag — ONE body shared by the gesture's TWO
-    // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
+    // Arm the dual-axis strip drag — ONE body, ONE entry: the ctrl-exact
+    // waveform press (the ruler entry is DELETED FOR GOOD, 2026-08-12 — the
+    // ruler's plain drag is the region former now; the entry's three changes
+    // of hands are recorded at the definition).
     // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05, the one
     // surviving piece of the rolled-back strip-drag playhead arc) and owes that
     // first frame's damage; the gesture itself stays NAVIGATION-CLASS, touching
@@ -948,17 +955,24 @@ struct GuiInputHandler {
     // the shift former's anchor moved to the clicked column and its
     // non-dissolving twin died with the span it used to preserve.
     // `anchor_frame` is the active-domain frame the press just placed the
-    // playhead at; (x, y) is the press position for the press-becomes-drag
-    // threshold. Dissolves the resting region at mouse-down, so a motionless
-    // release rests nothing at all. FOUR CALLERS, all of them placement
-    // presses (re-derived 2026-08-12): the plain UPPER-HALF waveform press, the
-    // SHIFT-exact waveform press at either height, the empty
-    // flag/triangle-lane parity press, and the `h` history view's own
-    // full-height plain press (the three live ones through
-    // place_playhead_and_arm_region). The plain
+    // playhead at (for the ruler arm, the frame it merely anchors at — that
+    // press seats no playhead); (x, y) is the press position for the
+    // press-becomes-drag threshold. Dissolves the resting region at
+    // mouse-down, so a motionless release rests nothing at all — EXCEPT the
+    // RULER arm (`ruler`, 2026-08-12, the merge arc's deferred-dissolve design
+    // resurrected ruler-scoped): that press must stay a consumed nothing when
+    // motionless, so its dissolve and its store-deselect DEFER to the 8px
+    // threshold crossing (the motion path's crossing act, gated on
+    // RegionDragState::ruler). FIVE CALLERS (re-derived 2026-08-12): the four
+    // placement presses — the plain UPPER-HALF waveform press, the SHIFT-exact
+    // waveform press at either height, the empty flag/triangle-lane parity
+    // press (the three live ones through place_playhead_and_arm_region), and
+    // the `h` history view's own full-height plain press — plus the RULER
+    // band's plain press, the one `ruler=true` caller. The plain
     // LOWER half is the scrub surface, whose press is a one-shot scrub act
     // arming nothing and leaving the region alone.
-    void arm_region_drag_at(int64_t anchor_frame, int x, int y);
+    void arm_region_drag_at(int64_t anchor_frame, int x, int y,
+                            bool ruler = false);
 
     // THE PLACEMENT PRESS'S PLAYHEAD HALF, and the whole of what the live press
     // and the `h` history mode's own placement press have in common: drop the
@@ -1588,9 +1602,10 @@ private:
     // always rests (the unset state died 2026-07-30), so the claim is purely
     // GEOMETRIC. Returns true iff the press landed on trim
     // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
-    // bridge span) — so the caller claims with no
-    // fallback; false lets the caller fall through to its ruler / marker flag
-    // handling. Read-only no longer refuses anywhere on this route
+    // bridge span). The band's one caller CONSUMES the press either way — a
+    // false return is the band's consumed-nothing click (nothing below the
+    // band ever sees the press), never a fall-through.
+    // Read-only no longer refuses anywhere on this route
     // (2026-08-07). Trim drags are SETTERS, so they DESELECT
     // and STOP a live audition at their first ACCEPTED bound change (the press
     // carries neither since 2026-07-30 — a trim-bar press that never becomes a
@@ -1740,10 +1755,12 @@ private:
     //   to promise.
     // - Pan: the waveform, EITHER half, ALT-exact — the captured grab-pan, which
     //   arms anywhere inside the waveform, so the cue covers the full height.
-    // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip drag;
-    //   and the RULER band, plain — the SAME gesture through the same hoisted
-    //   arm (arm_strip_drag_at's two entries), which is why the two surfaces
-    //   share a cursor. The `h` view's trim-bar framing wore this cue for the
+    // - Zoom: the waveform, EITHER half, CTRL-exact — the dual-axis strip
+    //   drag's ONE surface (the RULER band wore this cue while it was the
+    //   gesture's second entry; that entry is deleted for good, 2026-08-12 —
+    //   the ruler's plain drag is the REGION FORMER now, deliberately UNNAMED
+    //   like the placement press, so the band answers Arrow). The `h` view's
+    //   trim-bar framing wore this cue for the
     //   day it was a single click and does not now: the act is a DOUBLE-click,
     //   and a double-click carries no cursor promise anywhere in the product.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which
@@ -1753,8 +1770,10 @@ private:
     //   single-bound drags), and the bound-set clicks that write the same two
     //   bounds, ctrl for begin and ctrl+shift for end. Both of those arm a
     //   single-bound drag as well, so the cue is one shape for one act.
-    // - Arrow: everything else, the marker lane and the four button rows
-    //   included.
+    // - Arrow: everything else — the marker lane, the four button rows, and
+    //   the RULER band, whose plain-drag region former is deliberately
+    //   unnamed (the placement press's model; the `h` view consumes that
+    //   press outright and Arrow is that answer too, no mode arm needed).
     // THE TRIM BAR'S THREE ZONES READ THE ROUTER'S OWN OWNERS and re-derive
     // nothing: hit_test_trim_endcap and point_in_trim_bridge_span for the plain
     // hover (exactly what route_trim_bar_press calls, in its order), and

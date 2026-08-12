@@ -985,7 +985,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
     // left — read-only was the other, and its trim refusals are deleted with the
     // ruling that trim is band rather than authored content. Under the mode the
-    // Pan and the Zoom (both entries) stay live — they are its navigation
+    // Pan and the Zoom (the ctrl-waveform strip drag, the gesture's one entry)
+    // stay live — they are its navigation
     // vocabulary — while
     // the endcap/bridge drags and the two ctrl bound-set clicks are consumed
     // no-ops, so their cues must go. This term is what takes them: the ctrl arm
@@ -1042,15 +1043,18 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     if (mods.ctrl || mods.alt || mods.shift) return GuiCursorKind::Arrow;
 
     // PLAIN-EXACT from here, and the top strip splits by band exactly as the
-    // press does — ruler first, then trim bar, both disjoint from each other and
-    // from the marker lane below them.
+    // press does — the trim bar, disjoint from the ruler and marker lanes
+    // around it.
     if (inside_top) {
-        // THE RULER BAND IS THE STRIP DRAG'S SECOND ENTRY (arm_strip_drag_at),
-        // the same gesture the ctrl+waveform press arms — so it takes the same
-        // cursor. The band is exactly top_ruler_row_area, the lane accessor the
-        // press reads.
-        const GuiRect ruler = top_ruler_row_area(app);
-        if (y >= ruler.y && y < ruler.y + ruler.h) return GuiCursorKind::Zoom;
+        // THE RULER BAND IS DELIBERATELY UNNAMED (2026-08-12, the sixth glass
+        // ruling's pointer half): its plain drag is the REGION FORMER now, and
+        // the former carries no cue anywhere — the waveform placement press's
+        // own model, whose shift entry this map already leaves at the Arrow.
+        // The Zoom the band wore while it was the strip drag's second entry
+        // died with that entry (arm_strip_drag_at is ONE entry again, the
+        // ctrl-waveform press — the succession is at the arm). The `h` history
+        // view CONSUMES the ruler press outright, and Arrow is that answer
+        // too, so the mode needs no arm here.
         // THE TRIM BAR BAND, RESOLVED THROUGH THE ROUTER'S OWN TWO OWNERS
         // (architect 2026-08-03, closing the band-wide cue this used to paint):
         // the plain press arms only on an ENDCAP or inside the inter-cap BRIDGE,
@@ -1223,15 +1227,17 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries. The gesture
-// had a dedicated zoom LANE, lost it when that lane was deleted (2026-07-31),
-// and ROW 5 GAVE IT A SECOND ENTRY BACK: the ruler band. Both entries arm
-// exactly this — the same StripDragState, the same pointer capture ("swallow"),
-// the same anchor stem, the same edge clamp and 8px threshold — so the two
-// surfaces cannot drift, and the ruler press is the zoom strip reborn rather
-// than a lookalike. (The ruler entry was deleted for the trim surface arc's one
-// day, 2026-08-11..12 — the ruler as merged trim surface — and came back with
-// the arc's revert.)
+// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, ONE entry: the ctrl-exact
+// waveform press. THE RULER ENTRY IS DELETED FOR GOOD (architect 2026-08-12,
+// the sixth glass ruling's pointer half: the ruler's plain drag DRAWS THE
+// REGION now and the lane carries no zoom at all — zoom lives on the waveform
+// for mouse, keys and touch alike). The entry's three changes of hands, kept
+// because each was a ruling: born with row 5 (2026-08-01, "the zoom strip
+// reborn" after the dedicated zoom LANE's 2026-07-31 deletion), deleted by the
+// 2026-08-11 trim-surface merge, restored by the 2026-08-12 revert, and
+// deleted again the same day when the ruler became the region former. The
+// ctrl press alone already carried the gesture once (between the zoom lane's
+// deletion and row 5), which is what proved one entry costs no capability.
 //
 // The anchor is the SONG position under the press column, which is what makes
 // the zoom pivot on the pixel the user grabbed.
@@ -1262,8 +1268,8 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     app.strip_drag.anchor_sample =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(x) * spp;
-    // ZOOM IS THE GESTURE'S CUE ON BOTH ENTRIES — the ctrl-waveform press and the
-    // ruler plain press are exactly the zone map's two Zoom surfaces — so this is
+    // ZOOM IS THE GESTURE'S CUE — the ctrl-waveform press, this arm's one
+    // entry, is exactly the zone map's one Zoom surface — so this is
     // the kind the capture release restores. Passing it is what makes the restore
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
@@ -2146,14 +2152,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
         // marker claim below). On the WAVEFORM it arms the dual-axis strip drag
-        // (StripDragState / apply_strip_drag_at) — ONE OF THE GESTURE'S TWO
-        // ENTRIES. It was the only one between the zoom lane's deletion
-        // (architect 2026-07-31) and row 5, which is what proved the deletion
-        // cost no capability: this press has the gesture's full reach — the
+        // (StripDragState / apply_strip_drag_at) — THE GESTURE'S ONE ENTRY
+        // since 2026-08-12, when the ruler entry was deleted for good (the
+        // succession is at arm_strip_drag_at; the ctrl press alone already
+        // carried the gesture once, between the zoom lane's deletion of
+        // 2026-07-31 and row 5, which is what proved one entry costs no
+        // capability): this press has the gesture's full reach — the
         // cursor capture ("swallow"), the anchor stem, the edge clamp, and
-        // dual-axis zoom+pan. Row 5 gave it a second entry on the RULER band
-        // (arm_strip_drag_at, the zoom strip reborn), through the same hoisted
-        // arm body, so the two cannot drift. The waveform strip-drag is
+        // dual-axis zoom+pan. The waveform strip-drag is
         // navigation-class: allowed in read-only, never touches the playhead or
         // selection — and a MOTIONLESS ctrl+waveform press-release commits
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
@@ -2322,10 +2328,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (inside_top || stem_click) {
             // A PLAIN STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
             // waveform, so every band test inside this branch — the trim bar
-            // lane below, the ruler's strip-drag arm, the empty-marker-lane parity
-            // press — simply fails for it, and it lands on the one arm it is
-            // for: `mh_index >= 0`, the marker click. Nothing in those bodies
-            // knows or needs to know which surface resolved the index.
+            // lane below, the ruler's region-former arm, the empty-marker-lane
+            // parity press — simply fails for it, and it lands on the one arm
+            // it is for: `mh_index >= 0`, the marker click. Nothing in those
+            // bodies knows or needs to know which surface resolved the index.
             //
             // A SHIFT PRESS NEVER ARRIVES BY THE STEM: stem_click is plain-exact
             // (its definition above), so shift over a stem leaves both halves of
@@ -2351,35 +2357,54 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // it stops no playback — nor does the plain press: the trim bar's
             // stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
-            // THE RULER BAND IS THE ZOOM STRIP REBORN (row 5): a PLAIN left
-            // drag here arms the dual-axis strip drag through the shared arm
-            // above — the gesture's second entry, beside the ctrl-waveform one
-            // (the entry was deleted for the trim surface arc's one day,
-            // 2026-08-11..12, and restored with the arc's revert). Claimed
-            // before the trim and marker bands (disjoint y-bands, so it
-            // contends with nothing) and NAVIGATION-CLASS: allowed in read-only,
-            // touching neither playhead nor selection.
+            // THE RULER BAND'S PLAIN DRAG DRAWS THE REGION (architect
+            // 2026-08-12, the sixth glass ruling's pointer half: the timestamp
+            // lane loses ZOOM ENTIRELY — the strip-drag entry it carried is
+            // deleted for good, arm_strip_drag_at is the ctrl-waveform press
+            // alone, and zoom lives on the waveform for mouse, keys and touch
+            // alike). The design is the merge arc's deferred-dissolve former,
+            // ruler-scoped: the press CLAIMS the band on geometry and arms the
+            // one region drag at the press column's authored frame, but
+            // performs NO press-time act — no playhead seat, no deselect, no
+            // dissolve of a resting span — so a MOTIONLESS ruler click is a
+            // CONSUMED NOTHING that spares a resting span (there is no
+            // double-click here to aim with, but a stray tap dissolving
+            // listening scratch is still the thing to avoid). The dissolve and
+            // the store-deselect run at the 8px threshold crossing instead
+            // (RegionDragState::ruler, the motion path's crossing act); past
+            // the crossing it is the ONE former in full — the fresh span
+            // through the one motion path, the playhead riding the moving end,
+            // the release resting it under the sliver gate.
             //
-            // A MOTIONLESS plain press-release is a CONSUMED NOTHING — the
-            // release body disarms without committing (bar the anchor stem's
-            // erase), exactly as the ctrl+waveform entry does. There is NO
-            // DOUBLE-CLICK SURFACE here:
-            // the span-framing double-click lives on the TRIM lane, and giving
-            // the ruler one too would make two neighbouring bands answer the
-            // same gesture differently.
+            // PLAIN ONLY: no modifier binds here, so a modified ruler press
+            // (the !shift gate plus the ctrl/alt discard far above) stays a
+            // consumed nothing at the inert top-strip return. THE `h` HISTORY
+            // VIEW CONSUMES THIS PRESS (handle_history_mode_press's own ruler
+            // branch — the view's region gesture is its full-height waveform
+            // press), so this arm runs in the live views alone. There is NO
+            // DOUBLE-CLICK SURFACE here: the span-framing double-click lives
+            // on the TRIM lane, and giving the ruler one too would make two
+            // neighbouring bands answer the same gesture differently.
             //
-            // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT, and
-            // that survived the head's move into the marker lane unchanged
-            // (2026-08-01) because the claim was never keyed on the head — it
-            // reads the lane accessor and only the lane accessor. So the ruler
-            // lane is now labels + tick-tops + this drag, the marker lane is
-            // head + flags + their routes, and a press in the marker lane can
-            // never arm the strip drag: it falls past this block to the marker
-            // hit and the empty-marker-lane parity press below.
+            // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT (the
+            // claim reads the lane accessor and only the lane accessor, so the
+            // playhead head's 2026-08-01 move into the marker lane never
+            // touched it). So the ruler lane is labels + tick-tops + this
+            // former, the marker lane is head + flags + their routes, and a
+            // press in the marker lane can never reach this arm: it falls past
+            // this block to the marker hit and the empty-marker-lane parity
+            // press below. A GUTTER press (no column to anchor at) arms
+            // nothing at all.
             {
                 const GuiRect ruler = top_ruler_row_area(app);
                 if (!shift && y >= ruler.y && y < ruler.y + ruler.h) {
-                    arm_strip_drag_at(x, y);
+                    const int rel = x - area.x;
+                    if (rel >= 0 && rel < area.w) {
+                        const int64_t anchor = clamp_playhead_to_live_domain(
+                            playhead_frame_at_click_column(app, audio, rel),
+                            app, audio);
+                        arm_region_drag_at(anchor, x, y, /*ruler=*/true);
+                    }
                     return;
                 }
             }
@@ -2793,12 +2818,14 @@ void GuiInputHandler::finalize_editor_text_drag() {
     app.editor_text_drag.active = false;
 }
 
-void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
+void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y,
+                                         bool ruler) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
     app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
+    app.region_drag.ruler        = ruler;
     // Clear any resting region immediately at press: a plain upper-half
     // waveform press dissolves an existing highlight on mouse-down (the plain
     // canvas ground repaints back now, not at release; a lower-half scrub press never
@@ -2808,7 +2835,14 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // changes nothing at all (no cancel) — the dissolve at mouse-down is final
     // either way. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
-    clear_region_highlight(app, viewport);
+    // THE RULER ARM DEFERS THE DISSOLVE (2026-08-12, resurrecting the merge
+    // arc's band design ruler-scoped): the ruler's motionless click is a
+    // CONSUMED NOTHING by standing rule, and a resting span is listening
+    // scratch a stray tap must not destroy — so its press dissolves nothing,
+    // and the dissolve runs with the deselect at the threshold crossing
+    // instead (the motion path's crossing act, gated on
+    // RegionDragState::ruler, whose comment carries the divergence).
+    if (!ruler) clear_region_highlight(app, viewport);
 }
 
 int64_t GuiInputHandler::place_playhead_at_click_column(
@@ -3863,7 +3897,9 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // clicks and their drag arm, the empty-lane marker drop, the trim bar's three
 // WRITING routes (the endcap and bridge drags and the two ctrl bound-set
 // clicks, none of which the framing double-click above touches — it is the
-// band's SECOND click, exactly as outside), and every unbound modifier
+// band's SECOND click, exactly as outside), the RULER's region former
+// (2026-08-12 — the view's region gesture is the full-height waveform press,
+// so the band claims nothing in here), and every unbound modifier
 // combination that is not one of the LANE's two modified flag claims above (a
 // modified press over the lane that hits no flag included: only the bare and
 // shift-exact arms reach the waveform's placement press, and ctrl over the
@@ -3942,9 +3978,18 @@ bool GuiInputHandler::handle_history_mode_press(
     // main.cpp), so no shift press can land in one of them. Each band lies
     // inside the top strip, which spans the full window width, exactly as their
     // own claims test them.
+    // THE RULER IS A CONSUMED NOTHING IN THE VIEW (2026-08-12, with the sixth
+    // glass ruling's ruler rework — the merge arc's precedent, whose merged
+    // band the view consumed whole): the band's live gesture is the REGION
+    // FORMER now, and the view's own region gesture is its full-height
+    // waveform press below, so a ruler press claims nothing in here — no
+    // former, no nav (the strip-drag entry this branch used to fall through
+    // to is deleted for good; arm_strip_drag_at is the ctrl-waveform press
+    // alone), and the mode's ruler zone answers Arrow through the zone map's
+    // unnamed default with no mode arm needed.
     {
         const GuiRect ruler = top_ruler_row_area(app);
-        if (y >= ruler.y && y < ruler.y + ruler.h) return false;
+        if (y >= ruler.y && y < ruler.y + ruler.h) return true;
     }
     // THE TRIM BAR'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
     // SUPERSEDING the single click this act shipped with earlier that day): the
@@ -5036,13 +5081,30 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (area.w <= 0) return;
         // Sub-threshold: the press has not yet become a drag. Below the shared
         // Chebyshev gate nothing extra happens — the press already did the
-        // click and cleared any resting region at mouse-down. Once a drag,
-        // always a drag (moved never re-engages).
-        if (!app.region_drag.moved &&
-            std::max(std::abs(mouse_x - app.region_drag.press_x),
-                     std::abs(mouse_y - app.region_drag.press_y)) <
-                kDragMovedThresholdPx) {
-            return;
+        // click and cleared any resting region at mouse-down (the ruler arm
+        // did neither, and does neither here — its acts land at the crossing
+        // below). Once a drag, always a drag (moved never re-engages).
+        if (!app.region_drag.moved) {
+            if (std::max(std::abs(mouse_x - app.region_drag.press_x),
+                         std::abs(mouse_y - app.region_drag.press_y)) <
+                    kDragMovedThresholdPx) {
+                return;
+            }
+            // THE RULER ARM'S CROSSING ACT (2026-08-12, the merge arc's
+            // deferred-dissolve design resurrected ruler-scoped): the ruler's
+            // press deferred its dissolve and its deselect so a motionless
+            // ruler click stays a consumed nothing — this crossing is the
+            // moment the gesture stops being a click, so the resting span
+            // dissolves and the store selection drops HERE, the latest moment
+            // before the fresh span exists. That keeps the family invariant
+            // (a region rests only beside an empty selection) exactly: no
+            // event between this line and the install below can observe a
+            // span beside a selection. The placement-press arms did both at
+            // mouse-down and take neither branch.
+            if (app.region_drag.ruler) {
+                clear_region_highlight(app, viewport);
+                selection.clear_selection();
+            }
         }
         app.region_drag.moved = true;
         // A moved region drag drops any double-click candidate: this press became
@@ -5072,9 +5134,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // gesture, so the far endpoint alone decides the span. THE THRESHOLD-
         // CROSSING EVENT NEEDS NO BYPASS OF THIS TEST (2026-08-05, when the
         // non-dissolving arm died with the click-anchored former): every arm is
-        // arm_region_drag_at now, which clears the region AT MOUSE-DOWN, so at
-        // the crossing `app.region.active` is false and the install proceeds
-        // whatever column the pointer is over.
+        // arm_region_drag_at now, which clears the region AT MOUSE-DOWN — or,
+        // for the RULER arm, at the crossing act just above (2026-08-12) — so
+        // at the crossing `app.region.active` is false either way and the
+        // install proceeds whatever column the pointer is over.
         if (app.region.active && far_frame == app.region.b_frame)
             return;
         app.region.active     = true;
@@ -5083,12 +5146,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a
         // region does NOT select the markers it contains (the reverse coupling —
         // a region selecting its contents — was tried and retired; do not
-        // re-propose) — the press already deselected all and the drag
-        // leaves the selection EMPTY throughout. That is the whole story for the
-        // three LIVE formers — the plain upper-half press, the shift press at
-        // either height and the empty flag/triangle-lane parity press — all of
-        // which deselect at press through the one placement body, so a span
-        // drawn in an
+        // re-propose) — the press (or, for the ruler arm, the crossing act
+        // above) already deselected all and the drag
+        // leaves the selection EMPTY throughout. That is the whole story for
+        // the LIVE formers — the plain upper-half press, the shift press at
+        // either height and the empty flag/triangle-lane parity press deselect
+        // at press through the one placement body, and the RULER former
+        // (2026-08-12) at its crossing — so a span drawn in an
         // ordinary view rests beside an EMPTY selection. The `h` view's own
         // press rides this same motion path and deselects nothing, which costs
         // that invariant nothing since 2026-08-05: the view's regions are

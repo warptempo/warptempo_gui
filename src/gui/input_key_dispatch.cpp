@@ -1036,7 +1036,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // route below on_key's DRAG-MODAL GATE, so none of them can run with a gesture
 // live — the whole reason close_history_mode ends none. This one arrives on a
 // poll and bypasses that gate, and the view has three gestures live in it (the
-// region drag, the ruler/ctrl strip drag and the alt pan): left held across the
+// region drag, the ctrl strip drag and the alt pan): left held across the
 // reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
 // anchor the view took, or pan over the band the close just restored.
 // finalize_active_drags is the existing force-end — the same release bodies the
@@ -2183,9 +2183,10 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it (membership re-derived 2026-08-06): zoom, the paged scroll, the overview
-// command,
-// the pointer's pan / strip / ruler drags, and the mode's own cursor-moving acts
+// it (membership re-derived 2026-08-12 — the ruler drag left the list with its
+// strip-drag entry; the mode consumes the ruler press now): zoom, the paged
+// scroll, the overview command,
+// the pointer's pan and ctrl strip drags, and the mode's own cursor-moving acts
 // — the diff-flag click, the placement press and the keyboard's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the
 // frozen text

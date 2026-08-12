@@ -129,8 +129,10 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
     // inside the trim bar lane (top_trim_row_area). A press outside that
     // vertical band is not on an endcap. (The y-gate spanned the merged
     // trim-bar + ruler band for the trim surface arc's one day, 2026-08-11..12,
-    // and came back to the lane with the arc's revert — the ruler is the zoom
-    // strip's again.)
+    // and came back to the lane with the arc's revert; the ruler is the REGION
+    // FORMER's band since 2026-08-12. The lane itself is taller since the same
+    // day — kTrimBarScalePercent, render.h — and this gate follows it through
+    // the one accessor.)
     const GuiRect row = top_trim_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 

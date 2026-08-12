@@ -993,9 +993,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     app_state.h — the shared owner, which carries the trim-lane y-gate, the
 //     trim_bridge_gap interval and the painter's [0, area_w) clip) arms the pair
 //     drag. The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
-//     strip height: a top-strip press below that lane — the ruler, then the
-//     marker lane — is not claimed and falls through to the caller's ruler /
-//     flag handling. Both bounds are
+//     strip height: a top-strip press below that lane — the ruler (the region
+//     former's band), then the marker lane — is not claimed here at all; each
+//     of those bands has its own claim in on_button_press. Both bounds are
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
 //     like every trim gesture, moves the playhead only at its release, through
 //     the commit tail's park), so it always arms as

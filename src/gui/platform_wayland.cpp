@@ -3640,17 +3640,21 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the seat's position without sending one), so without this write
             // the stale travel survived until the user next physically moved
             // the mouse, and a click made before that moved was routed at it.
-            // THE DEFECT THAT CLOSES: a ruler-band press arms the strip drag
-            // (arm_strip_drag_at), a drag UP to zoom walks the virtual position
-            // up out of the ruler and into row 4's icon band — one zoom level
-            // is 60 px, the bands are ~20-70 px apart — the release draws the
-            // cursor back on the ruler at the press row, and the NEXT click,
-            // made without moving, was delivered at the travel's end: over the
-            // W radio, whose chord is bare `p`. A single visible click in the
-            // ruler switched the marker view. Every roster button, and the
-            // bare-`e` synthesized click (which reads the same two fields), had
-            // the same exposure; the alt-pan's is wider still, since it sets no
-            // restore-x override and its raw travel can end anywhere.
+            // THE DEFECT THAT CLOSED (historical account — the ruler entry it
+            // rode is deleted for good since 2026-08-12, the strip drag arming
+            // from the ctrl-waveform press alone now; the exposure and this
+            // fix are entry-agnostic): a ruler-band press armed the strip drag
+            // (arm_strip_drag_at), a drag UP to zoom walked the virtual
+            // position up out of the ruler and into row 4's icon band — one
+            // zoom level is 60 px, the bands ~20-70 px apart — the release
+            // drew the cursor back on the ruler at the press row, and the NEXT
+            // click, made without moving, was delivered at the travel's end:
+            // over the W radio, whose chord is bare `p`. A single visible
+            // click in the ruler switched the marker view. Every roster
+            // button, and the bare-`e` synthesized click (which reads the same
+            // two fields), had the same exposure; the alt-pan's is wider
+            // still, since it sets no restore-x override and its raw travel
+            // can end anywhere.
             // WHY THE HINT IS THE RIGHT VALUE: it is precisely where the cursor
             // is DRAWN from here, so the tracked position and the pixels the
             // user is aiming at now agree. It is an estimate, not an

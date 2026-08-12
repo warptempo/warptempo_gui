@@ -125,8 +125,10 @@ namespace {
 // redesign), TOOLBAR ROW (its own authored toolbar_row_h_px(), row 2 of the
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
 // own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
-// (trim_lane_h_px(), the bar and its endcaps), the RULER lane
-// (ruler_lane_h_px(), timestamps + tick tops + the zoom strip's drag band) and
+// (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
+// kTrimBarScalePercent, the finger-target factor of 2026-08-12), the RULER lane
+// (ruler_lane_h_px(), timestamps + tick tops + the region former's drag band —
+// its zoom entry deleted for good 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
@@ -199,8 +201,8 @@ int top_lane_height(int lane) {
         // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
-        case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / ticks / zoom strip
+        case 4: return trim_lane_h_px();         // trim bar + endcaps (x150%)
+        case 5: return ruler_lane_h_px();        // timestamps / ticks / region former
         // Flags, stems and the playhead head; bottom edge = waveform top.
         case 6: return marker_lane_h_px();
         default: return 0;
@@ -338,8 +340,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // its border-bottom); lane 3 is the ICON row (the seventeen view/mode/action
 // buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
-// double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
-// zoom strip); lane 6 is the MARKER lane (the flags, their stems, and the
+// double-click — the one lane that also rides kTrimBarScalePercent, so the
+// strip total and the waveform top move with that factor through this same
+// accumulation); lane 5 is the RULER lane (the timestamp ladder; its plain
+// drag draws the REGION since 2026-08-12, the zoom entry deleted for good);
+// lane 6 is the MARKER lane (the flags, their stems, and the
 // playhead's aliased head on the lane's bottom rows), whose bottom edge is
 // flush with the waveform area top. (The trim and ruler lanes were ONE merged
 // input band — top_trim_surface_area — for the trim surface arc's one day,

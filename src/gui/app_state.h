@@ -154,9 +154,10 @@ struct UndoEntry {
 // the inventory IS arm_region_drag_at's callers plus the callers of the body that
 // wraps it, place_playhead_and_arm_region).
 // THERE IS ONE FORMING GESTURE, THE PLACEMENT PRESS AND THE DRAG IT ARMS, in
-// FOUR entries (re-derived 2026-08-12, when the trim surface arc's revert
-// deleted the merged band's fifth — the band former's one-day life, 2026-08-11,
-// left with the merge; the trim bar's plain drag moves the trim window again):
+// FIVE entries (re-derived 2026-08-12, when the sixth glass ruling made the
+// RULER the region former — the merge arc's deferred-dissolve band design
+// resurrected ruler-scoped, after the band former's one-day life of 2026-08-11
+// had left with the arc's revert):
 //   * the PLAIN press in the waveform's UPPER half (the lower half is the scrub);
 //   * the SHIFT-exact press at EITHER height (architect 2026-08-05, THE FORMER'S
 //     RESHAPE: the region ANCHORS AT THE CLICKED COLUMN now, so shift IS the
@@ -169,14 +170,27 @@ struct UndoEntry {
 //     drag included, the drag's motion path being y-agnostic once armed. PLAIN
 //     ONLY there: a shift press on the lane claims nothing;
 //   * the `h` HISTORY VIEW'S own press, full height (that view has no scrub since
-//     playback left it), which is the same recipe minus the store deselect.
+//     playback left it), which is the same recipe minus the store deselect;
+//   * the RULER band's PLAIN press (architect 2026-08-12: the timestamp lane's
+//     drag draws the region and the lane carries NO ZOOM at all — its
+//     strip-drag entry is deleted for good) — NOT the placement body: the
+//     ruler's motionless click is a CONSUMED NOTHING by standing rule, so this
+//     arm seats no playhead, deselects nothing and dissolves nothing at press,
+//     deferring the dissolve and the deselect to the THRESHOLD CROSSING
+//     (RegionDragState::ruler); the drag then rides the one motion path,
+//     playhead on the moving end, exactly as every other entry. LIVE VIEWS
+//     ONLY: the `h` view consumes the ruler press outright, its own region
+//     gesture being the full-height waveform press above.
 // EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS — the family rule,
 // stated here and pointed at from the sites (architect-RATIFIED 2026-08-05,
 // promoting what had been the coder's reading of the mode's arm into the
-// ruling). The THREE live entries DESELECT at press — all three through the one
-// placement body — leaving the STORE selection
-// EMPTY throughout the drag; the `h` view's entry clears THE MODE'S focus and
-// diff-flag selection instead, through the one clearer that takes the pair, and
+// ruling). The THREE placement-body live entries DESELECT at press, leaving
+// the STORE selection
+// EMPTY throughout the drag; the RULER entry deselects at its crossing — the
+// latest moment before a span exists, so the invariant below holds identically
+// while its click stays a nothing; the `h` view's entry clears THE MODE'S focus
+// and diff-flag selection instead, through the one clearer that takes the pair,
+// and
 // touches no store selection at all by the view's own standing rule. So no
 // former anywhere leaves a selection standing beside the span it is drawing, and
 // the surface simply decides WHICH selection that is. Both of the view's
@@ -205,7 +219,9 @@ struct UndoEntry {
 // and the W/P marker-column switch (each flips the domain or the owning column out
 // from under the span), EVERY WAVEFORM PLACEMENT PRESS (it dissolves any resting
 // highlight at mouse-down, before it knows whether the gesture is a click or a
-// fresh region drag — via arm_region_drag_at, all FOUR entries; a SCRUB press
+// fresh region drag — via arm_region_drag_at, the four placement entries; the
+// RULER entry defers that same dissolve to its threshold crossing, so a
+// motionless ruler click spares a resting span; a SCRUB press
 // leaves the region alone in either entry, the lower-half left one and the bare
 // right one, that gesture being the region's PREVIEW gesture), the `h` view's
 // three edges (the view-local rule above), and the kick validator's live-domain
@@ -443,16 +459,21 @@ struct UndoHistory {
 // viewport scroll and no playback reseek per motion. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. FOUR PRESSES ARM THIS DRAG AND
-// ALL FOUR ARM IT THE SAME WAY, through arm_region_drag_at — dissolve the
-// resting region at mouse-down, anchor at the CLICK column (membership
-// re-derived 2026-08-12; the authoritative inventory is at RegionState): the
+// press, so there is no release-time collapse. FIVE PRESSES ARM THIS DRAG
+// (membership re-derived 2026-08-12; the authoritative inventory is at
+// RegionState). FOUR arm it the same way, through arm_region_drag_at —
+// dissolve the resting region at mouse-down, anchor at the CLICK column: the
 // plain upper-half waveform press, the SHIFT-exact waveform press at either
 // height (architect 2026-08-05, when the former's anchor moved to the click and
 // its non-dissolving twin died with the span it preserved), the empty
 // flag/triangle-lane parity press (whose armed drag then extends normally, the
 // motion path being y-agnostic) and the `h` history
-// view's own full-height press. Alt/Ctrl no-op earlier. A completed drag rests the
+// view's own full-height press. The FIFTH is the RULER band's plain press
+// (2026-08-12, the sixth glass ruling — the merge arc's band design
+// resurrected ruler-scoped), which sets `ruler` below and defers the dissolve
+// and the deselect to the threshold crossing — the ruler's motionless click
+// must stay a consumed nothing (the field's own comment carries the
+// divergence). Alt/Ctrl no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,
@@ -473,6 +494,23 @@ struct RegionDragState {
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
     int64_t anchor_frame = 0;      // active-domain frame the press placed
+    // THE RULER BAND'S OWN ARM (2026-08-12, the sixth glass ruling — the merge
+    // arc's deferred-dissolve band design resurrected ruler-scoped): a plain
+    // press-and-drag on the ruler draws the region, but the ruler's motionless
+    // click is a CONSUMED NOTHING by standing rule — so unlike the placement
+    // press this arm performs NO press-time act: no playhead seat, no
+    // deselect, and no dissolve of a resting span (listening scratch a stray
+    // tap must not destroy; the ruler has no double-click, so no framing seed
+    // is at stake — only the span itself). The press-time acts DEFER TO THE
+    // THRESHOLD CROSSING instead: the first crossing clears the resting span
+    // and drops the store selection, then the ordinary motion path forms the
+    // fresh span and carries the playhead on its moving end. This flag marks
+    // such an arm; the crossing act is in on_motion's region branch. Recorded
+    // divergence from the placement-press family's dissolve-at-mouse-down —
+    // the family INVARIANT (a region rests only beside an empty selection)
+    // holds identically, only the moment the press's acts land moved, because
+    // this band's click must stay a nothing.
+    bool    ruler        = false;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -610,11 +648,12 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces
-// through one shared body (arm_strip_drag_at): the CTRL-exact left-drag inside
-// the waveform, and the plain left-drag on the RULER band — the zoom strip
-// reborn (row 5, 2026-08-01; the ruler entry was deleted for the trim surface
-// arc's one day, 2026-08-11..12, and came back with the arc's revert). It once
+// Dual-axis zoom/pan drag (Ableton-style navigation), armed by ONE surface
+// (arm_strip_drag_at): the CTRL-exact left-drag inside the waveform. The RULER
+// entry is DELETED FOR GOOD (2026-08-12, the sixth glass ruling — the ruler's
+// plain drag draws the REGION now; the entry's three changes of hands — born
+// with row 5 as "the zoom strip reborn", deleted by the 2026-08-11 merge,
+// restored by the revert, deleted again — are recorded at the arm). It once
 // had a dedicated zoom LANE too, deleted 2026-07-31. The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
@@ -2601,10 +2640,12 @@ struct AppState {
     //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
-    // routes that move it (membership re-derived 2026-08-06): zoom, the paged
+    // routes that move it (membership re-derived 2026-08-12 — the ruler drag
+    // left the list with its strip-drag entry; the mode consumes the ruler
+    // press now): zoom, the paged
     // scroll and the overview command move viewport_start_sample or zoom_level,
     // the
-    // pointer's pan / strip / ruler drags move both, the mode's OWN cursor-moving
+    // pointer's pan and ctrl strip drags move both, the mode's OWN cursor-moving
     // acts land the playhead (the diff-flag click, the placement press, and the
     // keyboard's Tab cycle / Home / End / `c` — which `0` reaches too, from full
     // zoom out), and since 2026-08-04 the admitted VIEW SWITCHES
@@ -3457,8 +3498,9 @@ GuiRect top_ruler_row_area(const AppState& a);
 // (top_trim_surface_area — the trim surface arc's merged trim-bar + ruler
 // input band — lived between these accessors for one day, 2026-08-11..12, and
 // was deleted whole with the arc's revert: the two lanes are separate input
-// surfaces again, the ruler carrying the strip drag and the trim bar its own
-// gestures.)
+// surfaces, the trim bar carrying its own gestures and the ruler the region
+// former — since 2026-08-12, when the ruler's restored strip-drag entry was
+// deleted for good.)
 GuiRect top_marker_row_area(const AppState& a);
 // ROW 7's single bottom lane (2026-08-01), replacing the legacy
 // upper/lower pair: the lane with its two borders, and the content band inside
