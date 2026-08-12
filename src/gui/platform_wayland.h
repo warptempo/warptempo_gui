@@ -291,13 +291,22 @@ public:
     //     CURRENT centroid in surface px; dx is the centroid's horizontal delta
     //     since the previous delivered update (fractional — sub-pixel centroid
     //     motion must accumulate rather than truncate away); dist_ratio is the
-    //     finger-distance ratio current/previous, > 0 always (a degenerate
-    //     distance under 1 px on either side delivers 1.0 — no zoom that
-    //     frame). The latch is the platform's: nothing is delivered until the
+    //     finger-distance ratio current/previous, > 0 always, and 1.0 EXACTLY
+    //     (no zoom that frame) both under the zoom-engagement hysteresis below
+    //     and for a degenerate distance under 1 px on either side of the
+    //     ratio. The latch is the platform's: nothing is delivered until the
     //     centroid has travelled kTouchSlopPx (Chebyshev) from the two-finger
     //     start OR the finger distance has changed by that same slop, and the
     //     crossing update folds the whole accumulated delta — the strip drag's
     //     own press-becomes-drag model, so a two-finger tap navigates nothing.
+    //     THE ZOOM AXIS ENGAGES SEPARATELY (the first-glass hysteresis,
+    //     2026-08-11): pan is live from the latch, but dist_ratio stays 1.0
+    //     until the CUMULATIVE finger-distance change from the two-finger
+    //     start crosses kTouchZoomEngagePx, and from that crossing on zoom is
+    //     live for the rest of the gesture (one-sided — no re-disengage). The
+    //     engage crossing folds the whole accumulated change (delivers
+    //     current/start distance), the latch's own fold model, so a fast
+    //     pinch crossing latch and engage in one frame folds once.
     //   * end(): the gesture ended — a finger lifted (any end commits; the
     //     survivor is ignored until all fingers lift), wl_touch.cancel, or
     //     touch-capability loss. Fired ONLY if at least one update was
@@ -953,14 +962,21 @@ private:
     double     touch_nav_y1_    = 0.0;
     double     touch_nav_x2_    = 0.0;
     double     touch_nav_y2_    = 0.0;
-    // Nav: the two-finger START (the latch reference) and the last DELIVERED
-    // centroid/distance (the per-frame delta basis).
+    // Nav: the two-finger START (the latch and zoom-engage reference) and the
+    // per-frame delta bases — last_cx is the last DELIVERED centroid;
+    // last_dist stays PINNED at the start distance until the zoom engages
+    // (the engage crossing's fold basis) and is the last delivered distance
+    // from then on.
     double     touch_nav_start_cx_   = 0.0;
     double     touch_nav_start_cy_   = 0.0;
     double     touch_nav_start_dist_ = 0.0;
     double     touch_nav_last_cx_    = 0.0;
     double     touch_nav_last_dist_  = 0.0;
     bool       touch_nav_latched_    = false;
+    // The zoom axis's one-sided engagement hysteresis (kTouchZoomEngagePx):
+    // false = dist_ratio delivers 1.0 exactly; latches true for the rest of
+    // the gesture once the cumulative distance change crosses the threshold.
+    bool       touch_nav_zoom_engaged_ = false;
     // An update hook fired — the end hook is owed a commit.
     bool       touch_nav_delivered_  = false;
     // Positions moved this wl_touch frame (compute + deliver at the frame).
