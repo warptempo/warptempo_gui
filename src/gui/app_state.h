@@ -641,13 +641,18 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation), armed by ONE surface
-// (arm_strip_drag_at): the CTRL-exact left-drag inside the waveform. The RULER
-// entry is DELETED FOR GOOD (2026-08-12, the sixth glass ruling — the ruler's
-// plain drag draws the REGION now; the entry's three changes of hands — born
+// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO entries
+// (arm_strip_drag_at, parameterized on the anchor — the succession record is
+// at that definition): the CTRL-exact left-drag on the navigation surface,
+// and — since the OVERVIEW STRIP landed (2026-08-12) — that lane's PLAIN
+// drag, whose anchor is the pressed overview column's whole-song position.
+// The RULER's own
+// entry is DELETED FOR GOOD (2026-08-12, the sixth glass ruling — the entry's
+// three changes of hands — born
 // with row 5 as "the zoom strip reborn", deleted by the 2026-08-11 merge,
 // restored by the revert, deleted again — are recorded at the arm). It once
-// had a dedicated zoom LANE too, deleted 2026-07-31. The
+// had a dedicated zoom LANE too, deleted 2026-07-31; the overview strip is
+// the zoom-strip concept's THIRD HOME. The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
 // per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
@@ -3611,13 +3616,47 @@ GuiRect top_ruler_row_area(const AppState& a);
 // deleted for good.)
 GuiRect top_marker_row_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
-// strip's one lane, flush under the waveform — the lane including its 1px
+// strip's waveform-side lane (bottom lane 1), flush under the waveform — the
+// lane including its 1px
 // border-top, and the content band under that border. (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
-// stood, 2026-08-11..12, and is the strip's whole surface again; the blank
-// foot below it is strip geometry, not a lane.)
+// stood, 2026-08-11..12, the strip's whole surface at the unification, and
+// one of two again since the OVERVIEW STRIP landed below it later that day;
+// the blank foot below the pair is strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+// THE OVERVIEW STRIP (bottom lane 0, 2026-08-12 — the Ableton model,
+// ableton.png): the whole-song lane directly under the unified bottom row —
+// min/max bars off the peaks pyramid, the viewport box, the playhead tick,
+// and the plain drag as the dual-axis strip drag's second entry (the record
+// at arm_strip_drag_at). Height = the clamped leftover past the waveform
+// clamp (the vertical rule, main.cpp; retunables at render.h's kOverview*).
+GuiRect bottom_overview_row_area(const AppState& a);
+// THE OVERVIEW STRIP'S COLUMN MAPPING — one owner for the lane's
+// frames-per-column, shared by the painter (the bars' basis, the box and the
+// tick), the press claim (the drag anchor) and the tick's per-frame damage
+// sites so no two of them scale differently. THE DATA IS THE SOURCE DOMAIN,
+// ALWAYS (the ruled choice, recorded at paint_overview_strip): the lane spans
+// the whole PIECE — audio.total_frames() over the lane's width — in EVERY
+// view; target-domain values map through the warp frame map before they meet
+// this scale. Returns 0.0 on degenerate geometry (no lane width / no audio).
+double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio);
+// The lane column (offset from the lane's x) the tick painter draws an
+// ACTIVE-DOMAIN position at: nearbyint the position, inverse-map it to its
+// source frame in target view (the memoized active_domain_to_source_frame),
+// divide by the lane scale, clamp into [0, lane.w - 1]. Shared by
+// paint_overview_strip and the two per-frame scanner damage sites (main.cpp)
+// so the damaged column IS the painted one. Returns -1 on degenerate
+// geometry.
+int overview_tick_column(const AppState& a, const GuiAudio& audio,
+                         double active_position);
+// The strip drag's ANCHOR for a press at window x on the overview lane: the
+// SONG POSITION at the pressed column — (x - lane.x) * the lane scale, a
+// source frame by construction — mapped INTO the active domain in target view
+// (source_frame_to_active_domain) so the anchor is domain-correct for the one
+// drag body. Returns a frame position as a double, the anchor's own type.
+double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
+                                   int x);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The pure level→spp exponent: ms_per_px = 0.625 * 2^(level - 1), fully
@@ -3871,6 +3910,18 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 //    sites additionally CANNOT reach a paint handler (Viewport,
 //    GuiPlaybackLifecycle and the free land helper all see none), so for them
 //    the widening is the only honest shape as well as the affordable one.
+// THE OVERVIEW STRIP'S TICK EXTENDS THE SAME CADENCE SPLIT (2026-08-12): the
+// lane's playhead tick mirrors the values above, so its damage takes the same
+// two shapes — a NEW narrow per-frame pair for the scanner, the tick's own 1px
+// lane columns at the pre-paint advance (main.cpp, through the one column
+// owner overview_tick_column so the damaged column is the painted one; the
+// heartbeat site carries no overview arm — its job is producing a paint, not
+// naming movement), and the FULL-LANE shape for every discrete write, which
+// rides Viewport::invalidate_waveform_area's overview rider rather than a
+// per-site list (every discrete member above funnels through that owner's
+// shape already). The tick maps through the ACTIVE domain to its SOURCE
+// column, so it needs no plate basis at all — the lane's basis is the
+// whole-song scale, which no async publish window can move.
 double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
 // computed from the CONTINUOUS playhead_scanner_precise (not the integer

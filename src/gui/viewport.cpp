@@ -66,6 +66,23 @@ void Viewport::invalidate_waveform_area() {
     const int y0 = 0;
     const int y1 = a.y + a.h;
     gui.invalidate_region(0, y0, app.width, y1 - y0);
+    // THE OVERVIEW LANE RIDES THIS OWNER (2026-08-12, the strip's landing):
+    // its viewport BOX mirrors the viewport/zoom every caller of this damage
+    // just moved, and its playhead TICK mirrors the cursor every discrete
+    // playhead write behind this shape just landed — so the one full-area
+    // chokepoint carries the lane too, as a SECOND rect that deliberately
+    // SKIPS the unified bottom row between them (repainting the row per
+    // pan/zoom frame would pay its HarfBuzz label shaping for nothing; the
+    // platform's containment-only coalescing keeps the two rects separate).
+    // The lane's repaint is a blit + two outlines, the affordable shape at
+    // this damage's every cadence. The three inline copies of this owner's
+    // waveform rect (waveform_cache.cpp's publish sites) carry the same
+    // rider, each with a pointer here. The per-frame SCANNER sites do NOT
+    // come through here — their overview tick damage is its own narrow
+    // column pair (the cadence rule at playhead_pixel_x, app_state.h).
+    const GuiRect ov = bottom_overview_row_area(app);
+    if (ov.w > 0 && ov.h > 0)
+        gui.invalidate_region(ov.x, ov.y, ov.w, ov.h);
 }
 
 void Viewport::invalidate_status_row_area() {

@@ -458,9 +458,15 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     maybe_rebuild_flag_cache();
 
     // Invalidate the waveform area so the next paint blits the new
-    // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
+    // pixels. Matches the rects Viewport::invalidate_waveform_area uses —
+    // the OVERVIEW-LANE rider included (the rationale lives at that owner):
+    // this is the ASYNC publish (follow scroll, resize, drift catch-up), whose
+    // viewport moved undriven, so the lane's box owes the same frame.
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
+    const GuiRect ov = bottom_overview_row_area(app);
+    if (ov.w > 0 && ov.h > 0)
+        gui.invalidate_region(ov.x, ov.y, ov.w, ov.h);
 }
 
 // -- Synchronous waveform rebuild (THE user-driven render route) ---------
@@ -605,6 +611,16 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
+    // The OVERVIEW-LANE rider, mirroring Viewport::invalidate_waveform_area
+    // (the rationale lives there): several kick_waveform_sync tails — undo,
+    // the load-in-places, the tempo step — reach this route without passing
+    // that owner, and each may have moved the viewport, the domain or the
+    // map the lane's box reads.
+    {
+        const GuiRect ov = bottom_overview_row_area(app);
+        if (ov.w > 0 && ov.h > 0)
+            gui.invalidate_region(ov.x, ov.y, ov.w, ov.h);
+    }
 
     // Rebuild the flag cache inline, against the fingerprint just
     // published. Without this the plate leads its overlays: the run loop
@@ -1161,13 +1177,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // one rect at the one producer.
     //
     // The rect is the top strip PLUS the waveform — Viewport::invalidate_-
-    // waveform_area's exact shape, re-spelled because this struct holds no
+    // waveform_area's waveform rect, re-spelled because this struct holds no
     // Viewport (the same widening that free helper documents). It CONTAINS the
     // old strip-only rect by construction (waveform_area.y IS the top strip's
     // height and its own height floors at 0), so it replaces rather than joins
     // it; and the platform's containment coalescing drops it wholesale on the
     // paths that already damaged the waveform this frame — every marker
     // mutation, every pan/zoom, every drag motion event — so those pay nothing.
+    // (That owner's OVERVIEW-LANE rider is deliberately absent here: nothing
+    // on the overview strip keys on the marker stores this rebuild tracks —
+    // its bars are the piece, its box the viewport, its tick the playhead —
+    // so a flag-cache rebuild owes the lane nothing.)
     const GuiRect wave = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, wave.y + wave.h);
 }

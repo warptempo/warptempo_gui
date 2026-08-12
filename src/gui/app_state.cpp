@@ -360,3 +360,48 @@ bool popup_eligible_marker(const AppState& app, int idx) {
     }
     return m.tempo_inherits || !m.label_ref.empty();
 }
+
+// -- The overview strip's column mapping ------------------------------------
+//
+// The one owner of the lane's frames-per-column scale and of the two
+// conversions built on it (contracts at the declarations, app_state.h). The
+// data is the SOURCE domain, always — the ruled choice recorded at
+// paint_overview_strip — so the scale is audio.total_frames() over the lane's
+// width, and active-domain values pass through the memoized warp-map
+// translators (warp_frame_map_view) on their way to or from it.
+
+double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
+    const GuiRect lane = bottom_overview_row_area(a);
+    const int64_t total = audio.total_frames();
+    if (lane.w <= 0 || total <= 0) return 0.0;
+    return static_cast<double>(total) / static_cast<double>(lane.w);
+}
+
+int overview_tick_column(const AppState& a, const GuiAudio& audio,
+                         double active_position) {
+    const GuiRect lane = bottom_overview_row_area(a);
+    const double spp = overview_samples_per_pixel(a, audio);
+    if (spp <= 0.0) return -1;
+    const int64_t active = static_cast<int64_t>(std::nearbyint(active_position));
+    const int64_t src = active_domain_to_source_frame(a, audio, active);
+    int col = static_cast<int>(
+        std::nearbyint(static_cast<double>(src) / spp));
+    if (col < 0) col = 0;
+    if (col > lane.w - 1) col = lane.w - 1;
+    return col;
+}
+
+double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
+                                   int x) {
+    const GuiRect lane = bottom_overview_row_area(a);
+    const double spp = overview_samples_per_pixel(a, audio);
+    if (spp <= 0.0) return 0.0;
+    const double src = static_cast<double>(x - lane.x) * spp;
+    if (a.active_audio_view != 'T') return src;
+    // Target view: the pressed column names a SOURCE position (the lane's
+    // domain), and the drag body's anchor lives in the ACTIVE domain — map it
+    // forward once at the press. The int64 round-trip costs under one frame,
+    // invisible at whole-song scale.
+    return static_cast<double>(source_frame_to_active_domain(
+        a, audio, static_cast<int64_t>(std::nearbyint(src))));
+}

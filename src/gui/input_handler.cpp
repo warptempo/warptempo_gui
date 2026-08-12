@@ -1542,16 +1542,18 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // chords: panning while an edit is open changes no state the edit
     // owns and discards nothing, so there is nothing for modality to protect.
     //
-    // The wheel routes by area — the waveform and the top strip — plus the ONE
-    // row-wise carve-out below, the redesigned rows' inert band. BOTH areas
+    // The wheel routes by area — the waveform, the top strip, and the
+    // OVERVIEW STRIP (2026-08-12: the lane is a navigation surface, so its
+    // wheel is the stepped pan like the areas above it) — plus the ONE
+    // row-wise carve-out below, the redesigned rows' inert band. ALL THREE
     // take the same one route since 2026-08-12 (the eighth glass ruling: the
     // plain wheel is the STEPPED PAN everywhere, the wheel zoom and the alt
-    // forms deleted), so the two context ids differ only for the platform's
+    // forms deleted), so the context ids differ only for the platform's
     // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
     // it emits nothing at all. THE BLANK FOOT (the waveform-height clamp's
-    // window ground below the unified bottom row since the 2026-08-12 row
-    // unification) needs no band of its own: it lies below every area this
+    // window ground below the overview lane) needs no band of its own: it
+    // lies below every area this
     // probe tests, so a wheel there falls to the no-context 0 exactly as the
     // old status lane's did — nothing scrolls off the window's dead ground.
     //
@@ -1609,6 +1611,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     const bool inside_top      = rect_contains(top, x, y);
     if (inside_waveform) return 1;
     if (inside_top) return 2;
+    // THE OVERVIEW STRIP (context 3): a navigation surface, so the wheel is
+    // the stepped pan there — one clause, tested after the areas because the
+    // lane is disjoint from both (the bottom row's inert band above already
+    // won its own y-band). A positive context here also admits the two-finger
+    // touch nav's per-frame refusal check over the lane, which is the same
+    // navigation-class answer.
+    if (rect_contains(bottom_overview_row_area(app), x, y)) return 3;
     return 0;
 }
 
@@ -1645,10 +1654,13 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     app.transport_repeat.owner = -1;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx: 1 waveform, 2 the top strip. Both take the one plain route — the
-    // stepped pan (the eighth glass ruling; the wheel zoom is deleted).
+    // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All take the
+    // one plain route — the
+    // stepped pan (the eighth glass ruling; the wheel zoom is deleted). The
+    // overview rides the waveform's slot: handle_wheel only asks "am I on a
+    // panning surface", and the lane is one.
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
-                 ctx == 1, ctx == 2);
+                 ctx == 1 || ctx == 3, ctx == 2);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

@@ -1072,8 +1072,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // (set_trim_bound_at_click_then_arm_drag) — boundary extension by another
     // route, so it takes the BEGIN cap's own cue rather than the Arrow; over the
     // NAVIGATION SURFACE it is the dual-axis strip drag, whose surface GREW to
-    // the lanes with the same ruling (arm_strip_drag_at stays ONE gesture — the
-    // surface grew, not the entry count) and covers BOTH waveform halves as it
+    // the lanes with the same ruling (arm_strip_drag_at is ONE gesture; the
+    // OVERVIEW STRIP's plain press became its second ENTRY later that day,
+    // with its own Zoom clause in the plain section below) and covers BOTH
+    // waveform halves as it
     // always did. Ctrl's other top-strip claim is the marker membership toggle,
     // which is not a drag and has no cue — the flag carve-out above. The `h`
     // view ADMITS the zoom (its navigation vocabulary), so the cue stands in
@@ -1101,7 +1103,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // view identically, its own shift former being the same gesture.
     if (mods.ctrl || mods.alt || mods.shift) return GuiCursorKind::Arrow;
 
-    // PLAIN-EXACT from here. THE NAVIGATION SURFACE WEARS THE PAN — the cue
+    // PLAIN-EXACT from here. THE OVERVIEW STRIP WEARS THE ZOOM over its whole
+    // lane — the magnifier, Ableton's own hover cue ("if you hover it, it
+    // shows you a magnifying lens"), and the strip drag's standing cue: the
+    // lane's plain drag IS that gesture, this map's second Zoom surface (the
+    // ctrl arm above is the first). Modified presses on the lane bind
+    // nothing, so they fell to the Arrow above; the `h` view keeps this cue —
+    // the lane's gesture is the mode's admitted navigation class, exactly as
+    // the ctrl zoom's cue stands in there.
+    if (rect_contains(bottom_overview_row_area(app), x, y))
+        return GuiCursorKind::Zoom;
+    // THE NAVIGATION SURFACE WEARS THE PAN — the cue
     // promises the drag, which is what the plain drag does there now; the
     // motionless click (the deferred placement) needs no cue, exactly as no
     // click anywhere carries one. That covers the ruler, the marker lane's
@@ -1282,21 +1294,33 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, ONE gesture: the
+// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries since the
+// OVERVIEW STRIP landed (2026-08-12, the same day's ratified filler): the
 // ctrl-exact press on the waveform (either half) OR the two navigation lanes
 // (the ruler and the marker lane's empty stretches — the eighth glass ruling,
 // 2026-08-12: the lanes are the upper half's extension, so THE SURFACE GREW,
 // NOT THE ENTRY COUNT; a ctrl press on a FLAG stays the membership toggle,
-// lane vocabulary). The lanes' history here, kept because each turn was a
-// ruling: the ruler carried a PLAIN strip-drag entry from row 5 (2026-08-01,
-// "the zoom strip reborn" after the dedicated zoom LANE's 2026-07-31
-// deletion), lost it to the 2026-08-11 trim-surface merge, got it back in the
-// 2026-08-12 revert, lost it FOR GOOD the same day to the one-day ruler
-// region former — and rejoined as part of the CTRL surface with pan-primary,
-// later that same day, when the plain drag became the pan everywhere.
+// lane vocabulary), AND the overview strip's PLAIN press (the Ableton zoom
+// strip — the strip-drag concept's THIRD HOME, after the dedicated zoom LANE
+// deleted 2026-07-31 and the RULER, whose own plain entry was born with row 5
+// as "the zoom strip reborn", lost to the 2026-08-11 trim-surface merge,
+// restored by the 2026-08-12 revert, and deleted FOR GOOD the same day to the
+// one-day ruler region former; the ruler then rejoined as part of the CTRL
+// surface with pan-primary, later that same day, when the plain drag became
+// the pan everywhere).
 //
-// The anchor is the SONG position under the press column, which is what makes
-// the zoom pivot on the pixel the user grabbed.
+// The anchor is the SONG position under the press — the one thing the two
+// entries derive differently, so it is THE PARAMETER of the one body below
+// rather than a sibling's excuse: the ctrl entry reads the press column
+// against the live viewport (the two-parameter form's derivation — what makes
+// the zoom pivot on the pixel the user grabbed), the overview entry the
+// pressed OVERVIEW column's whole-song position, domain-corrected in target
+// view (overview_anchor_sample_at_x). Everything after the anchor is ONE
+// gesture: capture, stem-at-press, the incremental dual-axis apply, the
+// follow suppression through the viewport funnel. An overview anchor may name
+// an OFFSCREEN position; the first motion event's edge trick then rebinds it
+// to the nearest visible column exactly as a pan-pushed anchor rebinds — the
+// inherited rule, not a new arm.
 //
 // THE ANCHOR STEM PAINTS FROM THE PRESS (architect 2026-08-05, moving its start
 // off the slack crossing): the headless zoom stem stands at the press column for
@@ -1314,18 +1338,24 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 // anchor-follow re-seat are all gone, and SHIFT+CLICK is where "move the
 // playhead here" lives (the waveform placement press, region-scrub-esc.md).
 void GuiInputHandler::arm_strip_drag_at(int x, int y) {
+    // The ctrl entry's anchor: the press column against the live viewport.
     const double spp = current_samples_per_pixel(app, audio);
+    arm_strip_drag_at(x, y,
+                      static_cast<double>(app.viewport_start_sample) +
+                          static_cast<double>(x) * spp);
+}
+
+void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     app.strip_drag = StripDragState{};
     app.strip_drag.active  = true;
     app.strip_drag.press_x = x;
     app.strip_drag.press_y = y;
     app.strip_drag.last_x  = x;
     app.strip_drag.last_y  = y;
-    app.strip_drag.anchor_sample =
-        static_cast<double>(app.viewport_start_sample) +
-        static_cast<double>(x) * spp;
-    // ZOOM IS THE GESTURE'S CUE — the ctrl-waveform press, this arm's one
-    // entry, is exactly the zone map's one Zoom surface — so this is
+    app.strip_drag.anchor_sample = anchor_sample;
+    // ZOOM IS THE GESTURE'S CUE — both entries (the ctrl navigation-surface
+    // press and the overview strip's plain press) are exactly the zone map's
+    // two Zoom surfaces — so this is
     // the kind the capture release restores. Passing it is what makes the restore
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
@@ -2113,8 +2143,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is the bottom strip's one lane,
-    // directly under the waveform, and everything else is the shape above —
+    // on the block's own terms: the band is the bottom strip's waveform-side
+    // lane, directly under the waveform, and everything else is the shape above —
     // below the modal gates (a prompt or a dialog editor swallows the
     // press; the pointer-transparent flag editor does not, and its KEYBOARD
     // modality then answers the dispatched chord exactly as it answers the
@@ -2124,8 +2154,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the lane's pointer-inert tenants (text takes no clicks there, exactly
     // as the old status lane took none). The
     // arrows' hold-repeat arm lives inside the shared dispatch body
-    // (ToolbarChord::repeats), not here. The BLANK FOOT below the lane is
-    // outside this band and falls through to the tail's consumed nothing,
+    // (ToolbarChord::repeats), not here. Below the lane sit the OVERVIEW
+    // STRIP (its own claim further down, past the gesture guards — the
+    // strip-drag arm) and then the BLANK FOOT, which is
+    // outside every band and falls through to the tail's consumed nothing,
     // window ground by the vertical rule (main.cpp).
     {
         const GuiRect bottom_row = bottom_row_area(app);
@@ -2165,6 +2197,41 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // over the same state. Consumed instead, the trim guard's own shape; the
     // gesture ends by its own hooks or the button-lost motion arm.
     if (app.region_drag.active) return;
+
+    // THE OVERVIEW STRIP'S CLAIM (2026-08-12) — the whole lane, one act: a
+    // PLAIN LEFT press arms the dual-axis strip drag with the SONG POSITION
+    // AT THE PRESSED OVERVIEW COLUMN as its anchor (the whole-song mapping,
+    // domain-corrected in target view — overview_anchor_sample_at_x; the one
+    // arm body inherits capture, stem-at-press, follow suppression and every
+    // strip-drag rule, a motionless press-release being the drag's own
+    // consumed nothing, owing only the stem's erase). Every OTHER press on
+    // the band — modified, non-left — is a consumed nothing, the band-claim
+    // family's shape.
+    //
+    // DELIBERATELY ABOVE THE `h` MODE'S GATE: the lane's one gesture is the
+    // mode's own admitted navigation class (the ctrl zoom's sibling — the
+    // mode gate answers that ctrl press by falling through to this same
+    // arm), and the lane behaves identically in and out of the view (the box
+    // reads the mode's viewport by construction), so claiming here keeps ONE
+    // body with no mode arm — the band-claims-above-the-gate precedent, its
+    // "already covered" reasoning met by the gesture being coverage-free
+    // navigation rather than a chord.
+    //
+    // THE RECORDED LATER PHASE (architect, at the ratification — record, do
+    // not build): the BOX-DRAG PAN and the TRIM-STYLE ZOOM BRACKETS on the
+    // box edges; until that phase a motionless click stays the consumed
+    // nothing above.
+    {
+        const GuiRect ov = bottom_overview_row_area(app);
+        if (rect_contains(ov, x, y)) {
+            if (button == GuiMouseButton::Left &&
+                !mods.ctrl && !mods.shift && !mods.alt) {
+                arm_strip_drag_at(x, y,
+                                  overview_anchor_sample_at_x(app, audio, x));
+            }
+            return;
+        }
+    }
 
     // THE `h` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
     // and the second and last of the mode's two gates.

@@ -368,6 +368,50 @@ struct FlagCache {
     ~FlagCache() { destroy_surface(); }
 };
 
+// -- Off-screen pixel cache for the OVERVIEW STRIP's bars ----------------
+//
+// The whole-song min/max bars the overview lane blits (paint_overview_strip)
+// — the piece rendered once across the lane's width through the plate
+// renderer's own column writer (render_waveform, source domain, no map),
+// transparent outside the ink exactly like the plate, so the lane's ground
+// shows through.
+//
+// THE INVALIDATION KEY IS (width, height) AND NOTHING ELSE — the lane's
+// content dimensions, which move only on a window resize or a gui_scale
+// commit (both funnel through the lane accessor this cache is measured
+// against). The AUDIO IS DELIBERATELY NOT A KEY FIELD: the source is loaded
+// ONCE at launch and is process-immortal (file_loader — there is no
+// in-session source load; `'` load-in-place replaces sidecars and marker
+// stores, never the sample buffer), so the bars' input cannot change under a
+// live process and a per-frame tick repaint never re-reads the pyramid.
+// Rebuilds are synchronous at the paint site (O(lane width) with the
+// pyramid's unconditional <=5-pairs-per-column bound — the whole-song span is
+// exactly what the coarse rungs exist for).
+//
+// OWNED BY GuiPaintHandler AS A VALUE, unlike WaveformCache and FlagCache
+// (main.cpp-constructed references): those two are touched from outside the
+// painter — the worker completion path and main.cpp's tick — while this one
+// has no consumer but paint_overview_strip, so the narrower home is the
+// honest one.
+struct OverviewBarCache {
+    cairo_surface_t* surface  = nullptr;
+    int              width    = 0;
+    int              height   = 0;
+    bool             rendered = false;
+
+    void destroy_surface() {
+        if (surface) {
+            cairo_surface_destroy(surface);
+            surface = nullptr;
+        }
+        width    = 0;
+        height   = 0;
+        rendered = false;
+    }
+
+    ~OverviewBarCache() { destroy_surface(); }
+};
+
 // -- GuiPaintHandler -----------------------------------------------------
 //
 // Extracted from main.cpp's set_on_redraw / set_on_resize lambdas.
@@ -566,6 +610,12 @@ private:
 
     WaveformRenderInputs compute_waveform_render_inputs() const;
 
+    // The overview strip's bar cache and its dirty-detect (the key contract at
+    // OverviewBarCache above): rebuild the whole-song bars iff the lane's
+    // content dimensions moved; called from paint_overview_strip only.
+    OverviewBarCache overview_bar_cache;
+    void maybe_rebuild_overview_bar_cache(const GuiRect& lane);
+
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
     // recolor model, architect 2026-07-26: the plate is never recolored after
@@ -746,6 +796,15 @@ private:
     void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
+    // THE OVERVIEW STRIP (bottom lane 0, 2026-08-12 — the Ableton model): the
+    // lane's ground and borders (render_canvas, the waveform's own chrome),
+    // the cached whole-song bars (overview_bar_cache below), the VIEWPORT BOX
+    // and the PLAYHEAD TICK. Called from on_redraw beside the bottom row's
+    // pass on the lane's own exposure; the ground paints on every frame class
+    // (a button-adjacent lane must not read as a hole while loading) and the
+    // content gates on loaded audio inside. Full design record at the
+    // definition.
+    void paint_overview_strip(cairo_t* cr);
     // THE MODAL DIALOG (2026-08-12): the centered in-window box hosting the
     // prompts and the four modal editors (settings / load / commit-title /
     // BPM), painted LAST from on_redraw's tail, unconditionally — it

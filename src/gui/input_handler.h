@@ -483,9 +483,10 @@ struct GuiInputHandler {
     // or the compositor lacks the managers, end is idempotent — so a strip drag
     // that never captured (degraded compositor) still calls end harmlessly.
     // BEGIN CARRIES THE GESTURE'S OWN CURSOR KIND, which is the kind the capture
-    // release hands back: Zoom for the strip drag (its one entry, the
-    // ctrl-waveform press, arms inside the
-    // Zoom zone), Pan for the plain-drag grab-pan (stamped at its threshold
+    // release hands back: Zoom for the strip drag (both its entries — the
+    // ctrl navigation-surface press and the overview strip's plain press —
+    // arm inside the map's two
+    // Zoom zones), Pan for the plain-drag grab-pan (stamped at its threshold
     // crossing, where its capture begins). A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
@@ -942,15 +943,22 @@ struct GuiInputHandler {
     // the two buttons outside it are Settings and Navigation, whose action is a
     // dropdown toggle — not a chord, since no keyboard chord opens or closes a
     // popup.
-    // Arm the dual-axis strip drag — ONE body, ONE entry: the ctrl-exact
-    // waveform press (the ruler entry is DELETED FOR GOOD, 2026-08-12 — the
-    // ruler's plain drag is the region former now; the entry's three changes
-    // of hands are recorded at the definition).
+    // Arm the dual-axis strip drag — ONE body, TWO entries since the overview
+    // strip landed (2026-08-12): the ctrl-exact press on the navigation
+    // surface, whose anchor is the song position under the press against the
+    // LIVE VIEWPORT (the two-parameter form derives it), and the OVERVIEW
+    // STRIP's plain press, whose anchor is the song position at the pressed
+    // OVERVIEW column — the whole-song mapping, domain-corrected in target
+    // view (overview_anchor_sample_at_x) — handed to the parameterized form.
+    // The anchor is the ONE thing the entries decide differently, so the body
+    // is parameterized on it rather than grown a sibling; the succession
+    // record (the ruler's dead entry included) is at the definition.
     // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05, the one
     // surviving piece of the rolled-back strip-drag playhead arc) and owes that
     // first frame's damage; the gesture itself stays NAVIGATION-CLASS, touching
     // neither playhead nor selection.
     void arm_strip_drag_at(int x, int y);
+    void arm_strip_drag_at(int x, int y, double anchor_sample);
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
@@ -1872,6 +1880,10 @@ private:
     //   dual-axis strip drag's grown surface (the lanes joined it with the
     //   ruling; a ctrl press on a FLAG is the membership toggle, no cue).
     //   Live in the `h` view too — the zoom is its admitted navigation.
+    //   AND THE OVERVIEW STRIP'S WHOLE LANE, PLAIN (2026-08-12): its plain
+    //   drag is the same gesture's second entry, so it wears the same
+    //   magnifier — Ableton's own hover cue on its own zoom strip — in every
+    //   view; modified presses on the lane bind nothing and answer Arrow.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag, which
     //   moves BOTH bounds together, and the only trim gesture that does.
     // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the two routes

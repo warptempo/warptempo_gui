@@ -635,10 +635,10 @@ inline constexpr int      kWaveformBorderPx = 2;
 // kRedesignBottomLine (hex 0x17181A, the crop's near-black window-foot seam)
 // WAS declared here and is RETIRED (2026-08-12, the row unification): its one
 // consumer was the status line's bottom border on the window's last row, and
-// the unified bottom row sits against the waveform with blank window ground
-// below it — no lane rests on the window's foot any more, so the seam has no
-// surface. The crop measurement above stays as the provenance record; the
-// value is git history's.
+// the unified bottom row sits against the waveform with the OVERVIEW STRIP and
+// blank window ground below it — no lane rests on the window's foot any more,
+// so the seam has no surface. The crop measurement above stays as the
+// provenance record; the value is git history's.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1055,7 +1055,8 @@ inline int marker_lane_h_px() {
 // waveform CLAMPS at this height and the leftover becomes a band of BLANK
 // WINDOW GROUND. SINCE THE ROW UNIFICATION (later the same day) that blank
 // band sits at the WINDOW BOTTOM, under the unified bottom row — the whole
-// interactive stack (rows 1-4, rows 5-7, the waveform, the bottom row) is one
+// interactive stack (rows 1-4, rows 5-7, the waveform, the bottom row, and —
+// since the overview strip landed — that strip too) is one
 // contiguous cluster from the window top, and the flexible space is the
 // window's unused foot ("the icons, all the tools, they should be close to
 // the waveform"; the gap opened between the icon row and the trim lane for
@@ -1063,8 +1064,11 @@ inline int marker_lane_h_px() {
 // than the height on the Pi, smaller than the waveform height on my external
 // monitor". At 100% scale the natural heights are 334px on the Pi's 1024x600
 // (600 minus the 215px top strip and the 51px bottom row) and 814px on the
-// 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped (blank
-// 0) while the 1080p window gets a 264px blank foot. A SCALED length riding
+// 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped while
+// the 1080p window has 264px of leftover, split by the OVERVIEW STRIP's clamp
+// below (96 overview + 168 blank foot at 100%; on the Pi the strip's minimum
+// comes out of the WAVEFORM instead — the rule at the overview constants).
+// A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
 // strip/waveform geometry owner (bottom_strip_flex_gap / strip_row_rect /
@@ -1074,11 +1078,46 @@ inline int waveform_max_h_px() {
     return scaled_px(kWaveformMaxHeightPx, 1);
 }
 
+// THE OVERVIEW STRIP'S HEIGHT WINDOW — TWO RULED RETUNABLES (architect-ratified
+// 2026-08-12, his pick from the offered fillers: "the whole song overview
+// strip, yes, that's the best one... that's perfect"; the Ableton model per
+// his own reference, ableton.png in the redesign folder — "a Zoom strip right
+// underneath the transport buttons... it draws a box around the area that you
+// currently view"). The lane sits DIRECTLY UNDER the unified bottom row and
+// shows the WHOLE PIECE as min/max bars with the viewport box and the playhead
+// tick; its plain drag is the dual-axis strip drag (arm_strip_drag_at carries
+// the entry record).
+//
+// THE ONE HEIGHT RULE, at the geometry owner (main.cpp's vertical block):
+// overview height = clamp(what the blank foot would have been, min, max) —
+// the leftover past the waveform clamp feeds the overview first and only the
+// excess past kOverviewMaxHeightPx stays blank window ground. When the
+// leftover is short of the MINIMUM the WAVEFORM yields the difference: the
+// minimum is reserved AHEAD of the waveform's natural height, which is what
+// buys the Pi its sliver ("the touchpad could do with a very tiny one now
+// that the bottom two rows are combined... clamp the waveform to just a hair
+// above what it is now or below"). CONVERGENCE RECORDED: at 100% the Pi's
+// unclamped waveform was 334, and reserving the 24px minimum lands it at 310
+// — "a hair above" the pre-unification 307, the architect's own bracket. The
+// 1080p window at 100%: leftover 264 → overview 96, blank foot 168. Both
+// SCALED lengths riding gui_scale like every authored height; the ONE
+// application point is the same geometry owner as the waveform clamp above.
+inline constexpr int kOverviewMaxHeightPx = 96;
+inline constexpr int kOverviewMinHeightPx = 24;
+inline int overview_max_h_px() {
+    return scaled_px(kOverviewMaxHeightPx, 1);
+}
+inline int overview_min_h_px() {
+    return scaled_px(kOverviewMinHeightPx, 1);
+}
+
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
-// bottom strip's ONE lane since rows 8 and 9 merged (architect-ruled
-// 2026-08-12): the transport/arrow buttons on the left, the monospace clock
+// lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
+// strip's waveform-side lane, the OVERVIEW STRIP below it since it landed
+// later that day): the transport/arrow buttons on the left, the monospace clock
 // centered, and the status chain (the critical chip + section C) right-aligned,
-// all one line directly under the waveform, with the window's blank foot below
+// all one line directly under the waveform, with the OVERVIEW STRIP and the
+// window's blank foot below
 // it. The SUCCESSION: the status line landed as row 7 (2026-08-01, the
 // two-lane bottom strip collapsing to one — its crops keep that name), was
 // renumbered row 9 when the transport row (row 8, 2026-08-11, the touch arc's
@@ -1101,7 +1140,8 @@ inline int waveform_max_h_px() {
 // convention kept (the bottom strip's chrome grows toward the waveform, so
 // the border facing it is the one drawn). Row 9's second border — the
 // near-black window-foot seam — died with the row's window-edge position:
-// the lane's bottom edge meets blank window ground now, and kRedesignBottomLine
+// the lane's bottom edge meets the OVERVIEW STRIP now (blank window ground
+// for the strip's pre-landing hours), and kRedesignBottomLine
 // went with it (the retirement note is at the row-7 palette block above).
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
