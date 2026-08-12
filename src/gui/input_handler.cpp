@@ -1087,9 +1087,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // listening session running). Merging the regimes would give a refused press a
     // stop it does not have.
     // Trim is not part of the selection system, so the nudge never acts on a
-    // bound (trim's own gestures live on the merged band — the endcap drag,
-    // the alt bridge drag; roster at route_trim_bar_press's
-    // header, input_trim.cpp).
+    // bound (trim's own gestures live on the trim bar — the endcap and bridge
+    // drags; roster at route_trim_bar_press's header, input_trim.cpp).
     // ROUTING — TWO ROUTES AND ONE REFUSAL (architect 2026-07-29, down from three
     // routes): each column's POSITION nudge runs in its HOME view only — warp in
     // source, phase reset in target (the home-view binding) — and every other

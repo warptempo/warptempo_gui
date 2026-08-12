@@ -955,43 +955,29 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
     arm_pending_trim_drag(is_begin, /*both=*/false, mouse_x, mouse_y);
 }
 
-// Plain trim-surface press routing — the PLAIN press's route into a trim drag,
-// and one of FOUR arm_pending_trim_drag callers (re-derived 2026-08-11, the
-// fourth glass session): this
-// router, the ctrl / ctrl+shift BOUND-SET press above (which arms the same
-// single-bound pending on the bound it has just written), the ALT bridge
-// press in on_button_press (the pair drag's home since the fourth glass
-// session — ctrl+drag for the one session before it), and the CTRL in-span
-// press there (the deferred BEGIN set's vehicle, which drags nothing).
+// Plain trim-bar press routing — the PLAIN press's route into a trim drag,
+// and one of TWO arm_pending_trim_drag callers (re-derived 2026-08-12, the
+// trim surface arc's revert — the arc's extra arms, the alt bridge press and
+// the ctrl deferred-set pending, lived one day, 2026-08-11..12, and are
+// deleted whole): this router, and the ctrl / ctrl+shift BOUND-SET press
+// above, which arms the same single-bound pending on the bound it has just
+// written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
-// a bound is grabbed ONLY by its ENDCAP on the merged trim surface,
+// a bound is grabbed ONLY by its top-strip ENDCAP or by the bar's inter-cap
+// bridge span (the bound's own mark was already the unambiguous handle),
 // leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
-// CLAIMS the endcap geometry, a motionless press-release commits nothing,
+// CLAIMS the endcap/bridge geometry, a motionless press-release commits nothing,
 // and only once the pointer crosses kDragMovedThresholdPx does begin_trim_drag
-// run and the existing single drag machinery take over unchanged. A full
+// run and the existing single/pair drag machinery take over unchanged. A full
 // ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
 // pair-required gate is gone and the press is claimed purely on GEOMETRY.
-// Returns true iff the press landed on an endcap rect,
-// so the caller CLAIMS the press (no fallback); false lets the caller
-// arm the band's REGION FORMER instead (the trim surface arc, 2026-08-11: a
-// plain drag on the merged band off an endcap DRAWS THE REGION — the caller's
-// own arm, on_button_press). Trim bounds are transparent to every OTHER chord
-// (the caller gates this to the plain, unmodified press).
-//
-// THE BRIDGE ARM IS DISPLACED OFF THIS ROUTER (architect 2026-08-11, the trim
-// surface arc — HIS GESTURE RANKING from the glass sessions: pan #1, zoom #2,
-// region-draw #3, trim-move #4, the RARE gesture): a plain band drag now draws
-// the region, so the pair (bridge) drag moved off the plain press — to
-// CTRL+DRAG for one session, then to ALT+DRAG at the fourth glass session
-// (the architect's vocabulary ruling: ctrl = zoom, alt = move/pan, so MOVING
-// the trim window is alt's) — with the strictly-inside bridge geometry test
-// surviving unchanged (point_in_trim_bridge_span; the arm is
-// on_button_press's alt branch). The ctrl in-span press keeps only the
-// deferred ctrl+CLICK bound-set
-// (PendingTrimDrag::set_begin_bound_on_release; its threshold crossing
-// disarms now that the drag is alt's).
+// Returns true iff the press landed on trim
+// geometry (an endcap-rect single-bound hit, or the bar's inter-cap bridge
+// span), so the caller CLAIMS the press (no fallback); false lets the caller
+// fall through. Trim bounds are transparent to every OTHER chord (the caller
+// gates this to the plain, unmodified press).
 //
 // THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one — and since
 // 2026-08-07 neither does anything above it: the band's sole read-only defense
@@ -1000,13 +986,23 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // tab arms the endcap and bridge drags exactly as a writable one does. The two
 // internal returns this function once carried had already been deleted in
 // 2026-08-02 as unreachable; nothing replaced them, and nothing should.
-// The one arm:
-//   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, y-gated to the MERGED
-//     trim surface — trim bar + ruler + their gap, the fatter finger target)
-//     arms that bound's single drag.
-// THE ARM IS A SHARED OWNER AND NOT SPELLED HERE, which is what lets the
+// The two arms:
+//   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
+//     bar lane) arms that bound's single drag.
+//   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
+//     app_state.h — the shared owner, which carries the trim-lane y-gate, the
+//     trim_bridge_gap interval and the painter's [0, area_w) clip) arms the pair
+//     drag. The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
+//     strip height: a top-strip press below that lane — the ruler, then the
+//     marker lane — is not claimed and falls through to the caller's ruler /
+//     flag handling. Both bounds are
+//     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
+//     like every trim gesture, moves the playhead only at its release, through
+//     the commit tail's park), so it always arms as
+//     Begin structurally.
+// BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE, which is what lets the
 // pointer CURSOR promise exactly what this router claims: the zone map calls the
-// same predicate (pointer_cursor_kind, input_pointer.cpp), so a point that
+// same two predicates (pointer_cursor_kind, input_pointer.cpp), so a point that
 // arms nothing shows the Arrow by construction rather than by proximity.
 // The drags DESELECT and STOP a live audition at
 // their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
@@ -1014,7 +1010,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // PLAYHEAD is what they never
 // touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
-// THE ARMS DECIDE ON THE DISPLAYED BASIS — the displayed MAP
+// BOTH ARMS DECIDE ON THE DISPLAYED BASIS — the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
 // (item_viewport_basis), the EXACT basis and owner chain the live trim
 // pass (GuiPaintHandler::paint_trim) paints the bar and its endcaps from every frame
@@ -1031,32 +1027,29 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // far subtler seam).
 bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
-    // Single-drag hit: the endcap rect (hit_test_trim_endcap, gated to the
-    // merged trim surface). THE ENDCAP OUTRANKS the caller's region former, as
-    // it always outranked the bridge — a false here is what hands the rest of
-    // the band to the region draw.
+    // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
     const TrimHit single = hit_test_trim_endcap(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
         arm_pending_trim_drag(single == TrimHit::Begin, /*both=*/false,
                               mouse_x, mouse_y);
         return true;
     }
-    // (THE BRIDGE ARM LIVED HERE until the trim surface arc, 2026-08-11 — the
-    // pair drag is ALT+DRAG on the band now, armed at on_button_press's alt
-    // branch through the same pending; the header carries the displacement and
-    // the architect's gesture-ranking rationale.)
+    // Bridge (pair) drag. The pair has no grabbed-bound notion — both bounds are
+    // the subject, so it always arms as Begin structurally (there is no
+    // nearer-bound pick, and the gesture moves the playhead only at its
+    // release, through the commit tail's park).
+    if (point_in_trim_bridge_span(app, audio, mouse_x, mouse_y)) {
+        arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
+                              mouse_x, mouse_y);
+        return true;
+    }
     return false;
 }
 
-// Arm the pending trim endcap/bridge drag — the shared vehicle of the FOUR
-// press arms (the caller roster at route_trim_bar_press's header above; the
-// plain endcap, the alt bridge, the ctrl deferred set and the bound-set
-// set-then-arm). Mirrors
+// Arm the pending trim endcap/bridge drag from a plain trim-bar press. Mirrors
 // PendingMarkerDrag: nothing mutates the trim store yet — begin_trim_drag runs
 // only when on_motion sees the pointer cross kDragMovedThresholdPx from the
-// press (the ctrl deferred-set pending instead disarms there — the flag's
-// contract, app_state.h). is_begin names the single bound (Begin for a
-// bridge/pair drag); both
+// press. is_begin names the single bound (Begin for a bridge/pair drag); both
 // distinguishes the single vs the pair.
 void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
                                             int press_x, int press_y) {
@@ -1076,6 +1069,7 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 // (THE TOUCH TRIM MOVE lived here 2026-08-11..12 — the fourth glass session's
 // hold-a-beat gesture, three bodies driving this machinery from the
 // platform's trim-move hooks. Deleted whole with the disambiguation window at
-// the timer-free ruling: on glass the band is the ordinary pointer surface
-// now, entered through the press path like every other gesture; touch.md
-// carries the record.)
+// the timer-free ruling: on glass the trim bar is the ordinary pointer surface
+// now, entered through the press path like every other gesture — a finger drag
+// on the bar's bridge moves the window from contact; touch.md carries the
+// record.)

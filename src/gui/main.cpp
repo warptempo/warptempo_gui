@@ -126,9 +126,7 @@ namespace {
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
 // own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps), the RULER lane
-// (ruler_lane_h_px(), timestamps + tick tops; its zoom-strip drag entry is
-// DELETED — the trim surface arc, 2026-08-11, the lane's input merged into
-// the trim band and the strip drag one-entry on the ctrl-waveform press) and
+// (ruler_lane_h_px(), timestamps + tick tops + the zoom strip's drag band) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
@@ -202,7 +200,7 @@ int top_lane_height(int lane) {
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
         case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / ticks (input: merged trim band)
+        case 5: return ruler_lane_h_px();        // timestamps / ticks / zoom strip
         // Flags, stems and the playhead head; bottom edge = waveform top.
         case 6: return marker_lane_h_px();
         default: return 0;
@@ -308,15 +306,13 @@ GuiRect waveform_area(const AppState& a) {
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
-// 5 and the marker lane lane 6). The PAINTER is
-// handed its band as a parameter (GuiPaintHandler::paint_trim passes
+// 5 and the marker lane lane 6), and hit_test_trim_endcap / the pair-drag y-gate
+// read top_trim_row_area(app) — the exact band render_trim_flags paints the
+// lane ground, the window's bar and its two endcaps in, because the PAINTER is
+// handed that band as a parameter (GuiPaintHandler::paint_trim passes
 // top_trim_row_area(app) as render_trim_flags' `trim_bar`) instead of
-// re-deriving a lane y from the row heights above it, and the trim HIT y-gates
-// (hit_test_trim_endcap / the bridge test) read top_trim_surface_area(app) —
-// the MERGED band over lanes 4 and 5, a DELIBERATE, stated vertical widening
-// since the trim surface arc (2026-08-11; the columns still resolve through
-// the painter's own owners). All sides reach their bands through these
-// helpers, so paint and hit cannot drift when a
+// re-deriving a lane y from the row heights above it. Both sides therefore
+// reach the band through this one helper, so paint and hit cannot drift when a
 // lane above the trim bar changes height, is removed, or gains a gap.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge) {
@@ -339,17 +335,15 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // bar, plus its own 1px margin-bottom); lane 1 is the TOOLBAR row (the flat
 // ground carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
-// its border-bottom); lane 3 is the ICON row (the sixteen view/mode/action
-// buttons and its border-bottom); lane 4 is the TRIM lane (the bar and its
-// endcaps); lane 5 is the RULER lane (the timestamp ladder). FOR INPUT the two
-// are ONE MERGED TRIM SURFACE since the trim surface arc (architect
-// 2026-08-11, top_trim_surface_area below): every trim gesture, the band's
-// region former and the span-framing double-click answer over the merged
-// band's whole height, while each lane keeps its own PAINT — the ruler's
-// former strip-drag zoom entry is deleted, zoom living on the waveform. Lane 6
-// is the MARKER lane (the flags, their stems, and the
+// its border-bottom); lane 3 is the ICON row (the seventeen view/mode/action
+// buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
+// endcaps, every trim gesture the b/e chips used to carry, and the span-framing
+// double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
+// zoom strip); lane 6 is the MARKER lane (the flags, their stems, and the
 // playhead's aliased head on the lane's bottom rows), whose bottom edge is
-// flush with the waveform area top.
+// flush with the waveform area top. (The trim and ruler lanes were ONE merged
+// input band — top_trim_surface_area — for the trim surface arc's one day,
+// 2026-08-11..12; the revert re-split them and deleted the accessor.)
 GuiRect top_menu_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
@@ -372,17 +366,6 @@ GuiRect top_trim_row_area(const AppState& a) {
 
 GuiRect top_ruler_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 5);
-}
-
-// THE MERGED TRIM SURFACE (contract at the declaration, app_state.h): the trim
-// bar lane through the ruler lane as one input band — the union rect, which by
-// the strip stack's construction (adjacent lanes, one kRowGapPx between)
-// includes the inter-lane gap, so no dead row splits the finger target.
-GuiRect top_trim_surface_area(const AppState& a) {
-    const GuiRect trim  = top_trim_row_area(a);
-    const GuiRect ruler = top_ruler_row_area(a);
-    return GuiRect{trim.x, trim.y, trim.w,
-                   (ruler.y + ruler.h) - trim.y};
 }
 
 GuiRect top_marker_row_area(const AppState& a) {
