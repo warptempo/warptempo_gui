@@ -68,11 +68,13 @@ inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }
 
-// Single source for the bottom-strip editor prefixes, read by the paint
-// sites (render_bottom_strip_editor) alone since row 7. The pointer path no
-// longer measures a prefix at all: the painter shapes prefix and pending as ONE
-// run and publishes where the pending half begins, so the click-to-caret origin
-// IS the painted one rather than a re-derivation that could drift from it.
+// Single source for the modal editor prefixes, read by the dialog painter
+// (paint_modal_dialog) alone since the editors moved into the centered
+// dialog (2026-08-12; they were the bottom-strip prefixes from row 7 until
+// then). Each is the dialog's LABEL, painted beside the inset field; the
+// pointer path never measures one — the painter publishes the field's own
+// click-to-caret origin (AppState::DialogEditorText), so the mapped
+// geometry IS the painted one rather than a re-derivation that could drift.
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // The load prompt (bare `'`) label. The typed entry identifier —
@@ -743,4 +745,12 @@ private:
     void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
+    // THE MODAL DIALOG (2026-08-12): the centered in-window box hosting the
+    // prompts and the four modal editors (settings / load / commit-title /
+    // BPM), painted LAST from on_redraw's tail, unconditionally — it
+    // publishes AppState::modal_dialog and AppState::dialog_editor_text, the
+    // geometry the pointer path's veil, button claims and click-to-caret
+    // read. The full design record is at the definition; the sampled chrome
+    // constants are at render.h's kModal* block.
+    void paint_modal_dialog(cairo_t* cr);
 };

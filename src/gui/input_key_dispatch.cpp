@@ -190,7 +190,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // "read-only means no save" (Ctrl+S dropped here) and the structural drop of the
 // ctrl+alt render chords (their modifier combination simply matched no
 // predicate). ADMITTING Ctrl+S REMOVES AN INCONSISTENCY rather than creating
-// one: the close prompt's [S]ave has always saved from a locked tab —
+// one: the close prompt's Save answer has always saved from a locked tab —
 // GuiPrompt::respond calls GuiSaveOps::save with no read-only check of its own,
 // and the prompt block sits at the TOP of on_key, far above this gate — so the
 // keyboard chord was the only save route the lock ever stopped.
@@ -303,7 +303,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     // THE SAVE (architect 2026-08-07). It writes the state the tab already
-    // holds — it authors nothing — and the close prompt's [S]ave already saved
+    // holds — it authors nothing — and the close prompt's Save answer already saved
     // from a locked tab through the very same owner (the header's inconsistency
     // note). Ctrl-exact, exactly the dispatch arm's own spelling. IT CARRIES THE
     // SAVE AND COMMIT ACT IN THE `h` VIEW since 2026-08-08 and needs no clause
@@ -2122,7 +2122,9 @@ void GuiInputHandler::open_history_commit_editor() {
     app.commit_title_editor.selection_anchor = 0;
     app.commit_title_editor.cursor_pos =
         static_cast<int>(app.commit_title_editor.pending.size());
-    viewport.invalidate_status_row_area();
+    // A modal-dialog OPEN damages the whole window (the box's rect does not
+    // exist before its first paint — the settings opener carries the rule).
+    viewport.invalidate_all();
 }
 
 void GuiInputHandler::commit_title_editor_exit_no_commit() {
@@ -2790,20 +2792,25 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     return true;        // every other chord is inert while the popup is up
 }
 
-// The BOTTOM-STRIP modal surfaces: the settings editor, the load
-// editor, the bpm editor (top_flag_editor reused with Kind::BpmBracket,
-// painted in the bottom strip) and, since 2026-08-07, the history view's
-// commit-title editor — plus the prompts, which own input through
+// The DIALOG-HOSTED modal editors: the settings editor, the load
+// editor, the bpm editor (top_flag_editor reused with Kind::BpmBracket) and,
+// since 2026-08-07, the history view's commit-title editor — the four
+// surfaces painting in the centered modal dialog since 2026-08-12 (they
+// lived on the bottom strip before, whence the predicate's old
+// modal_bottom_strip_editor_active name; the membership is unchanged) —
+// plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it names is the POINTER-facing
 // behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (three since 2026-08-11: the wheel swallow, the cursor
-// map's blanket Arrow, and the modal-trap block at on_button_press's top) is
+// the caller roster (seven since the dialog arc: the wheel swallow, the
+// cursor map's blanket Arrow, the modal-trap block, the dialog button claim,
+// the dialog-hover motion branch, the roster hover walk's veil term, and the
+// dialog painter's fork by proxy) is
 // the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
-bool GuiInputHandler::modal_bottom_strip_editor_active() const {
+bool GuiInputHandler::modal_dialog_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.load_editor) ||
            text_editor::is_active(app.commit_title_editor) ||
@@ -2811,8 +2818,8 @@ bool GuiInputHandler::modal_bottom_strip_editor_active() const {
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
-// Any text editor consuming printable keys — the THREE bottom-strip editors
-// (the settings prompt, the load prompt and the commit-title editor)
+// Any text editor consuming printable keys — the THREE single-State dialog
+// editors (the settings prompt, the load prompt and the commit-title editor)
 // plus the top-strip flag editor in EITHER kind (the FlagPayload editor takes
 // typed letters too). The platform layer's kLeftClickKey probe: while this is
 // true that key types a normal letter rather than emulating the left button.
@@ -2824,7 +2831,7 @@ bool GuiInputHandler::any_text_editor_active() const {
 }
 
 // Keyboard modality — see the declaration for the readers and for why the
-// wheel and playback-stop readers deliberately keep the bottom-strip predicate.
+// wheel and playback-stop readers deliberately keep the dialog predicate.
 // It is EXACTLY any_text_editor_active, and that identity is structural rather
 // than coincidental: an editor that swallows printable letters MUST own the
 // keyboard, or typing `f` into a flag would toggle follow mode. So this
@@ -3485,7 +3492,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     }
 
     // The BPM sweep render fires from render_bpm_sweep(), triggered by Enter
-    // in the bottom-strip BPM editor after a successful commit; there is no
+    // in the BPM dialog editor after a successful commit; there is no
     // key-dispatch handler for it here.
 
     return false;
@@ -4272,7 +4279,9 @@ void GuiInputHandler::open_load_editor() {
         app.load_editor.cursor_pos =
             static_cast<int>(app.load_editor.pending.size());
     }
-    viewport.invalidate_status_row_area();
+    // A modal-dialog OPEN damages the whole window (the box's rect does not
+    // exist before its first paint — the settings opener carries the rule).
+    viewport.invalidate_all();
 }
 
 void GuiInputHandler::load_editor_exit_no_commit() {
@@ -4428,7 +4437,7 @@ void GuiInputHandler::load_editor_commit() {
 // MIRROR since 2026-08-11 (the modal-trap fix):
 // modal_editor_admits_command_chord (input_pointer.cpp) restates the
 // Esc/Ctrl+S/Ctrl+Q command set so a roster button whose chord is admitted
-// here dispatches while a bottom-strip editor stands — the two spellings must
+// here dispatches while a dialog editor stands — the two spellings must
 // move together. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
 // Alt + Tab fall through to handle_key unchanged); the commit-title, bpm and
@@ -4436,7 +4445,8 @@ void GuiInputHandler::load_editor_commit() {
 // them at all — the on_key gate swallows it first.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the four
-// bottom-strip surfaces pass invalidate_status_row_area, the top-strip flag editor
+// dialog surfaces pass invalidate_status_row_area (whose rider carries the
+// dialog's stashed box, viewport.cpp), the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
@@ -4634,7 +4644,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // plain pass per sweep cell; a disabled OWNER is rejected
     // (bpm_popup_eligible_marker now excludes disabled — a disabled owner was a
     // render-inert rewrite).
-    // There is no toggle-off branch: the bpm editor is a modal bottom-strip
+    // There is no toggle-off branch: the bpm editor is a modal dialog
     // surface, so while it is open `m` never reaches this dispatch — it is
     // just a typed character the bracket grammar rejects — and bpm mode never
     // rests without its editor (the mode's only exits are the editor's own:
@@ -4690,7 +4700,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             mvw[owner].bpm_endpoint = boundary;
         }
         const std::set<int> span_selection = app.selected_markers;
-        // The bpm editor is a modal bottom-strip surface, so its open takes the
+        // The bpm editor is a modal dialog surface, so its open takes the
         // shared modal stop (stop_playback_for_modal_open). Position is
         // load-bearing: every refusal in the guard ladder above — the authoring
         // gate, the span's contiguity / label_ref / eligibility tests, and

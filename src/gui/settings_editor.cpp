@@ -111,7 +111,11 @@ void GuiSettingsEditor::open() {
                        /*locked_prefix=*/"",
                        /*initial_pending=*/"",
                        text_editor::Kind::SettingsAssignment);
-    viewport.invalidate_status_row_area();
+    // A modal-dialog OPEN damages the whole window: the centered box's rect
+    // does not exist before its first paint (the stash is the painter's), so
+    // the status-row owner's dialog rider cannot cover it here. Every later
+    // repaint of the session rides that owner (viewport.cpp).
+    viewport.invalidate_all();
 }
 
 void GuiSettingsEditor::exit_no_commit() {

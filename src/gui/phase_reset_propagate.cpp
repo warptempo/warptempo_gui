@@ -260,8 +260,10 @@ void PhaseResetPropagate::open_paste_confirmation() {
     app.prompt.text            =
         "Paste phase resets into matching blocks? "
         "Existing phase resets in matched ranges will be cleared.";
+    // Button words in the dialog's plain-word spelling (PromptState owns the
+    // rule): `y` answers Yes from the keyboard exactly as before.
     app.prompt.response_keys   = {'y', '\x1b'};
-    app.prompt.response_labels = {"[Y]es", "[Esc]"};
+    app.prompt.response_labels = {"Yes", "Cancel"};
     app.prompt.trigger         = DialogTrigger::PASTE_CONFIRM;
     viewport.invalidate_all();
 }

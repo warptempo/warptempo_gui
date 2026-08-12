@@ -323,7 +323,7 @@ void enter(State& s, int target,
     s.red               = false;
     // A fresh session starts unscrolled; the flag editor's painter travels it on
     // the first frame if the seeded cursor (at end of text) is already past the
-    // box. The bottom-strip editors leave it at zero for their whole session.
+    // box. The dialog editors leave it at zero for their whole session.
     s.view_offset_px    = 0.0;
     touch_blink(s);
 }

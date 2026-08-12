@@ -27,25 +27,29 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
     // machinery remains a vector<char> match.
     //
-    // [S]ave always writes a loadable file: the marker serializer writes
+    // Save always writes a loadable file: the marker serializer writes
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. [S]ave / [Delete]
-    // (discard-and-proceed) / [Esc] (cancel). The accelerator letter
-    // capitalizes in the label while the match stays lowercase-exact —
-    // PromptState's declaration owns that rule.
+    // the GUI never writes a LOAD-invalid state. `s` = Save / Delete =
+    // discard-and-proceed / Esc = cancel; the labels are the dialog
+    // BUTTONS' plain words (PromptState's declaration owns the rule — the
+    // bracket-accelerator spelling retired with the bottom-strip prompt
+    // line, 2026-08-12), so the Delete sentinel wears its meaning,
+    // "Discard", and Escape wears "Cancel".
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
+    app.prompt.response_labels = {"Save", "Discard", "Cancel"};
     app.prompt.trigger         = t;
     viewport.invalidate_all();
 }
 
 // Dismiss-only error notice. The text is the caller's error string —
 // the parser's own message, verbatim. Single acknowledge response:
-// Esc (the '\x1b' sentinel; see open_unsaved's key-mapping note).
-// Modal like every other prompt while active: the pointer handlers
-// swallow mouse events and on_key routes only the response key.
+// Esc (the '\x1b' sentinel; see open_unsaved's key-mapping note). Its
+// one button wears "OK" rather than "Cancel" — nothing is being
+// cancelled, the act already refused; the button acknowledges.
+// Modal like every other prompt while active: the pointer veil consumes
+// everything outside the dialog and on_key routes only the response key.
 void GuiPrompt::open_error_notice(std::string text) {
     // A modal surface is opening: the shared modal stop, same rule as every
     // other prompt open.
@@ -53,7 +57,7 @@ void GuiPrompt::open_error_notice(std::string text) {
     app.prompt.active          = true;
     app.prompt.text            = std::move(text);
     app.prompt.response_keys   = {'\x1b'};
-    app.prompt.response_labels = {"[Esc]"};
+    app.prompt.response_labels = {"OK"};
     app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
     viewport.invalidate_all();
 }
@@ -98,8 +102,7 @@ void GuiPrompt::activate_response(char k) {
             if (!ok) {
                 app.prompt.text            = "Save failed.";
                 app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
-                app.prompt.response_labels =
-                    {"[R]etry", "[Delete]", "[Esc]"};
+                app.prompt.response_labels = {"Retry", "Discard", "Cancel"};
                 viewport.invalidate_all();
                 return;
             }

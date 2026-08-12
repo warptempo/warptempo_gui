@@ -165,8 +165,9 @@ struct State {
     // travel to keep the caret visible; the painter recomputes the MINIMAL
     // offset that shows the caret each frame (scroll only as far as it must, in
     // whichever direction the caret left the window) and the click-to-byte path
-    // reads the same published geometry. The BOTTOM-STRIP editors never touch
-    // it — they are monospace, unclamped, and behave exactly as before — so this
+    // reads the same published geometry. The DIALOG editors never touch
+    // it — their inset field does not scroll (an over-long buffer clips, the
+    // standing accepted cost) — so this
     // field is 0 for their whole session. It lives on State rather than beside
     // the geometry because it is SESSION state: it must survive from frame to
     // frame and die with the edit, which enter/deactivate already own.

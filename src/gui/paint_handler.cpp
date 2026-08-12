@@ -78,7 +78,7 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // boundary is computed from the lane's own edges, never from the text currently
 // on screen.
 //
-//   pad | CRITICAL | pad | C: the modal / status span | pad
+//   pad | CRITICAL | pad | C: the status span | pad
 //
 // SECTION A IS GONE WITH THE CLOCK. Its reserved cell was the row's right-hand
 // anchor and C ended one pad before it; C now runs to the RIGHT MARGIN — the
@@ -103,7 +103,9 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // anyway. Sizing it on a shaped maximum would mean reserving the widest possible
 // failure text on every row that has no failure at all.
 //
-// THE MODAL TEXT RUNS THE WHOLE ROW since the clock left it (2026-08-11). The
+// THE SPAN RUNS THE WHOLE ROW since the clock left it (2026-08-11); it is
+// STATUS ONLY since 2026-08-12, when the prompts and the modal editors left
+// the row for the centered dialog (paint_modal_dialog). The
 // DIRTY DOT'S SECTION IS GONE from the line too: the dot rides the WINDOW TITLE
 // beside the project name, where labwc paints it
 // (GuiPlatform::apply_window_title).
@@ -117,12 +119,12 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // paint_handler.h). One constant, two uses or three, an eye-consistency choice
 // either way.
 //
-// C IS CLIPPED AT THE RIGHT MARGIN; if the modal text does not fit, it clips
+// C IS CLIPPED AT THE RIGHT MARGIN; if the status text does not fit, it clips
 // (architect: a screen too small for the line is a user problem, not a layout
 // one). See paint_bottom_strip's clip block.
 
 struct BottomRowSections {
-    double c_x    = 0.0;   // the modal / status span's pen
+    double c_x    = 0.0;   // the status span's pen
     double c_x1   = 0.0;   // and its clip boundary: the lane's right margin
     // The critical chip's TEXT pen, valid only when a critical message stands
     // (crit_w > 0). The chip's own box is derived from it and the flag anatomy's
@@ -162,216 +164,14 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
     return s;
 }
 
-// The four bottom-strip editors (settings / load / commit title / BPM) share
-// this one body, differing only in prefix and which State they read. It shapes PREFIX AND
-// PENDING AS ONE RUN — so the pair kerns exactly as it paints — and addresses
-// the pending half through that run's own byte boundaries, which it publishes
-// for the pointer path (AppState::BottomEditorText).
-//
-// ALL FOUR INHERIT THE INVALID FLASH'S MARKER-FLAG BOX TOGETHER (2026-08-02,
-// step 1 below) — they are the complete set of surfaces painting through here,
-// and every one of them fits it: each is a prefix plus one editable run on one
-// line, which is the exact shape the box wraps, and none carries a second field,
-// a multi-line payload or a box of its own for it to fight. Their prefixes
-// differ in width and nothing else, and the box is measured off the RUN, not off
-// a prefix.
-//
-// NO VIEW OFFSET, deliberately: unlike the flag editor's unrolled box these
-// editors do not scroll. That was the monospace path's intent too and it is
-// kept — the settings and commit strings that reach the boundary are
-// pathological, and a scrolling field here would need machinery this row does
-// not want.
-//
-// WHAT THE 2026-08-01 RELAYOUT CHANGED ABOUT THAT CLAUSE, stated plainly: the
-// editors used to run off the RIGHT EDGE OF THE WINDOW, because C ran to the
-// window edge and nothing clipped it. C now ends at the lane's RIGHT MARGIN —
-// one pad in from its right edge, the boundary the timestamp's reserved cell
-// used to hold until the clock left for row 8 — and the whole section is
-// CLIPPED there (paint_bottom_strip), so
-// an over-long editor string is cut at that boundary instead of at the window's.
-// The intent is unchanged in substance — the editor still does not scroll and
-// still has no view offset — and only the boundary moved: an editor is modal
-// text in section C, and C's contents clip alike. The caret can therefore sit
-// outside the clip on a pathological string; the accepted cost is the same one
-// the run-off always carried (the text was off-window before), and the pointer
-// mapping is unaffected because BottomEditorText publishes unclipped geometry.
-//
-// The published byte geometry is the PAINTER's, clip or no clip: a click past
-// the boundary maps through the same byte_x table, which is exactly what the
-// unclipped run-off did.
-static void render_bottom_strip_editor(cairo_t* cr,
-                                       AppState& app,
-                                       cairo_scaled_font_t* font,
-                                       const text_editor::State& ed,
-                                       const char* prefix,
-                                       double origin_x,
-                                       double baseline_y,
-                                       int band_y, int band_h) {
-    const std::string prefix_s(prefix);
-    const std::string full = prefix_s + ed.pending;
-    const text_shape::ShapedRun run = text_shape::shape_text_run(font, full);
-    const std::vector<double> bx = text_shape::byte_offsets_px(run, full.size());
-    const size_t p0 = prefix_s.size();
-
-    // PUBLISH the pending half's geometry: origin at its byte 0, boundaries
-    // rebased to it. Same shape as FlagEditorBox's pair, so editor_byte_index_at
-    // searches this exactly as it searches the flag editor's.
-    AppState::BottomEditorText& out = app.bottom_editor_text;
-    out.valid         = true;
-    out.text_origin_x = origin_x + bx[p0];
-    out.byte_x.clear();
-    out.byte_x.reserve(ed.pending.size() + 1);
-    for (size_t i = p0; i < bx.size(); ++i) out.byte_x.push_back(bx[i] - bx[p0]);
-
-    // THE GLYPH INK BAND — the caret's and the selection highlight's shared
-    // vertical extent, the face's own ascent-to-descent about the baseline. The
-    // retired monospace box derived the same band by inverting a chip formula;
-    // here the extents ARE the band, with no box to invert.
-    //
-    // THE INVALID FLASH LEFT THIS BAND in 2026-08-02: it is a marker-flag box
-    // now and takes the flag's height and baseline offset instead. The caret and
-    // the highlight KEEP the ink band deliberately — they are the editor's
-    // resting furniture, present on every frame whether or not a box is, and the
-    // two extents agree to within a pixel anyway (a 19-row flag interior against
-    // this face's 19-row ascent+descent at gui_scale 100), so the flash contains
-    // them exactly as the flag editor's box contains its own.
-    const double sel_x0 = origin_x + bx[p0];
-    const double sel_x1 = origin_x + run.width_px;
-
-    // 1. THE INVALID FLASH, and it is the box's whole remaining visual.
-    //
-    //    IT IS A MARKER FLAG NOW (architect 2026-08-02: "the settings editor
-    //    still uses the old kaccent color — make it like the flag editor when
-    //    user enters invalid submission. same padding and size — basically it
-    //    should look like a marker flag in terms of dimensions"). The box is
-    //    built from THE MARKER FLAG'S OWN constants — called, never copied, so a
-    //    flag retune moves this surface with it — in the flag's own paint order:
-    //    the 1px left border (kMarkerFlagBorder at full strength — the flag's
-    //    border takes the disabled blend on a disabled MARKER, and a bottom
-    //    editor has no marker and no disabled state to inherit), the fill and
-    //    its 1px top edge in the marker lane's OWN red pair
-    //    (kMarkerFlagFillRed / kMarkerFlagEdgeRed — the exact pair the flag
-    //    editor flashes, so there is ONE invalid red in the product and no
-    //    drift), the flag's two pads around the run, the marker lane's height,
-    //    and the flag's baseline offset, which is what seats the box on the text
-    //    the way a flag sits on its label instead of merely being lane-tall
-    //    somewhere on the row. The pre-redesign dark-red chip pair leaves with
-    //    it — the last two tunable colours in the tree, which is what let the
-    //    whole colors.conf system retire the same day.
-    //
-    //    THE SUBJECT IS UNCHANGED — the EDITABLE RUN, not the prefix. The prefix
-    //    names the field; what failed to parse is what the user typed, and the
-    //    box marks that. So the left pad reaches a pixel or two back over the
-    //    prefix's trailing space (its glyphs repaint over the box in step 3
-    //    regardless), exactly as a flag's left pad sits between its border and
-    //    its first glyph.
-    //
-    //    THE NORMAL FACE IS DELIBERATELY UNCHANGED: at rest these editors paint
-    //    NO box, and the flag editor's marker-coloured ground is not borrowed
-    //    here. The architect's sentence is about the INVALID submission and the
-    //    DIMENSIONS, and the reason it stops there is structural — the flag
-    //    editor's fill is the edited MARKER'S OWN CLASS COLOUR, it is that
-    //    marker's flag unrolled; a settings, load or BPM editor edits no
-    //    marker and has no class, so kMarkerFlagFill here would be a purple that
-    //    names nothing, on a row whose ground is its own sampled surface. Red is
-    //    different in kind: it is a STATE, not an identity, and every editor in
-    //    the product can enter it. The one box these editors have therefore
-    //    takes the flag's anatomy; the resting row stays the row.
-    //
-    //    NO DEGENERATE CASE IS LEFT. An EMPTY invalid run needed a forced 1px
-    //    width and a negative-inset guard while the box was a RING made by
-    //    insetting a fill; this box is pad + run + pad under a top BAND, so an
-    //    empty run is an ordinary pads-wide box and every rectangle here is
-    //    positive by construction. VERTICAL OVERFLOW needs no guard either: the
-    //    box is 20px at gui_scale 100 against a 31px content band and scales
-    //    with it, and section C's clip (paint_bottom_strip) bounds this painter
-    //    to that band the way it bounds the glyphs.
-    if (ed.red) {
-        const int pad_l    = marker_flag_pad_left_px();
-        const int pad_r    = marker_flag_pad_right_px();
-        const int edge_h   = marker_flag_edge_h_px();
-        const int border_w = marker_flag_border_px();
-        const int rx0   = static_cast<int>(std::nearbyint(sel_x0));
-        const int rx1   = static_cast<int>(std::nearbyint(sel_x1));
-        const int run_w = (rx1 > rx0) ? (rx1 - rx0) : 0;
-        const int fx = rx0 - pad_l;
-        const int fw = pad_l + run_w + pad_r;
-        const int fy = static_cast<int>(std::nearbyint(baseline_y)) -
-                       marker_flag_baseline_px();
-        const int fh = marker_lane_h_px();
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                             kMarkerFlagBorder.b);
-        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
-                             kMarkerFlagFillRed.b);
-        cairo_rectangle(cr, fx, fy, fw, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
-                             kMarkerFlagEdgeRed.b);
-        cairo_rectangle(cr, fx, fy, fw, edge_h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
-    // 2. The selection highlight, from the same boundaries the glyphs came from.
-    const bool has_sel = text_editor::has_selection(ed);
-    const size_t s0 = p0 + static_cast<size_t>(text_editor::selection_start(ed));
-    const size_t s1 = p0 + static_cast<size_t>(text_editor::selection_end(ed));
-    if (has_sel) {
-        const int hx0 = static_cast<int>(std::nearbyint(origin_x + bx[s0]));
-        const int hx1 = static_cast<int>(std::nearbyint(origin_x + bx[s1]));
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        cairo_rectangle(cr, hx0, band_y, (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
-    // 3. Prefix and pending in one pass — one run, one paint.
-    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                         kRedesignLabel.b);
-    text_shape::show_shaped_run(cr, run, origin_x, baseline_y);
-
-    // 4. The selected substring repainted in the ground colour for contrast, the
-    //    WHOLE run re-shown under a clip — shaping the substring on its own
-    //    could kern its first glyph differently and shift the ink. It stays the
-    //    ROW GROUND rather than following the flash box's fill the way the flag
-    //    editor's does: the flag editor always has a box to knock its glyphs out
-    //    of, this one has a box only while invalid, and dark-on-white stays the
-    //    legible pair in both states.
-    if (has_sel) {
-        cairo_save(cr);
-        cairo_rectangle(cr, origin_x + bx[s0], static_cast<double>(band_y),
-                        bx[s1] - bx[s0], static_cast<double>(band_h));
-        cairo_clip(cr);
-        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                             kRedesignTabGround.b);
-        text_shape::show_shaped_run(cr, run, origin_x, baseline_y);
-        cairo_restore(cr);
-    }
-
-    // 5. The caret: a blink-gated 1px filled column on the cursor's own byte
-    //    boundary, AA off.
-    if (text_editor::cursor_visible_now(ed)) {
-        const int cursor_pos =
-            std::clamp(ed.cursor_pos, 0, static_cast<int>(ed.pending.size()));
-        const double cx =
-            origin_x + bx[p0 + static_cast<size_t>(cursor_pos)];
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        cairo_rectangle(cr, static_cast<int>(std::nearbyint(cx)), band_y,
-                        1, band_h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-}
+// (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
+// LEFT THIS ROW 2026-08-12 for the centered MODAL DIALOG: the settings, load,
+// commit-title and BPM editors paint as a label + dark inset field + OK/Cancel
+// buttons in paint_modal_dialog at the tail of this file, and the prompt's
+// text-plus-labels line became that dialog's message + real buttons. The
+// one-run prefix+pending shaping died with the row — the prefix is a LABEL
+// outside the field now, so the pending run shapes alone and the published
+// click-to-caret geometry (AppState::DialogEditorText) is the field's own.)
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -4191,7 +3991,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // ROW 9 — THE STATUS LANE IS ONE LINE (architect 2026-08-01, as the
     // then-row 7; the strip is row 9 in the numbering since row 8 landed,
     // 2026-08-11). THE LAYOUT since the clock left this row (2026-08-11):
-    // pad | CRITICAL chip | pad | SECTION C, the modal / editor / status
+    // pad | CRITICAL chip | pad | SECTION C, the status
     // span, CLIPPED AT THE LANE'S RIGHT MARGIN — one pad in from its right
     // edge. There is NO SECTION A any more: the timestamp, its reserved
     // widest-digit cell and the no-wiggle specimen all moved to ROW 8's
@@ -4208,20 +4008,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // WINDOW TITLE beside the project name (GuiPlatform::apply_window_title)
     // — the title is the mark's only home now.
     //
-    // PRECEDENCE IN SECTION C, highest first — MODALS FIRST, THEN STATUS
-    // (architect 2026-08-10, 0b7492b6, superseding the original
-    // status-over-editor order; the freeze that forced it and the full rule
-    // are recorded at the chain's modal block below): prompt > the history
-    // mode's two editors (the in-mode load editor, the commit-title editor)
-    // > settings editor > load editor > BPM editor > the history mode's line
-    // > queue / loading status > transient status message > the
-    // resolved-value readout. A modal must be VISIBLE to be operable — an
-    // editor holds the keyboard, so status painted over it read as a hung
-    // product — while the readout stays the lowest tier: a passive
-    // description of the selection under everything the user is doing or
-    // waiting on. The transient message sits directly above it for the same
-    // reason and cannot collide with an editor in practice — it is cleared
-    // by the next key press, and opening any editor is one.
+    // PRECEDENCE IN SECTION C, highest first — STATUS ONLY since the modals
+    // left for the centered dialog (2026-08-12; paint_modal_dialog): the
+    // history mode's line > queue / loading status > transient status
+    // message > the resolved-value readout. THE MODAL TIERS ARE GONE WHOLE —
+    // the prompt and the four modal editors paint in their own box over an
+    // inert window now, so the row never yields this span to them and the
+    // 0b7492b6 modals-first ordering is superseded structurally: a modal is
+    // visible because it floats, not because it outranks status in a shared
+    // cell. The row keeps its non-modal jobs untouched. The readout stays
+    // the lowest tier: a passive description of the selection under
+    // everything the user is waiting on, with the transient message directly
+    // above it.
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
     // redesigned rows above it: the line is audio-independent, and the loading
@@ -4266,17 +4064,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     const BottomRowSections sec =
         bottom_row_sections(font, lane, app.critical_error_message);
 
-    // The glyph ink band the editors' caret, selection and red flash share.
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
-    const int band_y = static_cast<int>(std::nearbyint(baseline - fe.ascent));
-    const int band_h = static_cast<int>(
-        std::nearbyint(fe.ascent + fe.descent));
-
-    // The published editor geometry is rewritten from scratch every run, so an
-    // editor that is not painted (closed, or outranked in the chain below)
-    // leaves nothing behind for the pointer path to grab.
-    app.bottom_editor_text = AppState::BottomEditorText{};
+    // (THE EDITORS' INK BAND AND THEIR PUBLISHED GEOMETRY LEFT WITH THEM,
+    // 2026-08-12: the caret/selection band and the DialogEditorText reset are
+    // paint_modal_dialog's now.)
 
     // (SECTION A — THE TIMESTAMP — LEFT THIS ROW 2026-08-11 for the centre of
     //  row 8, in monospace: the painter, the split-playhead read and the
@@ -4295,9 +4085,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
     // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px left
     // border, in the flag's own paint order and on the flag's own pads, height
-    // and baseline offset — the exact anatomy the four bottom-strip editors flash
-    // for an invalid commit (render_bottom_strip_editor, step 1). So there is ONE
-    // invalid red and ONE chip shape in the product, and a flag retune moves both
+    // and baseline offset — the marker flag's anatomy whole. (The four modal
+    // editors flashed this same anatomy from this row until 2026-08-12; their
+    // flash is the DIALOG FIELD's recolor now — same red pair, the field's
+    // own box — so the chip is the flag anatomy's one bottom-row tenant.) So
+    // there is ONE
+    // invalid red in the product, and a flag retune moves both
     // surfaces together. The ink is the row's ordinary label colour, which is
     // what that flash already shows on this same fill.
     //
@@ -4348,7 +4141,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         cairo_restore(cr);
     }
 
-    // --- Section C: the modal / editor / status chain, in the span that runs
+    // --- Section C: the status chain, in the span that runs
     //     from the critical cell (or the left lead-in, with no critical message
     //     standing) to the lane's RIGHT MARGIN — one pad in from its right
     //     edge, the boundary the clock's reserved cell held until 2026-08-11. ---
@@ -4359,9 +4152,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // no ellipsis, no shrink and no scroll here). The margin is a function of
     // the lane alone, so C's right edge never moves and its text never jumps.
     //
-    // The clip covers the row's whole content band vertically, so the editors'
-    // caret, selection highlight and red flash clip on the same boundary as
-    // their glyphs — one rectangle for every branch below, taken once. A
+    // The clip covers the row's whole content band vertically — one rectangle
+    // for every branch below, taken once. A
     // degenerate lane (a window narrower than pad + pad + A + pad, which the
     // 640px minimum makes unreachable at every gui_scale) yields an empty span
     // and simply paints no C at all rather than a normalized backwards rect.
@@ -4375,133 +4167,20 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                     c_w, static_cast<double>(content.h));
     cairo_clip(cr);
 
-    if (app.prompt.active) {
-        // Plain tier: the prompt text and its response labels assembled
-        // into one string joined by single ' ' characters and drawn in a
-        // single pass. Single space between tokens: two spaces never appear
-        // in GUI output, and modals use exactly one.
-        std::string assembled = app.prompt.text;
-        for (const auto& label : app.prompt.response_labels) {
-            assembled += ' ';
-            assembled += label;
-        }
-        show_row_text(cr, font, sec.c_x, baseline, assembled, kRedesignLabel);
-    } else if (app.history_mode.active &&
-               text_editor::is_active(app.load_editor)) {
-        // THE LOAD EDITOR OVER THE MODE'S OWN LINE (2026-08-04). The mode
-        // ADMITS `'` — in the mode that editor loads a COMMIT in place
-        // rather than a render entry — so for the first time the mode's line
-        // has a contender for the cell, and the editor takes it: it is the
-        // surface the user is typing into, and a caret with nowhere to paint
-        // is not a modal editor.
-        // The mode's line comes straight back when the edit ends either way.
-        //
-        // THE BRANCH IS MODE-SCOPED, above the mode's line and therefore above
-        // the queue status too, which is the ranking the mode already has:
-        // while it stands, this span is the mode's, and an editor the mode
-        // itself opened inherits that standing. OUTSIDE the mode the ordinary
-        // load-editor branch below paints instead, with the ./renders/
-        // prefix — and it too ranks ABOVE the queue status since the
-        // modals-first rewrite (0b7492b6, the chain contract below): a modal
-        // must be visible to be operable, so no editor sits below status
-        // anywhere in this chain. What is mode-scoped here is the prefix and
-        // the rank over the mode's own line, not the rank over status.
-        //
-        // ITS PREFIX IS THE SUBJECT'S: `Load: ` with no ./renders/ lead-in,
-        // since what the buffer holds is a commit spelling.
-        render_bottom_strip_editor(cr, app, font, app.load_editor,
-                                   kLoadEditorHistoryPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.commit_title_editor)) {
-        // THE COMMIT-TITLE EDITOR (2026-08-07), the mode's other editor and the
-        // same story as the load editor above it: the mode's line yields its
-        // cell to the surface the user is typing into, and gets it back when the
-        // edit ends either way. It carries no mode test of its own — it can only
-        // be open while the view stands (its one opener is the view's Ctrl+S,
-        // and every closer of the view runs past a keyboard the editor owns) —
-        // and leaving the test out is the failing-safe direction: an editor that
-        // somehow outlived the view would still paint its caret rather than
-        // swallowing keys invisibly. Its prefix names its subject — the commit
-        // message, prefilled with `Update <id>` — and its red flash is a blank
-        // buffer. The two are mutually exclusive (each opener refuses while any
-        // editor owns the keyboard), so the order of these two branches is free.
-        render_bottom_strip_editor(cr, app, font, app.commit_title_editor,
-                                   kCommitTitleEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    // A MODAL SURFACE ALWAYS OUTRANKS THE PROGRESS MESSAGE (architect
-    // 2026-08-10). The three editors below used to sit UNDER
-    // queue_progress_text, and that inversion was a real freeze: an editor is
-    // MODAL — it holds the keyboard through route_modal_editor_key and swallows
-    // presses — so while an "Updating..." or a "Rendering..." stood, the editor
-    // was open and operating on input while painting NOTHING. Keys and clicks
-    // vanished into a surface the user could not see, which reads as a hung
-    // product even to someone who knows the system.
-    //
-    // THE RULE IS ONE SENTENCE AND IT IS SYMMETRIC: a modal must be VISIBLE to
-    // be operable, and the message is STATUS rather than interaction, so the
-    // modal wins the slot. Because this is an else-if chain, the message needs
-    // no cancel, no clear and no label machinery to give way — it simply is not
-    // reached while an editor stands, and it RETURNS THE INSTANT the editor
-    // closes, from its own live state, on the next frame. No state, no edge, no
-    // recovery. And it is symmetric across BOTH producers by construction: the
-    // preview's "Updating..." and the archival render's "Rendering N of M"
-    // share this one slot, so neither can hide a modal and neither is treated
-    // specially.
-    //
-    // THIS SUPERSEDES THE CANCEL-AT-OPEN RULING OF THE SAME DAY, whose
-    // machinery is deleted whole: the three openers no longer cancel the
-    // in-flight preview, and the tick edge that re-established the buffer that
-    // cancel left dirty is gone with it. DO NOT RE-PROPOSE either — a render
-    // now runs to completion behind the visible editor, so there is nothing to
-    // recover: an Esc abandon leaves a COMPLETED, current buffer, and a
-    // commit's own trigger kills and re-dispatches exactly as it always has.
-    //
-    // THE THREE EDITORS OUTRANK THE HISTORY LINE TOO, and that is the same rule
-    // rather than an extra one — the line is status like the message. It is
-    // REACHABLE with an editor open, verified rather than assumed: bare `'` is
-    // one of the mode's admitted mutator chords (is_load_in_place,
-    // input_key_dispatch.cpp) and it opens the LOAD editor inside the view, so
-    // ranking the line first would hide that editor exactly as the message did.
-    // The commit-title editor above already sat ahead of the line for this
-    // reason; the other editors now join it, which leaves the whole chain
-    // reading MODALS first, then STATUS.
-    } else if (text_editor::is_active(app.settings_editor)) {
-        // Settings prompt overlay: "setting: <pending>", through the shared
-        // shaped-editor body (which publishes the caret geometry and owns the
-        // parse-failure red flash).
-        render_bottom_strip_editor(cr, app, font, app.settings_editor,
-                                   kSettingsEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.load_editor)) {
-        // Load prompt overlay: "Load: ./renders/<pending>", through
-        // the same shared body; its red flash is an unresolved / bad commit.
-        render_bottom_strip_editor(cr, app, font, app.load_editor,
-                                   kLoadEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (text_editor::is_active(app.top_flag_editor) &&
-               app.top_flag_editor.kind ==
-                   text_editor::Kind::BpmBracket) {
-        // BPM editor overlay, through the same bottom-strip
-        // editor helper as the settings branch above. top_flag_editor
-        // with kind==BpmBracket only ever paints here, never over the
-        // flag in the top strip.
-        render_bottom_strip_editor(cr, app, font, app.top_flag_editor,
-                                   kBpmEditorPrefix,
-                                   sec.c_x, baseline, band_y, band_h);
-    } else if (app.history_mode.active) {
-        // THE `h` HISTORY MODE'S ONE LINE, in the modal span — the same cell the
-        // four bottom-strip editors paint in. It ranks under the PROMPT
-        // (Ctrl+Q's quit dialog can still be raised over it) and under EVERY
-        // modal editor — the two in-mode editors above and the
-        // settings/load/BPM branches between them and this one — because the
-        // line is STATUS, and the chain reads MODALS first, then STATUS (the
-        // contract above, 0b7492b6); it ranks over the queue status and the
-        // readout, because while the mode stands this line is what the strip
-        // is for whenever no modal claims the cell. The three editors between
-        // cannot arrive here while the mode stands (its keyboard allowlist
-        // admits no opener but `'` and Ctrl+S, and the Settings menu is locked
-        // out), so their rank over this line is unobservable — the chain keeps
-        // the one modals-first shape rather than encoding reachability.
+    // (THE MODAL TIERS LEFT THIS CHAIN 2026-08-12 — the prompt and the four
+    // modal editors paint in the centered dialog (paint_modal_dialog), so the
+    // history line below is the span's top tier now and the row carries
+    // status on every frame, dialog up or not. The 0b7492b6 modals-first
+    // contract is superseded structurally: nothing here can hide a modal any
+    // more, because no modal competes for this cell.)
+    if (app.history_mode.active) {
+        // THE `h` HISTORY MODE'S ONE LINE, the span's top tier since the
+        // modals left for the dialog (2026-08-12): it ranks over the queue
+        // status and the readout, because while the mode stands this line is
+        // what the strip is for. A prompt or an in-mode editor no longer
+        // displaces it — the dialog floats over the row and the line stays
+        // painted beneath, which is the honest picture (the mode still
+        // stands).
         //
         // THE SHAPE: the commit's position in the walk and its short SHA, then
         // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
@@ -4523,8 +4202,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // architect's live pass — it is one `if` and one `+=`, deliberately
         // removable without touching the scale half.
         //
-        // Plain label ink (kRedesignLabel) through show_row_text, matching the
-        // prompt branch above and the transient-message and readout branches
+        // Plain label ink (kRedesignLabel) through show_row_text, matching
+        // the transient-message and readout branches
         // below: this is a passive report, not an editor, so it takes no caret,
         // no prefix face and no flash.
         // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
@@ -4589,8 +4268,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // status line
         // as an appendix; with one line and one span it takes its
         // place in the chain, directly above the readout. Cleared by the next
-        // key press, which is also what opens every editor above it, so the two
-        // cannot compete in practice.
+        // key press.
         show_row_text(cr, font, sec.c_x, baseline,
                       app.transient_status_message, kRedesignLabel);
     } else {
@@ -4611,8 +4289,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         //
         // LIVE-TEST FLAGGED: whether the readout should follow the selection
         // alone is the architect's call at the row-5 look. Row 7 adds a second
-        // flagged fact — it is the LOWEST tier of the one span, so any modal,
-        // editor or status message hides it while it is up.
+        // flagged fact — it is the LOWEST tier of the one span, so any
+        // status message hides it while it is up.
         std::string readout;
         if (popup_eligible_marker(app, app.last_selected_marker)) {
             readout = compute_hover_popup_text(
@@ -4625,6 +4303,407 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     }
     cairo_restore(cr);   // section C's clip
     cairo_restore(cr);   // the row's font/color state
+}
+
+// -- GuiPaintHandler::paint_modal_dialog ---------------------------------
+//
+// THE MODAL DIALOG (architect 2026-08-12: "we should institute real modals" —
+// kdenlive's own dialog model, achieved IN-WINDOW: no new Wayland surface, the
+// box is painted by this one renderer, centered both axes, after every other
+// pass). It hosts the PROMPTS and the FOUR modal editors (settings / load /
+// commit-title / BPM), which lived on the status lane until this arc; the
+// top-strip FLAG editor is deliberately NOT a dialog — it is positional,
+// editing the marker where it stands, and stays the pointer-transparent
+// unrolled flag (render_flag_editor_box).
+//
+// CONTENT PER KIND:
+//   A PROMPT — the message line (PromptState::text), then a right-aligned
+//   BUTTON ROW, one real button per response wearing its plain word
+//   (PromptState owns the label rule). NO DEFAULT FACE: the crop's
+//   highlighted Save is Qt's Enter-default and this prompt system has no
+//   Enter answer, so every button is plain (recorded at PromptState).
+//   AN EDITOR — its prefix as the LABEL on the box ground, the pending
+//   buffer in a DARK INSET FIELD (editor.png's look), then OK + Cancel.
+//   The field is the existing text_editor machinery — selection, caret,
+//   byte-identical editing — and the red flash RECOLORS THE FIELD in the
+//   marker-flag red pair (the one invalid red, called not copied).
+//
+// THE BUTTONS ARE THE ARCHITECT'S EXPLICIT MIX: the TOOLBAR row's box (row
+// 2's 32px height and its own label pads, the icon slot dropped — these
+// buttons carry words, not glyphs) wearing the ICON ROW's face colors — rest
+// is the bare label, hover the 1px accent outline at the icon row's radius.
+// THE CLICK FACE IS DELIBERATELY NOT PAINTED: dialog buttons act ON PRESS
+// like every roster button, and the press closes (or mutates) the dialog on
+// the same frame, so a held-interior fill would never be seen; the surface
+// does not join redesign_pressed.
+//
+// CHROME AND METRICS, sampled off the two crops (the four colors and their
+// derivations are at the kModal* block, render.h):
+//   kModalBorderPx 1     — the crop's frame.
+//   kModalPadPx 11       — modal_popup.png's measured content margin (the
+//                          11px band between the Cancel button's right border
+//                          x=710 and the box border x=722, and the same 11
+//                          rows under the button band, y=143..153); reused as
+//                          the box's uniform inner pad and the inter-block
+//                          vertical gap, the one-constant eye-consistency
+//                          choice the status row's pad already makes.
+//   kModalButtonGapPx 8  — the crop's inter-button gap (Save ends x=504, Do
+//                          Not Save begins x=513; identically 619..626).
+//   kModalFieldHeightPx 31 — editor.png's field, borders included (y=5..35).
+//   kModalFieldPadXPx 7  — its border-to-ink inset (x=86..92).
+//   kModalLabelGapPx 11  — its label-to-field gap (label ink ends x=73,
+//                          field border x=85).
+//   kModalFieldWidthPx 520 — AUTHORED, not sampled (the crop's field width is
+//                          its dialog's layout, not a rule): wide enough for
+//                          every render-entry id and settings line met in
+//                          practice; an over-long buffer CLIPS at the field
+//                          exactly as the old row clipped at its margin — the
+//                          editors still do not scroll, the same accepted
+//                          cost, and the published byte geometry stays the
+//                          painter's unclipped truth.
+//   kModalWindowMarginPx 10 — the box's clamp against a narrow window; the
+//                          field absorbs the shrink (floored at 40px).
+//
+// THE PUBLICATION is the floating surfaces' own convention: this runs
+// UNCONDITIONALLY from on_redraw's tail, rewrites AppState::modal_dialog and
+// AppState::dialog_editor_text every run (zero/invalid with no dialog up), so
+// the pointer path always reads what is actually on screen and a closed
+// dialog strands nothing. Damage: the openers invalidate the whole window
+// (the box's rect does not exist before the first paint); every later edit,
+// blink, flash and closer rides invalidate_status_row_area, which carries the
+// stashed box while one is up (the rider is at that owner, viewport.cpp).
+
+namespace {
+
+constexpr double kModalBorderPx       = 1.0;
+constexpr double kModalPadPx          = 11.0;
+constexpr double kModalButtonGapPx    = 8.0;
+constexpr double kModalFieldHeightPx  = 31.0;   // includes its two 1px borders
+constexpr double kModalFieldBorderPx  = 1.0;
+constexpr double kModalFieldPadXPx    = 7.0;
+constexpr double kModalLabelGapPx     = 11.0;
+constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
+constexpr double kModalWindowMarginPx = 10.0;
+
+} // namespace
+
+void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
+    // The publication reset, every run — a dialog that is not painted leaves
+    // nothing behind for the pointer path to grab.
+    AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    dlg.valid = false;
+    dlg.box   = GuiRect{0, 0, 0, 0};
+    dlg.field = GuiRect{0, 0, 0, 0};
+    dlg.buttons.clear();
+    app.dialog_editor_text = AppState::DialogEditorText{};
+
+    // WHICH DIALOG: the prompt outranks every editor (the one coexistence the
+    // old row's chain also resolved prompt-first — a WM close can raise the
+    // unsaved-work prompt over a standing editor, and the prompt is then what
+    // owns the keyboard); the editor fork below is the old chain's own order,
+    // with the load editor's prefix forked on the history mode exactly as
+    // before (in the mode its buffer is a commit spelling, so the ./renders/
+    // lead-in would be a false statement).
+    const bool prompt_up = app.prompt.active;
+    const text_editor::State* ed = nullptr;
+    const char* prefix = nullptr;
+    if (!prompt_up) {
+        if (app.history_mode.active &&
+            text_editor::is_active(app.load_editor)) {
+            ed     = &app.load_editor;
+            prefix = kLoadEditorHistoryPrefix;
+        } else if (text_editor::is_active(app.commit_title_editor)) {
+            ed     = &app.commit_title_editor;
+            prefix = kCommitTitleEditorPrefix;
+        } else if (text_editor::is_active(app.settings_editor)) {
+            ed     = &app.settings_editor;
+            prefix = kSettingsEditorPrefix;
+        } else if (text_editor::is_active(app.load_editor)) {
+            ed     = &app.load_editor;
+            prefix = kLoadEditorPrefix;
+        } else if (text_editor::is_active(app.top_flag_editor) &&
+                   app.top_flag_editor.kind ==
+                       text_editor::Kind::BpmBracket) {
+            ed     = &app.top_flag_editor;
+            prefix = kBpmEditorPrefix;
+        }
+    }
+    if (!prompt_up && ed == nullptr) {
+        // No dialog: the hover index resets WITH the stash, so a fresh dialog
+        // cannot inherit the previous one's lit button.
+        app.modal_dialog_hovered = -1;
+        return;
+    }
+
+    cairo_save(cr);
+    cairo_scaled_font_t* font = select_bottom_row_face(cr);
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+
+    const int bord  = scaled_px(kModalBorderPx, 1);
+    const int pad   = scaled_px(kModalPadPx);
+    const int bgap  = scaled_px(kModalButtonGapPx);
+    // The toolbar row's own button box: content height minus the two vertical
+    // margins — row 2's exact arithmetic, called on the same constants.
+    const int btn_h = scaled_px(static_cast<double>(kToolbarRowHeightPx)) -
+                      2 * scaled_px(kToolbarBtnMarginYPx);
+    const int btn_pad_l = scaled_px(kToolbarBtnPadLeftPx);
+    const int btn_pad_r = scaled_px(kToolbarBtnPadRightPx);
+
+    // -- The buttons' words and widths, shaped up front (the layout needs the
+    //    row's total before anything can be placed). --
+    struct DialogButtonPlan {
+        std::string label;
+        char        response_key = 0;
+        bool        editor_ok    = false;
+        int         w            = 0;
+    };
+    std::vector<DialogButtonPlan> plan;
+    if (prompt_up) {
+        for (size_t i = 0; i < app.prompt.response_labels.size(); ++i) {
+            DialogButtonPlan b;
+            b.label = app.prompt.response_labels[i];
+            b.response_key = i < app.prompt.response_keys.size()
+                                 ? app.prompt.response_keys[i] : 0;
+            plan.push_back(std::move(b));
+        }
+    } else {
+        // OK = the editor's Enter commit, Cancel = its Esc — the buttons
+        // dispatch through the SAME key route (input_pointer's dialog press
+        // claim), button-is-its-chord.
+        plan.push_back(DialogButtonPlan{"OK", 0, true, 0});
+        plan.push_back(DialogButtonPlan{"Cancel", 0, false, 0});
+    }
+    int buttons_w = 0;
+    for (size_t i = 0; i < plan.size(); ++i) {
+        const double lw =
+            text_shape::shape_text_run(font, plan[i].label).width_px;
+        plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
+        buttons_w += plan[i].w + (i > 0 ? bgap : 0);
+    }
+
+    // -- Content sizing. --
+    const int msg_band =
+        static_cast<int>(std::nearbyint(fe.ascent + fe.descent));
+    int label_w = 0;
+    int field_w = 0;
+    int field_h = 0;
+    int content_w = 0;
+    int top_h     = 0;
+    if (prompt_up) {
+        const double mw =
+            text_shape::shape_text_run(font, app.prompt.text).width_px;
+        content_w = std::max(static_cast<int>(std::ceil(mw)), buttons_w);
+        top_h     = msg_band;
+    } else {
+        label_w = static_cast<int>(
+            std::ceil(text_shape::shape_text_run(font, prefix).width_px));
+        field_w   = scaled_px(kModalFieldWidthPx);
+        field_h   = scaled_px(kModalFieldHeightPx);
+        content_w = std::max(label_w + scaled_px(kModalLabelGapPx) + field_w,
+                             buttons_w);
+        top_h     = field_h;
+    }
+    // The clamp against a narrow window: the box yields, and on an editor
+    // dialog the FIELD absorbs the shrink (floored so it stays a field).
+    const int max_box_w = app.width - 2 * scaled_px(kModalWindowMarginPx);
+    int box_w = content_w + 2 * (pad + bord);
+    if (box_w > max_box_w) {
+        box_w     = std::max(max_box_w, 2 * (pad + bord) + 1);
+        content_w = box_w - 2 * (pad + bord);
+        if (!prompt_up) {
+            field_w = std::max(
+                content_w - label_w - scaled_px(kModalLabelGapPx),
+                scaled_px(40.0, 1));
+        }
+    }
+    const int box_h = bord + pad + top_h + pad + btn_h + pad + bord;
+    const int bx = static_cast<int>(
+        std::nearbyint((app.width - box_w) / 2.0));
+    const int by = static_cast<int>(
+        std::nearbyint((app.height - box_h) / 2.0));
+
+    // -- The box: the 1px sampled frame around the sampled ground. No title
+    //    bar (the crop's is the WM's decoration; ours is in-window) and no
+    //    dim layer over the window behind (the palette is fully opaque by
+    //    ruling and kdenlive's own parent stays undimmed — inertness is
+    //    behavioral, the pointer veil in input_pointer.cpp). --
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, kModalBorder.r, kModalBorder.g, kModalBorder.b);
+    cairo_rectangle(cr, bx, by, box_w, box_h);
+    cairo_fill(cr);
+    cairo_set_source_rgb(cr, kModalGround.r, kModalGround.g, kModalGround.b);
+    cairo_rectangle(cr, bx + bord, by + bord,
+                    box_w - 2 * bord, box_h - 2 * bord);
+    cairo_fill(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+
+    const int cx0 = bx + bord + pad;                 // content left
+    const int cy0 = by + bord + pad;                 // content top
+
+    if (prompt_up) {
+        // The message line, clipped to the box interior — an over-long error
+        // text cuts at the frame exactly as the old row cut at its margin.
+        cairo_save(cr);
+        cairo_rectangle(cr, bx + bord, by + bord,
+                        box_w - 2 * bord, box_h - 2 * bord);
+        cairo_clip(cr);
+        show_row_text(cr, font, static_cast<double>(cx0),
+                      redesign_baseline(font, static_cast<double>(cy0),
+                                        static_cast<double>(top_h)),
+                      app.prompt.text, kRedesignLabel);
+        cairo_restore(cr);
+    } else {
+        // -- The editor row: label on the box ground, then the inset field. --
+        const int fbord = scaled_px(kModalFieldBorderPx, 1);
+        const int fx    = cx0 + label_w + scaled_px(kModalLabelGapPx);
+        const GuiRect field_outer{fx, cy0, field_w, field_h};
+        const GuiRect field_inner{fx + fbord, cy0 + fbord,
+                                  field_w - 2 * fbord, field_h - 2 * fbord};
+        const double baseline =
+            redesign_baseline(font, static_cast<double>(cy0),
+                              static_cast<double>(field_h));
+
+        show_row_text(cr, font, static_cast<double>(cx0), baseline,
+                      prefix, kRedesignLabel);
+
+        // The field chrome. THE RED FLASH RECOLORS THE FIELD — the editors'
+        // one invalid state paints the interior in the marker-flag red pair
+        // (fill under its 1px top edge, the flag anatomy's own order), so
+        // there is ONE invalid red in the product and no second box.
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kModalFieldBorder.r, kModalFieldBorder.g,
+                             kModalFieldBorder.b);
+        cairo_rectangle(cr, field_outer.x, field_outer.y,
+                        field_outer.w, field_outer.h);
+        cairo_fill(cr);
+        const GuiColor field_ground =
+            ed->red ? kMarkerFlagFillRed : kModalFieldGround;
+        cairo_set_source_rgb(cr, field_ground.r, field_ground.g,
+                             field_ground.b);
+        cairo_rectangle(cr, field_inner.x, field_inner.y,
+                        field_inner.w, field_inner.h);
+        cairo_fill(cr);
+        if (ed->red) {
+            cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r,
+                                 kMarkerFlagEdgeRed.g, kMarkerFlagEdgeRed.b);
+            cairo_rectangle(cr, field_inner.x, field_inner.y,
+                            field_inner.w, marker_flag_edge_h_px());
+            cairo_fill(cr);
+        }
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+
+        // The pending run, its selection and the caret, clipped to the field
+        // interior (no scroll, the standing accepted cost — the caret can sit
+        // outside the clip on a pathological string, and the published byte
+        // geometry stays the painter's unclipped truth).
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(font, ed->pending);
+        const std::vector<double> bx_off =
+            text_shape::byte_offsets_px(run, ed->pending.size());
+        const double tx =
+            static_cast<double>(field_inner.x) + scaled_px(kModalFieldPadXPx);
+
+        // PUBLISH the click-to-caret geometry: origin at pending's byte 0,
+        // the same shape as FlagEditorBox's pair, so editor_byte_index_at
+        // searches this exactly as it searches the flag editor's.
+        AppState::DialogEditorText& out = app.dialog_editor_text;
+        out.valid         = true;
+        out.text_origin_x = tx;
+        out.byte_x        = bx_off;
+
+        const int band_y =
+            static_cast<int>(std::nearbyint(baseline - fe.ascent));
+        const int band_h =
+            static_cast<int>(std::nearbyint(fe.ascent + fe.descent));
+
+        cairo_save(cr);
+        cairo_rectangle(cr, field_inner.x, field_inner.y,
+                        field_inner.w, field_inner.h);
+        cairo_clip(cr);
+
+        const bool   has_sel = text_editor::has_selection(*ed);
+        const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
+        const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
+        if (has_sel) {
+            const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
+            const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            cairo_rectangle(cr, hx0, band_y,
+                            (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, run, tx, baseline);
+        if (has_sel) {
+            // The selected substring knocked out in the FIELD ground — the
+            // whole run re-shown under a clip (shaping the substring alone
+            // could kern its first glyph differently and shift the ink).
+            cairo_save(cr);
+            cairo_rectangle(cr, tx + bx_off[s0], static_cast<double>(band_y),
+                            bx_off[s1] - bx_off[s0],
+                            static_cast<double>(band_h));
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kModalFieldGround.r, kModalFieldGround.g,
+                                 kModalFieldGround.b);
+            text_shape::show_shaped_run(cr, run, tx, baseline);
+            cairo_restore(cr);
+        }
+        if (text_editor::cursor_visible_now(*ed)) {
+            const int cursor_pos = std::clamp(
+                ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
+            const double caret_x = tx + bx_off[static_cast<size_t>(cursor_pos)];
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
+                            band_y, 1, band_h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+        cairo_restore(cr);   // the field clip
+
+        dlg.field = field_inner;
+    }
+
+    // -- The button row, right-aligned in the content span. --
+    const int row_y = cy0 + top_h + pad;
+    const int lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double rad = std::nearbyint(kIconCornerRadiusPx *
+                                      gui_scale_factor());
+    int x = bx + box_w - bord - pad - buttons_w;
+    for (size_t i = 0; i < plan.size(); ++i) {
+        if (i > 0) x += bgap;
+        const GuiRect r{x, row_y, plan[i].w, btn_h};
+        // The icon row's face rule, the two faces this surface has: rest is
+        // the bare label, hover the accent outline (the fill/outline split's
+        // hover half; there is no selected state here and the click face is
+        // deliberately unpainted, the header's act-on-press note).
+        if (static_cast<int>(i) == app.modal_dialog_hovered) {
+            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
+                              nullptr, &kRedesignAccent);
+        }
+        show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
+                      redesign_baseline(font, static_cast<double>(r.y),
+                                        static_cast<double>(r.h)),
+                      plan[i].label, kRedesignLabel);
+        AppState::ModalDialogButton out;
+        out.rect         = r;
+        out.response_key = plan[i].response_key;
+        out.editor_ok    = plan[i].editor_ok;
+        dlg.buttons.push_back(out);
+        x += plan[i].w;
+    }
+
+    dlg.box   = GuiRect{bx, by, box_w, box_h};
+    dlg.valid = true;
+    cairo_restore(cr);
 }
 
 // -- GuiPaintHandler::on_redraw ------------------------------------------
@@ -4784,7 +4863,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
         //  12. the flag editor's box, then the dropdown and the tooltip — the
         //      floating surfaces, after every pass above and outside this
-        //      branch.
+        //      branch — and LAST the MODAL DIALOG (paint_modal_dialog,
+        //      2026-08-12), the centered box the prompts and the four modal
+        //      editors paint in, over everything.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and
         // overlaps none of these passes.)
@@ -4913,6 +4994,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     render_flag_editor_box(cr, app, audio);
     paint_dropdown(cr);
     paint_shift_tooltip(cr);
+
+    // THE MODAL DIALOG PAINTS LAST OF ALL (2026-08-12): it floats over the
+    // whole window — the veil's visual half — and cannot coexist with the two
+    // floating surfaces above (a dropdown and a modal are never open together
+    // by the standing two-mechanism claim, and no tooltip dwell starts under
+    // a modal), so painting it after them costs nothing and states the stack
+    // honestly. UNCONDITIONAL for the floating surfaces' own reason: it
+    // publishes the geometry the pointer path reads (AppState::modal_dialog),
+    // and a run that skipped would strand a stale box.
+    paint_modal_dialog(cr);
 
     cairo_restore(cr);
 

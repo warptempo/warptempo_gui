@@ -93,30 +93,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.invalidate_status_row_area();
     }
 
-    // Bottom-strip prompt owns input while active. Only the prompt's
+    // The modal prompt (a centered dialog since 2026-08-12) owns input while
+    // active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
     // marker edits / playback / viewport keys cannot sneak in while
     // the prompt is up. Delete and Escape map to sentinel chars '\x7f' and
     // '\x1b' so they participate in the same vector<char> match as letter
-    // responses.
+    // responses. The dialog's BUTTONS answer too — the pointer's press claim
+    // (input_pointer.cpp) calls the same activate_response — but the keyboard
+    // half here is byte-identical to the bottom-strip era.
     // EVERY response — letters, Delete, Escape alike — matches BARE ONLY
     // (architect 2026-07-28): no ctrl, no alt, and no shift. That is what stops
-    // Ctrl+S from picking `[S]ave` in the close prompt and Alt+Y from applying
+    // Ctrl+S from picking the Save answer in the close prompt and Alt+Y from applying
     // a confirmed paste.
     // CASE-SENSITIVITY IS THE CODEPOINT'S JOB, NOT !shift's (architect 2026-07-30):
     // the platform case-folds letter keysyms, so the GuiKey says `y` for every way
     // of typing a Y, and the old `!shift` spelling let CAPSLOCK deliver a
-    // visually-uppercase Y that still answered `[Y]es` — the exact outcome the
+    // visually-uppercase Y that still answered the Yes response — the exact outcome the
     // case-sensitivity was there to forbid. `mods.codepoint` is the true character
     // under the live keyboard state (xkb_state_key_get_utf32 at the platform
     // boundary, shift AND lock applied), so the letter arm reads THAT: a capital Y
     // never matches a lowercase response key, however it was produced. The bare-only
     // gate stays as the modifier rule it always was, and the Delete / Escape
     // responses keep matching on the GuiKey (they carry no case and no codepoint
-    // worth reading). The LABEL capitalizes its accelerator letter anyway
-    // (architect 2026-08-02, pacman's Y/n convention — PromptState's declaration
-    // owns the rule): the display and the match are deliberately split, and a
-    // typed capital not answering is the accepted cost.
+    // worth reading). (The bracket-accelerator LABELS this match once shipped
+    // beside — "[S]ave", pacman's Y/n convention — retired with the
+    // bottom-strip prompt line, 2026-08-12: the responses are BUTTONS wearing
+    // plain words now, PromptState's declaration owning the label rule, and
+    // the match here is deliberately unchanged.)
     if (app.prompt.active) {
         // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
@@ -165,9 +169,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     below, matching every other modal's Ctrl+Q hatch.
     // A popup and an editor CANNOT be open together, so this gate can never
     // contend with route_modal_editor_key — and the claim rests on TWO
-    // mechanisms, one per class. The popup opens only from row 1, and while one
-    // of the three BOTTOM-STRIP editors is up the press that would open it dies
-    // at their swallow arms in on_button_press. The pointer-transparent FLAG
+    // mechanisms, one per class. The popup opens only from row 1, and while a
+    // DIALOG editor is up the press that would open it dies at the dialog's
+    // veil in on_button_press (the two menu anchors carry no chord, so the
+    // modal-trap lift never reaches them). The pointer-transparent FLAG
     // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
     // open path discards the edit, exactly as a press outside its box does. The
     // reverse direction is this gate's own doing — `;` is swallowed here, so no
@@ -260,7 +265,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // merely unlisted: nothing downstream can see it, so nothing downstream can
     // tear an edit down on its way to a command that does not exist.
     // Modality is about CHORDS only: the wheel still punches through a flag
-    // editor (navigation), which rides modal_bottom_strip_editor_active rather
+    // editor (navigation), which rides modal_dialog_editor_active rather
     // than this predicate, and opening a flag editor still does not stop
     // playback — that one rides no predicate at all, each bottom-strip surface
     // spelling its own stop at its open site.
@@ -480,7 +485,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q                 → close-prompt routing
     //   - Ctrl+S                 → the save (2026-08-07). It writes the state
     //                              the tab already holds and authors nothing —
-    //                              and the close prompt's [S]ave, which sits
+    //                              and the close prompt's Save answer, which sits
     //                              above this gate, always did save from a
     //                              locked tab through the same owner
     //   - Ctrl+Alt+R,            → the renders (2026-08-07): the single render
@@ -675,8 +680,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       share one popup state and one gate, so the second dropdown
     //       (2026-08-02) added no seventh place. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the four bottom-strip editors swallow the press that would open a
-    //       menu, and the pointer-transparent flag editor, which does not, is
+    //       — the four dialog editors' veil swallows the press that would open
+    //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
@@ -1526,9 +1531,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // them here means the platform never grows remainder in a context the
     // eventual emission could not fire in.
     //
-    // Only the BOTTOM-STRIP modal surfaces swallow the wheel (the settings and
-    // load editors and the BpmBracket reuse of top_flag_editor) —
-    // modal_bottom_strip_editor_active, deliberately NOT the keyboard gate's
+    // Only the DIALOG modal surfaces swallow the wheel (the settings, load
+    // and commit-title editors and the BpmBracket reuse of top_flag_editor
+    // — membership re-greped 2026-08-12 at the dialog arc; the inherited
+    // list had omitted the commit-title editor) —
+    // modal_dialog_editor_active, deliberately NOT the keyboard gate's
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,
     // because the wheel is NAVIGATION, not a chord, and that ruling is about
@@ -1565,7 +1572,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // owns the close and this owns only the swallow, which is also what keeps
     // the sub-detent accumulator from growing remainder under a popup.
     if (app.dropdown.open()) return -1;
-    if (modal_bottom_strip_editor_active()) return -1;
+    if (modal_dialog_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
     if (any_pointer_gesture_active(app)) return -1;
 

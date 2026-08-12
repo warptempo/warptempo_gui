@@ -742,6 +742,43 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 inline constexpr GuiColor kRedesignPopupDisabledLabel  = hex(0x686A6C);
 inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 
+// THE MODAL DIALOG'S CHROME (architect 2026-08-12, "we should institute real
+// modals" — kdenlive's own dialog model painted in-window; paint_modal_dialog
+// is the one consumer). Sampled off modal_popup.png (the Save/Do Not Save/
+// Cancel warning dialog) and editor.png (the "FFmpeg:" label + dark inset
+// field row of the settings dialog):
+//
+//   BOX GROUND — modal_popup.png's body reads #202326 from the row under the
+//   titlebar seam down to the bottom border (vertical scan at x=360: y=31..153
+//   uniform outside the text ink). It COINCIDES with kRedesignTabGround /
+//   kBackground and is NOT them — a dialog retune must not move the tab row
+//   (the standing numerically-equal-is-not-the-same-constant rule at
+//   kRedesignRowGroundUnfocused).
+//   BOX BORDER — the crop's 1px frame on all four edges reads #535659
+//   (x=2 / x=722 columns, y=3 / y=154 rows), which coincides with
+//   kRedesignLine, same rule. (The crop also carries a #292c30 TITLEBAR band
+//   under the frame's top edge with a second #535659 seam below it — that is
+//   the WM's decoration on kdenlive's separate dialog window; ours is
+//   in-window and paints NO title bar, so the band is deliberately not
+//   transcribed. The crop's highlighted default button — #2d4655 fill under a
+//   #4882a1 frame — is likewise not transcribed: this product's prompts have
+//   no Enter-default, the recorded decision at PromptState.)
+//
+//   FIELD GROUND — editor.png's inset interior reads #141618 (y=6..34 at
+//   x=200).
+//   FIELD BORDER — its 1px frame reads #4c4e51 (y=5 / y=35), coinciding with
+//   kRedesignTabLine, same rule again.
+//
+// The dialog's BUTTONS carry no constants here: they are the toolbar row's
+// box at the icon row's face colors, both REUSED not re-sampled (the
+// architect's explicit mix), and the invalid red flash recolors the FIELD in
+// the marker-flag red pair (kMarkerFlagFillRed / kMarkerFlagEdgeRed — the one
+// invalid red), called not copied.
+inline constexpr GuiColor kModalGround      = hex(0x202326);
+inline constexpr GuiColor kModalBorder      = hex(0x535659);
+inline constexpr GuiColor kModalFieldGround = hex(0x141618);
+inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
+
 // (THE GUI FONT SIZE AXIS IS GONE — architect approval 2026-08-01.
 // kDefaultFontSizePt, set_gui_font_size_pt, gui_font_scale and the
 // g_font_size_pt state behind them were the font_size setting: one GUI-wide
@@ -802,7 +839,8 @@ inline int scaled_px(double authored, int floor_px) {
 // flag_pad_x_px / flag_pad_y_px, kChipOutlinePx, kTextBoxPadPx /
 // text_box_pad_px, kTextBoxMarginPx / text_box_margin_px and
 // flag_glyph_inset_px: the chip anatomy every monospace text box was built
-// from. Its last audience was the three bottom-strip editors, which now paint
+// from. Its last audience was the three bottom-strip editors (the modal
+// dialog's editors since 2026-08-12), which paint
 // SHAPED text through the one chokepoint with no chip around them — the caret
 // and selection take the shaped run's own byte boundaries and the face's own
 // ascent/descent band, so there is no pad left to author. The marker flags took
@@ -1479,7 +1517,8 @@ inline int playhead_half_px() {
 // editor_text_glyph0_x and the pre-first-paint metric seeds all served ONE
 // surface by the end: the three bottom-strip editors' chip-shaped text box,
 // measured in glyph counts times one advance. Those editors are SHAPED now and
-// paint in paint_handler.cpp beside the rest of the bottom row, publishing their
+// paint in paint_handler.cpp (in the centered modal dialog since 2026-08-12),
+// publishing their
 // caret geometry the way the flag editor does — measurement, paint and hit all
 // off the same ShapedRun. Nothing in the tree measures text by counting
 // characters any more.)
@@ -2100,9 +2139,11 @@ struct FlagEditorBox {
 // swap, all through the one ladder; the border class-invariant), so opening an
 // editor changes the flag's SIZE and nothing else about how it reads. An
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed. Since 2026-08-02 the BOTTOM-STRIP editors flash that same
-// pair in this same box anatomy (render_bottom_strip_editor), so there is one
-// invalid red and one editor box in the product; the pre-redesign dark-red chip
+// kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
+// (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
+// 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
+// paint_modal_dialog), so there is one
+// invalid red in the product; the pre-redesign dark-red chip
 // pair they used to flash was the last tunable colour in the tree and went with
 // the whole palette-config system the next day.
 //

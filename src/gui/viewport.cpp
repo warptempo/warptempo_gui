@@ -71,6 +71,23 @@ void Viewport::invalidate_waveform_area() {
 void Viewport::invalidate_status_row_area() {
     const GuiRect t = status_row_invalidate_rect(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+    // THE MODAL DIALOG RIDES THIS OWNER (2026-08-12): while a dialog stands,
+    // the row's damage carries the dialog's stashed box too. The four modal
+    // editors' every repaint site — typing, the caret blink, the red flash,
+    // the commit/abandon closers, the F2.1 caret and drag — already speaks
+    // this call from their bottom-strip tenancy, and the editors paint in the
+    // centered box now; ONE rider here keeps every one of them honest instead
+    // of re-classifying dozens of sites per surface (a drift-prone sort with
+    // nothing bought — an extra box-sized rect on a status-string write while
+    // a dialog is up is a cheap union). With no dialog stashed this is a dead
+    // test. The stash is the PAINTER's (paint_modal_dialog), so a closer that
+    // runs between paints still damages the box the last frame drew, which is
+    // exactly the erase it owes; the OPENERS cannot ride it (no box exists
+    // before the first paint) and invalidate the whole window instead.
+    if (app.modal_dialog.valid) {
+        const GuiRect& d = app.modal_dialog.box;
+        gui.invalidate_region(d.x, d.y, d.w, d.h);
+    }
 }
 
 void Viewport::invalidate_clock_area() {

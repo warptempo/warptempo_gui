@@ -1775,8 +1775,8 @@ int main(int argc, char** argv) {
                     invalidate_top_strip();
             }
         }
-        // Same shape for the bottom-strip settings prompt; invalidate the
-        // status lane on each visibility flip.
+        // Same shape for the settings prompt (a dialog editor); the
+        // status-lane owner's rider carries the dialog's stashed box.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.settings_editor);
@@ -1785,7 +1785,7 @@ int main(int argc, char** argv) {
                 invalidate_status_row_area();
             }
         }
-        // Same shape for the bottom-strip load prompt.
+        // Same shape for the load prompt.
         if (text_editor::is_active(app.load_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.load_editor);

@@ -1347,25 +1347,34 @@ enum class DialogTrigger {
     ERROR_NOTICE,
 };
 
-// In-window modal prompt state. When `active` is true, the bottom row's
-// modal/status span carries the prompt's text and response options (the span
-// runs to the row's right margin and clips there).
-// Input is owned by the prompt: only the response keys (and Esc, which
-// activates the rightmost response) do anything; everything else is
-// swallowed. `response_keys` holds lowercase letters and the match is
-// CASE-SENSITIVE on the codepoint (the rule is at the prompt dispatch,
-// input_handler.cpp). THE LABEL CAPITALIZES ITS ACCELERATOR LETTER ANYWAY
-// (architect 2026-08-02): "[S]ave" reads as the word does, on pacman's Y/n
-// convention — the capital marks WHICH letter answers, not that shift is
-// required, and the user reads "[S]" as `s`. The match is deliberately
-// unchanged: a typed capital still does not answer, which is accepted.
-// The two non-letter responses match on the GuiKey instead, carry no case, and
-// therefore wear their proper key names: "[Delete]", "[Esc]".
+// In-window modal prompt state. When `active` is true, the CENTERED MODAL
+// DIALOG (paint_modal_dialog, 2026-08-12 — the prompts lived on the bottom
+// row's modal span before that) carries the prompt's text as its message line
+// and one REAL BUTTON per response, right-aligned in the box.
+// Keyboard input is owned by the prompt exactly as it always was: only the
+// response keys (and Esc, which activates the rightmost response) do
+// anything; everything else is swallowed. `response_keys` holds lowercase
+// letters and the match is CASE-SENSITIVE on the codepoint (the rule is at
+// the prompt dispatch, input_handler.cpp); the two non-letter responses match
+// on the GuiKey (Delete, Escape) instead.
+// `response_labels` are the BUTTONS' words — plain words in the kdenlive
+// dialog look ("Save", "Discard", "Cancel"), one per response, parallel to
+// response_keys. THE BRACKET-ACCELERATOR SPELLING IS RETIRED WITH THE ROW
+// (2026-08-12): "[S]ave" / "[Delete]" / "[Esc]" named the answering keys
+// inline because the row's one line was the whole surface; a button wears the
+// answer's MEANING, and the keyboard letters still answer unchanged. The two
+// key-named sentinels therefore wear meaning words too — '\x7f' (Delete, the
+// discard-and-proceed) is "Discard", '\x1b' (Escape) is "Cancel" ("OK" on the
+// dismiss-only error notice, where nothing is being cancelled).
+// NO BUTTON WEARS THE DEFAULT FACE: the crop's highlighted Save is Qt's
+// Enter-default, and this prompt system HAS no Enter answer — Return is not a
+// response key and does nothing — so every button wears the plain face
+// rather than inventing a default (the brief's recorded decision).
 struct PromptState {
     bool                     active = false;
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // e.g. "[S]ave"
+    std::vector<std::string> response_labels;   // button words, e.g. "Save"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 
@@ -2074,29 +2083,63 @@ struct AppState {
     // contract, including why `byte_x` is what click-to-byte searches.
     FlagEditorBox flag_editor_box;
 
-    // THE OPEN BOTTOM-STRIP EDITOR'S TEXT GEOMETRY — the same painter-publishes-
-    // shaped-geometry contract one row down, for the settings / load /
-    // BPM editors after row 7 took them off the monospace grid (2026-08-01).
-    // There is no BOX to publish: those editors have no chip around them any
-    // more (the press region is the STATUS LANE, bottom_row_area — the whole
-    // bottom strip until row 8 split the strip in two, 2026-08-11; the
-    // transport lane above it belongs to the button rows' claim), so this
-    // carries only what click-to-byte needs.
+    // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
+    // geometry contract for the settings / load / commit-title / BPM editors,
+    // which paint inside the MODAL DIALOG's inset field since 2026-08-12 (they
+    // lived on the status lane, row 9, from row 7 until then; the press region
+    // is the dialog's published FIELD rect, modal_dialog.field, not a lane).
     //
-    // `text_origin_x` is the window x of PENDING's byte 0 — the prefix's own
-    // shaped width is already spent in it — and `byte_x` holds pending.size()+1
+    // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
+    // left pad is already spent in it — and `byte_x` holds pending.size()+1
     // pen offsets RELATIVE to that origin, so the pair reads exactly like
     // FlagEditorBox's and editor_byte_index_at searches either the same way.
-    // Written by paint_bottom_strip: zeroed at the top of every run, filled by
-    // whichever editor branch actually paints. That makes it a statement about
-    // what is ON SCREEN — an editor the row's precedence hides (a prompt is up)
-    // publishes nothing and takes no clicks, which is the correct answer.
-    struct BottomEditorText {
+    // Written by paint_modal_dialog: zeroed at the top of every run, filled by
+    // whichever editor the dialog actually paints. That makes it a statement
+    // about what is ON SCREEN — an editor the dialog's precedence hides (a
+    // prompt is up) publishes nothing and takes no clicks, which is the
+    // correct answer.
+    struct DialogEditorText {
         bool                valid         = false;
         double              text_origin_x = 0.0;
         std::vector<double> byte_x;
     };
-    BottomEditorText bottom_editor_text;
+    DialogEditorText dialog_editor_text;
+
+    // THE MODAL DIALOG'S PAINTED GEOMETRY (architect 2026-08-12: "we should
+    // institute real modals" — kdenlive's own dialog model, in-window). The
+    // prompts and the four dialog editors paint as ONE centered box over an
+    // inert window; this is the painter's stash of what was drawn, the roster
+    // model: paint_modal_dialog rewrites it every run (zero/invalid when no
+    // dialog stands), and the pointer path reads it instead of re-deriving
+    // layout. `box` is the whole frame including its border; `field` is the
+    // editor field's INTERIOR (zero for prompts) — the click-to-caret / text-
+    // drag claim region; `buttons` are the answer buttons in painted order.
+    //
+    // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
+    // `response_key` is the PromptState response char the click activates
+    // (validated against the LIVE response_keys at dispatch, so a one-frame
+    // stale stash — the Save-failed mutation — answers nothing rather than the
+    // wrong set); for an EDITOR, `editor_ok` selects the session's own Enter
+    // (true) or Esc (false), dispatched through the editor's one key route —
+    // button-is-its-chord.
+    struct ModalDialogButton {
+        GuiRect rect{0, 0, 0, 0};
+        char    response_key = 0;      // prompt dialogs; 0 on editor dialogs
+        bool    editor_ok    = false;  // editor dialogs; OK vs Cancel
+    };
+    struct ModalDialogGeometry {
+        bool                           valid = false;
+        GuiRect                        box{0, 0, 0, 0};
+        GuiRect                        field{0, 0, 0, 0};
+        std::vector<ModalDialogButton> buttons;
+    };
+    ModalDialogGeometry modal_dialog;
+    // The hovered dialog button's index into modal_dialog.buttons, -1 none —
+    // pointer-derived face state in the roster's own model (the hover walk
+    // writes it, the painter reads it, a change damages the box). Cleared by
+    // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
+    // dialog cannot inherit the previous one's lit face.
+    int modal_dialog_hovered = -1;
 
     // THE CLOCK'S RESERVED CELL, published by paint_transport_row (2026-08-11,
     // when the timestamp moved off the status line into row 8's centre in
@@ -2597,7 +2640,8 @@ struct AppState {
     // architect-accepted 2026-08-08). IT ASKS FOR THE COMMIT
     // MESSAGE FIRST, through the COMMIT-TITLE EDITOR (architect 2026-08-07,
     // replacing the confirmation prompt that used to guard it and superseding
-    // "the message is derived, not chosen"): a fourth bottom-strip modal,
+    // "the message is derived, not chosen"): a fourth modal editor (dialog-
+    // hosted since 2026-08-12),
     // prefilled with `Update <id>`, where a bare Enter is the old `y` and typing
     // over the prefill names the checkpoint. On Enter the act runs THE ORDINARY
     // SAVE beside the
@@ -3306,13 +3350,13 @@ struct AppState {
     // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
     // Enter loads that render's frozen sidecar recipe in place as the new
     // authoring baseline (GuiInputHandler::load_render_entry_in_place). A
-    // bottom-strip modal like
+    // dialog modal like
     // the settings editor; separate State so the two paint regions stay
     // independent.
     text_editor::State load_editor;
     bool load_editor_blink_last = false;
 
-    // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth bottom-strip
+    // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth dialog
     // modal and the `h` history view's own: Ctrl+S while the view stands
     // opens it prefilled with the checkpoint's default message (`Update <id>`,
     // history_checkpoint_title's own spelling) and Enter runs the Save-and-
@@ -3322,7 +3366,7 @@ struct AppState {
     // only the second one carries information — a bare Enter is the old `y`.
     // Esc abandons with nothing written, and an empty or whitespace-only buffer
     // red-flashes rather than committing an unnamed checkpoint.
-    // A bottom-strip modal like the two above, with its own State so the paint
+    // A dialog modal like the two above, with its own State so the paint
     // regions stay independent; it can only be open while the history mode
     // stands, which is what keeps it out of every other surface's way.
     text_editor::State commit_title_editor;
@@ -3404,18 +3448,18 @@ struct AppState {
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status —
     // render the timestamp normally."
-    // IT COEXISTS WITH prompt.active, and PAINT PRECEDENCE is what keeps that
-    // invisible rather than any exclusion: an archival render runs on, so
+    // IT COEXISTS WITH prompt.active, and since the modal dialog (2026-08-12)
+    // the two no longer even share a surface: an archival render runs on, so
     // dirtying the project and pressing Ctrl+Q raises the close prompt over a
     // live run (the prompt cancels nothing), and the run's own completion can
-    // then rewrite or clear this string while the prompt stands. The two share
-    // ONE bottom-strip slot and the prompt is its FIRST tier (paint_handler's
-    // chain tests prompt.active before this), so a prompt is what the user sees
-    // for as long as it is up and this string is simply whatever the run left
-    // behind when it goes.
+    // then rewrite or clear this string while the prompt stands — the string
+    // keeps its row-9 slot and paints UNDER the centered dialog box, which is
+    // the honest picture (the run really is still going). While the two
+    // shared row 9's one cell the prompt was the chain's first tier; that
+    // ordering is superseded structurally.
     std::string queue_progress_text;
 
-    // Transient one-line status message shown in the bottom row's modal/status
+    // Transient one-line status message shown in the bottom row's status
     // span, one tier above the resolved readout (the row-7
     // chain; it was an appendix on the status line when the strip had two
     // rows and view letters). Set by a
@@ -3883,12 +3927,13 @@ std::pair<long long, long long> compute_trim_samples(
 // until 2026-08-11, when the clock left the status line for row 8's centre and
 // the two families it had served stopped sharing a rect.
 //
-//   status_row_invalidate_rect — ROW 9, the status lane: section C's whole
-//   precedence chain (the prompt, the four bottom-strip editors and their
-//   carets, the queue / render / transient status strings, the selection
-//   readout) and the critical chip. Reached through
-//   Viewport::invalidate_status_row_area, which is where its callers are; the
-//   great majority of them write a STRING into C.
+//   status_row_invalidate_rect — ROW 9, the status lane: section C's status
+//   chain (the queue / render / transient status strings, the selection
+//   readout, the history line) and the critical chip. Reached through
+//   Viewport::invalidate_status_row_area, which is where its callers are and
+//   which ALSO carries the modal dialog's stashed box while one stands (the
+//   rider, 2026-08-12 — the dialog editors' repaint sites all speak that
+//   call); the great majority of them write a STRING into C.
 //
 //   clock_invalidate_rect — ROW 8's reserved clock cell, and nothing else on
 //   that lane: every route that moves the PLAYHEAD or the SCANNER, which is the
@@ -4087,9 +4132,12 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 //     Ctrl+Tab, the mode's own cycle over the walk sources — is what makes the
 //     derived partition call them LIVE, so the mode line at the top of this
 //     body never fires for them either, and row 3 has no disabled face at all.)
-// MODAL gates are deliberately absent: a prompt or a bottom-strip editor
-// swallows the PRESS at the pointer path's own modal gate, and a modal that
-// greyed the chrome under it would be a fourth face nobody asked for.
+// MODAL gates are deliberately absent: a prompt or a dialog editor
+// swallows the PRESS at the pointer path's own veil, and a modal that
+// greyed the chrome under it would be a fourth face nobody asked for (the
+// HOVER faces do go dark under the veil — the hover walk's veil term,
+// recompute_redesign_button_hover — but that is the pointer's fact, not a
+// face state this predicate answers).
 // THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The

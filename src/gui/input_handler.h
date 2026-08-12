@@ -635,7 +635,7 @@ struct GuiInputHandler {
     // keyboard-modal flag editor exactly as the wheel does, and navigates the
     // same two surfaces), so wheel_context — the SINGLE wheel routing
     // predicate — is asked at each frame's centroid, refusing under the
-    // prompt, an open dropdown, the bottom-strip modal editors, loading/empty
+    // prompt, an open dropdown, the dialog modal editors, loading/empty
     // audio and any live pointer gesture, and applying only over the waveform
     // or the top strip. A modal opening MID-gesture therefore freezes it (the
     // wheel's own behavior), and a live mouse gesture freezes it too (no two
@@ -847,7 +847,7 @@ struct GuiInputHandler {
     //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
     //     OPEN and no modal or gesture owns the pointer, which that placement
     //     guarantees — the open-dropdown branch returns far above the tail, and
-    //     so do the prompt, the bottom-strip editors and every live gesture —
+    //     so do the prompt, the dialog editors and every live gesture —
     //     plus ONE condition the call site restates because nothing above
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
     //     the two held-motion producers are recorded at the call);
@@ -1138,7 +1138,7 @@ struct GuiInputHandler {
 
     // True when ANY text editor is consuming printable keys — the settings
     // editor, the load editor, or the top-strip flag editor in EITHER kind
-    // (unlike modal_bottom_strip_editor_active, which names only the three
+    // (unlike modal_dialog_editor_active, which names only the three
     // BOTTOM-STRIP surfaces and omits the FlagPayload editor). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
@@ -1485,8 +1485,9 @@ private:
     // on_key gate (modal_editor_key_blocked) swallows it before this route ever
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
-    // editor's own damage for a text change — the four bottom-strip surfaces
-    // pass the status lane, the flag editor the top strip. `repaint` is
+    // editor's own damage for a text change — the four dialog surfaces
+    // pass the status-lane owner (whose dialog rider carries the stashed box,
+    // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
     // caller that forgets it is a program bug, not a runtime condition to guard).
@@ -1512,7 +1513,7 @@ private:
     // of `key=` from the key's current stored value.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // Load prompt (bare `'`). A bottom-strip modal editor, structural
+    // Load prompt (bare `'`). A dialog modal editor, structural
     // sibling of the settings editor: it takes a render entry's identifier
     // relative to renders/ and, on Enter, loads that render's frozen sidecar
     // recipe in place as the new authoring baseline through
@@ -1925,8 +1926,8 @@ private:
     // WHAT IT IS BLIND TO, deliberately and by ruling:
     // - The FLAG editor does not refuse — it is pointer-transparent by ruling, so
     //   a scrub still acts under an open one and the cursor must not lie about
-    //   that. The three BOTTOM-STRIP modal editors DO refuse, because they really
-    //   do swallow the press (modal_bottom_strip_editor_active).
+    //   that. The four DIALOG modal editors DO refuse, because their veil really
+    //   does swallow the press (modal_dialog_editor_active).
     //
     // THE CUES ARE HOVER-ONLY WITH ONE NAMED EXCEPTION (architect 2026-08-03):
     // a LIVE TRIM GESTURE — pending or past the threshold; an endcap drag, the
@@ -2045,26 +2046,36 @@ private:
     // the pattern, not the trim move).
     // Modality here is CHORDS only, which is why the flag editor's OTHER
     // transparencies do not consult this predicate — see
-    // modal_bottom_strip_editor_active below for what does and does not.
+    // modal_dialog_editor_active below for what does and does not.
     bool keyboard_modal_editor_active() const;
 
     // Modal-editor predicate + key gate (bodies in input_key_dispatch.cpp).
     // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
-    // modal_bottom_strip_editor_active is for; other sites carry a pointer here.
-    // It names the BOTTOM-STRIP modal surfaces only — the settings editor, the
-    // load editor, the commit-title editor and the bpm bracket editor (plus the
-    // prompts, gated separately). THREE CALLERS (re-derived 2026-08-11), each
-    // asking the same question about a pointer
-    // fact: wheel_context's swallow (input_handler.cpp), because the wheel's
-    // stepped pan is NAVIGATION, not a chord, so it still punches through an
-    // open top-strip flag editor; pointer_cursor_kind (2026-08-03), because
-    // these four editors are exactly the ones that SWALLOW a pointer press, so
-    // they are exactly the ones over which no cursor may promise a gesture; and
-    // the MODAL-TRAP block at on_button_press's top (2026-08-11), because these
-    // four are exactly the swallows the admitted Quit/Save button presses must
-    // be lifted OVER (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord). The
-    // flag editor's exemption is the same fact in all three: it is
+    // modal_dialog_editor_active is for; other sites carry a pointer here.
+    // It names the DIALOG-HOSTED modal editors — the settings editor, the
+    // load editor, the commit-title editor and the bpm bracket editor (plus
+    // the prompts, gated separately), the four surfaces that paint in the
+    // centered modal dialog since 2026-08-12 (it was
+    // modal_bottom_strip_editor_active while they lived on the status lane;
+    // the MEANING — this exact four-editor set — is unchanged, only their
+    // home and therefore the name moved). SEVEN CALLERS (re-derived
+    // 2026-08-12, the dialog arc), each asking the same question about a
+    // pointer fact: wheel_context's swallow (input_handler.cpp), because the
+    // wheel's stepped pan is NAVIGATION, not a chord, so it still punches
+    // through an open top-strip flag editor; pointer_cursor_kind
+    // (2026-08-03), because these four editors are exactly the ones whose
+    // veil SWALLOWS a pointer press, so they are exactly the ones over which
+    // no cursor may promise a gesture; the MODAL-TRAP block at
+    // on_button_press's top (2026-08-11), because these four are exactly the
+    // swallows the admitted Quit/Save button presses must be lifted OVER
+    // (the fix's contract is at that block and at
+    // modal_editor_admits_command_chord); the dialog BUTTON claim beside it
+    // and on_motion's dialog-hover branch (2026-08-12), the box's own two
+    // pointer surfaces; the roster hover walk's veil term
+    // (recompute_redesign_button_hover — under an editor dialog only the
+    // veil-admitted buttons hover); and paint_modal_dialog's editor fork by
+    // proxy (it reads the same four is_active tests in the same order). The
+    // flag editor's exemption is the same fact in all of them: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // scrub reaches the audio under it, and its roster presses were never
     // blocked to begin with.
@@ -2072,7 +2083,7 @@ private:
     // not decided here — but it is no longer scattered either: since 2026-07-28
     // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
     // every open site calls and which records the whole decision table (the four
-    // bottom-strip editors and the prompts stop; the top-strip flag editor is
+    // dialog editors and the prompts stop; the top-strip flag editor is
     // explicitly EXEMPT and keeps a live audition playing). So a new modal
     // surface inherits the wheel swallow from this predicate and its playback
     // answer from that owner — it grows neither by hand.
@@ -2080,8 +2091,19 @@ private:
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
     // Ctrl+Q). It serves all five editors, top strip included.
-    bool modal_bottom_strip_editor_active() const;
+    bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
+
+    // THE MODAL DIALOG'S POINTER HALF (2026-08-12; bodies in
+    // input_pointer.cpp — the painter's stash is AppState::modal_dialog and
+    // the veil contract lives at on_button_press's two dialog gates):
+    // the button hit test over the stash, the hover-face writer the motion
+    // branches call, and the editor dialog's OK/Cancel dispatch — the
+    // session's own Enter/Esc through the per-editor key routes,
+    // button-is-its-chord.
+    int  modal_dialog_button_hit(int x, int y) const;
+    void update_modal_dialog_hover(int x, int y);
+    void dispatch_modal_dialog_editor_act(bool ok);
 
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The

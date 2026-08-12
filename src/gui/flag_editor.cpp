@@ -236,7 +236,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
 // omission: the top-strip flag editor is the one modal surface that keeps
 // playing, so a live audition survives the open. The decision and its rationale
 // are recorded at GuiPlaybackLifecycle::stop_playback_for_modal_open, the one
-// owner of the modal-open stop the bottom-strip surfaces call.
+// owner of the modal-open stop the dialog surfaces call.
 void GuiFlagEditor::enter_top_flag_edit(int idx) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
@@ -630,9 +630,10 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
         /*locked_prefix=*/"",
         format_bpm_bracket_text(mv[idx]));
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
-    // draws in the bottom strip. Invalidate it so the freshly opened editor
-    // actually paints.
-    viewport.invalidate_status_row_area();
+    // draws in the centered modal dialog, whose box does not exist before its
+    // first paint — so a modal-dialog OPEN damages the whole window (the
+    // settings opener carries the rule).
+    viewport.invalidate_all();
 }
 
 // Commit the BPM editor's pending buffer. Strict syntax via
@@ -778,7 +779,7 @@ void GuiFlagEditor::enter_bpm_mode() {
     }
     // Tag owner with bpm_owner=true if not already set. Sentinel-zero
     // values stay zero; format_bpm_bracket_text renders "[]" for that
-    // state, which seeds the bottom-strip editor. Every prior mode exit
+    // state, which seeds the BPM dialog editor. Every prior mode exit
     // wiped the bpm state, so a fresh entry always finds an untagged owner
     // and seeds a blank bracket.
     if (!mv[owner].bpm_owner) {

@@ -237,9 +237,14 @@ struct Viewport {
     // Invalidation.
     void invalidate_waveform_area();
     // ROW 9, the status lane: section C's whole precedence chain and the
-    // critical chip. The bottom strip's high-traffic owner — the editors and
-    // their carets, the queue / render / transient strings, the selection
-    // readout — and the DEFAULT for anything writing a string down there.
+    // critical chip. The bottom strip's high-traffic owner — the queue /
+    // render / transient strings, the selection readout — and the DEFAULT
+    // for anything writing a string down there. SINCE 2026-08-12 IT ALSO
+    // CARRIES THE MODAL DIALOG'S STASHED BOX while one stands (the rider and
+    // its rationale are at the definition): the four modal editors' repaint
+    // sites all speak this call from their bottom-strip tenancy, and the
+    // editors paint in the centered dialog now, so the one rider keeps every
+    // typing/blink/flash/closer honest without re-classifying the sites.
     void invalidate_status_row_area();
     // ROW 8's clock cell, and the authoritative inventory of who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one

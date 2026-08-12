@@ -88,7 +88,7 @@ struct GuiInputState {
     // encode it on insertion, so nothing truncates at this boundary. THREE
     // CONSUMERS
     // (re-derived 2026-07-30): the text editors' printable-insertion path,
-    // repeat_eligible's editor-typing repeat gate, and the bottom-strip prompt's
+    // repeat_eligible's editor-typing repeat gate, and the modal prompt's
     // LETTER responses — the last joined 2026-07-30, because the prompt is the
     // product's one CASE-SENSITIVE letter surface and the case-folded GuiKey
     // cannot express that (CapsLock defeated the old !shift spelling). Every

@@ -1711,9 +1711,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the editor dropped would break exactly that promise at the moment the two
     // are most directly compared — the flag is suppressed underneath and this
     // box stands in its place, on its column, one column of which would go
-    // missing on open and come back on commit. It is also the form the BOTTOM
-    // editors take now (render_bottom_strip_editor's invalid flash, 2026-08-02),
-    // so the product's two editor painters draw one box anatomy between them.
+    // missing on open and come back on commit. (The DIALOG editors' invalid
+    // flash carried this same flag-box anatomy from 2026-08-02 until
+    // 2026-08-12, when it became the dialog FIELD's recolor in the same red
+    // pair — paint_modal_dialog; the flag editor's box is the anatomy's one
+    // editor tenant now.)
     //
     // The border sits OUTSIDE the fill like the flag's, so nothing the clamp,
     // the text viewport or the view offset computed above moves: box_w, view_x0
