@@ -1241,7 +1241,9 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     viewport.invalidate_waveform_area();
 }
 
-// THE TWO-FINGER TOUCH NAVIGATION BODY — contract, delivery-shape
+// THE TOUCH NAVIGATION BODY — two-finger pan+zoom frames and the phone
+// model's single-finger pan frames (dist_ratio 1.0, the zoom term inert)
+// land here alike; contract, delivery-shape
 // justification and refusal rationale at the declaration (input_handler.h).
 // One delivered frame = one placement through the strip-drag family's own
 // application chokepoint.
@@ -1306,6 +1308,12 @@ void GuiInputHandler::end_touch_nav() {
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
     // own tail.
     if (playback.is_playing()) playback.resync_predictor();
+}
+
+// The pan-zone query's body (contract at the declaration): the waveform area,
+// geometry only, on the tree's one containment convention.
+bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    return rect_contains(waveform_area(app), x, y);
 }
 
 // The flag editor's guard-free close, shared by the left and right press arms

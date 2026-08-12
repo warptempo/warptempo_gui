@@ -968,12 +968,19 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
-    // The two-finger touch navigation (touch phase 1, 2026-08-11): the
-    // platform's centroid-pan + pinch-zoom frames drive the input handler's
+    // The touch navigation (touch phase 1, 2026-08-11; the phone model's
+    // one-finger pan joined at the second glass session the same day): the
+    // platform's nav frames — two-finger centroid-pan + pinch-zoom, and
+    // single-finger pan frames born of a drag starting on the pan surface —
+    // drive the input handler's ONE
     // touch-nav body, which runs the strip-drag family's own viewport
     // chokepoint — the set_keyboard_intent_cancel_hook wiring precedent, one
-    // narrow platform-to-GUI hook set. ONE finger needs no wiring at all: it
-    // is translated into the ordinary pointer deliveries above, and nothing on
+    // narrow platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook:
+    // the platform asks it once at each first finger's down, and the GUI
+    // answers the waveform area, geometry only (refusals stay per-frame in
+    // the update body). A one-finger gesture ANYWHERE ELSE needs no wiring:
+    // it is translated into the ordinary pointer deliveries above, and
+    // nothing on
     // this side can tell which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
     // apply_touch_nav_update's declaration (the GUI half, including why the
@@ -982,7 +989,10 @@ int main(int argc, char** argv) {
         [&](int x, int y, double dx, double dist_ratio) {
             input_handler.apply_touch_nav_update(x, y, dx, dist_ratio);
         },
-        [&]() { input_handler.end_touch_nav(); });
+        [&]() { input_handler.end_touch_nav(); },
+        [&](int x, int y) {
+            return input_handler.touch_point_in_pan_zone(x, y);
+        });
 
     auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };

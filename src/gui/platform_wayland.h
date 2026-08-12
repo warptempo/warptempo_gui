@@ -274,41 +274,66 @@ public:
     // rides is at AppState::transport_repeat. Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
-    // THE TWO-FINGER NAVIGATION HOOKS (touch phase 1, 2026-08-11). ONE finger on
-    // the glass IS the pointer — translated whole inside this class, so the GUI
-    // sees ordinary pointer deliveries and cannot tell which device produced
-    // them (the bare-`e` precedent applied to glass; the translation contract
-    // lives at the touch state block below). TWO fingers are the one gesture
-    // that never delivers pointer events: per-frame centroid pan plus
-    // distance-ratio zoom about the centroid, the strip drag's own dual-axis
-    // semantics, handed to the GUI through these hooks (the
+    // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; the PHONE MODEL —
+    // one-finger pan — joined at the second glass session the same day). ONE
+    // finger on the glass IS the pointer — translated whole inside this class,
+    // so the GUI sees ordinary pointer deliveries and cannot tell which device
+    // produced them (the bare-`e` precedent applied to glass; the translation
+    // contract lives at the touch state block below) — with ONE ruled
+    // exception, the phone model's own gesture: a one-finger DRAG whose DOWN
+    // POINT lies on the PAN SURFACE (the pan_zone query below) is
+    // SINGLE-FINGER NAVIGATION — the finger drags the pan — delivered through
+    // the SAME update hook with the finger as the centroid and dist_ratio
+    // pinned at 1.0 (one finger has no distance, so no zoom; the GUI body
+    // needs no fork and got none). TWO fingers are the dual-axis gesture:
+    // per-frame centroid pan plus distance-ratio zoom about the centroid, the
+    // strip drag's own semantics. Neither delivers pointer events. Both are
+    // handed to the GUI through these hooks (the
     // set_keyboard_intent_cancel_hook wiring precedent — main.cpp wires them to
     // the input handler's touch-nav body, which drives the strip-drag family's
     // viewport chokepoint).
     //
     //   * update(x, y, dx, dist_ratio): fired at most once per wl_touch.frame
-    //     while a two-finger gesture is live and past its latch. (x, y) is the
-    //     CURRENT centroid in surface px; dx is the centroid's horizontal delta
+    //     while a navigation gesture is live and past its latch. (x, y) is the
+    //     CURRENT centroid in surface px (single-finger: the finger itself);
+    //     dx is the centroid's horizontal delta
     //     since the previous delivered update (fractional — sub-pixel centroid
     //     motion must accumulate rather than truncate away); dist_ratio is the
     //     finger-distance ratio current/previous, > 0 always (a degenerate
     //     distance under 1 px on either side delivers 1.0 — no zoom that
-    //     frame). The latch is the platform's: nothing is delivered until the
-    //     centroid has travelled kTouchSlopPx (Chebyshev) from the two-finger
+    //     frame; single-finger frames are degenerate by construction, so they
+    //     always carry 1.0). The latch is the platform's: nothing is delivered
+    //     until the
+    //     centroid has travelled kTouchSlopPx (Chebyshev) from the gesture's
     //     start OR the finger distance has changed by that same slop, and the
     //     crossing update folds the whole accumulated delta — the strip drag's
-    //     own press-becomes-drag model, so a two-finger tap navigates nothing.
-    //   * end(): the gesture ended — a finger lifted (any end commits; the
-    //     survivor is ignored until all fingers lift), wl_touch.cancel, or
-    //     touch-capability loss. Fired ONLY if at least one update was
+    //     own press-becomes-drag model, so a two-finger tap navigates nothing
+    //     (a single-finger nav is born past its latch: it exists only by
+    //     crossing the disambiguation slop, the same distance in the same
+    //     Chebyshev metric, measured from the same down point).
+    //   * end(): the gesture ended — a finger lifted (any end commits; a
+    //     two-finger survivor is ignored until all fingers lift), wl_touch.cancel,
+    //     or touch-capability loss. Fired ONLY if at least one update was
     //     delivered, so a sub-latch two-finger touch costs the GUI nothing.
+    //   * pan_zone(x, y): THE ZONE QUERY — does this point lie on the
+    //     one-finger PAN SURFACE? Asked ONCE per touch stream, at the FIRST
+    //     finger's down; the answer is captured beside the down point and the
+    //     disambiguation window's resolution forks on it (the touch state
+    //     block below). GEOMETRY ONLY — the GUI answers the waveform area and
+    //     nothing else; every refusal (modal, prompt, dropdown, loading/empty
+    //     audio, live pointer gesture) stays at the per-frame wheel-context
+    //     answer inside the update body, exactly where the two-finger gesture
+    //     keeps it, so a refused pan freezes rather than falling back to a
+    //     pointer drag. Null — or answering false — means no pan surface: the
+    //     plain phase-1 translation everywhere.
     //
     // The hooks carry no modifier state: the GUI body reads nothing modal from
     // them, and its refusal answer is its own (the wheel-context predicate — the
     // gesture is the wheel's navigation-class sibling). Null-safe.
     void set_touch_nav_hooks(
         std::function<void(int x, int y, double dx, double dist_ratio)> update,
-        std::function<void()> end);
+        std::function<void()> end,
+        std::function<bool(int x, int y)> pan_zone);
 
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
@@ -827,12 +852,20 @@ private:
     // THE PHASES:
     //   * Idle    — no touch points.
     //   * Pending — the DISAMBIGUATION WINDOW: the first finger is down and
-    //     NOTHING has been delivered. The window exists only to tell one
-    //     finger from two (kTouchDisambiguateMs); it resolves to Pointer on
-    //     expiry, on motion beyond kTouchSlopPx, or on the finger lifting
-    //     inside it (a tap), and to Nav on a second finger landing inside it
-    //     (in which case no press was ever delivered — nothing to unwind,
-    //     the window's whole purpose).
+    //     NOTHING has been delivered. The window exists only to tell tap from
+    //     drag from two fingers (kTouchDisambiguateMs). It resolves to
+    //     Pointer on expiry or on the finger lifting inside it (a tap); on
+    //     MOTION beyond kTouchSlopPx it FORKS on the down point's captured
+    //     pan-zone answer (the PHONE MODEL, second glass session 2026-08-11):
+    //     inside the pan surface -> SINGLE-FINGER Nav (the finger drags the
+    //     pan; no press was ever delivered — nothing to unwind, the window's
+    //     whole purpose), outside -> Pointer. A second finger landing inside
+    //     the window resolves to two-finger Nav wherever the down point was.
+    //     HOLD UNLOCKS THE POINTER on the pan surface: expiry with the finger
+    //     stationary is the DELIBERATE escape to the ordinary pointer
+    //     translation — hold-then-drag is the old pointer drag, which is what
+    //     keeps the lower-half scrub hold and every press-and-hold gesture
+    //     alive on glass.
     //   * Pointer — the translation is live: the owning finger's motion is
     //     pointer motion (coalesced to the wl_touch.frame boundary, the
     //     pointer-frame precedent), its lift is the release on the logical
@@ -844,10 +877,19 @@ private:
     //     finger landing here is IGNORED whole —
     //     recorded, not routed: mid-gesture finger-count changes do not
     //     mutate a committed gesture (the any-end-commits family).
-    //   * Nav     — two fingers drive the touch-nav hooks (contract at
-    //     set_touch_nav_hooks). A third finger is ignored. One finger
-    //     lifting ends the gesture (any end commits) and the survivor is
-    //     ignored until all fingers lift (Drain).
+    //   * Nav     — ONE or TWO fingers drive the touch-nav hooks (contract at
+    //     set_touch_nav_hooks; touch_nav_single_ splits them). Single-finger
+    //     Nav is the phone model's pan: the finger is the centroid, the
+    //     distance stays degenerate so every frame carries dist_ratio 1.0. A
+    //     second finger landing during SINGLE-finger nav UPGRADES it to the
+    //     two-finger gesture IN PLACE — same hook stream, the delta bases
+    //     REBASED to the join (folding the centroid's jump to the pair
+    //     midpoint would pan by half the finger gap), so pan is continuous
+    //     and zoom is relative to the join. The reverse is DELIBERATELY
+    //     ASYMMETRIC: one finger lifting from TWO-finger nav ENDS the gesture
+    //     (a lift is an end — the any-end-commits family) and the survivor is
+    //     ignored until all fingers lift (Drain); no downgrade to
+    //     single-finger nav. A third finger is ignored.
     //   * Drain   — waiting for every remaining (ignored) finger to lift;
     //     nothing is delivered. Entered from Pointer and Nav ends that
     //     leave ignored fingers on the glass.
@@ -876,26 +918,41 @@ private:
     //     the finger last was — the accepted-glitch class, self-healing on
     //     the next pointer event;
     //     -> Drain if ignored fingers remain, else Idle.
-    //   * touch UP, either nav finger — the staged dirty frame DELIVERS
+    //   * touch UP, any nav finger (single-finger nav: the owner) — the
+    //     staged dirty frame DELIVERS
     //     first (Wayland orders the up before the wl_touch.frame that closes
     //     its batch, and that motion is the user's own final leg — the
     //     any-end-commits family; the end split at end_touch_nav_gesture),
     //     then the nav end (commits through the end hook iff an update was
-    //     delivered); -> Drain / Idle.
+    //     delivered). A nav gesture never held the logical button, so no
+    //     release and no translation end fire — nothing pointer-shaped ever
+    //     started; -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — resolve
-    //     Pending to Pointer.
-    //   * motion beyond kTouchSlopPx inside the window — resolve Pending to
-    //     Pointer (the crossing position delivered as the queued motion).
-    //   * second DOWN inside the window — Pending -> Nav, nothing delivered.
+    //     Pending to Pointer (hold-unlocks-the-pointer: expiry never forks on
+    //     the zone, by design — the Pending clause above).
+    //   * motion beyond kTouchSlopPx inside the window — FORK on the down
+    //     point's captured pan-zone answer (the phone model): pan surface ->
+    //     SINGLE-FINGER Nav (the nav seed measures its latch from the DOWN
+    //     point, so the first delivered frame folds the whole accumulated
+    //     delta exactly as the two-finger latch folds); elsewhere -> Pointer
+    //     (the crossing position delivered as the queued motion).
+    //   * second DOWN inside the window — Pending -> two-finger Nav, nothing
+    //     delivered, whatever the zone answer.
+    //   * second DOWN during SINGLE-finger Nav — the UPGRADE (a transform,
+    //     not an end; the end hook is not owed): touch_nav_single_ drops,
+    //     the second finger is recorded, and the delta bases REBASE to the
+    //     join; the latch state carries (a live pan does not re-latch). An
+    //     undelivered staged single-finger frame is DROPPED at the join — a
+    //     sub-frame sliver the rebase supersedes (recorded at the site).
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
     //     translation end on the release's own edge (the UP clause's
     //     focus fork and sibling-suppression rule apply here identically —
     //     one owner); a live Nav
-    //     gesture DROPS its staged dirty frame
+    //     gesture (single- or two-finger — one arm) DROPS its staged dirty frame
     //     (the compositor's claim means that motion retroactively was not
     //     ours — the recorded asymmetry with the Pointer release, which MUST
     //     deliver; the end split at end_touch_nav_gesture) and ends through
@@ -942,19 +999,29 @@ private:
     // resolution replays).
     uint64_t   touch_window_deadline_us_ = 0;
     bool       touch_window_moved_       = false;
+    // Pending: the down point's PAN-ZONE answer, captured ONCE at the first
+    // finger's down (the pan_zone query at set_touch_nav_hooks); the window's
+    // slop-crossing resolution forks on it — the phone model.
+    bool       touch_down_in_pan_zone_   = false;
     // The logical left's third source (see the OR-edge model above).
     bool       touch_left_held_          = false;
     // Pointer: a motion staged for the wl_touch.frame boundary (the
     // pointer-frame coalescing precedent; flushed ahead of the release).
     bool       touch_frame_motion_pending_ = false;
+    // Nav: ONE finger (the phone model's pan — the finger is the centroid and
+    // the distance fields stay degenerate) vs two. touch_nav_id2_ and the
+    // second finger's positions are meaningful only while this is false.
+    bool       touch_nav_single_ = false;
     // Nav: the second finger and the per-finger latest positions.
     int32_t    touch_nav_id2_   = 0;
     double     touch_nav_x1_    = 0.0;
     double     touch_nav_y1_    = 0.0;
     double     touch_nav_x2_    = 0.0;
     double     touch_nav_y2_    = 0.0;
-    // Nav: the two-finger START (the latch reference) and the last DELIVERED
-    // centroid/distance (the per-frame delta basis).
+    // Nav: the gesture START (the latch reference — the two-finger seed, the
+    // single-finger down point, or the upgrade's join) and the last DELIVERED
+    // centroid/distance (the per-frame delta basis). Single-finger nav keeps
+    // the distance fields at 0.0.
     double     touch_nav_start_cx_   = 0.0;
     double     touch_nav_start_cy_   = 0.0;
     double     touch_nav_start_dist_ = 0.0;
@@ -1099,10 +1166,13 @@ private:
     // Fired at the platform's consumed keyboard edges (see
     // set_keyboard_intent_cancel_hook). Null-safe at each fire site.
     std::function<void()> keyboard_intent_cancel_hook_;
-    // The two-finger navigation hooks (see set_touch_nav_hooks). Null-safe at
+    // The touch navigation hooks (see set_touch_nav_hooks). Null-safe at
     // each fire site.
     std::function<void(int, int, double, double)> touch_nav_update_hook_;
     std::function<void()>                         touch_nav_end_hook_;
+    // The pan-zone query (asked once, at the first finger's down; geometry
+    // only — the contract at set_touch_nav_hooks).
+    std::function<bool(int, int)>                 touch_pan_zone_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop
     // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
     // capture hooks, so the fire site needs no null test.
@@ -1259,10 +1329,20 @@ private:
     // Resolve the Pending disambiguation window to the POINTER translation:
     // deliver the synthesized enter-motion at the ORIGINAL down point, the
     // left press there (on the logical OR's 0->1 edge), then any queued
-    // motion. Shared by the three resolutions — expiry, slop crossing, and
+    // motion. Shared by the three pointer resolutions — expiry, the slop
+    // crossing's outside-the-pan-zone arm (its pan-surface arm takes
+    // resolve_touch_window_to_single_nav below instead), and
     // the tap (whose caller then delivers the release + the translation end
     // itself, through deliver_touch_translation_end).
     void resolve_touch_window_to_pointer();
+    // Resolve the Pending window to SINGLE-FINGER NAV instead (the phone
+    // model's slop-crossing arm, taken when the captured down point lay in
+    // the pan zone): seed the Nav state from the DOWN point, unlatched, so
+    // the first delivered frame runs the ordinary latch test and folds the
+    // whole accumulated delta — "latched and folded exactly as the
+    // two-finger latch is", literally the same code path. No press was ever
+    // delivered and the touch hold is never raised.
+    void resolve_touch_window_to_single_nav();
     // Sample the Pending window's deadline. Called from the timerfd tick
     // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
     // so expiry lands within one tick of the 60 ms mark) and lazily at every
@@ -1296,7 +1376,10 @@ private:
     void deliver_touch_translation_end();
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract
-    // is at set_touch_nav_hooks).
+    // is at set_touch_nav_hooks). Single-finger nav forks only the three
+    // input reads: the finger is the centroid and the distance stays 0.0, so
+    // the pinch latch arm is structurally false and the ratio guard delivers
+    // 1.0 — everything downstream is shared verbatim.
     void deliver_touch_nav_frame();
     // End a live Nav gesture. deliver_final_frame selects the END SPLIT
     // (recorded at the definition): the finger's own lift delivers the staged
