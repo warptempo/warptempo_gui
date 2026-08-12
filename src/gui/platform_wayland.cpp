@@ -163,11 +163,9 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
     if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
-// THE TOUCH FEEL CONSTANTS, all three RULED RETUNABLES (touch phase 1,
-// 2026-08-11). The first two shipped unverified ahead of the target panel's
-// arrival; kTouchZoomEngagePx is the first constant tuned ON silicon (the
-// ROADOM panel's first glass session, same day). Retune on silicon, not on
-// argument.
+// THE TOUCH DISAMBIGUATION CONSTANTS, both RULED RETUNABLES (touch phase 1,
+// 2026-08-11 — feel constants shipping unverified ahead of the target panel's
+// arrival; retune on silicon, not on argument).
 //
 // kTouchDisambiguateMs is the window between the FIRST finger's down and the
 // commitment to the one-finger pointer translation — it exists ONLY to tell
@@ -190,24 +188,8 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
 // motion in the same burst as the press, and that motion crosses the GUI's
 // own drag gate by construction, so a touch drag becomes a drag the moment
 // it resolves.
-//
-// kTouchZoomEngagePx is the two-finger gesture's ZOOM ENGAGEMENT threshold,
-// the maps-style ONE-SIDED HYSTERESIS ratified from the ROADOM panel's first
-// glass session (2026-08-11): pan is live from the nav latch as ever, but
-// the delivered dist_ratio stays 1.0 EXACTLY until the CUMULATIVE finger-
-// distance change from the two-finger start crosses this — and from the
-// crossing on, zoom is live for the rest of the gesture (no re-disengage;
-// hysteresis, not a deadband). The field problem it fixes: involuntary
-// finger-distance jitter (a few px on a ~200 px grip) leaked into the
-// per-frame ratio and trampled the pan, while zoom itself felt excellent.
-// 20 px sits comfortably above the session's observed jitter and small
-// against a deliberate pinch's travel; the crossing frame FOLDS the whole
-// accumulated change (ratio = current/start distance — the latch's own
-// press-becomes-drag model), so a deliberate pinch loses none of its first
-// 20 px and jitter never crosses to be folded.
 constexpr int    kTouchDisambiguateMs = 60;
 constexpr double kTouchSlopPx         = 8.0;
-constexpr double kTouchZoomEngagePx   = 20.0;
 
 } // namespace
 
@@ -3057,10 +3039,9 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
             touch_nav_start_cy_   = cy;
             touch_nav_start_dist_ = touch_nav_last_dist_ = d;
-            touch_nav_latched_      = false;
-            touch_nav_zoom_engaged_ = false;
-            touch_nav_delivered_    = false;
-            touch_nav_frame_dirty_  = false;
+            touch_nav_latched_     = false;
+            touch_nav_delivered_   = false;
+            touch_nav_frame_dirty_ = false;
             break;
         }
         case TouchPhase::Pointer:
@@ -3198,8 +3179,7 @@ void GuiPlatform::deliver_touch_nav_frame() {
         // slop (Chebyshev, the drag gate's own metric) or the finger distance
         // has changed by it — so a two-finger tap navigates nothing. The
         // crossing folds the whole accumulated delta (the strip drag's own
-        // crossing model): last_cx still holds the two-finger start (and
-        // last_dist stays pinned at it until the zoom ENGAGES, below).
+        // crossing model): last_cx/last_dist still hold the two-finger start.
         const bool travel =
             std::max(std::abs(cx - touch_nav_start_cx_),
                      std::abs(cy - touch_nav_start_cy_)) >= kTouchSlopPx;
@@ -3208,30 +3188,16 @@ void GuiPlatform::deliver_touch_nav_frame() {
         if (!travel && !pinch) return;
         touch_nav_latched_ = true;
     }
-    // ZOOM ENGAGEMENT HYSTERESIS (the first-glass tuning; rationale at
-    // kTouchZoomEngagePx): pan is live from the latch, but zoom stays quiet —
-    // dist_ratio 1.0 exactly, which the GUI body maps to log2(1) = 0 —
-    // until the cumulative distance change from the two-finger start crosses
-    // the engage threshold, and from then on it is live for the rest of the
-    // gesture. last_dist stays PINNED at the start distance while quiet, so
-    // the crossing frame folds the whole accumulated change (ratio =
-    // current/start) — and a fast pinch crossing the latch and the engage
-    // threshold in one frame folds ONCE, both arms reading the same pinned
-    // basis.
-    if (!touch_nav_zoom_engaged_ &&
-        std::abs(dist - touch_nav_start_dist_) >= kTouchZoomEngagePx)
-        touch_nav_zoom_engaged_ = true;
     // A pair collapsed under 1 px on either end of the ratio zooms nothing
     // that frame — a degenerate distance has no ratio.
     constexpr double kMinNavDistPx = 1.0;
     const double ratio =
-        (touch_nav_zoom_engaged_ &&
-         touch_nav_last_dist_ >= kMinNavDistPx && dist >= kMinNavDistPx)
+        (touch_nav_last_dist_ >= kMinNavDistPx && dist >= kMinNavDistPx)
             ? dist / touch_nav_last_dist_
             : 1.0;
     const double dx = cx - touch_nav_last_cx_;
-    touch_nav_last_cx_ = cx;
-    if (touch_nav_zoom_engaged_) touch_nav_last_dist_ = dist;
+    touch_nav_last_cx_   = cx;
+    touch_nav_last_dist_ = dist;
     if (dx == 0.0 && ratio == 1.0) return;  // a no-op frame delivers nothing
     touch_nav_delivered_ = true;
     if (touch_nav_update_hook_)
@@ -3248,10 +3214,10 @@ void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
     // touch_nav_frame_dirty_ when this runs.
     //   * FINGER-UP (true): the staged frame is the user's own FINAL MOTION
     //     and DELIVERS first — the any-end-commits family. This is what lets
-    //     a short pinch whose only latch- and engage-crossing motion batches
-    //     with the up act at all: with no prior update delivered, dropping
-    //     that frame would erase the crossing, owe no end hook, and make the
-    //     whole gesture silently do nothing.
+    //     a short pinch whose only latch-crossing motion batches with the up
+    //     act at all: with no prior update delivered, dropping that frame
+    //     would erase the crossing, owe no end hook, and make the whole
+    //     gesture silently do nothing.
     //   * HARD ENDS (wl_touch.cancel / touch-capability loss, false): the
     //     staged frame is DROPPED deliberately — the compositor's claim means
     //     that motion retroactively was not ours — and the end hook still
@@ -3268,9 +3234,8 @@ void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
     // The end hook is owed a commit only if an update was ever delivered — a
     // sub-latch two-finger touch costs the GUI nothing at all.
     if (touch_nav_delivered_ && touch_nav_end_hook_) touch_nav_end_hook_();
-    touch_nav_delivered_    = false;
-    touch_nav_latched_      = false;
-    touch_nav_zoom_engaged_ = false;
+    touch_nav_delivered_ = false;
+    touch_nav_latched_   = false;
 }
 
 void GuiPlatform::on_touch_cancel() {
@@ -3329,8 +3294,7 @@ void GuiPlatform::forget_touch_state() {
     touch_nav_x2_ = touch_nav_y2_ = 0.0;
     touch_nav_start_cx_ = touch_nav_start_cy_ = touch_nav_start_dist_ = 0.0;
     touch_nav_last_cx_ = touch_nav_last_dist_ = 0.0;
-    touch_nav_latched_ = touch_nav_zoom_engaged_ = false;
-    touch_nav_delivered_ = touch_nav_frame_dirty_ = false;
+    touch_nav_latched_ = touch_nav_delivered_ = touch_nav_frame_dirty_ = false;
 }
 
 // ---------------------------------------------------------------------------
