@@ -2792,9 +2792,11 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // commit-title editor — plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
-// is keyboard_modal_editor_active); what it still names is ONE behavior the
-// top-strip FlagPayload editor is deliberately transparent to — the wheel
-// swallow in wheel_context, this predicate's ONLY caller. The playback stop is
+// is keyboard_modal_editor_active); what it names is the POINTER-facing
+// behaviors the top-strip FlagPayload editor is deliberately transparent to —
+// the caller roster (three since 2026-08-11: the wheel swallow, the cursor
+// map's blanket Arrow, and the modal-trap block at on_button_press's top) is
+// the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
@@ -4418,7 +4420,12 @@ void GuiInputHandler::load_editor_commit() {
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
-// else is swallowed as a backstop. `autocomplete` is the optional
+// else is swallowed as a backstop. THE COMMAND ADMISSION HAS A POINTER-SIDE
+// MIRROR since 2026-08-11 (the modal-trap fix):
+// modal_editor_admits_command_chord (input_pointer.cpp) restates the
+// Esc/Ctrl+S/Ctrl+Q command set so a roster button whose chord is admitted
+// here dispatches while a bottom-strip editor stands — the two spellings must
+// move together. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
 // Alt + Tab fall through to handle_key unchanged); the commit-title, bpm and
 // flag editors pass an empty hook, but bare Tab never reaches this route for

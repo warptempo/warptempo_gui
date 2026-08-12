@@ -155,6 +155,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
     {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
+    // from region — momentary, click face, not a radio. Every rule the key has
+    // the button has: no region / degenerate result = the arm's own consumed
+    // refusals, read-only-legal (trim is band), consumed in the `h` view (the
+    // derived partition greys it there). Shift is NOT admitted — Shift+X the
+    // maximizer stays keyboard-only — so a shift press is the standing
+    // consumed nothing.
+    {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
     // (THE ZOOM PAIR — bare `-` and bare `=` — sat here from 2026-08-01 until
     // 2026-08-02, when the architect ruled out duplicate commands on the GUI and
     // the Navigation dropdown became those two commands' one pointer home. The
@@ -263,6 +271,28 @@ static_assert(std::size(kToolbarChords) + 2 ==
                   static_cast<std::size_t>(kRedesignButtonCount),
               "kToolbarChords must cover every RedesignButton except the "
               "Settings and Navigation anchors");
+
+// THE MODAL EDITORS' COMMAND-CHORD ADMISSION, read without the act — the
+// modal-trap fix's membership test (architect 2026-08-11, from the road: an
+// accidental settings editor on GLASS, with no physical keyboard, was an
+// EXIT-LESS STATE — the Quit button did nothing). The five editors' one modal
+// contract admits exactly the editor's own keys plus bare Esc, Ctrl+S and
+// Ctrl+Q (route_modal_editor_key / modal_editor_key_blocked,
+// input_key_dispatch.cpp); this predicate is that contract's COMMAND tail —
+// the chords that are commands rather than editor keys — spelled once so the
+// roster's modal press claim can DERIVE its membership from the admission
+// instead of hand-listing buttons. The two must move together: a chord added
+// to the editors' admission belongs here in the same edit. Bare Esc is in the
+// set because the contract admits it (the cancel); no roster button carries it
+// today (row 8's Esc button died the day it shipped), so the Esc arm is the
+// derivation's completeness, not a live consumer.
+bool modal_editor_admits_command_chord(GuiKey key, bool ctrl, bool shift,
+                                       bool alt) {
+    if (key == GuiKeys::Escape && !ctrl && !shift && !alt) return true;
+    if (key == GuiKeys::S && ctrl && !shift && !alt) return true;
+    if (key == GuiKeys::Q && ctrl && !shift && !alt) return true;
+    return false;
+}
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
 // painter's stash and nothing here re-shapes or re-measures, so the clickable
@@ -942,14 +972,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top = rect_contains(top, x, y);
-    // THE TRIM BAR BAND, spelled from the ONE geometry owner the press sites read
-    // (top_trim_row_area) and derived once because THREE modifier arms below need
-    // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
-    // bound-set clicks). The presses gate on the top strip first and so does this.
-    const GuiRect trim_bar_row = top_trim_row_area(app);
-    const bool in_trim_bar = inside_top &&
-                             y >= trim_bar_row.y &&
-                             y < trim_bar_row.y + trim_bar_row.h;
+    // THE MERGED TRIM SURFACE, spelled from the ONE geometry owner the press
+    // sites read (top_trim_surface_area — trim bar + ruler + their gap since
+    // the trim surface arc, 2026-08-11) and derived once because THREE
+    // modifier arms below need
+    // it — plain (the endcap grabs), ctrl (the bridge drag and the BEGIN
+    // bound-set) and ctrl+shift (the END bound-set). The presses gate on the
+    // top strip first and so does this.
+    const GuiRect trim_band = top_trim_surface_area(app);
+    const bool in_trim_surface = inside_top &&
+                                 y >= trim_band.y &&
+                                 y < trim_band.y + trim_band.h;
     // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES, which is why the
     // mode enters the map HERE rather than as a fourth blanket return above. The
     // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
@@ -970,7 +1003,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // product — the live band's span framing is one too, and the band shows the
     // shapes of its drags, never that.
     const bool trim_write_gestures_live =
-        in_trim_bar && !app.history_mode.active;
+        in_trim_surface && !app.history_mode.active;
 
     // ALT-EXACT: the captured grab-pan, whose press arms on `inside_waveform`
     // alone — either half, no band split. Alt claims nothing at all in the top
@@ -979,19 +1012,32 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     if (mods.alt && !mods.ctrl && !mods.shift)
         return inside_waveform ? GuiCursorKind::Pan : GuiCursorKind::Arrow;
     // CTRL-EXACT: two claims, and the press path's own order between them. Over
-    // the TRIM BAR ctrl sets the BEGIN bound and arms a single-bound drag on it
+    // the MERGED TRIM SURFACE ctrl is trim-bound vocabulary in TWO shapes
+    // since the trim surface arc (2026-08-11): inside the inter-cap BRIDGE
+    // span it is the BRIDGE (pair) drag — displaced here off the plain press,
+    // which draws the region now — so the span answers the bridge's own
+    // TrimResize (the ctrl+CLICK bound-set that shares the span acts only on
+    // a motionless release, and the cue names the DRAG the hold promises, the
+    // set-then-arm precedent read the other way); off the span ctrl sets the
+    // BEGIN bound and arms a single-bound drag on it
     // (set_trim_bound_at_click_then_arm_drag) — boundary extension by another
-    // route, so it takes the BEGIN cap's own cue rather than the Arrow; over the
-    // waveform it is the dual-axis strip drag, `inside_waveform` alone. Ctrl's
-    // other top-strip claim is the marker membership toggle, which is not a drag
-    // and has no cue.
+    // route, so it takes the BEGIN cap's own cue where the click would act and
+    // the Arrow where the strictly-inside guard would consume it. Over the
+    // waveform it is the dual-axis strip drag, `inside_waveform` alone —
+    // the gesture's ONE entry since the ruler's zoom arm died with the merge.
+    // Ctrl's other top-strip claim is the marker membership toggle, which is
+    // not a drag and has no cue.
     if (mods.ctrl && !mods.alt && !mods.shift) {
-        if (trim_write_gestures_live)
+        if (trim_write_gestures_live) {
+            if (point_in_trim_bridge_span(app, audio, x, y))
+                return GuiCursorKind::TrimResize;
             return trim_bound_click_frame(/*is_begin=*/true, x)
                        ? GuiCursorKind::TrimBoundBegin : GuiCursorKind::Arrow;
+        }
         return inside_waveform ? GuiCursorKind::Zoom : GuiCursorKind::Arrow;
     }
-    // CTRL+SHIFT-EXACT: the TRIM BAR is its ONE claim in the whole product — the
+    // CTRL+SHIFT-EXACT: the MERGED TRIM SURFACE is its ONE claim in the whole
+    // product — the
     // END bound set, the begin set's mirror — so it takes the END cap's cue there
     // and the Arrow everywhere else.
     if (mods.ctrl && mods.shift && !mods.alt) {
@@ -1010,28 +1056,27 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     if (mods.ctrl || mods.alt || mods.shift) return GuiCursorKind::Arrow;
 
     // PLAIN-EXACT from here, and the top strip splits by band exactly as the
-    // press does — ruler first, then trim bar, both disjoint from each other and
-    // from the marker lane below them.
+    // press does — the merged trim surface, then the marker lane below it.
     if (inside_top) {
-        // THE RULER BAND IS THE STRIP DRAG'S SECOND ENTRY (arm_strip_drag_at),
-        // the same gesture the ctrl+waveform press arms — so it takes the same
-        // cursor. The band is exactly top_ruler_row_area, the lane accessor the
-        // press reads.
-        const GuiRect ruler = top_ruler_row_area(app);
-        if (y >= ruler.y && y < ruler.y + ruler.h) return GuiCursorKind::Zoom;
-        // THE TRIM BAR BAND, RESOLVED THROUGH THE ROUTER'S OWN TWO OWNERS
-        // (architect 2026-08-03, closing the band-wide cue this used to paint):
-        // the plain press arms only on an ENDCAP or inside the inter-cap BRIDGE,
-        // so the cue asks exactly hit_test_trim_endcap and
-        // point_in_trim_bridge_span — the same predicates route_trim_bar_press
-        // calls, in the same order — and a point on the band that arms nothing
-        // (outside a trimmed-in window, either side of the bar) shows the Arrow.
-        // Cue and gesture therefore agree BY CONSTRUCTION rather than by
-        // proximity, which is the whole rule this map is written to.
+        // (THE RULER'S ZOOM CUE IS DELETED with its strip-drag entry — the trim
+        // surface arc, 2026-08-11: the ruler rows are the merged trim surface's
+        // now, answered below, and zoom's one pointer entry is the
+        // ctrl+waveform press, whose cue is the ctrl arm's above.)
         //
-        // AN ENDCAP IS NOT THE BRIDGE: a cap moves ONE bound and the bridge moves
-        // BOTH, so the caps take the boundary-extension shapes (begin left_side,
-        // end right_side) and the bridge keeps ew-resize, the move.
+        // THE MERGED TRIM SURFACE, RESOLVED THROUGH THE ROUTER'S OWN OWNER
+        // (architect 2026-08-03 for the by-construction rule; the band merged
+        // and the plain bridge cue died 2026-08-11): the plain press arms only
+        // on an ENDCAP — everywhere else on the band it is the REGION FORMER,
+        // which carries no cue, exactly as the waveform placement press
+        // carries none — so the cue asks exactly hit_test_trim_endcap, the
+        // predicate route_trim_bar_press calls, and a point off the caps shows
+        // the Arrow. Cue and gesture therefore agree BY CONSTRUCTION rather
+        // than by proximity, which is the whole rule this map is written to.
+        //
+        // AN ENDCAP IS NOT THE BRIDGE: a cap moves ONE bound, so the caps take
+        // the boundary-extension shapes (begin left_side, end right_side); the
+        // bridge's ew-resize is CTRL vocabulary now, named in the ctrl arm
+        // above where the drag actually lives.
         //
         // READ-ONLY NO LONGER REFUSES ANYTHING HERE (architect 2026-08-07): the
         // band's read-only return is deleted, trim being band rather than
@@ -1039,7 +1084,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // this arm must promise them. The term that used to answer Arrow on the
         // read-only bit is gone with the gesture refusal it mirrored — cue and
         // gesture stay one decision, which is why nothing replaced it.
-        if (in_trim_bar) {
+        if (in_trim_surface) {
             // THE `h` HISTORY MODE IS THE ONE THING THAT STILL TAKES THIS BAND'S
             // CUES: the drags its shapes promise are consumed in there, and its
             // one live gesture is a DOUBLE-click, which no cue in the product
@@ -1050,8 +1095,6 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
                 case TrimHit::None:  break;
             }
-            if (point_in_trim_bridge_span(app, audio, x, y))
-                return GuiCursorKind::TrimResize;
             return GuiCursorKind::Arrow;
         }
         return GuiCursorKind::Arrow;
@@ -1191,13 +1234,16 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries. The gesture
-// had a dedicated zoom LANE, lost it when that lane was deleted (2026-07-31),
-// and ROW 5 GAVE IT A SECOND ENTRY BACK: the ruler band. Both entries arm
-// exactly this — the same StripDragState, the same pointer capture ("swallow"),
-// the same anchor stem, the same edge clamp and 8px threshold — so the two
-// surfaces cannot drift, and the ruler press is the zoom strip reborn rather
-// than a lookalike.
+// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, ONE entry since the trim
+// surface arc (architect 2026-08-11): the CTRL-EXACT WAVEFORM PRESS. The
+// gesture's entry history, kept because each step was a ruling: a dedicated
+// zoom LANE (deleted 2026-07-31), the ctrl press alone (which proved the
+// deletion cost no capability), a second entry on the RULER band from row 5
+// (2026-08-01), and the ruler entry DELETED 2026-08-11 when the ruler merged
+// into the trim surface — zoom is already well supported on the waveform
+// (ctrl-drag, the keys, touch two-finger), his words, so the band went to
+// trim instead. The zoom-stem paint-from-press bookkeeping is the ctrl
+// entry's alone now.
 //
 // The anchor is the SONG position under the press column, which is what makes
 // the zoom pivot on the pixel the user grabbed.
@@ -1228,8 +1274,9 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     app.strip_drag.anchor_sample =
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(x) * spp;
-    // ZOOM IS THE GESTURE'S CUE ON BOTH ENTRIES — the ctrl-waveform press and the
-    // ruler plain press are exactly the zone map's two Zoom surfaces — so this is
+    // ZOOM IS THE GESTURE'S CUE — the ctrl-waveform press is exactly the zone
+    // map's one Zoom surface (the ruler's died with its entry, 2026-08-11) —
+    // so this is
     // the kind the capture release restores. Passing it is what makes the restore
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
@@ -1391,6 +1438,45 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the keyboard.
     if (app.prompt.active) return;
 
+    // THE MODAL-TRAP FIX (architect 2026-08-11, with the trim surface arc; the
+    // defect was the road's: an accidentally opened settings editor on GLASS,
+    // with no physical keyboard, was an EXIT-LESS STATE — the Quit button did
+    // nothing). The bottom-strip modal editors admit Ctrl+Q and Ctrl+S as
+    // CHORDS, but their pointer swallows below refuse the roster wholesale —
+    // so the QUIT and SAVE buttons violated button-is-its-chord exactly where
+    // the chord is admitted. FIXED BY DERIVATION, not new semantics: while a
+    // bottom-strip modal editor stands, a plain left press on a roster button
+    // whose chord the editors' modal contract ADMITS AS A COMMAND
+    // (modal_editor_admits_command_chord above — membership derived from the
+    // admission, never hand-listed; today that resolves to Quit and Save)
+    // dispatches through the ordinary one dispatch body, and every other
+    // press stays refused at the swallows below. The dispatched chord then
+    // meets the KEYBOARD gate's own routing — Ctrl+S saves with the editor
+    // open, Ctrl+Q runs the teardown and the close route — so the button is
+    // its chord end to end. Faces: the two admitted buttons already wear
+    // their enabled faces (the modal gates are deliberately absent from
+    // redesign_button_enabled — a modal that greyed the chrome would be a
+    // fourth face nobody asked for, the standing note there), so face and
+    // press agree where it matters and the un-admitted rest keep the standing
+    // swallowed-press model. A MODIFIED press stays swallowed: the band
+    // claims refuse ctrl/alt and non-admitting shift anyway, and under a
+    // modal the refusal's home is the swallow. THE FLAG EDITOR IS NOT IN
+    // THIS PATH and needs nothing: it is pointer-transparent — it never
+    // blocked these presses, whose chords already dispatch into the keyboard
+    // gate through the ordinary band claims below.
+    if (button == GuiMouseButton::Left && !mods.ctrl && !mods.alt &&
+        !mods.shift && modal_bottom_strip_editor_active()) {
+        for (const ToolbarChord& tc : kToolbarChords) {
+            if (!redesign_button_hit(app, tc.id, x, y)) continue;
+            if (modal_editor_admits_command_chord(tc.key, tc.ctrl, tc.shift,
+                                                  tc.alt)) {
+                dispatch_redesign_chord(x, y, mods);
+                return;
+            }
+            break;   // hit a non-admitted button: the modal swallow answers
+        }
+    }
+
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's text region places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
@@ -1490,7 +1576,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // It sits BELOW the modal gates like every other pointer target, which is
     // half of why a popup and an editor are never open together: the popup opens
     // only from a press, and while one of the three BOTTOM-STRIP editors is up
-    // every press dies at those gates. The other half is not here — the
+    // every press dies at those gates (the MODAL-TRAP block above lifts ONLY
+    // roster buttons whose chord the editors admit — Quit and Save today — and
+    // the two menu ANCHORS carry no chord, so no press can open a popup under
+    // an editor through it). The other half is not here — the
     // pointer-transparent FLAG editor swallows nothing, so a press does reach
     // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
     // that edit (the rule is stated there). Two mechanisms, one claim. (The
@@ -2067,14 +2156,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
         // marker claim below). On the WAVEFORM it arms the dual-axis strip drag
-        // (StripDragState / apply_strip_drag_at) — ONE OF THE GESTURE'S TWO
-        // ENTRIES. It was the only one between the zoom lane's deletion
-        // (architect 2026-07-31) and row 5, which is what proved the deletion
-        // cost no capability: this press has the gesture's full reach — the
+        // (StripDragState / apply_strip_drag_at) — THE GESTURE'S ONE ENTRY
+        // since the trim surface arc (2026-08-11) deleted the ruler entry row
+        // 5 had given it (the ruler is trim surface now; this press was
+        // already the sole entry once before, between the zoom lane's deletion
+        // and row 5, which is what proved one entry costs no capability): this
+        // press has the gesture's full reach — the
         // cursor capture ("swallow"), the anchor stem, the edge clamp, and
-        // dual-axis zoom+pan. Row 5 gave it a second entry on the RULER band
-        // (arm_strip_drag_at, the zoom strip reborn), through the same hoisted
-        // arm body, so the two cannot drift. The waveform strip-drag is
+        // dual-axis zoom+pan. The waveform strip-drag is
         // navigation-class: allowed in read-only, never touches the playhead or
         // selection — and a MOTIONLESS ctrl+waveform press-release commits
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
@@ -2135,16 +2224,33 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 clear_region_highlight(app, viewport);
                 return;
             }
-            // Markerless top-strip ctrl-exact press: the TRIM BAR sets the BEGIN
-            // trim bound at the click (REINSTATED architect 2026-08-01 — ctrl is
-            // BEGIN and ctrl+shift is END, the pair's original shape, now homed
-            // on the redesigned bar's whole band rather than the chip row it grew
-            // up on; set_trim_bound_at_click refuses any value not STRICTLY
-            // INSIDE its partner — the clicks ADJUST the window that always
-            // rests, they never create one — and, being
-            // a SETTER, deselects past its refusals. IT NO LONGER REFUSES A
-            // READ-ONLY TAB: trim is band, not authored content, and that gate
-            // was deleted 2026-08-07). EVERY other lane is a
+            // Markerless top-strip ctrl-exact press: the MERGED TRIM SURFACE is
+            // ctrl's trim-bound vocabulary in TWO SHAPES since the trim
+            // surface arc (architect 2026-08-11):
+            //   * INSIDE the inter-cap BRIDGE span, ctrl+DRAG is the BRIDGE
+            //     (pair) drag — DISPLACED here off the plain press, which
+            //     draws the region now. HIS GESTURE RANKING is the rationale,
+            //     recorded at route_trim_bar_press's header: pan #1, zoom #2,
+            //     region-draw #3, trim-move #4 — the RARE gesture takes the
+            //     modifier, and ctrl already means trim-bound vocabulary on
+            //     this band. The press arms the same pending an endcap press
+            //     arms (both=true; the strictly-inside geometry test survives,
+            //     only its modifier changed), and the ctrl+CLICK bound-set
+            //     STAYS: a MOTIONLESS release performs it, click vs drag
+            //     distinguished exactly as the band's other arms do — through
+            //     the pending's 8px threshold — via
+            //     PendingTrimDrag::set_begin_bound_on_release (a lost button
+            //     disarms without setting, not being a clean click).
+            //   * OFF the span, the click sets the BEGIN bound at press and
+            //     arms the single-bound drag on it (REINSTATED architect
+            //     2026-08-01 — ctrl is BEGIN and ctrl+shift is END;
+            //     set_trim_bound_at_click refuses any value not STRICTLY
+            //     INSIDE its partner and, being a SETTER, deselects past its
+            //     refusals. IT NO LONGER REFUSES A READ-ONLY TAB: trim is
+            //     band, not authored content, 2026-08-07). Off-span means the
+            //     click-set cannot collide with the bridge arm: the deferral
+            //     exists exactly where a drag must stay possible.
+            // EVERY other lane is a
             // strict no-op, falling through to the return below (the ctrl-click
             // clear on an empty marker spot is RETIRED, architect 2026-07-23:
             // ctrl-click in Ableton is just click, and ctrl stays the zoom
@@ -2153,13 +2259,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // bare clear). The four redesigned rows (lanes 0..3) were claimed far
             // above and never reach here.
             //
-            // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_row_area — the
-            // exact band the plain endcap/bar drags and the span-framing
+            // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_surface_area —
+            // the exact merged band the plain endcap grabs, the region former
+            // and the span-framing
             // double-click claim, so paint, hit and every trim gesture read ONE
             // accessor and cannot drift.
             if (inside_top) {
-                const GuiRect trim_band = top_trim_row_area(app);
+                const GuiRect trim_band = top_trim_surface_area(app);
                 if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
+                    if (point_in_trim_bridge_span(app, audio, x, y)) {
+                        // The bridge arm: nothing mutates until the threshold
+                        // (the drag) or a clean motionless release (the
+                        // deferred click-set). No stop here either — both
+                        // outcomes carry their own, each past its refusals.
+                        arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
+                                              x, y);
+                        app.pending_trim_drag.set_begin_bound_on_release = true;
+                        return;
+                    }
                     // NO stop here: the bound set has its own refusals
                     // (a degenerate audio/geometry state, a value not
                     // strictly inside its partner), and a refused press changes
@@ -2177,17 +2294,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Ctrl+Shift-exact: the TRIM BAR is its ONE claim — set the END trim
+        // Ctrl+Shift-exact: the MERGED TRIM SURFACE is its ONE claim — set the
+        // END trim
         // bound at the click (ctrl is BEGIN, ctrl+shift is END; the same
-        // reinstated pair, architect 2026-08-01. set_trim_bound_at_click refuses
+        // reinstated pair, architect 2026-08-01, the band grown to the merged
+        // surface 2026-08-11. set_trim_bound_at_click refuses
         // any value not strictly inside its partner — the adjust-only pair gate
         // died with the unset state 2026-07-30, a full pair always resting, and
         // the read-only refusal died 2026-08-07 with trim's reclassification as
         // band — and deselects as a SETTER past its
-        // refusals). Everywhere else Ctrl+Shift stays a strict no-op, playback
+        // refusals). Ctrl+shift keeps its at-press set everywhere on the band —
+        // it shares no geometry with the bridge drag, which is ctrl-exact, so
+        // it needs no deferral. Everywhere else Ctrl+Shift stays a strict
+        // no-op, playback
         // included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
-            const GuiRect trim_band = top_trim_row_area(app);
+            const GuiRect trim_band = top_trim_surface_area(app);
             if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
                 // NO stop here either: like the BEGIN set above, the stop sits
                 // inside set_trim_bound_at_click past that act's refusals, so a
@@ -2242,8 +2364,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // drag or nudge — nothing is towed.
         if (inside_top || stem_click) {
             // A PLAIN STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
-            // waveform, so every band test inside this branch — the trim bar
-            // lane below, the ruler's strip-drag arm, the empty-marker-lane parity
+            // waveform, so every band test inside this branch — the merged
+            // trim surface below, the empty-marker-lane parity
             // press — simply fails for it, and it lands on the one arm it is
             // for: `mh_index >= 0`, the marker click. Nothing in those bodies
             // knows or needs to know which surface resolved the index.
@@ -2254,65 +2376,42 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // shift is the region former. Shift reaches the marker RANGE select
             // through the FLAG BOX alone, which is `inside_top`.
             //
-            // The TRIM BAR (top_trim_row_area, lane 4) is trim's lane and is
-            // claimed BEFORE the marker single-select. Row 5's three lanes —
-            // the trim bar, the ruler (lane 5) and the marker lane (lane 6) —
+            // THE MERGED TRIM SURFACE (top_trim_surface_area — trim bar +
+            // ruler + their gap, the trim surface arc, architect 2026-08-11:
+            // "make the timestamp lane the same as the trim") is claimed
+            // BEFORE the marker single-select; it and the marker lane (lane 6)
             // are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
-            // double-click, else arms an endcap/bridge drag, else — on an unclaimed
-            // spot — is a CONSUMED NOTHING; the bound-set clicks
-            // are the ctrl (BEGIN) / ctrl+shift (END)
-            // claims above. A SHIFT-exact trim-bar press claims nothing —
+            // double-click, else arms an ENDCAP drag, else ARMS THE BAND'S
+            // REGION FORMER — a plain drag anywhere off a cap DRAWS THE REGION
+            // ("let's experiment with making the region draw a drag on the
+            // trim bar"), a motionless release staying the standing CONSUMED
+            // NOTHING (plus the double-click seed); the bound-set clicks and
+            // the bridge drag
+            // are the ctrl / ctrl+shift
+            // claims above. THE RULER'S STRIP-DRAG ZOOM ENTRY IS DELETED with
+            // the merge (its block stood here) — zoom lives on the waveform:
+            // ctrl-drag, the keys, touch two-finger. A SHIFT-exact band press
+            // still claims nothing —
             // trim is transparent to it, and the shift fall-through below is
-            // inert here (the flag boxes' y-band excludes the trim row), so it
+            // inert here (the flag boxes' y-band excludes the band), so it
             // ends at the inert top-strip return, having touched nothing at
-            // all: it is the only press that reaches the trim bar without
+            // all: it is the only press that reaches the band without
             // claiming it (ctrl and alt were discarded at the gate above), and
-            // it stops no playback — nor does the plain press: the trim bar's
+            // it stops no playback — nor does the plain press: the band's
             // stop belongs to the DRAG's first accepted bound change
-            // (input_trim.cpp).
-            // THE RULER BAND IS THE ZOOM STRIP REBORN (row 5): a PLAIN left
-            // drag here arms the dual-axis strip drag through the shared arm
-            // above — the gesture's second entry, beside the ctrl-waveform one.
-            // Claimed before the trim and marker bands (disjoint y-bands, so it
-            // contends with nothing) and NAVIGATION-CLASS: allowed in read-only,
-            // touching neither playhead nor selection.
-            //
-            // A MOTIONLESS plain press-release is a CONSUMED NOTHING — the
-            // release body disarms without committing (bar the anchor stem's
-            // erase), exactly as the ctrl+waveform entry does. There is NO
-            // DOUBLE-CLICK SURFACE here:
-            // the span-framing double-click lives on the TRIM lane, and giving
-            // the ruler one too would make two neighbouring bands answer the
-            // same gesture differently.
-            //
-            // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT, and
-            // that survived the head's move into the marker lane unchanged
-            // (2026-08-01) because the claim was never keyed on the head — it
-            // reads the lane accessor and only the lane accessor. So the ruler
-            // lane is now labels + tick-tops + this drag, the marker lane is
-            // head + flags + their routes, and a press in the marker lane can
-            // never arm the strip drag: it falls past this block to the marker
-            // hit and the empty-marker-lane parity press below.
-            {
-                const GuiRect ruler = top_ruler_row_area(app);
-                if (!shift && y >= ruler.y && y < ruler.y + ruler.h) {
-                    arm_strip_drag_at(x, y);
-                    return;
-                }
-            }
-            const GuiRect trim_bar = top_trim_row_area(app);
-            const bool in_trim_bar =
+            // (input_trim.cpp), and the region former stops nothing anywhere.
+            const GuiRect trim_bar = top_trim_surface_area(app);
+            const bool in_trim_surface =
                 (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
-            if (!shift && in_trim_bar) {
-                // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
-                // (a motionless release then runs that same click action at
-                // on_button_release), IN EITHER TAB since 2026-08-07 — the
+            if (!shift && in_trim_surface) {
+                // Plain merged-band press. An endcap hit ARMS the trim drag,
+                // IN EITHER TAB since 2026-08-07 — the
                 // band's read-only return is deleted below. Either
-                // way the trim bar CONSUMES the press — it never falls to the
+                // way the band CONSUMES the press — it never falls to the
                 // marker handling.
-                // A PLAIN TRIM-BAR CLICK THAT NEVER BECOMES A DRAG IS NOW A
+                // A PLAIN BAND CLICK THAT NEVER BECOMES A DRAG IS A
                 // CONSUMED NOTHING (architect 2026-07-30). Its entire act was
                 // PUBLISHING the trim window as a region highlight, and that
                 // coupling is retired outright with the SPAN FORM — so the two
@@ -2320,13 +2419,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // direct sync and the writable UNCLAIMED-spot sync) are gone, and
                 // so is the pre-route stop that served them: keeping either would
                 // make a no-op click stop an audition and destroy a selection for
-                // nothing. The drag keeps both — it takes the setter's deselect
+                // nothing. The trim drag keeps both — it takes the setter's
+                // deselect
                 // and the trim-mutation stop at its FIRST ACCEPTED bound change
                 // (input_trim.cpp), which is where a trim commit actually happens.
                 //
-                // THE SPAN-FRAMING DOUBLE-CLICK, rehomed onto this band from the
-                // deleted zoom lane (architect 2026-07-31): the whole band —
-                // endcaps, bridge and empty space alike — carries it, since it
+                // THE SPAN-FRAMING DOUBLE-CLICK, rehomed onto the trim band from
+                // the deleted zoom lane (architect 2026-07-31) and grown to the
+                // MERGED band with the arc: the whole surface —
+                // endcaps, bar and ruler rows alike — carries it, since it
                 // frames rather than grabs. The CONSUME runs FIRST, ahead of
                 // every arm: a candidate from the previous motionless press-
                 // release on this band, inside kDoubleClickMs and the slack on
@@ -2337,7 +2438,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // read-only-legal and still is (all modal gates sit far above).
                 // The surface tag is what keeps
                 // a marker or editor candidate from consuming here, and the TEST
-                // is shared with the history mode's own trim-bar double-click
+                // is shared with the history mode's own band double-click
                 // (trim_bar_double_click_at) so the two cannot drift on the
                 // gesture while running different commands on it. It DIVERGES
                 // from the bare `0` key, which only ever reaches the whole song
@@ -2349,25 +2450,48 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
                 // SEEDING is a RELEASE act (only the release knows the press
                 // stayed still), so the press records its point and the release
-                // decides — see TrimBarPressSeed. It was recorded above this
-                // band's read-only return while that return existed, so that a
-                // locked tab framed without arming; the return is gone and the
-                // ordering no longer carries a rule.
+                // decides — see TrimBarPressSeed. Recorded for BOTH plain arms
+                // below: the endcap pending and the region former alike stay a
+                // seeding click if motionless (the release's own !moved /
+                // !trim_drag terms are what refuse a moved drag's seed).
                 app.trim_bar_press = TrimBarPressSeed{
                     .active = true, .press_x = x, .press_y = y};
                 // THE BAND'S READ-ONLY RETURN IS DELETED (architect 2026-08-07):
-                // it was the sole read-only defense for the whole trim-bar band,
+                // it was the sole read-only defense for the whole trim band,
                 // and the ruling removed the thing it was defending — read-only
                 // protects the AUTHORED MUSICAL CONTENT (the marker stores and
                 // the engine settings), while trim is BAND, no more locked than
                 // the viewport or the zoom beside it in ViewState. So a locked
-                // tab arms the endcap and bridge drags here exactly as a
+                // tab arms the endcap drag and the region former here exactly
+                // as a
                 // writable one does, route_trim_bar_press below still carries no
                 // read-only check (it never did), and the trim CURSOR cues over
                 // this band follow by construction, reading those same routers.
                 // The full ruling is at read_only_key_blocked
                 // (input_key_dispatch.cpp).
-                route_trim_bar_press(x, y);
+                // THE ENDCAP OUTRANKS, as it always outranked (the router's own
+                // order): a cap hit arms the single-bound pending and the press
+                // is done.
+                if (route_trim_bar_press(x, y)) return;
+                // ELSE THE BAND'S REGION FORMER (the trim surface arc's second
+                // half): anchor at the press column, the drag's moving end
+                // following with the playhead riding it — the waveform
+                // placement press's region arm re-expressed on this band
+                // through the ONE arm (arm_region_drag_at, band variant). NO
+                // press-time act: no playhead seat, no deselect, no dissolve
+                // of a resting span — the band's motionless click must stay a
+                // consumed nothing, so those defer to the threshold crossing
+                // (RegionDragState::band, the motion path's crossing act). A
+                // gutter press (no column) arms nothing at all.
+                {
+                    int rel = x - area.x;
+                    if (rel >= 0 && rel < area.w) {
+                        const int64_t anchor = clamp_playhead_to_live_domain(
+                            playhead_frame_at_click_column(app, audio, rel),
+                            app, audio);
+                        arm_region_drag_at(anchor, x, y, /*band=*/true);
+                    }
+                }
                 return;
             }
             if (mh_index >= 0) {
@@ -2712,12 +2836,14 @@ void GuiInputHandler::finalize_editor_text_drag() {
     app.editor_text_drag.active = false;
 }
 
-void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
+void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y,
+                                         bool band) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
     app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
+    app.region_drag.band         = band;
     // Clear any resting region immediately at press: a plain upper-half
     // waveform press dissolves an existing highlight on mouse-down (the plain
     // canvas ground repaints back now, not at release; a lower-half scrub press never
@@ -2727,7 +2853,14 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // changes nothing at all (no cancel) — the dissolve at mouse-down is final
     // either way. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
-    clear_region_highlight(app, viewport);
+    // THE BAND ARM DEFERS THE DISSOLVE (the trim surface arc, 2026-08-11): the
+    // merged trim surface's motionless click is a CONSUMED NOTHING by standing
+    // rule, and a resting span is the aiming scratch the user may be about to
+    // FRAME with this very band's double-click — so its press dissolves
+    // nothing, and the dissolve runs with the deselect at the threshold
+    // crossing instead (the motion path's crossing act, gated on
+    // RegionDragState::band, whose comment carries the divergence).
+    if (!band) clear_region_highlight(app, viewport);
 }
 
 int64_t GuiInputHandler::place_playhead_at_click_column(
@@ -2885,16 +3018,23 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 
     // THE TRIM-BAR FRAMING DOUBLE-CLICK'S SEED, resolved for every left release
     // because only the release can tell a click from a drag. The press recorded
-    // the trim-bar point (TrimBarPressSeed); this seeds the candidate when the
-    // pointer never left the slack AND no trim drag went live — the two spellings
+    // the band point (TrimBarPressSeed); this seeds the candidate when the
+    // pointer never left the slack AND no trim drag went live AND the band's
+    // region drag never crossed its threshold (the trim surface arc's third
+    // term, 2026-08-11: the band's plain off-cap press arms the region former
+    // now, and a moved region drag that wanders back inside the slack is a
+    // DRAG, not a click) — the spellings
     // of "it stayed a click", equal by construction (kDoubleClickSlackPx ==
-    // kDragMovedThresholdPx). A moved endcap/bridge drag therefore seeds nothing
+    // kDragMovedThresholdPx). A moved endcap or region drag therefore seeds
+    // nothing
     // and, its own press having cleared any candidate at the top-of-frame, leaves
-    // none behind. The record is consumed either way.
+    // none behind. The record is consumed either way. (A WAVEFORM region drag
+    // never recorded a seed, so the region term never fires there.)
     {
         const TrimBarPressSeed seed = app.trim_bar_press;
         app.trim_bar_press = TrimBarPressSeed{};
         if (seed.active && !app.trim_drag.active &&
+            !(app.region_drag.active && app.region_drag.moved) &&
             std::abs(x - seed.press_x) <= kDoubleClickSlackPx &&
             std::abs(y - seed.press_y) <= kDoubleClickSlackPx) {
             app.double_click = DoubleClickCandidate{
@@ -2975,14 +3115,26 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
-        // endcap/bridge press, which is now a CONSUMED NOTHING (architect
+        // endcap/bridge press, which is a CONSUMED NOTHING (architect
         // 2026-07-30). Its whole act was publishing the trim window as a region
         // highlight, and that coupling retired with the SPAN FORM; a deselect
         // and a playback stop left behind would be pure cost on a click that
         // commits nothing. Just disarm. (A crossed pending became app.trim_drag
         // and commits through the branch above, where the setter's deselect and
         // the trim-mutation stop live.)
+        // ONE EXCEPTION SINCE THE TRIM SURFACE ARC (2026-08-11): the CTRL
+        // bridge press DEFERRED its ctrl+CLICK bound-set to exactly this
+        // moment — the clean motionless release IS the click (the flag's
+        // contract at PendingTrimDrag::set_begin_bound_on_release; a lost
+        // button and the force-end disarm without setting). It acts at the
+        // PRESS column — a click sets where it was aimed, and the release sits
+        // within the 8px slack by construction — and the setter carries its
+        // own stop, refusals and deselect, so nothing is restated here. No
+        // drag is armed after: the button is up.
+        const bool set_begin = app.pending_trim_drag.set_begin_bound_on_release;
+        const int  press_x   = app.pending_trim_drag.press_x;
         app.pending_trim_drag = PendingTrimDrag{};
+        if (set_begin) set_trim_bound_at_click(/*is_begin=*/true, press_x);
         return;
     }
     if (app.pending_marker_drag.active) {
@@ -3080,7 +3232,10 @@ void GuiInputHandler::finalize_active_drags() {
     // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
     // NOTHING of its own — the marker pending's click committed at the
     // PRESS, and the bound-set trim pending's bound was written at the press and
-    // stands. There is no release here (the button is still held), so nothing is
+    // stands (the CTRL BRIDGE arm's DEFERRED set fires only on a clean
+    // motionless release, so disarming here rightly drops it — a force-end is
+    // not a click; 2026-08-11). There is no release here (the button is still
+    // held), so nothing is
     // owed; a pending otherwise resolves only by the threshold crossing or a real
     // release / button loss. (TWO pendings, not three, since the tempo drag's
     // deletion — 2026-07-29, see marker_drag.h.)
@@ -3102,7 +3257,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs, row 4's sixteen and row 8's eight — 36, the enum's
+// four, row 3's two tabs, row 4's seventeen and row 8's eight — 37, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
@@ -3704,14 +3859,16 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // WHAT PASSES THROUGH, the whole list — the mode's navigation vocabulary, the
 // pointer half of what history_mode_key_blocked admits on the keyboard:
 //   * ALT-exact over the waveform — the captured grab-pan.
-//   * CTRL-exact over the waveform — the dual-axis strip drag. Ctrl+Shift is NOT
+//   * CTRL-exact over the waveform — the dual-axis strip drag, its one entry
+//     since the ruler entry died with the trim surface merge (2026-08-11; the
+//     ruler rows are the consumed merged band's now). Ctrl+Shift is NOT
 //     admitted anywhere: over the waveform it is already a no-op, and over the
-//     TRIM BAR it sets the end bound, which is a write.
-//   * a PLAIN press in the RULER band — the strip drag's other entry.
+//     merged band it sets the end bound, which is a write.
 //
 // THE ACTS, all pure navigation (2026-08-05, when the waveform's upper half
 // joined the marker lane and the trim bar gained its framing gesture):
-//   * a DOUBLE-CLICK anywhere on the TRIM BAR band ZOOMS TO THE VIEWED
+//   * a DOUBLE-CLICK anywhere on the MERGED TRIM SURFACE (trim bar + ruler +
+//     their gap since 2026-08-11) ZOOMS TO THE VIEWED
 //     CHECKPOINT'S DIFF SPAN — the span that band is already displaying —
 //     through the framing act the mode's edges stopped running in 2026-08-05
 //     (frame_viewed_commit_diff_span, input_key_dispatch.cpp). Since 2026-08-08
@@ -3861,11 +4018,12 @@ bool GuiInputHandler::handle_history_mode_press(
     // main.cpp), so no shift press can land in one of them. Each band lies
     // inside the top strip, which spans the full window width, exactly as their
     // own claims test them.
-    {
-        const GuiRect ruler = top_ruler_row_area(app);
-        if (y >= ruler.y && y < ruler.y + ruler.h) return false;
-    }
-    // THE TRIM BAR'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
+    // (THE RULER'S FALL-THROUGH IS DELETED with the trim surface arc,
+    // 2026-08-11: it existed to reach the live strip-drag arm — the mode's
+    // admitted zoom — and that ruler entry is deleted product-wide, the ruler
+    // rows being the merged trim surface's now. In-view zoom keeps its other
+    // three roads: the ctrl-waveform drag, the keys, the touch gestures.)
+    // THE BAND'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
     // SUPERSEDING the single click this act shipped with earlier that day): the
     // mode's fourth plain act, and it is the REGULAR VIEWS' GESTURE EXACTLY, on
     // the same band and through the same machinery. So a SINGLE plain click here
@@ -3893,7 +4051,13 @@ bool GuiInputHandler::handle_history_mode_press(
     // Only the COMMAND differs: the viewed checkpoint's diff span instead of the
     // region / trim / whole-song ladder.
     {
-        const GuiRect trim_bar = top_trim_row_area(app);
+        // THE MERGED TRIM SURFACE, whole (2026-08-11): the mode consumes the
+        // band's trim vocabulary and its region former alike — a plain press
+        // anywhere on it is the consumed nothing that seeds, and the
+        // double-click frames, over the band's full height. The view's own
+        // region former stays the waveform press below; the band does not draw
+        // regions in here, the mode's band being a viewer's.
+        const GuiRect trim_bar = top_trim_surface_area(app);
         if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
             if (trim_bar_double_click_at(dc_at_press, x, y)) {
                 frame_viewed_commit_diff_span();
@@ -4883,7 +5047,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // The motionless endcap/bridge press commits NOTHING (architect
             // 2026-07-30, the clean-release twin above): its highlight publish is
             // retired, so the same physical click rests identically whichever
-            // path ended it — as a consumed nothing.
+            // path ended it — as a consumed nothing. THE CTRL BRIDGE ARM'S
+            // DEFERRED BOUND-SET DIES HERE TOO (2026-08-11): a lost button is
+            // not a clean click, so set_begin_bound_on_release fires only on
+            // the real release — the seed's own rule, one line down.
             app.pending_trim_drag = PendingTrimDrag{};
             // THE TRIM-BAR SEED DIES WITH IT. A button lost mid-press is not a
             // clean click sequence, so it may not leave a seed behind for an
@@ -4947,6 +5114,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {
             const bool moved = app.region_drag.moved;
             app.region_drag = RegionDragState{};
+            // THE TRIM-BAR SEED DIES WITH A LOST BUTTON (the band arm records
+            // one at its press since the trim surface arc): a button lost
+            // mid-press is not a clean click sequence, so no seed may survive
+            // for an unrelated later release to consume — the pending trim
+            // drag's own rule, one branch up. A waveform arm never recorded
+            // one, so the clear is free there.
+            app.trim_bar_press = TrimBarPressSeed{};
             if (moved)
                 end_region_drag_min_size_check(app, audio, viewport);
             return;
@@ -4955,13 +5129,30 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (area.w <= 0) return;
         // Sub-threshold: the press has not yet become a drag. Below the shared
         // Chebyshev gate nothing extra happens — the press already did the
-        // click and cleared any resting region at mouse-down. Once a drag,
+        // click and cleared any resting region at mouse-down (the band arm did
+        // neither, and does neither here — its acts land at the crossing
+        // below). Once a drag,
         // always a drag (moved never re-engages).
-        if (!app.region_drag.moved &&
-            std::max(std::abs(mouse_x - app.region_drag.press_x),
-                     std::abs(mouse_y - app.region_drag.press_y)) <
-                kDragMovedThresholdPx) {
-            return;
+        if (!app.region_drag.moved) {
+            if (std::max(std::abs(mouse_x - app.region_drag.press_x),
+                         std::abs(mouse_y - app.region_drag.press_y)) <
+                    kDragMovedThresholdPx) {
+                return;
+            }
+            // THE BAND ARM'S CROSSING ACT (the trim surface arc, 2026-08-11):
+            // the merged trim surface's press deferred its dissolve and its
+            // deselect so a motionless band click stays a consumed nothing —
+            // this crossing is the moment the gesture stops being a click, so
+            // the resting span dissolves and the store selection drops HERE,
+            // the latest moment before the fresh span exists. That keeps the
+            // family invariant (a region rests only beside an empty selection)
+            // exactly: no event between this line and the install below can
+            // observe a span beside a selection. The placement-press arms did
+            // both at mouse-down and take neither branch.
+            if (app.region_drag.band) {
+                clear_region_highlight(app, viewport);
+                selection.clear_selection();
+            }
         }
         app.region_drag.moved = true;
         // A moved region drag drops any double-click candidate: this press became
@@ -4991,9 +5182,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // gesture, so the far endpoint alone decides the span. THE THRESHOLD-
         // CROSSING EVENT NEEDS NO BYPASS OF THIS TEST (2026-08-05, when the
         // non-dissolving arm died with the click-anchored former): every arm is
-        // arm_region_drag_at now, which clears the region AT MOUSE-DOWN, so at
-        // the crossing `app.region.active` is false and the install proceeds
-        // whatever column the pointer is over.
+        // arm_region_drag_at now, which clears the region AT MOUSE-DOWN — or,
+        // for the BAND arm, at the crossing act just above (2026-08-11) — so at
+        // the crossing `app.region.active` is false either way and the install
+        // proceeds whatever column the pointer is over.
         if (app.region.active && far_frame == app.region.b_frame)
             return;
         app.region.active     = true;
@@ -5002,11 +5194,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a
         // region does NOT select the markers it contains (the reverse coupling —
         // a region selecting its contents — was tried and retired; do not
-        // re-propose) — the press already deselected all and the drag
+        // re-propose) — the press (or, for the band arm, the crossing act
+        // above) already deselected all and the drag
         // leaves the selection EMPTY throughout. That is the whole story for the
-        // three LIVE formers — the plain upper-half press, the shift press at
-        // either height and the empty flag/triangle-lane parity press — all of
-        // which deselect at press through the one placement body, so a span
+        // LIVE formers — the plain upper-half press, the shift press at
+        // either height and the empty flag/triangle-lane parity press deselect
+        // at press through the one placement body, and the merged trim
+        // surface's band arm (2026-08-11) at its crossing — so a span
         // drawn in an
         // ordinary view rests beside an EMPTY selection. The `h` view's own
         // press rides this same motion path and deselects nothing, which costs

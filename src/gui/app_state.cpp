@@ -125,10 +125,14 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
 
     // The bounds are marked by the trim bar's two ENDCAPS (row 5, 2026-08-01 —
     // the square b/e chips and their strip-crossing stems are gone): a narrow
-    // full-lane-height column run per bound, edge-anchored on its own column,
-    // inside the trim bar lane (top_trim_row_area). A press outside that
-    // vertical band is not on an endcap.
-    const GuiRect row = top_trim_row_area(app);
+    // column run per bound, edge-anchored on its own column. THE Y-GATE IS THE
+    // MERGED TRIM SURFACE (top_trim_surface_area — trim bar + ruler + their
+    // gap, the trim surface arc, 2026-08-11): the cap GRAB works from the
+    // ruler rows too, a fatter finger target, while the cap still PAINTS in
+    // the trim bar lane alone — the stated vertical paint/hit divergence at
+    // this function's declaration, the grab tolerance's sibling. A press
+    // outside the merged band is not on an endcap.
+    const GuiRect row = top_trim_surface_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
@@ -237,10 +241,12 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
 bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
                                int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
-    // The TRIM BAR LANE ONLY — the band the bar and its endcaps paint in, and
-    // the exact band hit_test_trim_endcap gates on. A top-strip point BELOW it
-    // (the ruler, then the marker lane) is not the bridge handle.
-    const GuiRect row = top_trim_row_area(app);
+    // THE MERGED TRIM SURFACE — trim bar + ruler + their gap
+    // (top_trim_surface_area, the trim surface arc, 2026-08-11), the exact
+    // band hit_test_trim_endcap gates on. A top-strip point BELOW it (the
+    // marker lane) is not the bridge handle; the COLUMN interval below is
+    // unchanged, the bar's own strictly-inside geometry.
+    const GuiRect row = top_trim_surface_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return false;
 
     // Event-synchronized geometry, the VIEWPORT half: the bar's pixels are

@@ -922,7 +922,16 @@ constexpr IconRowDef kIconRowButtons[] = {
     // fifth arrived 2026-08-04 at the row's other end — the history button —
     // and its group took three more 2026-08-05, the revert act and the walk's
     // older / newer steps; the Cumulative reading's toggle joined that group
-    // 2026-08-08, leaving the row at SIXTEEN buttons in five groups.)
+    // 2026-08-08, and the TRIM button below opened a sixth group 2026-08-11,
+    // leaving the row at SEVENTEEN buttons in six groups.)
+    // THE TRIM BUTTON (2026-08-11, the trim surface arc), a NEW SEPARATOR-LED
+    // GROUP after the warp/phase radios — the architect's placement ("place it
+    // after the warp/phase radio buttons, create a new separator"), a group
+    // intended to collect VIEWPORT-RELATED ACTS later; today it is the one
+    // member. Bare `x`, set trim from region. The glyph is Breeze's
+    // transform-crop — crop IS trim-to-span — PLANNER-PICKED (the architect
+    // can revise; succession note at the icons.h entry).
+    {RedesignButton::IconTrim,   IconRowLead::Separator, icons::Icon::TransformCrop},
     {RedesignButton::IconCopy,   IconRowLead::Separator, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       icons::Icon::MusicNote16th},
@@ -1983,8 +1992,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, four vertical separators, and sixteen 32x32 buttons in five
-    // groups — the S/T and W/P view radios, the phase-reset copy/paste pair with
+    // width, five vertical separators, and seventeen 32x32 buttons in six
+    // groups — the S/T and W/P view radios, the trim button's own group
+    // (2026-08-11, the trim surface arc — one member so far, intended to
+    // collect viewport-related acts), the phase-reset copy/paste pair with
     // the bpm / iteration / follow modes, the listen / load-in-place pair, and
     // the history group: the mode's own button (2026-08-04) plus the cumulative
     // reading's toggle (2026-08-08), the revert act and the walk's older /

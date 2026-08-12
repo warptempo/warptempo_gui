@@ -936,7 +936,7 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the SIXTEEN view/mode/action buttons — the
+// tabs (row 4 of the redesign: the SEVENTEEN view/mode/action buttons — the
 // kIconRowButtons table is the count's one authority; icons::kIconCount is a
 // different number, the GLYPH set, which the row does not exhaust). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}

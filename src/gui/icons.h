@@ -81,6 +81,14 @@ enum class Icon {
     DocumentImport,      // Target audio view (bare `t`)
     Speedometer,         // Warp markers (bare `p`)
     ChronometerStart,    // Phase reset markers (bare `p`)
+    // THE TRIM BUTTON'S GLYPH (2026-08-11, the trim surface arc): Breeze's
+    // transform-crop — the crop frame with its two corner brackets and dashed
+    // edges. Crop IS trim-to-span, which is exactly what bare `x` does with
+    // the region. PLANNER-PICKED, not architect-picked — recorded so the
+    // architect can revise at a look, per the radios' precedent; no runner-up
+    // was rendered. One `.ColorScheme-Text` path of M/L/z commands only, well
+    // inside the interpreter's coverage.
+    TransformCrop,       // Set trim from region (bare `x`)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
@@ -155,7 +163,7 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 32;
+inline constexpr int kIconCount = 33;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

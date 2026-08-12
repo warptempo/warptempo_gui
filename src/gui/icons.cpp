@@ -589,6 +589,26 @@ constexpr IconPath kGoUpPaths[] = {
      "-6.125-6.125L11 7.707 9.832 8.875 3.707 15"},
 };
 
+// THE TRIM BUTTON'S GLYPH (2026-08-11, the trim surface arc): transform-crop,
+// the crop frame — corner brackets and dashed edges. One `.ColorScheme-Text`
+// path of axis-aligned M/L/z runs only, the interpreter's plainest case.
+constexpr IconPath kTransformCropPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 5 L 3 6 L 6 6 L 6 5 L 6 3 L 4 3 L 3 3 z M 16 3 L 16 4 L 16 "
+     "5 L 16 6 L 17 6 L 18 6 L 19 6 L 19 5 L 19 4 L 19 3 L 16 3 z M 4 4 L 5 "
+     "4 L 5 5 L 4 5 L 4 4 z M 17 4 L 18 4 L 18 5 L 17 5 L 17 4 z M 7 5 L 7 "
+     "6 L 9 6 L 9 5 L 7 5 z M 10 5 L 10 6 L 12 6 L 12 5 L 10 5 z M 13 5 L "
+     "13 6 L 15 6 L 15 5 L 13 5 z M 5 7 L 5 9 L 6 9 L 6 7 L 5 7 z M 16 7 L "
+     "16 9 L 17 9 L 17 7 L 16 7 z M 5 10 L 5 12 L 6 12 L 6 10 L 5 10 z M 16 "
+     "10 L 16 12 L 17 12 L 17 10 L 16 10 z M 5 13 L 5 15 L 6 15 L 6 13 L 5 "
+     "13 z M 16 13 L 16 15 L 17 15 L 17 13 L 16 13 z M 3 16 L 3 17 L 3 19 L "
+     "4 19 L 5 19 L 6 19 L 6 16 L 3 16 z M 7 16 L 7 17 L 9 17 L 9 16 L 7 16 "
+     "z M 10 16 L 10 17 L 12 17 L 12 16 L 10 16 z M 13 16 L 13 17 L 15 17 L "
+     "15 16 L 13 16 z M 16 16 L 16 17 L 16 18 L 16 19 L 17 19 L 18 19 L 19 "
+     "19 L 19 18 L 19 17 L 19 16 L 17 16 L 16 16 z M 4 17 L 5 17 L 5 18 L 4 "
+     "18 L 4 17 z M 17 17 L 18 17 L 18 18 L 17 18 L 17 17 z "},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -621,6 +641,7 @@ constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
 constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
+constexpr IconDef kTransformCrop      {22.0, kTransformCropPaths,       1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -655,6 +676,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogCancel:        return kDialogCancel;
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
+        case Icon::TransformCrop:       return kTransformCrop;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

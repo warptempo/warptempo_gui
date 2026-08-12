@@ -154,7 +154,8 @@ struct UndoEntry {
 // the inventory IS arm_region_drag_at's callers plus the callers of the body that
 // wraps it, place_playhead_and_arm_region).
 // THERE IS ONE FORMING GESTURE, THE PLACEMENT PRESS AND THE DRAG IT ARMS, in
-// FOUR entries (re-derived 2026-08-06):
+// FIVE entries (re-derived 2026-08-11, when the trim surface arc added the
+// band's):
 //   * the PLAIN press in the waveform's UPPER half (the lower half is the scrub);
 //   * the SHIFT-exact press at EITHER height (architect 2026-08-05, THE FORMER'S
 //     RESHAPE: the region ANCHORS AT THE CLICKED COLUMN now, so shift IS the
@@ -167,13 +168,26 @@ struct UndoEntry {
 //     drag included, the drag's motion path being y-agnostic once armed. PLAIN
 //     ONLY there: a shift press on the lane claims nothing;
 //   * the `h` HISTORY VIEW'S own press, full height (that view has no scrub since
-//     playback left it), which is the same recipe minus the store deselect.
+//     playback left it), which is the same recipe minus the store deselect;
+//   * the MERGED TRIM SURFACE's PLAIN press off an endcap (architect 2026-08-11,
+//     the trim surface arc: "let's experiment with making the region draw a
+//     drag on the trim bar") — NOT the placement body: the band's motionless
+//     click is a consumed nothing by standing rule, so this arm seats no
+//     playhead, deselects nothing and dissolves nothing at press, deferring
+//     the dissolve and the deselect to the THRESHOLD CROSSING
+//     (RegionDragState::band); the drag then rides the one motion path,
+//     playhead on the moving end, exactly as every other entry. LIVE VIEWS
+//     ONLY: the `h` view consumes the band's trim vocabulary whole and its
+//     band press stays a consumed nothing plus the framing double-click.
 // EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS — the family rule,
 // stated here and pointed at from the sites (architect-RATIFIED 2026-08-05,
 // promoting what had been the coder's reading of the mode's arm into the
-// ruling). The THREE live entries DESELECT at press — all three through the one
-// placement body — leaving the STORE selection
-// EMPTY throughout the drag; the `h` view's entry clears THE MODE'S focus and
+// ruling). The THREE placement-body live entries DESELECT at press,
+// leaving the STORE selection
+// EMPTY throughout the drag; the BAND entry deselects at its crossing — the
+// latest moment before a span exists, so the invariant below holds identically
+// while its click stays a nothing; the `h` view's entry clears THE MODE'S focus
+// and
 // diff-flag selection instead, through the one clearer that takes the pair, and
 // touches no store selection at all by the view's own standing rule. So no
 // former anywhere leaves a selection standing beside the span it is drawing, and
@@ -441,16 +455,20 @@ struct UndoHistory {
 // viewport scroll and no playback reseek per motion. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. FOUR PRESSES ARM THIS DRAG AND
-// ALL FOUR ARM IT THE SAME WAY, through arm_region_drag_at — dissolve the
-// resting region at mouse-down, anchor at the CLICK column (membership
-// re-derived 2026-08-06; the authoritative inventory is at RegionState): the
+// press, so there is no release-time collapse. FIVE PRESSES ARM THIS DRAG
+// (membership re-derived 2026-08-11; the authoritative inventory is at
+// RegionState). FOUR arm it the same way, through arm_region_drag_at —
+// dissolve the resting region at mouse-down, anchor at the CLICK column: the
 // plain upper-half waveform press, the SHIFT-exact waveform press at either
 // height (architect 2026-08-05, when the former's anchor moved to the click and
 // its non-dissolving twin died with the span it preserved), the empty
 // flag/triangle-lane parity press (whose armed drag then extends normally, the
 // motion path being y-agnostic) and the `h` history
-// view's own full-height press. Alt/Ctrl no-op earlier. A completed drag rests the
+// view's own full-height press. The FIFTH is the MERGED TRIM SURFACE's plain
+// press off an endcap (2026-08-11, the trim surface arc), which sets `band`
+// below and defers the dissolve and the deselect to the threshold crossing —
+// the band's motionless click must stay a consumed nothing (the field's own
+// comment carries the divergence). Alt/Ctrl no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,
@@ -471,6 +489,21 @@ struct RegionDragState {
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
     int64_t anchor_frame = 0;      // active-domain frame the press placed
+    // THE MERGED TRIM SURFACE'S OWN ARM (2026-08-11, the trim surface arc): a
+    // plain press-and-drag on the band (off an endcap) draws the region, but
+    // the band's motionless click is a CONSUMED NOTHING by standing rule — so
+    // unlike the placement press this arm performs NO press-time act: no
+    // playhead seat, no deselect, and no dissolve of a resting span (which is
+    // the aiming scratch a user may be about to frame with the double-click).
+    // The press-time acts DEFER TO THE THRESHOLD CROSSING instead: the first
+    // crossing clears the resting span and drops the surface's selection, then
+    // the ordinary motion path forms the fresh span and carries the playhead
+    // on its moving end. This flag marks such an arm; the crossing act is in
+    // on_motion's region branch. Recorded divergence from the placement-press
+    // family's dissolve-at-mouse-down — the family INVARIANT (a region rests
+    // only beside an empty selection) holds identically, only the moment the
+    // press's acts land moved, because this band's click must stay a nothing.
+    bool    band         = false;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -523,8 +556,15 @@ struct PendingMarkerDrag {
 // marker_drag.h. So the reposition drag above is the ONLY pointer marker gesture,
 // and W+target has no pointer authoring gesture at all.)
 
-// Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
-// top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span).
+// Pending trim cap/bridge drag. THREE ARMS since the trim surface arc
+// (2026-08-11, the ruler merged into the trim surface): a PLAIN left press on
+// an ENDCAP rect anywhere in the merged band (top_trim_surface_area — the
+// plain press's only trim claim now, the rest of the band being the region
+// former's), a CTRL-exact press inside the inter-cap BRIDGE span (the bridge
+// drag's new home — displaced off the plain press when that press became the
+// region draw; `set_begin_bound_on_release` below is that arm's deferred
+// click), and the ctrl / ctrl+shift bound-set clicks outside the span, which
+// still arm the single-bound drag on the bound they just set.
 // The trim sibling of PendingMarkerDrag: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
 // machinery takes over) only once the pointer crosses kDragMovedThresholdPx
@@ -532,7 +572,9 @@ struct PendingMarkerDrag {
 // NOTHING again (architect 2026-07-30): the lane-click model gave it one act —
 // publishing the trim window as a region highlight — and that publish is retired
 // with the SPAN FORM, so the click stops nothing, deselects nothing and commits
-// nothing on BOTH end paths (clean release and lost button). The DRAG carries the
+// nothing on BOTH end paths (clean release and lost button) — EXCEPT the ctrl
+// bridge arm's deferred bound-set, whose clean release IS the ctrl+CLICK (the
+// flag's own comment below). The DRAG carries the
 // setter's deselect and the trim-mutation stop at its first accepted bound
 // change. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
@@ -557,6 +599,17 @@ struct PendingTrimDrag {
     bool both     = false;  // the inter-endcap bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
+    // THE CTRL BRIDGE ARM'S DEFERRED CLICK (2026-08-11, the trim surface arc):
+    // the bridge drag moved from the plain press to CTRL+DRAG, and ctrl+CLICK
+    // is the BEGIN bound-set — so a ctrl press inside the bridge span cannot
+    // set at press time (the set would fire on every bridge grab) and defers
+    // to the MOTIONLESS RELEASE instead, exactly how the band's other arms
+    // tell a click from a drag. This flag marks that pending: a clean
+    // sub-threshold release runs set_trim_bound_at_click(begin) at the press
+    // column; a crossing becomes the bridge drag and the click never was; a
+    // LOST button or a force-end merely disarms — not a clean click, so the
+    // deferred set does not fire (the trim-bar seed's own rule).
+    bool set_begin_bound_on_release = false;
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
@@ -605,10 +658,12 @@ struct TrimDragState {
 };
 
 // Dual-axis zoom/pan drag (Ableton-style navigation), armed by ONE surface: a
-// CTRL-exact left-drag inside the waveform. It had a second entry — a plain
-// left-drag on the dedicated zoom lane — until that lane was deleted
-// (architect 2026-07-31); the GESTURE is untouched and keeps its full reach on
-// the surviving entry, which is why the deletion cost nothing. The
+// CTRL-exact left-drag inside the waveform. It has had two other entries in
+// its life — a plain left-drag on the dedicated zoom lane (deleted with that
+// lane, architect 2026-07-31) and row 5's plain RULER-band drag (2026-08-01,
+// deleted 2026-08-11 when the ruler merged into the trim surface; zoom lives
+// on the waveform) — and the GESTURE is untouched either time, keeping its
+// full reach on the ctrl entry, which is why each deletion cost nothing. The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
 // per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
@@ -776,7 +831,8 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
 // Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
-// then row 4's fifteen view / mode / action buttons. It exists ONCE, here, because it indexes
+// row 4's seventeen view / mode / action buttons, then row 8's transport
+// eight. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -833,6 +889,17 @@ enum class RedesignButton {
     // commands now living in the Navigation dropdown; the `-` / `=` KEYS are
     // untouched.)
     IconS, IconT, IconW, IconP,
+    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
+    // from region — the button IS its chord, so every rule `x` has, the button
+    // has (refusal-gated: no region = a consumed nothing, degenerate result =
+    // the same; region-consuming on success). Momentary, click face, no
+    // selected state, never-grey per the icon row's rule (in the `h` view the
+    // derived partition greys it, `x` being consumed there — nothing
+    // hand-listed). It opens a NEW SEPARATOR-LED GROUP after the warp/phase
+    // radios — the architect's placement ("place it after the warp/phase radio
+    // buttons, create a new separator"), a group intended to collect
+    // viewport-related acts later.
+    IconTrim,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconLoadInPlace,
     // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
@@ -905,16 +972,17 @@ enum class RedesignButton {
     TransportLeft, TransportDown, TransportUp, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: six in row 1, four
-// in row 2, two in row 3, sixteen in row 4 and eight in row 8 — 36. Of those,
-// THIRTY-FOUR carry a chord in kToolbarChords and TWO are the dropdown anchors
+// in row 2, two in row 3, seventeen in row 4 and eight in row 8 — 37. Of those,
+// THIRTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (Settings and Navigation), which is the split the chord table's own
-// static_assert checks. It was 28 until 2026-08-11, when row 8 — the transport
-// row, the touch arc's first surface — joined with nine buttons, and 37 only
-// within that day (the row's Esc button was deleted at the architect's live
-// pass); 29 before
+// static_assert checks. It was 36 for part of 2026-08-11 (row 4's trim button
+// joined later that day, the trim surface arc's roster half) and 28 until
+// earlier the same day, when row 8 — the transport row, the touch arc's first
+// surface — joined with nine buttons, 37 only within that morning (the row's
+// Esc button was deleted at the architect's live pass); 29 before
 // 2026-08-08, when row 3's compare-only pair was deleted and row 4 gained the
 // Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 36;
+inline constexpr int kRedesignButtonCount = 37;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -971,6 +1039,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
+        case RedesignButton::IconTrim:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -3433,6 +3502,16 @@ GuiRect top_icon_row_area(const AppState& a);
 // chip / marker-text / flag / triangle four.
 GuiRect top_trim_row_area(const AppState& a);
 GuiRect top_ruler_row_area(const AppState& a);
+// THE MERGED TRIM SURFACE (architect 2026-08-11, the trim surface arc): the
+// trim bar lane, the ruler lane and the inter-lane gap between them as ONE
+// INPUT BAND — every trim gesture, the band's region former and the
+// span-framing double-click answer over its whole height, a fatter finger
+// target being half the arc's point. INPUT ONLY: the two lanes keep their own
+// accessors and their own PAINT (the ruler still draws the ruler, paint_trim
+// still paints the bar in its own lane); only the pointer meaning merged. The
+// ruler's strip-drag zoom entry is DELETED with the merge — zoom lives on the
+// waveform (ctrl-drag, keys, touch two-finger).
+GuiRect top_trim_surface_area(const AppState& a);
 GuiRect top_marker_row_area(const AppState& a);
 // ROW 7's single bottom lane (2026-08-01), replacing the legacy
 // upper/lower pair: the lane with its two borders, and the content band inside
@@ -4026,6 +4105,12 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
+        // THE TRIM BUTTON MIRRORS NOTHING (2026-08-11): bare `x`'s refusals —
+        // no region, a degenerate inverse-mapped pair — are consumed no-ops on
+        // the key and stay so on the click, per the row's never-grey rule. The
+        // `h` view greys it through the derived partition above (`x` is
+        // consumed there), nothing hand-listed.
+        case RedesignButton::IconTrim:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -4242,6 +4327,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
+        // THE TRIM BUTTON IS MOMENTARY like copy and paste: set-trim-from-
+        // region is an act that completes, with no state to stay lit for —
+        // the window it wrote is the bar's own always-painted display.
+        case RedesignButton::IconTrim:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -4384,6 +4473,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (t)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
+        // THE TRIM BUTTON, one line: bare `x` has no shifted twin ON THE
+        // BUTTON — Shift+X the maximizer stays keyboard-only, so a shift press
+        // here is the ordinary consumed nothing and no shift line may promise
+        // one.
+        case RedesignButton::IconTrim:
+            return {"Set trim from region (x)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
@@ -4830,9 +4925,14 @@ enum class TrimHit { None, Begin, End };
 // bound's painted column — the begin cap's LEFT edge on it, the end cap's RIGHT
 // edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags fills
 // through, so paint and hit cannot drift. THE HIT RECT IS THAT CAP INFLATED by
-// kTrimEndcapGrabPx per side (a 2px cap is under any pointing tolerance); it is
-// the one place in this lane where the drawn and the grabbable rect differ, and
-// it is why two caps at nearby columns can overlap as targets at all (the
+// kTrimEndcapGrabPx per side (a 2px cap is under any pointing tolerance), and
+// VERTICALLY the y-gate is the MERGED trim surface — top_trim_surface_area,
+// trim bar + ruler + their gap, since the trim surface arc (2026-08-11): the
+// cap grab works from the ruler rows too, a fatter finger target being half
+// that arc's point. Paint and hit deliberately differ here — the caps still
+// PAINT in the trim bar lane alone — the same stated divergence the horizontal
+// grab tolerance already is. It is why two caps at nearby columns can overlap
+// as targets at all (the
 // arbitration is at the sort). Tests both mouse_x and mouse_y. Walks the
 // display warp_frame_map in target view so the hit lands on the drawn cap.
 // The endcaps and the bar's inter-cap bridge span are the ONLY trim grab
@@ -4844,14 +4944,19 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
 // BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
 // handle? The endcap test's twin, and it is a shared owner for the same reason:
 // TWO consumers ask this question and they must not answer it differently — the
-// plain trim-bar press router (route_trim_bar_press, which arms the pair drag on
-// a true) and the pointer cursor's zone map (pointer_cursor_kind, which shows the
-// bridge's TrimResize cue on a true). It was the router's own inline body until
+// CTRL-exact band press (the bridge drag's home since the trim surface arc,
+// 2026-08-11, when it was displaced off the plain press; the arm is in
+// on_button_press's ctrl branch) and the pointer cursor's zone map
+// (pointer_cursor_kind, which shows the
+// bridge's TrimResize cue under ctrl on a true). It was the plain-press
+// router's own inline body until
 // the cursor needed the same verdict; hoisting it whole was the alternative to a
 // second copy of the column math.
 //
-// The y-gate is top_trim_row_area, the same lane band hit_test_trim_endcap
-// gates on. The interval is trim_bridge_gap (render.h — the one owner the
+// The y-gate is top_trim_surface_area — the MERGED band (trim bar + ruler +
+// their gap, 2026-08-11), the same band hit_test_trim_endcap
+// gates on: the strictly-inside COLUMN geometry survives the displacement
+// unchanged, only the modifier and the band height moved. The interval is trim_bridge_gap (render.h — the one owner the
 // painter's midpoint mark also fits against) over the two bounds'
 // TrimBoundColumns on the DISPLAYED basis (item_viewport_basis +
 // displayed_trim_ms through displayed_or_live_target_map), which is the exact
