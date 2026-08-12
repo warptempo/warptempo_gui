@@ -41,7 +41,7 @@
 // apply_zoom_change helper, the resize zoom-out reclamp,
 // set_playback_speed, follow-mode off-to-on,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport
-// (Alt+wheel and PageUp/PageDown), and viewport recenter via
+// (the plain wheel's stepped pan and PageUp/PageDown), and viewport recenter via
 // center_viewport_on_playhead (C key). There is no loop-wrap resync event any
 // more: LOOPING IS GONE (architect 2026-07-30, all audition looping removed),
 // so the read position only ever advances and the free-running predictor has no

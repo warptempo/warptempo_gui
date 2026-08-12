@@ -304,13 +304,13 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // against the bound buffer's [domain_begin(), domain_end()). `sample` is a
 // paint-domain coordinate, the same domain
 // playback's public API speaks in every view. ONE call site (re-derived by grep
-// 2026-08-06): `place_playhead_at_click_column`, input_pointer.cpp — the
-// placement press's seat, always with playback alive at call time. That one body
-// serves the plain upper-half waveform press, the shift-exact press at either
-// height, the empty flag/triangle-lane parity press and the `h` view's own
-// press, the parity press being stop-free by the claim-keyed stop design
+// 2026-08-12): `place_playhead_at_click_column`, input_pointer.cpp — the
+// placement's seat, always with playback alive at call time. That one body
+// serves the DEFERRED CLICK ACT at a plain navigation-surface press's
+// motionless release (run_nav_click_act, live and `h`-view arms) and the two
+// SHIFT formers' presses, every route stop-free by the claim-keyed stop design
 // precisely so this reseek can reach a live session. Keep-alive is
-// exactly those presses' point
+// exactly those routes' point
 // (reposition the running audition under the freshly-placed cursor without a
 // restart glitch). The
 // scrub paths never come here: a scrub act over a LIVE session is a pure STOP
@@ -326,7 +326,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // the reseek site: the reseek repositions without recentering the viewport.
 //
 // stop_playback_if_playing clears follow_overridden_for_session. The
-// placement-press caller sets it back to true immediately AFTER this returns
+// placement caller sets it back to true immediately AFTER this returns
 // (having already run move_playhead_to before), so the reset is a harmless
 // transient there — that caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {

@@ -382,12 +382,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region drags, the Alt+drag grab-pan (scroll_drag),
+    // trim / strip / region drags, the plain-drag grab-pan and its pending
+    // click (scroll_drag — one state for both phases since 2026-08-12),
     // and the
     // pending marker / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys rather than letting one run over a latched
-    // pan. (The scrub is a one-shot press action, not a gesture — it arms nothing,
+    // pan — and its PENDING phase must, because the deferred click act reads
+    // playback state at the release and no command may move it in between.
+    // (The scrub is a one-shot press action, not a gesture — it arms nothing,
     // so it has no entry here. The tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
@@ -1485,34 +1488,32 @@ void GuiInputHandler::run_span_framing_command() {
     frame_span_into_view(app, audio, viewport, lo, hi, margin);
 }
 
-// Shared wheel handler. Verbatim from the lambda at the original
-// main.cpp:1444 — only difference is the captured viewport / playhead
-// helpers now resolve through this struct's reference members.
+// Shared wheel handler. THE PLAIN WHEEL IS THE STEPPED PAN (architect
+// 2026-08-12, the eighth glass ruling: "alt+wheel is step pan... that comes
+// from Reaper" — with alt leaving the pointer entirely, the pan moved onto
+// the PLAIN wheel, and THE WHEEL ZOOM IS DELETED, "superseded by the
+// ctrl-drag zoom... we already have the =/- hotkeys"). One arm: plain-exact
+// pans by the alt+wheel's exact old body — the samples_visible /
+// kViewportLeadDivisor stride through the scroll_viewport funnel, which is
+// what carries the follow suppression — over the waveform and the top strip
+// alike (both context ids, one route). Every modified wheel is swallowed.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                                    bool ctrl, bool shift, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
-    // (always >= 1 from the platform). Each chord scales its single per-step
-    // action by that count and applies it in ONE viewport call, so the
+    // (always >= 1 from the platform). The one arm scales its per-step
+    // stride by that count and applies it in ONE viewport call, so the
     // damage / hover / worker-kick path fires once per frame regardless of
     // burst size. count == 1 reproduces the single-detent behavior.
     if (count < 1) count = 1;
-    // Strict modifier matching: each wheel chord is an exact match. Ctrl+Alt is
-    // no longer a wheel chord — it matches nothing here and the event is
-    // swallowed.
-    if (alt && !ctrl && !shift) {
-        // Alt+wheel pans everywhere over the waveform or top strip — the whole
-        // strip is one pan surface now (the chip-row trim-end move is retired).
+    // Strict modifier matching: the plain shape is the whole wheel
+    // vocabulary. Alt+wheel (the pan's old home), the plain zoom, and every
+    // mixed pair are swallowed alike.
+    if (!ctrl && !shift && !alt) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / kViewportLeadDivisor);
         viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
-        return;
-    }
-    if (!ctrl && !shift && !alt) {
-        // WheelUp zooms out, WheelDown zooms in; the net level change applies
-        // in a single apply_zoom_change inside zoom_steps.
-        viewport.zoom_steps(button == GuiMouseButton::WheelUp ? -count : +count);
     }
 }
 
@@ -1531,22 +1532,22 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,
     // because the wheel is NAVIGATION, not a chord, and that ruling is about
-    // chords: zooming or panning while an edit is open changes no state the edit
+    // chords: panning while an edit is open changes no state the edit
     // owns and discards nothing, so there is nothing for modality to protect.
     //
     // The wheel routes by area — the waveform and the top strip — plus the ONE
-    // row-wise carve-out below, the redesigned rows' inert band. Under Alt both
-    // areas pan and under no modifier the waveform zooms, so the top strip needs
-    // no further split (the chip-row trim-end move is retired, and with it the
-    // region that existed solely to keep the platform's sub-detent remainder
-    // attribution from bridging two diverging Alt routes). Fewer regions is
+    // row-wise carve-out below, the redesigned rows' inert band. BOTH areas
+    // take the same one route since 2026-08-12 (the eighth glass ruling: the
+    // plain wheel is the STEPPED PAN everywhere, the wheel zoom and the alt
+    // forms deleted), so the two context ids differ only for the platform's
+    // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
     // it emits nothing at all. THE FLEXIBLE GAP BAND (the waveform-height
     // clamp's window ground between the icon row and the trim lane,
     // 2026-08-12) is INSIDE top_strip_area and DELIBERATELY NOT in the inert
     // list: it is not chrome — it is the strip block's own ground, sitting
-    // where the ruler and trim lanes already answer the strip's zoom/pan — so
-    // it inherits the top-strip route (plain wheel zooms, Alt pans) exactly as
+    // where the ruler and trim lanes already answer the strip's pan — so
+    // it inherits the top-strip route (the plain stepped pan) exactly as
     // the lanes beside it do, with no region added.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
@@ -1636,8 +1637,8 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     app.transport_repeat.owner = -1;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans
-    // (Alt); the top strip pans (Alt).
+    // ctx: 1 waveform, 2 the top strip. Both take the one plain route — the
+    // stepped pan (the eighth glass ruling; the wheel zoom is deleted).
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
                  ctx == 1, ctx == 2);
 }

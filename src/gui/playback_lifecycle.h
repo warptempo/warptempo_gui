@@ -145,11 +145,11 @@ struct GuiPlaybackLifecycle {
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
     // START half of its stop-then-start), which is also the gesture for
     // previewing a resting region: click inside the span and it auditions from
-    // there. That act has TWO press entries since 2026-08-01 (the lower-half
-    // left press and the bare right press at full height, enumerated at
-    // scrub_press_at) and they both funnel through scrub_act_at, so this stays
+    // there. That act has ONE press entry since 2026-08-12 (the lower-half
+    // plain left press — the bare right full-height entry died with the right
+    // button's unbinding), funneled through scrub_act_at, so this stays
     // one caller class. (Space's region left-bound launch was the second caller until the
-    // architect dropped it that day; Space now always toggles from the playhead.)
+    // architect dropped it 2026-07-30; Space now always toggles from the playhead.)
     // Delegates
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the active view's range — the
@@ -166,7 +166,7 @@ struct GuiPlaybackLifecycle {
     // (source-domain in source view; target-domain in target view). Handles
     // the target-view target_buffer translation internally. Caller is
     // responsible for the entry-state check — playback alive AND the position
-    // actually moving (the upper-half placement press, the ONE caller,
+    // actually moving (place_playhead_at_click_column, the ONE caller,
     // compares the sample against the entry playhead); this function
     // unconditionally reseeks when called. The scrub paths no longer come
     // here — a scrub act only stops or launches (scrub_act_at). Samples outside

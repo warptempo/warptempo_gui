@@ -826,7 +826,7 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // carry: only a bound walk knows where its live member is.
     fresh.local_index = fresh.local.live_index();
     // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
-    // removal from the view): the mode consumes bare Space and both scrub
+    // removal from the view): the mode consumes bare Space and the scrub
     // presses, so a session still running from before `h` could not be stopped
     // from inside — it would play on under a view that offers no transport at
     // all. THE OWNER IS THIS ENTRY OWNER rather than the toggle's arm, for the
@@ -1039,7 +1039,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // route below on_key's DRAG-MODAL GATE, so none of them can run with a gesture
 // live — the whole reason close_history_mode ends none. This one arrives on a
 // poll and bypasses that gate, and the view has three gestures live in it (the
-// region drag, the ctrl strip drag and the alt pan): left held across the
+// region drag, the ctrl strip drag and the grab pan): left held across the
 // reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
 // anchor the view took, or pan over the band the close just restored.
 // finalize_active_drags is the existing force-end — the same release bodies the
@@ -1540,7 +1540,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
     // (recorded at the arms 2026-08-06, where the docs had carried it alone):
     // the entry owner stops any session running before `h` and nothing in the
-    // view can start one — bare Space and both scrub presses are consumed — so
+    // view can start one — bare Space and the scrub press are consumed — so
     // these calls are formalities. They stay because the REGIME is what these
     // arms re-express: a mode-local command that commits a cursor position looks
     // exactly like its live twin, and a future route that could audition in here
@@ -1653,7 +1653,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // WHAT IS ADMITTED, the whole list. SPACE IS NOT ON IT (architect 2026-08-05):
 // PLAYBACK IS REMOVED FROM THE VIEW WHOLE — it was slow, the mode's full-song
 // trim forcing a full target preview render, and buggy besides — so bare Space
-// is a consumed no-op in here, both pointer scrub entries are consumed at the
+// is a consumed no-op in here, the pointer scrub press is consumed at the
 // pointer gate, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
@@ -2186,11 +2186,11 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it (membership re-derived 2026-08-12 — the ruler drag left the list with its
-// strip-drag entry; the mode consumes the ruler press now): zoom, the paged
-// scroll, the overview command,
-// the pointer's pan and ctrl strip drags, and the mode's own cursor-moving acts
-// — the diff-flag click, the placement press and the keyboard's Tab cycle,
+// it (membership re-derived 2026-08-12 under pan-primary): zoom, the paged
+// scroll, the plain wheel's stepped pan, the overview command,
+// the pointer's plain-drag pan and ctrl strip drag on the mode's whole
+// navigation surface, and the mode's own cursor-moving acts
+// — the diff-flag click, the deferred click act and the keyboard's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the
 // frozen text
 // would therefore write a checkpoint whose view band is a stale copy of one the
@@ -2579,7 +2579,7 @@ void GuiInputHandler::run_history_revert() {
     // NOT gated on anything this act finds: the stop is refusal-gated at its own
     // owner, and in this mode it is a formality either way — the entry owner
     // stops a session that was running before `h` and nothing in the view can
-    // start one (open_history_mode_fresh; bare Space and both scrub presses are
+    // start one (open_history_mode_fresh; bare Space and the scrub press are
     // consumed here). The doc says exactly this rather than folding the stop into
     // the "only when something changed" claim below, which covers the three
     // effects that do wait on a change.

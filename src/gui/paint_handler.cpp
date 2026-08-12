@@ -3103,7 +3103,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (head_window > kHeadTickWindowCap) head_window = kHeadTickWindowCap;
     const int head_col0 = head_cursor_col - head_half_max;
 
-    // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the alt+drag
+    // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
     // moments, a breathing comb; the majors read fine).
     //
@@ -3561,7 +3561,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     //
     // NO REGION GATE HERE, and none is wanted — THE DERIVATION, recorded once at
     // this site with Selection::phase_overlay_subject's mirror pointing here:
-    // the LIVE region former DESELECTS at press (the waveform placement press
+    // the LIVE region former DESELECTS at press (the shift former
     // and the drag it arms — the inventory is at RegionState, app_state.h) and
     // the `h` view's own spans are VIEW-LOCAL, cleared at its exit and at every
     // step and compare switch, so a region rests beside an EMPTY selection out

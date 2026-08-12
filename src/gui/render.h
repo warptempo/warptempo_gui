@@ -1563,7 +1563,7 @@ inline GuiRect waveform_content_rect(GuiRect area) {
 // not hand each column its neighbour's exact span: nearbyint ties flipped,
 // pyramid-bin membership flipped with them, extrema jumped, and the tip
 // segments amplified every flip into both neighbours — two screenshots one
-// alt+drag pixel apart differed in most of their columns. On the lattice a pan
+// grab-pan pixel apart differed in most of their columns. On the lattice a pan
 // by n pixels moves k0 by exactly n, so column c simply becomes what column c+n
 // was: same k0+c, therefore the same double, therefore the same nearbyint, the
 // same bins and the same extrema. Bit-identical shifted pixels, in both views —

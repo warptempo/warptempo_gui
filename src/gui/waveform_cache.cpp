@@ -190,7 +190,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // press so no follow scroll fires, and a compositor resize simply catches
     // up at the first post-gesture tick. With no mid-drag dispatch the
     // completion drop fires AT MOST ONCE (the one job in flight at the grab).
-    // The strip drag, alt-pan, and region drag are deliberately NOT here. The
+    // The strip drag, grab-pan, and region drag are deliberately NOT here. The
     // first two drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
     // which drains this worker rather than queuing behind it) and must keep
     // rendering; the region drag moves no viewport, so it never reaches the
@@ -320,7 +320,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // NOTHING mid-gesture, this drop fires AT MOST ONCE — for the single job in
     // flight at the grab; there is no drop-rewind-redispatch loop to sustain.
     // Gated on the marker/trim
-    // drags ALONE — the strip drag and alt-pan render synchronously per frame
+    // drags ALONE — the strip drag and grab-pan render synchronously per frame
     // (draining this worker) and must keep rendering, and the region drag never
     // touches the plate. (The TEMPO drag was on this gate too, joining the drop
     // for its own reason — it re-warped synchronously per cent step, so a pre-grab
@@ -495,7 +495,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      this function. The jumps this governs: zoom, center-on-playhead, the
 //      viewport-shift playhead moves (Home / End and navigate-to-marker), the
 //      A/B tab switch, the source/target toggle, undo / redo — AND ALL PANNING
-//      (touchpad scroll, Alt+wheel, PageUp/PageDown, the Alt+drag grab-pan).
+//      (touchpad scroll, the plain wheel's stepped pan, PageUp/PageDown, the
+//      plain-drag grab-pan).
 //      They arrive at a bounded rate: pointer detents
 //      coalesce to one action per pointer frame, and key repeat is compositor-
 //      throttled, so a full inline render per event is affordable. The pyramid

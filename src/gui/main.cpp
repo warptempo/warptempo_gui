@@ -130,8 +130,10 @@ namespace {
 // (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
 // kTrimBarScalePercent, resting at 100 since the seventh glass ruling), the
 // RULER lane
-// (ruler_lane_h_px(), timestamps + tick tops + the region former's drag band —
-// its zoom entry deleted for good 2026-08-12) and
+// (ruler_lane_h_px(), timestamps + tick tops + the navigation surface's lane
+// band — the pending click / grab-pan, the shift former and the ctrl zoom
+// since the eighth glass ruling; its dedicated zoom entry and its one-day
+// region former both died 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
@@ -228,7 +230,7 @@ int top_lane_height(int lane) {
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
         case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / ticks / region former
+        case 5: return ruler_lane_h_px();        // timestamps / ticks / nav band
         // Flags, stems and the playhead head; bottom edge = waveform top.
         case 6: return marker_lane_h_px();
         default: return 0;
@@ -469,8 +471,8 @@ GuiRect top_marker_row_area(const AppState& a) {
 // as the strip stack allocates it; bottom_row_content_area is the ground between
 // them, the band every painter and baseline works in.
 //
-// (The former pan-strip row retired earlier — pan lives on the Alt+drag waveform
-// grab and the ctrl+waveform strip drag's horizontal axis.)
+// (The former pan-strip row retired earlier — pan lives on the plain-drag
+// grab and the ctrl strip drag's horizontal axis.)
 GuiRect bottom_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 0);
 }
@@ -1432,7 +1434,7 @@ int main(int argc, char** argv) {
     // families, so a refresh was owed by
     // every writer of any of them: a set nobody could enumerate and keep
     // enumerated, and two review rounds each found a class the previous
-    // derivation had missed while whole classes (a wheel zoom moving the trim
+    // derivation had missed while whole classes (a keyboard zoom moving the trim
     // endcaps under a resting pointer, the zoom and navigation keys, `x`, an
     // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
     // and close, a dropdown item click) had no site to hang a call on at all.

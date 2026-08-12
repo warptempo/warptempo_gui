@@ -395,10 +395,10 @@ public:
     // gesture as UNBOUNDED virtual coordinates so zoom travel is infinite.
     // Wired from main.cpp into the input handler's strip-drag begin/end hooks;
     // capture is SHARED by two gestures — the ctrl+waveform strip drag and
-    // the alt-pan. On release the restore x
+    // the grab-pan. On release the restore x
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
-    // below), the alt-pan at the raw traveled virtual_pointer_x_; y is frozen at
+    // below), the grab-pan at the raw traveled virtual_pointer_x_; y is frozen at
     // the press row for both. Both degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
@@ -415,7 +415,7 @@ public:
     // motion (or the modifier edge) that selects the gesture's zone AND the press
     // that begins the capture, with no re-derivation in between. So the caller
     // passes the cue its own gesture wears — Zoom for the strip drag (its one
-    // entry is a Zoom zone), Pan for the alt-pan — the same "read the drag's own record"
+    // entry is a Zoom zone), Pan for the grab-pan — the same "read the drag's own record"
     // the live trim cue uses, and the platform STAMPS it as the remembered kind on
     // the path that CREATED THE LOCK PROXY. Only there, and neither other exit
     // stamps or restores anything: a DEGRADED compositor returns before the
@@ -464,7 +464,7 @@ public:
     // reappears dead on the stem's column (the edge-trick rebind pins the stem
     // while the raw cursor travel keeps going, so the raw virtual_pointer_x_
     // would land past it). begin_pointer_capture clears it, so a capture with
-    // no override set (the alt-pan, which has no stem) restores at the raw
+    // no override set (the grab-pan, which has no stem) restores at the raw
     // traveled virtual_pointer_x_.
     void set_capture_restore_x(double surface_x);
 

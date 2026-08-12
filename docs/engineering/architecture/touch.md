@@ -19,6 +19,8 @@ THE ONE KEEPER from the timer-free model, the architect's explicit ruling this s
 
 THE REVERSED DESIGN, recorded so it is not re-proposed: a two-finger REGION gesture (hold one finger, tap/drag the second to span a region) was designed in the same session and REVERSED before landing — "I don't think hold-the-finger-down-and-tap-the-other is the right solution." The architect ratified the pinch half of the motionless-hold fork and dropped the region half.
 
+> PAN-PRIMARY'S POINTER HALF LANDED FIRST (2026-08-12, the eighth glass ruling): the mouse-side vocabulary — the navigation surface's plain pending-click/grab-pan, the shift-only region former, the deferred placement, the grown ctrl zoom, the plain-wheel stepped pan, the dead right-click — shipped ahead of the touch-side beat, which lands next commit. Until then TOUCH INHERITS IT THROUGH THE POINTER TRANSLATION AS AN INTERIM: a tap is press+release at the lift (the deferred click act runs at that release, correctly), and a hold-then-drag off the pan zone reaches the plain grab-pan, whose capture-from-glass is the same class of oddity this file has tracked before.
+
 THE TRIM HOLD STAYS DEAD: neither `kTouchTrimHoldMs` nor `TouchPhase::TrimMove` nor the trim-move hooks returned with the window (The Trim Move below carries their record). The trim bar is an ordinary pointer surface on glass — a hold past the window then a drag, or a quick drag crossing the slop inside it, reaches the endcap/bridge machinery through the ordinary pointer path.
 
 ### The Timer-Free Model — the One-Session Experiment (Fifth Glass Ruling, 2026-08-12; Superseded the Same Day)

@@ -1152,7 +1152,7 @@ int cursor_kind_index(GuiCursorKind kind) {
 // ARROW IS FIRST, and its position matters: it is the fallback every other kind
 // degrades to, and the only one whose absence is reported as a broken theme.
 //
-// THERE IS NO "grabbing" CURSOR AND THAT IS DELIBERATE (architect): the alt-pan
+// THERE IS NO "grabbing" CURSOR AND THAT IS DELIBERATE (architect): the grab-pan
 // and the strip drag both take a POINTER CAPTURE, and the capture HIDES the
 // cursor — that hide is what buys unlimited travel, and the strip drag paints an
 // anchor stem to show where the gesture is. A pressed-state cursor was
@@ -1895,7 +1895,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // this edge tears the keyboard's modeled state down itself rather than
         // trusting the leave to have done it: pointer input delivered while no
         // keyboard exists must not inherit a phantom chord from the last
-        // keyboard event (for example the Alt+wheel pan). The teardown is
+        // keyboard event (a modifier-carrying chord). The teardown is
         // forget_keyboard_state's, in full.
         forget_keyboard_state();
     }
@@ -2251,9 +2251,12 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         mod_alt_ != prev_alt) {
         // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
-        // scroll frame that would re-probe. The wheel chords route differently
-        // by modifier (plain zoom vs Alt pan), so remainder accumulated under
-        // one chord must never assemble a detent under another.
+        // scroll frame that would re-probe. The plain stepped pan is the one
+        // live wheel chord (2026-08-12), but the rule is shape-general —
+        // remainder accumulated under
+        // one chord must never assemble a detent under another — and a
+        // modified wheel is a swallowed non-chord the remainder must not
+        // bridge into.
         scroll_accum_ = 0.0;
         // THE POINTER CURSOR USED TO BE THE SECOND CONSUMER HERE, through a
         // hook fired on this same test — modifiers SELECT between cursor kinds
@@ -3524,7 +3527,7 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     // the press row as the restore y (the cursor reappears at that row on
     // release; its restore x rides the drag's traveled virtual_pointer_x_ unless
     // a strip drag overrides it with its anchor-stem column). Each capture
-    // starts with no x override, so the alt-pan (no stem) falls back to the raw
+    // starts with no x override, so the grab-pan (no stem) falls back to the raw
     // traveled x.
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
@@ -3615,7 +3618,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the strip drag supplied (capture_restore_x_override_) when set —
             // the edge-trick rebind pins the stem while the raw cursor travel
             // keeps going, so restoring at the stem lands the cursor dead on it
-            // rather than past it. With no override (the alt-pan, which has no
+            // rather than past it. With no override (the grab-pan, which has no
             // stem) the x is the raw drag-traveled virtual_pointer_x_, passed
             // unclamped: the compositor clamps an off-window hint back on-screen
             // at unlock (an explicit clamp to the window width would instead pin
@@ -3652,7 +3655,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // over the W radio, whose chord is bare `p`. A single visible
             // click in the ruler switched the marker view. Every roster
             // button, and the bare-`e` synthesized click (which reads the same
-            // two fields), had the same exposure; the alt-pan's is wider
+            // two fields), had the same exposure; the grab-pan's is wider
             // still, since it sets no restore-x override and its raw travel
             // can end anywhere.
             // WHY THE HINT IS THE RIGHT VALUE: it is precisely where the cursor
@@ -3678,7 +3681,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // definition — every consumer of pointer_x_/pointer_y_ hit-tests
             // against surface rects — so an off-window value stored here is a
             // point no press can legitimately land on, and until the next
-            // physical motion a click would route at it. The alt-pan is the one
+            // physical motion a click would route at it. The grab-pan is the one
             // producer: it sets no restore-x override, so its raw travel can end
             // anywhere. AND THE CLAMP IS EXACT IN EVERY CASE THAT MATTERS: if
             // the compositor's screen-clamp really did draw the cursor outside
@@ -3708,7 +3711,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
     // For a capture that stamped (the lock-proxy path) that kind is the one the
     // GESTURE ITSELF STAMPED at begin_pointer_capture: Zoom for the strip drag,
-    // Pan for the alt-pan, the
+    // Pan for the grab-pan, the
     // cue the gesture wears by identity rather than one inferred from what was
     // on screen when the press landed. That is the whole reason it is stamped —
     // the cursor is re-derived once per RUN-LOOP ITERATION, so the batch that
