@@ -1192,6 +1192,22 @@ void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
 // struct ref. The four hit_test_* lambdas are now free functions taking
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
+
+// THE ZOOM ACCELERATION CURVE, f(D) = D·|D| / (|D| + kZoomAccelKneePx), over the
+// strip drag's signed CUMULATIVE vertical travel D (window px since the arm).
+// Odd in D, so up and down are mirror images; slope 0 at D = 0, so the first few
+// pixels of travel barely move the level; f(D) ≈ D − kZoomAccelKneePx once
+// |D| ≫ knee, so deliberate travel keeps the plain kZoomStripPxPerLevel
+// response less a constant offset. The rationale (a hand pivots at the wrist, so
+// an intended pan leaks incidental vertical travel a linear axis would turn into
+// zoom jitter) and the knee's retunability are at kZoomAccelKneePx, app_state.h.
+// Monotone and continuous, which is what lets its DELTA drive the incremental
+// zoom below.
+static double zoom_travel_response(double travel_px) {
+    const double mag = std::abs(travel_px);
+    return travel_px * mag / (mag + kZoomAccelKneePx);
+}
+
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // Dual-axis strip drag, INCREMENTAL (the v6 model). Every event reads the
     // LIVE zoom level and viewport and applies its own dx/dy on top — there is no
@@ -1237,12 +1253,36 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     if (vp < vp_lo) vp = vp_lo;
     if (vp > vp_hi) vp = vp_hi;
 
-    // (4) Zoom INCREMENTALLY off the live level: this event's dy applies to the
-    // current level (drag DOWN, dy>0, lowers the level → zooms in). No press
-    // baseline, so a wall reversal responds immediately — the older absolute-dy
-    // formula had a dead zone after a clamp (dy had to unwind all the way back
-    // before the level moved); this incremental form has none.
-    double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
+    // (4) Zoom INCREMENTALLY off the live level, THROUGH THE ACCELERATION CURVE:
+    // this event's dy applies to the current level (drag DOWN, dy>0, lowers the
+    // level → zooms in). No press baseline, so a wall reversal responds
+    // immediately — the older absolute-dy formula had a dead zone after a clamp
+    // (dy had to unwind all the way back before the level moved); this
+    // incremental form has none.
+    //
+    // The dy that reaches the level is not the raw one: the drag carries its
+    // signed CUMULATIVE vertical travel D since the arm, and the effective dy is
+    // the DELTA OF THE CURVE across this event's step, f(D_new) − f(D_old). Near
+    // the press the curve's slope is ~0, so an intended pan's incidental wrist
+    // arc barely moves the level; after deliberate travel the slope is ~1 and the
+    // response is the plain one (the ruling and the knee are at
+    // kZoomAccelKneePx, app_state.h). The pan axis above is untouched by this and
+    // stays linear.
+    //
+    // THE NO-DEAD-ZONE PROPERTY SURVIVES: a monotone function's delta responds at
+    // the LOCAL SLOPE, so after a wall clamp the first reversed event already
+    // produces a negative effective dy and the level moves on it. The nuance that
+    // changed, honestly: the reversal's RATE now depends on |D| — soft right after
+    // the press, ~1:1 after long travel. That gradient is the feature.
+    //
+    // A dy of 0 leaves D unchanged, so the effective dy is exactly 0 and the pure
+    // pan identity at step (6) is bit-exact rather than nearly so.
+    const double travel_before = sd.zoom_travel_px;
+    const double travel_after  = travel_before + dy;
+    sd.zoom_travel_px = travel_after;
+    const double effective_dy =
+        zoom_travel_response(travel_after) - zoom_travel_response(travel_before);
+    double new_level = app.zoom_level - effective_dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
         W, total, audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
@@ -1279,7 +1319,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
     // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
-    // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — new_level == old, so
+    // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — a zero dy leaves the
+    // cumulative travel unchanged, so the curve's delta is exactly zero and
+    // new_level == old, so
     // apply reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
     // column was derived from that same vp), and the level-unchanged dispatch
     // takes the same synchronous full rebuild. Off the walls the pan arithmetic

@@ -617,6 +617,12 @@ struct GuiInputHandler {
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
     // synchronous per-frame rebuild, and the either-axis follow suppression
     // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
+    // ONE CONSEQUENCE IS RULED RATHER THAN INCIDENTAL (2026-08-12): entering
+    // BELOW apply_strip_drag_at means the pinch does not take the ZOOM
+    // ACCELERATION CURVE (kZoomAccelKneePx, app_state.h). That curve exists to
+    // stop a wrist arc's incidental vertical travel jittering the level, a
+    // problem a distance RATIO does not have — the content tracks the fingers,
+    // so the pinch stays exactly log2-linear.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture

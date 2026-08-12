@@ -76,6 +76,33 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
+// THE ZOOM ACCELERATION CURVE'S ONE KNOB (architect-ruled 2026-08-12): the
+// travel scale (window px of CUMULATIVE vertical travel since the strip drag's
+// arm) over which the zoom axis wakes up.
+//
+// WHY THE AXIS ACCELERATES AT ALL: a hand pivots at the wrist, so it traces an
+// ARC — an intended horizontal pan leaks steady incidental vertical travel, and
+// a linear zoom axis turns that leak into zoom jitter. Ableton's answer, which
+// this reproduces: keep the PAN linear and greatly diminish SMALL vertical
+// travel, so the first few pixels move the level barely at all and subsequent
+// pixels move it much more. The response is the odd curve
+//     f(D) = D·|D| / (|D| + kZoomAccelKneePx)
+// on the cumulative travel D, applied INCREMENTALLY (each event's effective dy
+// is f(D_new) − f(D_old); apply_strip_drag_at, input_pointer.cpp): slope 0 at
+// D = 0, and f(D) ≈ D − kZoomAccelKneePx once |D| ≫ knee, so deliberate travel
+// gets the plain kZoomStripPxPerLevel response less a constant offset. The knee
+// is therefore the ONLY feel knob — smaller wakes the axis up sooner, larger
+// forgives more wrist arc — and it is field-retunable on glass and on the desk.
+//
+// It does NOT ride gui_scale: it models HAND travel on a physical device, like
+// the drag slop constants, not a painted metric.
+//
+// The two-finger touch pinch is deliberately OUTSIDE the curve: its zoom is a
+// physical finger-distance RATIO (the content tracks the fingers), and it
+// enters Viewport::apply_strip_drag_zoom directly, below the motion body that
+// owns this.
+constexpr double kZoomAccelKneePx = 48.0;
+
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
 struct SettingsSnapshot {
@@ -655,7 +682,11 @@ struct TrimDragState {
 // the zoom-strip concept's THIRD HOME. The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
-// per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
+// per motion event. THE PAN AXIS IS LINEAR AND THE ZOOM AXIS ACCELERATES (the
+// wrist-arc ruling, 2026-08-12): small vertical travel is diminished so an
+// intended pan's incidental arc cannot jitter the level, the response
+// approaching the linear one for deliberate travel (kZoomAccelKneePx above owns
+// the curve). It is INCREMENTAL — each event reads the LIVE zoom level and
 // viewport (never a stored press baseline) and applies its own dx/dy on top, so
 // nothing goes stale across composed pan/zoom phases. One song anchor
 // (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
@@ -678,7 +709,8 @@ struct StripDragState {
     int    press_x   = 0;
     int    press_y   = 0;
     // Pointer position at the previous motion event (window px), seeded at the
-    // press. Each event's dx/dy is the delta from here — dx pans, dy zooms.
+    // press. Each event's dx/dy is the delta from here — dx pans linearly, dy
+    // zooms through the acceleration curve below.
     int    last_x    = 0;
     int    last_y    = 0;
     // Song position (frames, double) the zoom pivots around — the frame under
@@ -686,6 +718,14 @@ struct StripDragState {
     // the effective waveform width, the edge trick pins it to the nearest
     // onscreen pixel and rewrites this to that pixel's frame.
     double anchor_sample = 0.0;
+    // SIGNED CUMULATIVE VERTICAL TRAVEL (window px) since the arm — the ZOOM
+    // ACCELERATION CURVE's one piece of state (the curve, its rationale and its
+    // knee are at kZoomAccelKneePx above). Each motion event adds its own dy
+    // here and takes the DELTA of the curve across the step as its effective
+    // dy, so the axis is soft near the press and approaches the plain response
+    // once the travel is deliberate. Zeroed by the arm's whole-struct reset (one
+    // arm body, both entries); the pan axis reads nothing here.
+    double zoom_travel_px = 0.0;
 };
 
 // THE PLAIN PRESS ON THE NAVIGATION SURFACE — a PENDING CLICK that becomes the
