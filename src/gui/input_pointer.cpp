@@ -1275,8 +1275,9 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     viewport.invalidate_waveform_area();
 }
 
-// THE TOUCH NAVIGATION BODY — the two-finger pan+zoom frames (the timer-free
-// model's one nav gesture); contract, delivery-shape
+// THE TOUCH NAVIGATION BODY — two-finger pan+zoom frames and the phone
+// model's single-finger pan frames (dist_ratio 1.0, the zoom term inert)
+// land here alike; contract, delivery-shape
 // justification and refusal rationale at the declaration (input_handler.h).
 // One delivered frame = one placement through the strip-drag family's own
 // application chokepoint.
@@ -1341,6 +1342,12 @@ void GuiInputHandler::end_touch_nav() {
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
     // own tail.
     if (playback.is_playing()) playback.resync_predictor();
+}
+
+// The pan-zone query's body (contract at the declaration): the waveform area,
+// geometry only, on the tree's one containment convention.
+bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    return rect_contains(waveform_area(app), x, y);
 }
 
 // The flag editor's guard-free close, shared by the left and right press arms
@@ -4377,7 +4384,7 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // keyboard-modal editors, and every live gesture and pending — PLUS THE ONE
 // condition the call site restates (codex round 2): a HELD PRIMARY BUTTON,
 // which does not return above (a held motion that armed no gesture reaches the
-// tail — the touch contact press burst's pre-press entry motion, and a mouse
+// tail — the touch resolution burst's pre-press entry motion, and a mouse
 // press-hold sliding along the armed row; the producers are recorded at the
 // call). With that guard the hover opens a menu in precisely the states in
 // which a click opens one — a held-button motion could never be a fresh press
@@ -4711,7 +4718,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // WHILE THE PRIMARY BUTTON IS HELD — the armed hover-OPEN (on_motion's
         // no-gesture tail), the open-menu anchor-SWITCH (the walk below), and
         // this hover CLOSE, its last unguarded member. A held button is not a
-        // resting hover at any of the three. For the TOUCH contact burst's
+        // resting hover at any of the three. For the TOUCH resolution burst's
         // held entry motion the tap's outcome is unchanged by guarding the
         // close: press-anywhere-closes at on_button_press already closes the
         // menu on the burst's own press, so the tap nets the same result by the
@@ -4767,7 +4774,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // family rule's second member (the three-member statement is at the
         // close walk above; the armed hover-open is the first) — a held
         // button is not a resting hover here either, on the same two producers:
-        // the TOUCH contact burst's pre-press entry motion (with a menu OPEN
+        // the TOUCH resolution burst's pre-press entry motion (with a menu OPEN
         // and the other anchor tapped, that motion reached this walk, switched
         // menus, and the burst's press then found its own menu already open and
         // toggle-closed it — the tap closed the popup instead of switching to
@@ -5202,7 +5209,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // branch's close walk, beside its siblings (the anchor-switch and the
         // hover close, codex round 3). A held button is not a resting hover,
         // and it does NOT return above — a held motion with no armed gesture
-        // reaches this tail, on two producers: the TOUCH contact burst's
+        // reaches this tail, on two producers: the TOUCH resolution burst's
         // pre-press entry motion (the platform raises the touch hold before
         // delivering it, so this guard is what stops that motion hover-opening
         // an armed anchor's menu one event before the press toggle-closes it —

@@ -580,14 +580,17 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
-    // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; TWO-FINGER
-    // frames only since the timer-free model, 2026-08-12 — the phone model's
-    // single-finger pan died with the disambiguation window): the
+    // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
+    // model's single-finger frames are back since the windowed model's
+    // return, the sixth glass ruling 2026-08-12): the
     // platform's touch-nav update hook lands here — a PUBLIC entry point like
     // on_key and on_motion above, because main.cpp's hook wiring calls it (the
-    // set_keyboard_intent_cancel_hook wiring precedent). The frames are the
-    // two-finger gesture's (centroid pan + pinch zoom), entered by the second
-    // finger's upgrade of a live translation. Per delivered frame:
+    // set_keyboard_intent_cancel_hook wiring precedent). TWO CALLERS' FRAMES,
+    // one body with NO fork: the two-finger gesture (centroid pan + pinch
+    // zoom), and the phone model's SINGLE-FINGER PAN — a one-finger drag whose
+    // down point lay on the waveform (touch_point_in_pan_zone below), whose
+    // frames carry the finger as the centroid and dist_ratio pinned at 1.0,
+    // so the zoom term is inert by construction. Per delivered frame:
     // (x, y) is the CURRENT finger centroid, dx the centroid's horizontal
     // travel since the previous delivered frame (fractional), dist_ratio the
     // finger-distance ratio current/previous (> 0; 1.0 = no zoom). The
@@ -611,9 +614,9 @@ struct GuiInputHandler {
     // to it — real mouse state corrupted from glass); (2) a strip_drag.active
     // gesture is TERMINATED by on_motion's button-lost arm the moment any real
     // mouse motion arrives without a held button (mods.primary_button_held is
-    // false during the nav gesture — the upgrade released the translation at
-    // the join, and nav holds no logical button), so a nudged mouse would
-    // kill a live pinch. Both are structural, so the arm is pointer-coupled in exactly the
+    // false during any touch nav gesture — neither finger count holds the
+    // logical button), so a nudged mouse would kill a live
+    // pinch. Both are structural, so the arm is pointer-coupled in exactly the
     // sense the ruling anticipated.
     //
     // THE REFUSAL ANSWER IS THE WHEEL'S, not the press path's, and per frame
@@ -642,6 +645,18 @@ struct GuiInputHandler {
     // delivered): one predictor resync, the grab-pan release's own tail — each
     // applied frame already rebuilt synchronously, so nothing else is owed.
     void end_touch_nav();
+    // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11):
+    // the platform asks whether a touch-DOWN point lies on the one-finger PAN
+    // SURFACE — answered here as the WAVEFORM AREA, GEOMETRY ONLY. Every
+    // refusal (modal, prompt, dropdown, loading/empty audio, live pointer
+    // gesture) deliberately stays at apply_touch_nav_update's per-frame
+    // wheel_context answer, so a refused pan FREEZES exactly as a refused
+    // two-finger frame does rather than falling back to a pointer drag.
+    // waveform_area reads only the window dims and the strip heights, so the
+    // answer is VIEW-INDEPENDENT — in particular the `h` history view pans by
+    // the same answer, and its mode admits pan/zoom (wheel-class), so nothing
+    // mode-shaped belongs here. Wired at main.cpp's set_touch_nav_hooks call.
+    bool touch_point_in_pan_zone(int x, int y) const;
 
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every
@@ -1593,8 +1608,9 @@ private:
     // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
 
-    // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update and
-    // end_touch_nav are PUBLIC entry points — main.cpp's hook wiring calls
+    // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update,
+    // end_touch_nav and the pan-zone query are PUBLIC entry points —
+    // main.cpp's hook wiring calls
     // them, like on_key and on_motion — declared beside those siblings above;
     // the nav implementation lives beside the strip drag's in
     // input_pointer.cpp, whose application chokepoint it shares.)
@@ -1897,9 +1913,10 @@ private:
     // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
     // owns the keyboard). (The touch trim-move's begin was briefly a reader
     // too — the fourth glass session's hold-a-beat gesture, 2026-08-11 — and
-    // died with that gesture at the timer-free model: every touch gesture now
-    // enters through the ordinary press path, whose gates were always the
-    // pointer's own.)
+    // died with that gesture 2026-08-12; it did not return with the windowed
+    // touch model, whose pointer-shaped gestures enter through the ordinary
+    // press path — the pointer's own gates — and whose nav gestures refuse
+    // per frame at wheel_context.)
     // Modality here is CHORDS only, which is why the flag editor's OTHER
     // transparencies do not consult this predicate — see
     // modal_bottom_strip_editor_active below for what does and does not.
