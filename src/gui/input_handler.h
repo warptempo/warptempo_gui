@@ -585,17 +585,14 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
-    // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; single-finger
-    // frames joined with the phone model at the second glass session the same
-    // day): the
+    // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; TWO-FINGER
+    // frames only since the timer-free model, 2026-08-12 — the phone model's
+    // single-finger pan died with the disambiguation window): the
     // platform's touch-nav update hook lands here — a PUBLIC entry point like
     // on_key and on_motion above, because main.cpp's hook wiring calls it (the
-    // set_keyboard_intent_cancel_hook wiring precedent). TWO CALLERS' FRAMES,
-    // one body with NO fork: the two-finger gesture (centroid pan + pinch
-    // zoom), and the phone model's SINGLE-FINGER PAN — a one-finger drag whose
-    // down point lay on the waveform (touch_point_in_pan_zone below), whose
-    // frames carry the finger as the centroid and dist_ratio pinned at 1.0,
-    // so the zoom term is inert by construction. Per delivered frame:
+    // set_keyboard_intent_cancel_hook wiring precedent). The frames are the
+    // two-finger gesture's (centroid pan + pinch zoom), entered by the second
+    // finger's upgrade of a live translation. Per delivered frame:
     // (x, y) is the CURRENT finger centroid, dx the centroid's horizontal
     // travel since the previous delivered frame (fractional), dist_ratio the
     // finger-distance ratio current/previous (> 0; 1.0 = no zoom). The
@@ -619,9 +616,9 @@ struct GuiInputHandler {
     // to it — real mouse state corrupted from glass); (2) a strip_drag.active
     // gesture is TERMINATED by on_motion's button-lost arm the moment any real
     // mouse motion arrives without a held button (mods.primary_button_held is
-    // false during any touch nav gesture — neither finger count holds the
-    // logical button), so a nudged mouse would kill a live
-    // pinch. Both are structural, so the arm is pointer-coupled in exactly the
+    // false during the nav gesture — the upgrade released the translation at
+    // the join, and nav holds no logical button), so a nudged mouse would
+    // kill a live pinch. Both are structural, so the arm is pointer-coupled in exactly the
     // sense the ruling anticipated.
     //
     // THE REFUSAL ANSWER IS THE WHEEL'S, not the press path's, and per frame
@@ -650,59 +647,6 @@ struct GuiInputHandler {
     // delivered): one predictor resync, the grab-pan release's own tail — each
     // applied frame already rebuilt synchronously, so nothing else is owed.
     void end_touch_nav();
-    // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11):
-    // the platform asks whether a touch-DOWN point lies on the one-finger PAN
-    // SURFACE — answered here as the WAVEFORM AREA, GEOMETRY ONLY. Every
-    // refusal (modal, prompt, dropdown, loading/empty audio, live pointer
-    // gesture) deliberately stays at apply_touch_nav_update's per-frame
-    // wheel_context answer, so a refused pan FREEZES exactly as a refused
-    // two-finger frame does rather than falling back to a pointer drag.
-    // waveform_area reads only the window dims and the strip heights, so the
-    // answer is VIEW-INDEPENDENT — in particular the `h` history view pans by
-    // the same answer, and its mode admits pan/zoom (wheel-class), so nothing
-    // mode-shaped belongs here. Wired at main.cpp's set_touch_nav_hooks call.
-    bool touch_point_in_pan_zone(int x, int y) const;
-
-    // THE TOUCH TRIM-MOVE HOOKS (the fourth glass session, 2026-08-11 — the
-    // architect's hold-a-beat mechanics: "hold for a beat and then drag on
-    // the trim bar moves the trim bar — including the timestamp region").
-    // The disambiguation window's EXPIRY on the MERGED TRIM BAND resolves to
-    // this gesture instead of the ordinary pointer, and these three drive THE
-    // BRIDGE-MOVE MACHINERY'S OWN BODY — begin_trim_drag(both=true) at the
-    // down x (its own anchor capture), update_trim_drag(x) per delivered
-    // frame, commit_trim_drag() at the end — so both bounds ride the dragged
-    // columns and the drag's whole commit regime is inherited verbatim: the
-    // stop and setter-deselect at the first accepted change, the rigid-delta
-    // walls, the release column snap, the crossed/coincident reset, the
-    // park-at-release and region clear (input_trim.cpp owns all of it; no
-    // second trim mover exists).
-    //
-    // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
-    // bypasses (the ctrl/alt band arms sit below these same gates in
-    // on_button_press): prompt, ALL FIVE modal editors through
-    // keyboard_modal_editor_active — the pointer-transparent flag editor
-    // deliberately included, since every pointer press closes an open one
-    // before any claim runs and this begin skips the press path (the
-    // judgment at the definition) — open dropdown,
-    // loading/empty audio, a live pointer gesture, and the `h` history view
-    // (which consumes the band's trim vocabulary whole). A refused begin
-    // arms nothing and the update/end bodies no-op through the machinery's
-    // own !active guards — the zone query stays GEOMETRY ONLY (the pan-zone
-    // contract), so a refused hold-drag FREEZES for the stream rather than
-    // falling back to a pointer drag.
-    //
-    // ONE ACCEPTED CROSS-DEVICE EDGE, the nav gestures' own class: the drag
-    // state is app.trim_drag itself, so a mouse release or a lost-button
-    // motion arriving mid-gesture commits it early through the pointer
-    // paths — the user's own two-handed act, every end a commit either way.
-    void begin_touch_trim_move(int x);
-    void update_touch_trim_move(int x);
-    void end_touch_trim_move();
-    // THE TRIM-BAND ZONE QUERY: does a touch-DOWN point lie on the merged
-    // trim band (top_trim_surface_area — the exact band every trim gesture
-    // reads)? GEOMETRY ONLY, the pan-zone contract verbatim; the two zones
-    // are disjoint surfaces. Wired at main.cpp's set_touch_nav_hooks call.
-    bool touch_point_in_trim_band_zone(int x, int y) const;
 
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every
@@ -1661,13 +1605,11 @@ private:
     // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
 
-    // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update,
-    // end_touch_nav, the two zone queries and the trim-move trio are PUBLIC
-    // entry points — main.cpp's hook wiring calls
+    // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update and
+    // end_touch_nav are PUBLIC entry points — main.cpp's hook wiring calls
     // them, like on_key and on_motion — declared beside those siblings above;
     // the nav implementation lives beside the strip drag's in
-    // input_pointer.cpp, whose application chokepoint it shares, and the
-    // trim-move trio beside the drag machinery it drives in input_trim.cpp.)
+    // input_pointer.cpp, whose application chokepoint it shares.)
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
@@ -1978,13 +1920,15 @@ private:
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
-    // TWO READERS: the on_key gate (input_handler.cpp), paired with
-    // modal_editor_key_blocked — and, since the fourth glass session
-    // (2026-08-11), begin_touch_trim_move's refusal list (input_trim.cpp),
-    // which needs exactly "any of the five editors is open": the touch
-    // hold-drag trim move bypasses the press path that would have closed an
-    // open flag editor, so it refuses under one instead (the judgment at its
-    // site).
+    // TWO READERS, re-derived 2026-08-12: the on_key gate
+    // (input_handler.cpp), paired with modal_editor_key_blocked, and the
+    // roster hover walk's no-dwell term (recompute_redesign_button_hover,
+    // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
+    // owns the keyboard). (The touch trim-move's begin was briefly a reader
+    // too — the fourth glass session's hold-a-beat gesture, 2026-08-11 — and
+    // died with that gesture at the timer-free model: every touch gesture now
+    // enters through the ordinary press path, whose gates were always the
+    // pointer's own.)
     // Modality here is CHORDS only, which is why the flag editor's OTHER
     // transparencies do not consult this predicate — see
     // modal_bottom_strip_editor_active below for what does and does not.
@@ -2005,11 +1949,7 @@ private:
     // the MODAL-TRAP block at on_button_press's top (2026-08-11), because these
     // four are exactly the swallows the admitted Quit/Save button presses must
     // be lifted OVER (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord). (The touch trim-move's begin refuses
-    // through the FIVE-editor predicate below instead — its gesture mutates,
-    // and no trim pointer gesture can begin under an open flag editor either,
-    // every press closing one first; the judgment is at
-    // begin_touch_trim_move, input_trim.cpp.) The
+    // modal_editor_admits_command_chord). The
     // flag editor's exemption is the same fact in all three: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // scrub reaches the audio under it, and its roster presses were never

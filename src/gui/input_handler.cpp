@@ -1088,7 +1088,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // stop it does not have.
     // Trim is not part of the selection system, so the nudge never acts on a
     // bound (trim's own gestures live on the merged band — the endcap drag,
-    // the alt bridge drag, the touch hold; roster at route_trim_bar_press's
+    // the alt bridge drag; roster at route_trim_bar_press's
     // header, input_trim.cpp).
     // ROUTING — TWO ROUTES AND ONE REFUSAL (architect 2026-07-29, down from three
     // routes): each column's POSITION nudge runs in its HOME view only — warp in

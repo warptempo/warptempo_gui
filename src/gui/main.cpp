@@ -987,45 +987,25 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
-    // The touch navigation (touch phase 1, 2026-08-11; the phone model's
-    // one-finger pan joined at the second glass session the same day): the
-    // platform's nav frames — two-finger centroid-pan + pinch-zoom, and
-    // single-finger pan frames born of a drag starting on the pan surface —
-    // drive the input handler's ONE
-    // touch-nav body, which runs the strip-drag family's own viewport
-    // chokepoint — the set_keyboard_intent_cancel_hook wiring precedent, one
-    // narrow platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook:
-    // the platform asks it once at each first finger's down, and the GUI
-    // answers the waveform area, geometry only (refusals stay per-frame in
-    // the update body). THE TRIM-MOVE MEMBERS joined at the fourth glass
-    // session (2026-08-11, the architect's hold-a-beat mechanics): a second
-    // zone query answering the MERGED TRIM BAND, and begin/update/end hooks
-    // the window's EXPIRY on that band drives — wired to the bridge-move
-    // machinery's own body (begin_touch_trim_move and siblings,
-    // input_trim.cpp), so a held beat then a drag on the band MOVES the trim
-    // window with the drag's whole commit regime inherited. A one-finger
-    // gesture ANYWHERE ELSE needs no wiring:
-    // it is translated into the ordinary pointer deliveries above, and
-    // nothing on
-    // this side can tell which device produced them. Contracts at
+    // The touch navigation (touch phase 1, 2026-08-11; TWO hooks again since
+    // the timer-free model, 2026-08-12 — the pan-zone query and the trim-move
+    // members died with the disambiguation window): the platform's TWO-FINGER
+    // nav frames — centroid-pan + pinch-zoom, entered by the second finger's
+    // upgrade — drive the input handler's ONE touch-nav body, which runs the
+    // strip-drag family's own viewport chokepoint — the
+    // set_keyboard_intent_cancel_hook wiring precedent, one narrow
+    // platform-to-GUI hook set. A ONE-finger gesture needs no wiring at all:
+    // the first finger is the pointer ON CONTACT, translated into the
+    // ordinary pointer deliveries above, and nothing on this side can tell
+    // which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
-    // apply_touch_nav_update's / begin_touch_trim_move's declarations (the
-    // GUI half, including why the
+    // apply_touch_nav_update's declaration (the GUI half, including why the
     // nav gesture stops short of the strip drag's pointer-press arm).
     gui.set_touch_nav_hooks(
         [&](int x, int y, double dx, double dist_ratio) {
             input_handler.apply_touch_nav_update(x, y, dx, dist_ratio);
         },
-        [&]() { input_handler.end_touch_nav(); },
-        [&](int x, int y) {
-            return input_handler.touch_point_in_pan_zone(x, y);
-        },
-        [&](int x, int y) {
-            return input_handler.touch_point_in_trim_band_zone(x, y);
-        },
-        [&](int x) { input_handler.begin_touch_trim_move(x); },
-        [&](int x) { input_handler.update_touch_trim_move(x); },
-        [&]() { input_handler.end_touch_trim_move(); });
+        [&]() { input_handler.end_touch_nav(); });
 
     auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };

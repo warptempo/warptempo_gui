@@ -3791,8 +3791,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // painted pair for BEHAVIOR while the view stands: the trim bar's four
     // press routes (plain, alt, ctrl, ctrl+shift) are consumed by the pointer
     // allowlist
-    // (handle_history_mode_press), and the touch hold-a-beat trim move refuses
-    // in the mode at its own begin — which is also why pointer_cursor_kind
+    // (handle_history_mode_press) — which is also why pointer_cursor_kind
     // empties
     // the band's cues in the mode, and the endcap / bridge hit tests are
     // reachable only from those presses. Its span-framing DOUBLE-CLICK is not

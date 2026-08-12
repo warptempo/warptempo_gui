@@ -617,15 +617,14 @@ struct PendingTrimDrag {
     bool set_begin_bound_on_release = false;
 };
 
-// Trim boundary drag (the live trim gesture, whatever drives it). Begun by
-// begin_trim_drag from TWO entry kinds: a PendingTrimDrag whose press crossed
+// Trim boundary drag (the live trim gesture). Begun by begin_trim_drag from
+// ONE entry kind since the timer-free touch model (2026-08-12, which deleted
+// the touch hold's direct begin): a PendingTrimDrag whose press crossed
 // the threshold — an endcap-rect hit or a bound-set arm drags one bound, the
 // ALT bridge press drags the pair; the caller roster lives at
 // route_trim_bar_press's header (input_trim.cpp), and the ctrl IN-SPAN
-// deferred-click pending instead DISARMS at the crossing (the flag above) —
-// and the TOUCH HOLD's trim move, which enters begin_trim_drag DIRECTLY with
-// no pending at all (the band's held beat already disambiguated;
-// begin_touch_trim_move, input_trim.cpp). Parallel to DragState
+// deferred-click pending instead DISARMS at the crossing (the flag
+// above). Parallel to DragState
 // but motion mutates the active tab's live trim mirror directly (no overlay);
 // release triggers a target render when the bound moved. Trim is excluded from
 // undo/redo. Session-only.
@@ -3236,8 +3235,8 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the trim-band pointer drags (the
-    // plain single-bound ENDCAP drag; the ALT inter-endcap bridge/pair drag,
-    // which the touch hold-a-beat trim move also drives), the ctrl /
+    // plain single-bound ENDCAP drag; the ALT inter-endcap bridge/pair
+    // drag), the ctrl /
     // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
     // trim to it and consumes the span; no region is a silent no-op), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's
@@ -3579,8 +3578,8 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// SIX CONSUMERS, re-derived 2026-08-11 (the fourth glass session added the
-// last), each stating the same
+// FIVE CONSUMERS, re-derived 2026-08-12 (the timer-free touch model deleted
+// begin_touch_trim_move, briefly the sixth), each stating the same
 // "nothing pops mid-gesture" boundary from its own side — and EVERY ONE OF THEM
 // IS AN INPUT ROUTE, which is the shape this predicate is for:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
@@ -3598,11 +3597,7 @@ inline int64_t snap_authored_frame(double frame) {
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
-//     contract is at pointer_cursor_kind's declaration, input_handler.h);
-//   * begin_touch_trim_move's refusal list (input_trim.cpp, 2026-08-11 — the
-//     fourth glass session): the touch hold-a-beat trim move drives the trim
-//     drag directly, bypassing on_button_press, so its begin restates this
-//     boundary itself — a second writer must not tear a live gesture.
+//     contract is at pointer_cursor_kind's declaration, input_handler.h).
 // (A SIXTH CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
 // acknowledge modal, which asked this before raising itself from a worker's
 // clock, a prompt over a live gesture having its release swallowed at the
