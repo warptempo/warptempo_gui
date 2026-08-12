@@ -371,7 +371,7 @@ bool popup_eligible_marker(const AppState& app, int idx) {
 // translators (warp_frame_map_view) on their way to or from it.
 
 double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
-    const GuiRect lane = bottom_overview_row_area(a);
+    const GuiRect lane = top_overview_row_area(a);
     const int64_t total = audio.total_frames();
     if (lane.w <= 0 || total <= 0) return 0.0;
     return static_cast<double>(total) / static_cast<double>(lane.w);
@@ -379,7 +379,7 @@ double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
 
 int overview_tick_column(const AppState& a, const GuiAudio& audio,
                          double active_position) {
-    const GuiRect lane = bottom_overview_row_area(a);
+    const GuiRect lane = top_overview_row_area(a);
     const double spp = overview_samples_per_pixel(a, audio);
     if (spp <= 0.0) return -1;
     const int64_t active = static_cast<int64_t>(std::nearbyint(active_position));
@@ -393,7 +393,7 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 
 double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
                                    int x) {
-    const GuiRect lane = bottom_overview_row_area(a);
+    const GuiRect lane = top_overview_row_area(a);
     const double spp = overview_samples_per_pixel(a, audio);
     if (spp <= 0.0) return 0.0;
     const double src = static_cast<double>(x - lane.x) * spp;

@@ -367,9 +367,12 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // router and the cursor map both ask it: a point is in the lanes iff it is in
 // the top strip AND in either lane's y-band. The FLAG BOXES carve themselves
 // out at each consumer (a flag hit is claimed first, lane vocabulary), and the
-// TRIM BAR is a disjoint y-band that never answers true here. Deliberately NOT
-// the flexible gap band between the icon row and the trim lane — that ground
-// is chrome, not surface, and stays inert.
+// TRIM BAR and the OVERVIEW STRIP are disjoint y-bands that never answer true
+// here (the strip has its own claim and its own cue). Deliberately NOT the
+// flexible GAP 1 band between the menu row and the centered block — that ground
+// is chrome, not surface, and stays inert (the gap sat between the icon row and
+// the trim lane for the seventh ruling's first hours, and at the window's foot
+// until the relayout's commit B split it in two).
 bool point_in_nav_lanes(const AppState& app, int x, int y) {
     if (!rect_contains(top_strip_area(app), x, y)) return false;
     const GuiRect ruler = top_ruler_row_area(app);
@@ -1214,8 +1217,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // ctrl arm above is the first). Modified presses on the lane bind
     // nothing, so they fell to the Arrow above; the `h` view keeps this cue —
     // the lane's gesture is the mode's admitted navigation class, exactly as
-    // the ctrl zoom's cue stands in there.
-    if (rect_contains(bottom_overview_row_area(app), x, y))
+    // the ctrl zoom's cue stands in there. IT MUST STAY ABOVE THE `inside_top`
+    // FALL-THROUGH below: the lane is a TOP-STRIP lane since the relayout's
+    // commit B (it was a bottom-strip lane, disjoint from that band, when this
+    // clause was written), so the strip's own Arrow would otherwise take it.
+    if (rect_contains(top_overview_row_area(app), x, y))
         return GuiCursorKind::Zoom;
     // THE NAVIGATION SURFACE WEARS THE PAN — the cue
     // promises the drag, which is what the plain drag does there now; the
@@ -1264,7 +1270,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         }
         // The rest of the strip: the flag boxes (lane vocabulary, no cue), the
         // button rows (claimed far above the waveform in the press path, no
-        // cue of their own) and the flexible gap band — all Arrow.
+        // cue of their own) and GAP 1's blank band — all Arrow.
         return GuiCursorKind::Arrow;
     }
     // THE WAVEFORM'S LOWER HALF: the audition scrub, through the press's own
@@ -2370,8 +2376,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is the bottom strip's waveform-side
-    // lane, directly under the waveform, and everything else is the shape above —
+    // on the block's own terms: the band is the bottom strip's ONE lane, on the
+    // window's foot since commit B, and everything else is the shape above —
     // below the modal gates (a prompt or a dialog editor swallows the
     // press; the pointer-transparent flag editor does not, and its KEYBOARD
     // modality then answers the dispatched chord exactly as it answers the
@@ -2381,11 +2387,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the lane's pointer-inert tenants (text takes no clicks there, exactly
     // as the old status lane took none). The
     // arrows' hold-repeat arm lives inside the shared dispatch body
-    // (ToolbarChord::repeats), not here. Below the lane sit the OVERVIEW
-    // STRIP (its own claim further down, past the gesture guards — the
-    // strip-drag arm) and then the BLANK FOOT, which is
-    // outside every band and falls through to the tail's consumed nothing,
-    // window ground by the vertical rule (main.cpp).
+    // (ToolbarChord::repeats), not here. The lane rests on the WINDOW'S FOOT
+    // since the relayout's commit B, so NOTHING is below it; ABOVE it lies GAP
+    // 2's blank window ground, outside every band and falling through to the
+    // tail's consumed nothing (window ground by the vertical rule, main.cpp).
+    // (The OVERVIEW STRIP sat under this lane for the afternoon it landed and
+    // is a top-strip lane now; its own claim is further down, past the gesture
+    // guards — the strip-drag arm.)
     {
         const GuiRect bottom_row = bottom_row_area(app);
         if (rect_contains(bottom_row, x, y)) {
@@ -2444,12 +2452,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // "already covered" reasoning met by the gesture being coverage-free
     // navigation rather than a chord.
     //
+    // AND DELIBERATELY ABOVE THE TOP-STRIP BRANCH, which the lane joined at the
+    // relayout's commit B: this claim's rect is the lane's own, so it wins the
+    // band before the strip's flag / trim / nav-lane walk and its empty-spot
+    // return can see it — the same position the claim held when the lane was a
+    // bottom-strip surface, now load-bearing rather than incidental.
+    //
     // THE RECORDED LATER PHASE (architect, at the ratification — record, do
     // not build): the BOX-DRAG PAN and the TRIM-STYLE ZOOM BRACKETS on the
     // box edges; until that phase a motionless click stays the consumed
     // nothing above.
     {
-        const GuiRect ov = bottom_overview_row_area(app);
+        const GuiRect ov = top_overview_row_area(app);
         if (rect_contains(ov, x, y)) {
             if (button == GuiMouseButton::Left &&
                 !mods.ctrl && !mods.shift && !mods.alt) {
@@ -3182,14 +3196,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the
-                // inter-lane gaps and any press in the FLEXIBLE GAP band
-                // between the icon row and the trim lane (the waveform-height
-                // clamp's window ground, 2026-08-12: inside top_strip_area but
-                // in no lane, so it falls to exactly this return with no code
-                // of its own, and the cursor map's plain top-strip
-                // fall-through answers Arrow over it the same way). A box
-                // under the point is a marker hit and never reaches this
-                // branch.
+                // inter-lane gaps and any press in the FLEXIBLE GAP 1 band
+                // between the menu row and the centered block (the centering
+                // rule's window ground, the relayout's commit B: inside
+                // top_strip_area but in no lane, so it falls to exactly this
+                // return with no code of its own, and the cursor map's plain
+                // top-strip fall-through answers Arrow over it the same way —
+                // the band was between the icon row and the trim lane when the
+                // seventh ruling opened it and at the window's foot in
+                // between). A box under the point is a marker hit and never
+                // reaches this branch, and the OVERVIEW STRIP's lane was
+                // claimed far above.
                 return;
             }
             return;

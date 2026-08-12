@@ -458,15 +458,15 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     maybe_rebuild_flag_cache();
 
     // Invalidate the waveform area so the next paint blits the new
-    // pixels. Matches the rects Viewport::invalidate_waveform_area uses —
-    // the OVERVIEW-LANE rider included (the rationale lives at that owner):
-    // this is the ASYNC publish (follow scroll, resize, drift catch-up), whose
-    // viewport moved undriven, so the lane's box owes the same frame.
+    // pixels. Matches the rect Viewport::invalidate_waveform_area uses — which
+    // CONTAINS THE OVERVIEW LANE since the relayout's commit B moved the strip
+    // into the centered block, so the dedicated overview rider that stood here
+    // is deleted with that owner's (the rationale lives there). This is the
+    // ASYNC publish (follow scroll, resize, drift catch-up), whose viewport
+    // moved undriven, and the lane's box owes the same frame — it simply gets it
+    // from the one rect now.
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
-    const GuiRect ov = bottom_overview_row_area(app);
-    if (ov.w > 0 && ov.h > 0)
-        gui.invalidate_region(ov.x, ov.y, ov.w, ov.h);
 }
 
 // -- Synchronous waveform rebuild (THE user-driven render route) ---------
@@ -610,17 +610,15 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
     const GuiRect a = waveform_area(app);
+    // ONE RECT, and it carries the OVERVIEW LANE: several kick_waveform_sync
+    // tails — undo, the load-in-places, the tempo step — reach this route
+    // without passing Viewport::invalidate_waveform_area, and each may have
+    // moved the viewport, the domain or the map the lane's box reads. Since the
+    // relayout's commit B put the lane inside the centered block, this rect
+    // (window top through the waveform's bottom) contains it by construction and
+    // the explicit rider that stood here is deleted — the record is at that
+    // owner.
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
-    // The OVERVIEW-LANE rider, mirroring Viewport::invalidate_waveform_area
-    // (the rationale lives there): several kick_waveform_sync tails — undo,
-    // the load-in-places, the tempo step — reach this route without passing
-    // that owner, and each may have moved the viewport, the domain or the
-    // map the lane's box reads.
-    {
-        const GuiRect ov = bottom_overview_row_area(app);
-        if (ov.w > 0 && ov.h > 0)
-            gui.invalidate_region(ov.x, ov.y, ov.w, ov.h);
-    }
 
     // Rebuild the flag cache inline, against the fingerprint just
     // published. Without this the plate leads its overlays: the run loop
@@ -1184,10 +1182,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // it; and the platform's containment coalescing drops it wholesale on the
     // paths that already damaged the waveform this frame — every marker
     // mutation, every pan/zoom, every drag motion event — so those pay nothing.
-    // (That owner's OVERVIEW-LANE rider is deliberately absent here: nothing
-    // on the overview strip keys on the marker stores this rebuild tracks —
-    // its bars are the piece, its box the viewport, its tick the playhead —
-    // so a flag-cache rebuild owes the lane nothing.)
+    // (THE OVERVIEW LANE IS INSIDE THIS RECT since the relayout's commit B moved
+    // the strip into the centered block, so this rebuild now repaints it as a
+    // matter of geometry — a cached blit plus two outlines, cheap. It owes the
+    // lane nothing on the merits: nothing on the strip keys on the marker stores
+    // this rebuild tracks — its bars are the piece, its box the viewport, its
+    // tick the playhead — which is why no rider was ever added here, and why
+    // none is needed now that the containment does it.)
     const GuiRect wave = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, wave.y + wave.h);
 }

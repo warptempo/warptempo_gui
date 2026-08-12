@@ -379,7 +379,11 @@ struct FlagCache {
 // THE INVALIDATION KEY IS (width, height) AND NOTHING ELSE — the lane's
 // content dimensions, which move only on a window resize or a gui_scale
 // commit (both funnel through the lane accessor this cache is measured
-// against). The AUDIO IS DELIBERATELY NOT A KEY FIELD: the source is loaded
+// against). THE KEY'S SHAPE IS UNCHANGED BY THE RELAYOUT'S COMMIT B, which
+// fixed the lane's HEIGHT on every host (render.h's kOverviewHeightPx): the
+// height still varies with gui_scale, so it stays a key field rather than
+// becoming a constant this cache could drop — and the WIDTH was always the one
+// that moves on a resize. The AUDIO IS DELIBERATELY NOT A KEY FIELD: the source is loaded
 // ONCE at launch and is process-immortal (file_loader — there is no
 // in-session source load; `'` load-in-place replaces sidecars and marker
 // stores, never the sample buffer), so the bars' input cannot change under a
@@ -669,7 +673,8 @@ private:
     // — their
     // separators and its border-bottom, fewer painting per frame under the
     // mode-collapsing roster), and the UNIFIED BOTTOM ROW's button
-    // cluster (bottom lane 1: the transport four left, the arrow four flush
+    // cluster (bottom lane 0, the strip's one lane since the relayout's commit
+    // B: the transport four left, the arrow four flush
     // right, declared
     // below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
@@ -799,13 +804,14 @@ private:
     void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
-    // THE OVERVIEW STRIP (bottom lane 0, 2026-08-12 — the Ableton model): the
-    // lane's ground and borders (render_canvas, the waveform's own chrome),
-    // the cached whole-song bars (overview_bar_cache below), the VIEWPORT BOX
-    // and the PLAYHEAD TICK. Called from on_redraw beside the bottom row's
-    // pass on the lane's own exposure; the ground paints on every frame class
-    // (a button-adjacent lane must not read as a hole while loading) and the
-    // content gates on loaded audio inside. Full design record at the
+    // THE OVERVIEW STRIP (top lane 3 since the relayout's commit B, 2026-08-12
+    // — the Ableton model): the lane's kWaveformCanvas ground under its ONE
+    // kWaveformBorder row at the bottom edge, the cached whole-song bars
+    // (overview_bar_cache below), the VIEWPORT BOX
+    // and the PLAYHEAD TICK. Called from on_redraw beside the button rows'
+    // passes on the lane's own exposure; the ground paints on every frame class
+    // (a lane inside the centered block must not read as a hole while loading)
+    // and the content gates on loaded audio inside. Full design record at the
     // definition.
     void paint_overview_strip(cairo_t* cr);
     // THE MODAL DIALOG (2026-08-12): the centered in-window box hosting the

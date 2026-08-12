@@ -119,14 +119,19 @@ namespace {
 // view-anchor math), so it cannot be main-private.
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
-// is superseded). Top and bottom strips now DIFFER in height; the waveform
-// flexes between them UP TO A CLAMP (the vertical rule below). The TOP strip
-// is SIX lanes since the 2026-08-12 grand relayout deleted the TOOLBAR ROW
-// (row 2 of the redesign, toolbar_row_h_px() — its Save / Undo / Redo /
-// Render dissolved into the icon row's first group) — from the window edge
-// inward: MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
-// redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
-// own authored icon_row_h_px(), row 4), then row 5's three: the TRIM lane
+// is superseded). Top and bottom strips DIFFER in height; the waveform flexes
+// between them UP TO A CLAMP, and TWO FLEXIBLE GAPS of blank window ground
+// center it (the vertical rule below). The TOP strip is SEVEN lanes since the
+// relayout's commit B moved the OVERVIEW STRIP up into the centered block
+// (2026-08-12; the 2026-08-12 roster commit had taken it to six by deleting
+// the TOOLBAR ROW, row 2 of the redesign — its Save / Undo / Redo / Render are
+// the icon row's first group now) — from the window edge inward: MENU ROW (its
+// own authored menu_row_h_px(), row 1 of the kdenlive redesign, PINNED at the
+// window top), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3),
+// ICON ROW (icon_row_h_px(), row 4), the OVERVIEW STRIP
+// (overview_lane_h_px(), the whole-song lane — ONE fixed tiny height on every
+// host now, 24 content + its 1px border-bottom; the render.h constant carries
+// the ruling and the deleted min/max pair), then row 5's three: the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
 // kTrimBarScalePercent, resting at 100 since the seventh glass ruling), the
 // RULER lane
@@ -138,60 +143,79 @@ namespace {
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
 // columns), whose bottom edge is the
-// waveform top. ALL SIX ride the gui_scale axis: row 5 retired the last
-// font-scaled lanes in this strip. The BOTTOM strip is TWO lanes since the
-// OVERVIEW STRIP landed (architect-ratified 2026-08-12, the same day's ROW
-// UNIFICATION having merged rows 8 and 9 into one): THE
-// UNIFIED BOTTOM ROW, bottom_row_h_px() tall — the transport four at the left
-// pad and the arrow four flush right (the relayout's rearrangement), all at
-// the icon row's boxes, the clock centered, the status chain right-aligned
-// against the arrows,
-// directly under the waveform — and under it THE OVERVIEW STRIP, the
-// whole-song lane whose height is the clamped leftover (the vertical rule
-// below). (The strip was one lane from row 7's collapse,
-// 2026-08-01, two from row 8, 2026-08-11, one at the unification, and two
-// again here.) Both ride the
+// waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
+// font-scaled lanes in this strip. The BOTTOM strip is ONE lane again: THE
+// UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
+// 8 and 9 merged) — the transport four at the left
+// pad and the arrow four flush right (the roster commit's rearrangement), all
+// at the icon row's boxes, the clock centered, the status chain right-aligned
+// against the arrows — sitting AT THE WINDOW'S FOOT with the flexible gap 2
+// between it and the waveform. (The strip was one lane from row 7's collapse,
+// 2026-08-01, two from row 8, 2026-08-11, one at the unification, two again
+// when the overview strip landed below the row that afternoon, and one from
+// commit B.) It rides the
 // gui_scale axis like every other redesigned row, so no lane anywhere is
 // font-scaled any more.
 //
-// THE VERTICAL RULE — THE WAVEFORM HAS A MAXIMUM HEIGHT (architect 2026-08-12,
-// the seventh glass ruling; kWaveformMaxHeightPx, render.h, carries the value
-// and its bracket; the ROW UNIFICATION later the same day moved the flexible
-// space to the WINDOW BOTTOM — "the icons, all the tools, they should be
-// close to the waveform"): the window stacks as rows 1, 3 and 4 (menu /
-// tabs / icons — the toolbar row deleted at the relayout) — rows 5-7 (trim
-// bar / ruler / marker lane, attached) — the
-// WAVEFORM (its natural leftover height, CLAMPED at the maximum) — THE
-// UNIFIED BOTTOM ROW — THE OVERVIEW STRIP (the whole-song lane, ratified the
-// same day as the unification's filler for the freed space) — BLANK WINDOW
-// GROUND to the window's bottom edge.
+// THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
+// HEIGHT (architect 2026-08-12: the seventh glass ruling gave the clamp,
+// kWaveformMaxHeightPx at render.h carrying the value and its bracket; the
+// relayout's COMMIT B, dictated at session close, gave the centering and took
+// the clamp 550 -> 500). The window stacks, top to bottom:
+//   THE MENU ROW, pinned at the window top;
+//   GAP 1 — flexible blank window ground;
+//   THE CENTERED BLOCK — tab row, icon row, OVERVIEW STRIP, trim bar, ruler,
+//     marker lane, then THE WAVEFORM, whose own thick bottom border (render_-
+//     canvas's, taken FROM the waveform area) is the block's bottom edge;
+//   GAP 2 — flexible blank window ground;
+//   THE UNIFIED BOTTOM ROW at the window's foot, its 1px border-top the thin
+//     border facing the gap.
 //
-// THE OVERVIEW'S HEIGHT IS THE LEFTOVER, CLAMPED (the one clean rule, the
-// ruled retunables kOverviewMax/MinHeightPx at render.h): overview =
-// clamp(what the blank foot would have been, min, max), where the
-// would-have-been foot is natural_waveform_height - waveform clamp
-// (overview_free_h below). blank = whatever of that leftover exceeds the
-// overview's MAXIMUM (bottom_strip_flex_gap below). When the leftover is
-// short of the overview's MINIMUM the WAVEFORM yields the difference — the
-// minimum is reserved AHEAD of the waveform's natural height, since
-// bottom_strip_h counts the overview lane whatever the leftover was — which
-// is the Pi's whole geometry: leftover negative, overview 24, waveform
-// 334 - 24 = 310 at 100% ("a hair above" the pre-unification 307, the
-// architect's own bracket — convergence recorded at the render.h constants).
-// On the 1080p monitor the leftover 264 splits 96 overview / 168 blank.
-// The blank band is WINDOW GROUND and HITS NOTHING: it
-// lies inside bottom_strip_area, below the overview lane's band, where the
-// press router's fallthrough answers a consumed nothing, the cursor map
-// answers Arrow, the wheel probe answers no context, and render_background's
-// chrome erase paints it with no lane painter over it. ONE OWNER: the blank
-// and the overview height enter
-// the geometry at exactly two expressions in this file — strip_row_rect's
-// inset for bottom lanes (they all sit above the blank), and bottom_strip_h's
-// total
-// (which is what clamps waveform_area's height, that function's h - top -
-// bottom arithmetic unchanged) — so every consumer (hit tests, paint, damage,
-// the wheel probe, the touch pan zone) inherits the shifted y's through the
-// lane accessors with no second site.
+// THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
+// THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, with no
+// titlebar arithmetic anywhere, because "the labwc titlebar above and the panel
+// below offset each other" (the architect's own reasoning). The derivation, all
+// of it in the four functions below:
+//   leftover = win_h - (menu + block-above-the-waveform) - bottom row
+//              = centered_leftover_h; the waveform's own borders are INSIDE its
+//                area, so the block's thick bottom border is not a term here
+//                (counting it would double it),
+//   W        = min(waveform_max_h_px(), max(0, leftover))  = waveform_clamped_h,
+//   gap 1    = max(0, win_h/2 - (menu + block above the waveform) - W/2)
+//              = top_flex_gap,
+//   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
+// WHEN CENTERING IS INFEASIBLE the gaps floor at 0 and the WAVEFORM absorbs the
+// shortfall — one clean formula, no second constant: on a short window the
+// leftover is under the clamp, so W takes all of it and both gaps are 0 (the Pi
+// exactly). A window tall enough for the clamp but too shallow to center it
+// (the top block being taller than the bottom row) rests gap 1 at 0 and puts
+// the remainder in gap 2, top-heavy and harmless.
+//
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 195 =
+// menu 35 + tab 31 + icon 47 + overview 25 + trim 9 + ruler 28 + marker 20, of
+// which 160 is the block above the waveform, and the bottom row 51):
+//   1920x1080: leftover 834 -> waveform CLAMPED at 500, gap 1 = 95, gap 2 = 239
+//     — 35 menu / 95 blank / 160 block / 500 waveform / 239 blank / 51 row,
+//     the waveform spanning y 290..790 about the window's midline 540.
+//   1024x600 (the Pi): leftover 354 -> waveform UNCLAMPED at 354, both gaps 0
+//     — 35 / 0 / 160 / 354 / 0 / 51. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -72), so the waveform keeps everything,
+//     which is the rule's own floor rather than a special case.
+//
+// THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
+// chrome erase paints both and no lane painter covers them; a press in either
+// falls to a consumed nothing (gap 1 through the top strip's empty-spot return,
+// gap 2 through the press path's tail), the cursor map answers Arrow over both,
+// and the wheel is inert in both (gap 1 by its own band in wheel_context's
+// inert list — it lies INSIDE top_strip_area, which is a pan surface; gap 2
+// needs no band, lying below every area that probe tests). ONE OWNER: the two
+// gaps enter the geometry at exactly three expressions in this file —
+// strip_row_rect's inset for top lanes 1..6 (gap 1, which every block lane
+// sits below), top_strip_h's total and bottom_strip_h's total (which is what
+// makes waveform_area's h - top - bottom arithmetic yield W with no second
+// expression of the rule) — so every consumer (hit tests, paint, damage, the
+// wheel probe, the touch pan zone) inherits the shifted y's through the lane
+// accessors with no second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
@@ -209,18 +233,20 @@ namespace {
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head on the
-// MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|tab
-// since the 2026-08-12 relayout deleted the toolbar lane between them,
-// tab|icon, icon|trim (a flexible-gap band for the seventh ruling's first
-// hours; tight again since the row unification moved the flexible space to
-// the window bottom), trim|ruler, ruler|marker, and both outer
+// MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|tab,
+// which is GAP 1's band since commit B and was the toolbar lane's until the
+// roster commit deleted it, tab|icon, icon|overview and overview|trim (the
+// strip's new neighbours; the icon|trim seam it split was a flexible-gap band
+// for the seventh ruling's first hours and tight from the row unification to
+// commit B), trim|ruler, ruler|marker, and both outer
 // kFlagBottomLiftPx gaps) is honored structurally by the loop below and by every
 // consumer, with no asset spanning any of them. ONE shared
 // helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
 // to it, so a lane is a pure index from its strip's window edge, and a bottom
-// lane's y is its inset flipped about the window midline plus the blank foot
-// (the vertical rule above).
+// lane's y is its inset flipped about the window midline (the bottom row rests
+// ON the window's foot since commit B — gap 2 is above it, in bottom_strip_h's
+// total rather than in the lane inset).
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -238,26 +264,35 @@ namespace {
 // font metric any more. The two-axes ruling and what became of the font axis are
 // at those accessors' declarations in render.h.
 //
-// The tab and icon lanes INCLUDE their 1px border-bottom, and the
-// UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side, its only border
-// (the CSS box model: the architect's stated content height excludes its
-// borders, and the lane owns every pixel it paints). The OVERVIEW lane below it
-// is border-free.
-constexpr int kTopLaneCount    = 6;
-constexpr int kBottomLaneCount = 2;
+// The tab, icon and OVERVIEW lanes INCLUDE their 1px border (bottom-side on all
+// three), and the UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side,
+// its only border (the CSS box model: the architect's stated content height
+// excludes its borders, and the lane owns every pixel it paints). The overview
+// lane was border-free under its old bottom-strip home, wearing the waveform's
+// own 2px rows at BOTH ends instead; commit B reduced that chrome to the one
+// line (the derivation is at kOverviewHeightPx, render.h).
+constexpr int kTopLaneCount    = 7;
+constexpr int kBottomLaneCount = 1;
 int top_lane_height(int lane) {
     switch (lane) {
         // (THE TOOLBAR ROW — top lane 1, the labeled Save/Undo/Redo/Render
         // lane — WAS DELETED 2026-08-12, the grand relayout's roster commit:
         // its four buttons are the icon row's first group now, so
         // kTopLaneCount fell 7 -> 6 and every lane below the menu row
-        // renumbered -1. The top strip shrank by the lane's 45 at 100%, and
-        // the waveform/overview arithmetic re-derives through this table with
-        // no second site — the current numbers are at kWaveformMaxHeightPx,
-        // render.h.)
+        // renumbered -1. Commit B then took the count back to 7 by moving the
+        // OVERVIEW STRIP up into the block as lane 3, renumbering row 5's trio
+        // +1 again. The vertical arithmetic re-derives through this table with
+        // no second site — the current stacks are at the vertical rule above.)
         case 0: return menu_row_h_px();          // menu row (proportional text)
         case 1: return tab_row_h_px();           // tab row (+ border-bottom)
         case 2: return icon_row_h_px();          // icon row (+ border-bottom)
+        // THE OVERVIEW STRIP's home since commit B: the whole-song lane between
+        // the icon row and the trim bar, ONE fixed tiny height on every host
+        // (content + its 1px border-bottom; the ruling, the deleted min/max
+        // clamp pair and the border's edge choice are at kOverviewHeightPx,
+        // render.h). Its height no longer depends on the window, which is why
+        // this table takes no win_h any more.
+        case 3: return overview_lane_h_px();     // overview strip (+ border)
         // ROW 5 REPLACED THE FOUR LEGACY LANES WITH THREE (2026-08-01). The old
         // trim-chip / marker-text / flag / triangle stack is gone: the chips
         // became the trim BAR, the marker-text lane died with its occlusion
@@ -265,113 +300,107 @@ int top_lane_height(int lane) {
         // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
         // from their own crop-measured constants, like lanes 0-2 — so the LAST
         // font-scaled lane in the top strip went with them.
-        case 3: return trim_lane_h_px();         // trim bar + endcaps
-        case 4: return ruler_lane_h_px();        // timestamps / ticks / nav band
+        case 4: return trim_lane_h_px();         // trim bar + endcaps
+        case 5: return ruler_lane_h_px();        // timestamps / ticks / nav band
         // Flags, stems and the playhead head; bottom edge = waveform top.
-        case 5: return marker_lane_h_px();
+        case 6: return marker_lane_h_px();
         default: return 0;
     }
 }
-// The bottom strip's TWO lanes: the OVERVIEW STRIP (lane 0 — the whole-song
-// lane, its height the clamped leftover, overview_lane_h below) under the
-// UNIFIED BOTTOM ROW (lane 1 — 2026-08-12, rows 8 and
+// The bottom strip's ONE lane: THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and
 // 9 merged: buttons left, clock centered, status chain right; the succession
-// is at kBottomRowHeightPx, render.h). Indexed from the window edge inward
-// like the top strip's lanes, with the BLANK FOOT between the window edge and
-// lane 0 (strip_row_rect's bottom inset), so the pair rests against the
-// waveform. The overview's height is window-height-derived, which is why the
-// bottom table takes win_h where the top one does not.
-int overview_lane_h(int win_h);
-int bottom_lane_height(int lane, int win_h) {
+// is at kBottomRowHeightPx, render.h), resting ON the window's foot since
+// commit B — GAP 2 sits ABOVE it, in bottom_strip_h's total rather than in
+// this lane's inset, so lane 0 is flush with the window edge like the top
+// strip's own lane 0. (The OVERVIEW STRIP was bottom lane 0 for the afternoon
+// of 2026-08-12 and is top lane 3 now.)
+int bottom_lane_height(int lane) {
     switch (lane) {
-        case 0: return overview_lane_h(win_h);  // overview strip
-        case 1: return bottom_row_h_px();       // unified row (+ border-top)
+        case 0: return bottom_row_h_px();       // unified row (+ border-top)
         default: return 0;
     }
 }
 // The UN-GAPPED lane sum — the strip's lanes and their (zero) authored gaps
-// alone. It IS the top strip's public height (the flexible gap left that end of
-// the stack at the 2026-08-12 row unification); the BOTTOM strip's public
-// height adds the blank foot to this, so this stays the gap computation's own
-// input, which is what keeps the two from being circular (the overview lane's
-// height reads only the FIXED sums, never this function's bottom answer).
-int strip_total_h(bool top_strip, int win_h) {
+// alone, with NO flexible gap in it. Each strip's public height adds its own
+// flexible gap to this (top_strip_h / bottom_strip_h below), so this stays the
+// gap derivation's own input and the two can never be circular.
+int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
     for (int i = 0; i < lanes; ++i)
-        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i, win_h);
+        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i);
     sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
     return sum;
 }
-// The bottom strip's FIXED sum — the strip as it would stack with the overview
-// lane at zero height: the unified row, the (zero) outer gaps and the (zero)
-// inter-lane gap. The overview height derivation's own input, kept separate
-// from strip_total_h above so the overview's height is a pure function of the
-// window and the fixed lanes rather than of itself.
-int bottom_fixed_lanes_h() {
-    return 2 * static_cast<int>(kFlagBottomLiftPx) + bottom_row_h_px() +
-           (kBottomLaneCount - 1) * static_cast<int>(kRowGapPx);
+// THE LEFTOVER the waveform and the two flexible gaps share (the vertical rule
+// above): the window less the whole top lane stack and less the bottom row. May
+// be NEGATIVE on an absurd window (a lane stack taller than the window itself —
+// the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
+// window height, exactly as every other geometry entry point does.
+int centered_leftover_h(int win_h) {
+    return win_h - strip_total_h(/*top_strip=*/true)
+                 - strip_total_h(/*top_strip=*/false);
 }
-// THE LEFTOVER past the waveform clamp — "what the blank foot would have been"
-// before the overview strip claimed it (the vertical rule above): the natural
-// waveform height (window minus the top stack minus the bottom strip's FIXED
-// lanes) minus the waveform's maximum. May be NEGATIVE (a short window whose
-// natural height never reaches the clamp — the Pi); the two consumers below
-// clamp it each in their own direction. Takes the CLAMPED window height —
-// callers clamp_dims first, exactly as every other geometry entry point does.
-int overview_free_h(int win_h) {
-    const int natural = win_h - strip_total_h(/*top_strip=*/true, win_h)
-                              - bottom_fixed_lanes_h();
-    return natural - waveform_max_h_px();
+// THE WAVEFORM'S HEIGHT: the leftover, CLAMPED at the maximum (the seventh
+// glass ruling's clamp, kWaveformMaxHeightPx at render.h). The floor at 0 is
+// what keeps a degenerate window's negative leftover out of the gap arithmetic
+// below; waveform_area's own guard answers the rect.
+int waveform_clamped_h(int win_h) {
+    const int leftover = centered_leftover_h(win_h);
+    if (leftover <= 0) return 0;
+    const int cap = waveform_max_h_px();
+    return leftover < cap ? leftover : cap;
 }
-// THE OVERVIEW LANE'S HEIGHT (the vertical rule above): the leftover clamped
-// into [kOverviewMinHeightPx, kOverviewMaxHeightPx] (scaled — the two ruled
-// retunables, render.h). The MIN arm is what makes the reserve come out of
-// the WAVEFORM on a short window: bottom_strip_h counts this lane whatever
-// the leftover was, so a leftover short of the minimum shrinks waveform_area
-// by the difference (the Pi's ~310-at-100% geometry, recorded at the
-// constants).
-int overview_lane_h(int win_h) {
-    int h = overview_free_h(win_h);
-    const int lo = overview_min_h_px();
-    const int hi = overview_max_h_px();
-    if (h < lo) h = lo;
-    if (h > hi) h = hi;
-    return h;
+// GAP 1 — the flexible blank band between the MENU ROW and the centered block
+// (commit B's centering rule, spelled at the vertical rule above): whatever it
+// takes to put the waveform's midpoint on the window's, floored at 0 where that
+// is infeasible. strip_total_h(top) is exactly the rule's "menu + the block
+// above the waveform", the two being the whole top lane stack.
+int top_flex_gap(int win_h) {
+    const int gap = win_h / 2 - strip_total_h(/*top_strip=*/true)
+                              - waveform_clamped_h(win_h) / 2;
+    return gap > 0 ? gap : 0;
 }
-// THE BLANK FOOT (the vertical rule above): whatever of the leftover exceeds
-// the overview lane's MAXIMUM — the strip claims the leftover first and only
-// the excess stays window ground. Zero wherever the leftover is at or under
-// that maximum (the Pi's whole geometry, negative leftovers included — the
-// silent-wrong guard at waveform_area still owns the degenerate window).
-// (top_strip_flex_gap's successor:
-// the seventh ruling opened this gap between the icon row and the trim lane,
-// and the row unification later the same day moved it to the window bottom —
-// same arithmetic, opposite end of the stack; the overview strip then claimed
-// its first kOverviewMaxHeightPx.)
-int bottom_strip_flex_gap(int win_h) {
-    const int gap = overview_free_h(win_h) - overview_max_h_px();
+// GAP 2 — the flexible blank band between the waveform's bottom border and the
+// UNIFIED BOTTOM ROW at the window's foot: the REMAINDER of the leftover, which
+// is what makes the stack add up to the window exactly. Zero whenever the
+// waveform took the whole leftover (every window short of the clamp — the Pi).
+// The floor is defensive only: gap 1 can never exceed the remainder, since that
+// would need the bottom row to be taller than the menu row plus the whole block
+// above the waveform.
+// (bottom_strip_flex_gap's successor, and top_strip_flex_gap's before it: the
+// seventh ruling opened ONE flexible gap between the icon row and the trim
+// lane, the row unification moved it whole to the window's foot below the
+// bottom row, and commit B split it in two around the block.)
+int bottom_flex_gap(int win_h) {
+    const int gap = centered_leftover_h(win_h) - waveform_clamped_h(win_h)
+                                               - top_flex_gap(win_h);
     return gap > 0 ? gap : 0;
 }
 } // namespace
 
+// The TOP strip's public height INCLUDES GAP 1 (commit B): it is the distance
+// from the window top to the WAVEFORM top, which is what every consumer asks of
+// it — top_strip_area then spans the blank band between the menu row and the
+// block (its damage covering it is correct: the band is repainted window
+// ground), and waveform_area's y is this sum with no second expression.
 int top_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    return strip_total_h(/*top_strip=*/true, h);
+    return strip_total_h(/*top_strip=*/true) + top_flex_gap(h);
 }
-// The BOTTOM strip's public height INCLUDES the blank foot (2026-08-12, the
-// row unification): it is the distance from the waveform bottom to the window
-// bottom, which is what every consumer actually asks of it —
+// The BOTTOM strip's public height INCLUDES GAP 2 (2026-08-12: the row
+// unification made this the blank foot below the row, commit B moved the blank
+// above it): it is the distance from the waveform bottom to the window bottom,
+// which is what every consumer actually asks of it —
 // bottom_strip_area then spans the blank band (its damage covering it is
 // correct: the band is repainted window ground), and waveform_area's
-// h - top - bottom arithmetic yields the CLAMPED waveform height — LESS the
-// overview minimum's reserve on a short window (the vertical rule) — with no
-// second expression.
+// h - top - bottom arithmetic yields the CLAMPED, CENTERED waveform height with
+// no second expression.
 int bottom_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    return strip_total_h(/*top_strip=*/false, h) + bottom_strip_flex_gap(h);
+    return strip_total_h(/*top_strip=*/false) + bottom_flex_gap(h);
 }
 
 GuiRect top_strip_area(const AppState& a) {
@@ -390,12 +419,11 @@ GuiRect bottom_strip_area(const AppState& a) {
 GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    // bottom_strip_h INCLUDES the blank foot (2026-08-12, the row
-    // unification), so the h - top - bot arithmetic below yields the CLAMPED
-    // waveform height — min(natural, kWaveformMaxHeightPx-scaled) wherever the
-    // natural height is non-negative — and the y lands the waveform flush
-    // under the marker lane with no second expression of the vertical rule
-    // here.
+    // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
+    // centering), so the h - top - bot arithmetic below yields the CLAMPED
+    // waveform height — min(leftover, kWaveformMaxHeightPx-scaled) wherever the
+    // leftover is non-negative — and the y lands the waveform flush under the
+    // marker lane with no second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
@@ -439,13 +467,13 @@ GuiRect waveform_area(const AppState& a) {
     // half of the cross-product this guard was written against, left the schema
     // entirely in row 7 — and the guard STAYS regardless: it costs one compare
     // and it is the class of fault (silent-wrong geometry) the project keeps
-    // guards for. (The blank foot cannot re-trip it: bottom_strip_flex_gap is
-    // zero whenever the leftover is at or under the overview maximum, negative
-    // included, so the blank never deepens an overflow. The OVERVIEW MINIMUM
-    // CAN deepen one — its reserve is counted whatever the window's height,
-    // the rule that buys the Pi its sliver — and this guard is exactly what
-    // owns that case: a window too short for the reserve computes a zero
-    // waveform here rather than a negative one.)
+    // guards for. (NEITHER FLEXIBLE GAP CAN DEEPEN AN OVERFLOW: both floor at
+    // 0 and both derive from the same leftover this subtraction reads, which is
+    // negative exactly when the lane stack overruns the window — so a window
+    // too short for its lanes computes a ZERO waveform here between two
+    // zero-height gaps, rather than a negative one. The overview lane's
+    // one-day reserve-ahead rule, the one term that could deepen an overflow,
+    // died with commit B's fixed lane height.)
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }
@@ -454,15 +482,17 @@ GuiRect waveform_area(const AppState& a) {
 // A lane is a pure index from its strip's window edge (0 = the edge-most lane):
 // the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
 // each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
-// further inward — PLUS, for bottom lanes, the BLANK FOOT (the vertical rule
-// at the head of this block: the unified bottom row is attached to the
-// clamped waveform, not to the window edge below it, and the blank band of
-// window ground sits between that edge and the lane). The top strip counts
-// downward from y=0; the bottom strip
+// further inward — PLUS, for TOP lanes 1 and beyond, GAP 1 (the vertical rule at
+// the head of this block: the menu row is pinned at the window top and the
+// centered block hangs below the flexible blank band, so every lane from the tab
+// row down carries it). The bottom strip's own gap 2 is NOT an inset here: its
+// one lane rests on the window's foot, and the gap sits above it, inside
+// bottom_strip_h. The top strip counts downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the TRIM BAR is TOP lane 3 (the ruler is lane
-// 4 and the marker lane lane 5), and hit_test_trim_endcap / the pair-drag y-gate
+// Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
+// 5 and the marker lane lane 6 — the numbering the overview strip's arrival in
+// the block restored), and hit_test_trim_endcap / the pair-drag y-gate
 // read top_trim_row_area(app) — the exact band render_trim_flags paints the
 // lane ground, the window's bar and its two endcaps in, because the PAINTER is
 // handed that band as a parameter (GuiPaintHandler::paint_trim passes
@@ -476,37 +506,61 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
     clamp_dims(w, h);
     int inset = static_cast<int>(kFlagBottomLiftPx);
     for (int i = 0; i < lane_from_window_edge; ++i) {
-        inset += top_strip ? top_lane_height(i) : bottom_lane_height(i, h);
+        inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
         inset += static_cast<int>(kRowGapPx);
     }
-    // The blank foot opens between the window's bottom edge and bottom lane 0
-    // (the vertical rule): every bottom lane sits above it, against the
-    // waveform, and the top strip's arithmetic never sees it. (For the seventh
-    // ruling's first hours the gap sat in the TOP strip, after the icon row;
-    // the row unification moved it here the same day.)
-    if (!top_strip)
-        inset += bottom_strip_flex_gap(h);
+    // GAP 1 opens between the menu row and the centered block (the vertical
+    // rule): every top lane from 1 down sits below it, and the bottom strip's
+    // arithmetic never sees it. (The seventh ruling's own gap sat after the ICON
+    // row for hours; the row unification moved it to the window's foot as the
+    // bottom lanes' inset, and commit B split it into this one and gap 2.)
+    if (top_strip && lane_from_window_edge >= 1)
+        inset += top_flex_gap(h);
     const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
-                                 : bottom_lane_height(lane_from_window_edge, h);
+                                 : bottom_lane_height(lane_from_window_edge);
     const int y = top_strip ? inset : (h - inset - lane_h);
     return GuiRect{0, y, w, lane_h};
+}
+
+// THE TWO BLANK BANDS AS RECTS. Gap 1 alone has a consumer: wheel_context's
+// wheel-inert band list, because the band lies INSIDE top_strip_area, which is
+// one of that probe's pan surfaces — everything else about both bands is a
+// fall-through (a press claims nothing, the cursor map answers Arrow,
+// render_background paints them). GAP 2 DELIBERATELY HAS NO ACCESSOR: it lies
+// below every area the wheel probe tests, so the no-context 0 already answers
+// it, and a rect with no reader would be dead code.
+// Derived from the two lane rects it lies between rather than from the gap
+// function, so the band covers the (zero) inter-lane gaps around it too — a
+// seam is non-lane ground exactly as the flexible band is, and the answer stays
+// correct if kRowGapPx is ever un-zeroed.
+GuiRect top_flex_gap_area(const AppState& a) {
+    const GuiRect menu = strip_row_rect(a, /*top_strip=*/true, 0);
+    const GuiRect tab  = strip_row_rect(a, /*top_strip=*/true, 1);
+    const int y0 = menu.y + menu.h;
+    const int gap_h = tab.y - y0;
+    return GuiRect{0, y0, menu.w, gap_h > 0 ? gap_h : 0};
 }
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
 // ground carrying the left float's Quit/Settings and the right float's view
-// bar, plus its own 1px margin-bottom); lane 1 is the TAB row (the "A" / "B"
+// bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
+// below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
 // its border-bottom); lane 2 is the ICON row (the twenty-nine view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these —
-// and its border-bottom); lane 3 is the TRIM lane (the bar, its
+// and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
+// its one fixed tiny height, moved here from the bottom strip by commit B — its
+// painter (paint_overview_strip), its press claim, its wheel band and its
+// cursor cue all read top_overview_row_area below); lane 4 is the TRIM lane (the
+// bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
 // double-click — the one lane that also rides kTrimBarScalePercent, resting at
 // 100 since the seventh glass ruling, through this same
-// accumulation); lane 4 is the RULER lane (the timestamp ladder; its plain
+// accumulation); lane 5 is the RULER lane (the timestamp ladder; its plain
 // drag draws the REGION since 2026-08-12, the zoom entry deleted for good);
-// lane 5 is the MARKER lane (the flags, their stems — pointer-inert since the
+// lane 6 is the MARKER lane (the flags, their stems — pointer-inert since the
 // seventh glass ruling — and the
 // playhead's aliased head on the lane's bottom rows), whose bottom edge is
 // flush with the waveform area top. (The trim and ruler lanes were ONE merged
@@ -524,54 +578,49 @@ GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 2);
 }
 
-GuiRect top_trim_row_area(const AppState& a) {
+GuiRect top_overview_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 3);
 }
 
-GuiRect top_ruler_row_area(const AppState& a) {
+GuiRect top_trim_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 4);
 }
 
-GuiRect top_marker_row_area(const AppState& a) {
+GuiRect top_ruler_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 5);
 }
 
-// THE BOTTOM STRIP IS TWO LANES — THE UNIFIED BOTTOM ROW (bottom lane 1;
+GuiRect top_marker_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 6);
+}
+
+// THE BOTTOM STRIP IS ONE LANE — THE UNIFIED BOTTOM ROW (bottom lane 0;
 // 2026-08-12, rows 8
-// and 9 merged; the succession is at kBottomRowHeightPx, render.h), directly
-// under the waveform: the transport/arrow buttons on the left at the icon
-// row's boxes, the monospace clock centered, and the status chain — the
-// critical chip + section C's status strings — right-aligned. Below it, THE
-// OVERVIEW STRIP (bottom lane 0; architect-ratified the same day — the
-// Ableton model, ableton.png): the whole song as min/max bars, the viewport
-// box, the playhead tick, and the plain drag as the dual-axis strip drag's
-// second entry; its height is the clamped leftover (the vertical rule at the
-// head of this block, the retunables at render.h's kOverview* constants).
-// Below that, the
-// BLANK FOOT of window ground to the window's bottom edge. The dirty flag is
+// and 9 merged; the succession is at kBottomRowHeightPx, render.h), resting on
+// the WINDOW'S FOOT since commit B, with GAP 2's blank window ground between it
+// and the waveform: the transport four on the left at the icon
+// row's boxes, the arrow four flush right, the monospace clock centered, and the
+// status chain — the critical chip + section C's status strings — right-aligned
+// against the arrows. (The OVERVIEW STRIP was bottom lane 0 under this row for
+// the afternoon of 2026-08-12 and is TOP lane 3 now.) The dirty flag is
 // the window title's dot, not a tenant here.
 // bottom_row_area is the lane INCLUDING its 1px border-top (the waveform
-// side), as the strip stack allocates it; bottom_row_content_area is the
+// side — commit B's "thin border" above the row), as the strip stack allocates
+// it; bottom_row_content_area is the
 // ground under that border, the band every button, baseline and cell works
 // in. Paint and hit agree through the one accessor exactly as the top rows'
-// do through theirs — the overview lane identically: its painter
-// (paint_overview_strip), its press claim, its wheel band and its cursor cue
-// all read bottom_overview_row_area.
+// do through theirs.
 //
 // (The former pan-strip row retired earlier — pan lives on the plain-drag
 // grab and the ctrl strip drag's horizontal axis.)
 GuiRect bottom_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, 1);
+    return strip_row_rect(a, /*top_strip=*/false, 0);
 }
 
 GuiRect bottom_row_content_area(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
     const int b = bottom_row_border_h_px();
     return GuiRect{lane.x, lane.y + b, lane.w, lane.h - b};
-}
-
-GuiRect bottom_overview_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, 0);
 }
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
@@ -2115,13 +2164,15 @@ int main(int argc, char** argv) {
         // above) deliberately carries no overview arm: its job is producing
         // A paint, which its scanner column or clock fallback already does,
         // and the tick's movement is this site's alone. Discrete playhead
-        // writes ride Viewport::invalidate_waveform_area's overview rider
-        // instead — the full-lane shape.
+        // writes need no arm at all since commit B moved the lane into the
+        // centered block: Viewport::invalidate_waveform_area's ONE rect (window
+        // top through the waveform's bottom) contains the lane by construction,
+        // which is what retired that owner's dedicated overview rider.
         {
             const int ov_new =
                 overview_tick_column(app, audio, app.playhead_scanner_precise);
             if (ov_old >= 0 && ov_new >= 0 && ov_new != ov_old) {
-                const GuiRect ov_lane = bottom_overview_row_area(app);
+                const GuiRect ov_lane = top_overview_row_area(app);
                 viewport.invalidate_rect(
                     GuiRect{ov_lane.x + ov_old, ov_lane.y, 1, ov_lane.h});
                 viewport.invalidate_rect(

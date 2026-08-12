@@ -1556,11 +1556,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // forms deleted), so the context ids differ only for the platform's
     // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
-    // it emits nothing at all. THE BLANK FOOT (the waveform-height clamp's
-    // window ground below the overview lane) needs no band of its own: it
-    // lies below every area this
-    // probe tests, so a wheel there falls to the no-context 0 exactly as the
-    // old status lane's did — nothing scrolls off the window's dead ground.
+    // it emits nothing at all. THE TWO BLANK BANDS SPLIT (the relayout's commit
+    // B, whose two flexible gaps center the waveform): GAP 2, between the
+    // waveform and the bottom row, needs no band of its own — it lies below
+    // every area this probe tests, so a wheel there falls to the no-context 0
+    // exactly as the old blank foot's did — while GAP 1, between the menu row
+    // and the centered block, lies INSIDE top_strip_area and therefore JOINS THE
+    // INERT BAND LIST below, blank window ground being no more a panning surface
+    // at the top of the window than at its foot.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag
@@ -1597,6 +1600,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
             top_menu_row_area(app),
+            // GAP 1's blank band, the ONE non-lane member (commit B): it sits
+            // inside the top-strip area below, which pans, so without this
+            // entry a wheel over blank window ground would scroll the song —
+            // exactly the fault row 1's ruling named. Not a redesigned row, but
+            // the same answer for the same reason, and the reason it needs a
+            // rect at all is at top_flex_gap_area (app_state.h).
+            top_flex_gap_area(app),
             top_tab_row_area(app),   top_icon_row_area(app),
             // The bottom row joined the family's inert band list 2026-08-11
             // (as the transport row), exactly as the rule above promises a
@@ -1613,19 +1623,23 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         }
     }
 
+    // THE OVERVIEW STRIP (context 3): a navigation surface, so the wheel is
+    // the stepped pan there. TESTED BEFORE THE AREAS since the relayout's
+    // commit B: the lane is a TOP-STRIP lane now (it was disjoint from both
+    // areas while it sat in the bottom strip, and this clause followed them),
+    // so the top-strip test below would otherwise answer 2 over it first. Both
+    // ids take the same one route, so the ordering costs nothing but the id's
+    // honesty — and the id is what the platform attributes sub-detent remainder
+    // to. A positive context here also admits the two-finger touch nav's
+    // per-frame refusal check over the lane, which is the same
+    // navigation-class answer.
+    if (rect_contains(top_overview_row_area(app), x, y)) return 3;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     const bool inside_waveform = rect_contains(area, x, y);
     const bool inside_top      = rect_contains(top, x, y);
     if (inside_waveform) return 1;
     if (inside_top) return 2;
-    // THE OVERVIEW STRIP (context 3): a navigation surface, so the wheel is
-    // the stepped pan there — one clause, tested after the areas because the
-    // lane is disjoint from both (the bottom row's inert band above already
-    // won its own y-band). A positive context here also admits the two-finger
-    // touch nav's per-frame refusal check over the lane, which is the same
-    // navigation-class answer.
-    if (rect_contains(bottom_overview_row_area(app), x, y)) return 3;
     return 0;
 }
 

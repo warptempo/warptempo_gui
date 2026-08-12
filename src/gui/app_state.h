@@ -1280,8 +1280,9 @@ inline constexpr bool redesign_button_mode_companion(RedesignButton b) {
 // damage decision the other rows answer with invalidate_top_strip must answer
 // with the bottom row's own rect for these eight — the hover recompute, the
 // click-face arm and clear, the tick comparator, and the tooltip, which also
-// FLIPS ABOVE the button here (below the lane is the blank window foot, zero
-// on a short window).
+// FLIPS ABOVE the button here (the lane rests on the WINDOW'S FOOT since the
+// relayout's commit B, so there is nothing below it at all; it was the blank
+// foot's own band, zero on a short window, for the afternoon before).
 // A membership predicate like redesign_button_is_tab, deliberately NOT the
 // exhaustive-switch shape: redesign_button_in_menu_row above is the roster's
 // one classification chokepoint (a new button fails to compile there until its
@@ -3783,6 +3784,22 @@ inline bool point_in_menu_row_band(const AppState& a, int x, int y) {
 }
 GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);
+// THE OVERVIEW STRIP (top lane 3 since the relayout's commit B, 2026-08-12 —
+// the Ableton model, ableton.png): the whole-song lane between the ICON ROW and
+// the TRIM BAR, inside the centered block — min/max bars off the peaks pyramid,
+// the viewport box, the playhead tick, and the plain drag as the dual-axis strip
+// drag's second entry (the record at arm_strip_drag_at). ONE fixed tiny height
+// on every host (the ruling, the deleted min/max clamp pair and the 1px
+// border-bottom are all at render.h's kOverviewHeightPx). It was a BOTTOM-strip
+// lane under the unified row for the afternoon it landed;
+// bottom_overview_row_area is this accessor's former name.
+GuiRect top_overview_row_area(const AppState& a);
+// GAP 1's band — the flexible blank window ground between the menu row and the
+// centered block (the vertical rule, main.cpp). ONE consumer, the wheel-inert
+// band list: the band lies inside top_strip_area, which is a pan surface, so it
+// needs a band of its own to stay inert. Gap 2 (above the bottom row) has no
+// accessor by the same reasoning inverted — it lies below every wheel area.
+GuiRect top_flex_gap_area(const AppState& a);
 // ROW 5's three lanes (2026-08-01), replacing the legacy
 // chip / marker-text / flag / triangle four.
 GuiRect top_trim_row_area(const AppState& a);
@@ -3801,22 +3818,17 @@ GuiRect top_ruler_row_area(const AppState& a);
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
-// strip's waveform-side lane (bottom lane 1), flush under the waveform — the
-// lane including its 1px
+// strip's ONE lane (bottom lane 0), resting on the WINDOW'S FOOT since the
+// relayout's commit B with GAP 2's blank ground between it and the waveform —
+// the lane including its 1px
 // border-top, and the content band under that border. (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
-// stood, 2026-08-11..12, the strip's whole surface at the unification, and
-// one of two again since the OVERVIEW STRIP landed below it later that day;
-// the blank foot below the pair is strip geometry, not a lane.)
+// stood, 2026-08-11..12, the strip's whole surface at the unification, one of
+// two again while the OVERVIEW STRIP sat below it that afternoon, and the
+// strip's one lane from commit B; each flexible gap is strip geometry, not a
+// lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
-// THE OVERVIEW STRIP (bottom lane 0, 2026-08-12 — the Ableton model,
-// ableton.png): the whole-song lane directly under the unified bottom row —
-// min/max bars off the peaks pyramid, the viewport box, the playhead tick,
-// and the plain drag as the dual-axis strip drag's second entry (the record
-// at arm_strip_drag_at). Height = the clamped leftover past the waveform
-// clamp (the vertical rule, main.cpp; retunables at render.h's kOverview*).
-GuiRect bottom_overview_row_area(const AppState& a);
 // THE OVERVIEW STRIP'S COLUMN MAPPING — one owner for the lane's
 // frames-per-column, shared by the painter (the bars' basis, the box and the
 // tick), the press claim (the drag anchor) and the tick's per-frame damage
@@ -4111,9 +4123,11 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // owner overview_tick_column so the damaged column is the painted one; the
 // heartbeat site carries no overview arm — its job is producing a paint, not
 // naming movement), and the FULL-LANE shape for every discrete write, which
-// rides Viewport::invalidate_waveform_area's overview rider rather than a
-// per-site list (every discrete member above funnels through that owner's
-// shape already). The tick maps through the ACTIVE domain to its SOURCE
+// needs no arm of its own: the lane sits inside the centered block since the
+// relayout's commit B, so Viewport::invalidate_waveform_area's ONE rect
+// (window top through the waveform bottom) contains it by construction, which
+// retired that owner's dedicated overview rider. The tick maps through the
+// ACTIVE domain to its SOURCE
 // column, so it needs no plate basis at all — the lane's basis is the
 // whole-song scale, which no async publish window can move.
 double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);

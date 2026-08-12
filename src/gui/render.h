@@ -635,10 +635,12 @@ inline constexpr int      kWaveformBorderPx = 2;
 // kRedesignBottomLine (hex 0x17181A, the crop's near-black window-foot seam)
 // WAS declared here and is RETIRED (2026-08-12, the row unification): its one
 // consumer was the status line's bottom border on the window's last row, and
-// the unified bottom row sits against the waveform with the OVERVIEW STRIP and
-// blank window ground below it — no lane rests on the window's foot any more,
-// so the seam has no surface. The crop measurement above stays as the
-// provenance record; the value is git history's.
+// the unified bottom row moved up against the waveform, leaving no lane on the
+// window's foot for the seam to sit on. The relayout's commit B put the row
+// back on the foot the same evening WITHOUT reinstating the seam — a second
+// line there would be a new design decision, not a consequence of the restack
+// (the reasoning is recorded at kBottomRowHeightPx). The crop measurement above
+// stays as the provenance record; the value is git history's.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1046,80 +1048,110 @@ inline int marker_lane_h_px() {
 // THE WAVEFORM'S MAXIMUM HEIGHT — a RULED RETUNABLE (architect 2026-08-12, the
 // seventh glass ruling): on tall monitors the natural (leftover) waveform is so
 // tall that reaching the ruler and the flag lane "feels cumbersome", so the
-// waveform CLAMPS at this height and the leftover becomes a band of BLANK
-// WINDOW GROUND. SINCE THE ROW UNIFICATION (later the same day) that blank
-// band sits at the WINDOW BOTTOM, under the unified bottom row — the whole
-// interactive stack (rows 1, 3 and 4 since the relayout deleted row 2,
-// rows 5-7, the waveform, the bottom row, and —
-// since the overview strip landed — that strip too) is one
-// contiguous cluster from the window top, and the flexible space is the
-// window's unused foot ("the icons, all the tools, they should be close to
-// the waveform"; the gap opened between the icon row and the trim lane for
-// the ruling's first hours). The architect's bracket for the value: "bigger
-// than the height on the Pi, smaller than the waveform height on my external
-// monitor". At 100% scale the natural heights are 379px on the Pi's 1024x600
-// (600 minus the 170px top strip — 215 until the 2026-08-12 relayout deleted
-// the toolbar row's 45 — and the 51px bottom row) and 859px on the
-// 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped while
-// the 1080p window has 309px of leftover, split by the OVERVIEW STRIP's clamp
-// below (96 overview + 213 blank foot at 100%; on the Pi the strip's minimum
-// comes out of the WAVEFORM instead — the rule at the overview constants —
-// landing the Pi waveform at 355; commit B of the relayout owns any further
-// vertical restack).
+// waveform CLAMPS at this height and the leftover becomes BLANK WINDOW GROUND.
+// WHERE THAT GROUND SITS IS THE RELAYOUT'S COMMIT B (architect-dictated
+// 2026-08-12 at session close): TWO flexible gaps, one under the MENU ROW and
+// one above the UNIFIED BOTTOM ROW, sized so THE WAVEFORM'S VERTICAL MIDPOINT
+// IS THE WINDOW'S ("the labwc titlebar above and the panel below offset each
+// other" — his own reasoning, so the centering is within the app surface with
+// no titlebar arithmetic). The stack is MENU ROW / gap 1 / THE CENTERED BLOCK
+// (tab, icon, OVERVIEW STRIP, trim, ruler, markers, then the WAVEFORM with its
+// own thick bottom border as the block's bottom edge) / gap 2 / THE UNIFIED
+// BOTTOM ROW at the window foot. (The ruling's first hours put the whole
+// flexible space between the icon row and the trim lane; the row unification
+// later that day moved it to the window's foot, under the bottom row and then
+// under the overview strip, and commit B split it in two around the block.)
+//
+// THE VALUE IS 550 -> 500 AT COMMIT B (the same dictation). The architect's
+// standing bracket: "bigger than the height on the Pi, smaller than the
+// waveform height on my external monitor"; his own scaling example at the
+// revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
+// produces by construction. At 100% scale, with the top lanes summing 195
+// (menu 35 + tab 31 + icon 47 + overview 25 + trim 9 + ruler 28 + marker 20)
+// and the bottom row 51: the 1920x1080 monitor's leftover is 834, so the
+// waveform CLAMPS at 500 and the two gaps take 95 (top) + 239 (bottom); the
+// Pi's 1024x600 leftover is 354, UNCLAMPED, and the centering is infeasible
+// there so both gaps floor at 0 and the waveform keeps the whole 354. The full
+// stacks are recorded at main.cpp's vertical block.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
-// strip/waveform geometry owner (bottom_strip_flex_gap / strip_row_rect /
+// strip/waveform geometry owner (the two flex gaps / strip_row_rect /
 // waveform_area, main.cpp); no consumer reads this accessor directly.
-inline constexpr int kWaveformMaxHeightPx = 550;
+inline constexpr int kWaveformMaxHeightPx = 500;
 inline int waveform_max_h_px() {
     return scaled_px(kWaveformMaxHeightPx, 1);
 }
 
-// THE OVERVIEW STRIP'S HEIGHT WINDOW — TWO RULED RETUNABLES (architect-ratified
+// THE OVERVIEW STRIP'S HEIGHT — ONE FIXED TINY LANE (architect-ratified
 // 2026-08-12, his pick from the offered fillers: "the whole song overview
 // strip, yes, that's the best one... that's perfect"; the Ableton model per
 // his own reference, ableton.png in the redesign folder — "a Zoom strip right
 // underneath the transport buttons... it draws a box around the area that you
-// currently view"). The lane sits DIRECTLY UNDER the unified bottom row and
-// shows the WHOLE PIECE as min/max bars with the viewport box and the playhead
-// tick; its plain drag is the dual-axis strip drag (arm_strip_drag_at carries
-// the entry record).
+// currently view"). The lane shows the WHOLE PIECE as min/max bars with the
+// viewport box and the playhead tick; its plain drag is the dual-axis strip
+// drag (arm_strip_drag_at carries the entry record).
 //
-// THE ONE HEIGHT RULE, at the geometry owner (main.cpp's vertical block):
-// overview height = clamp(what the blank foot would have been, min, max) —
-// the leftover past the waveform clamp feeds the overview first and only the
-// excess past kOverviewMaxHeightPx stays blank window ground. When the
-// leftover is short of the MINIMUM the WAVEFORM yields the difference: the
-// minimum is reserved AHEAD of the waveform's natural height, which is what
-// buys the Pi its sliver ("the touchpad could do with a very tiny one now
-// that the bottom two rows are combined... clamp the waveform to just a hair
-// above what it is now or below"). CONVERGENCE RECORDED at the ratification:
-// at 100% the Pi's
-// unclamped waveform was then 334, and reserving the 24px minimum landed it at
-// 310 — "a hair above" the pre-unification 307, the architect's own bracket.
-// (The 2026-08-12 relayout's toolbar-row deletion re-derives the Pi's numbers
-// to 379 natural / 355 with the reserve, and the 1080p leftover to 309 →
-// overview 96, blank foot 213 — the waveform-max block above carries the
-// current stack; commit B owns any further restack.) Both
-// SCALED lengths riding gui_scale like every authored height; the ONE
-// application point is the same geometry owner as the waveform clamp above.
-inline constexpr int kOverviewMaxHeightPx = 96;
-inline constexpr int kOverviewMinHeightPx = 24;
-inline int overview_max_h_px() {
-    return scaled_px(kOverviewMaxHeightPx, 1);
+// ITS HOME IS THE CENTERED BLOCK, between the ICON ROW and the TRIM BAR (the
+// relayout's commit B, the same day: top lane 3). It landed under the unified
+// bottom row for the afternoon and moved up with the restack — the whole
+// interactive block is one cluster and the strip is part of it.
+//
+// ONE CONSTANT, ONE HEIGHT ON BOTH HOSTS (architect, live at commit B: "always
+// the same height, very tiny height in both the laptop and the touch screen").
+// THE PAIR IT SUPERSEDES LIVED ONE DAY: kOverviewMaxHeightPx = 96 /
+// kOverviewMinHeightPx = 24 with the lane's height = clamp(the leftover past
+// the waveform clamp, min, max), the minimum reserved AHEAD of the waveform's
+// natural height so the Pi kept a 24px sliver ("the touchpad could do with a
+// very tiny one now that the bottom two rows are combined") — the clamp, the
+// reserve arithmetic and the blank-foot remainder are all DELETED
+// producer-less, and the waveform's natural height is the plain leftover the
+// two flex gaps share (the waveform-max block above). The surviving 24 is that
+// pair's own minimum, the sliver the Pi already read well.
+//
+// THE CSS BOX MODEL, as every bordered lane takes it (rows 3, 4 and the bottom
+// row): 24 is CONTENT and the 1px border sits OUTSIDE it, so the LANE the strip
+// stack allocates is 25 at 100%. THE BORDER IS ONE LINE, THE LANE'S BOTTOM
+// (architect at commit B: the lane's chrome comes down to "a single pixel
+// border in the same border color" it wore below its old home, where
+// render_canvas gave it 2px kWaveformBorder rows at BOTH ends). The bottom edge
+// is the one that carries it because the ICON ROW ABOVE ALREADY ENDS IN ITS OWN
+// border-bottom, while the TRIM LANE below opens with bare ground — so one line
+// at the seam facing the trim bar is exactly the separation the lane still
+// needs, and a top line would double the icon row's. Both SCALED lengths
+// riding gui_scale like every authored height.
+inline constexpr int kOverviewHeightPx = 24;
+inline constexpr int kOverviewBorderPx = 1;    // border-bottom, the trim side
+inline int overview_lane_border_h_px() {
+    return scaled_px(kOverviewBorderPx, 1);
 }
-inline int overview_min_h_px() {
-    return scaled_px(kOverviewMinHeightPx, 1);
+inline int overview_lane_content_h_px() {
+    return scaled_px(kOverviewHeightPx, 5);
+}
+inline int overview_lane_h_px() {
+    return overview_lane_content_h_px() + overview_lane_border_h_px();
+}
+// The overview lane's CONTENT band — the lane less its ONE border row (above),
+// the band the bars, the viewport box and the cached blit live in. The
+// waveform's own waveform_content_rect cannot serve: that one takes a
+// SYMMETRIC border off both ends, which is the waveform area's chrome and not
+// this lane's. The TICK deliberately reads the whole LANE instead, crossing the
+// border like every 1px position vertical in the product. A degenerate lane
+// (too short to carry the border) passes through unshrunk rather than
+// inverting, waveform_content_rect's own shape.
+inline GuiRect overview_content_rect(GuiRect lane) {
+    const int b = overview_lane_border_h_px();
+    if (lane.h <= b) return lane;
+    return GuiRect{lane.x, lane.y, lane.w, lane.h - b};
 }
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's waveform-side lane, the OVERVIEW STRIP below it since it landed
-// later that day): the transport/arrow buttons on the left, the monospace clock
-// centered, and the status chain (the critical chip + section C) right-aligned,
-// all one line directly under the waveform, with the OVERVIEW STRIP and the
-// window's blank foot below
+// strip's ONLY lane since the relayout's commit B moved the overview strip up
+// into the centered block): the transport/arrow buttons on the left, the
+// monospace clock centered, and the status chain (the critical chip + section C)
+// right-aligned, all one line AT THE WINDOW'S FOOT, with the flexible blank
+// gap 2 between it and the waveform above
 // it. The SUCCESSION: the status line landed as row 7 (2026-08-01, the
 // two-lane bottom strip collapsing to one — its crops keep that name), was
 // renumbered row 9 when the transport row (row 8, 2026-08-11, the touch arc's
@@ -1140,11 +1172,16 @@ inline int overview_min_h_px() {
 // THE CSS BOX MODEL, ONE BORDER: 50 is CONTENT and the 1px border-top sits
 // OUTSIDE it (a 51px lane at 100%), on the WAVEFORM side — row 8's own
 // convention kept (the bottom strip's chrome grows toward the waveform, so
-// the border facing it is the one drawn). Row 9's second border — the
-// near-black window-foot seam — died with the row's window-edge position:
-// the lane's bottom edge meets the OVERVIEW STRIP now (blank window ground
-// for the strip's pre-landing hours), and kRedesignBottomLine
-// went with it (the retirement note is at the row-7 palette block above).
+// the border facing it is the one drawn), and commit B's stack names that same
+// line "the thin border" above the row. Row 9's second border — the near-black
+// window-foot seam kRedesignBottomLine — was retired at the unification, when
+// the lane left the window's edge (the retirement note is at the row-7 palette
+// block above). THE ROW RESTS ON THE WINDOW'S FOOT AGAIN since commit B, so the
+// premise that retired the seam no longer holds — and the seam is deliberately
+// NOT reinstated: commit B's dictation names one thin border for this row, the
+// one above it, and a second line at the window's last row would be a new
+// design decision rather than a consequence of the restack. The constant stays
+// deleted; a reinstatement is a ruling.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
 // gui_scale_factor() like every redesigned row.

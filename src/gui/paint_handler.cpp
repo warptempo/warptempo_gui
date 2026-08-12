@@ -2202,9 +2202,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                   2 * pad_y;
 
     // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the bottom
-    // row's transport/arrow eight, whose lane sits at the bottom of the
-    // interactive stack: below them is only the blank window foot, zero on a
-    // short window, so the hint
+    // row's transport/arrow eight, whose lane rests on the WINDOW'S FOOT since
+    // the relayout's commit B (it was the blank foot's own band before, zero on
+    // a short window): there is nothing below them at all, so the hint
     // hangs upward there, the same box flipped about the button. Then CLAMPED
     // FULLY ON-WINDOW so a
     // button near an edge cannot push it off. The clamp is a pure position fix —
@@ -3755,23 +3755,32 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // overview strip, yes, that's the best one... that's perfect"; the Ableton
 // model per his own reference, ableton.png in the redesign folder: "a Zoom
 // strip right underneath the transport buttons... it draws a box around the
-// area that you currently view"). Bottom lane 0, directly under the unified
-// bottom row; height = the clamped leftover (the vertical rule, main.cpp).
+// area that you currently view"). TOP lane 3 since the relayout's commit B —
+// inside the CENTERED BLOCK, between the ICON ROW and the TRIM BAR — at ONE
+// fixed tiny height on every host (render.h's kOverviewHeightPx owns the ruling
+// and the deleted min/max clamp pair; it was bottom lane 0 under the unified row
+// for the afternoon it landed).
 //
 // FOUR LAYERS, bottom to top, all inside the lane:
-//   1. GROUND + BORDERS: render_canvas whole — the waveform's own chrome
-//      (kWaveformCanvas ground, 2px kWaveformBorder top/bottom rows), reused
-//      rather than resampled because the lane IS a miniature of the waveform
-//      surface and a third ground would be a new color with no crop behind
-//      it. Painted on every frame class, audio or none.
+//   1. GROUND + ONE BORDER, spelled here rather than through render_canvas:
+//      the waveform's kWaveformCanvas ground (reused rather than resampled —
+//      the lane IS a miniature of the waveform surface, and a third ground
+//      would be a new color with no crop behind it) under ONE 1px
+//      kWaveformBorder row at the lane's BOTTOM edge. render_canvas cannot
+//      serve any more: it paints 2px of that border at BOTH ends, which is the
+//      chrome the lane wore below the bottom row, and commit B cut it to the
+//      single line facing the trim bar (the edge choice and the CSS box model
+//      are recorded at the constant). Painted on every frame class, audio or
+//      none.
 //   2. THE BARS (the cached blit; maybe_rebuild_overview_bar_cache below):
 //      the WHOLE PIECE as per-column min/max bars in kWaveformInk, two
 //      channel bands exactly as the plate stacks them. THE DATA IS THE
 //      SOURCE DOMAIN, ALWAYS — a deliberate ruled choice: the whole-song
 //      TARGET domain does not exist as audio (the preview buffer is
 //      trim-scoped), so the overview shows the piece itself in every view
-//      and the BOX does the domain work. Clipped to the content band like
-//      the plate (the border rows survive every frame).
+//      and the BOX does the domain work. Clipped to the lane's content band
+//      (overview_content_rect — the lane less its one border row, which
+//      survives every frame) exactly as the plate clips to the waveform's.
 //   3. THE VIEWPORT BOX: a 1px outline marking the visible span, in
 //      kRedesignLine — the chrome-line class (the tab frame, the row
 //      borders), picked over the playhead white so the lane's one WHITE
@@ -3779,18 +3788,20 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      the viewport's target span maps back to source columns through the
 //      memoized inverse map, so the box may BREATHE NONLINEARLY across a
 //      domain switch or a tempo edit — correct, the map is the truth. Drawn
-//      inside the content band (a box edge on the border rows would vanish
-//      against them); read off the LIVE viewport, which the damage story
+//      inside the content band (a box edge on the border row would vanish
+//      against it); read off the LIVE viewport, which the damage story
 //      keeps within one synchronous-rebuild frame of the plate — at
 //      whole-song scale an async publish window's divergence is under a
 //      column.
 //   4. THE PLAYHEAD TICK: one kPlayheadStem column at the playhead's source
 //      position — the scanner while one is live, the resting cursor
-//      otherwise — full LANE height, crossing the borders like every
+//      otherwise — full LANE height, crossing the border like every
 //      position line (the 1px-verticals convention at
 //      waveform_content_rect). Its per-frame damage is the two scanner
-//      sites' narrow column pair (main.cpp); every discrete write rides
-//      Viewport::invalidate_waveform_area's overview rider.
+//      sites' narrow column pair (main.cpp); every discrete write is covered
+//      by Viewport::invalidate_waveform_area's one rect, which contains this
+//      lane since commit B moved it into the block (that owner's dedicated
+//      overview rider died with the move).
 //
 // INTERACTION lives elsewhere: the plain drag = the dual-axis strip drag
 // (the press claim in input_pointer.cpp; the anchor mapping at
@@ -3830,16 +3841,21 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         cairo_paint(ccr);
         cairo_destroy(ccr);
     }
-    // TWO CHANNEL BANDS, the plate's own stack (stereo is structural), inset
-    // by the BORDER rows alone — the plate's symmetric waveform_inset_px
-    // serves the playhead head's clearance there and would eat a third of the
-    // Pi's 24px lane here, so the bars run the whole content band.
-    const int inset = waveform_border_px();
-    const int split = waveform_channel_split_row(lane.h, inset);
+    // TWO CHANNEL BANDS, the plate's own stack (stereo is structural), filling
+    // the CONTENT band whole — the plate's symmetric waveform_inset_px serves
+    // the playhead head's clearance there and would eat a third of this 24px
+    // lane, so the bars run the whole band. The band is the lane less its ONE
+    // border row (commit B's chrome; the split is computed with a ZERO inset
+    // over that band's height, the channel splitter's own arithmetic — its
+    // symmetric-inset form would take the border off both ends), and the odd
+    // spare row falls at the band's bottom where nothing draws, exactly as in
+    // the plate.
+    const GuiRect band = overview_content_rect(GuiRect{0, 0, lane.w, lane.h});
+    const int split = waveform_channel_split_row(band.h, /*inset_px=*/0);
     const double spp = overview_samples_per_pixel(app, audio);
     if (split >= 0 && spp > 0.0) {
-        const int ch_h = split - inset;
-        const GuiRect ch0{0, inset, lane.w, ch_h};
+        const int ch_h = split;
+        const GuiRect ch0{0, 0, lane.w, ch_h};
         const GuiRect ch1{0, split, lane.w, ch_h};
         // THE BASIS: viewport start 0, the whole piece over the lane's width.
         // THE PYRAMID RUNG IS THE ONE OWNER'S PICK, per column from this spp
@@ -3858,11 +3874,29 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
 }
 
 void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
-    const GuiRect lane = bottom_overview_row_area(app);
+    const GuiRect lane = top_overview_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // Layer 1 — the waveform's own chrome, every frame class.
-    render_canvas(cr, lane.x, lane.y, lane.w, lane.h);
+    // Layer 1 — the waveform's ground under the ONE border row at the lane's
+    // bottom edge (the trim side; the edge choice is at kOverviewHeightPx). One
+    // pass, integer-edged with AA off like render_canvas's own, so ground and
+    // line can never disagree about where the lane ends. Every frame class.
+    {
+        const int b = overview_lane_border_h_px();
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kWaveformCanvas.r, kWaveformCanvas.g,
+                             kWaveformCanvas.b);
+        cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
+        cairo_fill(cr);
+        if (lane.h > b) {
+            cairo_set_source_rgb(cr, kWaveformBorder.r, kWaveformBorder.g,
+                                 kWaveformBorder.b);
+            cairo_rectangle(cr, lane.x, lane.y + lane.h - b, lane.w, b);
+            cairo_fill(cr);
+        }
+        cairo_restore(cr);
+    }
     if (app.loading || audio.total_frames() <= 0) return;
 
     const double spp_ov = overview_samples_per_pixel(app, audio);
@@ -3871,7 +3905,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // Layer 2 — the cached bars, content-band clipped like the plate blit.
     maybe_rebuild_overview_bar_cache(lane);
     if (overview_bar_cache.surface) {
-        const GuiRect content = waveform_content_rect(lane);
+        const GuiRect content = overview_content_rect(lane);
         cairo_save(cr);
         cairo_rectangle(cr, content.x, content.y, content.w, content.h);
         cairo_clip(cr);
@@ -3908,7 +3942,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
             if (x0 > lane.w - 1) x0 = lane.w - 1;
             if (x1 > lane.w) x1 = lane.w;
             if (x1 < x0 + 1) x1 = x0 + 1;   // >=1px: the span is never nothing
-            const GuiRect band = waveform_content_rect(lane);
+            const GuiRect band = overview_content_rect(lane);
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g,
@@ -3930,7 +3964,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // Layer 4 — the playhead tick: the scanner while live (its precise
     // position, the value the waveform scanner paints from), the resting
     // cursor otherwise; through the ONE column owner the damage sites share
-    // (overview_tick_column), full LANE height across the borders.
+    // (overview_tick_column), full LANE height across the border row.
     {
         const double active_pos = app.playhead_scanner_active
             ? app.playhead_scanner_precise
@@ -3952,8 +3986,9 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
-    // into ONE lane directly under the waveform; the arrows moved FLUSH RIGHT
-    // at the same day's relayout): the transport four
+    // into ONE lane — under the waveform then, on the WINDOW'S FOOT since the
+    // same day's relayout commit B, which also moved the arrows FLUSH RIGHT):
+    // the transport four
     // on the left at the icon row's boxes, the monospace clock centred, the
     // STATUS CHAIN right-aligned against the ARROW CLUSTER at the right
     // margin — the critical chip first, then section
@@ -4768,7 +4803,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE FOUR REDESIGNED TOP ROWS AND THE UNIFIED BOTTOM ROW PAINT
+    // THE THREE REDESIGNED TOP BUTTON ROWS, THE UNIFIED BOTTOM ROW AND THE
+    // OVERVIEW STRIP PAINT
     // ON EVERY FRAME
     // CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
@@ -4783,8 +4819,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // Each is gated on its OWN exposure rather than run unconditionally like the
     // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
-    // must not pay for them. Nothing painted after this point touches the four
-    // top lanes (the flag cache is transparent over them, every other pass owns a
+    // must not pay for them. Nothing painted after this point touches the three
+    // top button lanes or the overview strip between the icons and the trim bar
+    // (the flag cache is transparent over them, every other pass owns a
     // lane below them), so painting them first overdraws nothing.
     //
     // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
@@ -4816,14 +4853,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr, audio.sample_rate());
         }
-        // THE OVERVIEW STRIP (bottom lane 0, 2026-08-12), on its own
-        // exposure like its five siblings: the lane's GROUND paints on every
-        // frame class — a lane between the button row and the window foot
-        // must not read as a hole while loading — and the audio-dependent
+        // THE OVERVIEW STRIP (top lane 3 since the relayout's commit B — it was
+        // bottom lane 0 for the afternoon it landed), on its own
+        // exposure like its four siblings: the lane's GROUND paints on every
+        // frame class — a lane inside the centered block must not read as a
+        // hole while loading — and the audio-dependent
         // content (bars / box / tick) gates inside the painter. Cheap off
         // the damage: no text shaping anywhere in the pass, and the bars are
-        // a cached blit.
-        if (rects_intersect(exposed, bottom_overview_row_area(app))) {
+        // a cached blit. Nothing painted later covers it: the passes below own
+        // the trim, ruler and marker lanes under it and the waveform, and the
+        // flag cache's blit spans the whole top strip but is TRANSPARENT
+        // everywhere but the marker lane's boxes.
+        if (rects_intersect(exposed, top_overview_row_area(app))) {
             paint_overview_strip(cr);
         }
     }
@@ -4849,10 +4890,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND its 2px black
         //      top/bottom borders (above, unconditional).
-        //   3. the four redesigned top rows, the unified bottom row (its
+        //   3. the three redesigned top button rows, the unified bottom row (its
         //      chrome, buttons, clock and status chain in one painter) and
-        //      the OVERVIEW STRIP (ground, cached bars, viewport box,
-        //      playhead tick — paint_overview_strip), each
+        //      the OVERVIEW STRIP (ground + its one border row, cached bars,
+        //      viewport box, playhead tick — paint_overview_strip), each
         //      on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
