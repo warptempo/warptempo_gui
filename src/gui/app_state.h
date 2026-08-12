@@ -101,7 +101,17 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // physical finger-distance RATIO (the content tracks the fingers), and it
 // enters Viewport::apply_strip_drag_zoom directly, below the motion body that
 // owns this.
-constexpr double kZoomAccelKneePx = 48.0;
+//
+// THE VALUE, 200.0: the first cut shipped at 48.0 and the architect field-tested
+// it the same day — "a little better, but" not enough. His incidental wrist arc
+// reaches roughly 50 px of vertical travel, and at D = 50 a 48 knee is already
+// giving about three quarters of the plain response (the curve's local slope,
+// (D² + 2Dk)/(D + k)², ≈ 0.76 there) — barely a diminishment where the leak
+// actually lives. A 200 knee passes about 0.36 at the same travel. 200 is his
+// own bracketing pick out of "a hundred or two hundred", deliberately the STRONG
+// end so the A/B against 48 is unmistakable; the knee is under live field
+// calibration, so expect this number to move again.
+constexpr double kZoomAccelKneePx = 200.0;
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
