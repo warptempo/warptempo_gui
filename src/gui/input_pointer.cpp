@@ -1297,19 +1297,21 @@ void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
 
-// THE ZOOM ACCELERATION CURVE, f(D) = D·|D| / (|D| + kZoomAccelKneePx), over the
-// strip drag's signed CUMULATIVE vertical travel D (window px since the arm).
-// Odd in D, so up and down are mirror images; slope 0 at D = 0, so the first few
-// pixels of travel barely move the level; f(D) ≈ D − kZoomAccelKneePx once
-// |D| ≫ knee, so deliberate travel keeps the plain kZoomStripPxPerLevel
-// response less a constant offset. The rationale (a hand pivots at the wrist, so
-// an intended pan leaks incidental vertical travel a linear axis would turn into
-// zoom jitter) and the knee's retunability are at kZoomAccelKneePx, app_state.h.
-// Monotone and continuous, which is what lets its DELTA drive the incremental
-// zoom below.
-static double zoom_travel_response(double travel_px) {
+// THE OFF-AXIS DAMPING RESPONSE, f(D) = D·|D| / (|D| + kOffAxisKneePx), over a
+// classified segment's signed cumulative OFF-AXIS travel D (window px since the
+// segment's classification) — zoom_travel_response's successor, the same f gone
+// off-axis-only under the directional segment stabilization. Odd in D, so both
+// directions are mirror images; slope 0 at D = 0, so slight off-axis wobble
+// barely moves its axis; f(D) ≈ D − kOffAxisKneePx once |D| ≫ knee, so
+// sustained deliberate off-axis travel grows toward the plain response — the
+// axis is DAMPED, NEVER LOCKED, the property that distinguishes this model
+// from the failed first-direction hard lock (the ruling, the segment model and
+// the knee's 48→200→600 calibration succession are at kStripSegmentClassifyPx
+// / kOffAxisKneePx, app_state.h). Monotone and continuous, which is what lets
+// its DELTA drive the incremental axes below.
+static double off_axis_response(double travel_px) {
     const double mag = std::abs(travel_px);
-    return travel_px * mag / (mag + kZoomAccelKneePx);
+    return travel_px * mag / (mag + kOffAxisKneePx);
 }
 
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
@@ -1321,13 +1323,89 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // each event and the edge trick rebinds it when it leaves the screen.
     StripDragState& sd = app.strip_drag;
 
+    // (0) MOTION PAUSE = SEGMENT RESET (the directional segment stabilization —
+    // the model and its three retunables at kStripSegmentClassifyPx,
+    // app_state.h). If the time since the segment's previous motion event
+    // exceeds kStripSegmentPauseMs, FIRST reset the segment — origin = the
+    // previous resting point, mode back to Unclassified — THEN process this
+    // event under the fresh segment. Lazy check only, no timer: a pause is
+    // observed by the next event that follows it. Time base: monotonic_ms(),
+    // the double-click windows' own delivery-time domain (the motion path
+    // carries no protocol timestamp). This is the quick toggle the architect
+    // described — pan, rest a beat, pull down = free zoom — and his natural
+    // pan rhythm (lift hand, carry, re-press) starts fresh segments through
+    // the arm anyway.
+    const int64_t now_ms = monotonic_ms();
+    if (now_ms - sd.last_motion_ms > kStripSegmentPauseMs) {
+        sd.seg_x0 = sd.last_x;
+        sd.seg_y0 = sd.last_y;
+        sd.seg_mode = StripSegmentMode::Unclassified;
+        sd.off_axis_origin = 0.0;
+    }
+    sd.last_motion_ms = now_ms;
+
     // (1) Per-event deltas from the previous motion position. The crossing event
     // folds the whole accumulated delta since the press (last_x/last_y were
-    // seeded there and no sub-threshold event advanced them).
+    // seeded there and no sub-threshold event advanced them). THE MODE FORK
+    // derives the EFFECTIVE deltas: in an Unclassified segment both axes are
+    // plain; in a classified segment the ON-axis is plain and the OFF-axis is
+    // the DELTA of the damping response across this event — D measured from the
+    // off-axis origin set at classification, so the applied displacement is
+    // f(D_new) − f(D_old), soft near the classification point and approaching
+    // 1:1 under sustained off-axis travel (damped, never locked).
+    //
+    // THE WALL CONSEQUENCE FALLS OUT HERE (the architect's first complaint,
+    // stated per the ruling): a Horizontal segment whose pan saturates at a
+    // viewport wall keeps producing motion events (the hand still moves), so
+    // the segment neither reclassifies (classification is once per segment)
+    // nor resets (each event refreshes last_motion_ms), and the zoom leak
+    // stays damped — the zoom level is maintained through the wall. No special
+    // wall arm exists.
     const double dx = static_cast<double>(x - sd.last_x);
     const double dy = static_cast<double>(y - sd.last_y);
+    double effective_dx = dx;
+    double effective_dy = dy;
+    switch (sd.seg_mode) {
+    case StripSegmentMode::Unclassified:
+        break;  // both axes plain — no dead zone at the arm
+    case StripSegmentMode::Horizontal: {
+        // Pan plain; zoom damped over the off-axis travel.
+        const double d_new = static_cast<double>(y) - sd.off_axis_origin;
+        effective_dy = off_axis_response(d_new) - off_axis_response(d_new - dy);
+        break;
+    }
+    case StripSegmentMode::Vertical: {
+        // Zoom plain linear (the pre-curve response); pan damped by the same
+        // f — the ruled symmetry, both axes stabilized.
+        const double d_new = static_cast<double>(x) - sd.off_axis_origin;
+        effective_dx = off_axis_response(d_new) - off_axis_response(d_new - dx);
+        break;
+    }
+    }
     sd.last_x = x;
     sd.last_y = y;
+
+    // CLASSIFICATION, once per segment, AFTER this event's deltas (the
+    // classifying event itself still responds plain — its travel is the
+    // segment's sub-slop opening, tiny by construction): when Chebyshev travel
+    // from the segment origin reaches kStripSegmentClassifyPx, classify on the
+    // 45° diagonal — |Δy| > |Δx| = Vertical, else Horizontal (TIES HORIZONTAL,
+    // the pan-primary bias) — and set the off-axis origin to the CURRENT
+    // off-axis coordinate, so the damping's cumulative D starts at zero here
+    // and the plain→damped transition is continuous, no jump.
+    if (sd.seg_mode == StripSegmentMode::Unclassified) {
+        const double seg_dx = std::abs(static_cast<double>(x - sd.seg_x0));
+        const double seg_dy = std::abs(static_cast<double>(y - sd.seg_y0));
+        if (std::max(seg_dx, seg_dy) >= kStripSegmentClassifyPx) {
+            if (seg_dy > seg_dx) {
+                sd.seg_mode = StripSegmentMode::Vertical;
+                sd.off_axis_origin = static_cast<double>(x);
+            } else {
+                sd.seg_mode = StripSegmentMode::Horizontal;
+                sd.off_axis_origin = static_cast<double>(y);
+            }
+        }
+    }
 
     // (2) The old spp is read from the LIVE level (never stored).
     const double spp_old = current_samples_per_pixel(app, audio);
@@ -1336,7 +1414,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     const int64_t total = live_total_frames(app, audio);
 
     // (3) Pan at the old level, in the double domain: grab sign — drag right
-    // (dx>0) reveals earlier content, so the viewport moves left. The result is
+    // (dx>0) reveals earlier content, so the viewport moves left. The dx that
+    // pans is the mode fork's effective_dx — plain 1:1 in Unclassified and
+    // Horizontal segments, damped in a Vertical one. The result is
     // WALL-CLAMPED here, at the old level, to the SAME right wall the downstream
     // clamp_viewport_start rests at — the shared max_viewport_start_grid owner
     // (the level mid-gesture is the live level, so it reads exactly the state the
@@ -1351,41 +1431,28 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // deliberately NOT reproduced (the sub-pixel residue there self-heals on the
     // following event, exactly as step (5)'s live re-read does — only the WALL had
     // to be exact because the edge rebind is a lasting mutation).
-    double vp = static_cast<double>(app.viewport_start_sample) - dx * spp_old;
+    double vp =
+        static_cast<double>(app.viewport_start_sample) - effective_dx * spp_old;
     const double vp_lo = 0.0;
     const double vp_hi = static_cast<double>(max_viewport_start_grid(app, audio));
     if (vp < vp_lo) vp = vp_lo;
     if (vp > vp_hi) vp = vp_hi;
 
-    // (4) Zoom INCREMENTALLY off the live level, THROUGH THE ACCELERATION CURVE:
-    // this event's dy applies to the current level (drag DOWN, dy>0, lowers the
-    // level → zooms in). No press baseline, so a wall reversal responds
-    // immediately — the older absolute-dy formula had a dead zone after a clamp
-    // (dy had to unwind all the way back before the level moved); this
-    // incremental form has none.
+    // (4) Zoom INCREMENTALLY off the live level: the mode fork's effective_dy
+    // applies to the current level (drag DOWN, dy>0, lowers the level → zooms
+    // in) — plain linear in Unclassified and Vertical segments, damped in a
+    // Horizontal one. No press baseline, so a level-clamp reversal responds
+    // immediately — the older absolute-dy formula had a dead zone after a
+    // clamp (dy had to unwind all the way back before the level moved); this
+    // incremental form has none, and the damped arm keeps it: a monotone
+    // function's delta responds at the LOCAL SLOPE, so the first reversed
+    // event already produces an opposite effective dy. The reversal's RATE in
+    // a damped segment depends on |D| — soft near the classification point,
+    // ~1:1 after long off-axis travel — which is the feature.
     //
-    // The dy that reaches the level is not the raw one: the drag carries its
-    // signed CUMULATIVE vertical travel D since the arm, and the effective dy is
-    // the DELTA OF THE CURVE across this event's step, f(D_new) − f(D_old). Near
-    // the press the curve's slope is ~0, so an intended pan's incidental wrist
-    // arc barely moves the level; after deliberate travel the slope is ~1 and the
-    // response is the plain one (the ruling and the knee are at
-    // kZoomAccelKneePx, app_state.h). The pan axis above is untouched by this and
-    // stays linear.
-    //
-    // THE NO-DEAD-ZONE PROPERTY SURVIVES: a monotone function's delta responds at
-    // the LOCAL SLOPE, so after a wall clamp the first reversed event already
-    // produces a negative effective dy and the level moves on it. The nuance that
-    // changed, honestly: the reversal's RATE now depends on |D| — soft right after
-    // the press, ~1:1 after long travel. That gradient is the feature.
-    //
-    // A dy of 0 leaves D unchanged, so the effective dy is exactly 0 and the pure
-    // pan identity at step (6) is bit-exact rather than nearly so.
-    const double travel_before = sd.zoom_travel_px;
-    const double travel_after  = travel_before + dy;
-    sd.zoom_travel_px = travel_after;
-    const double effective_dy =
-        zoom_travel_response(travel_after) - zoom_travel_response(travel_before);
+    // A dy of 0 makes the damped arm evaluate f at two EQUAL arguments, so the
+    // effective dy is exactly 0.0 and the pure-pan identity at step (6) is
+    // bit-exact rather than nearly so.
     double new_level = app.zoom_level - effective_dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
         W, total, audio.sample_rate());
@@ -1423,19 +1490,27 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
     // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
-    // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — a zero dy leaves the
-    // cumulative travel unchanged, so the curve's delta is exactly zero and
-    // new_level == old, so
-    // apply reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
+    // clamp. IDENTITY PROOFS, argued across the mode fork: PURE PAN (dy=0)
+    // yields an EXACTLY-ZERO zoom delta in EVERY mode — the plain arms
+    // (Unclassified, Vertical) take the raw dy = 0, and the Horizontal damped
+    // arm evaluates f at two EQUAL arguments (D_new = D_new − 0), whose
+    // difference is exactly 0.0 — so new_level == old bit-exact, apply
+    // reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
     // column was derived from that same vp), and the level-unchanged dispatch
-    // takes the same synchronous full rebuild. Off the walls the pan arithmetic
-    // is unchanged, so the identity holds as before; AT a wall the clamped vp
-    // equals the viewport that will rest, the anchor column re-derives against it
-    // consistently, and apply reproduces the wall value — a saturated pan is a
-    // true no-op. Pure zoom (dx=0) leaves the anchor's current (possibly
-    // edge-pinned) column fixed and pivots the rescale around it. A both-unchanged
-    // event (level and viewport identical after the clamp) is a true no-op the
-    // entry point skips.
+    // takes the same synchronous full rebuild. Off the walls the pan
+    // arithmetic is unchanged, so the identity holds as before; AT a wall the
+    // clamped vp equals the viewport that will rest, the anchor column
+    // re-derives against it consistently, and apply reproduces the wall value
+    // — a saturated pan is a true no-op. PURE ZOOM (dx=0) is symmetric: the
+    // plain arms take the raw dx = 0, the Vertical damped arm's equal-argument
+    // delta is exactly 0.0, so effective_dx·spp_old subtracts nothing and vp
+    // is the resting viewport bit-exact — the anchor's current (possibly
+    // edge-pinned) column stays fixed and the rescale pivots around it. The
+    // segment machinery beyond the deltas (the pause reset, the classification,
+    // the off-axis origin) reads and writes only its own record — the anchor
+    // arithmetic, the edge trick and the capture-restore drive never see it. A
+    // both-unchanged event (level and viewport identical after the clamp) is a
+    // true no-op the entry point skips.
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
 }
@@ -1499,6 +1574,13 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     app.strip_drag.last_x  = x;
     app.strip_drag.last_y  = y;
     app.strip_drag.anchor_sample = anchor_sample;
+    // The first directional segment starts here: origin at the press (the
+    // whole-struct reset above already left the mode Unclassified and the
+    // off-axis origin cleared), clock seeded so the first motion event
+    // measures its pause gap from the arm.
+    app.strip_drag.seg_x0 = x;
+    app.strip_drag.seg_y0 = y;
+    app.strip_drag.last_motion_ms = monotonic_ms();
     // ZOOM IS THE GESTURE'S CUE — both entries (the ctrl navigation-surface
     // press and the overview strip's plain press) are exactly the zone map's
     // two Zoom surfaces — so this is
