@@ -1292,7 +1292,7 @@ inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 //
 // THE BPM BRACKET NEEDS NO SUCH RULE, and the symmetry question is answered
 // rather than skipped: format_bpm_bracket_text (warpmarkers.h) is a different
-// composer feeding a different surface — it seeds the BOTTOM-STRIP BpmBracket
+// composer feeding a different surface — it seeds the DIALOG-HOSTED BpmBracket
 // editor and never reaches a flag box — so no budget applies to it and there is
 // nothing to exempt. Only the iter bracket is spliced into flag text.
 inline constexpr size_t kIterBracketDisplayGlyphs = 14;

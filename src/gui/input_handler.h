@@ -1145,9 +1145,10 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
     // True when ANY text editor is consuming printable keys — the settings
-    // editor, the load editor, or the top-strip flag editor in EITHER kind
-    // (unlike modal_dialog_editor_active, which names only the three
-    // BOTTOM-STRIP surfaces and omits the FlagPayload editor). The platform's
+    // editor, the load editor, the commit-title editor, or the top-strip flag
+    // editor in EITHER kind (unlike modal_dialog_editor_active, which names the
+    // four DIALOG-hosted surfaces — those first three plus the flag editor's
+    // BpmBracket kind — and omits the FlagPayload kind). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -1338,7 +1339,7 @@ private:
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source_parent>/renders/<N>_bpm/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
-    // gate; it is now fired by Enter in the bottom-strip BPM editor (after
+    // gate; it is now fired by Enter in the BPM editor (after
     // a successful commit). Returns true if the batch was accepted —
     // dispatched, or (when the worker was busy) parked behind the killed
     // render's drain via kill_running_render_and_park; false on any guard
@@ -2042,7 +2043,8 @@ private:
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
-    // EVERY editor does — the two bottom-strip ones, the bpm bracket, and the
+    // EVERY editor does — the three single-State dialog ones (settings, load,
+    // commit title), the bpm bracket, and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.

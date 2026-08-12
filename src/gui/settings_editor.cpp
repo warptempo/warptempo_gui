@@ -369,7 +369,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // does, the membership stated at the head of input_trim.cpp). It
             // moves the cursor from inside a modal editor, which is accepted
             // for uniformity: a typed commit is a commit, and the editor lives
-            // on the bottom strip while the move is out on the waveform. The
+            // in the centered dialog while the move is out on the waveform. The
             // INACTIVE-band arm below stays out of the rule — it writes a
             // PARKED pair, not the live window, and moves nothing visible.
             input->commit_trim_mutation();

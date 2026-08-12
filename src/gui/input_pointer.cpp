@@ -1651,8 +1651,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
-    // its own fresh candidate (TrimBar / EditorText at a motionless release,
-    // Marker / EmptyLane at the press). One closed instrumentation point — the clear covers
+    // its own fresh candidate (TrimBar / EditorText / EmptyLane at a motionless
+    // RELEASE — the empty lane joined that class 2026-08-12, its press being the
+    // navigation surface's pending click now, so only the release knows it
+    // stayed a click and a pan that crossed the threshold seeds nothing;
+    // Marker at the press). One closed instrumentation point — the clear covers
     // every non-consuming press (a strip/region/trim arm, a modal swallow)
     // without a clear scattered on each path. It sits ABOVE the prompt swallow
     // (2026-08-11), which is what makes the "a modal swallow" clause fully

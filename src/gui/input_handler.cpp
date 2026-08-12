@@ -48,9 +48,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // dwell still counting when `;` opened the settings editor never comes due.
     // (The tooltip cannot come BACK under that modal: the dwell writer refuses to
     // run one while a prompt or a keyboard-modal editor is up — the rule is at
-    // recompute_redesign_button_hover.) The HOVER PILL is deliberately untouched:
-    // a lit face under a modal is the standing accepted cost, a floating second
-    // surface is not.
+    // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
+    // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
+    // input_pointer.cpp) — under a PROMPT every roster face goes dark, and
+    // under an EDITOR dialog every face but the veil-admitted pair (Quit and
+    // Save, the modal trap's reach-through) does, so a modal opened by this key
+    // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
+    // raises no veil and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
     // ANY KEY PRESS ALSO ENDS THE MENU ROW'S MODE, the keyboard half of the same
     // blanket rule at the top of on_button_press. It needs no exception list for
@@ -252,8 +256,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the three
-    // bottom-strip ones (settings, load, and the commit title since
-    // 2026-08-07), the bpm bracket, and the top-strip flag editor
+    // single-State dialog ones (settings, load, and the commit title since
+    // 2026-08-07), the bpm bracket (a dialog too), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
     // (modal_editor_key_blocked); everything else — playback, navigation, zoom,
@@ -267,7 +271,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Modality is about CHORDS only: the wheel still punches through a flag
     // editor (navigation), which rides modal_dialog_editor_active rather
     // than this predicate, and opening a flag editor still does not stop
-    // playback — that one rides no predicate at all, each bottom-strip surface
+    // playback — that one rides no predicate at all, each modal surface
     // spelling its own stop at its open site.
     // Sits after the text-drag gate so an in-flight editor selection drag keeps
     // owning the keyboard exactly as before.
@@ -1030,10 +1034,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `;` opens the settings prompt in the bottom strip. Keyboard-only
-    // (no click analogue). The active-editor block at the top of on_key
-    // routes subsequent keystrokes; opening here just primes the State.
-    // The settings editor is a modal bottom-strip surface, so its open takes the
+    // Bare `;` opens the settings prompt as a centered modal dialog.
+    // Keyboard-only (no click analogue). The active-editor block at the top of
+    // on_key routes subsequent keystrokes; opening here just primes the State.
+    // The settings editor is a modal DIALOG surface, so its open takes the
     // shared modal stop (stop_playback_for_modal_open — the decision table and
     // the flag editor's exemption live at its declaration). THE STOP IS THE
     // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
@@ -1047,14 +1051,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `'` opens the load prompt in the bottom strip: load a chosen
+    // Bare `'` opens the load prompt as a centered modal dialog: load a chosen
     // render in place as the new authoring baseline by NAME — or, while the `h`
     // history mode stands, a COMMIT by its SHA, the editor's other subject
     // (open_load_editor's own branch; the mode admits this one key through
     // history_mode_key_blocked above). TWO PRODUCERS, ONE ROUTE: this key and
     // the icon row's load button, which synthesizes exactly this bare chord
     // through the redesign chord table, so both subjects reach both producers
-    // and no second opener exists. A modal bottom-strip
+    // and no second opener exists. A modal DIALOG
     // surface. open_load_editor owns the no-source / renders-side guards AND
     // the playback stop: playback halts only when the modal actually opens, so a
     // refused open leaves a listening session undisturbed (once open, Space is

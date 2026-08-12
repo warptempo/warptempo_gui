@@ -82,8 +82,9 @@ constexpr int kMaxPendingCharsBpm = 60;
 // This note used to record "running off the right edge while typing — no
 // horizontal scroll" as the settings prompt's accepted behaviour. The FLAG
 // editor grew a view offset when it became the unrolled flag box, because that
-// box is clamped on-window and its text genuinely does not fit; the bottom-strip
-// editors are UNCHANGED and still run off the right edge, deliberately — the
+// box is clamped on-window and its text genuinely does not fit; the DIALOG
+// editors are UNCHANGED and still run off the right edge of their field,
+// deliberately — the
 // feature is scoped to the surface that needed it, not adopted product-wide.
 // See `view_offset_px` below for which side writes it.
 constexpr int kMaxPendingCharsSettings = 1024;

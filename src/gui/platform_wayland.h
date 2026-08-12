@@ -373,6 +373,15 @@ public:
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end);
 
+    // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
+    // Idle. The full rationale (and why Drain's inclusion is harmless) is at
+    // the touch state block below, beside the phases it reads; the ONE
+    // consumer is main.cpp's pre-paint follow chase, which must not page the
+    // song out from under a finger that is aiming or gesturing.
+    bool touch_contact_active() const {
+        return touch_phase_ != TouchPhase::Idle;
+    }
+
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
     // the iteration's FULLY SETTLED state. That placement is the whole point: a
@@ -1102,6 +1111,23 @@ private:
     // and pointer_x_/pointer_y_ on the focused arm — because the translation's
     // END is a MOUSE question ("is the mouse resting in the window, and
     // where"), not a touch delivery to gate.
+    //
+    // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the one thing outside this
+    // layer that reads the phase machine, through touch_contact_active()
+    // above. THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
+    // user is aiming or gesturing, and the autopager must not move the song
+    // under it. It is not a nicety — the window's whole design defers
+    // conversion: a TAP delivers its press+release burst AT THE LIFT carrying
+    // the DOWN point's coordinates (up to kTouchDisambiguateMs later off the
+    // zone, up to kTouchRegionHoldMs on it) and the REGION HOLD converts the
+    // down point at the beat's EXPIRY, so a chase that paged in between would
+    // land the act on whatever frame had slid under that screen column instead
+    // of the frame aimed at. Nothing GUI-side is armed during Pending, so
+    // any_pointer_gesture_active cannot see that window — this query is what
+    // covers it, along with the live translation, Nav, Region and Drain. DRAIN
+    // IS IN BY CONSTRUCTION rather than by need (nothing converts during a
+    // drain): the rule is "any contact down", which needs no phase list to
+    // stay true as phases are added.
     struct wl_touch* wl_touch_ = nullptr;
     enum class TouchPhase { Idle, Pending, Pointer, Nav, Region, Drain };
     TouchPhase touch_phase_       = TouchPhase::Idle;

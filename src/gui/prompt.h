@@ -50,10 +50,12 @@ struct GuiPrompt {
     // lives with the mode's other machinery, at
     // GuiInputHandler::open_history_commit_editor.)
 
-    // Dismiss-only modal error notice in the bottom strip (ERROR_NOTICE).
+    // Dismiss-only modal error notice (ERROR_NOTICE), painted in the CENTERED
+    // MODAL DIALOG like every other prompt since 2026-08-12.
     // `text` is displayed verbatim — callers pass the owner's own error
     // string, unmodified. While active it is modal exactly like the other
-    // prompts: mouse swallowed, keyboard answers; Esc acknowledges.
+    // prompts: the veil swallows every outside press, its one OK button and the
+    // keyboard answer, Esc acknowledges.
     // Covers the environmental and tripwire-class refusals. TWO CALLERS
     // (re-derived by grep 2026-08-09), and both are SYNCHRONOUS REFUSALS of a
     // command the user just gave: the target-view entry gate (its resolve/build

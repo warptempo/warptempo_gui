@@ -234,8 +234,10 @@ namespace {
 // at those accessors' declarations in render.h.
 //
 // The toolbar, tab and icon lanes INCLUDE their 1px border-bottom, and the
-// bottom lane BOTH its borders (the CSS box model: the architect's stated
-// content height excludes its borders, and the lane owns every pixel it paints).
+// UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side, its only border
+// (the CSS box model: the architect's stated content height excludes its
+// borders, and the lane owns every pixel it paints). The OVERVIEW lane below it
+// is border-free.
 constexpr int kTopLaneCount    = 7;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
@@ -276,10 +278,11 @@ int bottom_lane_height(int lane, int win_h) {
     }
 }
 // The UN-GAPPED lane sum — the strip's lanes and their (zero) authored gaps
-// alone. The top strip's public height adds the flexible gap below; this stays
-// the gap computation's own input, which is what keeps the two from being
-// circular (the overview lane's height reads only the FIXED sums, never this
-// function's bottom answer).
+// alone. It IS the top strip's public height (the flexible gap left that end of
+// the stack at the 2026-08-12 row unification); the BOTTOM strip's public
+// height adds the blank foot to this, so this stays the gap computation's own
+// input, which is what keeps the two from being circular (the overview lane's
+// height reads only the FIXED sums, never this function's bottom answer).
 int strip_total_h(bool top_strip, int win_h) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
@@ -2105,7 +2108,39 @@ int main(int argc, char** argv) {
                     GuiRect{ov_lane.x + ov_new, ov_lane.y, 1, ov_lane.h});
             }
         }
-        if (app.follow_mode && !app.follow_overridden_for_session)
+        // THE FOLLOW CHASE NEVER PAGES UNDER A LIVE AIM (the two refusal terms
+        // below). The chase is the product's one AUTONOMOUS viewport mover: it
+        // fires from the clock rather than from an event, and every aiming
+        // gesture converts a WINDOW COLUMN through the CURRENT viewport at some
+        // later moment than the press the user aimed with —
+        //   * the pending nav-surface click (ScrollDragState) converts its
+        //     remembered press_x at the RELEASE, so a page in between would
+        //     place the playhead on whatever frame had slid under that column;
+        //   * the grab-pan's first leg folds the whole press->crossing delta,
+        //     and follow suppression only begins once that first scroll_viewport
+        //     application fires;
+        //   * a live marker / trim / region / strip drag converts each motion's
+        //     window x the same way, so a page mid-drag would teleport the
+        //     dragged subject under a motionless pointer;
+        //   * on glass the conversion is deferred by design — a tap delivers its
+        //     whole burst at the LIFT with the DOWN point's coordinates, and the
+        //     region hold converts the down point at the beat's expiry.
+        // PAUSING THE MOVER is the whole fix: with the chase held, the
+        // press-time viewport stays valid by construction and every existing
+        // conversion is already correct — nothing captures frames at the press
+        // and nothing about the click act, the fold or the session override
+        // moves. This is a PAUSE, not a suppression: it writes nothing, so the
+        // follow producer inventory (follow_overridden_for_session, app_state.h)
+        // is unchanged and the chase simply resumes and catches up on the next
+        // tick after the gesture ends — including after a lost button or a
+        // force-end that ran no act at all. A long motionless HOLD therefore
+        // visibly freezes the chase for as long as it is held, which is the
+        // intended reading: the user is aiming.
+        // The touch term is the platform's (touch_contact_active — any finger
+        // down), because nothing GUI-side is armed during the disambiguation
+        // window; the contract is at the touch state block, platform_wayland.h.
+        if (app.follow_mode && !app.follow_overridden_for_session &&
+            !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });
 

@@ -136,7 +136,7 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     // closes it, input_pointer.cpp) — the keyboard flips are edge-damaged at
     // handle_top_flag_editor_key, and the two overlap harmlessly on Esc/Ctrl+Q.
     // (Kind-exact: this teardown serves the BPM bracket session too, and that
-    // editor's flash is a bottom-strip fact with no stem behind it.)
+    // editor's flash recolors the modal dialog's FIELD, with no stem behind it.)
     if (app.top_flag_editor.red &&
         app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
         viewport.invalidate_waveform_area();
@@ -612,11 +612,12 @@ void GuiFlagEditor::wipe_bpm_state() {
     }
 }
 
-// Open the bottom-strip BPM editor on `idx`. Seed pending is the
+// Open the BPM editor on `idx` — a centered modal dialog since 2026-08-12.
+// Seed pending is the
 // current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
-// swaps to digits + `@`/`,`/`[`/`]`; the bottom-strip paint branch supplies
-// the visible "BPM: " prefix (kBpmEditorPrefix, paint_handler.h), so the
+// swaps to digits + `@`/`,`/`[`/`]`; the dialog painter supplies the visible
+// "BPM: " LABEL beside the field (kBpmEditorPrefix, paint_handler.h), so the
 // editor's locked_prefix stays "".
 void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
@@ -746,7 +747,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
 // auto-select an endpoint cue. The full section gate (non-empty, contiguous,
 // ref-free) lives in the `m` handler; this route re-checks only that at least
 // one marker is selected and the owner is eligible. The `m` handler calls this
-// and then opens the bottom-strip BPM editor on the owner.
+// and then opens the BPM editor on the owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;
@@ -796,7 +797,8 @@ void GuiFlagEditor::enter_bpm_mode() {
 // The single bpm-mode-off chokepoint: every route that turns bpm mode off
 // funnels here. Wipes the session-only bpm state (mode exit IS the clear, so
 // no marker carries bpm state once the mode is down) and repaints both the
-// top strip and the bottom strip the bpm editor drew on.
+// top strip and the status row — whose damage owner carries the modal dialog's
+// stashed box as a rider, which is what covers the bpm editor's own pixels.
 void GuiFlagEditor::exit_bpm_mode() {
     if (!app.bpm_mode_enabled) return;
     app.bpm_mode_enabled = false;

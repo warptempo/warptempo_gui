@@ -619,8 +619,9 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and the bottom strip's modal span gives its line back. Narrow
-    // damage would have to know all three, and none of them is worth a rect. It
+    // with it, and the bottom row's status corner rewrites its `n/N shortsha`.
+    // Narrow damage would have to know all three, and none of them is worth a
+    // rect. It
     // covers the restore's and the republication's own damage too, which is why
     // both above emit theirs and nothing here has to widen for them.
     viewport.invalidate_all();
@@ -4904,7 +4905,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // Top-flag editor key routing. See the declaration for the consumed/command
 // contract. BOTH kinds take the shared modal route (architect 2026-07-28) and
 // differ only in their commit / cancel bodies and their repaint area: the bpm
-// bracket editor draws in the BOTTOM strip (like the settings editor) and
+// bracket editor draws in the CENTERED MODAL DIALOG (like the settings editor;
+// its damage rides the status row's dialog rider) and
 // commits into a render sweep, the FlagPayload editor draws in the TOP strip
 // and commits the flag's own payload. Neither passes a bare-Tab hook, and bare
 // Tab never reaches this route for either — the on_key gate swallows it first.

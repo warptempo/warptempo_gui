@@ -705,7 +705,12 @@ struct StripDragState {
 //     dissolve, playhead to the column, live-playback reseek, follow override
 //     (run_nav_click_act, input_pointer.cpp). Playback state is read AT the
 //     release — the press touched nothing, so the readings agree, and a
-//     session that ended naturally under the hold is answered honestly;
+//     session that ended naturally under the hold is answered honestly.
+//     THE PRESS COLUMN STAYS THE COLUMN THE USER AIMED AT because the FOLLOW
+//     CHASE IS PAUSED for the press's whole life — the pre-paint gate refuses
+//     under any live pointer gesture (this pending included) and under any
+//     touch contact, so no autopager can slide the song beneath a held
+//     column between the press and the release that converts it (main.cpp);
 //   * CROSSING the threshold is the GRAB-PAN, the alt+drag machinery whole:
 //     the pointer CAPTURE begins at the crossing (begin_strip_pointer_capture
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
@@ -1949,14 +1954,16 @@ struct AppState {
     // bounds), and on file load.
     TrimDragState trim_drag;
 
-    // Ctrl-exact left-drag on the waveform (dual-axis zoom/pan navigation).
-    // Cleared on button release and file load.
+    // The dual-axis zoom/pan navigation drag, from either of its two entries
+    // (the contract and the entries are at StripDragState). Cleared on button
+    // release and file load.
     StripDragState strip_drag;
 
     // Double-click candidate, shared by the trim-bar, flag, empty-lane and
     // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
-    // motionless press-release (or, for Marker / EmptyLane, at the press);
-    // cleared on file load and when the double-click action fires.
+    // motionless press-release (or, for Marker alone, at the press — the
+    // per-surface rule is at DoubleClickSurface); cleared on file load and when
+    // the double-click action fires.
     DoubleClickCandidate double_click;
 
     // The trim-bar framing double-click's press record (see TrimBarPressSeed).
@@ -2443,8 +2450,9 @@ struct AppState {
     // that commit had and the session dropped, and ONE DOUBLE-WIDTH flag per
     // same-frame pair (red half then, green half now). The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
-    // marker stands exactly where it stood. The bottom strip's modal span
-    // carries the commit's position, its short SHA and its `scale=` value.
+    // marker stands exactly where it stood. The bottom row's right-aligned
+    // status corner (section C) carries the commit's position, its short SHA
+    // and its `scale=` value.
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
     // load-in-place gate itself — each candidate commit's three sidecars must
@@ -2637,8 +2645,9 @@ struct AppState {
     // keyboard-modal editor gate sits above them in on_key, and any pointer
     // press outside the editor's own text-drag reach is the editor's to swallow
     // — so `h`, `,` and `.` TYPE into the buffer rather than stepping the walk,
-    // and the mode's bottom-strip line yields its cell to the editor for the
-    // life of the edit.
+    // and the mode's status corner KEEPS its cell throughout (2026-08-12: the
+    // editor is a centered DIALOG painted over the row, not a tenant of it, so
+    // there is no line to yield).
     //
     // THE OTHER ADMITTED MUTATOR IS Ctrl+S, AND IT WRITES OUTSIDE THIS
     // SESSION (architect 2026-08-04, REHOMED FROM Ctrl+Alt+R 2026-08-08): while
@@ -3333,29 +3342,30 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // Bottom-strip command prompt. Active only when a close / re-detect
-    // gesture fires while a confirmation is required. Originally
-    // a centered modal dialog; the same modal semantics now live in the
-    // bottom strip.
+    // The command prompt, a CENTERED MODAL DIALOG (paint_modal_dialog, 2026-08-12
+    // — one box painted last over an inert window, its responses real buttons;
+    // the bottom strip's own prompt line is retired). Active only when a
+    // close / re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
     // Shared text-editor state for two editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
-    // marker's own box, which the flag pass therefore skips) and the
-    // bottom-strip BPM editor (Kind::BpmBracket). The editor
+    // marker's own box, which the flag pass therefore skips) and the BPM editor
+    // (Kind::BpmBracket), which paints in the CENTERED MODAL DIALOG like the
+    // other three dialog editors (2026-08-12). The editor
     // owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
     // invalidate the top strip without redundant repaints.
     bool top_flag_editor_blink_last = false;
 
-    // Settings-prompt editor. Opens on `:`, accepts a single `key=value`
-    // line, writes to engine_settings on commit. Lives in the bottom
-    // strip; separate from top_flag_editor so the two paint regions stay
-    // independent (the in-practice mutual exclusion comes from the flag
-    // editor swallowing all keys while active).
+    // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
+    // line, writes to engine_settings on commit. Paints in the CENTERED MODAL
+    // DIALOG (2026-08-12); separate from top_flag_editor so the two paint
+    // regions stay independent (the in-practice mutual exclusion comes from the
+    // flag editor swallowing all keys while active).
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
@@ -3608,12 +3618,18 @@ GuiRect top_icon_row_area(const AppState& a);
 // chip / marker-text / flag / triangle four.
 GuiRect top_trim_row_area(const AppState& a);
 GuiRect top_ruler_row_area(const AppState& a);
-// (top_trim_surface_area — the trim surface arc's merged trim-bar + ruler
-// input band — lived between these accessors for one day, 2026-08-11..12, and
-// was deleted whole with the arc's revert: the two lanes are separate input
-// surfaces, the trim bar carrying its own gestures and the ruler the region
-// former — since 2026-08-12, when the ruler's restored strip-drag entry was
-// deleted for good.)
+// THE TWO LANES ARE SEPARATE INPUT SURFACES, and they answer differently: the
+// TRIM BAR carries its own gestures (endcap / bridge drags, the ctrl and
+// ctrl+shift bound-set clicks, the span-framing double-click), while the RULER
+// is a member of the NAVIGATION SURFACE since 2026-08-12's eighth glass ruling
+// — plain drag is the pending click / grab-pan, a motionless plain click the
+// deferred playhead placement, SHIFT the one region former, CTRL the dual-axis
+// strip drag. (Its own dedicated strip-drag entry and the ruler-scoped region
+// former it briefly carried are both gone: the entry was deleted for good
+// earlier that day, and the former lived half a day before the ruling folded
+// the ruler into the one vocabulary. top_trim_surface_area — the trim surface
+// arc's merged trim-bar + ruler input band — lived between these accessors for
+// one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
 // strip's waveform-side lane (bottom lane 1), flush under the waveform — the
@@ -3700,12 +3716,14 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FIVE CONSUMERS, re-derived 2026-08-12 at the eighth ruling's touch half
-// (the ruling's mouse half had left FOUR, deleting the
-// bare right-press scrub's gate; the timer-free touch
-// model had deleted begin_touch_trim_move the same day), each stating the same
-// "nothing pops mid-gesture" boundary from its own side — and EVERY ONE OF THEM
-// IS AN INPUT ROUTE, which is the shape this predicate is for:
+// SIX CONSUMERS, re-derived by grep 2026-08-12 (the follow chase joined; the
+// eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the
+// bare right-press scrub's gate — and the timer-free touch model had deleted
+// begin_touch_trim_move the same day). EACH STATES THE SAME
+// "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
+// two kinds: the four INPUT-ROUTE consumers refuse events, and the run loop's
+// TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
+// world's autonomous movers for the gesture's life:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
 //     the platform's per-frame sub-detent accumulator probe both route through
 //     it, so a wheel cannot shift the viewport out from under a gesture (the
@@ -3713,8 +3731,6 @@ inline int64_t snap_authored_frame(double frame) {
 //     before its drag begins either);
 //   * repeat_eligible (input_key_dispatch.cpp) — a key held through a gesture
 //     must not arm a repeat that fires once the gesture ends;
-//   * the run loop's per-tick redesign-button hover refresh (main.cpp) — an
-//     active gesture FREEZES hover;
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
@@ -3723,12 +3739,21 @@ inline int64_t snap_authored_frame(double frame) {
 //     touch half) — the region hold bypasses the press path, so it restates
 //     the same no-second-writer boundary the press claims inherit by
 //     ordering (the dead begin_touch_trim_move's own reading, revived with
-//     the hook pattern).
-// (A SIXTH CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
+//     the hook pattern);
+//   * the run loop's per-tick redesign-button hover refresh (main.cpp) — an
+//     active gesture FREEZES hover;
+//   * the run loop's PRE-PAINT FOLLOW CHASE (main.cpp) — the autopager is the
+//     product's one autonomous viewport mover, and every aiming gesture
+//     converts a window column through the CURRENT viewport later than the
+//     press it was aimed with, so the chase is PAUSED (it writes nothing here,
+//     so this is no follow producer) for the gesture's whole life. Its touch
+//     sibling term is the platform's own contact query, the Pending window
+//     arming nothing this predicate can see; the argument is at the gate.
+// (A CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
 // acknowledge modal, which asked this before raising itself from a worker's
 // clock, a prompt over a live gesture having its release swallowed at the
 // prompt's own gate. It went with the modal, which became a paint-only slot.
-// Nothing outside the input layer asks this question now.)
+// Nothing ASYNCHRONOUS asks this question now.)
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
