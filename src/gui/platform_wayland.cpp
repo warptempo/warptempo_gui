@@ -2877,7 +2877,8 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // any queued motion. Shared by all three pointer resolutions (the slop
     // crossing reaches here only OUTSIDE the pan zone — its pan-surface arm
     // resolves to single-finger nav instead, the phone model's fork at the
-    // Pending motion site); the tap's caller
+    // Pending motion site — and the expiry only OFF the trim band, whose beat
+    // expiry resolves to the trim move instead); the tap's caller
     // delivers the release and the focus-forked translation end itself
     // (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;
@@ -3082,7 +3083,9 @@ void GuiPlatform::deliver_touch_translation_end() {
 
 void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                                 int32_t id, int32_t fx, int32_t fy) {
-    maybe_resolve_touch_window();   // an event past the deadline sees Pointer
+    // An event past the deadline sees the resolved phase (Pointer — or
+    // TrimMove on the band's beat; the fork lives in the resolver).
+    maybe_resolve_touch_window();
     ++touch_point_count_;
     const double x = wl_fixed_to_double(fx);
     const double y = wl_fixed_to_double(fy);

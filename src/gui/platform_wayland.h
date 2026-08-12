@@ -891,8 +891,9 @@ private:
     //     hold-a-beat's own deadline: the band's expiry is a gesture in its
     //     own right, and riding the 60 ms mark made the "hold" shorter than
     //     an aimed drag's natural dwell — the constants block's record). It
-    //     resolves to Pointer on expiry or on the finger lifting inside it
-    //     (a tap); on
+    //     resolves to Pointer on the finger lifting inside it (a tap) and on
+    //     expiry — except the band's beat expiry, which resolves to TrimMove
+    //     (the EXPIRY clause below); on
     //     MOTION beyond kTouchSlopPx it FORKS on the down point's captured
     //     pan-zone answer (the PHONE MODEL, second glass session 2026-08-11):
     //     inside the pan surface -> SINGLE-FINGER Nav (the finger drags the
@@ -1418,7 +1419,9 @@ private:
     // Resolve the Pending disambiguation window to the POINTER translation:
     // deliver the synthesized enter-motion at the ORIGINAL down point, the
     // left press there (on the logical OR's 0->1 edge), then any queued
-    // motion. Shared by the three pointer resolutions — expiry, the slop
+    // motion. Shared by the three pointer resolutions — the off-band expiry
+    // (the band's beat expiry takes resolve_touch_window_to_trim_move below
+    // instead), the slop
     // crossing's outside-the-pan-zone arm (its pan-surface arm takes
     // resolve_touch_window_to_single_nav below instead), and
     // the tap (whose caller then delivers the release + the translation end

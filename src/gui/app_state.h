@@ -617,9 +617,15 @@ struct PendingTrimDrag {
     bool set_begin_bound_on_release = false;
 };
 
-// Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
-// Drag once the plain trim-bar press crosses the threshold — an endcap-rect hit
-// drags one bound, the inter-endcap bridge drags the pair. Parallel to DragState
+// Trim boundary drag (the live trim gesture, whatever drives it). Begun by
+// begin_trim_drag from TWO entry kinds: a PendingTrimDrag whose press crossed
+// the threshold — an endcap-rect hit or a bound-set arm drags one bound, the
+// ALT bridge press drags the pair; the caller roster lives at
+// route_trim_bar_press's header (input_trim.cpp), and the ctrl IN-SPAN
+// deferred-click pending instead DISARMS at the crossing (the flag above) —
+// and the TOUCH HOLD's trim move, which enters begin_trim_drag DIRECTLY with
+// no pending at all (the band's held beat already disambiguated;
+// begin_touch_trim_move, input_trim.cpp). Parallel to DragState
 // but motion mutates the active tab's live trim mirror directly (no overlay);
 // release triggers a target render when the bound moved. Trim is excluded from
 // undo/redo. Session-only.
