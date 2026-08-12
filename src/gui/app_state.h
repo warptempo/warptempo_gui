@@ -556,14 +556,17 @@ struct PendingMarkerDrag {
 // marker_drag.h. So the reposition drag above is the ONLY pointer marker gesture,
 // and W+target has no pointer authoring gesture at all.)
 
-// Pending trim cap/bridge drag. THREE ARMS since the trim surface arc
-// (2026-08-11, the ruler merged into the trim surface): a PLAIN left press on
-// an ENDCAP rect anywhere in the merged band (top_trim_surface_area — the
-// plain press's only trim claim now, the rest of the band being the region
-// former's), a CTRL-exact press inside the inter-cap BRIDGE span (the bridge
-// drag's new home — displaced off the plain press when that press became the
-// region draw; `set_begin_bound_on_release` below is that arm's deferred
-// click), and the ctrl / ctrl+shift bound-set clicks outside the span, which
+// Pending trim cap/bridge drag. FOUR ARMS since the fourth glass session
+// (2026-08-11, the bridge drag's modifier swapped ctrl -> alt): a PLAIN left
+// press on an ENDCAP rect anywhere in the merged band (top_trim_surface_area
+// — the plain press's only trim claim now, the rest of the band being the
+// region former's), an ALT-exact press inside the inter-cap BRIDGE span (the
+// bridge drag's home — displaced off the plain press to ctrl+drag at the
+// third glass session and onto ALT+DRAG at the fourth, the architect's
+// vocabulary ruling: ctrl = zoom, alt = move/pan), a CTRL-exact press inside
+// that same span (`set_begin_bound_on_release` below — the deferral vehicle
+// for the ctrl+CLICK's BEGIN set, and nothing else since the drag left ctrl),
+// and the ctrl / ctrl+shift bound-set clicks outside the span, which
 // still arm the single-bound drag on the bound they just set.
 // The trim sibling of PendingMarkerDrag: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
@@ -573,7 +576,7 @@ struct PendingMarkerDrag {
 // publishing the trim window as a region highlight — and that publish is retired
 // with the SPAN FORM, so the click stops nothing, deselects nothing and commits
 // nothing on BOTH end paths (clean release and lost button) — EXCEPT the ctrl
-// bridge arm's deferred bound-set, whose clean release IS the ctrl+CLICK (the
+// in-span arm's deferred bound-set, whose clean release IS the ctrl+CLICK (the
 // flag's own comment below). The DRAG carries the
 // setter's deselect and the trim-mutation stop at its first accepted bound
 // change. Deferring begin_trim_drag to the crossing keeps
@@ -599,16 +602,18 @@ struct PendingTrimDrag {
     bool both     = false;  // the inter-endcap bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
-    // THE CTRL BRIDGE ARM'S DEFERRED CLICK (2026-08-11, the trim surface arc):
-    // the bridge drag moved from the plain press to CTRL+DRAG, and ctrl+CLICK
-    // is the BEGIN bound-set — so a ctrl press inside the bridge span cannot
-    // set at press time (the set would fire on every bridge grab) and defers
-    // to the MOTIONLESS RELEASE instead, exactly how the band's other arms
-    // tell a click from a drag. This flag marks that pending: a clean
-    // sub-threshold release runs set_trim_bound_at_click(begin) at the press
-    // column; a crossing becomes the bridge drag and the click never was; a
-    // LOST button or a force-end merely disarms — not a clean click, so the
-    // deferred set does not fire (the trim-bar seed's own rule).
+    // THE CTRL IN-SPAN ARM'S DEFERRED CLICK (2026-08-11, the trim surface
+    // arc; the drag half left at the fourth glass session): ctrl+CLICK inside
+    // the bridge span is the BEGIN bound-set, deferred to the MOTIONLESS
+    // RELEASE — an at-press set would have fired on every bridge grab while
+    // the bridge drag lived on ctrl, and the deferral is KEPT across the
+    // drag's move to ALT so the click's observable shape never changed. This
+    // flag marks that pending: a clean sub-threshold release runs
+    // set_trim_bound_at_click(begin) at the press column; a threshold
+    // CROSSING now merely DISARMS — the drag this pending used to become is
+    // ALT+DRAG's, so a moved ctrl press is not a click and sets nothing — and
+    // a LOST button or a force-end disarms the same way (not a clean click,
+    // the trim-bar seed's own rule).
     bool set_begin_bound_on_release = false;
 };
 
@@ -3564,7 +3569,8 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FIVE CONSUMERS, re-derived by grep 2026-08-09, each stating the same
+// SIX CONSUMERS, re-derived 2026-08-11 (the fourth glass session added the
+// last), each stating the same
 // "nothing pops mid-gesture" boundary from its own side — and EVERY ONE OF THEM
 // IS AN INPUT ROUTE, which is the shape this predicate is for:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
@@ -3582,7 +3588,11 @@ inline int64_t snap_authored_frame(double frame) {
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
-//     contract is at pointer_cursor_kind's declaration, input_handler.h).
+//     contract is at pointer_cursor_kind's declaration, input_handler.h);
+//   * begin_touch_trim_move's refusal list (input_trim.cpp, 2026-08-11 — the
+//     fourth glass session): the touch hold-a-beat trim move drives the trim
+//     drag directly, bypassing on_button_press, so its begin restates this
+//     boundary itself — a second writer must not tear a live gesture.
 // (A SIXTH CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
 // acknowledge modal, which asked this before raising itself from a worker's
 // clock, a prompt over a live gesture having its release swallowed at the
@@ -4943,20 +4953,25 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
 // point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP
 // BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
 // handle? The endcap test's twin, and it is a shared owner for the same reason:
-// TWO consumers ask this question and they must not answer it differently — the
-// CTRL-exact band press (the bridge drag's home since the trim surface arc,
-// 2026-08-11, when it was displaced off the plain press; the arm is in
-// on_button_press's ctrl branch) and the pointer cursor's zone map
+// THREE consumers ask this question and they must not answer it differently —
+// the ALT-exact band press (the bridge drag's home since the fourth glass
+// session, 2026-08-11: displaced off the plain press to ctrl+drag at the
+// third and onto ALT+DRAG at the fourth — the architect's vocabulary ruling,
+// ctrl = zoom, alt = move/pan; the arm is in on_button_press's alt branch),
+// the CTRL-exact band press (the in-span deferred BEGIN set's geometry — its
+// arm defers the click where the bridge drag once had to stay possible, and
+// keeps the deferral) and the pointer cursor's zone map
 // (pointer_cursor_kind, which shows the
-// bridge's TrimResize cue under ctrl on a true). It was the plain-press
+// bridge's TrimResize cue under alt on a true). It was the plain-press
 // router's own inline body until
 // the cursor needed the same verdict; hoisting it whole was the alternative to a
 // second copy of the column math.
 //
 // The y-gate is top_trim_surface_area — the MERGED band (trim bar + ruler +
 // their gap, 2026-08-11), the same band hit_test_trim_endcap
-// gates on: the strictly-inside COLUMN geometry survives the displacement
-// unchanged, only the modifier and the band height moved. The interval is trim_bridge_gap (render.h — the one owner the
+// gates on: the strictly-inside COLUMN geometry has survived every
+// displacement unchanged — only the modifier and the band height ever moved.
+// The interval is trim_bridge_gap (render.h — the one owner the
 // painter's midpoint mark also fits against) over the two bounds'
 // TrimBoundColumns on the DISPLAYED basis (item_viewport_basis +
 // displayed_trim_ms through displayed_or_live_target_map), which is the exact

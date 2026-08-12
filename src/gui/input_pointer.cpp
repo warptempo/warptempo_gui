@@ -1005,32 +1005,36 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     const bool trim_write_gestures_live =
         in_trim_surface && !app.history_mode.active;
 
-    // ALT-EXACT: the captured grab-pan, whose press arms on `inside_waveform`
-    // alone — either half, no band split. Alt claims nothing at all in the top
-    // strip (an alt press there is a strict consumed no-op), so the cue stops at
-    // the waveform's edge.
-    if (mods.alt && !mods.ctrl && !mods.shift)
+    // ALT-EXACT: two claims since the fourth glass session (2026-08-11, the
+    // architect's vocabulary ruling — ctrl = zoom, ALT = move/pan). Over the
+    // MERGED TRIM SURFACE's inter-cap BRIDGE span alt is the BRIDGE (pair)
+    // drag — ALT+DRAG MOVES THE TRIM WINDOW — so the span answers the
+    // bridge's own TrimResize (the cue names the DRAG the hold promises);
+    // the modifier swapped off ctrl, the geometry test unchanged. Over the
+    // waveform alt is the captured grab-pan, `inside_waveform` alone — either
+    // half, no band split. Everywhere else alt claims nothing and shows the
+    // Arrow.
+    if (mods.alt && !mods.ctrl && !mods.shift) {
+        if (trim_write_gestures_live &&
+            point_in_trim_bridge_span(app, audio, x, y))
+            return GuiCursorKind::TrimResize;
         return inside_waveform ? GuiCursorKind::Pan : GuiCursorKind::Arrow;
-    // CTRL-EXACT: two claims, and the press path's own order between them. Over
-    // the MERGED TRIM SURFACE ctrl is trim-bound vocabulary in TWO shapes
-    // since the trim surface arc (2026-08-11): inside the inter-cap BRIDGE
-    // span it is the BRIDGE (pair) drag — displaced here off the plain press,
-    // which draws the region now — so the span answers the bridge's own
-    // TrimResize (the ctrl+CLICK bound-set that shares the span acts only on
-    // a motionless release, and the cue names the DRAG the hold promises, the
-    // set-then-arm precedent read the other way); off the span ctrl sets the
-    // BEGIN bound and arms a single-bound drag on it
-    // (set_trim_bound_at_click_then_arm_drag) — boundary extension by another
-    // route, so it takes the BEGIN cap's own cue where the click would act and
-    // the Arrow where the strictly-inside guard would consume it. Over the
+    }
+    // CTRL-EXACT: two claims, and the press path's own order between them.
+    // Over the MERGED TRIM SURFACE ctrl is the BOUND-SET PAIR'S vocabulary
+    // alone since the bridge drag moved to alt (the fourth glass session,
+    // 2026-08-11): the BEGIN set — deferred to the motionless release inside
+    // the bridge span, at-press-then-arm off it, ONE cue for both shapes —
+    // so the band answers the BEGIN cap's own cue where the click would act
+    // and the Arrow where the strictly-inside guard would consume it (the
+    // in-span deferral changes no answer: an in-span column is strictly
+    // inside by geometry). Over the
     // waveform it is the dual-axis strip drag, `inside_waveform` alone —
     // the gesture's ONE entry since the ruler's zoom arm died with the merge.
     // Ctrl's other top-strip claim is the marker membership toggle, which is
     // not a drag and has no cue.
     if (mods.ctrl && !mods.alt && !mods.shift) {
         if (trim_write_gestures_live) {
-            if (point_in_trim_bridge_span(app, audio, x, y))
-                return GuiCursorKind::TrimResize;
             return trim_bound_click_frame(/*is_begin=*/true, x)
                        ? GuiCursorKind::TrimBoundBegin : GuiCursorKind::Arrow;
         }
@@ -1361,6 +1365,15 @@ void GuiInputHandler::end_touch_nav() {
 // geometry only, on the tree's one containment convention.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     return rect_contains(waveform_area(app), x, y);
+}
+
+// The trim-band zone query's body (the fourth glass session, 2026-08-11;
+// contract at the declaration): the merged trim surface, geometry only —
+// the same one accessor every trim gesture reads, so the touch hold and the
+// pointer arms agree on the band by construction. Refusals stay in
+// begin_touch_trim_move, the pan-zone split exactly.
+bool GuiInputHandler::touch_point_in_trim_band_zone(int x, int y) const {
+    return rect_contains(top_trim_surface_area(app), x, y);
 }
 
 // The flag editor's guard-free close, shared by the left and right press arms
@@ -2121,12 +2134,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (!inside_waveform && !inside_top) return;
 
         // Alt-exact left press: on the waveform it arms the captured grab-pan;
-        // alt-exact anywhere else (a top-strip marker included) does nothing
-        // further HERE — the land now lives on the PLAIN marker click below.
-        // On a markerless (or top-strip) spot that "nothing" is a STRICT no-op,
-        // playback included: alt claims no top-strip gesture, so no stop runs
-        // over it and a live audition keeps playing; alt+drag from a marker is
-        // inert by ruling.
+        // on the MERGED TRIM SURFACE's inter-cap BRIDGE span it arms the
+        // BRIDGE (pair) drag — ALT+DRAG MOVES THE TRIM WINDOW since the
+        // fourth glass session (architect 2026-08-11, his vocabulary ruling:
+        // ctrl = zoom, ALT = move/pan — alt-drag pans the waveform, so
+        // alt-drag MOVES the trim window; the drag lived one session on
+        // ctrl+drag, whose motionless-release BEGIN set stays ctrl's,
+        // untouched below). Alt-exact anywhere else (a top-strip marker
+        // included) does nothing further HERE — the land now lives on the
+        // PLAIN marker click below. On a markerless off-span spot that
+        // "nothing" is a STRICT no-op, playback included: alt claims no other
+        // top-strip gesture, so no stop runs over it and a live audition
+        // keeps playing; alt+drag from a marker is inert by ruling.
         //
         // The waveform grab-pan: continuous 1:1 pan of the viewport by the
         // per-event pixel delta (see on_motion). It CAPTURES the pointer
@@ -2141,6 +2160,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // gestures. A motionless Alt press-release commits nothing but the brief
         // cursor hide/reappear (the scroll happens on motion).
         if (alt && !ctrl && !shift) {
+            // THE BRIDGE (pair) DRAG — alt's one top-strip claim (2026-08-11,
+            // the modifier swapped off ctrl at the fourth glass session):
+            // inside the inter-cap span, arm the same pending an endcap press
+            // arms (both=true; point_in_trim_bridge_span self-gates on the
+            // merged band's y). Nothing mutates until the threshold — a
+            // motionless alt release is a consumed nothing (the pending's
+            // release arm disarms; alt carries NO deferred click, the BEGIN
+            // set staying ctrl's own vocabulary). No stop here — the drag
+            // stops at its first accepted bound change, like every trim drag.
+            if (inside_top) {
+                if (point_in_trim_bridge_span(app, audio, x, y)) {
+                    arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
+                                          x, y);
+                }
+                return;
+            }
             if (inside_waveform) {
                 app.scroll_drag = ScrollDragState{};
                 app.scroll_drag.active = true;
@@ -2227,29 +2262,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Markerless top-strip ctrl-exact press: the MERGED TRIM SURFACE is
             // ctrl's trim-bound vocabulary in TWO SHAPES since the trim
             // surface arc (architect 2026-08-11):
-            //   * INSIDE the inter-cap BRIDGE span, ctrl+DRAG is the BRIDGE
-            //     (pair) drag — DISPLACED here off the plain press, which
-            //     draws the region now. HIS GESTURE RANKING is the rationale,
-            //     recorded at route_trim_bar_press's header: pan #1, zoom #2,
-            //     region-draw #3, trim-move #4 — the RARE gesture takes the
-            //     modifier, and ctrl already means trim-bound vocabulary on
-            //     this band. The press arms the same pending an endcap press
-            //     arms (both=true; the strictly-inside geometry test survives,
-            //     only its modifier changed), and the ctrl+CLICK bound-set
-            //     STAYS: a MOTIONLESS release performs it, click vs drag
-            //     distinguished exactly as the band's other arms do — through
-            //     the pending's 8px threshold — via
-            //     PendingTrimDrag::set_begin_bound_on_release (a lost button
-            //     disarms without setting, not being a clean click).
+            //   * INSIDE the inter-cap BRIDGE span, the ctrl+CLICK bound-set
+            //     DEFERS to the MOTIONLESS RELEASE (the press arms a pending
+            //     purely as that deferral's vehicle, via
+            //     PendingTrimDrag::set_begin_bound_on_release; a lost button
+            //     disarms without setting, not being a clean click). THE
+            //     BRIDGE (pair) DRAG NO LONGER LIVES ON THIS PRESS: it moved
+            //     to ALT+DRAG at the fourth glass session (the architect's
+            //     vocabulary ruling — ctrl = zoom, alt = move/pan; the alt
+            //     branch above is its home), so a ctrl press that crosses the
+            //     threshold in-span now DISARMS and drags nothing (the
+            //     click-vs-drag split stands; only the drag's meaning left).
+            //     The deferral itself STAYS — an at-press set would fire on
+            //     every in-span press, and the release keeps the click's
+            //     observable shape identical across the swap.
             //   * OFF the span, the click sets the BEGIN bound at press and
             //     arms the single-bound drag on it (REINSTATED architect
             //     2026-08-01 — ctrl is BEGIN and ctrl+shift is END;
             //     set_trim_bound_at_click refuses any value not STRICTLY
             //     INSIDE its partner and, being a SETTER, deselects past its
             //     refusals. IT NO LONGER REFUSES A READ-ONLY TAB: trim is
-            //     band, not authored content, 2026-08-07). Off-span means the
-            //     click-set cannot collide with the bridge arm: the deferral
-            //     exists exactly where a drag must stay possible.
+            //     band, not authored content, 2026-08-07).
             // EVERY other lane is a
             // strict no-op, falling through to the return below (the ctrl-click
             // clear on an empty marker spot is RETIRED, architect 2026-07-23:
@@ -2268,12 +2301,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const GuiRect trim_band = top_trim_surface_area(app);
                 if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
                     if (point_in_trim_bridge_span(app, audio, x, y)) {
-                        // The bridge arm: nothing mutates until the threshold
-                        // (the drag) or a clean motionless release (the
-                        // deferred click-set). No stop here either — both
-                        // outcomes carry their own, each past its refusals.
-                        arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
-                                              x, y);
+                        // The deferred click-set's vehicle: nothing mutates
+                        // until a clean motionless release performs the BEGIN
+                        // set; a threshold crossing DISARMS (the bridge drag
+                        // is alt's now — the flag's contract, app_state.h).
+                        // both=false so the pending's cursor cue names the
+                        // set this press promises, not a drag it no longer
+                        // carries. No stop here — the set carries its own,
+                        // past its refusals.
+                        arm_pending_trim_drag(/*is_begin=*/true,
+                                              /*both=*/false, x, y);
                         app.pending_trim_drag.set_begin_bound_on_release = true;
                         return;
                     }
@@ -2327,9 +2364,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
         // here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
-        // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
-        // stepped pan and the Alt+drag captured grab-pan are untouched (separate
-        // handlers). On the keyboard alt survives only in the FOUR Ctrl+Alt
+        // marker selection). Alt is POINTER-ONLY vocabulary — the Alt+wheel
+        // stepped pan, the Alt+drag captured grab-pan and, since the fourth
+        // glass session (2026-08-11), the alt bridge drag that MOVES the trim
+        // window — all claimed at the alt branch above, never here. On the
+        // keyboard alt survives only in the FOUR Ctrl+Alt
         // render / propagate chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R,
         // Ctrl+Alt+P, Ctrl+Alt+Shift+P) — every other alt keybinding was retired
         // 2026-07-28, so nothing here defers to one.
@@ -3123,10 +3162,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // and commits through the branch above, where the setter's deselect and
         // the trim-mutation stop live.)
         // ONE EXCEPTION SINCE THE TRIM SURFACE ARC (2026-08-11): the CTRL
-        // bridge press DEFERRED its ctrl+CLICK bound-set to exactly this
+        // in-span press DEFERRED its ctrl+CLICK bound-set to exactly this
         // moment — the clean motionless release IS the click (the flag's
         // contract at PendingTrimDrag::set_begin_bound_on_release; a lost
-        // button and the force-end disarm without setting). It acts at the
+        // button, the force-end and — since the bridge drag moved to alt —
+        // the threshold crossing all disarm without setting). It acts at the
         // PRESS column — a click sets where it was aimed, and the release sits
         // within the 8px slack by construction — and the setter carries its
         // own stop, refusals and deselect, so nothing is restated here. No
@@ -3232,7 +3272,7 @@ void GuiInputHandler::finalize_active_drags() {
     // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
     // NOTHING of its own — the marker pending's click committed at the
     // PRESS, and the bound-set trim pending's bound was written at the press and
-    // stands (the CTRL BRIDGE arm's DEFERRED set fires only on a clean
+    // stands (the CTRL IN-SPAN arm's DEFERRED set fires only on a clean
     // motionless release, so disarming here rightly drops it — a force-end is
     // not a click; 2026-08-11). There is no release here (the button is still
     // held), so nothing is
@@ -5065,6 +5105,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                      std::abs(mouse_y - app.pending_trim_drag.press_y)) <
                 kDragMovedThresholdPx) {
             return;   // still a click; leave the pending armed, do nothing
+        }
+        // THE DEFERRED-CLICK PENDING DIES AT THE CROSSING (2026-08-11, the
+        // fourth glass session): the ctrl in-span press is the BEGIN set's
+        // deferral vehicle and NOTHING else — the bridge drag it used to
+        // become moved to ALT+DRAG — so a moved ctrl press is not a click and
+        // sets nothing, exactly as a lost button doesn't (the flag's contract
+        // at PendingTrimDrag::set_begin_bound_on_release). Disarm and done; no
+        // seed was recorded by that arm, so there is nothing else to clear.
+        if (app.pending_trim_drag.set_begin_bound_on_release) {
+            app.pending_trim_drag = PendingTrimDrag{};
+            return;
         }
         // Threshold crossed: begin the trim drag anchored at the PRESS column so
         // the bound(s) track from the grab, this first update folding the whole

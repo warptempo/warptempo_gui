@@ -929,9 +929,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // after the warp/phase radio buttons, create a new separator"), a group
     // intended to collect VIEWPORT-RELATED ACTS later; today it is the one
     // member. Bare `x`, set trim from region. The glyph is Breeze's
-    // transform-crop — crop IS trim-to-span — PLANNER-PICKED (the architect
-    // can revise; succession note at the icons.h entry).
-    {RedesignButton::IconTrim,   IconRowLead::Separator, icons::Icon::TransformCrop},
+    // EDIT-CUT — the scissors, his pick from the rendered candidate sheet
+    // later the same day, over the first cut's planner-picked transform-crop
+    // (read as rectangle-select; the succession is at the icons.h entry and
+    // the retired glyph's one-commit record at the icons.cpp table).
+    {RedesignButton::IconTrim,   IconRowLead::Separator, icons::Icon::EditCut},
     {RedesignButton::IconCopy,   IconRowLead::Separator, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       icons::Icon::MusicNote16th},

@@ -662,6 +662,43 @@ struct GuiInputHandler {
     // mode-shaped belongs here. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
 
+    // THE TOUCH TRIM-MOVE HOOKS (the fourth glass session, 2026-08-11 — the
+    // architect's hold-a-beat mechanics: "hold for a beat and then drag on
+    // the trim bar moves the trim bar — including the timestamp region").
+    // The disambiguation window's EXPIRY on the MERGED TRIM BAND resolves to
+    // this gesture instead of the ordinary pointer, and these three drive THE
+    // BRIDGE-MOVE MACHINERY'S OWN BODY — begin_trim_drag(both=true) at the
+    // down x (its own anchor capture), update_trim_drag(x) per delivered
+    // frame, commit_trim_drag() at the end — so both bounds ride the dragged
+    // columns and the drag's whole commit regime is inherited verbatim: the
+    // stop and setter-deselect at the first accepted change, the rigid-delta
+    // walls, the release column snap, the crossed/coincident reset, the
+    // park-at-release and region clear (input_trim.cpp owns all of it; no
+    // second trim mover exists).
+    //
+    // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
+    // bypasses (the ctrl/alt band arms sit below these same gates in
+    // on_button_press): prompt, bottom-strip modal editors, open dropdown,
+    // loading/empty audio, a live pointer gesture, and the `h` history view
+    // (which consumes the band's trim vocabulary whole). A refused begin
+    // arms nothing and the update/end bodies no-op through the machinery's
+    // own !active guards — the zone query stays GEOMETRY ONLY (the pan-zone
+    // contract), so a refused hold-drag FREEZES for the stream rather than
+    // falling back to a pointer drag.
+    //
+    // ONE ACCEPTED CROSS-DEVICE EDGE, the nav gestures' own class: the drag
+    // state is app.trim_drag itself, so a mouse release or a lost-button
+    // motion arriving mid-gesture commits it early through the pointer
+    // paths — the user's own two-handed act, every end a commit either way.
+    void begin_touch_trim_move(int x);
+    void update_touch_trim_move(int x);
+    void end_touch_trim_move();
+    // THE TRIM-BAND ZONE QUERY: does a touch-DOWN point lie on the merged
+    // trim band (top_trim_surface_area — the exact band every trim gesture
+    // reads)? GEOMETRY ONLY, the pan-zone contract verbatim; the two zones
+    // are disjoint surfaces. Wired at main.cpp's set_touch_nav_hooks call.
+    bool touch_point_in_trim_band_zone(int x, int y) const;
+
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every
     // rule about WHAT the cue means, are at pointer_cursor_kind below.
@@ -1589,21 +1626,19 @@ private:
     void commit_trim_mutation();
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim
-    // drag, and ONE OF TWO since the bound-set clicks came back 2026-08-01 (the
-    // other is set_trim_bound_at_click_then_arm_drag, which arms the same
-    // single-bound pending on the bound it has just written; the Alt pointer
-    // gesture retired wholesale, and the waveform stem
-    // grab with it; bounds are grabbed by their top-strip ENDCAPS / the bar's
-    // inter-cap bridge only). Arms a PendingTrimDrag (the pending+threshold
+    // drag — the ENDCAP resolver since the trim surface arc (2026-08-11; the
+    // bridge arm left it for on_button_press's modifier branches, ctrl for
+    // one session then alt). Arms a PendingTrimDrag (the pending+threshold
     // pattern): the
-    // press CLAIMS the cap/bridge geometry, but the trim-drag machinery begins
+    // press CLAIMS the cap geometry, but the trim-drag machinery begins
     // only once the pointer crosses kDragMovedThresholdPx. A full ordered pair
     // always rests (the unset state died 2026-07-30), so the claim is purely
-    // GEOMETRIC. Returns true iff the press landed on trim
-    // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
-    // bridge span) — so the caller claims with no
-    // fallback; false lets the caller fall through to its ruler / marker flag
-    // handling. Read-only no longer refuses anywhere on this route
+    // GEOMETRIC. Returns true iff the press landed on an ENDCAP rect
+    // (y-gated to the merged band) — so the caller claims with no
+    // fallback; false hands the rest of the band to the caller's REGION
+    // FORMER arm. The caller inventory and the arm's full contract are at the
+    // definition (input_trim.cpp).
+    // Read-only no longer refuses anywhere on this route
     // (2026-08-07). Trim drags are SETTERS, so they DESELECT
     // and STOP a live audition at their first ACCEPTED bound change (the press
     // carries neither since 2026-07-30 — a trim-bar press that never becomes a
@@ -1621,12 +1656,13 @@ private:
     // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
 
-    // (THE TOUCH-NAV BODY IS NOT HERE: apply_touch_nav_update, end_touch_nav
-    // and touch_point_in_pan_zone are PUBLIC entry points — main.cpp's hook
-    // wiring calls
+    // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update,
+    // end_touch_nav, the two zone queries and the trim-move trio are PUBLIC
+    // entry points — main.cpp's hook wiring calls
     // them, like on_key and on_motion — declared beside those siblings above;
-    // their implementation lives beside the strip drag's in
-    // input_pointer.cpp, whose application chokepoint they share.)
+    // the nav implementation lives beside the strip drag's in
+    // input_pointer.cpp, whose application chokepoint it shares, and the
+    // trim-move trio beside the drag machinery it drives in input_trim.cpp.)
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
@@ -1760,32 +1796,38 @@ private:
     //   for the
     //   day it was a single click and does not now: the act is a DOUBLE-click,
     //   and a double-click carries no cursor promise anywhere in the product.
-    // - TrimResize: the merged band's inter-cap BRIDGE, CTRL-exact (2026-08-11
-    //   — the pair drag displaced there off the plain press, which is the
-    //   band's region former now and carries no cue, the placement press's own
-    //   model): the drag that moves BOTH bounds together, and the only trim
-    //   gesture that does.
+    // - TrimResize: the merged band's inter-cap BRIDGE, ALT-exact (2026-08-11
+    //   — the pair drag displaced off the plain press to ctrl+drag at the
+    //   third glass session and onto ALT+DRAG at the fourth, the architect's
+    //   vocabulary ruling: ctrl = zoom, alt = move/pan; the plain press is
+    //   the band's region former and carries no cue, the placement press's
+    //   own model): the drag that moves BOTH bounds together, and the only
+    //   trim gesture that does.
     // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the two routes
     //   that do it — the merged band's BEGIN / END endcap on a plain hover (the
     //   single-bound drags, over the band's whole height since the merge), and
     //   the bound-set clicks that write the same two
-    //   bounds, ctrl (off the bridge span) for begin and ctrl+shift for end.
-    //   Both of those arm a
+    //   bounds, ctrl for begin (deferred to the motionless release inside the
+    //   bridge span, at-press off it — one cue for both shapes) and
+    //   ctrl+shift for end.
+    //   Both off-span shapes arm a
     //   single-bound drag as well, so the cue is one shape for one act.
     // - Arrow: everything else, the marker lane and the four button rows
     //   included.
     // THE MERGED BAND'S ZONES READ THE ROUTER'S OWN OWNERS and re-derive
     // nothing: hit_test_trim_endcap for the plain
     // hover (exactly what route_trim_bar_press calls), point_in_trim_bridge_span
-    // for ctrl's bridge arm, and
+    // for alt's bridge arm, and
     // trim_bound_click_frame for the two bound-set clicks (exactly what
     // set_trim_bound_at_click decides on). So a point on the band that would arm
     // NO NAMED GESTURE — off the caps on a plain hover (the region former,
-    // unnamed like the placement press), or a ctrl click the
+    // unnamed like the placement press), an alt press off the bridge span, or
+    // a ctrl click the
     // STRICTLY-INSIDE guard would consume — shows the Arrow, and the cue cannot
     // drift from the gesture because there is no second copy to drift.
     // ALL OF THEM ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
-    // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
+    // the `h` history view consumes the endcap drags, the alt bridge drag and
+    // both ctrl clicks,
     // so those cues go while it stands and the whole band answers Arrow
     // there. (That answer was the LOCKED TAB'S too until 2026-08-07, when trim
     // became read-only-legal; the view is the only zone consumer now.) The one gesture the view DOES give
@@ -1929,8 +1971,13 @@ private:
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
-    // ONE READER: the on_key gate (input_handler.cpp), paired with
-    // modal_editor_key_blocked.
+    // TWO READERS: the on_key gate (input_handler.cpp), paired with
+    // modal_editor_key_blocked — and, since the fourth glass session
+    // (2026-08-11), begin_touch_trim_move's refusal list (input_trim.cpp),
+    // which needs exactly "any of the five editors is open": the touch
+    // hold-drag trim move bypasses the press path that would have closed an
+    // open flag editor, so it refuses under one instead (the judgment at its
+    // site).
     // Modality here is CHORDS only, which is why the flag editor's OTHER
     // transparencies do not consult this predicate — see
     // modal_bottom_strip_editor_active below for what does and does not.
@@ -1951,7 +1998,11 @@ private:
     // the MODAL-TRAP block at on_button_press's top (2026-08-11), because these
     // four are exactly the swallows the admitted Quit/Save button presses must
     // be lifted OVER (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord). The
+    // modal_editor_admits_command_chord). (The touch trim-move's begin refuses
+    // through the FIVE-editor predicate below instead — its gesture mutates,
+    // and no trim pointer gesture can begin under an open flag editor either,
+    // every press closing one first; the judgment is at
+    // begin_touch_trim_move, input_trim.cpp.) The
     // flag editor's exemption is the same fact in all three: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // scrub reaches the audio under it, and its roster presses were never

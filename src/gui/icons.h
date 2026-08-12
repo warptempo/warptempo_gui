@@ -82,13 +82,14 @@ enum class Icon {
     Speedometer,         // Warp markers (bare `p`)
     ChronometerStart,    // Phase reset markers (bare `p`)
     // THE TRIM BUTTON'S GLYPH (2026-08-11, the trim surface arc): Breeze's
-    // transform-crop — the crop frame with its two corner brackets and dashed
-    // edges. Crop IS trim-to-span, which is exactly what bare `x` does with
-    // the region. PLANNER-PICKED, not architect-picked — recorded so the
-    // architect can revise at a look, per the radios' precedent; no runner-up
-    // was rendered. One `.ColorScheme-Text` path of M/L/z commands only, well
-    // inside the interpreter's coverage.
-    TransformCrop,       // Set trim from region (bare `x`)
+    // EDIT-CUT — the scissors, ARCHITECT-PICKED from the rendered candidate
+    // sheet the same day, superseding the planner's transform-crop of the
+    // first cut (he read the crop frame as rectangle-select rather than
+    // crop; its one-commit life is recorded at the table). Cutting IS
+    // trimming, the scissors the universal glyph for it. One
+    // `.ColorScheme-Text` path of m/c/l/z commands, inside the interpreter's
+    // coverage.
+    EditCut,             // Set trim from region (bare `x`)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor

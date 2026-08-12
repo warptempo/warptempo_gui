@@ -327,13 +327,44 @@ public:
     //     pointer drag. Null — or answering false — means no pan surface: the
     //     plain phase-1 translation everywhere.
     //
+    //   THE TRIM-MOVE MEMBERS (the fourth glass session, 2026-08-11 — the
+    //   architect's hold-a-beat mechanics for moving the trim window on
+    //   glass: "hold for a beat and then drag on the trim bar moves the trim
+    //   bar — including the timestamp region"; the family's one owner grew
+    //   members again rather than a sibling setter appearing):
+    //   * trim_zone(x, y): the SECOND zone query — does this point lie on the
+    //     MERGED TRIM BAND? Asked once at the first finger's down beside
+    //     pan_zone (the two surfaces are disjoint, so at most one answers
+    //     true); the window's EXPIRY forks on it — on the band a hold
+    //     resolves to the TRIM-MOVE gesture below instead of the pointer.
+    //     GEOMETRY ONLY, the pan_zone contract verbatim: every refusal stays
+    //     in the begin body, so a refused trim-move is dead for the stream
+    //     (nothing pointer-shaped ever starts) rather than a fallback drag.
+    //   * trim_begin(x): the hold resolved on the band — the GUI arms the
+    //     bridge-move machinery at the DOWN x (its own anchor capture), or
+    //     refuses inside the body (modal, prompt, dropdown, loading/empty
+    //     audio, live pointer gesture, the `h` view); a refused begin makes
+    //     the two hooks below no-ops through the machinery's own !active
+    //     guards.
+    //   * trim_update(x): at most once per wl_touch.frame while the gesture
+    //     is live — the finger's current x, absolute (the machinery is
+    //     anchor-relative internally, so absolute in / displacement inside).
+    //   * trim_end(): the gesture ended — finger up, wl_touch.cancel or
+    //     touch-capability loss. Any end COMMITS (the release-snap commit
+    //     regime is the machinery's own); fired unconditionally, the commit
+    //     body's !active guard covering the refused-begin stream.
+    //
     // The hooks carry no modifier state: the GUI body reads nothing modal from
-    // them, and its refusal answer is its own (the wheel-context predicate — the
-    // gesture is the wheel's navigation-class sibling). Null-safe.
+    // them, and its refusal answer is its own (the nav pair's wheel-context
+    // predicate; the trim-move begin's own gate list). Null-safe.
     void set_touch_nav_hooks(
         std::function<void(int x, int y, double dx, double dist_ratio)> update,
         std::function<void()> end,
-        std::function<bool(int x, int y)> pan_zone);
+        std::function<bool(int x, int y)> pan_zone,
+        std::function<bool(int x, int y)> trim_zone,
+        std::function<void(int x)> trim_begin,
+        std::function<void(int x)> trim_update,
+        std::function<void()> trim_end);
 
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
@@ -861,11 +892,18 @@ private:
     //     pan; no press was ever delivered — nothing to unwind, the window's
     //     whole purpose), outside -> Pointer. A second finger landing inside
     //     the window resolves to two-finger Nav wherever the down point was.
-    //     HOLD UNLOCKS THE POINTER on the pan surface: expiry with the finger
-    //     stationary is the DELIBERATE escape to the ordinary pointer
-    //     translation — hold-then-drag is the old pointer drag, which is what
-    //     keeps the lower-half scrub hold and every press-and-hold gesture
-    //     alive on glass.
+    //     EXPIRY forks on the down point's captured TRIM-BAND answer (the
+    //     fourth glass session, 2026-08-11): on the MERGED TRIM BAND a hold
+    //     resolves to TrimMove (below) — hold-a-beat-then-drag MOVES the trim
+    //     window, the architect's mechanics for the arc's recorded gap —
+    //     and everywhere else HOLD UNLOCKS THE POINTER as before: expiry with
+    //     the finger stationary is the DELIBERATE escape to the ordinary
+    //     pointer translation — hold-then-drag is the old pointer drag, which
+    //     is what keeps the lower-half scrub hold and every press-and-hold
+    //     gesture alive on glass (the band is the one surface that trades
+    //     that unlock away; an endcap fine-grab on glass goes through the
+    //     cap's QUICK-drag hit instead — sub-window slop-crossing resolves to
+    //     the pointer on the band as everywhere off the pan surface).
     //   * Pointer — the translation is live: the owning finger's motion is
     //     pointer motion (coalesced to the wl_touch.frame boundary, the
     //     pointer-frame precedent), its lift is the release on the logical
@@ -890,9 +928,20 @@ private:
     //     (a lift is an end — the any-end-commits family) and the survivor is
     //     ignored until all fingers lift (Drain); no downgrade to
     //     single-finger nav. A third finger is ignored.
+    //   * TrimMove — the hold-a-beat trim move (the fourth glass session,
+    //     2026-08-11): the window EXPIRED with the down point on the MERGED
+    //     TRIM BAND, and the owning finger now drives the trim-move hooks —
+    //     begin fired at entry with the DOWN x (the GUI arms the bridge-move
+    //     machinery, both bounds riding the dragged columns), motion staged
+    //     to the frame boundary and delivered as trim_update(x), the lift
+    //     delivering the staged final frame then trim_end (any end commits —
+    //     the machinery's own release-snap commit). NOTHING pointer-shaped
+    //     ever starts: no press, no hold bit, no release, no translation end
+    //     — the Nav model, not the Pointer one. A second finger landing here
+    //     is IGNORED whole, exactly as during a live translation.
     //   * Drain   — waiting for every remaining (ignored) finger to lift;
-    //     nothing is delivered. Entered from Pointer and Nav ends that
-    //     leave ignored fingers on the glass.
+    //     nothing is delivered. Entered from Pointer, Nav and TrimMove ends
+    //     that leave ignored fingers on the glass.
     //
     // THE EDGE INVENTORY — every route that ends or transforms touch state,
     // authoritative here (the transport_repeat precedent; each fire site
@@ -927,11 +976,20 @@ private:
     //     delivered). A nav gesture never held the logical button, so no
     //     release and no translation end fire — nothing pointer-shaped ever
     //     started; -> Drain / Idle.
+    //   * touch UP, TrimMove owner — the staged dirty frame DELIVERS first
+    //     (the user's own final leg, the nav finger-up's model), then the
+    //     trim_end hook (any end commits — the machinery's release snap and
+    //     park). No release and no translation end: nothing pointer-shaped
+    //     ever started; -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
-    //     deadline, and lazily at every touch event's arrival) — resolve
-    //     Pending to Pointer (hold-unlocks-the-pointer: expiry never forks on
-    //     the zone, by design — the Pending clause above).
+    //     deadline, and lazily at every touch event's arrival) — FORK on the
+    //     down point's captured TRIM-BAND answer (the fourth glass session):
+    //     on the band -> TrimMove (hold-a-beat-then-drag moves the trim
+    //     window; the begin hook fires at the down x, and any sub-slop drift
+    //     inside the window stages as the gesture's first frame); elsewhere
+    //     -> Pointer (hold-unlocks-the-pointer, the Pending clause above —
+    //     expiry never forks on the PAN zone, by design).
     //   * motion beyond kTouchSlopPx inside the window — FORK on the down
     //     point's captured pan-zone answer (the phone model): pan surface ->
     //     SINGLE-FINGER Nav (the nav seed measures its latch from the DOWN
@@ -956,7 +1014,11 @@ private:
     //     (the compositor's claim means that motion retroactively was not
     //     ours — the recorded asymmetry with the Pointer release, which MUST
     //     deliver; the end split at end_touch_nav_gesture) and ends through
-    //     its end path (commits iff an update was delivered); an unresolved
+    //     its end path (commits iff an update was delivered); a live TrimMove
+    //     gesture takes the Nav shape — staged frame DROPPED, then trim_end
+    //     (the end itself always fires: the GUI-side trim drag holds the
+    //     drag-modal gate open and MUST commit; only the final MOTION is
+    //     dropped, and dropped motion wedges nothing); an unresolved
     //     Pending window is dropped silently (nothing was delivered, so
     //     there is nothing to end); all touch state forgotten either way.
     //   * TOUCH capability loss — the cancel contract above, then the
@@ -980,7 +1042,7 @@ private:
     // END is a MOUSE question ("is the mouse resting in the window, and
     // where"), not a touch delivery to gate.
     struct wl_touch* wl_touch_ = nullptr;
-    enum class TouchPhase { Idle, Pending, Pointer, Nav, Drain };
+    enum class TouchPhase { Idle, Pending, Pointer, Nav, TrimMove, Drain };
     TouchPhase touch_phase_       = TouchPhase::Idle;
     // ALL live touch points, the ignored ones included — the Drain exit test.
     int        touch_point_count_ = 0;
@@ -1003,6 +1065,14 @@ private:
     // finger's down (the pan_zone query at set_touch_nav_hooks); the window's
     // slop-crossing resolution forks on it — the phone model.
     bool       touch_down_in_pan_zone_   = false;
+    // Pending: the down point's TRIM-BAND answer, captured beside the pan
+    // one (the trim_zone query — the fourth glass session, 2026-08-11); the
+    // window's EXPIRY forks on it. The two zones are disjoint surfaces, so at
+    // most one of the pair is true.
+    bool       touch_down_in_trim_band_  = false;
+    // TrimMove: a finger position staged for the wl_touch.frame boundary
+    // (the Nav dirty-frame cadence; delivered as trim_update(x)).
+    bool       touch_trim_frame_dirty_   = false;
     // The logical left's third source (see the OR-edge model above).
     bool       touch_left_held_          = false;
     // Pointer: a motion staged for the wl_touch.frame boundary (the
@@ -1173,6 +1243,14 @@ private:
     // The pan-zone query (asked once, at the first finger's down; geometry
     // only — the contract at set_touch_nav_hooks).
     std::function<bool(int, int)>                 touch_pan_zone_hook_;
+    // The trim-move members (the fourth glass session, 2026-08-11): the
+    // trim-band zone query (asked once, beside the pan one) and the
+    // begin/update/end hooks the TrimMove phase drives (contracts at
+    // set_touch_nav_hooks). Null-safe at each fire site.
+    std::function<bool(int, int)>                 touch_trim_zone_hook_;
+    std::function<void(int)>                      touch_trim_begin_hook_;
+    std::function<void(int)>                      touch_trim_update_hook_;
+    std::function<void()>                         touch_trim_end_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop
     // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
     // capture hooks, so the fire site needs no null test.
@@ -1343,6 +1421,13 @@ private:
     // two-finger latch is", literally the same code path. No press was ever
     // delivered and the touch hold is never raised.
     void resolve_touch_window_to_single_nav();
+    // Resolve the Pending window to the TRIM-MOVE gesture (the fourth glass
+    // session's expiry fork, taken when the captured down point lay on the
+    // merged trim band): fire the begin hook at the DOWN x — the GUI arms
+    // the bridge-move machinery there, its own anchor capture — and stage
+    // any sub-slop drift as the gesture's first frame. Nothing pointer-shaped
+    // starts: no press, no hold, no release owed.
+    void resolve_touch_window_to_trim_move();
     // Sample the Pending window's deadline. Called from the timerfd tick
     // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
     // so expiry lands within one tick of the 60 ms mark) and lazily at every
@@ -1388,10 +1473,19 @@ private:
     // that motion retroactively was not ours). Either way the end hook fires
     // iff an update was delivered.
     void end_touch_nav_gesture(bool deliver_final_frame);
+    // End a live TrimMove gesture — the Nav end's own split, restated for the
+    // trim hooks: the finger's lift delivers the staged frame first (true),
+    // the hard ends drop it (false); trim_end then fires UNCONDITIONALLY
+    // either way (unlike the nav end's delivered-gate: the GUI-side trim drag
+    // holds the drag-modal gate open from the begin, so the commit is owed
+    // even when no update was ever delivered — its !active guard covers a
+    // refused begin for free).
+    void end_touch_trim_move(bool deliver_final_frame);
     // THE HARD-END CONTRACT, shared verbatim by wl_touch.cancel and
     // touch-capability loss (the edge inventory names it): commit-and-END a
     // live Pointer translation (the release, then the focus-forked translation
-    // end through deliver_touch_translation_end), end a live Nav gesture, drop
+    // end through deliver_touch_translation_end), end a live Nav or TrimMove
+    // gesture (staged frame dropped), drop
     // a Pending window silently, forget all touch state.
     void hard_end_touch_stream();
     // Reset every touch field to its rest value (the one forget, so a new

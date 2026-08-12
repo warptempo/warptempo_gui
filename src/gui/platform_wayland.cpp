@@ -2838,8 +2838,14 @@ void GuiPlatform::on_pointer_frame() {
 void GuiPlatform::maybe_resolve_touch_window() {
     if (touch_phase_ != TouchPhase::Pending) return;
     if (monotonic_us() < touch_window_deadline_us_) return;
-    // The window EXPIRED with one finger down: it is the pointer.
-    resolve_touch_window_to_pointer();
+    // The window EXPIRED with one finger down: on the merged trim band the
+    // hold is the TRIM-MOVE gesture (the fourth glass session's fork —
+    // hold-a-beat-then-drag moves the trim window); everywhere else it is
+    // the pointer (hold-unlocks-the-pointer, unchanged).
+    if (touch_down_in_trim_band_)
+        resolve_touch_window_to_trim_move();
+    else
+        resolve_touch_window_to_pointer();
 }
 
 void GuiPlatform::resolve_touch_window_to_pointer() {
@@ -2924,6 +2930,25 @@ void GuiPlatform::resolve_touch_window_to_single_nav() {
     // The crossing motion is staged for the frame boundary, the Nav cadence.
     touch_nav_frame_dirty_ = true;
     touch_window_moved_    = false;
+}
+
+void GuiPlatform::resolve_touch_window_to_trim_move() {
+    // Pending -> TrimMove (the fourth glass session's expiry fork; contract
+    // at the declaration): the hold resolved on the merged trim band, so the
+    // finger now MOVES THE TRIM WINDOW through the trim-move hooks and
+    // NOTHING pointer-shaped starts — no entry motion, no press, the touch
+    // hold never raised (the single-nav model, not the Pointer one). The
+    // begin fires at the DOWN point — the anchor the GUI-side machinery
+    // captures — and any sub-slop drift that arrived inside the window is
+    // the gesture's own first leg, staged for the frame boundary exactly as
+    // the resolution replay delivers the pointer's queued motion.
+    touch_phase_ = TouchPhase::TrimMove;
+    if (touch_trim_begin_hook_)
+        touch_trim_begin_hook_(
+            static_cast<int>(std::nearbyint(touch_down_x_)));
+    touch_trim_frame_dirty_ =
+        touch_window_moved_ && (touch_last_x_ != touch_down_x_);
+    touch_window_moved_ = false;
 }
 
 void GuiPlatform::flush_touch_frame_motion() {
@@ -3062,6 +3087,13 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                 touch_pan_zone_hook_ &&
                 touch_pan_zone_hook_(static_cast<int>(std::nearbyint(x)),
                                      static_cast<int>(std::nearbyint(y)));
+            // The TRIM-BAND answer, captured beside it (the fourth glass
+            // session): the window's EXPIRY forks on this one. Same
+            // geometry-only contract; the two surfaces are disjoint.
+            touch_down_in_trim_band_ =
+                touch_trim_zone_hook_ &&
+                touch_trim_zone_hook_(static_cast<int>(std::nearbyint(x)),
+                                      static_cast<int>(std::nearbyint(y)));
             break;
         case TouchPhase::Pending: {
             if (id == touch_owner_id_) break;  // protocol nonsense; ignore
@@ -3094,8 +3126,10 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             break;
         }
         case TouchPhase::Pointer:
-            // A second finger during a live translation is IGNORED whole —
-            // recorded (the count above), not routed: mid-gesture finger-count
+        case TouchPhase::TrimMove:
+            // A second finger during a live translation — or a live trim
+            // move — is IGNORED whole: recorded (the count above), not
+            // routed: mid-gesture finger-count
             // changes do not mutate a committed gesture (the any-end-commits
             // family).
             break;
@@ -3172,6 +3206,17 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
             break;
+        case TouchPhase::TrimMove:
+            if (id != touch_owner_id_) break;  // an ignored finger lifting
+            // The owner's lift ends the trim move: the staged dirty frame
+            // DELIVERS first (the user's own final leg — the nav finger-up's
+            // model), then the end hook commits (the machinery's own
+            // release snap and park). No release, no translation end:
+            // nothing pointer-shaped ever started.
+            end_touch_trim_move(/*deliver_final_frame=*/true);
+            touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
+                                                  : TouchPhase::Idle;
+            break;
         case TouchPhase::Nav:
             // Single-finger nav: only the owner exists (the !single term is
             // the dormant-id2 guard, as at the motion arm).
@@ -3234,6 +3279,13 @@ void GuiPlatform::on_touch_motion(uint32_t /*time*/, int32_t id,
             // frame. Button deliveries flush this first.
             touch_frame_motion_pending_ = true;
             break;
+        case TouchPhase::TrimMove:
+            if (id != touch_owner_id_) break;   // ignored fingers stay ignored
+            touch_last_x_ = x;
+            touch_last_y_ = y;
+            // The Nav dirty-frame cadence: one trim_update per wl_touch.frame.
+            touch_trim_frame_dirty_ = true;
+            break;
         case TouchPhase::Nav:
             if (id == touch_owner_id_) {
                 touch_nav_x1_ = x;
@@ -3265,6 +3317,12 @@ void GuiPlatform::on_touch_frame() {
     } else if (touch_phase_ == TouchPhase::Nav && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
         deliver_touch_nav_frame();
+    } else if (touch_phase_ == TouchPhase::TrimMove &&
+               touch_trim_frame_dirty_) {
+        touch_trim_frame_dirty_ = false;
+        if (touch_trim_update_hook_)
+            touch_trim_update_hook_(
+                static_cast<int>(std::nearbyint(touch_last_x_)));
     }
 }
 
@@ -3350,6 +3408,26 @@ void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
     touch_nav_latched_   = false;
 }
 
+void GuiPlatform::end_touch_trim_move(bool deliver_final_frame) {
+    // The Nav end split restated for the trim hooks (the contract at the
+    // declaration): the finger's own lift delivers the staged frame first —
+    // the user's final leg, and for the trim drag the position the release
+    // snap commits — while the hard ends drop it (the compositor's claim
+    // means that motion retroactively was not ours). trim_end then fires
+    // UNCONDITIONALLY, unlike the nav end's delivered-gate: the GUI-side trim
+    // drag has held the drag-modal gate open since the begin, so its commit
+    // is owed even when no update was ever delivered, and a refused begin is
+    // covered by the commit body's own !active guard.
+    if (deliver_final_frame && touch_trim_frame_dirty_) {
+        touch_trim_frame_dirty_ = false;
+        if (touch_trim_update_hook_)
+            touch_trim_update_hook_(
+                static_cast<int>(std::nearbyint(touch_last_x_)));
+    }
+    touch_trim_frame_dirty_ = false;
+    if (touch_trim_end_hook_) touch_trim_end_hook_();
+}
+
 void GuiPlatform::on_touch_cancel() {
     // The compositor claims the touches (its own gesture recognition, a grab).
     // One contract with touch-capability loss, in full.
@@ -3381,6 +3459,14 @@ void GuiPlatform::hard_end_touch_stream() {
             // held the logical button.
             end_touch_nav_gesture(/*deliver_final_frame=*/false);
             break;
+        case TouchPhase::TrimMove:
+            // A live trim move takes the Nav shape — staged frame dropped —
+            // and its end COMMITS unconditionally (the GUI-side drag holds
+            // the drag-modal gate open and must close; the end split at
+            // end_touch_trim_move). No release, no leave: nothing
+            // pointer-shaped ever started.
+            end_touch_trim_move(/*deliver_final_frame=*/false);
+            break;
         case TouchPhase::Pending:
             // Nothing was delivered, so there is nothing to end.
             break;
@@ -3405,6 +3491,8 @@ void GuiPlatform::forget_touch_state() {
     // still reach here with it clear.
     touch_frame_motion_pending_ = false;
     touch_down_in_pan_zone_     = false;
+    touch_down_in_trim_band_    = false;
+    touch_trim_frame_dirty_     = false;
     touch_nav_single_ = false;
     touch_nav_id2_ = 0;
     touch_nav_x1_ = touch_nav_y1_ = 0.0;
@@ -3990,10 +4078,18 @@ void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { ke
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(int x, int y, double dx, double dist_ratio)> update,
     std::function<void()> end,
-    std::function<bool(int x, int y)> pan_zone) {
-    touch_nav_update_hook_ = std::move(update);
-    touch_nav_end_hook_    = std::move(end);
-    touch_pan_zone_hook_   = std::move(pan_zone);
+    std::function<bool(int x, int y)> pan_zone,
+    std::function<bool(int x, int y)> trim_zone,
+    std::function<void(int x)> trim_begin,
+    std::function<void(int x)> trim_update,
+    std::function<void()> trim_end) {
+    touch_nav_update_hook_  = std::move(update);
+    touch_nav_end_hook_     = std::move(end);
+    touch_pan_zone_hook_    = std::move(pan_zone);
+    touch_trim_zone_hook_   = std::move(trim_zone);
+    touch_trim_begin_hook_  = std::move(trim_begin);
+    touch_trim_update_hook_ = std::move(trim_update);
+    touch_trim_end_hook_    = std::move(trim_end);
 }
 void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }

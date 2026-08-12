@@ -956,10 +956,13 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 }
 
 // Plain trim-surface press routing — the PLAIN press's route into a trim drag,
-// and one of THREE arm_pending_trim_drag callers (re-derived 2026-08-11): this
+// and one of FOUR arm_pending_trim_drag callers (re-derived 2026-08-11, the
+// fourth glass session): this
 // router, the ctrl / ctrl+shift BOUND-SET press above (which arms the same
-// single-bound pending on the bound it has just written), and the CTRL bridge
-// press in on_button_press (the pair drag's home since the trim surface arc).
+// single-bound pending on the bound it has just written), the ALT bridge
+// press in on_button_press (the pair drag's home since the fourth glass
+// session — ctrl+drag for the one session before it), and the CTRL in-span
+// press there (the deferred BEGIN set's vehicle, which drags nothing).
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
 // a bound is grabbed ONLY by its ENDCAP on the merged trim surface,
 // leaving the waveform purely
@@ -980,11 +983,15 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // THE BRIDGE ARM IS DISPLACED OFF THIS ROUTER (architect 2026-08-11, the trim
 // surface arc — HIS GESTURE RANKING from the glass sessions: pan #1, zoom #2,
 // region-draw #3, trim-move #4, the RARE gesture): a plain band drag now draws
-// the region, so the pair (bridge) drag moved to CTRL+DRAG on the band — ctrl
-// already means trim-bound vocabulary there — with the strictly-inside
-// bridge geometry test surviving unchanged (point_in_trim_bridge_span; the arm
-// is on_button_press's ctrl branch, whose motionless release is the ctrl+CLICK
-// bound-set, deferred through PendingTrimDrag::set_begin_bound_on_release).
+// the region, so the pair (bridge) drag moved off the plain press — to
+// CTRL+DRAG for one session, then to ALT+DRAG at the fourth glass session
+// (the architect's vocabulary ruling: ctrl = zoom, alt = move/pan, so MOVING
+// the trim window is alt's) — with the strictly-inside bridge geometry test
+// surviving unchanged (point_in_trim_bridge_span; the arm is
+// on_button_press's alt branch). The ctrl in-span press keeps only the
+// deferred ctrl+CLICK bound-set
+// (PendingTrimDrag::set_begin_bound_on_release; its threshold crossing
+// disarms now that the drag is alt's).
 //
 // THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one — and since
 // 2026-08-07 neither does anything above it: the band's sole read-only defense
@@ -1035,7 +1042,7 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
         return true;
     }
     // (THE BRIDGE ARM LIVED HERE until the trim surface arc, 2026-08-11 — the
-    // pair drag is CTRL+DRAG on the band now, armed at on_button_press's ctrl
+    // pair drag is ALT+DRAG on the band now, armed at on_button_press's alt
     // branch through the same pending; the header carries the displacement and
     // the architect's gesture-ranking rationale.)
     return false;
@@ -1059,4 +1066,61 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     // (2026-07-29 — the rule at the drag-modal gate, input_handler.cpp). The drag
     // this may become deselects at its first published bound and keeps that
     // deselect.
+}
+
+// --- The touch trim move (hold-a-beat on the merged band) ----------------
+//
+// The fourth glass session's gesture (architect 2026-08-11) — the full
+// contract, the refusal list and the accepted cross-device edge are at the
+// declarations (input_handler.h). These three ARE the bridge-move machinery's
+// own body driven from the platform's trim-move hooks: no pending and no
+// threshold — the 60ms hold already disambiguated, so the begin goes straight
+// to begin_trim_drag — and no second trim mover anywhere.
+
+void GuiInputHandler::begin_touch_trim_move(int x) {
+    // The press path's own gates, restated because this gesture never passes
+    // through on_button_press (the ctrl/alt band arms sit below every one of
+    // these): a modal surface owns the input, an open dropdown owns the
+    // pointer, unloaded audio has no trim to move, a live pointer gesture
+    // must not be torn by a second writer, and the `h` history view consumes
+    // the band's trim vocabulary whole (its cursor map and press router both
+    // answer so). THE EDITOR GATE IS THE FIVE-EDITOR PREDICATE, the flag
+    // editor deliberately included though it is pointer-transparent: every
+    // pointer press CLOSES an open flag editor before any claim runs, so no
+    // trim pointer gesture can begin under one — and this begin, which skips
+    // the press path, must not become the first (its drag's deselect under a
+    // live flag edit is a state the mouse cannot produce). Refusing is the
+    // safe mirror of that net truth; the user's tap closes the editor as any
+    // click does, and the next hold works. A refused begin arms nothing —
+    // the update/end hooks then
+    // no-op on the machinery's own !active guards, so the refused stream is
+    // dead rather than a fallback pointer drag (the pan gestures' model).
+    if (app.prompt.active) return;
+    if (keyboard_modal_editor_active()) return;
+    if (app.dropdown.open()) return;
+    if (app.loading || audio.total_frames() <= 0) return;
+    if (app.history_mode.active) return;
+    if (any_pointer_gesture_active(app)) return;
+    // The bridge (pair) drag, begun directly at the down column: both=true is
+    // the rigid-pair arm (is_begin is Begin by construction there), and
+    // begin_trim_drag's own anchor capture reads this x — so the whole drag
+    // is anchor-relative from the finger's down point, exactly as the mouse
+    // bridge drag is from its press.
+    begin_trim_drag(TrimHit::Begin, x, /*both=*/true);
+}
+
+void GuiInputHandler::update_touch_trim_move(int x) {
+    // The drag's own motion body: rigid pair delta, absolute walls, the
+    // first-accepted-change stop + setter deselect, repaint. Self-guarded on
+    // !trim_drag.active, which is what makes a refused begin's stream free.
+    update_trim_drag(x);
+}
+
+void GuiInputHandler::end_touch_trim_move() {
+    // Any end commits (finger up, wl_touch.cancel, capability loss — the
+    // platform's end split delivers or drops the staged final frame, its
+    // record): the release column snap, the crossed/coincident reset, the
+    // commit tail's park-at-trim-start + region clear, the stop and deselect.
+    // Self-guarded like the update.
+    commit_trim_drag();
 }
