@@ -641,7 +641,10 @@ void GuiInputHandler::close_history_mode() {
 // 2026-08-05: a different walk or a different reading is a different list, so a
 // switch replaces the lane's content exactly as a step does — one edge whether
 // it arrived from a tab press, the Ctrl+Tab cycle or bare `u`, all three going
-// through set_history_reading): the two pointer stashes and the diff-flag LIST
+// through set_history_reading): the pointer stash (flag_hit_rects), the stem
+// painter's stash (marker_stems — paint-only since the stems-inert ruling,
+// 2026-08-12, but its `marker_index` still changes domain across the edge and
+// the playhead's stem-suppression decider reads it) and the diff-flag LIST
 // their indices name.
 //
 // The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK

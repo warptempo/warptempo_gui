@@ -60,9 +60,11 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // 2026-08-02 with its last reader long behind it. It was the single
 // clicking/hovering tolerance shared by stems, flags and trim bounds; the
 // redesign gave each surface its own authored, gui_scale-aware grab constant
-// instead — kMarkerStemGrabPx / marker_stem_grab_px() below for the marker
-// stem, kTrimEndcapGrabPx / trim_endcap_grab_px() in render.h for the trim
-// endcaps — and the flags are hit on their painted boxes with no halo at all.
+// instead, of which the trim endcaps' — kTrimEndcapGrabPx /
+// trim_endcap_grab_px() in render.h — is the one survivor: the flags are hit
+// on their painted boxes with no halo at all, and the marker stems' grab
+// constant died with their pointer surface (stems pointer-inert, 2026-08-12 —
+// the record is at the retired hit_test_marker_stem's site below).
 // The rule it carried outlives it and belongs to nothing in particular: a grab
 // tolerance is NOT a spacing gap. Markers may sit arbitrarily close, overlap
 // exactly, and cross during gestures; ordering degeneracy collapses at the
@@ -2002,15 +2004,21 @@ struct AppState {
     // carries one entry per DRAWN stem, which on the two LIVE columns means one
     // per ENABLED marker — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
-    // per diff flag, that lane's classes all stemming. Consumers read the stash
-    // rather than re-deciding, so "drawn" and "grabbable" stay one fact in both.
+    // per diff flag, that lane's classes all stemming. Since the stems-inert
+    // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its two
+    // readers are the per-frame stem painter (GuiPaintHandler::
+    // paint_marker_stems) and the playhead's white-stem suppression decider
+    // (GuiPaintHandler::playhead_stem_suppressed — a paint decision, not a
+    // surface), the pointer never reads it (hit_test_marker_stem is deleted —
+    // the record is at its retired site far below), and only `flag_hit_rects`
+    // still answers clicks.
     //
     // THE INDEX DOMAIN FOLLOWS THE PAINTER: `marker_index` is a store index on
     // the live columns and an index into history_mode.flags in the mode. The
     // mode EDGES are what that costs — drop_lane_stash_across_history_edge
     // (input_key_dispatch.cpp) carries the argument and empties both.
     //
-    // Cold (before the first rebuild) both are empty, so nothing is clickable
+    // Cold (before the first rebuild) both are empty, so no flag is clickable
     // and no stem paints — the same "visible iff hit-testable" property the
     // redesigned rows' stash has, and the honest one: a flag that has never
     // painted has no box to click.
@@ -4841,66 +4849,19 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// THE STEM AS A POINTER TARGET (architect 2026-08-01, at the row-5 live test): a
-// press within kMarkerStemGrabPx of a PAINTED stem's column, IN THE WAVEFORM'S
-// UPPER HALF, is that item's click. Returns the stash's own index — a marker
-// index on the live columns, a history diff-flag ordinal while the `h` mode
-// stands — or -1.
-//
-// TWO CALL SITES (2026-08-05), each the plain upper-half press of its own lane's
-// vocabulary: on_button_press (input_pointer.cpp), where a stem is the marker's
-// second surface and routes through its flag's click bodies, and
-// handle_history_mode_press, where a diff flag's stem routes through that flag's
-// focus click. Neither restates the geometry; this function is the one owner of
-// the half test, the tolerance and the arbitration.
-//
-// BOTH CALLERS GATE IT PLAIN-EXACT, WITH NO EXCEPTION ANYWHERE (architect
-// 2026-08-01, made UNIVERSAL by the symmetry ruling of 2026-08-06) — stated here
-// because it bounds what this function is for, and spelled at each call site:
-// SHIFT and CTRL bind to the FLAG BOX ALONE, in the marker lane, in every view.
-// Both modifiers already own a waveform gesture at the very pixels a stem stands
-// on (ctrl = the strip drag, shift = the placement press since 2026-08-05), so a
-// modified press near a stem is not a hit at all and falls through to the
-// waveform underneath. The `h` history view's own modified arm asked this
-// function for one day — its stem-based multi-select — and that arm is DELETED:
-// waveform modifiers are gesture vocabulary and selection is lane vocabulary, in
-// both views alike. This function is unchanged and unconditional; only its
-// callers decide when to ask.
-//
-// UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
-// plain waveform press already splits by half — upper is playhead placement +
-// the region-drag arm, lower is the one-shot scrub — so this claim slots into a
-// seam that already exists. A full-height band would need a carve-out inside the
-// LEFT press's scrub branch and would make it impossible to LEFT-scrub at a
-// marker's column, which is exactly where a user scrubs most. (The BARE RIGHT
-// press added 2026-08-01 scrubs at full height and so reaches a stem's column
-// unobstructed — it never resolves a marker, the stem claim being left-press
-// vocabulary. That relieves the cost this argument weighed but does not change
-// the ruling: the half split is what keeps the LEFT press's two arms legible.)
-//
-// IT READS THE PAINTER'S STASH (AppState::marker_stems), so the grabbable stem
-// is the DRAWN stem by construction — same column, same displayed basis — and a
-// DISABLED marker, which publishes no stem entry at all, is not grabbable for
-// the same reason it is not visible. One fact, not two. THE STASH ANSWERS FOR
-// THE HISTORY LANE TOO, by that same construction: whichever diff classes that
-// painter stems are exactly the ones a press can claim, with no second predicate
-// deciding.
-//
-// NEAREST WINS, TIES TO LATER-IN-STORE. The stash is in paint order, so a tie
-// resolving to the later entry is the same "topmost = last painted" rule
-// hit_test_flag uses on the boxes — two overlapping stems answer the way the two
-// overlapping flags above them do.
-int hit_test_marker_stem(const AppState& app, int mouse_x, int mouse_y);
-
-// The stem's grab half-width in AUTHORED pixels, per side. A 1px line is under
-// any pointing tolerance, so the drawn stem and the grabbable stem are
-// deliberately NOT the same column — the same deliberate difference the trim
-// endcaps record (kTrimEndcapGrabPx), and stated here for the same reason:
-// everywhere else in the redesign paint and hit are identical by construction.
-inline constexpr int kMarkerStemGrabPx = 4;
-inline int marker_stem_grab_px() {
-    return scaled_px(kMarkerStemGrabPx, 0);
-}
+// (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
+// glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box
+// being the marker's one pointer surface ("I definitely don't want to be
+// concerned about accidentally touching a marker"). hit_test_marker_stem — the
+// 2026-08-01 second-surface owner: a plain upper-half press within
+// kMarkerStemGrabPx of a painted stem's column was that item's click, on the
+// live columns and, since 2026-08-05, on the `h` view's diff flags — is
+// DELETED with both of its callers, and kMarkerStemGrabPx / marker_stem_grab_px
+// with it. The question stayed open through the touch arc and was answered
+// "stems stay" while the scrollbar plan lived; the waveform-height clamp
+// (main.cpp's layout owner) keeps the flag lane in easy reach on every display,
+// which is what the removal was waiting for. The stems still PAINT exactly as
+// before — the marker_stems stash below is the stem PAINTER's input alone now.)
 
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };

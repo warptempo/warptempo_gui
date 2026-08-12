@@ -63,9 +63,10 @@ void remap_marker_indices_after_reorder(AppState& app,
 }
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. Each surface's grab tolerance resolves
-// through app_state.h (kMarkerStemGrabPx) or render.h (kTrimEndcapGrabPx) —
-// there is no shared hit half-width any more.
+// references are now explicit arguments. The one surviving grab tolerance is
+// the trim endcaps' (kTrimEndcapGrabPx, render.h) — there is no shared hit
+// half-width any more, and the marker surfaces (the flag boxes) hit on their
+// painted rects with no halo.
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item hit tests decide against the
@@ -130,9 +131,10 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
     // vertical band is not on an endcap. (The y-gate spanned the merged
     // trim-bar + ruler band for the trim surface arc's one day, 2026-08-11..12,
     // and came back to the lane with the arc's revert; the ruler is the REGION
-    // FORMER's band since 2026-08-12. The lane itself is taller since the same
-    // day — kTrimBarScalePercent, render.h — and this gate follows it through
-    // the one accessor.)
+    // FORMER's band since 2026-08-12. The lane's height is
+    // kTrimBarScalePercent-scaled — resting at 100 since the seventh glass
+    // ruling, render.h — and this gate follows whatever it reads through the
+    // one accessor.)
     const GuiRect row = top_trim_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
@@ -320,30 +322,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     return -1;
 }
 
-int hit_test_marker_stem(const AppState& app, int mouse_x, int mouse_y) {
-    // The contract — upper half only, the painter's stash, nearest-with-ties-to-
-    // later — is at the declaration.
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0 || area.h <= 0) return -1;
-    if (mouse_y < area.y || mouse_y >= area.y + area.h / 2) return -1;
-    if (mouse_x < area.x || mouse_x >= area.x + area.w) return -1;
-
-    const double tol = static_cast<double>(marker_stem_grab_px());
-    const double px  = static_cast<double>(mouse_x);
-    int    best      = -1;
-    double best_gap  = 0.0;
-    for (const MarkerStem& stem : app.marker_stems) {
-        const double gap = std::fabs(px - stem.x);
-        if (gap > tol) continue;
-        // <= keeps the LATER entry on a tie; the stash is in paint order, so
-        // that is the same topmost rule the flag boxes resolve overlaps with.
-        if (best < 0 || gap <= best_gap) {
-            best     = stem.marker_index;
-            best_gap = gap;
-        }
-    }
-    return best;
-}
+// (hit_test_marker_stem IS DELETED — architect 2026-08-12, the seventh glass
+// ruling: marker stems are pointer-inert in all contexts, the flag box being
+// the marker's one pointer surface. Its two callers — the live views' plain
+// stem click and the `h` view's diff-flag stem click — died with it, and
+// kMarkerStemGrabPx with them. The marker_stems stash it read survives as the
+// stem PAINTER's input alone.)
 
 // Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.

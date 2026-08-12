@@ -587,9 +587,11 @@ void render_trim_flags(cairo_t* cr,
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
-    // The lane is the crop's 9 rows times kTrimBarScalePercent (14 at 100%
-    // since 2026-08-12 — the finger-target factor, render.h): the bevel pair
-    // keeps its crop height, so the extra rows all land in the face band.
+    // The lane is the crop's 9 rows times kTrimBarScalePercent (back at 100
+    // since the seventh glass ruling, 2026-08-12, so 9 at 100% scale —
+    // render.h carries the one-commit 150 experiment's record): the bevel pair
+    // keeps its crop height whatever the factor, so any extra rows land in the
+    // face band.
     const int bevel_h  = std::min(trim_bevel_h_px(), lane_h);
     const int face_h   = lane_h - bevel_h;  // the crop's rows 0..6, grown
     const int hi_h     = bevel_h / 2;       // next row: the lighter shade
@@ -762,15 +764,13 @@ void render_trim_flags(cairo_t* cr,
             // side rims stay exactly `inset` even where the height gives way,
             // and the square still hangs FLUSH ON THE BEVEL.
             //
-            // A FLOOR, NOT A RESHAPE — and since the trim bar's own scale
-            // factor (kTrimBarScalePercent, 2026-08-12) a PURE BACKSTOP: the
-            // lane's face rides 13.5 authored rows while the tile's width
-            // rides 9, so inner_w (~5s) sits far under face_h (~13.5s - bevel)
-            // and the clamp binds at NO legal scale in [50, 200] — measured,
-            // 5 against face_h 12 at 100%, 2 against 5 at 50%, 10 against 25
-            // at 200%. (Pre-factor it bound across the whole band 50..74,
-            // where the 9-row lane was too shallow for the tile's own width —
-            // the band the clamp was written for.) The
+            // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
+            // (5 against face_h 7 at 100%, 10 against 14 at 200% — zero binding
+            // scales in [100, 200]), so every pixel there is what it was. (With
+            // kTrimBarScalePercent at the one-commit 150, 2026-08-12, the taller
+            // face made this a pure backstop at every legal scale; the factor's
+            // return to 100 restored the 50..74 binding band the clamp was
+            // written for.) The
             // degenerate arm below face_h <= 1 is unreachable in [50, 200] and
             // skips THE SQUARE ALONE — never the tile, whose own paint-or-not
             // verdict is the fit test above and is unchanged.

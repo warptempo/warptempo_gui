@@ -71,10 +71,10 @@ namespace {
 // kFlagBottomLiftPx (see the geometry helpers below); nothing is
 // window-proportional, and since row 7 nothing is font-proportional either.
 
-// The pointer grab tolerances live beside the surfaces they belong to —
-// kMarkerStemGrabPx in app_state.h (reached by the hit_test_* free functions
-// and the GuiInputHandler mouse handler), kTrimEndcapGrabPx in render.h — so
-// nothing of that family is file-local here.
+// The one pointer grab tolerance lives beside the surface it belongs to —
+// kTrimEndcapGrabPx in render.h (the marker stems' grab constant died with
+// their pointer surface, 2026-08-12) — so nothing of that family is
+// file-local here.
 
 // ms-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): ms_per_px(level) = 0.625 * 2^(level - 1), computed directly in
@@ -120,13 +120,16 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
-// flexes between them. The TOP strip is SEVEN lanes (from the window edge
+// flexes between them UP TO A CLAMP (the vertical rule below). The TOP strip
+// is SEVEN lanes (from the window edge
 // inward): MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
 // redesign), TOOLBAR ROW (its own authored toolbar_row_h_px(), row 2 of the
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
-// own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
+// own authored icon_row_h_px(), row 4), then — after the FLEXIBLE GAP — row
+// 5's three: the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
-// kTrimBarScalePercent, the finger-target factor of 2026-08-12), the RULER lane
+// kTrimBarScalePercent, resting at 100 since the seventh glass ruling), the
+// RULER lane
 // (ruler_lane_h_px(), timestamps + tick tops + the region former's drag band —
 // its zoom entry deleted for good 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
@@ -141,6 +144,28 @@ namespace {
 // editor/modal row COLLAPSED INTO ONE LINE, bottom_row_h_px() tall. Both ride
 // the gui_scale axis like every other redesigned row, so no lane anywhere is
 // font-scaled any more.
+//
+// THE VERTICAL RULE — THE WAVEFORM HAS A MAXIMUM HEIGHT (architect 2026-08-12,
+// the seventh glass ruling; kWaveformMaxHeightPx, render.h, carries the value
+// and its bracket — "bigger than the height on the Pi, smaller than the
+// waveform height on my external monitor"): the window stacks as rows 1-4
+// (menu / toolbar / tabs / icons) — THE FLEXIBLE GAP — rows 5-7 (trim bar /
+// ruler / marker lane, their heights unchanged, ATTACHED to the waveform) —
+// the WAVEFORM (its natural leftover height, CLAMPED at the maximum) — row 8 —
+// row 9. gap = max(0, natural_waveform_height - clamp) (top_strip_flex_gap
+// below), so on a short window (the Pi) the gap is 0 and every pixel is what
+// it always was, while on a tall monitor the strip block and the waveform ride
+// LOW, adjacent to row 8, and the ruler/flag lanes stay in easy reach. The gap
+// band is WINDOW GROUND and HITS NOTHING: it lies inside top_strip_area, where
+// the press router's empty-top-strip fallthrough answers a consumed nothing
+// and the cursor map answers Arrow, and render_background's chrome erase
+// paints it with no lane painter over it. ONE OWNER: the gap enters the
+// geometry at exactly two expressions in this file — strip_row_rect's inset
+// for top lanes past the icon row, and top_strip_h's total (which is what
+// clamps waveform_area's height, that function's h - top - bottom arithmetic
+// unchanged) — so every consumer (hit tests, paint, damage, the wheel probe,
+// the touch pan zone) inherits the shifted y's through the lane accessors with
+// no second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
@@ -159,7 +184,8 @@ namespace {
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head on the
 // MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|toolbar, toolbar|tab,
-// tab|icon, icon|trim, trim|ruler, ruler|marker, and both outer
+// tab|icon, the icon|trim seam GROWN INTO THE FLEXIBLE GAP (2026-08-12),
+// trim|ruler, ruler|marker, and both outer
 // kFlagBottomLiftPx gaps) is honored structurally by the loop below and by every
 // consumer, with no asset spanning any of them. ONE shared
 // helper —
@@ -201,7 +227,7 @@ int top_lane_height(int lane) {
         // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
-        case 4: return trim_lane_h_px();         // trim bar + endcaps (x150%)
+        case 4: return trim_lane_h_px();         // trim bar + endcaps
         case 5: return ruler_lane_h_px();        // timestamps / ticks / region former
         // Flags, stems and the playhead head; bottom edge = waveform top.
         case 6: return marker_lane_h_px();
@@ -223,6 +249,10 @@ int bottom_lane_height(int lane) {
         default: return 0;
     }
 }
+// The UN-GAPPED lane sum — the strip's lanes and their (zero) authored gaps
+// alone. The top strip's public height adds the flexible gap below; this stays
+// the gap computation's own input, which is what keeps the two from being
+// circular.
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
@@ -231,9 +261,38 @@ int strip_total_h(bool top_strip) {
     sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
     return sum;
 }
+// THE FLEXIBLE GAP (the vertical rule above): how much of the window's leftover
+// height the waveform must NOT take, computed from the un-gapped stack — the
+// natural waveform height is the window minus both raw lane sums, and the gap
+// is whatever of it exceeds the clamp (kWaveformMaxHeightPx, render.h). Zero
+// wherever the natural height is at or under the clamp (the Pi's whole
+// geometry), and zero too on a degenerate window whose natural height is
+// already negative (the silent-wrong guard at waveform_area still owns that
+// case). Takes the CLAMPED window height — callers clamp_dims first, exactly
+// as every other geometry entry point does.
+int top_strip_flex_gap(int win_h) {
+    const int natural = win_h - strip_total_h(/*top_strip=*/true)
+                              - strip_total_h(/*top_strip=*/false);
+    const int gap = natural - waveform_max_h_px();
+    return gap > 0 ? gap : 0;
+}
+// The lane index the gap opens AFTER: the icon row (top lane 3). Lanes 0..3
+// stay at the window top; lanes 4..6 (trim / ruler / marker) sit below the gap,
+// attached to the waveform.
+constexpr int kTopStripGapAfterLane = 3;
 } // namespace
 
-int top_strip_h(const AppState&)    { return strip_total_h(/*top_strip=*/true);  }
+// The TOP strip's public height INCLUDES the flexible gap (2026-08-12): it is
+// the distance from the window top to the waveform top, which is what every
+// consumer actually asks of it — top_strip_area then spans the gap band (its
+// damage covering it is correct: the band is repainted window ground), and
+// waveform_area's h - top - bottom arithmetic yields the CLAMPED waveform
+// height with no second expression.
+int top_strip_h(const AppState& a) {
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
+    return strip_total_h(/*top_strip=*/true) + top_strip_flex_gap(h);
+}
 int bottom_strip_h(const AppState&) { return strip_total_h(/*top_strip=*/false); }
 
 GuiRect top_strip_area(const AppState& a) {
@@ -252,6 +311,11 @@ GuiRect bottom_strip_area(const AppState& a) {
 GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
+    // top_strip_h INCLUDES the flexible gap (2026-08-12), so the h - top - bot
+    // arithmetic below yields the CLAMPED waveform height — min(natural,
+    // kWaveformMaxHeightPx-scaled) wherever the natural height is non-negative
+    // — and the y lands the waveform flush under the marker lane with no
+    // second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
@@ -295,7 +359,9 @@ GuiRect waveform_area(const AppState& a) {
     // half of the cross-product this guard was written against, left the schema
     // entirely in row 7 — and the guard STAYS regardless: it costs one compare
     // and it is the class of fault (silent-wrong geometry) the project keeps
-    // guards for.
+    // guards for. (The flexible gap cannot re-trip it: top_strip_flex_gap is
+    // zero whenever the natural height is at or under the clamp, negative
+    // included, so the gap never deepens an overflow.)
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }
@@ -304,7 +370,10 @@ GuiRect waveform_area(const AppState& a) {
 // A lane is a pure index from its strip's window edge (0 = the edge-most lane):
 // the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
 // each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
-// further inward. The top strip counts downward from y=0; the bottom strip
+// further inward — PLUS, for top lanes past the icon row, the FLEXIBLE GAP
+// (the vertical rule at the head of this block: rows 5-7 are attached to the
+// clamped waveform, not to the icon row above them). The top strip counts
+// downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
@@ -325,6 +394,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
         inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
         inset += static_cast<int>(kRowGapPx);
     }
+    // The flexible gap opens between the icon row and the trim lane (the
+    // vertical rule): every top lane below it shifts down by the gap, and the
+    // bottom strip's mirror arithmetic never sees it.
+    if (top_strip && lane_from_window_edge > kTopStripGapAfterLane)
+        inset += top_strip_flex_gap(h);
     const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
                                  : bottom_lane_height(lane_from_window_edge);
     const int y = top_strip ? inset : (h - inset - lane_h);
@@ -338,13 +412,16 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // ground carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
 // its border-bottom); lane 3 is the ICON row (the seventeen view/mode/action
-// buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
+// buttons and its border-bottom); THE FLEXIBLE GAP opens after it (the
+// vertical rule at the head of this block — window ground, no lane, hits
+// nothing); lane 4 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
-// double-click — the one lane that also rides kTrimBarScalePercent, so the
-// strip total and the waveform top move with that factor through this same
+// double-click — the one lane that also rides kTrimBarScalePercent, resting at
+// 100 since the seventh glass ruling, through this same
 // accumulation); lane 5 is the RULER lane (the timestamp ladder; its plain
 // drag draws the REGION since 2026-08-12, the zoom entry deleted for good);
-// lane 6 is the MARKER lane (the flags, their stems, and the
+// lane 6 is the MARKER lane (the flags, their stems — pointer-inert since the
+// seventh glass ruling — and the
 // playhead's aliased head on the lane's bottom rows), whose bottom edge is
 // flush with the waveform area top. (The trim and ruler lanes were ONE merged
 // input band — top_trim_surface_area — for the trim surface arc's one day,

@@ -37,9 +37,10 @@ class GuiWaveformWorker;
 
 // -- Constants used by paint code ----------------------------------------
 //
-// Declared here so paint_handler.cpp can reach them. The pointer-side grab
-// tolerances are paint-handler-independent and live with the surfaces they
-// belong to (kMarkerStemGrabPx in app_state.h, kTrimEndcapGrabPx in render.h);
+// Declared here so paint_handler.cpp can reach them. The one pointer-side grab
+// tolerance is paint-handler-independent and lives with the surface it
+// belongs to (kTrimEndcapGrabPx in render.h; the marker stems' died with
+// their pointer surface, 2026-08-12);
 // playhead_half_px() lives in render.h. redesign_font_size_px() — the product's
 // ONE text size since row 7 — lives in render.h so render.cpp can reach it
 // without pulling paint_handler.h into the lower-layer include graph.

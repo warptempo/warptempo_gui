@@ -227,8 +227,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     the re-grep for this retell found the class absent; membership re-derived
 //     2026-08-06): the three keyboard arms — the diff-flag Tab cycle, the
 //     absolute Home/End and `c` — and, SINCE 2026-08-06, THE MODE'S FLAG CLICKS,
-//     BOTH BODIES: the plain focus click over either surface, the flag box or
-//     the stem (focus_history_diff_flag), and the lane's shift/ctrl selection
+//     BOTH BODIES: the plain focus click on the flag box
+//     (focus_history_diff_flag — its stem surface died with the stems-inert
+//     ruling, 2026-08-12), and the lane's shift/ctrl selection
 //     pair (select_history_diff_flags_modified). All of them are the live arms'
 //     region regime read against the mode's data, and the flag clicks are the
 //     live MARKER CLICKS' class above, at the same UNCONDITIONAL strength — the
@@ -2004,16 +2005,16 @@ private:
     //     four acts. It takes the press's DOUBLE-CLICK SNAPSHOT because one of
     //     those acts is a double-click (the trim bar's framing) and on_button_-
     //     press clears the shared field before this is reached.
-    //   * focus_history_diff_flag is the PLAIN focus click's body, shared by its
-    //     two surfaces — the flag box in the lane and the flag's STEM in the
-    //     waveform's upper half — so the two cannot answer differently. It
+    //   * focus_history_diff_flag is the PLAIN focus click's body — the flag
+    //     box in the lane, the flag's one pointer surface (its waveform STEM
+    //     surface died with the stems-inert ruling, 2026-08-12). It
     //     clears the mode's multi-selection: a plain click replaces it.
     //   * select_history_diff_flags_modified is the SHIFT and CTRL clicks' body,
     //     over the MARKER LANE ALONE — the range extend and the membership
-    //     toggle, both then focusing the clicked flag and landing on it. The
-    //     flag's stem is a PLAIN surface only (architect 2026-08-06, the
-    //     symmetry ruling: over the waveform a modifier names a gesture, not a
-    //     selection, in this view exactly as in the regular ones).
+    //     toggle, both then focusing the clicked flag and landing on it (over
+    //     the waveform a modifier names a gesture, not a selection — the
+    //     2026-08-06 symmetry ruling — and since 2026-08-12 a plain waveform
+    //     press resolves no flag either: the placement press at every column).
     //   * close_history_mode is the ONE exit owner; every closer calls it, and
     //     since 2026-08-05 it is also the ONE site that puts the editor's parked
     //     navigation band back (the snapshot's own record is at

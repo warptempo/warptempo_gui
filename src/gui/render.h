@@ -975,22 +975,26 @@ inline int icon_row_h_px() {
 // factor below, so the crop's y-map holds for the ruler and marker lanes while
 // the trim lane is taller than its measured 9 rows now.)
 //
-// THE TRIM BAR'S OWN SCALE FACTOR (architect 2026-08-12, the sixth glass
-// ruling's pointer half): the trim bar lane is "a little too small for a
-// finger", so it — AND IT ALONE among the lanes — grows by this percent, a
-// RULED RETUNABLE. The architect offered himself 150 or 200 and picked 150
-// ("let's try 150"); a retune is this one constant. It COMPOSES with gui_scale
-// inside trim_lane_h_px (the crop-measured 9 is still the authored value; the
-// factor multiplies it before the one scaled_px conversion), and it reaches
-// every consumer through the LANE RECT alone: top_trim_row_area's height is
-// this accessor, and the endcap rects (trim_endcap_rect takes the lane rect's
-// y/h), the bridge y-gate, the framing double-click band and the painted bar
-// (render_trim_flags' trim_bar parameter) all read that one rect — so paint
-// and hit grow together by construction and no second site scales anything.
-// The lane's INTERIOR widths (the endcap's 2px, the bevel pair, the midpoint
-// tile's 9) deliberately keep their own crop metrics: the factor buys a taller
-// finger TARGET, not a re-proportioned glyph set.
-inline constexpr int kTrimBarScalePercent = 150;
+// THE TRIM BAR'S OWN SCALE FACTOR — a RULED RETUNABLE, back at 100 (architect
+// 2026-08-12, the seventh glass ruling). The 150 experiment lived one commit,
+// earlier the same day: the sixth ruling read the lane as "a little too small
+// for a finger" (the architect offered himself 150 or 200 and picked 150), and
+// his next look at glass and monitors reversed it — "the blue bar looks too
+// big". The bar needs no big finger target any more: the common act is
+// HIGHLIGHTING to set trim, which lives on the RULER's plain drag now (the
+// region former + `x`), so the trim bar's own gestures are the rare case. The
+// machinery stays because the factor is the lane's one retune knob: it
+// COMPOSES with gui_scale inside trim_lane_h_px (the crop-measured 9 is still
+// the authored value; the factor multiplies it before the one scaled_px
+// conversion), and it reaches every consumer through the LANE RECT alone —
+// top_trim_row_area's height is this accessor, and the endcap rects
+// (trim_endcap_rect takes the lane rect's y/h), the bridge y-gate, the framing
+// double-click band and the painted bar (render_trim_flags' trim_bar
+// parameter) all read that one rect — so paint and hit move together by
+// construction and no second site scales anything. The lane's INTERIOR widths
+// (the endcap's 2px, the bevel pair, the midpoint tile's 9) keep their own
+// crop metrics regardless of the factor.
+inline constexpr int kTrimBarScalePercent = 100;
 inline constexpr int kTrimLaneHeightPx   = 9;
 inline constexpr int kRulerLaneHeightPx  = 28;
 inline constexpr int kMarkerLaneHeightPx = 20;
@@ -1003,6 +1007,27 @@ inline int ruler_lane_h_px() {
 }
 inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneHeightPx, 5);
+}
+
+// THE WAVEFORM'S MAXIMUM HEIGHT — a RULED RETUNABLE (architect 2026-08-12, the
+// seventh glass ruling): on tall monitors the natural (leftover) waveform is so
+// tall that reaching the ruler and the flag lane "feels cumbersome", so the
+// waveform CLAMPS at this height and a FLEXIBLE GAP of window ground opens
+// after the icon row — rows 5-7 stay attached to the waveform's top and the
+// whole strip-block-plus-waveform rides LOW, adjacent to row 8, with every lane
+// in easy reach on every display. The architect's bracket for the value:
+// "bigger than the height on the Pi, smaller than the waveform height on my
+// external monitor". At 100% scale the natural heights are 307px on the Pi's
+// 1024x600 (600 minus the 215px top strip and the 78px bottom strip) and 787px
+// on the 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped
+// and pixel-identical (gap 0) while the 1080p window gets a 237px gap. A
+// SCALED length riding gui_scale like every authored height, so the clamp
+// keeps pace with the lanes it is measured against. The ONE application point
+// is the strip/waveform geometry owner (top_strip_flex_gap / strip_row_rect /
+// waveform_area, main.cpp); no consumer reads this accessor directly.
+inline constexpr int kWaveformMaxHeightPx = 550;
+inline int waveform_max_h_px() {
+    return scaled_px(kWaveformMaxHeightPx, 1);
 }
 
 // Authored pixel geometry of THE BOTTOM ROW — the bottom strip's window-edge
@@ -1249,9 +1274,8 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
 // shade of whatever surface owns the column. Rides gui_scale like every
 // authored length; deliberately NOT kTrimBarScalePercent — the lane's interior
-// metrics keep their crop values (the factor grows the finger target, so the
-// extra rows go to the FACE above the bevel; the rule at the factor's own
-// comment).
+// metrics keep their crop values whatever the factor reads (at the resting 100
+// the two axes coincide; the rule at the factor's own comment).
 inline int trim_bevel_h_px() {
     return scaled_px(2.0, 2);
 }
@@ -1262,8 +1286,8 @@ inline int trim_endcap_w_px() {
 }
 // THE MIDPOINT MARK IS THE 9x9 CROP, so its lengths are the crop's own: a TILE
 // 9 columns wide at 100% (its height is the lane's, which is what 9 rows means
-// here — and the lane rides kTrimBarScalePercent since 2026-08-12, so the tile
-// stands taller than the crop's square while its widths keep the crop), an
+// here — the lane also rides kTrimBarScalePercent, resting at 100 since the
+// seventh glass ruling, so tile and crop square coincide again), an
 // INNER square 5x5, and the crop's 2px INSET placing that square at
 // cols 2..6 / rows 2..6. Plus the CLEARANCE the visibility rule demands on each
 // side of the whole tile. All the widths ride gui_scale alone, like every
@@ -1920,19 +1944,21 @@ struct FlagLaneRects {
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
 // column the stem stands on (the flag box's own LEFT edge — the composite shows
 // the stem under it) and the color its class resolved to. The painter is the
-// only producer; the per-frame waveform pass (GuiPaintHandler::paint_marker_stems)
-// is the only consumer, so a stem and its flag can never disagree about a column.
+// only producer; the readers are the per-frame waveform pass
+// (GuiPaintHandler::paint_marker_stems) and the playhead's white-stem
+// suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
+// paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved CLASS; the consumer applies
 // exactly one override over it, the open flag editor's invalid-commit red flash
 // (a transient the painter has no business baking into a cache — the contract is
 // at GuiPaintHandler::paint_marker_stems).
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
-// on the entry means the consumer has nothing to re-decide. That absence is
-// LOAD-BEARING TWICE since 2026-08-01: the stem is a POINTER TARGET now
-// (hit_test_marker_stem, app_state.h), so "no stem" and "not grabbable" are the
-// same fact rather than two that could drift, and `marker_index` is what lets
-// the hit route into the marker-click bodies.
+// on the entry means the consumer has nothing to re-decide. (The stash was
+// ALSO the pointer's stem hit source for 2026-08-01..12, when the stem was a
+// second click surface of its marker; that surface is deleted — stems are
+// pointer-inert, the seventh glass ruling — so the stash is paint-only again
+// and `marker_index` serves the painter's identity bookkeeping alone.)
 struct MarkerStem {
     int      marker_index;
     double   x;

@@ -1541,7 +1541,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // region that existed solely to keep the platform's sub-detent remainder
     // attribution from bridging two diverging Alt routes). Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
-    // it emits nothing at all.
+    // it emits nothing at all. THE FLEXIBLE GAP BAND (the waveform-height
+    // clamp's window ground between the icon row and the trim lane,
+    // 2026-08-12) is INSIDE top_strip_area and DELIBERATELY NOT in the inert
+    // list: it is not chrome — it is the strip block's own ground, sitting
+    // where the ruler and trim lanes already answer the strip's zoom/pan — so
+    // it inherits the top-strip route (plain wheel zooms, Alt pans) exactly as
+    // the lanes beside it do, with no region added.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag

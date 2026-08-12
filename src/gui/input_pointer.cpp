@@ -2020,8 +2020,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the scanner scrub, which touches no selection at all), and a Shift
         // press FORMS a region waveform-wide (from the playhead, or a marker
         // DROP that clears the selection; see the waveform block below) — so
-        // no marker scan runs on the waveform at all (the invisible stem is
-        // not a grab target). The plain DRAG never selects markers either
+        // no marker scan runs on the waveform at all. THE MARKER STEMS ARE
+        // POINTER-INERT (architect 2026-08-12, the seventh glass ruling — "I
+        // definitely don't want to be concerned about accidentally touching a
+        // marker"): the FLAG BOX is the marker's ONE pointer surface, in every
+        // view. The stem-as-second-surface model of 2026-08-01 — the plain
+        // upper-half press within a grab tolerance of a painted stem's column
+        // routing through the flag's own click bodies — is DELETED WHOLE
+        // (hit_test_marker_stem and kMarkerStemGrabPx with it), so a plain
+        // upper-half press over a stem column is the ordinary placement press,
+        // stem or no stem. The stems question stayed OPEN through the touch
+        // arc and was answered "stems stay" while the scrollbar plan lived;
+        // the waveform-height clamp (main.cpp's layout owner) keeps the flag
+        // lane in easy reach on every display, which is what the removal was
+        // waiting for — marker work happens in the flag lane, and the
+        // waveform is purely region / playhead / pan / zoom. (Modified
+        // presses never resolved a stem anyway — the 2026-08-01 plain-exact
+        // gate, made universal by the 2026-08-06 symmetry ruling — so this
+        // ruling only moved the PLAIN stem click.) The stems still PAINT
+        // exactly as before: class-colored, always on, disabled-no-stem.
+        // The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).
         // Trim bounds are grabbed only by their top-strip endcaps /
@@ -2034,39 +2052,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // what makes a spot EMPTY) all read this one hit.
         int mh_index = -1;
         if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
-        // THE STEM IS A SECOND SURFACE OF THE SAME ITEM (architect 2026-08-01):
-        // a press within a few px of an ENABLED marker's stem column, in the
-        // WAVEFORM'S UPPER HALF, resolves to that marker and routes through the
-        // very same click bodies its flag does — select / land / arm / open,
-        // nothing restated. It is resolved HERE, beside the flag hit, so exactly
-        // one `mh_index` reaches every branch below and the two surfaces cannot
-        // answer differently. The full contract (why upper-half only, why the
-        // painter's stash, the tie rule) is at hit_test_marker_stem, app_state.h.
-        //
-        // THE STEM SURFACE IS PLAIN-EXACT (architect 2026-08-01, second pass):
-        // the SHIFT range select and the CTRL membership toggle bind to the FLAG
-        // ALONE, because both modifiers already mean something else ON THE
-        // WAVEFORM — ctrl is the strip drag and shift is the region former — and
-        // the stem lives in the waveform area, standing over pixels those two
-        // gestures own. So a modified press near a stem is NOT a marker hit at
-        // all: it falls through to the waveform's own ctrl / shift gesture at
-        // that column, which is the answer the surface underneath promises. The
-        // FLAG keeps all three clicks (it is in the top strip, where neither
-        // waveform gesture reaches), and the plain stem click is untouched —
-        // select, land, arm the pending drag, seed the double-click.
-        //
-        // ONE HIT OWNER STILL: the gate is on this single resolution site, not a
-        // second hit function, and the short-circuit leaves `mh_index` at -1 for
-        // a modified press, so every branch below sees "no marker" from the one
-        // index they all read.
-        //
-        // `stem_click` is what widens the marker branches' own gate from
-        // "inside_top" to "inside_top OR a stem": the trim-bar and empty-lane
-        // arms inside those branches are y-band tests that a waveform press
-        // fails, so they fall through untouched.
-        const bool stem_click =
-            !inside_top && inside_waveform && !alt && !ctrl && !shift &&
-            (mh_index = hit_test_marker_stem(app, x, y)) >= 0;
 
         // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
@@ -2189,14 +2174,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // 2026-07-30). Read-only allowed
             // (selection + playhead are navigation).
             //
-            // THE FLAG IS THE WHOLE SURFACE HERE — `inside_top` alone, not the
-            // stem's widened gate (architect 2026-08-01): the ctrl-exact
-            // WAVEFORM press is the strip drag, and the stem stands ON the
-            // waveform, so ctrl over a stem belongs to the drag. The gate is
-            // spelled `inside_top` rather than `inside_top || stem_click`
-            // because stem_click is FALSE for any modified press by its own
-            // definition above; saying so directly keeps this branch from
-            // reading as though a stem could still reach it. A markerless
+            // THE FLAG IS THE WHOLE SURFACE HERE — `inside_top` alone: the
+            // ctrl-exact WAVEFORM press is the strip drag, and a stem stands
+            // ON the waveform, so ctrl over a stem belongs to the drag (as it
+            // always did — modified presses never resolved a stem, and since
+            // 2026-08-12 no press does). A markerless
             // top-strip ctrl press claims only the trim bar (BEGIN bound set,
             // next block) and is a strict no-op on every other lane — no-op in
             // the playback sense too, since only a CLAIM stops playback.
@@ -2325,19 +2307,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // re-zoom), and all three land ON THEIR FOCUS (architect 2026-07-28), so
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
-        if (inside_top || stem_click) {
-            // A PLAIN STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
-            // waveform, so every band test inside this branch — the trim bar
-            // lane below, the ruler's region-former arm, the empty-marker-lane
-            // parity press — simply fails for it, and it lands on the one arm
-            // it is for: `mh_index >= 0`, the marker click. Nothing in those
-            // bodies knows or needs to know which surface resolved the index.
-            //
-            // A SHIFT PRESS NEVER ARRIVES BY THE STEM: stem_click is plain-exact
-            // (its definition above), so shift over a stem leaves both halves of
-            // this gate false and falls through to the waveform block, where
-            // shift is the region former. Shift reaches the marker RANGE select
-            // through the FLAG BOX alone, which is `inside_top`.
+        if (inside_top) {
+            // TOP-STRIP ONLY (the stem's widened gate — `inside_top ||
+            // stem_click` — died with the stem surface, architect 2026-08-12:
+            // a plain waveform press over a stem column falls through to the
+            // waveform block below and is the placement press there).
             //
             // The TRIM BAR (top_trim_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. Row 5's three lanes —
@@ -2603,9 +2577,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             active_column_authoring_allowed(app)) {
                             // Every open route opens fully SELECTED (open-
                             // selected), so there is no clicked-glyph caret to
-                            // seat — a press on the flag BOX and a press on the
-                            // marker's STEM are the same open. A specific caret
-                            // spot is a click inside
+                            // seat. A specific caret spot is a click inside
                             // the already-open editor (the F2.1 path).
                             flag_editor.enter_top_flag_edit(hit);
                             opened_editor = true;
@@ -2625,10 +2597,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             .target  = hit};
                         // A writable tab arms the pending REPOSITION drag on a
                         // plain marker press IN THE COLUMN'S HOME VIEW only —
-                        // from EITHER surface, the flag box or its stem
-                        // (2026-08-01): the drag tracks the pointer's x from the
-                        // press point, which is the same gesture whichever the
-                        // press started on. The old on_flag half of this test
+                        // from the FLAG BOX, the marker's one pointer surface
+                        // (the stem's second-surface arm of 2026-08-01 died
+                        // with the stem surface, 2026-08-12): the drag tracks
+                        // the pointer's x from the press point. The old
+                        // on_flag half of this test
                         // went with the marker-text lane's run in row 5;
                         // read-only selects but never arms (marker
                         // mutation refused). ONE DRAG, ONE GATE since 2026-07-29:
@@ -2710,15 +2683,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // marker lane outside every flag box — a box under the point is
                 // a marker hit and never reaches this branch. The inter-lane
                 // gaps, the SHIFT-exact trim-bar press and the SHIFT-exact
-                // marker-lane press land here too, equally inert.
+                // marker-lane press land here too, equally inert — and so does
+                // any press in the FLEXIBLE GAP band between the icon row and
+                // the trim lane (the waveform-height clamp's window ground,
+                // 2026-08-12: inside top_strip_area but in no lane, so it
+                // falls to exactly this return with no code of its own, and
+                // the cursor map's plain top-strip fall-through answers Arrow
+                // over it the same way).
                 return;
             }
             return;
         }
 
-        // Waveform-area press: marker-blind for SELECTION (it never SELECTS a
-        // hit marker — the stem is not a grab target; hit_test_flag runs only
-        // for top-strip presses). ONLY THE PLAIN PRESS SPLITS BY HALF
+        // Waveform-area press: marker-blind — the waveform resolves NO marker
+        // on any press (the stems are pointer-inert since 2026-08-12, and
+        // hit_test_flag runs only for top-strip presses), so a press over a
+        // stem column is the ordinary press for its half and modifiers.
+        // ONLY THE PLAIN PRESS SPLITS BY HALF
         // (architect 2026-07-23): the UPPER half is the placement press — CLEARS
         // the selection (the deselect-all: a waveform click dismisses the marker
         // selection, the Ableton behaviour), drops the playhead at the clicked
@@ -3844,11 +3825,6 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     live clear-site rule's own shape. On empty lane it clears the focus, lands
 //     nothing, and still clears the region — the live marker click's
 //     unconditional clear.
-//   * a PLAIN press within the stem grab tolerance of a PAINTED DIFF FLAG'S
-//     STEM, in the waveform's upper half, IS THAT FLAG'S CLICK — the same body
-//     at a different pixel, so it inherits that minimalism whole. It is asked
-//     BEFORE the placement press below, the live press's own order between the
-//     two surfaces. PLAIN ONLY since the symmetry ruling below.
 //   * the MARKER LANE's two MODIFIED clicks, and that lane alone: SHIFT takes
 //     the contiguous range from the focus, CTRL toggles one flag's membership,
 //     and both then focus the clicked flag and land the playhead on it (the live
@@ -3882,16 +3858,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //
 // THE SYMMETRY RULING (architect 2026-08-06) is why the acts read as they do:
 // THE HISTORY VIEW AND THE REGULAR VIEWS ANSWER A WAVEFORM CLICK IDENTICALLY,
-// and the regular views' standing model is the model. MODIFIED CLICKS ON THE
-// WAVEFORM IGNORE STEMS everywhere — the 2026-08-01 live-view precedent, now
-// universal — so a waveform modifier is GESTURE vocabulary (ctrl the strip drag,
+// and the regular views' standing model is the model. THE WAVEFORM RESOLVES NO
+// FLAG AT ALL — a waveform modifier is GESTURE vocabulary (ctrl the strip drag,
 // shift the placement press and its former) while SELECTION is LANE vocabulary
-// (the flag boxes' plain, shift and ctrl clicks). PLAIN clicks keep the stem hit
-// in both views, that being the one surface where a flag and the waveform
-// overlap without a modifier to spend. What this DELETED is the mode's
-// stem-based multi-select — the shift range and the ctrl toggle over stems in
-// the waveform's upper half, which stood for one day — and nothing else: the
-// LANE's shift and ctrl clicks are untouched.
+// (the flag boxes' plain, shift and ctrl clicks), and since 2026-08-12 (the
+// seventh glass ruling, stems pointer-inert in all contexts) the PLAIN click is
+// lane vocabulary too: the diff flag's STEM surface — the plain upper-half
+// press within the grab tolerance that was that flag's click, the one surface
+// where a flag and the waveform overlapped — is DELETED with the live views'
+// stem surface, so the view's waveform press is the placement press at EVERY
+// column, stems included. (The 2026-08-06 ruling had already deleted the mode's
+// one-day stem-based multi-select; the LANE's three clicks are untouched by
+// both rulings.)
 //
 // EVERYTHING ELSE IS A CONSUMED NO-OP — the RIGHT button whole, the marker
 // clicks and their drag arm, the empty-lane marker drop, the trim bar's three
@@ -4048,30 +4026,12 @@ bool GuiInputHandler::handle_history_mode_press(
     // press owns. Both halves take the same act since playback left the view —
     // the lower half was the scrub's until 2026-08-05.
     if (inside_waveform) {
-        // THE STEM CLAIM FIRST — the live press's own order between the two
-        // surfaces of one item (on_button_press resolves the stem beside the
-        // flag hit, ahead of every branch that consumes it). hit_test_marker_stem
-        // is unchanged and needs to be: it reads the painter's stash, which the
-        // mode's own lane pass publishes for the diff flags (render_history_diff_-
-        // flags, the sole producer while the mode stands), so `marker_index` is
-        // an index into app.history_mode.flags exactly as the flag rects' is, a
-        // changed pair carries the ONE stem its one ordinal names, and the
-        // clickable stems are the DRAWN stems by construction — no second
-        // predicate decides which diff classes stem. The half test and the
-        // grab tolerance come from that owner too.
-        // PLAIN ONLY, and this gate is now the WHOLE of the symmetry ruling on
-        // this surface (architect 2026-08-06): a modified click over the
-        // waveform never resolves a stem in either view, so the shift press
-        // that reaches here skips the claim and goes straight to the placement
-        // press beneath it. Ctrl never arrives at all (it left for the strip
-        // drag far above).
-        if (!shift) {
-            const int stem_hit = hit_test_marker_stem(app, x, y);
-            if (stem_hit >= 0) {
-                focus_history_diff_flag(stem_hit);
-                return true;
-            }
-        }
+        // NO STEM CLAIM (architect 2026-08-12, the seventh glass ruling —
+        // stems pointer-inert in all contexts): the diff flag's stem surface,
+        // this arm's leading claim since 2026-08-05, is deleted with the live
+        // views' stem surface, so the waveform press is the placement press
+        // at EVERY column, stems included, plain and shift alike. The diff
+        // flag's LANE BOX is its one pointer surface, above.
         // THE PLACEMENT PRESS. The focus clear runs FIRST, ahead of the shared
         // body's own gutter return, exactly where the live body's deselect runs
         // — this is that deselect's mode analog, and the clearer inventory at
@@ -4100,10 +4060,11 @@ bool GuiInputHandler::handle_history_mode_press(
     return true;
 }
 
-// THE MODE'S PLAIN FOCUS CLICK, one body for its two pointer surfaces — the diff
-// flag's box in the marker lane and its STEM in the waveform's upper half. `hit`
-// is an index into app.history_mode.flags (-1, or anything the list no longer
-// holds, being the empty-lane answer: clear the focus and land nothing).
+// THE MODE'S PLAIN FOCUS CLICK — the diff flag's box in the marker lane, the
+// flag's ONE pointer surface (its waveform STEM surface, this body's second
+// caller from 2026-08-05, died with the stems-inert ruling of 2026-08-12).
+// `hit` is an index into app.history_mode.flags (-1, or anything the list no
+// longer holds, being the empty-lane answer: clear the focus and land nothing).
 //
 // IT CLEARS THE MULTI-SELECTION (architect 2026-08-05), which is the live
 // model's own shape rather than a rule of the mode's: a plain click REPLACES the
