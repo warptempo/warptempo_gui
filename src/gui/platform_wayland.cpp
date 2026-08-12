@@ -163,7 +163,7 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
     if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
-// THE TOUCH DISAMBIGUATION CONSTANTS, both RULED RETUNABLES (touch phase 1,
+// THE TOUCH DISAMBIGUATION CONSTANTS, all RULED RETUNABLES (touch phase 1,
 // 2026-08-11 — feel constants shipping unverified ahead of the target panel's
 // arrival; retune on silicon, not on argument).
 //
@@ -175,9 +175,28 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
 // the two fingers of an intended pinch, which land a frame or two apart, are
 // seen as a pair. The deadline is sampled on the timerfd tick (the key-repeat
 // precedent), so expiry lands within one tick (<= ~16 ms) of the mark — the
-// window is a feel bound, not an exact timer. Expiry ALWAYS resolves to the
-// pointer translation — hold unlocks the pointer under the phone model (the
-// Pending clause at the touch state block).
+// window is a feel bound, not an exact timer. Expiry resolves to the pointer
+// translation — hold unlocks the pointer under the phone model (the Pending
+// clause at the touch state block) — everywhere but the MERGED TRIM BAND,
+// whose down STRETCHES the window to kTouchTrimHoldMs below.
+//
+// kTouchTrimHoldMs is the trim band's OWN Pending deadline — the "beat" of
+// the fourth glass session's hold-a-beat trim move, given its own constant
+// after riding kTouchDisambiguateMs for a few hours broke the band's quick
+// drag in the field (2026-08-11): 60 ms is shorter than the natural dwell of
+// an AIMED band drag — a finger landing from rest takes well over 60 ms to
+// cover its first 8 px — so nearly every deliberate drag expired into the
+// trim move before its motion reached the slop fork, and the band's region
+// former was unreachable from glass (a >60 ms tap likewise stopped being a
+// click, begin+committing a motionless trim move instead). The band trades
+// hold-unlocks-the-pointer away, so nothing on it needs the 60 ms press;
+// stretching its window costs only trim-move latency, and inside the
+// stretched window every other meaning keeps the Pending arms' own shapes:
+// a slop crossing resolves to the pointer (the region former / the endcap
+// quick-grab), a lift is the tap (the click), a second finger joins
+// two-finger nav — only a finger that survives the whole beat sub-slop
+// resolves to TrimMove. 500 ms is the desktop long-press convention (labwc's
+// own repeat delay is 575 ms — the same order): a beat, not a blink.
 //
 // kTouchSlopPx is the physical-pixel travel that resolves the window EARLY
 // (a finger that is already dragging should not wait out the
@@ -194,6 +213,7 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
 // own drag gate by construction, so a touch drag becomes a drag the moment
 // it resolves.
 constexpr int    kTouchDisambiguateMs = 60;
+constexpr int    kTouchTrimHoldMs     = 500;
 constexpr double kTouchSlopPx         = 8.0;
 
 } // namespace
@@ -2838,8 +2858,10 @@ void GuiPlatform::on_pointer_frame() {
 void GuiPlatform::maybe_resolve_touch_window() {
     if (touch_phase_ != TouchPhase::Pending) return;
     if (monotonic_us() < touch_window_deadline_us_) return;
-    // The window EXPIRED with one finger down: on the merged trim band the
-    // hold is the TRIM-MOVE gesture (the fourth glass session's fork —
+    // The window EXPIRED with one finger down: on the merged trim band — whose
+    // down stretched the window to the BEAT, kTouchTrimHoldMs, so this expiry
+    // is a real held beat rather than the 60 ms disambiguation mark — the hold
+    // is the TRIM-MOVE gesture (the fourth glass session's fork —
     // hold-a-beat-then-drag moves the trim window); everywhere else it is
     // the pointer (hold-unlocks-the-pointer, unchanged).
     if (touch_down_in_trim_band_)
@@ -3069,15 +3091,12 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             // The FIRST finger opens the disambiguation window: remember
             // {id, position, deadline} and deliver NOTHING — the window exists
             // only to tell one finger from two (the constants above own the
-            // tuning rationale). The deadline is monotonic, not the event
-            // timestamp (whose base this program never compares against).
+            // tuning rationale; the deadline itself is set below the zone
+            // captures, because the trim band's window is the BEAT).
             touch_phase_    = TouchPhase::Pending;
             touch_owner_id_ = id;
             touch_down_x_ = touch_last_x_ = x;
             touch_down_y_ = touch_last_y_ = y;
-            touch_window_deadline_us_ =
-                monotonic_us() +
-                static_cast<uint64_t>(kTouchDisambiguateMs) * 1000ull;
             touch_window_moved_ = false;
             // The PAN-ZONE answer is captured ONCE, here at the down (the
             // phone model): the window's slop-crossing resolution forks on
@@ -3094,6 +3113,18 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                 touch_trim_zone_hook_ &&
                 touch_trim_zone_hook_(static_cast<int>(std::nearbyint(x)),
                                       static_cast<int>(std::nearbyint(y)));
+            // The deadline forks on the band answer just captured: the band's
+            // hold is a BEAT (kTouchTrimHoldMs — its expiry resolves to the
+            // trim move, and the band trades hold-unlocks-the-pointer away,
+            // so nothing there wants the short window's press); everywhere
+            // else the window is the tap/drag/two-finger disambiguation
+            // (kTouchDisambiguateMs). Monotonic, not the event timestamp
+            // (whose base this program never compares against).
+            touch_window_deadline_us_ =
+                monotonic_us() +
+                static_cast<uint64_t>(touch_down_in_trim_band_
+                                          ? kTouchTrimHoldMs
+                                          : kTouchDisambiguateMs) * 1000ull;
             break;
         case TouchPhase::Pending: {
             if (id == touch_owner_id_) break;  // protocol nonsense; ignore

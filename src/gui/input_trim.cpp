@@ -1079,7 +1079,8 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 // contract, the refusal list and the accepted cross-device edge are at the
 // declarations (input_handler.h). These three ARE the bridge-move machinery's
 // own body driven from the platform's trim-move hooks: no pending and no
-// threshold — the 60ms hold already disambiguated, so the begin goes straight
+// threshold — the held beat (the platform's kTouchTrimHoldMs window) already
+// disambiguated, so the begin goes straight
 // to begin_trim_drag — and no second trim mover anywhere.
 
 void GuiInputHandler::begin_touch_trim_move(int x) {

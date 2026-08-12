@@ -335,7 +335,9 @@ public:
     //   * trim_zone(x, y): the SECOND zone query — does this point lie on the
     //     MERGED TRIM BAND? Asked once at the first finger's down beside
     //     pan_zone (the two surfaces are disjoint, so at most one answers
-    //     true); the window's EXPIRY forks on it — on the band a hold
+    //     true); a band down STRETCHES the Pending window to the beat
+    //     (kTouchTrimHoldMs — the constants block's record) and the window's
+    //     EXPIRY forks on the same answer — on the band a held beat
     //     resolves to the TRIM-MOVE gesture below instead of the pointer.
     //     GEOMETRY ONLY, the pan_zone contract verbatim: every refusal stays
     //     in the begin body, so a refused trim-move is dead for the stream
@@ -884,8 +886,13 @@ private:
     //   * Idle    — no touch points.
     //   * Pending — the DISAMBIGUATION WINDOW: the first finger is down and
     //     NOTHING has been delivered. The window exists only to tell tap from
-    //     drag from two fingers (kTouchDisambiguateMs). It resolves to
-    //     Pointer on expiry or on the finger lifting inside it (a tap); on
+    //     drag from two fingers (kTouchDisambiguateMs — except on the MERGED
+    //     TRIM BAND, whose down STRETCHES the window to kTouchTrimHoldMs, the
+    //     hold-a-beat's own deadline: the band's expiry is a gesture in its
+    //     own right, and riding the 60 ms mark made the "hold" shorter than
+    //     an aimed drag's natural dwell — the constants block's record). It
+    //     resolves to Pointer on expiry or on the finger lifting inside it
+    //     (a tap); on
     //     MOTION beyond kTouchSlopPx it FORKS on the down point's captured
     //     pan-zone answer (the PHONE MODEL, second glass session 2026-08-11):
     //     inside the pan surface -> SINGLE-FINGER Nav (the finger drags the
@@ -894,7 +901,7 @@ private:
     //     the window resolves to two-finger Nav wherever the down point was.
     //     EXPIRY forks on the down point's captured TRIM-BAND answer (the
     //     fourth glass session, 2026-08-11): on the MERGED TRIM BAND a hold
-    //     resolves to TrimMove (below) — hold-a-beat-then-drag MOVES the trim
+    //     resolves to TrimMove (below) — hold-a-BEAT-then-drag MOVES the trim
     //     window, the architect's mechanics for the arc's recorded gap —
     //     and everywhere else HOLD UNLOCKS THE POINTER as before: expiry with
     //     the finger stationary is the DELIBERATE escape to the ordinary
@@ -902,8 +909,9 @@ private:
     //     is what keeps the lower-half scrub hold and every press-and-hold
     //     gesture alive on glass (the band is the one surface that trades
     //     that unlock away; an endcap fine-grab on glass goes through the
-    //     cap's QUICK-drag hit instead — sub-window slop-crossing resolves to
-    //     the pointer on the band as everywhere off the pan surface).
+    //     cap's QUICK-drag hit instead — sub-beat slop-crossing resolves to
+    //     the pointer on the band as everywhere off the pan surface, and a
+    //     sub-beat lift is the tap).
     //   * Pointer — the translation is live: the owning finger's motion is
     //     pointer motion (coalesced to the wl_touch.frame boundary, the
     //     pointer-frame precedent), its lift is the release on the logical
@@ -986,10 +994,12 @@ private:
     //     deadline, and lazily at every touch event's arrival) — FORK on the
     //     down point's captured TRIM-BAND answer (the fourth glass session):
     //     on the band -> TrimMove (hold-a-beat-then-drag moves the trim
-    //     window; the begin hook fires at the down x, and any sub-slop drift
+    //     window; the band's own deadline IS the beat, kTouchTrimHoldMs — its
+    //     down stretched the window, the Pending clause above — the begin
+    //     hook fires at the down x, and any sub-slop drift
     //     inside the window stages as the gesture's first frame); elsewhere
-    //     -> Pointer (hold-unlocks-the-pointer, the Pending clause above —
-    //     expiry never forks on the PAN zone, by design).
+    //     -> Pointer at the 60 ms mark (hold-unlocks-the-pointer, the Pending
+    //     clause above — expiry never forks on the PAN zone, by design).
     //   * motion beyond kTouchSlopPx inside the window — FORK on the down
     //     point's captured pan-zone answer (the phone model): pan surface ->
     //     SINGLE-FINGER Nav (the nav seed measures its latch from the DOWN
@@ -1067,7 +1077,8 @@ private:
     bool       touch_down_in_pan_zone_   = false;
     // Pending: the down point's TRIM-BAND answer, captured beside the pan
     // one (the trim_zone query — the fourth glass session, 2026-08-11); the
-    // window's EXPIRY forks on it. The two zones are disjoint surfaces, so at
+    // down's deadline choice (the beat vs the 60 ms window) and the window's
+    // EXPIRY both fork on it. The two zones are disjoint surfaces, so at
     // most one of the pair is true.
     bool       touch_down_in_trim_band_  = false;
     // TrimMove: a finger position staged for the wl_touch.frame boundary
@@ -1430,7 +1441,8 @@ private:
     void resolve_touch_window_to_trim_move();
     // Sample the Pending window's deadline. Called from the timerfd tick
     // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
-    // so expiry lands within one tick of the 60 ms mark) and lazily at every
+    // so expiry lands within one tick of its mark — the 60 ms window, or the
+    // trim band's beat) and lazily at every
     // touch event's arrival, so an event past the deadline is processed
     // against the resolved state.
     void maybe_resolve_touch_window();
