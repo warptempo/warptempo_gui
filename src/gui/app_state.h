@@ -1884,8 +1884,11 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerDrag pending_marker_drag;
 
-    // Pending trim endcap/bridge drag, armed by a plain trim-bar press (the
-    // trim-drag machinery begins only past the threshold). Cleared on the
+    // Pending trim endcap/bridge drag — four press arms since the fourth
+    // glass session (plain endcap, alt bridge, ctrl deferred set, the
+    // bound-set set-then-arm; the roster at PendingTrimDrag's own contract
+    // above). The trim-drag machinery begins only past the threshold (the
+    // ctrl deferred-set pending instead DISARMS there). Cleared on the
     // threshold crossing, on button release / lost button, by the force-end
     // finalizer, and on file load.
     PendingTrimDrag pending_trim_drag;
@@ -3226,8 +3229,9 @@ struct AppState {
     // backing store lives in ViewState::trim. Excluded from undo/redo.
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
-    // Trim is a region authored purely by the plain trim-bar pointer drags
-    // (single-bound endcap, inter-endcap bridge/pair), the ctrl /
+    // Trim is a region authored purely by the trim-band pointer drags (the
+    // plain single-bound ENDCAP drag; the ALT inter-endcap bridge/pair drag,
+    // which the touch hold-a-beat trim move also drives), the ctrl /
     // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
     // trim to it and consumes the span; no region is a silent no-op), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's

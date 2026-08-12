@@ -1048,10 +1048,15 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     return false;
 }
 
-// Arm the pending trim endcap/bridge drag from a plain trim-bar press. Mirrors
+// Arm the pending trim endcap/bridge drag — the shared vehicle of the FOUR
+// press arms (the caller roster at route_trim_bar_press's header above; the
+// plain endcap, the alt bridge, the ctrl deferred set and the bound-set
+// set-then-arm). Mirrors
 // PendingMarkerDrag: nothing mutates the trim store yet — begin_trim_drag runs
 // only when on_motion sees the pointer cross kDragMovedThresholdPx from the
-// press. is_begin names the single bound (Begin for a bridge/pair drag); both
+// press (the ctrl deferred-set pending instead disarms there — the flag's
+// contract, app_state.h). is_begin names the single bound (Begin for a
+// bridge/pair drag); both
 // distinguishes the single vs the pair.
 void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
                                             int press_x, int press_y) {

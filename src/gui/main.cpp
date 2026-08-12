@@ -126,7 +126,9 @@ namespace {
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
 // own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps), the RULER lane
-// (ruler_lane_h_px(), timestamps + tick tops + the zoom strip's drag band) and
+// (ruler_lane_h_px(), timestamps + tick tops; its zoom-strip drag entry is
+// DELETED — the trim surface arc, 2026-08-11, the lane's input merged into
+// the trim band and the strip drag one-entry on the ctrl-waveform press) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the PLAYHEAD
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
@@ -200,7 +202,7 @@ int top_lane_height(int lane) {
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
         // font-scaled lane in the top strip went with them.
         case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / ticks / zoom strip
+        case 5: return ruler_lane_h_px();        // timestamps / ticks (input: merged trim band)
         // Flags, stems and the playhead head; bottom edge = waveform top.
         case 6: return marker_lane_h_px();
         default: return 0;

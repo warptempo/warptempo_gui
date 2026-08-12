@@ -974,9 +974,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     const bool inside_top = rect_contains(top, x, y);
     // THE MERGED TRIM SURFACE, spelled from the ONE geometry owner the press
     // sites read (top_trim_surface_area — trim bar + ruler + their gap since
-    // the trim surface arc, 2026-08-11) and derived once because THREE
+    // the trim surface arc, 2026-08-11) and derived once because FOUR
     // modifier arms below need
-    // it — plain (the endcap grabs), ctrl (the bridge drag and the BEGIN
+    // it — plain (the endcap grabs), alt (the bridge drag, the fourth glass
+    // session's home), ctrl (the BEGIN
     // bound-set) and ctrl+shift (the END bound-set). The presses gate on the
     // top strip first and so does this.
     const GuiRect trim_band = top_trim_surface_area(app);
@@ -988,12 +989,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
     // left — read-only was the other, and its trim refusals are deleted with the
     // ruling that trim is band rather than authored content. Under the mode the
-    // Pan and the Zoom (both entries) stay live — they are its navigation
+    // Pan and the Zoom stay live — they are its navigation
     // vocabulary — while
-    // the endcap/bridge drags and the two ctrl bound-set clicks are consumed
-    // no-ops, so their cues must go. This term is what takes them: the ctrl arm
-    // falls to the waveform's own Zoom-or-Arrow question and the ctrl+shift arm
-    // to the Arrow it already returns everywhere else; the plain arm takes the
+    // the endcap drags, the alt bridge drag and the two bound-set clicks are
+    // consumed
+    // no-ops, so their cues must go. This term is what takes them: the alt arm
+    // falls to the waveform's own Pan-or-Arrow question, the ctrl arm
+    // to its Zoom-or-Arrow twin, the ctrl+shift arm
+    // to the Arrow it already returns everywhere else, and the plain arm takes
+    // the
     // Arrow below. THE SCRUB IS THE MODE'S SECOND ZONE-SCOPED CUE, taken at its
     // own arm at the tail of this function (2026-08-05, when playback left the
     // view whole).
@@ -1079,7 +1083,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         //
         // AN ENDCAP IS NOT THE BRIDGE: a cap moves ONE bound, so the caps take
         // the boundary-extension shapes (begin left_side, end right_side); the
-        // bridge's ew-resize is CTRL vocabulary now, named in the ctrl arm
+        // bridge's ew-resize is ALT vocabulary now (the fourth glass
+        // session's swap), named in the alt arm
         // above where the drag actually lives.
         //
         // READ-ONLY NO LONGER REFUSES ANYTHING HERE (architect 2026-08-07): the
@@ -2341,7 +2346,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the read-only refusal died 2026-08-07 with trim's reclassification as
         // band — and deselects as a SETTER past its
         // refusals). Ctrl+shift keeps its at-press set everywhere on the band —
-        // it shares no geometry with the bridge drag, which is ctrl-exact, so
+        // no arm shares its shape there (the bridge drag is alt-exact and the
+        // deferred BEGIN set ctrl-exact), so
         // it needs no deferral. Everywhere else Ctrl+Shift stays a strict
         // no-op, playback
         // included, falling to the return below.
@@ -2358,7 +2364,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
 
         // Strict modifier matching: the marker reposition arm lives on the plain
-        // flag press and trim's endcap/bridge drags on the plain trim-bar press, so
+        // flag press and trim's ENDCAP drag on the plain trim-bar press (the
+        // bridge drag is the alt branch's, far above), so
         // every remaining modified combination — Ctrl+Alt (a strict no-op),
         // Ctrl+Shift off the trim bar (its one claim is the END bound set
         // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
@@ -2384,8 +2391,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // act, nothing else) — neither ever SELECTS a marker. A Shift press on
         // the waveform instead FORMS a region waveform-wide
         // (the former / marker drop, one-shot — see the waveform block). In the top strip a plain
-        // TRIM-BAR press arms a trim endcap/bridge drag (claimed ahead of the
-        // marker select); otherwise a marker click — its FLAG BOX, the marker's
+        // TRIM-BAR press arms a trim ENDCAP drag (claimed ahead of the
+        // marker select; the bridge drag is alt's, above); otherwise a marker click — its FLAG BOX, the marker's
         // one pointer item — is the whole selection interface, BOTH views. Plain
         // click: single-select, LAND the playhead on the marker (below), and ARM
         // a pending marker drag (moves the marker if the pointer crosses the
@@ -2426,10 +2433,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // REGION FORMER — a plain drag anywhere off a cap DRAWS THE REGION
             // ("let's experiment with making the region draw a drag on the
             // trim bar"), a motionless release staying the standing CONSUMED
-            // NOTHING (plus the double-click seed); the bound-set clicks and
-            // the bridge drag
+            // NOTHING (plus the double-click seed); the bound-set clicks
             // are the ctrl / ctrl+shift
-            // claims above. THE RULER'S STRIP-DRAG ZOOM ENTRY IS DELETED with
+            // claims above and the bridge drag is the ALT branch's, further
+            // above. THE RULER'S STRIP-DRAG ZOOM ENTRY IS DELETED with
             // the merge (its block stood here) — zoom lives on the waveform:
             // ctrl-drag, the keys, touch two-finger. A SHIFT-exact band press
             // still claims nothing —

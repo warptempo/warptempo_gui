@@ -3788,9 +3788,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shadowed — this is one substitution at the one paint site, above the
     // displayed_trim_ms mapping below, so the substituted frames ride the target
     // view's display map exactly as the authored pair does. Nothing consumes the
-    // painted pair for BEHAVIOR while the view stands: the trim bar's three
-    // press routes are consumed by the pointer allowlist
-    // (handle_history_mode_press), which is also why pointer_cursor_kind empties
+    // painted pair for BEHAVIOR while the view stands: the trim bar's four
+    // press routes (plain, alt, ctrl, ctrl+shift) are consumed by the pointer
+    // allowlist
+    // (handle_history_mode_press), and the touch hold-a-beat trim move refuses
+    // in the mode at its own begin — which is also why pointer_cursor_kind
+    // empties
     // the band's cues in the mode, and the endcap / bridge hit tests are
     // reachable only from those presses. Its span-framing DOUBLE-CLICK is not
     // consumed but REPLACED there, framing the diff span — and it reads the

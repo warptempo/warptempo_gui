@@ -440,8 +440,8 @@ public:
     // once per RUN-LOOP ITERATION, and a single dispatch batch can carry the
     // motion (or the modifier edge) that selects the gesture's zone AND the press
     // that begins the capture, with no re-derivation in between. So the caller
-    // passes the cue its own gesture wears — Zoom for the strip drag (both entries
-    // are Zoom zones), Pan for the alt-pan — the same "read the drag's own record"
+    // passes the cue its own gesture wears — Zoom for the strip drag (its one
+    // entry is a Zoom zone), Pan for the alt-pan — the same "read the drag's own record"
     // the live trim cue uses, and the platform STAMPS it as the remembered kind on
     // the path that CREATED THE LOCK PROXY. Only there, and neither other exit
     // stamps or restores anything: a DEGRADED compositor returns before the

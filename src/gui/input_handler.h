@@ -479,8 +479,9 @@ struct GuiInputHandler {
     // or the compositor lacks the managers, end is idempotent — so a strip drag
     // that never captured (degraded compositor) still calls end harmlessly.
     // BEGIN CARRIES THE GESTURE'S OWN CURSOR KIND, which is the kind the capture
-    // release hands back: Zoom for the strip drag (both entries arm inside the
-    // Zoom zones), Pan for the alt-pan. A capture hides the cursor and makes the
+    // release hands back: Zoom for the strip drag (its one entry, the
+    // ctrl-waveform press, arms inside the
+    // Zoom zone), Pan for the alt-pan. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
     // reasoning, and why the stamp rides the lock-REQUEST path only, are at
@@ -678,7 +679,11 @@ struct GuiInputHandler {
     //
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the ctrl/alt band arms sit below these same gates in
-    // on_button_press): prompt, bottom-strip modal editors, open dropdown,
+    // on_button_press): prompt, ALL FIVE modal editors through
+    // keyboard_modal_editor_active — the pointer-transparent flag editor
+    // deliberately included, since every pointer press closes an open one
+    // before any claim runs and this begin skips the press path (the
+    // judgment at the definition) — open dropdown,
     // loading/empty audio, a live pointer gesture, and the `h` history view
     // (which consumes the band's trim vocabulary whole). A refused begin
     // arms nothing and the update/end bodies no-op through the machinery's
@@ -1666,7 +1671,9 @@ private:
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
-    // only once on_motion crosses kDragMovedThresholdPx from the press.
+    // only once on_motion crosses kDragMovedThresholdPx from the press (the
+    // ctrl deferred-set pending instead disarms there; four press arms — the
+    // roster at the definition's header, input_trim.cpp).
     void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
                                int press_y);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
