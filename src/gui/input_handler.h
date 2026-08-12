@@ -655,18 +655,85 @@ struct GuiInputHandler {
     // delivered): one predictor resync, the grab-pan release's own tail — each
     // applied frame already rebuilt synchronously, so nothing else is owed.
     void end_touch_nav();
-    // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11):
-    // the platform asks whether a touch-DOWN point lies on the one-finger PAN
-    // SURFACE — answered here as the WAVEFORM AREA, GEOMETRY ONLY. Every
-    // refusal (modal, prompt, dropdown, loading/empty audio, live pointer
-    // gesture) deliberately stays at apply_touch_nav_update's per-frame
+    // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
+    // GROWN to the navigation surface by pan-primary's touch half, the
+    // eighth glass ruling 2026-08-12): the platform asks whether a
+    // touch-DOWN point lies on the one-finger PAN SURFACE — answered here as
+    // THE NAVIGATION SURFACE, the pan-primary vocabulary's one plain-drag
+    // surface, exactly as the press router derives it: the waveform's UPPER
+    // half (the WHOLE waveform inside the `h` history view, which has no
+    // scrub) + the RULER + the MARKER lane MINUS its flag boxes (the
+    // painter's published rects through hit_test_flag — a finger landing on
+    // a flag resolves to the POINTER, so a quick flag drag is the immediate
+    // marker drag, the mouse's own carve-out; in the `h` view the same
+    // carve-out serves the diff flags). The LOWER half is deliberately OFF
+    // the zone — scrub is not pan, the architect reserving that half for
+    // scrubbing — so a quick drag there resolves to the pointer and fires
+    // the scrub at resolution, the press's own act. SURFACE GEOMETRY ONLY:
+    // every refusal (modal, prompt, dropdown, loading/empty audio, live
+    // pointer gesture) deliberately stays downstream — at
+    // apply_touch_nav_update's per-frame
     // wheel_context answer, so a refused pan FREEZES exactly as a refused
-    // two-finger frame does rather than falling back to a pointer drag.
-    // waveform_area reads only the window dims and the strip heights, so the
-    // answer is VIEW-INDEPENDENT — in particular the `h` history view pans by
-    // the same answer, and its mode admits pan/zoom (wheel-class), so nothing
-    // mode-shaped belongs here. Wired at main.cpp's set_touch_nav_hooks call.
+    // two-finger frame does rather than falling back to a pointer drag, and
+    // in begin_touch_region's gate list for the hold. Asked ONCE at the
+    // first finger's down; the answer also picks the window's DEADLINE (the
+    // region-hold beat on the zone, the 60 ms window off it) and forks the
+    // EXPIRY (the region hold vs the pointer unlock) — the platform state
+    // block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
+
+    // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
+    // ruling 2026-08-12 — "region select to be hold and then drag because
+    // the pan is way more common": the pan zone's stretched window expires
+    // at the ~500 ms region-hold beat into THE REGION FORMER, so
+    // hold-then-drag sweeps a region on glass; the dead trim-move hooks'
+    // exact pattern reborn — touch.md carries both records). The three ARE
+    // the one region former's own machinery driven from the platform's
+    // region hooks: no pending and no second former anywhere — the beat
+    // already disambiguated, so the begin goes straight to the former's
+    // press half and the drag rides the ONE motion path
+    // (apply_region_drag_motion) with the playhead on the moving end.
+    //
+    // begin_touch_region(x, y) runs THE SHIFT FORMER'S OWN PRESS HALF at the
+    // finger's DOWN point, forking on the `h` history mode exactly as the
+    // shift press does: LIVE = the one placement body
+    // (place_playhead_and_arm_region — deselect-all, playhead seated at the
+    // down column, live-session reseek, dissolve-at-arm, the drag arm); the
+    // MODE = the view-local former's recipe (clear the mode focus +
+    // selection through the pair clearer, the shared placement body, the
+    // same arm) — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
+    // the family rule at RegionState (app_state.h).
+    // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
+    // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
+    // view, which ADMITS this former as its own view-local vocabulary):
+    // prompt, the five editors via keyboard_modal_editor_active (the flag
+    // editor deliberately included though pointer-transparent — every
+    // pointer press CLOSES an open flag editor before any claim runs, and
+    // this begin, which skips the press path, must not become the first
+    // gesture to run under one; the user's tap closes the editor as any
+    // click does, and the next hold works), open dropdown, loading/empty
+    // audio, a live pointer gesture. A refused begin arms nothing and the
+    // update/end bodies no-op on the drag's own !active guard, so the
+    // refused stream is dead rather than a fallback pointer drag.
+    //
+    // update_touch_region(x, y): the drag's one motion path — the shared
+    // Chebyshev gate from the down point, then the span extension with the
+    // playhead riding the moving end. end_touch_region(): the release
+    // path's own body (a moved drag rests the span under the sliver gate; a
+    // MOTIONLESS end rests nothing and leaves the playhead where the begin
+    // seated it — the former's motionless-release rule, which is what makes
+    // a long-press-then-lift a PLACEMENT). Any end commits — finger up,
+    // wl_touch.cancel, capability loss; the platform's end split delivers
+    // or drops the staged final frame, its record.
+    //
+    // ONE ACCEPTED CROSS-DEVICE EDGE, the dead trim-move's own class: the
+    // drag state is app.region_drag itself, so a mouse release or a
+    // lost-button motion arriving mid-gesture ends it early through the
+    // pointer paths — the user's own two-handed act, every end a commit
+    // either way.
+    void begin_touch_region(int x, int y);
+    void update_touch_region(int x, int y);
+    void end_touch_region();
 
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every
@@ -958,20 +1025,35 @@ struct GuiInputHandler {
     // reasoning is at the definition.
     void finalize_active_drags();
 
-    // Arm the region-select drag at a press — THE ONE ARM, serving the SHIFT
-    // former's two entries (the one mouse region gesture since 2026-08-12, the
+    // Arm the region-select drag at a press — THE ONE ARM, serving the ONE
+    // region former's entries (shift+drag on the desk, the region hold on
+    // glass — the deliberate act's two device forms since 2026-08-12, the
     // eighth glass ruling; the plain placement presses that used to arm it are
     // the pending pan now, and the one-day RULER arm with its deferred
     // dissolve is deleted). `anchor_frame` is the active-domain frame the
     // press just placed the playhead at; (x, y) is the press position for the
     // press-becomes-drag threshold. Dissolves the resting region at
-    // mouse-down, so a motionless release rests nothing at all. TWO CALLERS
-    // (re-derived 2026-08-12): the LIVE shift former (through
-    // place_playhead_and_arm_region) and the `h` history view's own shift
-    // former (handle_history_mode_press). The plain
+    // mouse-down, so a motionless release rests nothing at all. THREE CALLERS
+    // (re-derived 2026-08-12, the touch half): the LIVE former's press half
+    // (place_playhead_and_arm_region — the shift press and the touch begin's
+    // live arm both route through it), the `h` history view's own shift
+    // former (handle_history_mode_press), and the touch begin's MODE arm
+    // (begin_touch_region — the view-local recipe re-expressed at the down
+    // point). The plain
     // LOWER half is the scrub surface, whose press is a one-shot scrub act
     // arming nothing and leaving the region alone.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
+
+    // THE REGION DRAG'S ONE MOTION PATH, hoisted for its two drivers
+    // (2026-08-12, the touch half): on_motion's region branch (mouse motion
+    // under the held button, past its own button-lost arm) and
+    // update_touch_region (the platform's per-frame region hook, which never
+    // has a button to lose). The whole live body: the shared Chebyshev gate
+    // from the press/down point (moved latches once), the moved-drag
+    // double-click-candidate clear, the far endpoint at the pointer column
+    // through the click->frame basis, the span install, and the playhead
+    // riding the moving end. Caller guards active.
+    void apply_region_drag_motion(int mouse_x, int mouse_y);
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
@@ -979,13 +1061,17 @@ struct GuiInputHandler {
     // session alive) and override follow for that session. NO selection, NO
     // region, NO drag arm — each caller owns those, which is what lets the mode
     // reuse this recipe without inheriting a region former it must not have.
-    // THREE ROUTES REACH IT since 2026-08-12: the DEFERRED CLICK ACT
-    // (run_nav_click_act, both arms) and the two SHIFT formers' presses.
+    // FOUR ROUTES REACH IT since 2026-08-12 (re-derived at the touch half):
+    // the DEFERRED CLICK ACT
+    // (run_nav_click_act, both arms), the two SHIFT formers' presses, and
+    // the touch region begin's MODE arm (its live arm rides the shift
+    // former's own body).
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
     // [0, area.w)) seats nothing and returns -1, a value no seated frame can
     // take (the clamp's floor is 0). `was_playing` / `playhead_at_entry` are
-    // the caller's readings from AHEAD of its own acts — the shift formers
-    // capture at press entry, the deferred click act reads at the release
+    // the caller's readings from AHEAD of its own acts — the formers
+    // capture at their press/begin entry, the deferred click act reads at the
+    // release
     // (equivalent, its press having touched nothing, and honest about a
     // session that ended under the hold).
     // Neither is a pre-stop reading: the playback stops are claim-keyed and sit
@@ -999,8 +1085,10 @@ struct GuiInputHandler {
     int64_t place_playhead_at_click_column(int click_rel_x, bool was_playing,
                                            int64_t playhead_at_entry);
 
-    // THE SHIFT REGION FORMER'S BODY — its live entry's one call site (the
-    // shift-exact press on the navigation surface, on_button_press): clear
+    // THE REGION FORMER'S LIVE PRESS HALF — TWO call sites since the touch
+    // half (2026-08-12): the shift-exact press on the navigation surface
+    // (on_button_press) and the touch region begin's live arm
+    // (begin_touch_region — the hold's expiry at the down point): clear
     // the marker selection, run the body above, and arm the region drag (which
     // dissolves any resting highlight at mouse-down). The clear runs ahead of
     // the body's gutter return, so an inert-gutter click still deselects but
@@ -1643,11 +1731,13 @@ private:
     void apply_strip_drag_at(int x, int y, bool final_event);
 
     // (THE TOUCH HOOK BODIES ARE NOT HERE: apply_touch_nav_update,
-    // end_touch_nav and the pan-zone query are PUBLIC entry points —
+    // end_touch_nav, the pan-zone query and the region trio
+    // (begin/update/end_touch_region) are PUBLIC entry points —
     // main.cpp's hook wiring calls
     // them, like on_key and on_motion — declared beside those siblings above;
     // the nav implementation lives beside the strip drag's in
-    // input_pointer.cpp, whose application chokepoint it shares.)
+    // input_pointer.cpp, whose application chokepoint it shares, and the
+    // region bodies beside the former's own press half there.)
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
@@ -1943,16 +2033,16 @@ private:
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
-    // TWO READERS, re-derived 2026-08-12: the on_key gate
-    // (input_handler.cpp), paired with modal_editor_key_blocked, and the
+    // THREE READERS, re-derived 2026-08-12 (the touch half): the on_key gate
+    // (input_handler.cpp), paired with modal_editor_key_blocked, the
     // roster hover walk's no-dwell term (recompute_redesign_button_hover,
     // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
-    // owns the keyboard). (The touch trim-move's begin was briefly a reader
-    // too — the fourth glass session's hold-a-beat gesture, 2026-08-11 — and
-    // died with that gesture 2026-08-12; it did not return with the windowed
-    // touch model, whose pointer-shaped gestures enter through the ordinary
-    // press path — the pointer's own gates — and whose nav gestures refuse
-    // per frame at wheel_context.)
+    // owns the keyboard), and the touch region begin's gate
+    // (begin_touch_region, input_pointer.cpp — the gesture bypasses the
+    // press path that closes the flag editor, so it refuses under every
+    // editor; the same reading the dead trim-move begin briefly held,
+    // 2026-08-11, whose gesture died 2026-08-12 — the region hold revived
+    // the pattern, not the trim move).
     // Modality here is CHORDS only, which is why the flag editor's OTHER
     // transparencies do not consult this predicate — see
     // modal_bottom_strip_editor_active below for what does and does not.

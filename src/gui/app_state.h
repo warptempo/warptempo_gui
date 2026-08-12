@@ -155,10 +155,11 @@ struct UndoEntry {
 // 2026-08-05, every entry reaching it through the one arm arm_region_drag_at, so
 // the inventory IS arm_region_drag_at's callers plus the callers of the body that
 // wraps it, place_playhead_and_arm_region).
-// THERE IS ONE FORMING GESTURE, THE SHIFT+DRAG FORMER, in TWO entries
-// (re-derived 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
+// THERE IS ONE FORMING GESTURE, THE REGION FORMER, in THREE entries
+// (re-derived 2026-08-12 at the eighth glass ruling's touch half —
+// PAN-PRIMARY: the plain drag
 // on the navigation surface is the GRAB-PAN now, so the region is the
-// deliberate secondary act — shift on the desk, a hold on glass):
+// deliberate secondary act — SHIFT on the desk, the REGION HOLD on glass):
 //   * the SHIFT-exact press on the NAVIGATION SURFACE — the waveform's UPPER
 //     half, the RULER lane, and the MARKER lane's empty stretches (the lanes
 //     joined the y-gate with the same ruling, being the upper half's
@@ -173,7 +174,14 @@ struct UndoEntry {
 //   * the `h` HISTORY VIEW'S own SHIFT former, over the view's whole
 //     navigation surface (full waveform height — no scrub in there — plus the
 //     same two lanes), the same recipe with the MODE's focus clear in place
-//     of the store deselect.
+//     of the store deselect;
+//   * the TOUCH REGION HOLD (the eighth ruling's touch half): a ~500 ms
+//     one-finger hold on the same navigation surface (the touch pan zone)
+//     expires into begin_touch_region, which FORKS on the mode exactly as
+//     the shift press forks at its two claims — the live arm through the
+//     same placement body, the mode arm through the same view-local recipe —
+//     and the drag rides the same one motion path, so hold-then-drag sweeps
+//     a region on glass and a motionless hold-lift is the placement.
 // (The PLAIN entries — the upper-half press, the empty-lane parity press, the
 // view's full-height press and the one-day RULER former — all LEFT this
 // inventory 2026-08-12: a plain press on the navigation surface is the
@@ -182,10 +190,11 @@ struct UndoEntry {
 // EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS — the family rule,
 // stated here and pointed at from the sites (architect-RATIFIED 2026-08-05,
 // promoting what had been the coder's reading of the mode's arm into the
-// ruling). The LIVE entry DESELECTS at press through the placement body,
-// leaving the STORE selection EMPTY throughout the drag; the `h` view's entry
-// clears THE MODE'S focus and diff-flag selection instead, through the one
-// clearer that takes the pair, and touches no store selection at all by the
+// ruling). The LIVE entries DESELECT at press/begin through the placement
+// body,
+// leaving the STORE selection EMPTY throughout the drag; the MODE entries
+// clear THE MODE'S focus and diff-flag selection instead, through the one
+// clearer that takes the pair, and touch no store selection at all by the
 // view's own standing rule. So no former anywhere leaves a selection standing
 // beside the span it is drawing, and the surface simply decides WHICH
 // selection that is.
@@ -210,9 +219,9 @@ struct UndoEntry {
 //
 // CLEARED wholesale on: file load, the A/B tab switch, the S/T audio-view switch
 // and the W/P marker-column switch (each flips the domain or the owning column out
-// from under the span), the SHIFT former's press (it dissolves any resting
+// from under the span), the former's press/begin (it dissolves any resting
 // highlight at mouse-down, before it knows whether the gesture is a click or a
-// fresh region drag — via arm_region_drag_at, both entries), the DEFERRED
+// fresh region drag — via arm_region_drag_at, all three entries), the DEFERRED
 // CLICK ACT at a plain navigation-surface press's motionless release
 // (run_nav_click_act — the placement is a point command; THE PAN ITSELF NEVER
 // CLEARS, a crossed plain drag being a pure viewport move, and a SCRUB press
@@ -438,10 +447,11 @@ struct UndoHistory {
     }
 };
 
-// State for the SHIFT+DRAG region former — THE ONE MOUSE REGION GESTURE
+// State for the REGION FORMER — THE ONE REGION GESTURE, shift+drag on the
+// desk and the ~500 ms region hold on glass
 // (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
 // is the grab-pan now, so the region is the deliberate act and takes the
-// secondary form — shift on the desk, a hold on glass). The SHIFT-exact PRESS
+// secondary form on both devices). The SHIFT-exact PRESS
 // on the NAVIGATION SURFACE — the waveform's UPPER half, the RULER lane, and
 // the MARKER lane's empty stretches (its y-gate GREW to the lanes and SHRANK
 // off the LOWER half with the same ruling: "no region sweep at all in the
@@ -459,12 +469,16 @@ struct UndoHistory {
 // motion — which is what makes the playhead LAND WHERE THE MOUSE RELEASES. A
 // sub-threshold press-release is the placement click (deselect + playhead at
 // the column) and simply disarms — the highlight already dissolved at press,
-// so there is no release-time collapse. TWO ARMS REACH arm_region_drag_at
-// (membership re-derived 2026-08-12; the authoritative inventory is at
+// so there is no release-time collapse. THREE ARMS REACH arm_region_drag_at
+// (membership re-derived 2026-08-12 at the touch half; the authoritative
+// inventory is at
 // RegionState): the LIVE shift former above, through the one placement body
-// (place_playhead_and_arm_region), and the `h` history view's OWN shift
+// (place_playhead_and_arm_region), the `h` history view's OWN shift
 // former (handle_history_mode_press), which clears the MODE's focus +
-// selection instead of the store selection and rides the same motion path.
+// selection instead of the store selection and rides the same motion path,
+// and the TOUCH REGION HOLD's begin (begin_touch_region — the pan zone's
+// stretched window expiring at the beat), which forks on the mode into
+// those same two recipes and drives the drag through the region hooks.
 // (The plain upper-half press, the empty-lane parity press and the one-day
 // RULER former — with its deferred-dissolve `ruler` flag — all LEFT this list
 // 2026-08-12: their plain presses are the PENDING PAN now, ScrollDragState,
@@ -3590,8 +3604,9 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// FOUR CONSUMERS, re-derived 2026-08-12 (the eighth glass ruling deleted the
-// bare right-press scrub and its gate, briefly the fifth; the timer-free touch
+// FIVE CONSUMERS, re-derived 2026-08-12 at the eighth ruling's touch half
+// (the ruling's mouse half had left FOUR, deleting the
+// bare right-press scrub's gate; the timer-free touch
 // model had deleted begin_touch_trim_move the same day), each stating the same
 // "nothing pops mid-gesture" boundary from its own side — and EVERY ONE OF THEM
 // IS AN INPUT ROUTE, which is the shape this predicate is for:
@@ -3607,7 +3622,12 @@ inline int64_t snap_authored_frame(double frame) {
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
-//     contract is at pointer_cursor_kind's declaration, input_handler.h).
+//     contract is at pointer_cursor_kind's declaration, input_handler.h);
+//   * begin_touch_region's refusal (input_pointer.cpp, the eighth ruling's
+//     touch half) — the region hold bypasses the press path, so it restates
+//     the same no-second-writer boundary the press claims inherit by
+//     ordering (the dead begin_touch_trim_move's own reading, revived with
+//     the hook pattern).
 // (A SIXTH CONSUMER lived here for one day of 2026-08-09 — the checkpoint's
 // acknowledge modal, which asked this before raising itself from a worker's
 // clock, a prompt over a live gesture having its release swallowed at the

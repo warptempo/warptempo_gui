@@ -1054,9 +1054,9 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
-    // The touch navigation (touch phase 1, 2026-08-11; THREE hooks since the
-    // windowed model's return, the sixth glass ruling 2026-08-12 — the
-    // trim-move members of 2026-08-11 stay dead): the platform's nav frames —
+    // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
+    // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
+    // platform's nav frames —
     // two-finger centroid-pan + pinch-zoom, and the phone model's
     // single-finger pan frames born of a drag starting on the pan surface —
     // drive the input handler's ONE touch-nav body, which runs the
@@ -1064,8 +1064,16 @@ int main(int argc, char** argv) {
     // set_keyboard_intent_cancel_hook wiring precedent, one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
-    // the waveform area, geometry only (refusals stay per-frame in the
-    // update body). A one-finger gesture ANYWHERE ELSE needs no wiring: it
+    // the NAVIGATION SURFACE — upper waveform half (whole in the `h` view) +
+    // ruler + the marker lane minus its flag boxes — surface geometry only
+    // (refusals stay per-frame in the update body and in the region begin).
+    // The REGION TRIO is the eighth ruling's half: the zone's stretched
+    // window (the ~500 ms region-hold beat) expires into the region former —
+    // begin at the down point, one update per frame, an end that always
+    // fires — the dead trim-move hooks' exact pattern reborn (contracts at
+    // GuiPlatform::set_touch_nav_hooks; the GUI bodies at
+    // begin_touch_region's declaration). A one-finger gesture off the zone
+    // needs no wiring: it
     // is translated into the ordinary pointer deliveries above, and nothing
     // on this side can tell which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
@@ -1078,7 +1086,10 @@ int main(int argc, char** argv) {
         [&]() { input_handler.end_touch_nav(); },
         [&](int x, int y) {
             return input_handler.touch_point_in_pan_zone(x, y);
-        });
+        },
+        [&](int x, int y) { input_handler.begin_touch_region(x, y); },
+        [&](int x, int y) { input_handler.update_touch_region(x, y); },
+        [&]() { input_handler.end_touch_region(); });
 
     auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };

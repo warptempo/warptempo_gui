@@ -274,27 +274,33 @@ public:
     // rides is at AppState::transport_repeat. Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
-    // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; THREE members —
-    // update, end, and the phone model's pan-zone query — since the WINDOWED
-    // MODEL'S RETURN, the sixth glass ruling 2026-08-12; the trim-move
-    // members of 2026-08-11 stay dead, the hold-a-beat trim move not having
-    // returned with the window — touch.md carries the record). ONE finger on
+    // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members
+    // since PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
+    // update, end, the pan-zone query, and the REGION trio
+    // begin/update/end, the dead trim-move members' exact pattern reborn for
+    // the region former; touch.md carries the arc). ONE finger on
     // the glass IS the pointer — translated whole inside this class, so the
     // GUI sees ordinary pointer deliveries and cannot tell which device
     // produced them (the bare-`e` precedent applied to glass; the translation
-    // contract lives at the touch state block below) — with ONE ruled
-    // exception, the phone model's own gesture: a one-finger DRAG whose DOWN
-    // POINT lies on the PAN SURFACE (the pan_zone query below) is
-    // SINGLE-FINGER NAVIGATION — the finger drags the pan — delivered through
+    // contract lives at the touch state block below) — with TWO ruled
+    // exceptions, both born of the pan zone (the pan_zone query below): a
+    // one-finger DRAG whose DOWN POINT lies on the zone is
+    // SINGLE-FINGER NAVIGATION — the finger drags the pan, the phone model —
+    // delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
     // pinned at 1.0 (one finger has no distance, so no zoom; the GUI body
-    // needs no fork and got none). TWO fingers are the dual-axis gesture:
+    // needs no fork and got none), and a HOLD past the zone's stretched
+    // window (kTouchRegionHoldMs) is THE REGION HOLD — the expiry drives the
+    // GUI's region former through the region trio, so hold-then-drag sweeps
+    // a region on glass (the eighth ruling: pan is the common act and takes
+    // the primary drag, the region is the deliberate act and takes the
+    // hold). TWO fingers are the dual-axis gesture:
     // per-frame centroid pan plus distance-ratio zoom about the centroid, the
-    // strip drag's own semantics. Neither delivers pointer events. Both are
-    // handed to the GUI through these hooks (the
+    // strip drag's own semantics. None of the three delivers pointer events.
+    // All are handed to the GUI through these hooks (the
     // set_keyboard_intent_cancel_hook wiring precedent — main.cpp wires them
     // to the input handler's touch-nav body, which drives the strip-drag
-    // family's viewport chokepoint).
+    // family's viewport chokepoint, and to the region former's own bodies).
     //
     //   * update(x, y, dx, dist_ratio): fired at most once per wl_touch.frame
     //     while a navigation gesture is live and past its latch. (x, y) is
@@ -321,24 +327,51 @@ public:
     //     GUI nothing.
     //   * pan_zone(x, y): THE ZONE QUERY — does this point lie on the
     //     one-finger PAN SURFACE? Asked ONCE per touch stream, at the FIRST
-    //     finger's down; the answer is captured beside the down point and the
-    //     disambiguation window's slop-crossing resolution forks on it (the
-    //     touch state block below). GEOMETRY ONLY — the GUI answers the
-    //     waveform area and nothing else; every refusal (modal, prompt,
-    //     dropdown, loading/empty audio, live pointer gesture) stays at the
-    //     per-frame wheel-context answer inside the update body, exactly
-    //     where the two-finger gesture keeps it, so a refused pan freezes
-    //     rather than falling back to a pointer drag. Null — or answering
-    //     false — means no pan surface: the plain phase-1 translation
-    //     everywhere.
+    //     finger's down; the answer is captured beside the down point, picks
+    //     the window's DEADLINE (kTouchRegionHoldMs on the zone,
+    //     kTouchDisambiguateMs off it) and forks both the slop-crossing
+    //     resolution (nav vs pointer) and the expiry (region hold vs pointer
+    //     unlock) — the touch state block below. SURFACE GEOMETRY ONLY — the
+    //     GUI answers the navigation surface (the pan-primary vocabulary's
+    //     one plain-drag surface, flag boxes carved out) and nothing modal;
+    //     every refusal (prompt, editors, dropdown, loading/empty audio,
+    //     live pointer gesture) stays downstream — at the per-frame
+    //     wheel-context answer inside the update body for the nav gestures,
+    //     in the region begin body for the hold — so a refused pan freezes
+    //     and a refused hold is a dead stream rather than a fallback pointer
+    //     drag. Null — or answering false — means no pan surface: the plain
+    //     phase-1 translation everywhere.
+    //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
+    //     the GUI arms its region former at the DOWN point (the former's own
+    //     press half: deselect, playhead seat, the drag arm), or refuses
+    //     inside the body (prompt, the five editors, open dropdown,
+    //     loading/empty audio, live pointer gesture); a refused begin makes
+    //     the two hooks below no-ops through the drag's own !active guard, so
+    //     the refused stream is dead. NOTHING pointer-shaped starts — no
+    //     press, no hold bit, no release, no translation end (the
+    //     single-finger nav's model).
+    //   * region_update(x, y): at most once per wl_touch.frame while the
+    //     region gesture is live — the finger's current position, absolute
+    //     (the drag's one motion path converts to columns itself).
+    //   * region_end(): the gesture ended — finger up, wl_touch.cancel or
+    //     touch-capability loss. Any end COMMITS (the former's own release
+    //     regime: a moved drag rests the span under the sliver gate, a
+    //     motionless hold-lift rests nothing and leaves the playhead where
+    //     the begin seated it — the placement). Fired UNCONDITIONALLY once
+    //     the gesture began — the GUI-side drag holds the drag-modal gate
+    //     open and its release path is owed — the refused-begin stream
+    //     covered by the same !active guard.
     //
-    // The hooks carry no modifier state: the GUI body reads nothing modal from
-    // them, and its refusal answer is its own (the per-frame wheel-context
-    // predicate). Null-safe.
+    // The hooks carry no modifier state: the GUI bodies read nothing modal
+    // from them, and their refusal answers are their own (the per-frame
+    // wheel-context predicate; the region begin's gate list). Null-safe.
     void set_touch_nav_hooks(
         std::function<void(int x, int y, double dx, double dist_ratio)> update,
         std::function<void()> end,
-        std::function<bool(int x, int y)> pan_zone);
+        std::function<bool(int x, int y)> pan_zone,
+        std::function<void(int x, int y)> region_begin,
+        std::function<void(int x, int y)> region_update,
+        std::function<void()> region_end);
 
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
@@ -864,16 +897,24 @@ private:
     //   * Idle    — no touch points.
     //   * Pending — the DISAMBIGUATION WINDOW: the first finger is down and
     //     NOTHING has been delivered. The window exists only to tell tap from
-    //     drag from two fingers (kTouchDisambiguateMs, one deadline for every
-    //     surface — the merged trim band's stretched beat died with the band
-    //     and the hold-a-beat trim move; neither returned with the window).
+    //     drag from two fingers from the region hold, and its DEADLINE FORKS
+    //     ON THE DOWN POINT'S PAN-ZONE ANSWER (the eighth glass ruling,
+    //     2026-08-12 — the two-deadline fork, the dead trim-band beat's exact
+    //     pattern): ON the zone the window runs to kTouchRegionHoldMs (the
+    //     region-hold beat), OFF it kTouchDisambiguateMs as before.
     //     It resolves to Pointer on the finger lifting inside it (a TAP —
-    //     the whole burst delivers at the lift) and on EXPIRY (HOLD UNLOCKS
-    //     THE POINTER: expiry with the finger stationary is the DELIBERATE
-    //     escape to the ordinary pointer translation — hold-then-drag is the
-    //     old pointer drag, which is what keeps the lower-half scrub hold,
-    //     the endcap/bridge grabs and every press-and-hold gesture alive on
-    //     glass); on MOTION beyond kTouchSlopPx it FORKS on the down point's
+    //     the whole burst delivers at the lift, and on the navigation
+    //     surface that burst's motionless press-release IS the deferred
+    //     click act — the playhead placement, the pan-primary mouse half's
+    //     own machinery); on EXPIRY
+    //     it FORKS on the zone answer: OFF the zone HOLD UNLOCKS THE POINTER
+    //     (expiry with the finger stationary is the DELIBERATE escape to the
+    //     ordinary pointer translation — hold-then-drag is the old pointer
+    //     drag, which is what keeps the endcap/bridge grabs, the flag drags
+    //     and every off-zone press-and-hold gesture alive on glass), ON the
+    //     zone the beat's expiry is THE REGION HOLD (-> Region below —
+    //     hold-then-drag sweeps a region, the deliberate act's glass form);
+    //     on MOTION beyond kTouchSlopPx it FORKS on the same
     //     captured pan-zone answer (the PHONE MODEL, second glass session
     //     2026-08-11): inside the pan surface -> SINGLE-FINGER Nav (the
     //     finger drags the pan; no press was ever delivered — nothing to
@@ -907,28 +948,51 @@ private:
     //     (a lift is an end — the any-end-commits family) and the survivor is
     //     ignored until all fingers lift (Drain); no downgrade to
     //     single-finger nav. A third finger is ignored.
+    //   * Region  — THE REGION HOLD (the eighth glass ruling, 2026-08-12):
+    //     the zone window EXPIRED with the down point on the pan zone, and
+    //     the owning finger now drives the REGION former through the region
+    //     trio — begin fired at entry with the DOWN point (the GUI runs the
+    //     former's own press half and arms the drag, or refuses), motion
+    //     staged to the frame boundary and delivered as region_update(x, y),
+    //     the lift delivering the staged final frame then region_end (any
+    //     end commits — the former's own release regime). NOTHING
+    //     pointer-shaped ever starts: no press, no hold bit, no release, no
+    //     translation end — the single-finger Nav model, not the Pointer
+    //     one. A second finger landing here is IGNORED whole (a committed
+    //     gesture — the moved-drag rule's family).
     //   * Drain   — waiting for every remaining (ignored) finger to lift;
-    //     nothing is delivered. Entered from Pointer and Nav ends that leave
-    //     ignored fingers on the glass.
+    //     nothing is delivered. Entered from Pointer, Nav and Region ends
+    //     that leave ignored fingers on the glass.
     //
     // THE EDGE INVENTORY — every route that ends or transforms touch state,
     // authoritative here (the transport_repeat precedent; each fire site
     // states only its own clause):
-    //   * touch UP, owner, Pending  — a TAP: resolve (enter-motion + press at
+    //   * touch UP, owner, Pending  — a TAP, whichever deadline the window
+    //     rides: resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> Idle (a lone finger
-    //     cannot leave a survivor).
+    //     cannot leave a survivor). On the navigation surface the burst's
+    //     motionless press-release runs the GUI's DEFERRED CLICK ACT at its
+    //     release — the placement at the tap point — and on the marker
+    //     lane's empty stretch that release also seeds the EmptyLane
+    //     double-click candidate, so TWO TAPS there reach the marker CREATE
+    //     (the second tap's press consumes the candidate; nothing
+    //     touch-side special-cases any of it).
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
-    //     deadline, and lazily at every touch event's arrival) — the POINTER
-    //     resolution, every surface alike (hold-unlocks-the-pointer, the
-    //     Pending clause above; expiry never forks on the pan zone, by
-    //     design, and the trim band's beat fork is gone with the trim move).
+    //     deadline, and lazily at every touch event's arrival) — FORK on the
+    //     down point's captured pan-zone answer (the eighth glass ruling):
+    //     ON the zone -> Region (the region hold at the kTouchRegionHoldMs
+    //     beat; the begin hook fires at the down point, and any sub-slop
+    //     drift inside the window stages as the gesture's first frame); OFF
+    //     it -> Pointer at the kTouchDisambiguateMs mark
+    //     (hold-unlocks-the-pointer, the Pending clause above).
     //   * motion beyond kTouchSlopPx inside the window — FORK on the down
     //     point's captured pan-zone answer (the phone model): pan surface ->
     //     SINGLE-FINGER Nav (the nav seed measures its latch from the DOWN
     //     point, so the first delivered frame folds the whole accumulated
     //     delta exactly as the two-finger latch folds); elsewhere -> Pointer
-    //     (the crossing position delivered as the queued motion).
+    //     (the crossing position delivered as the queued motion — a quick
+    //     flag drag is the immediate marker drag, a quick trim drag trims).
     //   * second DOWN inside the window — Pending -> two-finger Nav, nothing
     //     delivered, whatever the zone answer.
     //   * second DOWN during Pointer — FORK ON THE MOVED LATCH (the sixth
@@ -956,6 +1020,11 @@ private:
     //     join; the latch state carries (a live pan does not re-latch). An
     //     undelivered staged single-finger frame is DROPPED at the join — a
     //     sub-frame sliver the rebase supersedes (recorded at the site).
+    //   * second DOWN during Region — IGNORED whole: recorded (the point
+    //     count), not routed — a committed gesture, the moved-drag rule's
+    //     family (a region hold that expired into the gesture is as
+    //     deliberate as a moved drag; there is no motionless sub-state to
+    //     upgrade from, the hold having already become the former).
     //   * touch UP, owner, Pointer  — staged motion flushed, release on the
     //     logical left 1->0 edge at the last position, THE TRANSLATION END ON
     //     THAT SAME EDGE (codex round 2; one owner,
@@ -983,6 +1052,13 @@ private:
     //     release and no translation end fire — a nav born of the motionless
     //     hold's upgrade had its translation released at the join, and every
     //     other nav entry never delivered a press at all; -> Drain / Idle.
+    //   * touch UP, owner, Region — the staged dirty frame DELIVERS first
+    //     (the user's own final leg, the nav finger-up's model), then the
+    //     region_end hook (any end commits — the former's release regime:
+    //     the span rests under the sliver gate, or a motionless hold-lift
+    //     rests nothing with the playhead where the begin seated it). No
+    //     release and no translation end: nothing pointer-shaped ever
+    //     started; -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.
     //   * third DOWN during two-finger Nav / any DOWN during Drain — ignored:
     //     recorded (the point count), not routed — the mid-gesture rule
@@ -998,7 +1074,12 @@ private:
     //     (the compositor's claim means that motion retroactively was not
     //     ours — the recorded asymmetry with the Pointer release, which MUST
     //     deliver; the end split at end_touch_nav_gesture) and ends through
-    //     its end path (commits iff an update was delivered); an unresolved
+    //     its end path (commits iff an update was delivered); a live REGION
+    //     gesture takes the Nav shape — staged frame DROPPED, then
+    //     region_end (the end itself ALWAYS fires: the GUI-side region drag
+    //     holds the drag-modal gate open and its release path is owed; only
+    //     the final MOTION is dropped, and dropped motion wedges nothing);
+    //     an unresolved
     //     Pending window is dropped silently (nothing was delivered, so
     //     there is nothing to end); all touch state forgotten either way.
     //   * TOUCH capability loss — the cancel contract above, then the
@@ -1022,7 +1103,7 @@ private:
     // END is a MOUSE question ("is the mouse resting in the window, and
     // where"), not a touch delivery to gate.
     struct wl_touch* wl_touch_ = nullptr;
-    enum class TouchPhase { Idle, Pending, Pointer, Nav, Drain };
+    enum class TouchPhase { Idle, Pending, Pointer, Nav, Region, Drain };
     TouchPhase touch_phase_       = TouchPhase::Idle;
     // ALL live touch points, the ignored ones included — the Drain exit test.
     int        touch_point_count_ = 0;
@@ -1036,15 +1117,21 @@ private:
     double     touch_last_x_      = 0.0;
     double     touch_last_y_      = 0.0;
     // Pending only: the disambiguation deadline (monotonic; event timestamps
-    // ride a base this program never compares against) and whether any
-    // sub-slop motion arrived inside the window (the queued motion the
-    // resolution replays).
+    // ride a base this program never compares against — kTouchRegionHoldMs
+    // on the pan zone, kTouchDisambiguateMs off it, the two-deadline fork)
+    // and whether any sub-slop motion arrived inside the window (the queued
+    // motion the resolution replays).
     uint64_t   touch_window_deadline_us_ = 0;
     bool       touch_window_moved_       = false;
     // Pending: the down point's PAN-ZONE answer, captured ONCE at the first
-    // finger's down (the pan_zone query at set_touch_nav_hooks); the window's
-    // slop-crossing resolution forks on it — the phone model.
+    // finger's down (the pan_zone query at set_touch_nav_hooks). It picks
+    // the window's deadline, and BOTH one-finger resolutions fork on it:
+    // the slop crossing (the phone model's pan vs the pointer) and the
+    // expiry (the region hold vs the pointer unlock).
     bool       touch_down_in_pan_zone_   = false;
+    // Region: a finger position staged for the wl_touch.frame boundary
+    // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
+    bool       touch_region_frame_dirty_ = false;
     // Pointer: the translation has MOVED — Chebyshev >= kTouchSlopPx from the
     // down point, LATCHED ONCE (the sixth glass ruling, 2026-08-12). Seeded
     // by the resolver from the window's own travel (a slop-crossing
@@ -1219,9 +1306,14 @@ private:
     // each fire site.
     std::function<void(int, int, double, double)> touch_nav_update_hook_;
     std::function<void()>                         touch_nav_end_hook_;
-    // The pan-zone query (asked once, at the first finger's down; geometry
-    // only — the contract at set_touch_nav_hooks).
+    // The pan-zone query (asked once, at the first finger's down; surface
+    // geometry only — the contract at set_touch_nav_hooks).
     std::function<bool(int, int)>                 touch_pan_zone_hook_;
+    // The region trio the Region phase drives (contracts at
+    // set_touch_nav_hooks). Null-safe at each fire site.
+    std::function<void(int, int)>                 touch_region_begin_hook_;
+    std::function<void(int, int)>                 touch_region_update_hook_;
+    std::function<void()>                         touch_region_end_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop
     // (see set_loop_settled_hook). SEEDED with a no-op, like the input handler's
     // capture hooks, so the fire site needs no null test.
@@ -1379,7 +1471,8 @@ private:
     // deliver the synthesized enter-motion at the ORIGINAL down point, the
     // left press there (on the logical OR's 0->1 edge), then any queued
     // motion; seed the MOVED latch from the window's own travel. Shared by
-    // all three pointer resolutions — the expiry (every surface alike), the
+    // all three pointer resolutions — the OFF-ZONE expiry (the on-zone one
+    // takes resolve_touch_window_to_region below), the
     // slop crossing's outside-the-pan-zone arm (its pan-surface arm takes
     // resolve_touch_window_to_single_nav below instead), and the tap (whose
     // caller then delivers the release + the translation end itself, through
@@ -1393,7 +1486,14 @@ private:
     // two-finger latch is", literally the same code path. No press was ever
     // delivered and the touch hold is never raised.
     void resolve_touch_window_to_single_nav();
-    // Sample the Pending window's deadline. Called from the timerfd tick
+    // Resolve the Pending window to the REGION HOLD (the on-zone expiry at
+    // the kTouchRegionHoldMs beat — the eighth glass ruling): fire the
+    // region begin at the DOWN point and stage any sub-slop window drift as
+    // the gesture's first frame. Nothing pointer-shaped starts — no press,
+    // no hold bit — the single-nav model.
+    void resolve_touch_window_to_region();
+    // Sample the Pending window's deadline (whichever of the two the zone
+    // answer picked). Called from the timerfd tick
     // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
     // so expiry lands within one tick of its mark) and lazily at every
     // touch event's arrival, so an event past the deadline is processed
@@ -1438,12 +1538,18 @@ private:
     // that motion retroactively was not ours). Either way the end hook fires
     // iff an update was delivered.
     void end_touch_nav_gesture(bool deliver_final_frame);
+    // End a live Region gesture — the Nav end's own split, restated for the
+    // region trio (the finger's lift delivers the staged frame first, the
+    // hard ends drop it) with ONE deliberate difference: region_end fires
+    // UNCONDITIONALLY, the GUI-side drag holding the drag-modal gate open
+    // (the trim-move precedent; rationale at the definition).
+    void end_touch_region_gesture(bool deliver_final_frame);
     // THE HARD-END CONTRACT, shared verbatim by wl_touch.cancel and
     // touch-capability loss (the edge inventory names it): commit-and-END a
     // live Pointer translation (the release, then the focus-forked translation
-    // end through deliver_touch_translation_end), end a live Nav gesture
-    // (staged frame dropped), drop a Pending window silently, forget all
-    // touch state.
+    // end through deliver_touch_translation_end), end a live Nav or Region
+    // gesture (staged frame dropped), drop a Pending window silently, forget
+    // all touch state.
     void hard_end_touch_stream();
     // Reset every touch field to its rest value (the one forget, so a new
     // edge cannot land with one field remembered).
