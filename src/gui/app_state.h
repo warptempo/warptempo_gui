@@ -964,11 +964,13 @@ enum class RedesignButton {
     // history mode's own. (Revert above joined them the same day, the
     // Cumulative toggle on 2026-08-08, making that family FOUR.)
     IconHistoryOlder, IconHistoryNewer,
-    // Row 8, the TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
-    // first surface): the permanent bottom toolbar between the waveform and
-    // the status line, on every host — no touch mode, no flag, no detection.
-    // Eight buttons in two groups, in painted order (the enum order is the
-    // painted order, and row 8 paints below rows 1-4, so the roster's tail is
+    // The BOTTOM ROW's transport cluster (row 8, architect-ratified
+    // 2026-08-11, the touch arc's first surface; a tenant of the unified
+    // bottom row directly under the waveform since the 2026-08-12 row
+    // unification): permanent on every host — no touch mode, no flag, no
+    // detection. Eight buttons in two groups, in painted order (the enum
+    // order is the painted order, and the row paints below rows 1-4, so the
+    // roster's tail is
     // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
     // the ONE bare Space binding split over two state-mirrored buttons,
     // skip-forward = bare End), then the
@@ -1091,13 +1093,15 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE ROW 8'S — the bottom transport toolbar (2026-08-11). Named
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — the transport/arrow eight (row 8's,
+// 2026-08-11; tenants of the unified bottom row since 2026-08-12). Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
-// about any one button: row 8's pixels live in the BOTTOM strip, so every
+// about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the transport row's own rect for these eight — the hover recompute, the
+// with the bottom row's own rect for these eight — the hover recompute, the
 // click-face arm and clear, the tick comparator, and the tooltip, which also
-// FLIPS ABOVE the button here (below it would hang off the window's foot).
+// FLIPS ABOVE the button here (below the lane is the blank window foot, zero
+// on a short window).
 // A membership predicate like redesign_button_is_tab, deliberately NOT the
 // exhaustive-switch shape: redesign_button_in_menu_row above is the roster's
 // one classification chokepoint (a new button fails to compile there until its
@@ -2141,19 +2145,24 @@ struct AppState {
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
 
-    // THE CLOCK'S RESERVED CELL, published by paint_transport_row (2026-08-11,
-    // when the timestamp moved off the status line into row 8's centre in
-    // monospace). It is a PAINTER STASH in the roster's own model — the rect
+    // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
+    // when the timestamp moved off the status line into the transport row's
+    // centre in monospace; the row unification merged that row and the status
+    // line into the one bottom row a day later). It is a PAINTER STASH in the
+    // roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen on the monospace face at the live size, which only the
     // painter is holding a scaled font for.
     //
-    // ITS ONE CONSUMER IS DAMAGE: clock_invalidate_rect (below) hands it to
-    // every route that moves the playhead or the scanner, so a clock advance
-    // dirties the cell instead of the whole transport lane and the eight
-    // buttons' draws fall outside on_redraw's clip. Zero before the row's first
-    // paint, which that owner answers with the lane itself — the first frame
-    // paints everything anyway.
+    // ITS CONSUMERS ARE THE TWO CELL DAMAGE OWNERS: clock_invalidate_rect
+    // hands it to every route that moves the playhead or the scanner, so a
+    // clock advance dirties the cell instead of the whole lane and the
+    // buttons' draws fall outside on_redraw's clip, and
+    // status_row_invalidate_rect reads its RIGHT EDGE as the status cell's
+    // left bound (the right-aligned chain clips against the clock, so the
+    // cell edge bounds everything a string write can move). Zero before the
+    // row's first paint, which both owners answer with the whole lane — the
+    // first frame paints everything anyway.
     GuiRect clock_cell_rect{0, 0, 0, 0};
 
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
@@ -3398,7 +3407,11 @@ struct AppState {
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
 
-    // THE CRITICAL SLOT — the bottom row's leftmost cell, and the product's one
+    // THE CRITICAL SLOT — the status chain's LEFTMOST member (right-aligned on
+    // the unified bottom row since 2026-08-12, leftmost-in-chain so it can
+    // never be pushed off — the chain left-anchors when it overflows and C
+    // clips instead; the layout is at paint_bottom_strip), and the product's
+    // one
     // permanent failure surface (architect 2026-08-09, REPLACING the acknowledge
     // modal the checkpoint's failures used to raise). A critical failure must be
     // IMPOSSIBLE TO MISS and IMPOSSIBLE TO HIJACK WITH: a modal is missable
@@ -3597,14 +3610,14 @@ GuiRect top_ruler_row_area(const AppState& a);
 // former — since 2026-08-12, when the ruler's restored strip-drag entry was
 // deleted for good.)
 GuiRect top_marker_row_area(const AppState& a);
-// ROW 7's single bottom lane (2026-08-01), replacing the legacy
-// upper/lower pair: the lane with its two borders, and the content band inside
-// them.
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
+// strip's one lane, flush under the waveform — the lane including its 1px
+// border-top, and the content band under that border. (It was row 7's single
+// status lane from 2026-08-01, one of two lanes while the transport row
+// stood, 2026-08-11..12, and is the strip's whole surface again; the blank
+// foot below it is strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
-// ROW 8's transport row (2026-08-11): the bottom strip's second lane, flush
-// under the waveform — the lane including its 1px border-top.
-GuiRect bottom_transport_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The pure level→spp exponent: ms_per_px = 0.625 * 2^(level - 1), fully
@@ -3920,30 +3933,38 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
-// THE BOTTOM STRIP'S TWO DAMAGE OWNERS, one per lane, and which one a route
-// wants is decided by WHICH PIXELS IT ERASES — the product's standing rule that
-// damage follows the basis of what it repaints (playhead_pixel_x above states
-// the same rule for the waveform's two bases). The two lanes carried one owner
-// until 2026-08-11, when the clock left the status line for row 8's centre and
-// the two families it had served stopped sharing a rect.
+// THE BOTTOM ROW'S TWO DAMAGE OWNERS, one per CELL of the unified lane (the
+// row unification of 2026-08-12 merged the two bottom lanes into one; the
+// split's two families survive it unchanged as the row's clock cell and its
+// status cell), and which one a route wants is decided by WHICH PIXELS IT
+// ERASES — the product's standing rule that damage follows the basis of what
+// it repaints (playhead_pixel_x above states the same rule for the waveform's
+// two bases). The two families carried one owner until 2026-08-11, when the
+// clock left the status line for the transport row's centre and stopped
+// sharing a rect with the strings.
 //
-//   status_row_invalidate_rect — ROW 9, the status lane: section C's status
-//   chain (the queue / render / transient status strings, the selection
-//   readout, the history line) and the critical chip. Reached through
+//   status_row_invalidate_rect — the STATUS CELL, from the clock's reserved
+//   cell to the lane's right edge: section C's status chain (the queue /
+//   render / transient status strings, the selection readout, the history
+//   line) and the critical chip, right-aligned there since the unification.
+//   Reached through
 //   Viewport::invalidate_status_row_area, which is where its callers are and
 //   which ALSO carries the modal dialog's stashed box while one stands (the
 //   rider, 2026-08-12 — the dialog editors' repaint sites all speak that
 //   call); the great majority of them write a STRING into C.
 //
-//   clock_invalidate_rect — ROW 8's reserved clock cell, and nothing else on
-//   that lane: every route that moves the PLAYHEAD or the SCANNER, which is the
-//   only thing the clock reads. Reached through
+//   clock_invalidate_rect — the reserved CLOCK CELL at the lane's centre, and
+//   nothing else on the row: every route that moves the PLAYHEAD or the
+//   SCANNER, which is the only thing the clock reads. Reached through
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
 //
-// A route doing both — a load-in-place, an undo restore, a view switch — calls
-// both, spelling the two lanes it dirties rather than widening to one rect that
-// covers them.
+// The transport/arrow buttons on the row's left are the third tenant and have
+// NO owner here: their damage rides the roster machinery (the face writers
+// and the tick comparator), exactly as the top rows' buttons do. A route
+// touching both cells — a load-in-place, an undo restore, a view switch —
+// calls both owners, spelling the two cells it dirties rather than widening
+// to one rect that covers them.
 GuiRect status_row_invalidate_rect(const AppState& a);
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);

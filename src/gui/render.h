@@ -621,22 +621,24 @@ inline constexpr int      kWaveformBorderPx = 2;
 // docs/engineering/waveform_antialiasing_retired.md, and the deletion inventory
 // is at render_waveform's own header.
 
-// -- ROW 7: THE BOTTOM ROW (the status line) --------------------------------
+// -- ROW 7: THE BOTTOM ROW (the status line's chrome) -----------------------
 //
 // Measured off row_7_text.png (407x33): a 1px #4c4e51 TOP border, 31 rows of
-// #202326 ground, and a 1px #17181a BOTTOM border which is the window's LAST
-// row. Two DIFFERENT line greys on the two edges — that is what the crop says,
-// verified column by column (every one of the 407 columns carries both values),
-// so the row does not get one border color applied twice.
+// #202326 ground, and a 1px #17181a BOTTOM border which was the window's LAST
+// row. THE GROUND AND THE TOP LINE ARE THE ROW-3/4 CONSTANTS REUSED, on the
+// judgment those rows already set: #202326 is kRedesignTabGround (the tab
+// row's ground, the selected tab's interior, the icon row's ground — one
+// Breeze Window fact seen again, not a fifth sample of the same number), and
+// #4c4e51 is kRedesignTabLine (row 3's frame grey, row 4's separators and
+// border) — which is why this block declares nothing today.
 //
-// THE GROUND AND THE TOP LINE ARE THE ROW-3/4 CONSTANTS REUSED, on the judgment
-// those rows already set: #202326 is kRedesignTabGround (the tab row's ground,
-// the selected tab's interior, the icon row's ground — one Breeze Window fact
-// seen again, not a fifth sample of the same number), and #4c4e51 is
-// kRedesignTabLine (row 3's frame grey, row 4's separators and border). Only the
-// BOTTOM edge is new, and it is new because no surface in the tree has ever
-// carried it: a near-black seam under the whole window.
-inline constexpr GuiColor kRedesignBottomLine = hex(0x17181A);
+// kRedesignBottomLine (hex 0x17181A, the crop's near-black window-foot seam)
+// WAS declared here and is RETIRED (2026-08-12, the row unification): its one
+// consumer was the status line's bottom border on the window's last row, and
+// the unified bottom row sits against the waveform with blank window ground
+// below it — no lane rests on the window's foot any more, so the seam has no
+// surface. The crop measurement above stays as the provenance record; the
+// value is git history's.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1050,48 +1052,62 @@ inline int marker_lane_h_px() {
 // THE WAVEFORM'S MAXIMUM HEIGHT — a RULED RETUNABLE (architect 2026-08-12, the
 // seventh glass ruling): on tall monitors the natural (leftover) waveform is so
 // tall that reaching the ruler and the flag lane "feels cumbersome", so the
-// waveform CLAMPS at this height and a FLEXIBLE GAP of window ground opens
-// after the icon row — rows 5-7 stay attached to the waveform's top and the
-// whole strip-block-plus-waveform rides LOW, adjacent to row 8, with every lane
-// in easy reach on every display. The architect's bracket for the value:
-// "bigger than the height on the Pi, smaller than the waveform height on my
-// external monitor". At 100% scale the natural heights are 307px on the Pi's
-// 1024x600 (600 minus the 215px top strip and the 78px bottom strip) and 787px
-// on the 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped
-// and pixel-identical (gap 0) while the 1080p window gets a 237px gap. A
-// SCALED length riding gui_scale like every authored height, so the clamp
-// keeps pace with the lanes it is measured against. The ONE application point
-// is the strip/waveform geometry owner (top_strip_flex_gap / strip_row_rect /
+// waveform CLAMPS at this height and the leftover becomes a band of BLANK
+// WINDOW GROUND. SINCE THE ROW UNIFICATION (later the same day) that blank
+// band sits at the WINDOW BOTTOM, under the unified bottom row — the whole
+// interactive stack (rows 1-4, rows 5-7, the waveform, the bottom row) is one
+// contiguous cluster from the window top, and the flexible space is the
+// window's unused foot ("the icons, all the tools, they should be close to
+// the waveform"; the gap opened between the icon row and the trim lane for
+// the ruling's first hours). The architect's bracket for the value: "bigger
+// than the height on the Pi, smaller than the waveform height on my external
+// monitor". At 100% scale the natural heights are 334px on the Pi's 1024x600
+// (600 minus the 215px top strip and the 51px bottom row) and 814px on the
+// 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped (blank
+// 0) while the 1080p window gets a 264px blank foot. A SCALED length riding
+// gui_scale like every authored height, so the clamp keeps pace with the
+// lanes it is measured against. The ONE application point is the
+// strip/waveform geometry owner (bottom_strip_flex_gap / strip_row_rect /
 // waveform_area, main.cpp); no consumer reads this accessor directly.
 inline constexpr int kWaveformMaxHeightPx = 550;
 inline int waveform_max_h_px() {
     return scaled_px(kWaveformMaxHeightPx, 1);
 }
 
-// Authored pixel geometry of THE BOTTOM ROW — the bottom strip's window-edge
-// lane, the STATUS LINE: ROW 9 of the redesign since the transport row became
-// row 8 (architect's numbering, 2026-08-11); it LANDED as row 7, the name its
-// crops and history keep. Measured off
-// row_7_text.png
-// (407x33). The bottom strip COLLAPSED FROM TWO LANES TO ONE here (architect
-// 2026-08-01) — the status row and the modal/editor row became a single line,
-// and this accessor was the whole bottom strip's height until row 8 stacked
-// the TRANSPORT ROW above it (2026-08-11, the accessors below this block).
+// Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
+// bottom strip's ONE lane since rows 8 and 9 merged (architect-ruled
+// 2026-08-12): the transport/arrow buttons on the left, the monospace clock
+// centered, and the status chain (the critical chip + section C) right-aligned,
+// all one line directly under the waveform, with the window's blank foot below
+// it. The SUCCESSION: the status line landed as row 7 (2026-08-01, the
+// two-lane bottom strip collapsing to one — its crops keep that name), was
+// renumbered row 9 when the transport row (row 8, 2026-08-11, the touch arc's
+// first surface) stacked above it, and both lanes merged into this one a day
+// later — the buttons grown to the icon row's boxes for glass, the status
+// strings moved beside them, every interactive surface one contiguous cluster
+// against the waveform.
 //
-// THE CSS BOX MODEL, WITH A BORDER ON BOTH EDGES: 31 is CONTENT, and the two 1px
-// borders sit OUTSIDE it — the TOP one under the waveform area, the BOTTOM one
-// on the window's last row — so the LANE is their sum (33 at 100%). Every other
-// redesigned row has a border on one edge only; this one is the window's foot
-// and closes on both. bottom_row_content_h_px() is the ground the text sits on;
-// bottom_row_h_px() is the lane the strip stack allocates.
+// THE CONTENT HEIGHT IS DERIVED, NOT INVENTED: 50 = the icon row's 32px button
+// box (kIconBtnPx, paint_handler.cpp — the grown buttons' size, the
+// unification's point) + twice the 9px margin row 8's own ruled geometry
+// centered at ((44 - 26) / 2 = 9, the tune-up's arithmetic), so the lane
+// shrinks-to-fit its tallest tenant at row 8's own breathing room. Row 8's
+// sampled kdenlive transport metrics (26px boxes / 16px glyphs off
+// transport.png) and its ruled 44 content are SUPERSEDED by the icon-row
+// boxes; row 9's measured 31 dies with the lane.
 //
-// IT RIDES gui_scale_factor() LIKE EVERY REDESIGNED ROW, and that is the change
-// this row makes to the strip stack: the bottom lanes were the LAST font-scaled
-// lanes in the tree (they sized from the measured monospace band), and with them
-// gone the font axis had no surface left — which is why it, and the font_size
-// setting behind it, are deleted (architect approval 2026-08-01).
-inline constexpr int kBottomRowHeightPx = 31;
-inline constexpr int kBottomRowBorderPx = 1;     // top AND bottom, equal
+// THE CSS BOX MODEL, ONE BORDER: 50 is CONTENT and the 1px border-top sits
+// OUTSIDE it (a 51px lane at 100%), on the WAVEFORM side — row 8's own
+// convention kept (the bottom strip's chrome grows toward the waveform, so
+// the border facing it is the one drawn). Row 9's second border — the
+// near-black window-foot seam — died with the row's window-edge position:
+// the lane's bottom edge meets blank window ground now, and kRedesignBottomLine
+// went with it (the retirement note is at the row-7 palette block above).
+// bottom_row_content_h_px() is the ground the buttons and text sit on;
+// bottom_row_h_px() is the lane the strip stack allocates. Rides
+// gui_scale_factor() like every redesigned row.
+inline constexpr int kBottomRowHeightPx = 50;
+inline constexpr int kBottomRowBorderPx = 1;     // border-top, the waveform side
 inline int bottom_row_border_h_px() {
     return scaled_px(kBottomRowBorderPx, 1);
 }
@@ -1099,42 +1115,7 @@ inline int bottom_row_content_h_px() {
     return scaled_px(kBottomRowHeightPx, 5);
 }
 inline int bottom_row_h_px() {
-    return bottom_row_content_h_px() + 2 * bottom_row_border_h_px();
-}
-
-// Authored pixel geometry of THE TRANSPORT ROW — row 8 of the redesign
-// (architect-ratified 2026-08-11, the touch arc's first surface): the bottom
-// strip's SECOND lane, between the waveform and the status line, permanent on
-// every host — ordinary mouse-clickable buttons, no touch mode, no flag, no
-// detection. Eight buttons in two groups: the transport (skip-back / play /
-// stop / skip-forward, left-anchored) and the four cardinal
-// arrows in vim order left-to-right (right-anchored); the button and glyph
-// boxes are the row's own sampled kdenlive transport sizes (kTransportBtnPx /
-// kTransportGlyphPx, paint_handler.cpp).
-//
-// THE HEIGHT IS A RULED 44 (architect 2026-08-11, his live-look tune-up,
-// superseding the first cut's icon-row 46 and the sampled ~46 band that
-// justified it). THE RULED "44 PIXELS TALL" IS READ AS CONTENT, with the
-// existing 1px border-top OUTSIDE it (a 45px lane at 100%) — the CSS box
-// model every stated row height already takes — and the arithmetic is what
-// confirms the reading: the ruled 26px button boxes center in 44 at exactly
-// (44-26)/2 = 9px margins, where a 43px content band would center at a
-// fractional 8.5. Stated as this row's own constant rather than read through
-// any other row's so the rows move independently. The border sits on the
-// TOP edge — the waveform side, the mirror of the icon row's border-bottom:
-// the bottom strip's chrome grows from the window edge inward, so the border
-// that separates a lane from the waveform is the one facing it. The waveform
-// area loses exactly this lane's height (architect-accepted).
-inline constexpr int kTransportRowHeightPx = 44;
-inline constexpr int kTransportRowBorderPx = 1;
-inline int transport_row_border_h_px() {
-    return scaled_px(kTransportRowBorderPx, 1);
-}
-inline int transport_row_content_h_px() {
-    return scaled_px(kTransportRowHeightPx, 5);
-}
-inline int transport_row_h_px() {
-    return transport_row_content_h_px() + transport_row_border_h_px();
+    return bottom_row_content_h_px() + bottom_row_border_h_px();
 }
 
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — and since row 7 the ONLY

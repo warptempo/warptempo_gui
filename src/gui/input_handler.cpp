@@ -1549,13 +1549,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // forms deleted), so the two context ids differ only for the platform's
     // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
-    // it emits nothing at all. THE FLEXIBLE GAP BAND (the waveform-height
-    // clamp's window ground between the icon row and the trim lane,
-    // 2026-08-12) is INSIDE top_strip_area and DELIBERATELY NOT in the inert
-    // list: it is not chrome — it is the strip block's own ground, sitting
-    // where the ruler and trim lanes already answer the strip's pan — so
-    // it inherits the top-strip route (the plain stepped pan) exactly as
-    // the lanes beside it do, with no region added.
+    // it emits nothing at all. THE BLANK FOOT (the waveform-height clamp's
+    // window ground below the unified bottom row since the 2026-08-12 row
+    // unification) needs no band of its own: it lies below every area this
+    // probe tests, so a wheel there falls to the no-context 0 exactly as the
+    // old status lane's did — nothing scrolls off the window's dead ground.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag
@@ -1590,12 +1588,15 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         const GuiRect bands[] = {
             top_menu_row_area(app),  top_toolbar_row_area(app),
             top_tab_row_area(app),   top_icon_row_area(app),
-            // Row 8 joined the family's inert band list 2026-08-11, exactly as
-            // the rule above promises a future row would. It is a bottom-strip
+            // The bottom row joined the family's inert band list 2026-08-11
+            // (as the transport row), exactly as the rule above promises a
+            // future row would, and the 2026-08-12 unification widened its
+            // band to the whole merged lane — the clock and status cells are
+            // as wheel-inert as the buttons. It is a bottom-strip
             // lane, so the top-strip area test below would never have routed it
             // anyway; membership here is what stops the sub-detent accumulator
             // growing remainder over it, like its four siblings.
-            bottom_transport_row_area(app),
+            bottom_row_area(app),
         };
         for (const GuiRect& b : bands) {
             if (rect_contains(b, x, y)) return -1;

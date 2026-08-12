@@ -45,7 +45,7 @@ class GuiWaveformWorker;
 // ONE text size since row 7 — lives in render.h so render.cpp can reach it
 // without pulling paint_handler.h into the lower-layer include graph.
 
-// THE BOTTOM ROW'S PAD — the pen x of the first glyph on the line,
+// THE BOTTOM ROW'S PAD — the status chain's one spacing constant,
 // MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
 // row's 16px size puts the pen at x = 13 (12 and 14 both fit worse; the fit is
 // at the crop's left edge, which is the window's; the architect confirmed the
@@ -53,17 +53,14 @@ class GuiWaveformWorker;
 // on gui_scale_factor() like every other redesigned dimension, rounded with
 // std::nearbyint so it stays an integer.
 //
-// (It replaces timestamp_pad_x, the authored 8 on the font axis. The row rides
-// gui_scale now — see bottom_row_h_px.) ONE CONSTANT, TWO USES in
-// bottom_row_sections (re-derived 2026-08-11, when the clock left for row 8 and
-// took the third — the inter-section gap before its reserved cell — with it):
-// the LEFT lead-in before the modal span, and the RIGHT margin that span clips
-// at. The reuse is an
-// eye-consistency choice, stated there. Since 2026-08-09 the lead-in leads into
-// the CRITICAL CELL when one stands, and the same constant is the gap between
-// that cell and the modal span — a THIRD use of the one pad, present only on
-// the rows that carry a critical message and byte-identical to the three above
-// on every other row.
+// ONE CONSTANT, THREE USES in the unified row's status chain (re-derived at
+// the row unification, 2026-08-12, which right-aligned the chain and retired
+// the left lead-in — nothing on the row left-aligns text any more, the button
+// cluster opening with the icon row's own pad instead): the RIGHT margin the
+// chain aligns to, the gap between the CLOCK's reserved cell and the chain's
+// left clip bound, and — on a row carrying a critical message — the gap
+// between the critical chip and section C inside the chain. The reuse is an
+// eye-consistency choice, stated at the painter.
 inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }
@@ -619,9 +616,11 @@ private:
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons), the TAB ROW (top lane 2, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom), the
-    // ICON ROW (top lane 3, row 4: the sixteen view/mode/action buttons, their
-    // separators and its border-bottom), and the TRANSPORT ROW (bottom lane 1,
-    // row 8: the eight transport / arrow buttons, declared below).
+    // ICON ROW (top lane 3, row 4: the seventeen view/mode/action buttons,
+    // their
+    // separators and its border-bottom), and the UNIFIED BOTTOM ROW's button
+    // cluster (bottom lane 0: the eight transport / arrow buttons, declared
+    // below).
     // All five PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
@@ -641,12 +640,14 @@ private:
     void paint_toolbar_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
-    // ROW 8 — the transport row (2026-08-11), the family's fifth button-row
-    // painter and the one whose lane is in the BOTTOM strip: the eight icon
-    // buttons between the waveform and the status line, on the icon row's own
-    // face rules at the row's own sampled kdenlive sizes. Same exposure gating
-    // and the same audio-independence as the four above.
-    void paint_transport_row(cairo_t* cr);
+    // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
+    // 2026-08-12): the transport/arrow eight at the icon row's boxes and the
+    // centred monospace clock, painted onto the lane paint_bottom_strip has
+    // already grounded — that painter is the lane's one chrome owner and the
+    // only caller of this body, which keeps the family's fifth button-row
+    // painter separate only because the button cluster's tables and the
+    // clock's metrics live beside it.
+    void paint_bottom_row_buttons_and_clock(cairo_t* cr);
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
     // overlap the rows they hang over. They cannot coexist, and the claim rests

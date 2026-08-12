@@ -101,7 +101,7 @@ void Selection::set_single_selection(int idx) {
     app.last_selected_marker = (idx >= 0) ? idx : -1;
     viewport.invalidate_top_strip();
     // The bottom-strip pass/ref readout now shows for the last-selected marker
-    // too (not only on hover), so a selection change damages the status lane
+    // too (not only on hover), so a selection change damages the status cell
     // as well; the flags' own selected/unselected colour swap rides the
     // top-strip damage (through the flag cache's selection fingerprint).
     viewport.invalidate_status_row_area();

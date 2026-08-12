@@ -1926,7 +1926,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
     // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row /
-    // paint_transport_row) —
+    // paint_bottom_row_buttons_and_clock) —
     // never re-shaped here, so the clickable rect is the painted one. The action
     // FIRES ON PRESS: nothing on these rows drags, so there is no arm, no
     // threshold and no release body, and no double-click surface either. The one
@@ -2111,19 +2111,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
     }
-    // ROW 8 — THE TRANSPORT ROW (2026-08-11), the block's fifth member on the
-    // block's own terms: the band is the BOTTOM strip's lane 1, between the
-    // waveform and the status row, and everything else is the shape above —
+    // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
+    // merged lane since the 2026-08-12 unification), the block's fifth member
+    // on the block's own terms: the band is the bottom strip's one lane,
+    // directly under the waveform, and everything else is the shape above —
     // below the modal gates (a prompt or a dialog editor swallows the
     // press; the pointer-transparent flag editor does not, and its KEYBOARD
     // modality then answers the dispatched chord exactly as it answers the
     // key), above the loading/empty guard, ctrl/alt strict no-ops, and every
-    // press in the band that is not on a button a consumed nothing. The
+    // press in the band that is not on a button a consumed nothing — which
+    // since the unification includes the whole clock-and-status right side,
+    // the lane's pointer-inert tenants (text takes no clicks there, exactly
+    // as the old status lane took none). The
     // arrows' hold-repeat arm lives inside the shared dispatch body
-    // (ToolbarChord::repeats), not here.
+    // (ToolbarChord::repeats), not here. The BLANK FOOT below the lane is
+    // outside this band and falls through to the tail's consumed nothing,
+    // window ground by the vertical rule (main.cpp).
     {
-        const GuiRect transport_row = bottom_transport_row_area(app);
-        if (rect_contains(transport_row, x, y)) {
+        const GuiRect bottom_row = bottom_row_area(app);
+        if (rect_contains(bottom_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
@@ -3490,7 +3496,7 @@ void GuiInputHandler::clear_redesign_button_hover() {
     }
     if (changed_top)       viewport.invalidate_top_strip();
     if (changed_transport)
-        viewport.invalidate_rect(bottom_transport_row_area(app));
+        viewport.invalidate_rect(bottom_row_area(app));
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
@@ -3579,7 +3585,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // every other face the top strip — each strip pays only for its own.
     if (changed_top)       viewport.invalidate_top_strip();
     if (changed_transport)
-        viewport.invalidate_rect(bottom_transport_row_area(app));
+        viewport.invalidate_rect(bottom_row_area(app));
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
@@ -3796,7 +3802,7 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
             // face damages its own lane where every other row damages the top
             // strip — the same fork every face writer takes.
             if (redesign_button_in_transport_row(tc.id))
-                viewport.invalidate_rect(bottom_transport_row_area(app));
+                viewport.invalidate_rect(bottom_row_area(app));
             else
                 viewport.invalidate_top_strip();
         }
@@ -4809,7 +4815,7 @@ void GuiInputHandler::clear_redesign_button_press() {
         static_cast<RedesignButton>(app.redesign_pressed));
     app.redesign_pressed = -1;
     if (transport)
-        viewport.invalidate_rect(bottom_transport_row_area(app));
+        viewport.invalidate_rect(bottom_row_area(app));
     else
         viewport.invalidate_top_strip();
 }

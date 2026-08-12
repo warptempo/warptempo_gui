@@ -198,7 +198,7 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     // THE CLOCK RIDES THE WRITE (2026-08-11, the row-8 cell): row 8's clock
     // shows this cursor whenever no scanner is active, and since the
     // timestamp left the status line the two callers' own damage (waveform +
-    // status lane) no longer covers it. The call sits HERE, beside the one
+    // status cell) no longer covers it. The call sits HERE, beside the one
     // cursor write, rather than copied per caller — this helper is the trim
     // family's single playhead writer (both trim-commit callers ride it),
     // the same damage-beside-the-write shape land_playhead_on_source_frame
@@ -376,7 +376,7 @@ void GuiInputHandler::handle_trim_x() {
 // 2026-08-07, and both keys are on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
 // makes a second Shift+X a natural silent no-op and whose tail owns the repaint
-// (waveform + status lane) and the target_render trigger. IT TOUCHES NO REGION AND
+// (waveform + status cell) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
 // rule does not reach it, and the gated region re-sync it used to carry died
 // with the trim-window highlight itself (architect 2026-07-30) — a scratch span

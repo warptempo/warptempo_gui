@@ -26,28 +26,24 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// THE STATUS LINE IS SANS, AND MONOSPACE LIVES ON EXACTLY ONE SURFACE
+// THE STATUS TEXT IS SANS, AND MONOSPACE LIVES ON EXACTLY ONE SURFACE
 // (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
 // to get rid of monospace altogether — the last row should be the same font as
-// the rest"): monospace RETURNS for the CLOCK alone, which moved that
-// same day off this line into the centre of row 8 (paint_transport_row, which
-// owns the face, the size and the cell). The reversal is scoped to that one
-// surface and nothing else in the product may take it.
+// the rest"): monospace is the CLOCK's alone — the unified bottom row's
+// centre cell (paint_bottom_row_buttons_and_clock, which owns the face, the
+// size and the cell). The reversal is scoped to that one surface and nothing
+// else in the product may take it.
 //
-// EVERY STRING THIS LINE STILL CARRIES — the prompts, the queue/render/transient
-// status, the resolved readout, the critical chip and the four editors' own
-// text — is the redesign's sans at the redesign's size, shaped and painted
-// through the ONE chokepoint like every other redesigned row. (The dirty mark
-// used to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which
-// labwc paints — see GuiPlatform::apply_window_title.)
+// EVERY STRING THE STATUS CHAIN CARRIES — the queue/render/transient status,
+// the resolved readout, the history line and the critical chip — is the
+// redesign's sans at the redesign's size, shaped and painted through the ONE
+// chokepoint like every other redesigned row. (The dirty mark used to be on
+// this list; since 2026-08-01 it is in the WINDOW TITLE, which labwc paints —
+// see GuiPlatform::apply_window_title.)
 //
-// WHAT THE ROW KEEPS FROM THE CLOCK'S TENANCY is the FIXED-SECTION layout
-// (bottom_row_sections below): the sections are still computed from shaped
-// maxima and the row's own edges rather than from the text currently on screen,
-// which is what stops C jumping as its precedence chain switches strings.
-// The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen — went
-// with the clock and is at row 8's own metrics, re-derived there on the new
-// face rather than trusted to it.
+// The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
+// belongs to the clock and lives at its own metrics, re-derived on the
+// monospace face rather than trusted to it.
 
 // The bottom row's ONE face, selected on `cr`. Returns the scaled font every
 // shape and paint on the row must share — the text_shape precondition is that a
@@ -72,97 +68,38 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
-// THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01, RELAID
-// OUT the same day and cut down to two on 2026-08-11 when the clock left for
-// row 8): nothing on the row moves when the span's contents change. Every
-// boundary is computed from the lane's own edges, never from the text currently
-// on screen.
+// THE STATUS CHAIN IS RIGHT-ALIGNED (the row unification, 2026-08-12 — "the
+// information displays can go in the bottom right"): the FIXED-SECTION layout
+// of 2026-08-01..08-12 (boundaries computed from the lane's own edges, never
+// from the text on screen) is RETIRED with the lane it laid out. The chain —
+// the CRITICAL CHIP first, then section C's status span — builds from the
+// row's RIGHT MARGIN, so its pen IS a function of the live text now. That
+// does not resurrect the twitch the fixed sections existed to prevent: the
+// per-frame changer was always the CLOCK, which keeps its own reserved
+// no-wiggle cell at the lane's centre, while the status strings change only
+// on discrete events — the same frames that rewrite the row anyway (the
+// critical chip's own-text exception of 2026-08-09, now the whole chain's
+// model).
 //
-//   pad | CRITICAL | pad | C: the status span | pad
+// THE LAYOUT, right to left:  ... clock cell | pad | THE CHAIN | pad(margin)
+// with the chain = [CRITICAL chip | pad |] C's status text, right-aligned as
+// one unit. THE CHIP IS THE CHAIN'S LEFTMOST MEMBER, which is what keeps its
+// impossible-to-miss primacy under right alignment: when the chain overflows
+// its span, it anchors LEFT at the clock bound instead — the chip stays
+// wholly visible and C clips at the right margin, so the critical report is
+// still the last thing given up. The chain CLIPS AGAINST THE CLOCK'S CELL on
+// its left (never overlapping it — the collision rule) and at the right
+// margin on its right (the standing "a screen too small for the line is a
+// user problem" ruling: no ellipsis, no shrink, no scroll).
 //
-// SECTION A IS GONE WITH THE CLOCK. Its reserved cell was the row's right-hand
-// anchor and C ended one pad before it; C now runs to the RIGHT MARGIN — the
-// same one pad in from the lane's right edge that A's cell used to sit at — so
-// the span is strictly wider than it was and nothing else about the row moved.
+// The chip keeps the marker flag's whole anatomy (border, pads, fill, edge —
+// the one invalid red, called not copied) and C keeps its precedence chain;
+// only where the pen lands moved. The whole layout lives inline in
+// paint_bottom_strip's chain block now — the BottomRowSections struct and
+// bottom_row_sections, the fixed layout's owners, died with it.
 //
-// THE CRITICAL CELL IS FIRST ON THE ROW (architect 2026-08-09), and it is
-// PRESENT ONLY WHILE THE CRITICAL MESSAGE IS NON-EMPTY: with the slot empty its
-// width is zero, C starts at the left lead-in exactly as it always did, and the
-// row's arithmetic is byte-identical to the pre-slot layout. When it is there,
-// C's pen and NOTHING ELSE moves right by the cell — "everything else happens to
-// the right of this message" — and A's reserved cell, C's clip boundary and the
-// pads are all untouched.
-//
-// IT IS THE ONE SECTION SIZED ON ITS OWN TEXT, which is a deliberate exception to
-// the fixed-sections rule above rather than a hole in it. The rule exists because
-// the CLOCK's digits change several times a second, and a section sized on live
-// text would make the row twitch. The critical message is the opposite kind of
-// string: it is written once by a checkpoint verdict and then stands for the rest
-// of the session (AppState::critical_error_message), so its width changes only on
-// the frame a checkpoint act ends — the same frame the row is being rewritten
-// anyway. Sizing it on a shaped maximum would mean reserving the widest possible
-// failure text on every row that has no failure at all.
-//
-// THE SPAN RUNS THE WHOLE ROW since the clock left it (2026-08-11); it is
-// STATUS ONLY since 2026-08-12, when the prompts and the modal editors left
-// the row for the centered dialog (paint_modal_dialog). The
-// DIRTY DOT'S SECTION IS GONE from the line too: the dot rides the WINDOW TITLE
-// beside the project name, where labwc paints it
-// (GuiPlatform::apply_window_title).
-//
-// THE ONE 13px PAD IS USED TWICE ON AN ORDINARY ROW (re-derived at the clock's
-// move; it was three uses while section A stood): the left lead-in and the
-// right margin C clips at. A ROW CARRYING A CRITICAL MESSAGE USES IT A THIRD
-// TIME, between the chip and C — the lead-in then leads into the critical chip
-// instead of into C, and the gap the chip's right edge takes is the same
-// constant again (the same inventory is recorded at bottom_row_pad_x,
-// paint_handler.h). One constant, two uses or three, an eye-consistency choice
-// either way.
-//
-// C IS CLIPPED AT THE RIGHT MARGIN; if the status text does not fit, it clips
-// (architect: a screen too small for the line is a user problem, not a layout
-// one). See paint_bottom_strip's clip block.
-
-struct BottomRowSections {
-    double c_x    = 0.0;   // the status span's pen
-    double c_x1   = 0.0;   // and its clip boundary: the lane's right margin
-    // The critical chip's TEXT pen, valid only when a critical message stands
-    // (crit_w > 0). The chip's own box is derived from it and the flag anatomy's
-    // pads, exactly as the editors' invalid flash derives its box from its run.
-    double crit_x = 0.0;
-    double crit_w = 0.0;   // that message's shaped width; 0 = no cell at all
-};
-
-static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
-                                             const GuiRect& lane,
-                                             std::string_view critical) {
-    const double pad = static_cast<double>(bottom_row_pad_x());
-    BottomRowSections s;
-    // Every boundary lands on an integer pen so the hinted glyphs stay crisp,
-    // the same rounding convention the redesigned rows' label origins take.
-    const double lane_x1 = static_cast<double>(lane.x) +
-                           static_cast<double>(lane.w);
-    s.c_x1 = std::nearbyint(lane_x1 - pad);
-    // THE CRITICAL CELL, and with it C's pen. The chip's text sits one flag
-    // border plus one flag left-pad in from the lead-in, so the BOX's left edge —
-    // not its glyphs — is what the pad lands on, exactly as a marker flag seats
-    // its label. C then clears the box's right edge (the run plus the flag's
-    // right pad) by the row's one pad.
-    // EMPTY IS THE COMMON CASE AND COSTS NOTHING: no shaping runs, crit_w stays
-    // 0, and C's pen is the lead-in it has always been.
-    if (!critical.empty()) {
-        const double border = static_cast<double>(marker_flag_border_px());
-        const double pad_l  = static_cast<double>(marker_flag_pad_left_px());
-        const double pad_r  = static_cast<double>(marker_flag_pad_right_px());
-        s.crit_w = text_shape::shape_text_run(font, critical).width_px;
-        s.crit_x = std::nearbyint(static_cast<double>(lane.x) + pad +
-                                  border + pad_l);
-        s.c_x    = std::nearbyint(s.crit_x + s.crit_w + pad_r + pad);
-    } else {
-        s.c_x = std::nearbyint(static_cast<double>(lane.x) + pad);
-    }
-    return s;
-}
+// THE DIRTY DOT is not a tenant: it rides the WINDOW TITLE beside the project
+// name, where labwc paints it (GuiPlatform::apply_window_title).
 
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // LEFT THIS ROW 2026-08-12 for the centered MODAL DIALOG: the settings, load,
@@ -2022,69 +1959,60 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// ROW 8 — THE TRANSPORT ROW (architect-ratified 2026-08-11, the touch arc's
-// first surface): the permanent bottom toolbar between the waveform and the
-// status line, on every host — ordinary mouse-clickable buttons, no touch
-// mode, no flag, no detection. Eight icon buttons in two groups, and since
-// later that same day THE CLOCK between them:
+// THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — the transport half of THE
+// UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the transport row
+// landed 2026-08-11 as the touch arc's first surface, its own lane for one
+// day): permanent on every host — ordinary mouse-clickable buttons, no touch
+// mode, no flag, no detection. Eight icon buttons in two groups on the row's
+// LEFT, the CLOCK centred in the lane, and the status chain (paint_bottom_
+// strip's right-aligned half) beyond it:
 //
-//   THE TRANSPORT, left-anchored in the standard order — skip-back (bare
+//   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
 //   buttons: Play greyed while an audition runs, Stop while none is), and
 //   skip-forward (bare End);
+//   THE CARDINAL ARROWS, the second group of the same left cluster, VIM ORDER
+//   left-to-right — left, down, up, right (bare Left/Down/Up/Right), a single
+//   line and not a d-pad, press-fire with hold-to-repeat like their keys
+//   (right-anchored until the unification pulled them beside the transport;
+//   their deletion is separately scheduled, and until it lands they take the
+//   one uniform treatment);
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
-//   and the no-wiggle cell are all at kClockShape below);
-//   THE CARDINAL ARROWS, right-anchored, VIM ORDER left-to-right — left,
-//   down, up, right (bare Left/Down/Up/Right), a single line and not a d-pad,
-//   press-fire with hold-to-repeat like their keys.
+//   and the no-wiggle cell are all at kClockShape below).
 //
-// (A CENTERED ESC BUTTON shipped between the groups and was DELETED at the
-// architect's live pass the same day — "looks like a missing button with that
-// cross out"; the mid-render CANCEL lives on the RENDER button now, and bare
-// Esc is keyboard-only again.)
+// (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
+// was DELETED at the architect's live pass — "looks like a missing button
+// with that cross out"; the mid-render CANCEL lives on the RENDER button now,
+// and bare Esc is keyboard-only.)
 //
-// THE GROUPS ARE SEPARATED BY DISTANCE, NOT BY PAINTED SEPARATORS: this row's
-// two groups are anchored to opposite
-// edges of the window — the anchoring IS the group boundary, so a
-// painted line would divide nothing. Within a group the gap is a RULED 2px
-// (kTransportBtnGapPx below — the architect's own number since the 2026-08-11
-// tune-up, no longer inherited from the icon row it happens to equal), and the
-// row opens and closes with its 8px pad (kIconRowPadLeftPx,
-// mirrored on the right).
+// THE BUTTONS ARE THE ICON ROW'S BOXES (the unification's point — "the same
+// size as the other icon buttons", bigger finger targets without stealing
+// waveform height): 32px boxes with 22px glyphs, read from the icon row's own
+// kIconBtnPx / kIconGlyphPx so the two rows cannot drift apart. ROW 8's
+// SAMPLED KDENLIVE TRANSPORT METRICS ARE SUPERSEDED — the 26px button box
+// measured off transport.png's Project Monitor cluster ((1569,367)-(1594,392))
+// and the 16px glyph box derived from its inks via the viewBox (the ruled
+// 26/16 pair of the 2026-08-11 tune-up) served the two-lane bottom strip and
+// died with it. Within a group the gap is the RULED 2px (kTransportBtnGapPx —
+// the architect's own number from that tune-up, no longer inherited from the
+// icon row it happens to equal), and the row opens with its 8px pad
+// (kIconRowPadLeftPx).
 //
-// THE SEPARATOR, FORWARD SPEC ONLY (architect 2026-08-11 — nothing draws one
-// today, the two groups being distance-divided, but the first one to land must
-// land on these ruled numbers rather than a re-derivation): the SOURCE is
-// tmp/screenshots/kdenlive/redesign/row_8_separator.png, 1x32 — a single flat
-// column sampling #4c4e51, which IS kRedesignTabLine (the same grey the icon
-// row's separators paint; recorded as the sampled value, per the palette
-// rule) — so a row-8 separator is a 1px-wide, 32-tall kRedesignTabLine line,
-// centered in the content band like every separator in the family, with FIVE
-// pixels from a button to the separator on each side (the ruled
-// button-to-separator metric, against the icon row's 4).
-//
-// THE GEOMETRY IS RULED WHOLE (architect 2026-08-11, his live-look tune-up):
-// the row is 44 TALL (read as CONTENT beside its 1px border-top — the reading
-// and its arithmetic at kTransportRowHeightPx, render.h), the buttons 26x26 ON
-// THE OUTLINE (the button box), the glyphs 16, TWO pixels between buttons, and
-// FIVE pixels from a button to a separator (the forward spec below). The 26/16
-// pair was first SAMPLED off transport.png (the Project Monitor's transport
-// cluster): the hovered skip-backward button's
-// outline box measures 26x26 exactly ((1569,367)-(1594,392)), and the glyph
-// inks measure 13x12 / 11x12 / 13x12 — the ink geometry of Breeze's own 16px
-// media icons (media-skip-backward at viewBox 16 inks full-width x by y 2..14
-// = 12 tall; media-playback-start inks 12x12), so the GLYPH BOX is 16 (the
-// row-2 precedent: derive the box from the ink via the file's own viewBox
-// geometry, never read ink as box) — and the ruling then adopted both numbers.
-// Our 22-viewBox transcriptions scale onto
-// the 16px box with the same optical result (ink 16*16/22 = 12 tall), so the
-// glyph SOURCE files are untouched. In the ruled 44 the 26px buttons center
-// at +9 exactly and the 16px glyphs at +5 inside them (the first cut's 46 —
-// and the sampled ~46 monitor band that justified it — are superseded by the
-// ruled number). ALL EIGHT BUTTONS TAKE THE ONE SIZE
-// (planner's uniformity choice, architect can revise: kdenlive sizes only its
-// transport this way, but mixed box sizes in one lane would read as noise).
+// THE TWO GROUPS ARE DIVIDED BY THE ROW-8 SEPARATOR SPEC, which gains its
+// first consumer here: while the groups were anchored to opposite window
+// edges the anchoring WAS the group boundary and nothing drew a line, but the
+// unification put them adjacent in one left cluster, which is exactly the
+// case the family divides with a separator (the icon row's own rule). The
+// spec's ruled numbers land verbatim (architect 2026-08-11 — "the first one
+// to land must land on these ruled numbers rather than a re-derivation"):
+// SOURCE tmp/screenshots/kdenlive/redesign/row_8_separator.png, 1x32 — a
+// single flat column sampling #4c4e51, which IS kRedesignTabLine (the same
+// grey the icon row's separators paint; recorded as the sampled value, per
+// the palette rule) — so the line is 1px wide, 32 tall, kRedesignTabLine,
+// centered in the content band, with FIVE pixels from button to separator on
+// each side (the ruled metric, against the icon row's 4). That the ruled 32
+// now equals the button box is a coincidence of the growth, not a derivation.
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
@@ -2094,18 +2022,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the mode's own vocabulary, so the two skips
 // stay live — all at redesign_button_enabled, nothing decided here). The
 // ONE box-model difference is the border edge: this lane's 1px border is on
-// TOP, the waveform side — the bottom strip's chrome grows from the window
-// edge inward, so the border facing the waveform is the mirror of the icon
-// row's border-bottom.
+// TOP, the waveform side — the bottom strip's chrome grows toward the
+// waveform, so the border facing it is the one drawn (the mirror of the icon
+// row's border-bottom; the lane's chrome is paint_bottom_strip's, which calls
+// the body below onto its content band).
 
-// THE ROW'S OWN RULED METRICS (2026-08-11); the pads, stroke and radius are
-// still the icon row's, read from its constants.
-constexpr double kTransportBtnPx    = 26.0;  // button box, both axes (outline)
-constexpr double kTransportGlyphPx  = 16.0;  // icon box inside the button
+// THE CLUSTER'S OWN RULED METRICS; the boxes, glyphs, pads, stroke and radius
+// are the icon row's, read from its constants.
 constexpr double kTransportBtnGapPx = 2.0;   // between adjacent buttons, ruled
-// (The separator's numbers — 1px wide, 32 tall, kRedesignTabLine, 5px gaps —
-// are the forward spec in the header above; no constant until a consumer
-// exists.)
+constexpr double kTransportSepGapPx    = 5.0;   // button-to-separator, ruled
+constexpr double kTransportSepWidthPx  = 1.0;   // the row-8 separator spec
+constexpr double kTransportSepHeightPx = 32.0;  // ruled, centered in content
 
 // The painter's half of the row's roster: two groups, painted left to right.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
@@ -2189,33 +2116,19 @@ static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
     return g_clock_metrics.cell_w;
 }
 
-void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
-    const GuiRect lane = bottom_transport_row_area(app);
-    if (lane.w <= 0 || lane.h <= 0) return;
-
-    const int border_h  = transport_row_border_h_px();
-    const int content_h = lane.h - border_h;
-    if (content_h <= 0) return;
-    const int content_y = lane.y + border_h;
+void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
+    const GuiRect lane    = bottom_row_area(app);
+    const GuiRect content = bottom_row_content_area(app);
+    if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
+    const int content_y = content.y;
+    const int content_h = content.h;
 
     cairo_save(cr);
 
-    // The border-TOP runs the entire window width — the seam against the
-    // waveform above, this row's one box-model difference from row 4.
-    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                         kRedesignTabLine.b);
-    cairo_rectangle(cr, lane.x, lane.y, lane.w, border_h);
-    cairo_fill(cr);
-
-    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                         kRedesignTabGround.b);
-    cairo_rectangle(cr, lane.x, content_y, lane.w, content_h);
-    cairo_fill(cr);
-
-    const int btn      = scaled_px(kTransportBtnPx);
+    const int btn      = scaled_px(kIconBtnPx);
     const int btn_gap  = scaled_px(kTransportBtnGapPx);
     const int pad      = scaled_px(kIconRowPadLeftPx);
-    const int glyph_px = scaled_px(kTransportGlyphPx);
+    const int glyph_px = scaled_px(kIconGlyphPx);
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
@@ -2258,32 +2171,46 @@ void GuiPaintHandler::paint_transport_row(cairo_t* cr) {
                     static_cast<double>(glyph_px), keep, under);
     };
 
-    // THE TWO ANCHORS AND THE CENTRED CELL BETWEEN THEM. Left: the transport
-    // walks from the row's pad. Right: the arrows close against the mirrored
-    // pad. The clock is centred in the LANE, not in the gap the two groups
-    // leave, so it sits on the window's own midline whatever the groups do.
+    // ONE LEFT CLUSTER AND THE CENTRED CELL BESIDE IT (the unification's
+    // layout): the transport walks from the row's pad, the separator divides,
+    // the arrows continue the same walk. The clock is centred in the LANE, not
+    // in what the cluster leaves, so it sits on the window's own midline
+    // whatever the cluster does; the status chain (paint_bottom_strip's other
+    // half) right-aligns beyond the cell and clips against it.
     //
-    // THE THREE CAN OVERLAP AT THE FLOOR, and the row accepts it exactly as
-    // row 1's floats do — no collision rule anywhere in the redesign
-    // (re-derived 2026-08-11, with the clock): at the 640px defensive floor
-    // with gui_scale at its 100 default the groups clear each other by 404px
-    // (26px buttons, 2px gaps, 8px pads — the transport ends at 118, the arrows
-    // start at 522) and the 9-glyph cell is 86px wide about the midline, 277 to
-    // 363, so nothing meets. At that floor with gui_scale at its 200 CEILING
-    // the groups still clear by 168px (52px buttons, 4px gaps, 16px pads — 236
-    // to 404) but the cell doubles with them to 173px, 234 to 406, and it
-    // overlaps each group by about 2px. That combination is a 640px window at
-    // double scale — the floor exists to keep the program running, not to lay
-    // out well, and the same crop-at-the-floor allowance is recorded at
-    // kMinWindowWidthPx.
+    // THE CLUSTER AND THE CELL CAN OVERLAP AT THE FLOOR, and the row accepts
+    // it exactly as row 1's floats do — no collision rule anywhere in the
+    // redesign (re-derived at the unification's metrics): at the 640px
+    // defensive floor with gui_scale at its 100 default the cluster ends at
+    // 287 (8px pad, eight 32px buttons, six 2px gaps, the 5+1+5 separator
+    // slot) and the 9-glyph cell spans about 277 to 363 about the midline, a
+    // ~10px overlap of the cell's left slack onto the arrows' last button.
+    // The floor exists to keep the program running, not to lay out well — the
+    // same crop-at-the-floor allowance is recorded at kMinWindowWidthPx; at
+    // the Pi's 1024 the cell starts around 469 and nothing meets.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
         x += btn + btn_gap;
     }
 
-    const int arrows_n = static_cast<int>(std::size(kTransportArrowGroup));
-    x = lane.x + lane.w - pad - (arrows_n * btn + (arrows_n - 1) * btn_gap);
+    // The separator between the two groups — the row-8 spec's ruled numbers,
+    // landed at their first consumer (the block header above): 5px from the
+    // transport's last button (the walk has already added the 2px button gap,
+    // so add the difference), the 1px kRedesignTabLine line centered in the
+    // content band, 5px to the arrows' first button.
+    {
+        x += scaled_px(kTransportSepGapPx) - btn_gap;
+        const int sep_w = std::max(1, scaled_px(kTransportSepWidthPx));
+        const int sep_h = scaled_px(kTransportSepHeightPx);
+        const int sep_y = content_y + (content_h - sep_h) / 2;
+        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                             kRedesignTabLine.b);
+        cairo_rectangle(cr, x, sep_y, sep_w, sep_h);
+        cairo_fill(cr);
+        x += sep_w + scaled_px(kTransportSepGapPx);
+    }
+
     for (const TransportRowDef& def : kTransportArrowGroup) {
         paint_button(def, x);
         x += btn + btn_gap;
@@ -2439,9 +2366,10 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
                   2 * pad_y;
 
-    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the transport
-    // row's eight (row 8, 2026-08-11), whose lane rests on the window's foot:
-    // below them is only the status line and the window edge, so the hint
+    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the bottom
+    // row's transport/arrow eight, whose lane sits at the bottom of the
+    // interactive stack: below them is only the blank window foot, zero on a
+    // short window, so the hint
     // hangs upward there, the same box flipped about the button. Then CLAMPED
     // FULLY ON-WINDOW so a
     // button near an edge cannot push it off. The clamp is a pure position fix —
@@ -3988,17 +3916,16 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    // ROW 9 — THE STATUS LANE IS ONE LINE (architect 2026-08-01, as the
-    // then-row 7; the strip is row 9 in the numbering since row 8 landed,
-    // 2026-08-11). THE LAYOUT since the clock left this row (2026-08-11):
-    // pad | CRITICAL chip | pad | SECTION C, the status
-    // span, CLIPPED AT THE LANE'S RIGHT MARGIN — one pad in from its right
-    // edge. There is NO SECTION A any more: the timestamp, its reserved
-    // widest-digit cell and the no-wiggle specimen all moved to ROW 8's
-    // centre (paint_transport_row's clock block), so nothing on this line
-    // reserves space for digits, and bottom_row_sections computes from the
-    // lane's own edges alone (plus the one own-text-sized exception, the
-    // critical chip, whose ruling is at its block below).
+    // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
+    // into ONE lane directly under the waveform): the transport/arrow buttons
+    // on the left at the icon row's boxes, the monospace clock centred, and
+    // the STATUS CHAIN right-aligned — the critical chip first, then section
+    // C's precedence chain. This painter owns the lane's CHROME (ground +
+    // border-top) and the chain; the buttons and the clock are
+    // paint_bottom_row_buttons_and_clock, called from here onto the grounded
+    // band (the cluster's tables and the clock's metrics live beside that
+    // body). The right-alignment ruling, the chip's primacy under it and the
+    // collision rule are at the chain block near the head of this file.
     //
     // WHAT DIED WITH THE 2026-08-01 COLLAPSE, and why it is not missing: the
     // S/T · W/P · A/B view readout and the "(read-only)" token. Rows 3 and 4
@@ -4027,152 +3954,70 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = bottom_row_content_area(app);
     const int     border  = bottom_row_border_h_px();
+    if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
 
-    // THE ROW'S OWN GROUND AND ITS TWO BORDERS, hard-coded from row_7_text.png
-    // per the redesign's color ruling (the constants and the two-greys note are
-    // at kRedesignBottomLine, render.h). The ground erases whatever chrome
-    // render_background laid down, so the strip no longer depends on the tunable
-    // kBackground happening to hold the same value.
+    // THE ROW'S GROUND AND ITS ONE BORDER-TOP — the waveform-side seam, row
+    // 8's box-model convention kept whole by the unification (row 9's second
+    // border, the window-foot seam, died with the row's window-edge position;
+    // kRedesignBottomLine's retirement note is at render.h's row-7 block).
+    // Hard-coded per the redesign's color ruling; the ground erases whatever
+    // chrome render_background laid down, so the strip does not depend on the
+    // kBackground constant happening to hold the same value.
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                             kRedesignTabGround.b);
-        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
-        cairo_fill(cr);
         cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
                              kRedesignTabLine.b);
         cairo_rectangle(cr, lane.x, lane.y, lane.w, border);
         cairo_fill(cr);
-        cairo_set_source_rgb(cr, kRedesignBottomLine.r, kRedesignBottomLine.g,
-                             kRedesignBottomLine.b);
-        cairo_rectangle(cr, lane.x, lane.y + lane.h - border, lane.w, border);
+        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                             kRedesignTabGround.b);
+        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
         cairo_fill(cr);
         cairo_restore(cr);
     }
 
-    // ONE FACE, ONE BASELINE, ONE SET OF SECTION BOUNDARIES for the whole line.
-    // The baseline is solved the way every redesigned row solves one: center the
-    // face's own (ascent + descent) band in the content band and round to the
-    // pixel grid. With the row on the redesign's sans this formula reproduces
-    // the crop's measured baseline (row 22 of 33) exactly.
+    // THE BUTTON CLUSTER AND THE CLOCK — publishes the clock's reserved cell
+    // (AppState::clock_cell_rect), the anchor the chain below clips against
+    // and both cell damage owners read. Runs whole on every exposure like the
+    // top button rows (it shapes no text beyond the clock's one memoised-cell
+    // run, so a narrow clip pays almost nothing for it).
+    paint_bottom_row_buttons_and_clock(cr);
+
+    // --- THE STATUS CHAIN, right-aligned (the layout ruling is at the chain
+    //     block near the head of this file). ---
+    //
+    // THE EXPOSURE GATE: the chain shapes text through HarfBuzz, which the
+    // outer Cairo clip would not elide, so the per-frame clock damage — whose
+    // clip is exactly the reserved cell — and a button face's own damage must
+    // not pay for it. The chain's whole span is the STATUS CELL, from the
+    // clock cell's right edge to the lane's right edge
+    // (status_row_invalidate_rect, the cell's damage owner): when the current
+    // damage clip ends at or left of that edge, no pixel of the chain is
+    // exposed and nothing here runs. The same per-exposure gating the top
+    // rows take per-lane in on_redraw, taken per-CELL here because two cells
+    // and a button cluster share this painter's one lane.
+    const GuiRect cell = app.clock_cell_rect;   // just published above
+    {
+        double clip_x0 = 0.0, clip_y0 = 0.0, clip_x1 = 0.0, clip_y1 = 0.0;
+        cairo_clip_extents(cr, &clip_x0, &clip_y0, &clip_x1, &clip_y1);
+        if (cell.w > 0 && clip_x1 <= static_cast<double>(cell.x + cell.w))
+            return;
+    }
+
+    // ONE FACE, ONE BASELINE for the chain. The baseline is solved the way
+    // every redesigned row solves one: center the face's own (ascent +
+    // descent) band in the content band and round to the pixel grid.
     cairo_save(cr);
     cairo_scaled_font_t* font = select_bottom_row_face(cr);
     const double baseline = redesign_baseline(font,
                                               static_cast<double>(content.y),
                                               static_cast<double>(content.h));
-    const BottomRowSections sec =
-        bottom_row_sections(font, lane, app.critical_error_message);
 
-    // (THE EDITORS' INK BAND AND THEIR PUBLISHED GEOMETRY LEFT WITH THEM,
-    // 2026-08-12: the caret/selection band and the DialogEditorText reset are
-    // paint_modal_dialog's now.)
-
-    // (SECTION A — THE TIMESTAMP — LEFT THIS ROW 2026-08-11 for the centre of
-    //  row 8, in monospace: the painter, the split-playhead read and the
-    //  no-wiggle specimen all moved to paint_transport_row's clock block.)
-
-    // --- THE CRITICAL CELL, first on the row and painted before everything else
-    //     on it (architect 2026-08-09). ---
-    //
-    // WHAT IT IS: the product's one PERMANENT failure surface, and the only cell
-    // on this row that no input route can touch. A checkpoint failure is
-    // critical, so its report may be neither missed nor used to hijack the
-    // keyboard — it is a chip that simply stays, until a later checkpoint
-    // succeeds or the program closes (the contract, the one producer and the one
-    // clearing route are at AppState::critical_error_message).
-    //
-    // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
-    // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px left
-    // border, in the flag's own paint order and on the flag's own pads, height
-    // and baseline offset — the marker flag's anatomy whole. (The four modal
-    // editors flashed this same anatomy from this row until 2026-08-12; their
-    // flash is the DIALOG FIELD's recolor now — same red pair, the field's
-    // own box — so the chip is the flag anatomy's one bottom-row tenant.) So
-    // there is ONE
-    // invalid red in the product, and a flag retune moves both
-    // surfaces together. The ink is the row's ordinary label colour, which is
-    // what that flash already shows on this same fill.
-    //
-    // IT CLIPS AT C'S OWN BOUNDARY, the lane's right margin:
-    // the row is one line and a too-small window is adversarial (the standing
-    // ruling at section C's clip), so a message longer than the row can hold is
-    // cut there like every other string on it. When the message is that long C's
-    // own span collapses to nothing and the degenerate guard below paints no C at
-    // all — the critical report is the last thing to be given up, which is the
-    // ordering the ruling asks for.
-    if (sec.crit_w > 0.0) {
-        const int pad_l    = marker_flag_pad_left_px();
-        const int pad_r    = marker_flag_pad_right_px();
-        const int edge_h   = marker_flag_edge_h_px();
-        const int border_w = marker_flag_border_px();
-        const int tx = static_cast<int>(std::nearbyint(sec.crit_x));
-        const int fw = pad_l +
-                       static_cast<int>(std::nearbyint(sec.crit_w)) + pad_r;
-        const int fx = tx - pad_l;
-        const int fy = static_cast<int>(std::nearbyint(baseline)) -
-                       marker_flag_baseline_px();
-        const int fh = marker_lane_h_px();
-        cairo_save(cr);
-        // The clip spans from the lane's left edge to C's boundary, so the chip
-        // and its text are bounded by the right margin exactly as C's contents
-        // are.
-        cairo_rectangle(cr, static_cast<double>(lane.x),
-                        static_cast<double>(content.y),
-                        sec.c_x1 - static_cast<double>(lane.x),
-                        static_cast<double>(content.h));
-        cairo_clip(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                             kMarkerFlagBorder.b);
-        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
-                             kMarkerFlagFillRed.b);
-        cairo_rectangle(cr, fx, fy, fw, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
-                             kMarkerFlagEdgeRed.b);
-        cairo_rectangle(cr, fx, fy, fw, edge_h);
-        cairo_fill(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-        show_row_text(cr, font, sec.crit_x, baseline,
-                      app.critical_error_message, kRedesignLabel);
-        cairo_restore(cr);
-    }
-
-    // --- Section C: the status chain, in the span that runs
-    //     from the critical cell (or the left lead-in, with no critical message
-    //     standing) to the lane's RIGHT MARGIN — one pad in from its right
-    //     edge, the boundary the clock's reserved cell held until 2026-08-11. ---
-    //
-    // THE SPAN IS CLIPPED AT THAT MARGIN, and that clip is the whole
-    // overrun mechanism (architect 2026-08-01: a screen too small to hold the
-    // line is a user problem — "too small screen is adversarial" — so there is
-    // no ellipsis, no shrink and no scroll here). The margin is a function of
-    // the lane alone, so C's right edge never moves and its text never jumps.
-    //
-    // The clip covers the row's whole content band vertically — one rectangle
-    // for every branch below, taken once. A
-    // degenerate lane (a window narrower than pad + pad + A + pad, which the
-    // 640px minimum makes unreachable at every gui_scale) yields an empty span
-    // and simply paints no C at all rather than a normalized backwards rect.
-    const double c_w = sec.c_x1 - sec.c_x;
-    if (c_w <= 0.0) {
-        cairo_restore(cr);
-        return;
-    }
-    cairo_save(cr);
-    cairo_rectangle(cr, sec.c_x, static_cast<double>(content.y),
-                    c_w, static_cast<double>(content.h));
-    cairo_clip(cr);
-
-    // (THE MODAL TIERS LEFT THIS CHAIN 2026-08-12 — the prompt and the four
-    // modal editors paint in the centered dialog (paint_modal_dialog), so the
-    // history line below is the span's top tier now and the row carries
-    // status on every frame, dialog up or not. The 0b7492b6 modals-first
-    // contract is superseded structurally: nothing here can hide a modal any
-    // more, because no modal competes for this cell.)
+    // COMPOSE SECTION C's TEXT FIRST, by the precedence chain — a
+    // right-aligned pen needs the run's width before it can land, so the
+    // branches build the string and ONE layout-and-paint tail follows.
+    std::string status;
     if (app.history_mode.active) {
         // THE `h` HISTORY MODE'S ONE LINE, the span's top tier since the
         // modals left for the dialog (2026-08-12): it ranks over the queue
@@ -4186,7 +4031,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
         // sign vocabulary and through the lane's own spelling owner
         // (history_diff_label), so the corner and the flags cannot come to
-        // bracket differently.
+        // bracket differently. (The "bottom-left corner" of the mode's record
+        // reads BOTTOM-RIGHT since the unification right-aligned the chain —
+        // the same line, the same precedence, the row's other end.)
         //
         // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect
         // 2026-08-05, superseding the arc's unchanged-token report): a value
@@ -4202,10 +4049,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // architect's live pass — it is one `if` and one `+=`, deliberately
         // removable without touching the scale half.
         //
-        // Plain label ink (kRedesignLabel) through show_row_text, matching
-        // the transient-message and readout branches
-        // below: this is a passive report, not an editor, so it takes no caret,
-        // no prefix face and no flash.
+        // Plain label ink (kRedesignLabel) through the shared tail, matching
+        // the transient-message and readout branches: this is a passive
+        // report, not an editor, so it takes no caret, no prefix face and no
+        // flash.
         // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
         // walk_index / walk_count, so a Local tab counts the session's own
         // timeline states with the same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
@@ -4213,7 +4060,6 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // an undo entry has no commit, so the token simply does not appear on
         // the Local tab — the empty-sha test below is that fact rather than a
         // second branch.
-        std::string line;
         const std::size_t count = app.history_mode.walk_count();
         // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing
         // at all: a blank corner beside a blank lane says only that the corner
@@ -4225,17 +4071,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // has authored nothing reads `1/1` — one state compared against itself.
         // The zero arm therefore describes the commit side alone now, and stays
         // one expression because the arithmetic below is the walk-agnostic one.
-        line += std::to_string(count == 0 ? 0 : app.history_mode.walk_index() + 1);
-        line += '/';
-        line += std::to_string(count);
+        status += std::to_string(
+            count == 0 ? 0 : app.history_mode.walk_index() + 1);
+        status += '/';
+        status += std::to_string(count);
         if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
             // Empty for an out-of-range index, which is exactly the empty walk,
             // so the count needs no test of its own here.
             const std::string& sha =
                 app.history_mode.session.sha_at(app.history_mode.index);
             if (!sha.empty()) {
-                line += ' ';
-                line += sha.substr(0, 7);
+                status += ' ';
+                status += sha.substr(0, 7);
             }
         }
         const GuiHistoryCommitDelta* d =
@@ -4247,31 +4094,25 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (d && d->scale_changed) {
             // The position always precedes it now (`0/0` at worst), so the
             // separator is unconditional.
-            line += ' ';
-            line += "Scale: ";
-            line += history_diff_label("[-]", /*disabled=*/false,
-                                       d->then_scale_token);
-            line += ' ';
-            line += history_diff_label("[+]", /*disabled=*/false,
-                                       d->now_scale_token);
+            status += ' ';
+            status += "Scale: ";
+            status += history_diff_label("[-]", /*disabled=*/false,
+                                         d->then_scale_token);
+            status += ' ';
+            status += history_diff_label("[+]", /*disabled=*/false,
+                                         d->now_scale_token);
         }
-        show_row_text(cr, font, sec.c_x, baseline, line, kRedesignLabel);
     } else if (!app.queue_progress_text.empty()) {
         // The render/batch/queue status AND the startup "loading..." line —
         // one slot, and the reason this painter runs on the loading frame class
         // too (it is the only feedback there).
-        show_row_text(cr, font, sec.c_x, baseline, app.queue_progress_text,
-                      kRedesignLabel);
+        status = app.queue_progress_text;
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
-        // "No renders to load in place", ...). It used to ride the two-row
-        // status line
-        // as an appendix; with one line and one span it takes its
-        // place in the chain, directly above the readout. Cleared by the next
-        // key press.
-        show_row_text(cr, font, sec.c_x, baseline,
-                      app.transient_status_message, kRedesignLabel);
-    } else {
+        // "No renders to load in place", ...). It takes its place in the
+        // chain, directly above the readout. Cleared by the next key press.
+        status = app.transient_status_message;
+    } else if (popup_eligible_marker(app, app.last_selected_marker)) {
         // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
         // to be "hover wins, else the last-selected marker"; the hover arm died
         // with the whole hover-popup machinery, so what is left is the arm that
@@ -4291,17 +4132,111 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // alone is the architect's call at the row-5 look. Row 7 adds a second
         // flagged fact — it is the LOWEST tier of the one span, so any
         // status message hides it while it is up.
-        std::string readout;
-        if (popup_eligible_marker(app, app.last_selected_marker)) {
-            readout = compute_hover_popup_text(
-                slice_to_warp_markers(app.warpmarkers.markers()),
-                app.last_selected_marker, sr, audio.total_frames());
-        }
-        if (!readout.empty()) {
-            show_row_text(cr, font, sec.c_x, baseline, readout, kRedesignLabel);
-        }
+        status = compute_hover_popup_text(
+            slice_to_warp_markers(app.warpmarkers.markers()),
+            app.last_selected_marker, sr, audio.total_frames());
     }
-    cairo_restore(cr);   // section C's clip
+
+    // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain, chip first. ---
+    //
+    // The span runs from one pad right of the clock's cell to one pad in from
+    // the lane's right edge; the chain right-aligns inside it, and when it
+    // does not fit it LEFT-anchors at the clock bound instead — the chip (the
+    // chain's leftmost member) stays wholly visible and C clips at the right
+    // margin, the chip's primacy under right alignment. The clip never
+    // reaches the clock's cell, which is the collision rule: the chain and
+    // the clock cannot overlap, whatever the strings do.
+    const std::string_view critical = app.critical_error_message;
+    if (status.empty() && critical.empty()) {
+        cairo_restore(cr);
+        return;
+    }
+    const double pad = static_cast<double>(bottom_row_pad_x());
+    const double span_x0 = static_cast<double>(cell.x + cell.w) + pad;
+    const double span_x1 = std::nearbyint(
+        static_cast<double>(lane.x + lane.w) - pad);
+    if (span_x1 <= span_x0) {
+        // Degenerate: no span at all (unreachable at the 640px minimum on any
+        // gui_scale that fits the cluster; nothing paints rather than a
+        // backwards rect).
+        cairo_restore(cr);
+        return;
+    }
+
+    text_shape::ShapedRun status_run;
+    if (!status.empty())
+        status_run = text_shape::shape_text_run(font, status);
+    text_shape::ShapedRun crit_run;
+    double chip_box_w = 0.0;
+    const int pad_l    = marker_flag_pad_left_px();
+    const int pad_r    = marker_flag_pad_right_px();
+    const int border_w = marker_flag_border_px();
+    if (!critical.empty()) {
+        crit_run = text_shape::shape_text_run(font, critical);
+        chip_box_w = border_w + pad_l + std::nearbyint(crit_run.width_px) +
+                     pad_r;
+    }
+    const double chain_w =
+        (critical.empty() ? 0.0 : chip_box_w + pad) +
+        (status.empty() ? 0.0 : status_run.width_px);
+    const double chain_x = std::nearbyint(
+        std::max(span_x0, span_x1 - chain_w));
+
+    cairo_save(cr);
+    cairo_rectangle(cr, span_x0, static_cast<double>(content.y),
+                    span_x1 - span_x0, static_cast<double>(content.h));
+    cairo_clip(cr);
+
+    double pen = chain_x;
+    if (!critical.empty()) {
+        // THE CRITICAL CHIP, the chain's leftmost member (architect
+        // 2026-08-09: a checkpoint failure may be neither missed nor used to
+        // hijack the keyboard — a paint-only chip that simply stays, until a
+        // later checkpoint succeeds or the program closes; the contract, the
+        // one producer and the one clearing route are at
+        // AppState::critical_error_message).
+        //
+        // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
+        // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px
+        // left border, in the flag's own paint order and on the flag's own
+        // pads, height and baseline offset — the marker flag's anatomy whole
+        // (the dialog editors' invalid flash recolors the dialog FIELD in the
+        // same red pair, so the chip is the flag anatomy's one bottom-row
+        // tenant). The ink is the row's ordinary label colour.
+        const int edge_h = marker_flag_edge_h_px();
+        const int fx = static_cast<int>(pen) + border_w;
+        const int fw = static_cast<int>(chip_box_w) - border_w;
+        const int fy = static_cast<int>(std::nearbyint(baseline)) -
+                       marker_flag_baseline_px();
+        const int fh = marker_lane_h_px();
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                             kMarkerFlagBorder.b);
+        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
+                             kMarkerFlagFillRed.b);
+        cairo_rectangle(cr, fx, fy, fw, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
+                             kMarkerFlagEdgeRed.b);
+        cairo_rectangle(cr, fx, fy, fw, edge_h);
+        cairo_fill(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, crit_run,
+                                    static_cast<double>(fx + pad_l), baseline);
+        cairo_restore(cr);
+        pen += chip_box_w + pad;
+    }
+    if (!status.empty()) {
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, status_run, pen, baseline);
+    }
+    cairo_restore(cr);   // the chain's clip
     cairo_restore(cr);   // the row's font/color state
 }
 
@@ -4772,7 +4707,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE FOUR REDESIGNED TOP ROWS, THE TRANSPORT ROW AND THE BOTTOM ROW PAINT
+    // THE FOUR REDESIGNED TOP ROWS AND THE UNIFIED BOTTOM ROW PAINT
     // ON EVERY FRAME
     // CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
@@ -4810,14 +4745,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
         }
-        // ROW 8 (2026-08-11) joins the family on the family's own terms: the
-        // transport row is audio-independent chrome exactly like the four top
-        // rows — its press claim sits above the pointer path's loading guard —
-        // and it publishes the hit rects the claim reads, so it must paint on
-        // every frame class its lane is exposed on.
-        if (rects_intersect(exposed, bottom_transport_row_area(app))) {
-            paint_transport_row(cr);
-        }
+        // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged) is one
+        // exposure and one painter: paint_bottom_strip grounds the lane,
+        // paints the button cluster + clock through its
+        // paint_bottom_row_buttons_and_clock half (audio-independent chrome
+        // exactly like the four top rows — the press claim sits above the
+        // pointer path's loading guard, and the painter publishes the hit
+        // rects the claim reads, so it must paint on every frame class its
+        // lane is exposed on) and then the right-aligned status chain, which
+        // carries its own per-CELL exposure gate so a narrow clock or button
+        // damage never pays for the chain's shaping.
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr, audio.sample_rate());
         }
@@ -4844,8 +4781,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND its 2px black
         //      top/bottom borders (above, unconditional).
-        //   3. the four redesigned top rows, the transport row (row 8, bottom
-        //      lane 1) and the bottom row, each on its own
+        //   3. the four redesigned top rows and the unified bottom row (its
+        //      chrome, buttons, clock and status chain in one painter), each
+        //      on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
         //   4. region ground -> waveform plate -> phase-reset overlay ring.

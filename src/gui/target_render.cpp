@@ -543,9 +543,9 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 
     if (outcome != RenderOutcome::Success && !run_active_) {
         // Clear status. Match finalize_render_run by invalidating the status
-        // lane before clearing queue_progress_text; status_row_invalidate_rect()
-        // covers the status lane, which is the label's whole home (the bottom
-        // strip's second lane, row 8's transport row, carries no status).
+        // cell before clearing queue_progress_text; status_row_invalidate_rect()
+        // covers the unified bottom row's status cell, which is the label's
+        // whole home (the row's button cluster and clock carry no status).
         //
         // HELD DURING A RUN: mid-run this branch is the CANCELLED outcome of the
         // render the next trigger just killed, and its successor is already
@@ -597,9 +597,9 @@ void GuiTargetRender::complete_successful_buffer() {
         is_dirty_ = false;
     }
 
-    // Clear status. Match finalize_render_run by invalidating the status lane
+    // Clear status. Match finalize_render_run by invalidating the status cell
     // before clearing queue_progress_text; status_row_invalidate_rect() covers
-    // the status lane, the label's whole home. GUARDED on a non-empty slot, like the two sibling
+    // the unified bottom row's status cell, the label's whole home. GUARDED on a non-empty slot, like the two sibling
     // clears (dispatch_render_now's early refusal and cancel_in_flight_update):
     // the reuse rungs reach this tail with the label NEVER stamped — a
     // synchronous cache or artifact hit resolves without going asynchronous, so

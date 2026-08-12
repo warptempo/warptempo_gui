@@ -191,10 +191,10 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the status lane before clearing queue_progress_text.
-    // status_row_invalidate_rect() covers the status lane — the whole bottom
-    // strip until row 8 stacked the transport row above it (2026-08-11) — and
-    // the label lives nowhere else; keep this
+    // Invalidate the status cell before clearing queue_progress_text.
+    // status_row_invalidate_rect() covers the unified bottom row's status
+    // cell — the right-aligned chain's whole span — and the label lives
+    // nowhere else; keep this
     // ordering consistent with the other status-clear paths.
     viewport.invalidate_status_row_area();
     app.queue_progress_text.clear();

@@ -236,8 +236,11 @@ struct Viewport {
 
     // Invalidation.
     void invalidate_waveform_area();
-    // ROW 9, the status lane: section C's whole precedence chain and the
-    // critical chip. The bottom strip's high-traffic owner — the queue /
+    // THE STATUS CELL — the unified bottom row's right portion, from the
+    // clock's reserved cell to the lane's right edge (the row unification,
+    // 2026-08-12; the rect is status_row_invalidate_rect, app_state.h):
+    // section C's whole precedence chain and the critical chip, right-aligned
+    // there. The bottom row's high-traffic string owner — the queue /
     // render / transient strings, the selection readout — and the DEFAULT
     // for anything writing a string down there. SINCE 2026-08-12 IT ALSO
     // CARRIES THE MODAL DIALOG'S STASHED BOX while one stands (the rider and
@@ -246,10 +249,12 @@ struct Viewport {
     // editors paint in the centered dialog now, so the one rider keeps every
     // typing/blink/flash/closer honest without re-classifying the sites.
     void invalidate_status_row_area();
-    // ROW 8's clock cell, and the authoritative inventory of who wants it
+    // The unified bottom row's CLOCK CELL, and the authoritative inventory of
+    // who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one
     // owner split in two — the rects and the split's reasoning are at
-    // clock_invalidate_rect, app_state.h). MEMBERSHIP IS "THIS ROUTE CHANGES
+    // clock_invalidate_rect, app_state.h; the 2026-08-12 row unification
+    // merged the two LANES but kept the two CELL owners). MEMBERSHIP IS "THIS ROUTE CHANGES
     // WHAT THE CLOCK SHOWS" — a write to the playhead or the scanner, the
     // only two values the clock reads, or a flip of WHICH of the two it
     // reads (the playback edges). The list below is re-derived by grep
@@ -293,7 +298,7 @@ struct Viewport {
     //     Tab/`c` jump and history diff-flag click ride — and on_motion's
     //     sliver release.
     //
-    //   BOTH LANES — the routes that land a playhead AND rewrite the readout,
+    //   BOTH CELLS — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,
     //   which restores the entering tab's own playhead), the undo/redo restore
     //   (undo), the position nudges' shared tail (position_nudge), two of the
@@ -305,16 +310,16 @@ struct Viewport {
     //   coincidence auto-select fires only where the land is a provable no-op
     //   (auto_select_marker_at_playhead's equality predicate is the land's
     //   own) — and the small always-clean rect is kept as truth-over-churn
-    //   beside the tail's real status-lane rewrite), and the TRIM COMMIT
+    //   beside the tail's real status-cell rewrite), and the TRIM COMMIT
     //   WRITERS (input_trim:
     //   commit_trim_mutation and handle_trim_clear_both damage the waveform +
-    //   status lane at their own sites and reach the clock inside
+    //   status cell at their own sites and reach the clock inside
     //   park_playhead_at_trim_start — the trim family's one cursor writer,
     //   where the damage sits beside the write rather than copied per
     //   caller).
     //
-    // Every OTHER route on the status lane is a string writer and takes that
-    // lane alone; routes that damage the WHOLE window (the S/T audio-view
+    // Every OTHER route on the status cell is a string writer and takes that
+    // cell alone; routes that damage the WHOLE window (the S/T audio-view
     // toggle's full-window invalidate, the loads, the resize path) cover the
     // cell as a superset and are deliberately unlisted; routes that funnel
     // through a listed owner (the settings editor's active-tab playhead
@@ -324,7 +329,7 @@ struct Viewport {
     // worth naming, since it sits beside the tab switch and answers
     // differently: it damages the READOUT (its coincidence auto-select can
     // change the selection) and moves no playhead at all, so it takes the
-    // status lane alone.
+    // status cell alone.
     void invalidate_clock_area();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
     // COLUMNS' rects. The columns must be resolved on the PLATE basis — the
@@ -355,9 +360,9 @@ struct Viewport {
     // edges damage the strip AND the surface's own published rect — two cheap
     // calls the platform coalesces — rather than growing a union helper that
     // only these two callers would ever use. Since row 8 (2026-08-11) it is
-    // also the TRANSPORT ROW'S damage entry: that row's faces live in the
-    // bottom strip, so every face writer's damage fork passes
-    // bottom_transport_row_area here where the top rows call
+    // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
+    // faces live in the bottom strip, so every face writer's damage fork
+    // passes bottom_row_area here where the top rows call
     // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
 
