@@ -336,12 +336,15 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
+// THE `h` HISTORY MODE'S PURE KEY PREDICATES — two gates and, since the
+// 2026-08-12 mode-collapsing roster, one classification (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
 // is stated at AppState::HistoryMode). They are free rather than members because
 // each has a SECOND reader that holds no press and no handler: the redesign
 // roster's mode-scoped disabled-face partition
-// (history_mode_disables_button, app_state.h) asks both of them about a table of
+// (history_mode_disables_button) and the collapse walk beside it
+// (redesign_button_collapsed, both input_pointer.cpp, declared app_state.h)
+// ask them about a table of
 // chords.
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
@@ -373,6 +376,19 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app);
+// THE MODE-COLLAPSING ROSTER'S THIRD PREDICATE (2026-08-12, the grand
+// relayout): true for the chord SHAPES whose allowlist admission above is
+// conditional on MOMENT state — the commit act's Ctrl+S (head delta /
+// in-flight) and the revert act's Ctrl+H (a subject standing) — so that a
+// failing condition GREYS the button rather than COLLAPSING it out of the
+// icon row (a selection change must not reflow the row under the pointer;
+// the two-level rule is recorded at redesign_button_collapsed,
+// input_pointer.cpp). The load-in-place's walk-member condition is
+// DELIBERATELY NOT here: an ineligible `'` collapses by the architect's own
+// enumeration — the walk's membership is a per-visit fact, not a
+// per-interaction one. A pure shape test like history_mode_owns_key, body
+// beside the gate whose conditional terms it names.
+bool history_mode_admission_is_momentary(GuiKey key, GuiInputState mods);
 
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3):
@@ -779,8 +795,9 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
-    // the view bar's three, row 2's four, row 3's two tabs and row 4's sixteen
-    // (definitions beside on_motion in
+    // the view bar's three, row 3's two tabs, row 4's twenty-nine (the
+    // toolbar four included since the 2026-08-12 relayout) and the bottom
+    // row's eight (definitions beside on_motion in
     // input_pointer.cpp).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects

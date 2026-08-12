@@ -659,39 +659,42 @@ private:
     // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
-    // THE FIVE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
+    // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
     // flat
-    // sampled ground plus the "Quit" and "Settings" buttons), the TOOLBAR ROW
-    // (top lane 1,
-    // row 2: the same ground, its border-bottom, its separators and the four
-    // Save/Undo/Redo/Render buttons), the TAB ROW (top lane 2, row 3: the
+    // sampled ground plus the "Quit" and "Settings" buttons), the TAB ROW
+    // (top lane 1, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom), the
-    // ICON ROW (top lane 3, row 4: the seventeen view/mode/action buttons,
-    // their
-    // separators and its border-bottom), and the UNIFIED BOTTOM ROW's button
-    // cluster (bottom lane 0: the eight transport / arrow buttons, declared
+    // ICON ROW (top lane 2, row 4: the twenty-nine view/mode/action buttons —
+    // the deleted toolbar row's four lead them since the 2026-08-12 relayout
+    // — their
+    // separators and its border-bottom, fewer painting per frame under the
+    // mode-collapsing roster), and the UNIFIED BOTTOM ROW's button
+    // cluster (bottom lane 1: the transport four left, the arrow four flush
+    // right, declared
     // below).
-    // All five PUBLISH their buttons' hit rects into app.redesign_buttons —
+    // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
     // doctrine) — and every one stashes the ENABLED and SELECTED bits it
     // painted beside them, through the one publisher (publish_button_face),
     // for main.cpp's staleness comparator.
     //
-    // All five are called from on_redraw OUTSIDE the loading / total>0
+    // All four are called from on_redraw OUTSIDE the loading / total>0
     // branches, each gated on its OWN exposure — they are the passes with no
     // dependence on the loaded audio, so a button is visible exactly whenever it
     // is clickable (their press claims sit above the pointer path's loading
     // guard). The exposure gate matters: each shapes labels through HarfBuzz,
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
-    // after them touches the four lanes, the flag cache being transparent
-    // there.
+    // after them touches the three lanes, the flag cache being transparent
+    // there. (paint_toolbar_row died with row 2 at the 2026-08-12 relayout —
+    // its four buttons are the icon row's first group.)
     void paint_menu_row(cairo_t* cr);
-    void paint_toolbar_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
-    // 2026-08-12): the transport/arrow eight at the icon row's boxes and the
+    // 2026-08-12; the arrows flush right since the same day's relayout): the
+    // transport four at the left pad, the arrow four at the right margin, at
+    // the icon row's boxes, and the
     // centred monospace clock, painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row

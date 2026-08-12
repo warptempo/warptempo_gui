@@ -467,7 +467,8 @@ void Undo::apply_post_restore_rules_phase_reset(
 // the tab makes the history reachable again with nothing lost.
 //
 // THE TEST ITSELF LIVES OUT AT history_step_actionable (app_state.h) and this
-// delegates to it, because the toolbar's Undo / Redo buttons must GREY on
+// delegates to it, because the Undo / Redo buttons (the icon row's, since the
+// 2026-08-12 relayout dissolved the toolbar row) must GREY on
 // exactly the fact these guards refuse on — one predicate, two readers, no way
 // for the face and the action to disagree. The rationale above stays here,
 // where the guard is run.

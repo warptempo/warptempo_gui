@@ -236,11 +236,12 @@ struct Viewport {
 
     // Invalidation.
     void invalidate_waveform_area();
-    // THE STATUS CELL — the unified bottom row's right portion, from the
-    // clock's reserved cell to the lane's right edge (the row unification,
-    // 2026-08-12; the rect is status_row_invalidate_rect, app_state.h):
+    // THE STATUS CELL — the unified bottom row's middle-right span, from the
+    // clock's reserved cell to the right-anchored arrow cluster's left edge
+    // (the row unification, 2026-08-12; the arrows flush right since the same
+    // day's relayout; the rect is status_row_invalidate_rect, app_state.h):
     // section C's whole precedence chain and the critical chip, right-aligned
-    // there. The bottom row's high-traffic string owner — the queue /
+    // against the arrows. The bottom row's high-traffic string owner — the queue /
     // render / transient strings, the selection readout — and the DEFAULT
     // for anything writing a string down there. SINCE 2026-08-12 IT ALSO
     // CARRIES THE MODAL DIALOG'S STASHED BOX while one stands (the rider and

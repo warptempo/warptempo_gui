@@ -89,8 +89,8 @@ struct ToolbarChord {
     // both, so consuming at the claim keeps the pressed interior from ever
     // painting over a lit button. One rule, two justifications.
     bool           radio;
-    // CLICK_FACE: rows 2, 4 and 8 and the view bar show a pressed interior;
-    // row 1's
+    // CLICK_FACE: row 4, the bottom row and the view bar show a pressed
+    // interior; row 1's
     // two left-floating buttons and row 3 have two faces by scope and show
     // nothing new on a press.
     bool           click_face;
@@ -105,7 +105,8 @@ struct ToolbarChord {
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
-// in the redesign, rows 1 through 4 and row 8, in one table. The flags above
+// in the redesign — rows 1, 3 and 4 and the bottom row since the 2026-08-12
+// relayout deleted row 2 — in one table. The flags above
 // are the
 // only axes the rows differ on, so they share one dispatch body
 // (dispatch_redesign_chord) instead of accumulating a special case per row.
@@ -115,7 +116,7 @@ struct ToolbarChord {
 // left it when its action became a DROPDOWN TOGGLE (a popup open/close is not a
 // chord at all — the bare `;` keyboard route still opens the editor directly,
 // untouched), and Navigation arrived a menu button 2026-08-02. Everything else
-// on rows 1 through 4 and row 8 is here.
+// on rows 1, 3 and 4 and the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1. QUIT IS A CHORD — Ctrl+Q — and joined the table when the architect
     // corrected the "two-call sequence" framing (2026-07-31): on_key's own
@@ -135,7 +136,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
     {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
     {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
-    // Row 2 — the toolbar.
+    // The toolbar four — icon-row members since the 2026-08-12 relayout
+    // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
+    // only the face and the band changed hands).
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true},   // Ctrl+Shift+Z
@@ -163,10 +166,28 @@ constexpr ToolbarChord kToolbarChords[] = {
     // maximizer stays keyboard-only — so a shift press is the standing
     // consumed nothing.
     {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
-    // (THE ZOOM PAIR — bare `-` and bare `=` — sat here from 2026-08-01 until
-    // 2026-08-02, when the architect ruled out duplicate commands on the GUI and
-    // the Navigation dropdown became those two commands' one pointer home. The
-    // keys are untouched; the buttons are deleted whole.)
+    // THE ZOOM GROUP (2026-08-12, the grand relayout — SUPERSEDING the
+    // 2026-08-02 no-duplicate-commands deletion of the old zoom pair for
+    // these four: the Navigation dropdown keeps its rows, the buttons being
+    // the glass rig's pointer home): four momentary navigation chords, no
+    // radio, no shift admission, click face like the rest of the row. All
+    // four stay LIVE in the `h` view — `=`, `-` and `0` are on the mode's
+    // allowlist and `c` is its own vocabulary — which the derived partition
+    // answers with nothing hand-listed.
+    {RedesignButton::IconZoomIn,       GuiKeys::Equal,  false, false, false, false, true}, // bare =
+    {RedesignButton::IconZoomOut,      GuiKeys::Minus,  false, false, false, false, true}, // bare -
+    {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
+    {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
+    // THE SINGLE-MARKER VERBS (2026-08-12): drop, delete, disable toggle,
+    // inherit/collapse — authoring chords whose refusals (read-only, home
+    // view, empty selection, occupied frame) are the keys' own consumed
+    // no-ops, inherited whole through on_key. The `h` view consumes all four
+    // outright, which is what COLLAPSES their buttons there
+    // (redesign_button_collapsed below).
+    {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false, false, true}, // bare s
+    {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
+    {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
+    {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
     {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, true},   // Ctrl+P
     {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  false, true},   // Ctrl+Alt+P (+Shift)
     // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
@@ -582,7 +603,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   rather than relabelled in either case; it was RENDER's chord and RENDER's
 //   face until 2026-08-08, when the act moved onto the save it begins with),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
-//   switches), the load-editor opener (bare `'`, which in this mode loads THE
+//   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (bare `=`,
+//   `-` and `0` are the allowlist's own zoom admissions and bare `c` is the
+//   mode's vocabulary — pure navigation, live with nothing hand-listed),
+//   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:
 //   the THIRD session-dependent entry, dead on a walk with no member — the
@@ -625,7 +649,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
-//   (bare `l`); and the SETTINGS anchor — alone here since 2026-08-08, when
+//   (bare `l`); the TRIM SCISSORS (bare `x`) and the FOUR MARKER VERBS since
+//   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
+//   consumed like the rest); and the SETTINGS anchor — alone here since 2026-08-08, when
 //   NAVIGATION moved to the LIVE column above with its menu.
 //
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
@@ -639,6 +665,16 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // row 4's never-grey rule still answers for it (the `'` button stays lit on a
 // locked tab, in the view as out of it). Only the VIEW's own consumption greys
 // anything here.
+//
+// SINCE THE MODE-COLLAPSING ROSTER (2026-08-12, redesign_button_collapsed
+// below) most of this partition's DEAD column never PAINTS a grey face in
+// the view at all: the icon row COLLAPSES its consumed members (Undo, Redo,
+// Render, the trim scissors, the four marker verbs, copy/paste, bpm,
+// iteration, follow, listen, a memberless `'`), leaving the grey face to the
+// MOMENT-STATE members (Save, Revert) and to the non-icon-row surfaces (the
+// Settings anchor). This function is UNCHANGED by that — it stays the one
+// derivation both the grey face and the collapse walk read, each scoping its
+// own consequence.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     if (b == RedesignButton::Settings) return true;
     if (b == RedesignButton::Navigation) return false;
@@ -655,6 +691,74 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // (the table plus the two anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
+    return false;
+}
+
+// THE MODE-COLLAPSING ROSTER (architect 2026-08-12, the grand relayout:
+// "hidden not greyed outside the view; inside the view every unusable icon
+// collapses") — the ONE answer to "does the icon row's walk SKIP this button",
+// consumed by paint_icon_row alone (which scopes the rule to ROW 4: the row
+// is a left-to-right accumulation of uniform boxes recomputed each paint, so
+// collapse IS skipping members; rows 1 and 3 and the bottom row keep their
+// grey models). A collapsed member publishes a ZERO rect, so the press claim,
+// the hover walk and the tooltip dwell — all readers of the painter's stash —
+// cannot reach it by construction.
+//
+// TWO LEVELS, DERIVED NOT LISTED:
+//
+//   AT REST (no `h` view): the history group's four MODE-COMPANIONS collapse
+//   — Cumulative, Revert, Older, Newer, the resting-disabled family whose
+//   keys are bound only inside the view (redesign_button_mode_companion,
+//   app_state.h — the ONE spelled membership, shared with
+//   redesign_button_enabled's resting arm so the two cannot drift). THE
+//   HISTORY BUTTON ITSELF STAYS VISIBLE AT REST, deliberately and by ruling
+//   (architect-confirmed 2026-08-12): it is the view's OPENER, and a
+//   collapsed opener would make the view pointer-unreachable —
+//   keyboard-only, which on the glass rig (no keyboard) means unreachable
+//   outright, the exact trap class the modal reach-through fix closed. (The
+//   Cumulative toggle's dimmed-selected resting lamp of 2026-08-08 is
+//   SUPERSEDED by its collapse — the reading shows inside the view, where
+//   the bit acts.)
+//
+//   INSIDE THE VIEW: every button whose chord the mode CONSUMES OUTRIGHT
+//   collapses — the walk asks the mode's own gates about the button's chord,
+//   exactly as history_mode_disables_button above does (owned → live,
+//   admitted → live, blocked → collapsed) — EXCEPT the MOMENT-STATE
+//   admissions, which KEEP THE GREY FACE when their condition fails:
+//   Save with an empty head delta or a checkpoint in flight, Revert with no
+//   diff-flag subject (history_mode_admission_is_momentary, the gate's own
+//   classification of its conditional terms, input_key_dispatch.cpp).
+//   COLLAPSE ANSWERS MODE MEMBERSHIP, GREY ANSWERS MOMENT STATE — a
+//   selection click must not reflow the row under the pointer, which a
+//   collapsing Revert would do on every subject change. The load-in-place's
+//   walk-member condition is deliberately NOT momentary (the architect's own
+//   enumeration puts "`'` when ineligible" among the collapsers: the walk's
+//   membership is a per-visit fact, its one mid-visit transition — the
+//   prefetch delivering member 0 — coinciding with the enabled-bit flip the
+//   tick comparator already repaints on). The two anchors and every
+//   non-icon-row button fall out LIVE here; the icon row is the one caller.
+//
+// EVERY collapse TRANSITION coincides with damage that already exists: the
+// mode edges invalidate wholesale, and the one in-view mover (`'`) flips its
+// enabled bit in the same instant, which the tick comparator repairs — so
+// collapse needed no damage mechanism of its own.
+bool redesign_button_collapsed(const AppState& app, RedesignButton b) {
+    if (!app.history_mode.active) return redesign_button_mode_companion(b);
+    if (b == RedesignButton::Settings || b == RedesignButton::Navigation)
+        return false;   // the anchors are not icon-row members; hand-answered
+                        // live so a future caller cannot vanish a menu.
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (tc.id != b) continue;
+        GuiInputState chord{};
+        chord.ctrl  = tc.ctrl;
+        chord.shift = tc.shift;
+        chord.alt   = tc.alt;
+        if (history_mode_owns_key(tc.key, chord)) return false;
+        if (!history_mode_key_blocked(tc.key, chord, app)) return false;
+        // Blocked: a moment-state admission greys (the enabled predicate's
+        // mode line already answers false); everything else collapses.
+        return !history_mode_admission_is_momentary(tc.key, chord);
+    }
     return false;
 }
 
@@ -1977,8 +2081,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
     }
 
-    // THE FIVE REDESIGNED BUTTON ROWS (top lanes 0..3 plus the bottom strip's
-    // transport row, whose claim closes the block), claimed ABOVE the
+    // THE FOUR REDESIGNED BUTTON ROWS (top lanes 0..2 plus the bottom strip's
+    // transport row, whose claim closes the block — the toolbar row's own
+    // claim died with its lane at the 2026-08-12 relayout, its four buttons
+    // now inside the icon row's band), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
     // the loaded audio. They sit BELOW the modal gates on purpose: a press while
@@ -1991,7 +2097,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // deleted that button the same day and the claim came home to this block
     // with its justification.)
     //
-    // ONE BAND-CLAIM SHAPE FOR ALL FIVE ROWS: the exact half-open row band, a
+    // ONE BAND-CLAIM SHAPE FOR ALL FOUR ROWS: the exact half-open row band, a
     // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
     // only where the chord table admits one, and any press in the band that is
     // not on a button is a consumed nothing. Each band differs ONLY in its rect
@@ -2000,8 +2106,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // driven by the table's per-button flags.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
-    // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row /
-    // paint_bottom_row_buttons_and_clock) —
+    // paint_menu_row / paint_tab_row / paint_icon_row /
+    // paint_bottom_row_buttons_and_clock; a COLLAPSED icon-row member's stash
+    // is a zero rect, which contains no point — the mode-collapsing roster's
+    // whole pointer story) —
     // never re-shaped here, so the clickable rect is the painted one. The action
     // FIRES ON PRESS: nothing on these rows drags, so there is no arm, no
     // threshold and no release body, and no double-click surface either. The one
@@ -2077,14 +2185,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     dispatch_redesign_chord(x, y, mods);
                 }
             }
-            return;
-        }
-    }
-    {
-        const GuiRect toolbar = top_toolbar_row_area(app);
-        if (rect_contains(toolbar, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
-            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
         }
     }
@@ -2525,7 +2625,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // ctrl-click in Ableton is just click, and ctrl stays the zoom
             // modifier here; the PLAIN empty marker-lane press below is the
             // surviving lane gesture — the waveform's own parity press, not a
-            // bare clear). The four redesigned rows (lanes 0..3) were claimed far
+            // bare clear). The three redesigned top rows (lanes 0..2 since the
+            // 2026-08-12 relayout deleted the toolbar lane) were claimed far
             // above and never reach here.
             //
             // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_row_area — the
@@ -3577,10 +3678,12 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit / Navigation / Settings and the view bar's three, row 2's
-// four, row 3's two tabs, row 4's seventeen and row 8's eight — 37, the enum's
+// (row 1's Quit / Navigation / Settings and the view bar's three, row 3's two
+// tabs, row 4's twenty-nine — the toolbar four included since the 2026-08-12
+// relayout — and the bottom row's eight: 45, the enum's
 // own count at kRedesignButtonCount — the stash is
-// AppState::redesign_buttons).
+// AppState::redesign_buttons; a COLLAPSED icon-row member's zero rect resolves
+// unhovered with no arm here).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE damage call PER STRIP TOUCHED — the strip idiom (no
 // narrow rects; the playhead columns' carve-out stays the sole exception),
@@ -3852,7 +3955,7 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
 }
 
 // THE ONE CHORD-DISPATCH BODY for every redesigned button whose action IS a
-// chord — rows 1 through 4 and row 8, driven entirely by kToolbarChords'
+// chord — rows 1, 3 and 4 and the bottom row, driven entirely by kToolbarChords'
 // per-button flags
 // so no row carries a special case of its own. Returns true when a button's rect
 // claimed the press, whether or not anything was dispatched (a refusal is still

@@ -2063,6 +2063,19 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_save || is_ctrl_q);
 }
 
+// THE GATE'S MOMENT-STATE SHAPES (contract at the declaration,
+// input_handler.h): the two conditional admissions above whose CONDITION
+// moves at interaction cadence — `is_save`'s Ctrl+S (head_delta_empty /
+// history_checkpoint_in_flight) and `is_revert_act`'s Ctrl+H (a diff-flag
+// subject standing). Spelled HERE, beside the terms they name, so the gate
+// and this classification are one file's facts; `is_load_in_place`'s
+// walk-member condition is deliberately excluded (the declaration says why).
+// Read by redesign_button_collapsed alone.
+bool history_mode_admission_is_momentary(GuiKey key, GuiInputState mods) {
+    const bool ctrl_exact = mods.ctrl && !mods.shift && !mods.alt;
+    return ctrl_exact && (key == GuiKeys::S || key == GuiKeys::H);
+}
+
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the three

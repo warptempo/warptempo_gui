@@ -627,7 +627,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the roster's own face bits (rect/hovered/enabled/selected) and
         // read_only is none of them. One damage at the one writer is the
         // cheaper and more honest answer than a fifth stashed bit.
-        // (The row 2 buttons' ENABLED faces also move with this flag, and those
+        // (The toolbar four's ENABLED faces — icon-row members since the
+        // 2026-08-12 relayout — also move with this flag, and those
         // the comparator does catch — this damage merely arrives first.)
         viewport.invalidate_top_strip();
         return;
@@ -1592,7 +1593,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // sub-detent accumulator from growing remainder over them.
     {
         const GuiRect bands[] = {
-            top_menu_row_area(app),  top_toolbar_row_area(app),
+            // (The toolbar row's band left with its lane, 2026-08-12 — the
+            // relayout dissolved row 2 into the icon row, whose band below
+            // covers its four buttons now.)
+            top_menu_row_area(app),
             top_tab_row_area(app),   top_icon_row_area(app),
             // The bottom row joined the family's inert band list 2026-08-11
             // (as the transport row), exactly as the rule above promises a

@@ -771,11 +771,13 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 //   FIELD BORDER — its 1px frame reads #4c4e51 (y=5 / y=35), coinciding with
 //   kRedesignTabLine, same rule again.
 //
-// The dialog's BUTTONS carry no constants here: they are the toolbar row's
-// box at the icon row's face colors, both REUSED not re-sampled (the
-// architect's explicit mix), and the invalid red flash recolors the FIELD in
-// the marker-flag red pair (kMarkerFlagFillRed / kMarkerFlagEdgeRed — the one
-// invalid red), called not copied.
+// The dialog's BUTTONS carry no constants here: they are the deleted toolbar
+// row's 32px box (kModalBtnBoxPx and the 9/10 label pads, paint_handler.cpp —
+// row 2's own arithmetic, kept by the dialog when the row dissolved into the
+// icon row at the 2026-08-12 relayout) at the icon row's face colors, both
+// REUSED not re-sampled (the architect's explicit mix), and the invalid red
+// flash recolors the FIELD in the marker-flag red pair (kMarkerFlagFillRed /
+// kMarkerFlagEdgeRed — the one invalid red), called not copied.
 inline constexpr GuiColor kModalGround      = hex(0x202326);
 inline constexpr GuiColor kModalBorder      = hex(0x535659);
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
@@ -898,12 +900,13 @@ inline constexpr int kPlayheadUnitPx = 8;
 // window edge (the kdenlive menu bar, row 1 of the redesign). 34 CONTENT at
 // 100% gui_scale plus a 1px MARGIN-BOTTOM, so the LANE is 35.
 //
-// THE SAME CSS BOX MODEL rows 2, 3 and 4 take (a stated dimension is CONTENT
+// THE SAME CSS BOX MODEL rows 3 and 4 take (a stated dimension is CONTENT
 // and what sits outside it is its own term, with the LANE the sum — the lane
 // must physically own every pixel it paints), with ONE TERM DIFFERENT IN KIND:
 // what sits outside row 1's content is a MARGIN, not a border. It paints the
 // ROW GROUND rather than a line, and it exists to hold the RIGHT-FLOATING VIEW
-// BAR's own blue background off row 2's ground. Under the left-floating
+// BAR's own blue background off the next lane's ground (the tab row, since
+// the 2026-08-12 relayout deleted the toolbar lane). Under the left-floating
 // buttons it is indistinguishable from the ground above it, which is correct —
 // a margin shows what is behind the box, and behind row 1 is row 1's ground.
 //
@@ -928,40 +931,27 @@ inline int menu_row_h_px() {
     return menu_row_content_h_px() + menu_row_margin_h_px();
 }
 
-// Authored pixel geometry of the TOOLBAR ROW — the top strip's lane 1, under
-// the menu row (row 2 of the redesign: Save / Undo / Redo / Render). Measured
-// at 100% gui_scale off row_2_button_{rest,hover}.png (81x32),
-// row_2_separator.png (1x34) and row_2_border_bottom.png.
-//
-// THE CSS BOX MODEL IS THE RULED VOCABULARY (architect 2026-07-31): the
-// architect's stated dimensions are CONTENT, and a border sits OUTSIDE them. So
-// the authored height is 44 and the 1px border-bottom is a separate term — the
-// LANE the strip stack allocates is their sum (45 at 100%), because the lane
-// must physically own every pixel it paints. toolbar_row_content_h_px() is the
-// ground/button band; toolbar_row_h_px() is the lane. The border scales too, so
-// at 200% it is 2 px of line under 88 px of content.
-inline constexpr int kToolbarRowHeightPx = 44;
-inline constexpr int kToolbarBorderPx    = 1;
-inline int toolbar_border_h_px() {
-    return scaled_px(kToolbarBorderPx, 1);
-}
-inline int toolbar_row_content_h_px() {
-    return scaled_px(kToolbarRowHeightPx, 5);
-}
-inline int toolbar_row_h_px() {
-    return toolbar_row_content_h_px() + toolbar_border_h_px();
-}
+// (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
+// commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
+// since 2026-07-31, dissolved into the ICON ROW as its first group of four
+// glyph buttons, so the top strip lost the lane's 44 content + 1px border.
+// kToolbarRowHeightPx / kToolbarBorderPx and their accessors went with it;
+// the row's 32px button box and 9/10 label pads survive as the MODAL DIALOG
+// BUTTONS' own constants — kModalBtnBoxPx and friends, paint_handler.cpp —
+// which used to read row 2's. The crops and the row-2 record stay in
+// kdenlive-redesign.md.)
 
-// Authored pixel geometry of the TAB ROW — the top strip's lane 2, under the
-// toolbar (row 3 of the redesign: the "Tab A" / "Tab B" Breeze tabs). Measured
+// Authored pixel geometry of the TAB ROW — the top strip's lane 1, under the
+// menu row (row 3 of the redesign: the "Tab A" / "Tab B" Breeze tabs). Measured
 // at 100% gui_scale off row_3_tab_{rest,hover,selected}.png (30 tall) and
 // row_3_bottom_border.png.
 //
-// THE SAME CSS BOX MODEL AS THE TOOLBAR: the architect's stated 30 is CONTENT
+// THE CSS BOX MODEL IS THE RULED VOCABULARY (architect 2026-07-31): the
+// architect's stated 30 is CONTENT
 // and the 1px bottom border sits OUTSIDE it, so the LANE the strip stack
 // allocates is their sum (31 at 100%). tab_row_content_h_px() is the ground and
 // tab band — the height every tab box fills, flush, top to bottom;
-// tab_row_h_px() is the lane. Rides gui_scale_factor() like rows 1 and 2, not
+// tab_row_h_px() is the lane. Rides gui_scale_factor() like row 1, not
 // the monospace font's axis.
 inline constexpr int kTabRowHeightPx = 30;
 inline constexpr int kTabRowBorderPx = 1;
@@ -975,14 +965,18 @@ inline int tab_row_h_px() {
     return tab_row_content_h_px() + tab_row_border_h_px();
 }
 
-// Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
-// tabs (row 4 of the redesign: the SEVENTEEN view/mode/action buttons — the
-// kIconRowButtons table is the count's one authority; icons::kIconCount is a
+// Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
+// tabs (row 4 of the redesign: the TWENTY-NINE view/mode/action buttons since
+// the 2026-08-12 grand relayout took row 2's four and added the zoom and
+// marker-verb groups — the
+// kIconRowButtons table is the count's one authority, and the MODE-COLLAPSING
+// rule at redesign_button_collapsed means fewer paint on any given frame;
+// icons::kIconCount is a
 // different number, the GLYPH set, which the row does not exhaust). Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
-// Same CSS box model as rows 2 and 3: 46 is CONTENT, the 1px border-bottom sits
+// Same CSS box model as row 3: 46 is CONTENT, the 1px border-bottom sits
 // OUTSIDE it, and the LANE is their sum (47 at 100%).
 //
 // 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31, settling the
@@ -1055,19 +1049,23 @@ inline int marker_lane_h_px() {
 // waveform CLAMPS at this height and the leftover becomes a band of BLANK
 // WINDOW GROUND. SINCE THE ROW UNIFICATION (later the same day) that blank
 // band sits at the WINDOW BOTTOM, under the unified bottom row — the whole
-// interactive stack (rows 1-4, rows 5-7, the waveform, the bottom row, and —
+// interactive stack (rows 1, 3 and 4 since the relayout deleted row 2,
+// rows 5-7, the waveform, the bottom row, and —
 // since the overview strip landed — that strip too) is one
 // contiguous cluster from the window top, and the flexible space is the
 // window's unused foot ("the icons, all the tools, they should be close to
 // the waveform"; the gap opened between the icon row and the trim lane for
 // the ruling's first hours). The architect's bracket for the value: "bigger
 // than the height on the Pi, smaller than the waveform height on my external
-// monitor". At 100% scale the natural heights are 334px on the Pi's 1024x600
-// (600 minus the 215px top strip and the 51px bottom row) and 814px on the
+// monitor". At 100% scale the natural heights are 379px on the Pi's 1024x600
+// (600 minus the 170px top strip — 215 until the 2026-08-12 relayout deleted
+// the toolbar row's 45 — and the 51px bottom row) and 859px on the
 // 1920x1080 monitor — 550 sits strictly inside, so the Pi is unclamped while
-// the 1080p window has 264px of leftover, split by the OVERVIEW STRIP's clamp
-// below (96 overview + 168 blank foot at 100%; on the Pi the strip's minimum
-// comes out of the WAVEFORM instead — the rule at the overview constants).
+// the 1080p window has 309px of leftover, split by the OVERVIEW STRIP's clamp
+// below (96 overview + 213 blank foot at 100%; on the Pi the strip's minimum
+// comes out of the WAVEFORM instead — the rule at the overview constants —
+// landing the Pi waveform at 355; commit B of the relayout owns any further
+// vertical restack).
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
@@ -1096,10 +1094,14 @@ inline int waveform_max_h_px() {
 // minimum is reserved AHEAD of the waveform's natural height, which is what
 // buys the Pi its sliver ("the touchpad could do with a very tiny one now
 // that the bottom two rows are combined... clamp the waveform to just a hair
-// above what it is now or below"). CONVERGENCE RECORDED: at 100% the Pi's
-// unclamped waveform was 334, and reserving the 24px minimum lands it at 310
-// — "a hair above" the pre-unification 307, the architect's own bracket. The
-// 1080p window at 100%: leftover 264 → overview 96, blank foot 168. Both
+// above what it is now or below"). CONVERGENCE RECORDED at the ratification:
+// at 100% the Pi's
+// unclamped waveform was then 334, and reserving the 24px minimum landed it at
+// 310 — "a hair above" the pre-unification 307, the architect's own bracket.
+// (The 2026-08-12 relayout's toolbar-row deletion re-derives the Pi's numbers
+// to 379 natural / 355 with the reserve, and the 1080p leftover to 309 →
+// overview 96, blank foot 213 — the waveform-max block above carries the
+// current stack; commit B owns any further restack.) Both
 // SCALED lengths riding gui_scale like every authored height; the ONE
 // application point is the same geometry owner as the waveform clamp above.
 inline constexpr int kOverviewMaxHeightPx = 96;
@@ -1162,7 +1164,7 @@ inline int bottom_row_h_px() {
 // text size in the product. Every row's text is 12pt through the existing
 // points*4/3 convention = 16px at 100%, scaled on gui_scale_factor(). It lives
 // here rather than in a painter's anonymous namespace because row 5's marker
-// flags shape their labels inside render.cpp while rows 1-4 and row 7 shape
+// flags shape their labels inside render.cpp while the button rows shape
 // theirs in paint_handler.cpp, and one design size cannot have two definitions.
 //
 // ROW 7 CONFIRMED IT INDEPENDENTLY, off row_7_text.png, which is worth recording

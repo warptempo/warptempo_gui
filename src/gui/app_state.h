@@ -916,8 +916,9 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
-// Settings plus the view bar's three, row 2's toolbar four, row 3's two TABS,
-// row 4's seventeen view / mode / action buttons, then row 8's transport
+// Settings plus the view bar's three, row 3's two TABS, row 4's twenty-nine
+// view / mode / action buttons (the deleted toolbar row's four lead them since
+// the 2026-08-12 relayout), then the bottom row's transport
 // eight. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -956,8 +957,6 @@ enum class RedesignButton {
     // expression follows it. This enum and the painter's kMenuButtons table are
     // the two places that carry the order, and they move together.
     Quit, Navigation, Settings, ViewSW, ViewTP, ViewTW,
-    // Row 2, the toolbar.
-    Save, Undo, Redo, Render,
     // Row 3, the tabs — TWO SLOTS, ALWAYS. They are the A/B tabs ordinarily and
     // the `h` view's WALK SELECTOR while it stands, "Remote" and "Local"
     // (architect 2026-08-08): the row grew to four for the (walk source,
@@ -968,12 +967,16 @@ enum class RedesignButton {
     // tooltips and the painter's defs — so nothing publishes an empty rect in
     // this row any more.
     TabA, TabB,
-    // Row 4, the icon row, in painted order: the two view radio pairs, the
-    // phase-reset clipboard pair, the three mode/editor buttons, the two
-    // render-entry buttons, then the history mode's own. (THE ZOOM PAIR LEFT
-    // 2026-08-02 — the architect's no-duplicate-commands ruling, its two
-    // commands now living in the Navigation dropdown; the `-` / `=` KEYS are
-    // untouched.)
+    // Row 4, the icon row, in painted order: the toolbar four (the deleted
+    // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
+    // 2026-08-12 grand relayout dissolved that lane — same chords, same face
+    // machinery, the FACE now a glyph in the 32px box and the old labels
+    // living on as the tooltips), the two view radio pairs, the trim button's
+    // group, the ZOOM GROUP and the SINGLE-MARKER VERBS (both 2026-08-12,
+    // the architect's live placement "after the trim"), the phase-reset
+    // clipboard pair with the three mode/editor buttons, the two
+    // render-entry buttons, then the history mode's own.
+    Save, Undo, Redo, Render,
     IconS, IconT, IconW, IconP,
     // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
     // from region — the button IS its chord, so every rule `x` has, the button
@@ -986,6 +989,25 @@ enum class RedesignButton {
     // buttons, create a new separator"), a group intended to collect
     // viewport-related acts later.
     IconTrim,
+    // THE ZOOM GROUP (2026-08-12, the grand relayout's roster commit): four
+    // navigation chords in their own separator-led group after the scissors —
+    // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
+    // whose ceiling arm runs the `c` command), and working-zoom center (bare
+    // `c`). Every one is a momentary navigation act, never-grey per the
+    // row's rule and LIVE in the `h` view (all four chords are on the mode's
+    // allowlist or its own vocabulary, so the derived partition answers live
+    // with nothing hand-listed). THE 2026-08-02 NO-DUPLICATE-COMMANDS RULING
+    // IS SUPERSEDED FOR THESE FOUR by the architect's relayout order — the
+    // Navigation dropdown keeps its zoom rows; the buttons are the touch
+    // rig's pointer home for the same commands.
+    IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
+    // THE SINGLE-MARKER VERBS (2026-08-12, the same order): drop (bare `s`),
+    // delete (`Delete`), the disable toggle (`Ctrl+D`), and inherit/collapse
+    // (`Ctrl+N`). Authoring chords, so read-only and home-view refusals are
+    // the chords' own consumed no-ops (never-grey), and the `h` view COLLAPSES
+    // all four (redesign_button_collapsed — the mode consumes the chords
+    // outright).
+    IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconLoadInPlace,
     // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
@@ -1029,7 +1051,7 @@ enum class RedesignButton {
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
     // detection. Eight buttons in two groups, in painted order (the enum
-    // order is the painted order, and the row paints below rows 1-4, so the
+    // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
     // the ONE bare Space binding split over two state-mirrored buttons,
@@ -1059,18 +1081,18 @@ enum class RedesignButton {
     TransportSkipBack, TransportPlay, TransportStop, TransportSkipForward,
     TransportLeft, TransportDown, TransportUp, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above: six in row 1, four
-// in row 2, two in row 3, seventeen in row 4 and eight in row 8 — 37. Of those,
-// THIRTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
+// THE ROSTER, re-derived by counting the enumerators above: six in row 1, two
+// in row 3, twenty-nine in row 4 and eight in the bottom row — 45. Of those,
+// FORTY-THREE carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (Settings and Navigation), which is the split the chord table's own
-// static_assert checks. It was 36 for part of 2026-08-11 (row 4's trim button
-// joined later that day, the trim surface arc's roster half) and 28 until
-// earlier the same day, when row 8 — the transport row, the touch arc's first
-// surface — joined with nine buttons, 37 only within that morning (the row's
-// Esc button was deleted at the architect's live pass); 29 before
-// 2026-08-08, when row 3's compare-only pair was deleted and row 4 gained the
-// Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 37;
+// static_assert checks. 45 = the 2026-08-12 grand relayout's roster commit:
+// 37 with the toolbar row's four MOVED into row 4 (no count change) plus the
+// ZOOM GROUP's four and the SINGLE-MARKER VERBS' four. It was 37 from late
+// 2026-08-11 (the trim button joining the transport row's eight, which had
+// landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
+// before that, and 29 before 2026-08-08, when row 3's compare-only pair was
+// deleted and row 4 gained the Cumulative toggle.
+inline constexpr int kRedesignButtonCount = 45;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -1128,6 +1150,14 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconW:
         case RedesignButton::IconP:
         case RedesignButton::IconTrim:
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
+        case RedesignButton::IconZoomFitBest:
+        case RedesignButton::IconZoomOriginal:
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -1151,6 +1181,26 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
             break;
     }
     return false;
+}
+
+// THE HISTORY GROUP'S FOUR MODE-COMPANIONS — Cumulative, Revert, and the
+// walk's Older / Newer steps: the resting-disabled family whose keys are bound
+// ONLY inside the `h` history view (redesign_button_enabled's own arm reads
+// this membership's fact as `history_mode.active`). Named ONCE here because
+// TWO readers must agree on it since the 2026-08-12 mode-collapsing roster:
+// the enabled predicate's resting-disabled arm below, and
+// redesign_button_collapsed (input_pointer.cpp), which COLLAPSES the four out
+// of the icon row's walk at rest — hidden, not greyed, the architect's ruling
+// — so the two cannot drift into different lists. THE HISTORY BUTTON ITSELF
+// IS DELIBERATELY NOT A MEMBER: it is the view's OPENER, and a collapsed
+// opener would make the view pointer-unreachable — keyboard-only, which on
+// the glass rig (no keyboard) means unreachable outright, the exact trap
+// class the modal reach-through fix closed (architect-confirmed 2026-08-12).
+inline constexpr bool redesign_button_mode_companion(RedesignButton b) {
+    return b == RedesignButton::IconCumulative ||
+           b == RedesignButton::IconRevert ||
+           b == RedesignButton::IconHistoryOlder ||
+           b == RedesignButton::IconHistoryNewer;
 }
 
 // WHICH BUTTONS ARE THE BOTTOM ROW'S — the transport/arrow eight (row 8's,
@@ -3661,7 +3711,6 @@ GuiRect top_menu_row_area(const AppState& a);
 inline bool point_in_menu_row_band(const AppState& a, int x, int y) {
     return rect_contains(top_menu_row_area(a), x, y);
 }
-GuiRect top_toolbar_row_area(const AppState& a);
 GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);
 // ROW 5's three lanes (2026-08-01), replacing the legacy
@@ -4070,9 +4119,12 @@ std::pair<long long, long long> compute_trim_samples(
 // sharing a rect with the strings.
 //
 //   status_row_invalidate_rect — the STATUS CELL, from the clock's reserved
-//   cell to the lane's right edge: section C's status chain (the queue /
-//   render / transient status strings, the selection readout, the history
-//   line) and the critical chip, right-aligned there since the unification.
+//   cell to the ARROW CLUSTER's left edge (the four cardinal arrows sit flush
+//   at the lane's right margin since the 2026-08-12 relayout rearranged the
+//   row; the painter-stashed TransportLeft rect is the boundary, the lane's
+//   right edge the pre-first-paint fallback): section C's status chain (the
+//   queue / render / transient status strings, the selection readout, the
+//   history line) and the critical chip, right-aligned against the arrows.
 //   Reached through
 //   Viewport::invalidate_status_row_area, which is where its callers are and
 //   which ALSO carries the modal dialog's stashed box while one stands (the
@@ -4085,7 +4137,8 @@ std::pair<long long, long long> compute_trim_samples(
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
 //
-// The transport/arrow buttons on the row's left are the third tenant and have
+// The transport buttons on the row's left and the arrow cluster flush at its
+// right (the 2026-08-12 relayout's split) are the button tenants and have
 // NO owner here: their damage rides the roster machinery (the face writers
 // and the tick comparator), exactly as the top rows' buttons do. A route
 // touching both cells — a load-in-place, an undo restore, a view switch —
@@ -4236,6 +4289,21 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
 // restates none of its terms.
 bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
+// THE MODE-COLLAPSING ROSTER'S PREDICATE (architect 2026-08-12, the grand
+// relayout: "hidden not greyed outside the view; inside the view every
+// unusable icon collapses") — true when the ICON ROW's walk must SKIP this
+// button entirely: not painted, a zero published rect, so it claims no press,
+// no hover and no tooltip by construction. Its ONE consumer is paint_icon_row
+// (the row is one left-to-right accumulation recomputed each paint, so
+// collapse IS skipping members), which scopes the rule to ROW 4 — rows 1 and
+// 3 and the bottom row keep the grey model, their layouts not being an
+// accumulation of uniform boxes. Definition beside
+// history_mode_disables_button (input_pointer.cpp), DERIVED from the same
+// predicates the faces already read — the mode-companion membership at rest,
+// the mode's own gates inside the view — never a hand list; the two-level
+// collapse-vs-grey rule is recorded at the definition.
+bool redesign_button_collapsed(const AppState& app, RedesignButton b);
+
 // THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
 // (row 2's third face, and every row's while the history view stands) and for
 // hoverability, mirroring each chord's OWN refusals rather than inventing a
@@ -4244,7 +4312,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // and main.cpp's staleness comparator.
 //
 // WHAT EACH ENTRY MIRRORS, read off the routes themselves:
-//   * ALL FOUR row-2 chords drop at on_key's `app.loading || total <= 0` guard
+//   * ALL FOUR toolbar chords (Save / Undo / Redo / Render — icon-row members
+//     since the 2026-08-12 relayout deleted their labeled row, the same
+//     machinery under a glyph face) drop at on_key's
+//     `app.loading || total <= 0` guard
 //     (input_handler.cpp). THE PER-TAB READ-ONLY GATE NOW SPLITS THEM (architect
 //     2026-08-07): read-only protects the AUTHORED MUSICAL CONTENT — the marker
 //     stores and the engine settings — so its allowlist
@@ -4289,7 +4360,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
 // second switch can take a `default` because the first has already returned for
-// every id that is not one of row 2's four.
+// every id that is not one of the toolbar four's (Save / Undo / Redo /
+// Render — icon-row members since the 2026-08-12 relayout, keeping their
+// mirrored derivations).
 inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
                                     RedesignButton b) {
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
@@ -4352,6 +4425,25 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // `h` view greys it through the derived partition above (`x` is
         // consumed there), nothing hand-listed.
         case RedesignButton::IconTrim:
+        // THE ZOOM GROUP MIRRORS NOTHING (2026-08-12): four navigation chords
+        // that always mean something on a loaded file, and the loading/blank
+        // guard is the family's shared answer below. LIVE in the `h` view —
+        // the derived partition finds all four on the mode's allowlist or its
+        // own vocabulary.
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
+        case RedesignButton::IconZoomFitBest:
+        case RedesignButton::IconZoomOriginal:
+        // THE SINGLE-MARKER VERBS MIRROR NOTHING EITHER (2026-08-12): bare
+        // `s`, Delete, Ctrl+D and Ctrl+N keep every refusal they have —
+        // read-only, home view, empty selection — as consumed no-ops on the
+        // click, the row's never-grey rule. In the `h` view they COLLAPSE
+        // rather than grey (redesign_button_collapsed), so this arm is never
+        // painted there at all.
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -4455,6 +4547,13 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // states that rule for iteration and follow, and this button is the
         // first to wear it at REST rather than only inside the view.
         case RedesignButton::IconCumulative:
+            // The four cases above are exactly redesign_button_mode_companion's
+            // membership (the one spelled list, beside the roster), and SINCE
+            // THE MODE-COLLAPSING ROSTER (2026-08-12) this resting-disabled
+            // answer is painted NOWHERE: outside the view the icon row's walk
+            // COLLAPSES the four (redesign_button_collapsed reads that same
+            // membership), so the arm's remaining work is the comparator's
+            // totality and the in-view frames, where it answers true.
             return a.history_mode.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
@@ -4572,6 +4671,20 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // region is an act that completes, with no state to stay lit for —
         // the window it wrote is the bar's own always-painted display.
         case RedesignButton::IconTrim:
+        // THE ZOOM GROUP AND THE MARKER VERBS ARE MOMENTARY like copy and
+        // paste (2026-08-12): each is an act that completes — a zoom step, a
+        // centering, a drop, a delete — with no state to stay lit for. The
+        // disable toggle deliberately carries no lamp either: it acts on the
+        // SELECTION, whose members' own flags show the state per marker,
+        // and a single lamp could not say which.
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
+        case RedesignButton::IconZoomFitBest:
+        case RedesignButton::IconZoomOriginal:
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -4651,7 +4764,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // say what they do — "Quit" quits, "Settings" and "Navigation" open menus that
 // name themselves — so a hint repeating the label would be noise. Stating it as
 // the ROW's property is what let Navigation inherit the exclusion in 2026-08-02
-// without being remembered. Every button on rows 2, 3 and 4 has one; its icon or
+// without being remembered. Every button on rows 3 and 4 and the bottom row
+// has one; its icon or
 // single letter is not self-describing.
 //
 // The names follow HELP's vocabulary so the hint and the manual agree.
@@ -4720,6 +4834,28 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // one.
         case RedesignButton::IconTrim:
             return {"Set trim from region (x)", nullptr};
+        // THE ZOOM GROUP (2026-08-12), all one-line: names aligned with the
+        // Navigation dropdown's rows for the two they share ("Zoom in" /
+        // "Zoom out"); the accelerators are the table's own convention —
+        // non-letter keys are themselves, a bare letter is lowercase.
+        case RedesignButton::IconZoomIn:
+            return {"Zoom in (=)", nullptr};
+        case RedesignButton::IconZoomOut:
+            return {"Zoom out (-)", nullptr};
+        case RedesignButton::IconZoomFitBest:
+            return {"Full zoom out (0)", nullptr};
+        case RedesignButton::IconZoomOriginal:
+            return {"Center on focus (c)", nullptr};
+        // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
+        // plainly in HELP's vocabulary. None admits shift.
+        case RedesignButton::IconMarkerDrop:
+            return {"Drop marker (s)", nullptr};
+        case RedesignButton::IconMarkerDelete:
+            return {"Delete markers (Delete)", nullptr};
+        case RedesignButton::IconMarkerDisable:
+            return {"Disable markers (Ctrl+D)", nullptr};
+        case RedesignButton::IconMarkerInherit:
+            return {"Toggle inherit (Ctrl+N)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
@@ -4789,57 +4925,70 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     return {nullptr, nullptr};
 }
 
-// ROW 2'S TWO STATEFUL BUTTONS — the ONE row on this whole surface whose text
-// follows STATE rather than being a constant (architect 2026-08-02 for Render,
-// 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). Each is a chord
-// whose MEANING is selected by a mode bit, and the button says whichever command
-// it currently is:
+// THE TOOLBAR PAIR'S STATEFUL FACES — Save's and Render's, the two buttons
+// whose MEANING is selected by a mode bit (architect 2026-08-02 for Render,
+// 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). SINCE THE
+// 2026-08-12 RELAYOUT DISSOLVED ROW 2 the two are ICON buttons and the words
+// live on their TOOLTIPS alone (the stateful overload below; the labeled
+// faces and their four label constants — kRenderIterationsLabel,
+// kSaveCommitLabel "Save and Commit", kSaveCommittingLabel "Committing...",
+// kRenderCancelLabel "Cancel" — are DELETED producer-less with the row's
+// painter; the architect's same-day ruling kept media-record for BOTH of
+// Render's idle meanings, "the context makes it clear", so only the GLYPH
+// SWAPS say state on the row now: Save wears VcsCommit in the history view
+// and while a checkpoint publishes, Render wears DialogCancel mid-render —
+// redesign_button_icon, paint_handler.cpp). The title-case exception record
+// ("Save and Commit", capital S lowercase "and" capital C, architect-spelled
+// 2026-08-04; "Render Iterations", capital I, 2026-08-03) survives on the
+// tooltip strings that still carry the words. Each is a chord
+// whose MEANING is selected by a mode bit, and the button's hint says
+// whichever command it currently is:
 //
-//   SAVE, WITH THE HISTORY MODE STANDING → "Save and Commit", and the vcs-commit
-//   icon with it: Ctrl+S there SAVES the piece beside its source through this
+//   SAVE, WITH THE HISTORY MODE STANDING → the vcs-commit icon and the
+//   "Save and Commit (Ctrl+S)" hint: Ctrl+S there SAVES the piece beside its
+//   source through this
 //   very button's ordinary act and then commits the live state into the projects
 //   repository as a checkpoint (run_history_commit, input_key_dispatch.cpp, owns
-//   the order and the refusal). The label carries both halves because the act
-//   does. IT LIVES ON THIS BUTTON BECAUSE THE ACT IS SAVE-FIRST BY DEFINITION
+//   the order and the refusal). IT LIVES ON THIS BUTTON BECAUSE THE ACT IS
+//   SAVE-FIRST BY DEFINITION
 //   (architect 2026-08-08, correcting the Render hijack it shipped under): a
 //   surface that runs the save first belongs on the save's own slot, and Render
 //   went back to being a render in every mode.
 //
-//   SAVE, WITH A CHECKPOINT PUBLISHING → "Committing...", the same commit icon,
-//   DISABLED, in EVERY view (the act outlives the view it was launched from).
-//   Ranked FIRST of the three because it is the outermost fact: while the worker
+//   SAVE, WITH A CHECKPOINT PUBLISHING → the same commit icon, DISABLED, in
+//   EVERY view (the act outlives the view it was launched from), the hint
+//   "Committing the checkpoint (Ctrl+S)". Ranked FIRST because it is the
+//   outermost fact: while the worker
 //   is writing the three sidecars no save may run at all (GuiSaveOps::save's own
-//   term, whose mirror this face is). Three literal dots, not an ellipsis
-//   character — the product's text is ASCII in every label.
+//   term, whose mirror this face is). Three literal dots died with the label;
+//   the hint spells the act in prose.
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
-//   the queue — never the automatic preview) → "Cancel", the dialog-cancel
-//   glyph,
+//   the queue — never the automatic preview) → the dialog-cancel glyph, the
+//   one-line "Cancel" hint,
 //   and THE ROSTER'S ONE CHORD DIVERGENCE: its click runs the cancel act
 //   itself (architect 2026-08-11 — the ruling, the rank over the iteration
-//   label and the bit are at AppState::render_cancel_face and the divergence
+//   hint and the bit are at AppState::render_cancel_face and the divergence
 //   record at dispatch_redesign_chord's Render arm; Ctrl+Alt+R on the keyboard
 //   keeps its own kill-and-redispatch semantics unchanged).
 //
-//   RENDER, WITH ITERATION MODE ON (and nothing live) → "Render Iterations",
-//   the sweep, and its own
-//   one-line hint. The history mode gives Render NO face of its own any more: in
+//   RENDER, WITH ITERATION MODE ON (and nothing live) → the SAME media-record
+//   glyph (the architect's 2026-08-12 ruling: no second render glyph, "the
+//   context makes it clear") under the one-line "Render Iterations
+//   (Ctrl+Alt+R)" hint — the TOOLTIP alone forks the two idle meanings. The
+//   history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary
-//   label and icon over the derived disabled face.
+//   icon over the derived disabled face — COLLAPSED out of the row entirely
+//   there since the mode-collapsing roster (redesign_button_collapsed).
 //
-// THE TITLE CASE IS DELIBERATE AND SCOPED TO THESE TWO STRINGS (architect
+// THE TITLE CASE IS DELIBERATE AND SCOPED TO THE TWO HINT STRINGS carrying
+// the old labels (architect
 // 2026-08-03 for the capital I, 2026-08-04 for the capital C beside it): every
 // other multi-word GUI label in the product stays sentence case ("Playback
 // speed", "Center on focus", "Next marker") — these two are the named
 // exceptions, not a precedent to copy outward or "fix". The joining word stays
 // LOWERCASE ("and"), which is what title case means and what the architect
-// spelled. (The prompt that used to ask about the act was PROSE and took the
-// ordinary sentence case; it is gone — the act asks for its commit MESSAGE now,
-// through an editor whose prefix is the plain "Commit: " label — so the title
-// case here is the button's alone.)
-//
-// "COMMITTING..." NEEDS NO EXCEPTION OF ITS OWN: it is one word, so sentence
-// case and title case spell it identically.
+// spelled.
 //
 // RENDER'S SHIFT LINE GOES WITH ITS ITERATION FACE, and that is the same fact
 // rather than a second decision: Ctrl+Alt+Shift+R is a consumed no-op in
@@ -4847,33 +4996,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // so advertising a shift press there would advertise nothing. The rule the
 // static_assert below states — the hint exists exactly where a shift press does
 // something — therefore holds on this form too, not only on the constant table
-// it overrides. In the HISTORY VIEW the whole button is dead, hint included in
-// the sense that it describes what the button does where it works — its two-line
-// constant form, the resting-disabled family's own answer.
-//
-// ALL THREE STRINGS LIVE HERE, beside the constant table, so the label a button
-// paints and the name its hint gives cannot drift into two different words.
-inline constexpr const char* kRenderIterationsLabel = "Render Iterations";
-inline constexpr const char* kSaveCommitLabel       = "Save and Commit";
-inline constexpr const char* kSaveCommittingLabel   = "Committing...";
-// RENDER'S MID-RENDER FACE (architect 2026-08-11): while an EXPLICIT render
-// act is live (render_cancel_face — the narrowing and its rationale are at
-// that bit) the button reads "Cancel" — sentence case, the ordinary
-// convention, one word — wears Icon::DialogCancel, and ITS CLICK CANCELS (the
-// divergence from its chord is the ruled exception recorded at
-// dispatch_redesign_chord's Render arm). RANKED ABOVE THE ITERATION LABEL
-// wherever both could apply: "Render Iterations" names what a press would
-// START, and while one is LIVE a press starts nothing — it cancels — so the
-// in-flight face is the outer truth exactly as Save's "Committing..." outranks
-// its view label.
-inline constexpr const char* kRenderCancelLabel     = "Cancel";
+// it overrides.
 // ROW 3'S TWO WALK-SELECTOR WORDS, while the `h` view stands and the tabs
 // select the walk instead of being the A/B pair (architect 2026-08-05 for the
 // repurposing, 2026-08-08 for what the words say). Sentence case, the ordinary
-// convention: these are ordinary labels and not row 2's two named title-case
-// exceptions. They live beside the toolbar trio for the same reason that trio
-// lives beside the constant table — one place where a stateful button's word is
-// written.
+// convention: these are ordinary labels and not the two named title-case
+// exceptions. THE ROSTER'S ONLY LABEL CONSTANTS since the 2026-08-12 relayout
+// deleted row 2's labeled faces (redesign_button_label serves the tab row
+// alone now).
 //
 // TWO WORDS, ONE AXIS: "Remote" is the committed checkpoint walk and "Local"
 // the session's own undo/redo timeline. The words are the SURFACE's, not the
@@ -4947,20 +5077,19 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 }
 
 // A BUTTON'S LABEL, by the same bits and for the same reason. The constant
-// per-button labels live with the painters' roster halves (kToolbarButtons and
-// kTabs, paint_handler.cpp); this answers only "does this button override its
-// own", which FOUR now do — the SAVE button on two bits (a publishing
-// checkpoint, then the history view), the Render button on the iteration bit,
-// and row 3's two tabs on the history view's. LABEL MEMBERSHIP IS UNCHANGED by
-// any override: a button with a label keeps one in every mode. (The TOOLTIP
-// override's membership does move, once: the walk-selector tabs drop theirs, on
-// the view bar's own reasoning — the sibling function above states it.)
+// per-button labels live with the painter's roster half (kTabs,
+// paint_handler.cpp); this answers only "does this button override its
+// own", which TWO now do — row 3's tabs on the history view's bit. THE
+// TOOLBAR PAIR'S LABEL ARMS ARE DELETED PRODUCER-LESS (2026-08-12, the
+// relayout): with row 2's labeled painter gone no label is painted for Save
+// or Render in any state — their stateful words are the TOOLTIP overload's
+// above, their stateful faces the GLYPH swaps (redesign_button_icon).
 inline const char* redesign_button_label(const AppState& a, RedesignButton b,
                                          const char* table_label) {
     // THE TABS ARE THE WALK SELECTOR IN THE `h` VIEW, so they say which walk
     // they select rather than which tab they are; the READING is row 4's
     // Cumulative toggle since 2026-08-08 and has no label on this row at all.
-    // The shaped-run layout each painter does absorbs the width change (both
+    // The shaped-run layout the tab painter does absorbs the width change (both
     // words are wider than "A"/"B", and the tab's width has always been
     // max(minimum, shaped + 2*pad)). The order is the enum's, which is the
     // painted one, and the same one the press claim and the Ctrl+Tab cycle
@@ -4968,25 +5097,6 @@ inline const char* redesign_button_label(const AppState& a, RedesignButton b,
     if (a.history_mode.active) {
         if (b == RedesignButton::TabA) return kCompareRemoteLabel;
         if (b == RedesignButton::TabB) return kCompareLocalLabel;
-    }
-    // THE SAVE BUTTON'S THREE STATES, ranked outermost first: a publishing
-    // checkpoint (global — the act outlives the view), then the view itself,
-    // then the plain save from the table.
-    if (b == RedesignButton::Save && a.history_checkpoint_in_flight) {
-        return kSaveCommittingLabel;
-    }
-    if (b == RedesignButton::Save && a.history_mode.active) {
-        return kSaveCommitLabel;
-    }
-    // RENDER'S TWO STATES, in-flight first (the rank rule is at
-    // kRenderCancelLabel): a live render makes the button the CANCEL act, in
-    // iteration mode as out of it; idle, the iteration bit picks the sweep
-    // label as before.
-    if (b == RedesignButton::Render && a.render_cancel_face) {
-        return kRenderCancelLabel;
-    }
-    if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        return kRenderIterationsLabel;
     }
     return table_label;
 }
@@ -5019,7 +5129,7 @@ static_assert(
 //
 // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON HOVERS UNDER IT. A lit
 // button beside an open menu would advertise a click the popup is about to
-// swallow (rows 2, 3 and 4, which it floats over) or a second lit button in a row
+// swallow (rows 3 and 4, which it floats over) or a second lit button in a row
 // that shows one at a time (row 1) — and a HINT under an open menu is the
 // two-floating-surfaces rule, which this same term is what makes structural.
 //

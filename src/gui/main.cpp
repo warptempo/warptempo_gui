@@ -121,9 +121,10 @@ namespace {
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
 // flexes between them UP TO A CLAMP (the vertical rule below). The TOP strip
-// is SEVEN lanes (from the window edge
-// inward): MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
-// redesign), TOOLBAR ROW (its own authored toolbar_row_h_px(), row 2 of the
+// is SIX lanes since the 2026-08-12 grand relayout deleted the TOOLBAR ROW
+// (row 2 of the redesign, toolbar_row_h_px() — its Save / Undo / Redo /
+// Render dissolved into the icon row's first group) — from the window edge
+// inward: MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
 // own authored icon_row_h_px(), row 4), then row 5's three: the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
@@ -137,12 +138,14 @@ namespace {
 // HEAD on the lane's bottom rows — the head moved down out of the ruler at the
 // row-5 live test, though the ruler painter still draws it, needing the tick
 // columns), whose bottom edge is the
-// waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
+// waveform top. ALL SIX ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is TWO lanes since the
 // OVERVIEW STRIP landed (architect-ratified 2026-08-12, the same day's ROW
 // UNIFICATION having merged rows 8 and 9 into one): THE
-// UNIFIED BOTTOM ROW, bottom_row_h_px() tall — the transport/arrow buttons at
-// the icon row's boxes, the clock centered, the status chain right-aligned,
+// UNIFIED BOTTOM ROW, bottom_row_h_px() tall — the transport four at the left
+// pad and the arrow four flush right (the relayout's rearrangement), all at
+// the icon row's boxes, the clock centered, the status chain right-aligned
+// against the arrows,
 // directly under the waveform — and under it THE OVERVIEW STRIP, the
 // whole-song lane whose height is the clamped leftover (the vertical rule
 // below). (The strip was one lane from row 7's collapse,
@@ -155,8 +158,9 @@ namespace {
 // the seventh glass ruling; kWaveformMaxHeightPx, render.h, carries the value
 // and its bracket; the ROW UNIFICATION later the same day moved the flexible
 // space to the WINDOW BOTTOM — "the icons, all the tools, they should be
-// close to the waveform"): the window stacks as rows 1-4 (menu / toolbar /
-// tabs / icons) — rows 5-7 (trim bar / ruler / marker lane, attached) — the
+// close to the waveform"): the window stacks as rows 1, 3 and 4 (menu /
+// tabs / icons — the toolbar row deleted at the relayout) — rows 5-7 (trim
+// bar / ruler / marker lane, attached) — the
 // WAVEFORM (its natural leftover height, CLAMPED at the maximum) — THE
 // UNIFIED BOTTOM ROW — THE OVERVIEW STRIP (the whole-song lane, ratified the
 // same day as the unification's filler for the freed space) — BLANK WINDOW
@@ -205,7 +209,8 @@ namespace {
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head on the
-// MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|toolbar, toolbar|tab,
+// MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|tab
+// since the 2026-08-12 relayout deleted the toolbar lane between them,
 // tab|icon, icon|trim (a flexible-gap band for the seventh ruling's first
 // hours; tight again since the row unification moved the flexible space to
 // the window bottom), trim|ruler, ruler|marker, and both outer
@@ -228,35 +233,42 @@ static void clamp_dims(int& w, int& h) {
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
 // LANE IN BOTH STRIPS is now an authored crop-measured constant on the GUI-SCALE
-// axis (menu_row_h_px(), toolbar_row_h_px(), tab_row_h_px(), icon_row_h_px(),
+// axis (menu_row_h_px(), tab_row_h_px(), icon_row_h_px(),
 // row 5's trio, and — since row 7 — bottom_row_h_px()); no lane sizes from a
 // font metric any more. The two-axes ruling and what became of the font axis are
 // at those accessors' declarations in render.h.
 //
-// The toolbar, tab and icon lanes INCLUDE their 1px border-bottom, and the
+// The tab and icon lanes INCLUDE their 1px border-bottom, and the
 // UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side, its only border
 // (the CSS box model: the architect's stated content height excludes its
 // borders, and the lane owns every pixel it paints). The OVERVIEW lane below it
 // is border-free.
-constexpr int kTopLaneCount    = 7;
+constexpr int kTopLaneCount    = 6;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
+        // (THE TOOLBAR ROW — top lane 1, the labeled Save/Undo/Redo/Render
+        // lane — WAS DELETED 2026-08-12, the grand relayout's roster commit:
+        // its four buttons are the icon row's first group now, so
+        // kTopLaneCount fell 7 -> 6 and every lane below the menu row
+        // renumbered -1. The top strip shrank by the lane's 45 at 100%, and
+        // the waveform/overview arithmetic re-derives through this table with
+        // no second site — the current numbers are at kWaveformMaxHeightPx,
+        // render.h.)
         case 0: return menu_row_h_px();          // menu row (proportional text)
-        case 1: return toolbar_row_h_px();       // toolbar row (+ border-bottom)
-        case 2: return tab_row_h_px();           // tab row (+ border-bottom)
-        case 3: return icon_row_h_px();          // icon row (+ border-bottom)
+        case 1: return tab_row_h_px();           // tab row (+ border-bottom)
+        case 2: return icon_row_h_px();          // icon row (+ border-bottom)
         // ROW 5 REPLACED THE FOUR LEGACY LANES WITH THREE (2026-08-01). The old
         // trim-chip / marker-text / flag / triangle stack is gone: the chips
         // became the trim BAR, the marker-text lane died with its occlusion
         // resolver, and the flag+triangle pair became ONE marker lane carrying
         // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
-        // from their own crop-measured constants, like lanes 0-3 — so the LAST
+        // from their own crop-measured constants, like lanes 0-2 — so the LAST
         // font-scaled lane in the top strip went with them.
-        case 4: return trim_lane_h_px();         // trim bar + endcaps
-        case 5: return ruler_lane_h_px();        // timestamps / ticks / nav band
+        case 3: return trim_lane_h_px();         // trim bar + endcaps
+        case 4: return ruler_lane_h_px();        // timestamps / ticks / nav band
         // Flags, stems and the playhead head; bottom edge = waveform top.
-        case 6: return marker_lane_h_px();
+        case 5: return marker_lane_h_px();
         default: return 0;
     }
 }
@@ -449,8 +461,8 @@ GuiRect waveform_area(const AppState& a) {
 // downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
-// 5 and the marker lane lane 6), and hit_test_trim_endcap / the pair-drag y-gate
+// Paint/hit agreement invariant: the TRIM BAR is TOP lane 3 (the ruler is lane
+// 4 and the marker lane lane 5), and hit_test_trim_endcap / the pair-drag y-gate
 // read top_trim_row_area(app) — the exact band render_trim_flags paints the
 // lane ground, the window's bar and its two endcaps in, because the PAINTER is
 // handed that band as a parameter (GuiPaintHandler::paint_trim passes
@@ -483,17 +495,18 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
 // ground carrying the left float's Quit/Settings and the right float's view
-// bar, plus its own 1px margin-bottom); lane 1 is the TOOLBAR row (the flat
-// ground carrying the Save / Undo / Redo / Render buttons, its separators and its
-// border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
-// its border-bottom); lane 3 is the ICON row (the seventeen view/mode/action
-// buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
+// bar, plus its own 1px margin-bottom); lane 1 is the TAB row (the "A" / "B"
+// Breeze tabs and
+// its border-bottom); lane 2 is the ICON row (the twenty-nine view/mode/action
+// buttons — the deleted toolbar row's four lead them since the 2026-08-12
+// relayout, whose roster commit removed that lane and renumbered these —
+// and its border-bottom); lane 3 is the TRIM lane (the bar, its
 // endcaps, every trim gesture the b/e chips used to carry, and the span-framing
 // double-click — the one lane that also rides kTrimBarScalePercent, resting at
 // 100 since the seventh glass ruling, through this same
-// accumulation); lane 5 is the RULER lane (the timestamp ladder; its plain
+// accumulation); lane 4 is the RULER lane (the timestamp ladder; its plain
 // drag draws the REGION since 2026-08-12, the zoom entry deleted for good);
-// lane 6 is the MARKER lane (the flags, their stems — pointer-inert since the
+// lane 5 is the MARKER lane (the flags, their stems — pointer-inert since the
 // seventh glass ruling — and the
 // playhead's aliased head on the lane's bottom rows), whose bottom edge is
 // flush with the waveform area top. (The trim and ruler lanes were ONE merged
@@ -503,28 +516,24 @@ GuiRect top_menu_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
 
-GuiRect top_toolbar_row_area(const AppState& a) {
+GuiRect top_tab_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 1);
 }
 
-GuiRect top_tab_row_area(const AppState& a) {
+GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 2);
 }
 
-GuiRect top_icon_row_area(const AppState& a) {
+GuiRect top_trim_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 3);
 }
 
-GuiRect top_trim_row_area(const AppState& a) {
+GuiRect top_ruler_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 4);
 }
 
-GuiRect top_ruler_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, 5);
-}
-
 GuiRect top_marker_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, 6);
+    return strip_row_rect(a, /*top_strip=*/true, 5);
 }
 
 // THE BOTTOM STRIP IS TWO LANES — THE UNIFIED BOTTOM ROW (bottom lane 1;
@@ -836,26 +845,37 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// THE STATUS CELL'S RECT — the unified bottom row's RIGHT PORTION, from the
-// clock's reserved cell to the lane's right edge, the span the right-aligned
+// THE STATUS CELL'S RECT — the unified bottom row's middle-right span, from
+// the clock's reserved cell to the ARROW CLUSTER's left edge (the four
+// cardinal arrows sit flush at the lane's right margin since the 2026-08-12
+// relayout), the span the right-aligned
 // status chain (the critical chip + section C) paints in. The chain never
-// paints left of the clock cell (the painter's collision rule at
+// paints left of the clock cell or right of the arrows (the painter's
+// collision rule at
 // paint_bottom_strip), so this rect covers every pixel a status-string write
-// can move; the buttons on the row's left damage themselves through their own
+// can move; the buttons at both margins damage themselves through their own
 // face writers, and a clock advance takes the cell below instead (the two
-// cells' owners are contrasted at the declaration, app_state.h).
+// cells' owners are contrasted at the declaration, app_state.h). The right
+// boundary is the painter's own TransportLeft stash — the same publication
+// the chain's clip reads — so cell and paint cannot drift.
 // (The dirty flag is not a sharer either: it lives in the window title, which
 // the compositor repaints, so a dirty transition damages nothing of ours.)
 //
 // BEFORE THE ROW'S FIRST PAINT the clock stash is zero and the answer is the
 // WHOLE lane — the honest widening, and unreachable in practice: the first
-// frame damages the window entire.
+// frame damages the window entire (the arrow stash starts zero too, and its
+// fallback is the lane's right edge for the same reason).
 GuiRect status_row_invalidate_rect(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
     const GuiRect cell = a.clock_cell_rect;
     if (cell.w <= 0 || cell.h <= 0) return lane;
     const int x0 = cell.x + cell.w;
-    return GuiRect{x0, lane.y, lane.x + lane.w - x0, lane.h};
+    const GuiRect arrows = a.redesign_buttons[
+        redesign_button_index(RedesignButton::TransportLeft)].rect;
+    const int x1 = (arrows.w > 0 && arrows.h > 0) ? arrows.x
+                                                  : lane.x + lane.w;
+    if (x1 <= x0) return lane;   // degenerate stash order: the honest widening
+    return GuiRect{x0, lane.y, x1 - x0, lane.h};
 }
 
 // THE CLOCK'S RECT — the unified bottom row's reserved centre cell as the

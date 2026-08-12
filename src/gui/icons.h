@@ -42,17 +42,26 @@ namespace icons {
 
 // The icon set, one entry per committed SVG.
 enum class Icon {
-    // Row 2, the toolbar.
+    // The toolbar four — Save / Undo / Redo / Render. Transcribed for row 2
+    // (the labeled toolbar row, 2026-07-31) and SURVIVING ITS DELETION whole
+    // (2026-08-12, the grand relayout's roster commit): the four buttons moved
+    // into the icon row as its first group, wearing these same glyphs at the
+    // row's 22px box. MediaRecord serves BOTH the plain render and the
+    // iteration sweep by the architect's same-day ruling ("the context makes
+    // it clear" — the tooltip alone forks); the mid-render Cancel face is
+    // DialogCancel below.
     DocumentSave,        // Save
     EditUndo,            // Undo
     EditRedo,            // Redo
     MediaRecord,         // Render
     // SAVE's OTHER face: while the history mode stands, Ctrl+S saves and then
-    // commits the checkpoint, so the button wears the commit icon and the
-    // "Save and Commit" label — and keeps both while the checkpoint publishes,
-    // under "Committing..." (the swap's owner is redesign_button_label /
-    // redesign_button_icon; the mode is AppState::HistoryMode). It was RENDER's
-    // second face until 2026-08-08, when the act moved onto the save chord.
+    // commits the checkpoint, so the button wears the commit icon — and keeps
+    // it while the checkpoint publishes (the swap's owner is
+    // redesign_button_icon, its hint the tooltip override's "Save and Commit"
+    // / "Committing the checkpoint"; the mode is AppState::HistoryMode). It
+    // was RENDER's second face until 2026-08-08, when the act moved onto the
+    // save chord; the WORDS moved off the button whole when row 2's labeled
+    // faces died at the 2026-08-12 relayout — the glyph swap says it now.
     VcsCommit,           // Save, in the history view and while publishing
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
@@ -90,6 +99,32 @@ enum class Icon {
     // `.ColorScheme-Text` path of m/c/l/z commands, inside the interpreter's
     // coverage.
     EditCut,             // Set trim from region (bare `x`)
+    // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
+    // roster commit — the icon row's zoom group after the trim scissors).
+    // Breeze's own magnifier family, one construction four ways: the bare
+    // magnifier with a plus (zoom in), a minus (zoom out), the fit frame
+    // (full zoom out — bare `0`'s whole-song arm), and the 1:1 original
+    // (working-zoom center, bare `c`). The 2026-08-01 ZoomOut/ZoomIn pair was
+    // deleted with its buttons under the no-duplicate-commands ruling of
+    // 2026-08-02; the architect's 2026-08-12 relayout ruling supersedes that
+    // for these four (the roster's record at kIconRowButtons), so the two
+    // magnifiers return as fresh transcriptions beside two new siblings.
+    ZoomIn,              // Zoom in (bare `=`)
+    ZoomOut,             // Zoom out (bare `-`)
+    ZoomFitBest,         // Full zoom out / overview (bare `0`)
+    ZoomOriginal,        // Working-zoom center (bare `c`)
+    // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
+    // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
+    // the delete (`Delete` — the resolved-color entry, like media-record's
+    // red), view-hidden for the disable toggle (`Ctrl+D` — the crossed-out
+    // eye), and insert-link for the inherit/collapse (`Ctrl+N` — a pass
+    // marker LINKS its tempo to its neighbor). view-hidden is transcribed
+    // VERBATIM, its degenerate artifact subpath included (the architect ruled
+    // the artifact fine; the record is at the table entry).
+    ListAdd,             // Drop marker (bare `s`)
+    ListRemove,          // Delete markers (`Delete`)
+    ViewHidden,          // Disable markers (`Ctrl+D`)
+    InsertLink,          // Inherit tempo (`Ctrl+N`)
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
@@ -164,7 +199,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 33;
+// 41 since 2026-08-12 (the grand relayout's roster commit): 33 + the zoom
+// group's four (zoom-in / zoom-out / zoom-fit-best / zoom-original) + the
+// single-marker verbs' four (list-add / list-remove / view-hidden /
+// insert-link). 33 was 32 + edit-cut (2026-08-11, the trim surface arc).
+inline constexpr int kIconCount = 41;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

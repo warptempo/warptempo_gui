@@ -617,6 +617,127 @@ constexpr IconPath kEditCutPaths[] = {
      "-1.5"},
 };
 
+// -- THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
+// roster commit) -------------------------------------------------------------
+//
+// Breeze's magnifier family, transcribed byte-verbatim from breeze-dark's
+// actions/22/: zoom-in, zoom-out, zoom-fit-best and zoom-original share one
+// magnifier construction (the 8/7 double circle ring — media-record's nonzero
+// hole idiom — plus the handle's rounded 1x1 arc stub) and differ in the
+// dial's content: a plus, a minus, the fit frame, and the 1:1 corner-arrow
+// dial. All four are single `.ColorScheme-Text` paths resolving to #fcfcfc,
+// relative m/l/h/v with `a` arcs, glued negative-after-flag arc arguments
+// ("0 0-8 8" — a flag is one digit, media-record's own producer form) and
+// implicit repetition; every family has a committed producer already, so
+// nothing here asked the interpreter for anything new. (ZoomOut and ZoomIn
+// existed 2026-08-01..02 as different transcriptions and were deleted WHOLE
+// with their buttons; these are fresh copies of today's files, not revivals.)
+
+constexpr IconPath kZoomInPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
+     "7-7zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
+};
+
+constexpr IconPath kZoomOutPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
+     "7-7zm-4 6v2h8v-2h-8z"},
+};
+
+constexpr IconPath kZoomFitBestPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
+     "7-7zm-4 3v1 6 1h8v-1-6-1h-8zm1 1h6v6h-6v-6z"},
+};
+
+constexpr IconPath kZoomOriginalPaths[] = {
+    {kIconText,
+     "m3 3v6h0.2695312 1.0332032 4.6972656l-2.9394531-2.9394531a7 7 0 0 1 "
+     "4.9394531-2.0605469 7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 "
+     "1-7-7h-1a8 8 0 0 0 8 8 8 8 0 0 0 4.892578-1.693359l3.400391 "
+     "3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8 8 8 0 0 0-5.6347656 2.3652344l-2.3652344-2.3652344z"},
+};
+
+// -- THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
+// sheets) ---------------------------------------------------------------------
+//
+// list-add (the plus — drop a marker), list-remove (the X — delete),
+// view-hidden (the crossed-out eye — the disable toggle) and insert-link (the
+// chain — a pass marker LINKS its tempo to its neighbor, Ctrl+N's
+// inherit/collapse). Transcribed byte-verbatim like every entry above.
+//
+// LIST-REMOVE IS THE SET'S SECOND RESOLVED-COLOR RED: its one path is
+// `.ColorScheme-NegativeText { color: #da4453 }` under fill="currentColor" —
+// kIconNegativeText below is THE VALUE THAT FILE RESOLVES TO, recorded like
+// media-record's own literal #da4453, with which it coincides by shared
+// Breeze ancestry and by nothing else (two constants, deliberately not
+// aliased, exactly as kIconAccent is not kRedesignAccent). Command coverage:
+// absolute M/L with one absolute C (the outline's corner easing) and z.
+//
+// VIEW-HIDDEN IS TRANSCRIBED VERBATIM, ARTIFACT AND ALL (architect-ruled
+// 2026-08-12, at the pick): the file's last subpath — "M 1 13 C 0.33333333 19
+// 0.66666667 16 1 13 z" — is a degenerate editing artifact whose fill covers
+// (next to) nothing, and the architect ruled the verbatim copy fine rather
+// than editing Breeze's file by hand, which would have broken the
+// diff-is-a-transcription-bug property. Coverage: absolute M/L/A/C/Z, every
+// family with a committed producer.
+
+constexpr GuiColor kIconNegativeText = hex(0xDA4453);
+
+constexpr IconPath kListAddPaths[] = {
+    {kIconText,
+     "M 10 4 L 10 11 L 3 11 L 3 12 L 10 12 L 10 19 L 11 19 L 11 12 L 18 12 "
+     "L 18 11 L 11 11 L 11 4 L 10 4 z "},
+};
+
+constexpr IconPath kListRemovePaths[] = {
+    {kIconNegativeText,
+     "M 3.6992188 3 L 3 3.6992188 L 10.300781 11 L 3 18.300781 C 3 "
+     "18.300781 3.7112147 18.993333 3.6992188 19 L 11 11.699219 L 18.300781 "
+     "19 C 18.288781 18.9933 19 18.300781 19 18.300781 L 11.699219 "
+     "11.001953 L 19 3.6992188 L 18.300781 3 L 11 10.300781 L 3.6992188 3 z "},
+};
+
+constexpr IconPath kViewHiddenPaths[] = {
+    {kIconText,
+     "M 18.292969 3 L 3 18.292969 L 3.7070312 19 L 19 3.7070312 L 18.292969 "
+     "3 z M 11 6 A 10 9.9999781 0 0 0 2.2871094 11.119141 C 2.4663699 "
+     "11.420241 2.7209984 11.668644 3.0273438 11.839844 A 9 8.99998 0 0 1 "
+     "11 7 A 4 4 0 0 0 7 11 A 4 4 0 0 0 7.3574219 12.642578 L 8.1308594 "
+     "11.869141 A 3 3 0 0 1 8 11 A 3 3 0 0 1 11 8 A 3 3 0 0 1 11.869141 "
+     "8.1308594 L 12.640625 7.359375 A 4 4 0 0 0 11.34375 7.0175781 A 9 "
+     "8.99998 0 0 1 12.796875 7.203125 L 13.640625 6.359375 A 10 9.9999781 "
+     "0 0 0 11 6 z M 16.404297 7.5957031 L 15.675781 8.3242188 A 9 8.99998 "
+     "0 0 1 18.974609 11.837891 C 19.282742 11.665091 19.539718 11.415428 "
+     "19.71875 11.111328 A 10 9.9999781 0 0 0 16.404297 7.5957031 z M 11 9 "
+     "A 2 2 0 0 0 9 11 L 11 9 z M 14.642578 9.3574219 L 13.869141 "
+     "10.130859 A 3 3 0 0 1 14 11 A 3 3 0 0 1 11 14 A 3 3 0 0 1 10.130859 "
+     "13.869141 L 9.3574219 14.642578 A 4 4 0 0 0 11 15 A 4 4 0 0 0 15 11 "
+     "A 4 4 0 0 0 14.642578 9.3574219 z M 13 11 L 11 13 A 2 2 0 0 0 13 11 "
+     "z M 1 13 C 0.33333333 19 0.66666667 16 1 13 z "},
+};
+
+constexpr IconPath kInsertLinkPaths[] = {
+    {kIconText,
+     "M 6 3 L 6 5 L 3 5 L 3 6 L 6 6 L 6 8 L 10 8 L 10 7 L 7 7 L 7 4 L 10 4 "
+     "L 10 3 L 6 3 z M 12 3 L 12 4 L 15 4 L 15 7 L 12 7 L 12 8 L 16 8 L 16 "
+     "6 L 19 6 L 19 5 L 16 5 L 16 3 L 12 3 z M 10 5 L 10 6 L 12 6 L 12 5 L "
+     "10 5 z M 16 14 L 16 16 L 14 16 L 14 17 L 16 17 L 16 19 L 17 19 L 17 "
+     "17 L 19 17 L 19 16 L 17 16 L 17 14 L 16 14 z "},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -650,6 +771,14 @@ constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
 constexpr IconDef kEditCut            {22.0, kEditCutPaths,             1};
+constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
+constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
+constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
+constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
+constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
+constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
+constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
+constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -685,6 +814,14 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
         case Icon::EditCut:             return kEditCut;
+        case Icon::ZoomIn:              return kZoomIn;
+        case Icon::ZoomOut:             return kZoomOut;
+        case Icon::ZoomFitBest:         return kZoomFitBest;
+        case Icon::ZoomOriginal:        return kZoomOriginal;
+        case Icon::ListAdd:             return kListAdd;
+        case Icon::ListRemove:          return kListRemove;
+        case Icon::ViewHidden:          return kViewHidden;
+        case Icon::InsertLink:          return kInsertLink;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;
