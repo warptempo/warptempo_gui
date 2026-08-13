@@ -86,27 +86,23 @@ void Viewport::invalidate_waveform_area() {
 void Viewport::invalidate_status_row_area() {
     const GuiRect t = status_row_invalidate_rect(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
-    // THE MODAL DIALOG RIDES THIS OWNER (2026-08-12; the dialog is its own
-    // labwc WINDOW since that evening, so the ride is a ping of the dialog
-    // SURFACE rather than a stashed in-window box rect). The four modal
+    // THE MODAL DIALOG RIDES THIS OWNER (2026-08-12): while a dialog stands,
+    // the row's damage carries the dialog's stashed box too. The four modal
     // editors' every repaint site — typing, the caret blink, the red flash,
-    // the commit/abandon closers — already speaks
-    // this call from their bottom-strip tenancy, and the editors paint in
-    // the dialog window now; ONE rider here keeps every one of them honest
-    // instead of re-classifying dozens of sites per surface (a drift-prone
-    // sort with nothing bought — a redundant repaint of a small window on a
-    // status-string write while a dialog is up is a cheap union). With no
-    // dialog window standing invalidate_dialog is a no-op, so this is a dead
-    // test then. The in-window era's closer-erases-the-box duty is gone with
-    // the box: the main window never hosts dialog pixels, and the window's
-    // teardown is the lifecycle sync's (main.cpp).
-    invalidate_dialog();
-}
-
-void Viewport::invalidate_dialog() {
-    // The dialog window's whole-window damage (contract at the declaration);
-    // the platform no-ops when no dialog surface stands.
-    gui.invalidate_dialog();
+    // the commit/abandon closers, the F2.1 caret and drag — already speaks
+    // this call from their bottom-strip tenancy, and the editors paint in the
+    // centered box now; ONE rider here keeps every one of them honest instead
+    // of re-classifying dozens of sites per surface (a drift-prone sort with
+    // nothing bought — an extra box-sized rect on a status-string write while
+    // a dialog is up is a cheap union). With no dialog stashed this is a dead
+    // test. The stash is the PAINTER's (paint_modal_dialog), so a closer that
+    // runs between paints still damages the box the last frame drew, which is
+    // exactly the erase it owes; the OPENERS cannot ride it (no box exists
+    // before the first paint) and invalidate the whole window instead.
+    if (app.modal_dialog.valid) {
+        const GuiRect& d = app.modal_dialog.box;
+        gui.invalidate_region(d.x, d.y, d.w, d.h);
+    }
 }
 
 void Viewport::invalidate_clock_area() {

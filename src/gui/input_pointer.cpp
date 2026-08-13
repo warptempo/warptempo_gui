@@ -293,22 +293,47 @@ static_assert(std::size(kToolbarChords) + 2 ==
               "kToolbarChords must cover every RedesignButton except the "
               "Settings and Navigation anchors");
 
-// (THE VEIL'S REACH-THROUGH IS DELETED — 2026-08-12 evening, with the modal
-// dialog's move to its own labwc window. The SUCCESSION, recorded once here
-// where both predicates lived: the MODAL-TRAP FIX of 2026-08-11 —
-// modal_editor_admits_command_chord, the editors' Esc/Ctrl+S/Ctrl+Q command
-// admission restated for the pointer, and modal_veil_admits_button, the
-// roster answer derived from it through the chord table — existed because
-// the IN-WINDOW dialog could trap a keyboardless glass user: an accidental
-// settings editor with no physical keyboard was an exit-less state, so the
-// Quit and Save buttons were lifted over the veil. A REAL WINDOW cannot
-// trap — the dialog's own buttons are always reachable and its WM close
-// button is the session's Esc — so the reach-through's reason is gone and
-// the veil is TOTAL: under any dialog, every main-window press, motion,
-// wheel and key is consumed (the keys at the platform's focus fork,
-// deliver_key). The keyboard contract itself is untouched — dialog-focused
-// Ctrl+S and Ctrl+Q still act through route_modal_editor_key — so only the
-// main-window POINTER lift died, and one day old.)
+// THE MODAL EDITORS' COMMAND-CHORD ADMISSION, read without the act — the
+// modal-trap fix's membership test (architect 2026-08-11, from the road: an
+// accidental settings editor on GLASS, with no physical keyboard, was an
+// EXIT-LESS STATE — the Quit button did nothing). The five editors' one modal
+// contract admits exactly the editor's own keys plus bare Esc, Ctrl+S and
+// Ctrl+Q (route_modal_editor_key / modal_editor_key_blocked,
+// input_key_dispatch.cpp); this predicate is that contract's COMMAND tail —
+// the chords that are commands rather than editor keys — spelled once so the
+// roster's modal press claim can DERIVE its membership from the admission
+// instead of hand-listing buttons. The two must move together: a chord added
+// to the editors' admission belongs here in the same edit. Bare Esc is in the
+// set because the contract admits it (the cancel); no roster button carries it
+// today (row 8's Esc button died the day it shipped), so the Esc arm is the
+// derivation's completeness, not a live consumer.
+bool modal_editor_admits_command_chord(GuiKey key, bool ctrl, bool shift,
+                                       bool alt) {
+    if (key == GuiKeys::Escape && !ctrl && !shift && !alt) return true;
+    if (key == GuiKeys::S && ctrl && !shift && !alt) return true;
+    if (key == GuiKeys::Q && ctrl && !shift && !alt) return true;
+    return false;
+}
+
+// THE VEIL'S ROSTER ANSWER (2026-08-12, the modal dialog arc): while an
+// EDITOR dialog stands, the window behind is inert to the pointer — so the
+// roster hover walk refuses every button EXCEPT the ones whose chord the
+// editors' modal contract admits as a command, i.e. exactly the buttons the
+// modal-trap press block above still dispatches (Quit and Save today). The
+// membership is DERIVED from the admission through the chord table, never
+// hand-listed — the modal-trap block's own rule — so the hover face and the
+// press reach cannot drift apart. The two menu ANCHORS carry no chord and
+// resolve false. Under a PROMPT the caller refuses the whole roster (a prompt
+// admits no command chord at all — its keyboard swallows everything but its
+// own responses), so this predicate is the editor-dialog half only.
+static bool modal_veil_admits_button(RedesignButton id) {
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (tc.id == id)
+            return modal_editor_admits_command_chord(tc.key, tc.ctrl,
+                                                     tc.shift, tc.alt);
+    }
+    return false;
+}
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
 // painter's stash and nothing here re-shapes or re-measures, so the clickable
@@ -387,7 +412,7 @@ struct ActiveEditorText {
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
     // true = one of the four DIALOG editors (settings / load / commit-title /
-    // BPM, painting in the modal dialog since 2026-08-12 — the field
+    // BPM, painting in the centered modal dialog since 2026-08-12 — the field
     // was `bottom_strip` while they lived on the status lane); false = the
     // top-strip flag editor. Selects the claim region and the repaint owner.
     bool                dialog       = false;
@@ -397,7 +422,7 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
     // THE FOUR DIALOG EDITORS share ONE publication — only one of them is
-    // ever open, and the dialog painter (on_dialog_redraw) fills it from whichever editor it
+    // ever open, and paint_modal_dialog fills it from whichever editor it
     // actually painted. An invalid publication (nothing painted yet, or an
     // editor the dialog's precedence hides — a prompt is up) leaves this
     // invalid, exactly as the flag
@@ -1033,12 +1058,11 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 // re-read out of on_button_press rather than remembered, and each applying to
 // EVERY kind (this is what makes the cues hover-only — with the trim gesture's
 // one named exception, stated at its arm):
-//   1. the prompt's veil (the top of the handler — the dialog is its own
-//      WINDOW since 2026-08-12 evening, so a main-window press reaches
-//      nothing at all);
-//   2. the four DIALOG modal editors' veil, which consumes every main-window
-//      press whole (the dialog's field and buttons live on the dialog
-//      surface) — the shared predicate is modal_dialog_editor_active;
+//   1. the prompt's veil (the top of the handler — its dialog buttons are the
+//      one thing a press can reach, and a button carries no cursor cue);
+//   2. the four DIALOG modal editors' veil, which consumes every press
+//      outside the dialog's own field and buttons — the
+//      shared predicate is modal_dialog_editor_active;
 //   3. the open dropdown, which owns the pointer and consumes every press over
 //      the pixels it floats above;
 //   4. the loading / empty-audio return, above the whole waveform band. The four
@@ -1884,20 +1908,15 @@ void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     flag_editor.exit_top_flag_edit_no_commit();
 }
 
-// -- The modal dialog's pointer half (2026-08-12; on the DIALOG SURFACE
-//    since that evening's real-window move) --
+// -- The modal dialog's pointer half (2026-08-12) ---------------------------
 //
-// The dialog's geometry is the painter's (on_dialog_redraw, which publishes
-// AppState::modal_dialog in DIALOG-LOCAL coordinates on every dialog paint);
-// these are the DIALOG surface's readers and the buttons' dispatch, driven
-// by the platform's dialog input hooks (main.cpp wires them to the
-// on_dialog_* entry points below). The main window's whole answer while a
-// dialog stands is the VEIL — the press/motion gates in on_button_press and
-// on_motion.
+// The dialog itself is the painter's (paint_modal_dialog, which publishes
+// AppState::modal_dialog every frame); these three are the pointer's readers
+// and the buttons' dispatch. The full veil contract is at the press gates in
+// on_button_press.
 
-// The dialog button under (x, y) — DIALOG-LOCAL — or -1: the painter's
-// stash, the roster model. A zero/invalid stash contains no point, the
-// correct cold answer (the window's first paint has not landed yet).
+// The dialog button under (x, y), or -1 — the painter's stash, the roster
+// model: a zero/invalid stash contains no point, the correct cold answer.
 int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     if (!app.modal_dialog.valid) return -1;
     for (size_t i = 0; i < app.modal_dialog.buttons.size(); ++i) {
@@ -1907,17 +1926,16 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     return -1;
 }
 
-// The dialog buttons' hover face — the pointer fact, written on every DIALOG
-// motion; a change damages the dialog window (whole — its one damage
-// granule). The index resets when the lifecycle sync zeroes the stash at the
-// window's close, so it cannot go stale across dialogs; the platform's
-// dialog leave synthesizes a (-1, -1) motion, so a face lit under a
-// departing pointer goes out.
+// The dialog buttons' hover face — the pointer fact, written on every motion
+// under a standing dialog; a change damages the stashed box (the painter
+// reads the index back). The index resets with the stash in
+// paint_modal_dialog's no-dialog arm, so it cannot go stale across dialogs.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
     if (app.modal_dialog_hovered != hit) {
         app.modal_dialog_hovered = hit;
-        if (app.modal_dialog.valid) viewport.invalidate_dialog();
+        if (app.modal_dialog.valid)
+            viewport.invalidate_rect(app.modal_dialog.box);
     }
 }
 
@@ -1942,217 +1960,6 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
         handle_load_editor_key(key, mods);
     } else if (text_editor::is_active(app.commit_title_editor)) {
         handle_commit_title_editor_key(key, mods);
-    }
-}
-
-// -- The DIALOG surface's entry points (2026-08-12 evening) -----------------
-//
-// Wired from main.cpp to the platform's dialog input hooks; coordinates are
-// DIALOG-LOCAL throughout, matching the painter's published stash
-// (AppState::modal_dialog). The vocabulary is deliberately small — the
-// dialog's whole pointer surface is its buttons and (on an editor) its inset
-// field: a plain left press acts, every modified or non-left press is a
-// consumed nothing, and there is nothing to scroll (the platform swallows
-// the dialog wheel outright).
-//
-// THE STALE WINDOW IS INERT — the gate all four of them carry, THE
-// INVARIANT'S OWN COMPARE (the full statement at GuiPlatform's dialog_open()
-// block; codex round 11): dialog-bound input acts only while the live
-// modal-surface identity equals the identity the settled tail last synced
-// into the window — modal_surface_out_of_sync (paint_handler.h), the same
-// generation compare the platform's keyboard fork reads through its probe,
-// asked GUI-side here because these points can. It refuses every lag span as
-// one rule: the ZOMBIE (the modal state answered inside its own dispatch
-// while the toplevel lives to the settled tail — one
-// wl_display_dispatch_pending() batch can carry MORE queued events behind
-// the answering one, still routed to the standing surface) and the CONTENT
-// SWITCH (a prompt replacing an editor on the standing toplevel: a queued
-// click on the STALE window's button rects must not act on the NEW
-// surface's stash — the old modal-state-standing gate admitted exactly
-// that, the round-11 keyboard scenario's pointer twin). It covers TOUCH by
-// construction, a finger on the dialog being the plain pointer translation
-// into these same entry points. GATE-THEN-READ IS COHERENT with the stash:
-// the tail (and the dialog paint it triggers) rewrites the published rects
-// in the same iteration that records the synced generation, so a gate that
-// passes reads a stash the synced content published — and before a fresh
-// window's first paint the stash is still zeroed/invalid, which resolves no
-// button and no field (the cold answer, stated at modal_dialog_button_hit).
-// THE ZEROED STASH IS NOT THE FIX: the painter's rects are zeroed by that
-// same tail, not earlier, so they are still published for the whole zombie
-// span and a queued click could still resolve a button on them. (The prompt
-// arm's live response-set match makes such a click answer nothing in
-// practice — a backstop against a stale stash; the gate above is what makes
-// "nothing acts" the rule.) The keyboard half of the same spans is the
-// platform's (deliver_key's fork, the same compare via the probe).
-//
-// WHY A DELIVERY-TIME GATE IS THE RIGHT SHAPE *HERE*, where the platform's
-// touch half is origin-scoped (the ORIGIN RULE at GuiPlatform's dialog_open()
-// block, codex round 9): these four points are reached only by input that
-// ROUTES TO THE DIALOG SURFACE, so they ask the admission question on behalf
-// of the very surface that owns the input — "the surface moved" and "this
-// input is dead" are then the same fact, and there is no deferral in between
-// (a dialog pointer event dispatches at arrival; a dialog TOUCH stream
-// defers, but it defers into these same points and re-asks here). The
-// main-surface side has no such luxury: its deferred acts are measured
-// against the main window's VEIL, which is the GUI modal state that the
-// answer itself removes — so those are gated AT THEIR ORIGIN in the platform
-// instead (the touch poison's dialog_modality_stands, ORIGIN semantics
-// distinct from this gate's ADMISSION semantics — the distinction at that
-// helper — plus the consumption-aware repeat arm). A main-surface POINTER
-// event needs no origin term of its own: it dispatches at arrival and the
-// GUI's veil, which is that modal state, is exactly the right question for
-// it.
-
-void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
-                                             int y, GuiInputState mods) {
-    // The double-click candidate obeys on_button_press's own top-of-frame
-    // rule: any press snapshots and clears the pending candidate. Dialog and
-    // main presses share the one field safely though their coordinates live
-    // in different spaces — a MAIN press clears the candidate too, so a
-    // dialog-seeded candidate can only ever be consumed by the next DIALOG
-    // press, whose coordinates are its own space's.
-    const DoubleClickCandidate dc_at_press = app.double_click;
-    app.double_click = DoubleClickCandidate{};
-
-    // The staleness gate (the block above), BELOW the candidate clear so that
-    // "any press clears the pending candidate" stays true without exception —
-    // a consumed press is still a press for that rule's purposes, and the
-    // cleared candidate cannot then be consumed by the NEXT dialog's field.
-    if (modal_surface_out_of_sync(app)) return;
-
-    if (button != GuiMouseButton::Left || mods.ctrl || mods.shift || mods.alt)
-        return;   // the dialog answers plain left presses and nothing else
-
-    // A PROMPT's buttons: a press on one activates that response through the
-    // keyboard's own dispatch body (activate_response), validated against
-    // the LIVE response set so a one-frame-stale stash (the Save-failed
-    // mutation) answers nothing rather than the wrong set.
-    if (app.prompt.active) {
-        const int hit = modal_dialog_button_hit(x, y);
-        if (hit < 0) return;
-        const char rk =
-            app.modal_dialog.buttons[static_cast<size_t>(hit)].response_key;
-        for (char live : app.prompt.response_keys) {
-            if (rk != 0 && rk == live) {
-                prompt.activate_response(rk);
-                break;
-            }
-        }
-        return;
-    }
-    // (No second "did the modal move?" test here: the staleness gate at the
-    // top owns that question for the whole function, so reaching this line
-    // with no prompt up means a dialog EDITOR stands by construction.)
-    //
-    // An editor dialog's OK / Cancel — the session's own Enter / Esc through
-    // the one modal key route (dispatch_modal_dialog_editor_act above),
-    // button-is-its-chord: a red-flash refusal, the BPM commit's render
-    // sweep and every teardown are the keyboard's own bodies.
-    const int hit = modal_dialog_button_hit(x, y);
-    if (hit >= 0) {
-        dispatch_modal_dialog_editor_act(
-            app.modal_dialog.buttons[static_cast<size_t>(hit)].editor_ok);
-        return;
-    }
-    // THE FIELD INTERIOR, the painter's published rect (modal_dialog.field):
-    // click-to-caret, the F2.1 drag arm and the double-click word select —
-    // the main-window bodies verbatim, retargeted to the dialog's
-    // coordinates and its whole-window damage. Everything else on the dialog
-    // — ground, label, pads — is chrome and consumes the press.
-    const ActiveEditorText g = active_editor_text(app, audio);
-    if (!g.valid || !g.dialog) return;
-    if (!rect_contains(app.modal_dialog.field, x, y)) return;
-    const DoubleClickCandidate& dc = dc_at_press;
-    if (dc.surface == DoubleClickSurface::EditorText &&
-        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-        text_editor::select_word_at(*g.ed, editor_byte_index_at(g, x));
-        viewport.invalidate_dialog();
-        return;
-    }
-    set_editor_caret_from_x(g, x);
-    // Collapsed anchor — extends to a real selection only if the pointer
-    // then moves.
-    g.ed->selection_anchor = g.ed->cursor_pos;
-    app.editor_text_drag.active = true;
-    viewport.invalidate_dialog();
-}
-
-void GuiInputHandler::on_dialog_button_release(GuiMouseButton button, int x,
-                                               int y,
-                                               GuiInputState /*mods*/) {
-    // The staleness gate first (the block above this group): a release queued
-    // behind the input that moved the modal surface finalizes nothing. A
-    // field drag that was live when the session answered is disarmed by the
-    // lifecycle sync's own close arm (main.cpp), which is where that flag's
-    // cleanup belongs — the editor it selected in is gone.
-    if (modal_surface_out_of_sync(app)) return;
-    if (button != GuiMouseButton::Left) return;
-    // F2.1's release, the main handler's own shape: finalize the drag and
-    // seed the EditorText double-click candidate on a motionless click (a
-    // pure click that left a caret, no selection). A drag that made a
-    // selection seeds nothing.
-    if (app.editor_text_drag.active) {
-        const ActiveEditorText g = active_editor_text(app, audio);
-        finalize_editor_text_drag();
-        if (g.valid && g.dialog && !text_editor::has_selection(*g.ed)) {
-            app.double_click = DoubleClickCandidate{
-                .surface = DoubleClickSurface::EditorText,
-                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
-                .target = -1};
-        }
-    }
-}
-
-void GuiInputHandler::on_dialog_motion(int x, int y, GuiInputState mods) {
-    // The staleness gate (the block above this group): no caret moves and no
-    // hover face lights on a window whose modal surface has moved. The
-    // hover index is zeroed by the lifecycle sync's close arm, so nothing
-    // stale survives the span either.
-    if (modal_surface_out_of_sync(app)) return;
-    // The field's live text drag first (the main on_motion's own order),
-    // then the buttons' hover face. A lost button finalizes like release,
-    // mirroring the main handlers. The platform's dialog leave delivers a
-    // (-1, -1) motion through here, which resolves no button and puts a lit
-    // face out.
-    if (app.editor_text_drag.active) {
-        if (!mods.primary_button_held) {
-            finalize_editor_text_drag();
-            return;
-        }
-        const ActiveEditorText g = active_editor_text(app, audio);
-        if (g.valid && g.dialog) {
-            set_editor_caret_from_x(g, x);
-            viewport.invalidate_dialog();
-        }
-        return;
-    }
-    update_modal_dialog_hover(x, y);
-}
-
-void GuiInputHandler::on_dialog_close_request() {
-    // The staleness gate (the block above this group), stated here too so all
-    // four entry points read the one rule: a WM close queued behind the
-    // input that moved the modal surface answers nothing. The two arms below
-    // would already both refuse a dropped modal on their own — that is a
-    // coincidence of this body's shape, not the span's guarantee, and the
-    // gate is what makes it the rule (and what refuses the content-switch
-    // span, which the arms alone would NOT: the new surface's arm is live).
-    if (modal_surface_out_of_sync(app)) return;
-    // The dialog window's WM CLOSE (titlebar X) is the session's Esc — the
-    // abandon/cancel arm, never a destructive answer: a prompt takes its Esc
-    // response (every prompt carries one — the rightmost Cancel, or the
-    // error notice's OK), an editor abandons through its own cancel body.
-    // The WINDOW itself comes down when the modal state drops and the
-    // lifecycle sync (main.cpp) closes it — honoring the close directly
-    // would bypass the session's own cancel semantics.
-    if (app.prompt.active) {
-        prompt.activate_response('\x1b');
-        return;
-    }
-    if (modal_dialog_editor_active()) {
-        dispatch_modal_dialog_editor_act(/*ok=*/false);
     }
 }
 
@@ -2219,40 +2026,121 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
 
-    // THE VEIL, TOTAL (2026-08-12 evening — the modal dialog is a real labwc
-    // window): while a PROMPT or a DIALOG EDITOR stands, its box is another
-    // SURFACE, so no main-window press can be a dialog press — the dialog's
-    // buttons, field and text drag live in the dialog entry points
-    // (on_dialog_button_press below), and every main-window press is simply
-    // CONSUMED, the architect's words made structural ("once I've done that
-    // pop-up modal, I can't do anything else in the window behind it"). The
-    // one-day reach-through (the modal-trap Quit/Save lift of 2026-08-11)
-    // is DELETED — the succession record is at the top of this file, where
-    // its two predicates lived — and the keyboard half of the veil is the
-    // platform's focus fork (deliver_key), so nothing key-shaped arrives
-    // here to swallow.
-    if (app.prompt.active) return;
-    if (modal_dialog_editor_active()) return;
+    // Prompt-modal input handling: while a prompt dialog is up, its BUTTONS
+    // are the pointer's only targets — a plain left press on one activates
+    // that response through the keyboard's own dispatch body
+    // (activate_response), validated against the LIVE response set so a
+    // one-frame-stale stash (the Save-failed mutation) answers nothing rather
+    // than the wrong set. Every other press — any button, any modifier,
+    // anywhere — is swallowed: THE VEIL. Responses still answer from the
+    // keyboard unchanged.
+    if (app.prompt.active) {
+        if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
+            !mods.alt) {
+            const int hit = modal_dialog_button_hit(x, y);
+            if (hit >= 0) {
+                const char rk =
+                    app.modal_dialog.buttons[static_cast<size_t>(hit)]
+                        .response_key;
+                for (char live : app.prompt.response_keys) {
+                    if (rk != 0 && rk == live) {
+                        prompt.activate_response(rk);
+                        break;
+                    }
+                }
+            }
+        }
+        return;
+    }
 
-    // F2.1: mouse drag-to-select inside the active text editor — the TOP
-    // FLAG editor's arm alone now: the four dialog editors' field gesture
-    // moved to the dialog surface with the dialog (on_dialog_button_press),
-    // and the veil above consumes every main-window press while one stands,
-    // so a valid resolution here is always the flag editor's
-    // (g.dialog false by construction). A press on the unrolled flag box
-    // places the caret and arms a selection drag (anchor == caret until the
-    // pointer moves); a press outside it falls through to the guard-free
-    // close below and then routes normally.
+    // THE MODAL-TRAP FIX (architect 2026-08-11, with the trim surface arc; the
+    // defect was the road's: an accidentally opened settings editor on GLASS,
+    // with no physical keyboard, was an EXIT-LESS STATE — the Quit button did
+    // nothing). The dialog modal editors admit Ctrl+Q and Ctrl+S as
+    // CHORDS, but their pointer veil below refuses the roster wholesale —
+    // so the QUIT and SAVE buttons violated button-is-its-chord exactly where
+    // the chord is admitted. FIXED BY DERIVATION, not new semantics: while a
+    // dialog modal editor stands, a plain left press on a roster button
+    // whose chord the editors' modal contract ADMITS AS A COMMAND
+    // (modal_editor_admits_command_chord above — membership derived from the
+    // admission, never hand-listed; today that resolves to Quit and Save)
+    // dispatches through the ordinary one dispatch body, and every other
+    // press stays refused at the swallows below. The dispatched chord then
+    // meets the KEYBOARD gate's own routing — Ctrl+S saves with the editor
+    // open, Ctrl+Q runs the teardown and the close route — so the button is
+    // its chord end to end. Faces: the two admitted buttons already wear
+    // their enabled faces (the modal gates are deliberately absent from
+    // redesign_button_enabled — a modal that greyed the chrome would be a
+    // fourth face nobody asked for, the standing note there), so face and
+    // press agree where it matters and the un-admitted rest keep the standing
+    // swallowed-press model. A MODIFIED press stays swallowed: the band
+    // claims refuse ctrl/alt and non-admitting shift anyway, and under a
+    // modal the refusal's home is the swallow. THE FLAG EDITOR IS NOT IN
+    // THIS PATH and needs nothing: it is pointer-transparent — it never
+    // blocked these presses, whose chords already dispatch into the keyboard
+    // gate through the ordinary band claims below.
+    if (button == GuiMouseButton::Left && !mods.ctrl && !mods.alt &&
+        !mods.shift && modal_dialog_editor_active()) {
+        for (const ToolbarChord& tc : kToolbarChords) {
+            if (!redesign_button_hit(app, tc.id, x, y)) continue;
+            if (modal_editor_admits_command_chord(tc.key, tc.ctrl, tc.shift,
+                                                  tc.alt)) {
+                dispatch_redesign_chord(x, y, mods);
+                return;
+            }
+            break;   // hit a non-admitted button: the modal swallow answers
+        }
+    }
+
+    // THE DIALOG'S OWN BUTTONS, claimed while an editor dialog stands and
+    // ahead of the field claim below (the rects are disjoint; the order only
+    // states that a button press is a button press). A plain left press on OK
+    // or Cancel dispatches the editor's own Enter or Esc through the one
+    // modal key route (dispatch_modal_dialog_editor_act) — button-is-its-
+    // chord, so a red-flash refusal, the BPM commit's render sweep and every
+    // teardown are the keyboard's own bodies. A PROMPT's buttons are claimed
+    // in the prompt gate above, not here.
+    if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
+        !mods.alt && modal_dialog_editor_active()) {
+        const int hit = modal_dialog_button_hit(x, y);
+        if (hit >= 0) {
+            dispatch_modal_dialog_editor_act(
+                app.modal_dialog.buttons[static_cast<size_t>(hit)].editor_ok);
+            return;
+        }
+    }
+
+    // F2.1: mouse drag-to-select inside the active text editor. A press on
+    // the active editor's text region places the caret and arms a selection
+    // drag (anchor == caret until the pointer moves). Resolved before the
+    // per-editor modal swallows below so the gesture reaches the four dialog
+    // editors too. A press outside the active editor's
+    // region falls through: the dialog editors stay modal — the VEIL — and
+    // swallow it, while the top flag editor closes guard-free below and the
+    // press then acts normally.
     if (button == GuiMouseButton::Left) {
         const ActiveEditorText g = active_editor_text(app, audio);
-        if (g.valid && !g.dialog) {
-            // FlagPayload: the editable text lives IN THE UNROLLED FLAG BOX.
-            // The claim is the whole published BOX, pads included, not just
-            // the glyph run's extent — the box is the field, and clicking
-            // its padding should place the caret at the nearest end exactly
-            // as clicking a text field's margin does (the nearest-boundary
-            // search gives that for free).
-            if (rect_contains(app.flag_editor_box.box, x, y)) {
+        if (g.valid) {
+            bool in_region = false;
+            if (g.dialog) {
+                // THE DIALOG'S FIELD INTERIOR, the painter's published rect
+                // (modal_dialog.field): the editable text lives in the inset
+                // field alone — the box around it is dialog chrome, and its
+                // buttons were claimed above. Claiming more would map a
+                // chrome press to an editor byte.
+                in_region = rect_contains(app.modal_dialog.field, x, y);
+            } else {
+                // FlagPayload: the editable text lives IN THE UNROLLED FLAG BOX.
+                // The claim is the whole published BOX, pads included, not just
+                // the glyph run's extent — the box is the field, and clicking
+                // its padding should place the caret at the nearest end exactly
+                // as clicking a text field's margin does (the nearest-boundary
+                // search gives that for free). Any press OUTSIDE the box is a
+                // non-caret click, which closes the editor below and then routes
+                // normally (the guard-free lifecycle).
+                in_region = rect_contains(app.flag_editor_box.box, x, y);
+            }
+            if (in_region) {
                 // Double-click: a second click within the window on this
                 // editor's text selects the RUN of the clicked character class
                 // (word / punctuation / whitespace) under the click — select_
@@ -2266,7 +2154,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                     text_editor::select_word_at(
                         *g.ed, editor_byte_index_at(g, x));
-                    viewport.invalidate_top_strip();
+                    // The dialog editors' repaint owner carries the stashed
+                    // box (the rider at invalidate_status_row_area).
+                    if (g.dialog) viewport.invalidate_status_row_area();
+                    else          viewport.invalidate_top_strip();
                     return;
                 }
                 set_editor_caret_from_x(g, x);
@@ -2274,10 +2165,36 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // pointer then moves.
                 g.ed->selection_anchor = g.ed->cursor_pos;
                 app.editor_text_drag.active = true;
-                viewport.invalidate_top_strip();
+                if (g.dialog) viewport.invalidate_status_row_area();
+                else          viewport.invalidate_top_strip();
                 return;
             }
+            // A dialog editor stays modal — THE VEIL: a press outside the
+            // box's field and buttons is CONSUMED, closing nothing (the
+            // architect's words: "once I've done that pop-up modal, I can't
+            // do anything else in the window behind it"; the dialog closes
+            // only by its own buttons and keys, and the one reach-through is
+            // the modal-trap roster block above). A flag-editor press that
+            // isn't on the lane text falls through to the guard-free close
+            // below.
+            if (g.dialog) return;
         }
+    }
+
+    if (text_editor::is_active(app.settings_editor)) return;
+    if (text_editor::is_active(app.load_editor)) return;
+    if (text_editor::is_active(app.commit_title_editor)) return;
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
+        // The BPM editor is a dialog modal owner (like the settings
+        // editor). Mouse input does not interact with it beyond its dialog's
+        // own field and buttons, claimed above; the session ends only through
+        // Esc / the Enter dispatch path / the dialog's Cancel and OK
+        // (`m` is just a typed character now). Swallow
+        // the press so it cannot drive a region drag / marker click / or
+        // tear the editor down through the top-strip flag-edit routine
+        // below.
+        return;
     }
     // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
     // FLOATS over them: a press on one of its items runs that item, and a press
@@ -2299,9 +2216,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // It sits BELOW the modal gates like every other pointer target, which is
     // half of why a popup and an editor are never open together: the popup opens
     // only from a press, and while a DIALOG editor is up
-    // every main-window press dies at the veil, now total (the modal-trap
-    // lift is deleted — the succession record at the top of this file — so
-    // no press of any kind can open a popup under an editor). The other half is not here — the
+    // every press dies at the veil (the MODAL-TRAP block above lifts ONLY
+    // roster buttons whose chord the editors admit — Quit and Save today — and
+    // the two menu ANCHORS carry no chord, so no press can open a popup under
+    // an editor through it). The other half is not here — the
     // pointer-transparent FLAG editor swallows nothing, so a press does reach
     // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
     // that edit (the rule is stated there). Two mechanisms, one claim. (The
@@ -4153,13 +4071,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // stamp itself.
     const bool modal_owns_the_keyboard =
         app.prompt.active || keyboard_modal_editor_active();
-    // THE DIALOG'S VEIL, TOTAL (2026-08-12; the reach-through exception died
-    // the same evening with the dialog's move to its own labwc window — the
-    // succession record at the top of this file): under a PROMPT or an
-    // EDITOR dialog the whole roster is refused — nothing behind the dialog
-    // is pressable, so nothing hovers, and the main window visibly reads
-    // inert. The pointer-transparent FLAG editor raises no veil: it is not a
-    // dialog and its roster presses were never blocked.
+    // THE DIALOG'S VEIL (2026-08-12): under a PROMPT the whole roster is
+    // refused — nothing behind the dialog is pressable, so nothing hovers;
+    // under an EDITOR dialog only the veil-admitted buttons hover (the
+    // modal-trap pair the press claim still dispatches — Quit and Save,
+    // derived at modal_veil_admits_button). The pointer-transparent FLAG
+    // editor raises no veil: it is not a dialog and its roster presses were
+    // never blocked.
     const bool editor_dialog_veil = modal_dialog_editor_active();
     bool changed_top       = false;
     bool changed_transport = false;
@@ -4176,7 +4094,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // all, and both refusals live in that one predicate rather than as
         // conditions here or in the painter. There is no in-window term: the
         // whole walk refused above.
-        const bool veiled = app.prompt.active || editor_dialog_veil;
+        const bool veiled =
+            app.prompt.active ||
+            (editor_dialog_veil && !modal_veil_admits_button(id));
         const bool under_pointer = !veiled &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
@@ -5645,17 +5565,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // and the dialog editors' below) both call it — but WHAT IT DERIVES under
     // a modal changed with the dialog veil (2026-08-12, revising the
     // 2026-07-31 "hover follows the pointer everywhere" reading): the walk's
-    // veil term refuses the WHOLE roster under a PROMPT or an EDITOR dialog,
-    // because a hover face is a PROMISE OF PRESSABILITY and the veil consumes
-    // those presses (total since the dialog became its own window that
-    // evening and the Quit/Save reach-through died).
+    // veil term refuses the whole roster under a PROMPT and everything but
+    // the veil-admitted Quit/Save under an EDITOR dialog, because a hover
+    // face is a PROMISE OF PRESSABILITY and the veil consumes those presses.
     // The recompute must still RUN in those branches for the original
     // ruling's reason inverted: the walk is the only writer of `hovered`
     // false as well as true, so a modal that skipped it would leave a pill
     // lit at the open frozen under the veil — the exact stale-pill defect the
     // 2026-07-31 ruling fixed, now fixed by re-deriving to the veiled answer.
-    // The dialog's own buttons take their hover on the DIALOG SURFACE
-    // (on_dialog_motion). What the recompute must
+    // The dialog's own buttons take their hover through
+    // update_modal_dialog_hover in the same branches. What the recompute must
     // NOT do under a modal is start a TOOLTIP dwell — a floating hint is not
     // a face, and that refusal lives in the recompute itself.
     // What DOES still freeze the hover is an active pointer GESTURE — the
@@ -5808,19 +5727,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (app.prompt.active) {
-        // THE PROMPT'S MAIN-WINDOW MOTION IS THE VEIL: the roster recompute
-        // re-derives ALL-FALSE through the veil term, so a pill lit at the
-        // open goes out on the next motion or tick, and nothing else runs —
-        // the dialog's own buttons hover on the DIALOG SURFACE
-        // (on_dialog_motion), not here.
+        // THE PROMPT DIALOG'S MOTION: the dialog buttons' hover face, then
+        // the roster recompute — which under a prompt re-derives ALL-FALSE
+        // through the veil term (modal_veil_admits_button refuses everything
+        // under a prompt), so a pill lit at the open goes out on the next
+        // motion or tick. The veil consumes the rest of the motion — nothing
+        // below this branch runs.
+        update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }
-    // F2.1: editor-text drag motion — the FLAG editor's arm on this surface
-    // (a dialog editor's field drag rides on_dialog_motion; if its flag is
-    // somehow up here — a release lost to the dialog surface — the
-    // button-lost arm below finalizes). Handled
-    // before the trim / playhead branches. A lost button finalizes like
+    // F2.1: editor-text drag motion. Handled before the dialog-editor branch
+    // (which returns) so the gesture reaches the four dialog editors' fields,
+    // and before the trim / playhead branches. A lost button finalizes like
     // release, mirroring those handlers.
     if (app.editor_text_drag.active) {
         if (!mods.primary_button_held) {
@@ -5846,16 +5765,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (modal_dialog_editor_active()) {
-        // THE EDITOR DIALOG'S MAIN-WINDOW MOTION IS THE VEIL — the four
-        // dialog editors in one branch (the BPM bracket included): the
-        // roster recompute re-derives the whole roster DARK through the veil
-        // term (total since the dialog became its own window — the
-        // reach-through pair's live faces died with it) and nothing else
-        // runs. The dialog's field drag and button hover ride the DIALOG
-        // SURFACE (on_dialog_motion). The rationale for recomputing at all
-        // is the one the old branch carried: hover is a separately
-        // maintained pointer fact, and a modal freezing it left lit pills
-        // behind.
+        // THE EDITOR DIALOG'S MOTION — the four dialog editors in one branch
+        // (the BPM bracket included since the dialog arc; it used to fall
+        // through to the gesture branches, harmlessly, its presses all
+        // swallowed): the dialog buttons' hover face, then the roster
+        // recompute, whose veil term refuses everything but the veil-admitted
+        // Quit/Save so THEIR faces stay live (the modal-trap pair the press
+        // claim reaches through the veil) while the rest of the roster goes
+        // dead under the pointer. The rationale for recomputing at all is the
+        // one the old branch carried: hover is a separately maintained
+        // pointer fact, and a modal freezing it left lit pills behind.
+        update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
     }

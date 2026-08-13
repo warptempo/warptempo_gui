@@ -1562,10 +1562,7 @@ int main(int argc, char** argv) {
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES end the transport arrows'
     // hold-repeat (codex round 4, 2026-08-11): keyboard leave / keyboard-
-    // capability loss, every Super-swallowed press and every press the MODAL
-    // DIALOG's keyboard fork swallows (its veil and generation-mismatch
-    // classes alike — membership re-greped from the hook's fire sites
-    // 2026-08-13, codex round 11) are key events the GUI's
+    // capability loss and every Super-swallowed press are key events the GUI's
     // three chokepoint disarms can never see — the platform consumes them
     // without calling on_key — so the platform reports them through this one
     // hook instead of the application growing a second, partial list. The fire
@@ -1643,144 +1640,9 @@ int main(int argc, char** argv) {
     // NEITHER RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED: each refuses on
     // app.pointer_in_window inside its own body, so a per-iteration call cannot
     // resurrect a face from coordinates the pointer has left behind.
-    // -- THE MODAL DIALOG WINDOW'S LIFECYCLE SYNC (2026-08-12 evening: the
-    // dialog is a real labwc window — GuiPlatform's dialog block owns the
-    // surface, paint_handler's plan/painter own the content). ONE derived
-    // owner instead of a call at every opener and closer, the roster model:
-    // the modal state (a prompt or one of the four dialog editors standing)
-    // is re-read at every loop tail, and the WINDOW mirrors it — opened when
-    // a modal stands and none is up, closed when none stands, resized and
-    // retitled when the standing content's fingerprint moved (a prompt
-    // raised over an editor by the WM close, the Save-failed mutation). Every
-    // opener and closer therefore participates by mutating the modal state
-    // it already owns, and a route added later joins with no call to
-    // remember.
-    // THE TAIL IS THE TEARDOWN OWNER AND THE ONE OPENER, AND THE WINDOW
-    // THEREFORE LAGS THE MODAL STATE AT EVERY MOVE — the tail runs in the
-    // same iteration that dispatched the moving input, but NOT before further
-    // input can arrive: one wl_display_dispatch_pending() batch can carry
-    // several queued events behind the one that raised, answered or switched
-    // the modal surface. THE INVARIANT that makes every such lag span safe
-    // (codex round 11; the full statement and the round 8-11 derivation
-    // record at GuiPlatform's dialog_open() block): input may only answer a
-    // modal surface the user has seen — dialog-bound input is admitted only
-    // while the live MODAL-SURFACE GENERATION equals the one THIS SYNC last
-    // recorded after applying the plan (the record below; the witness is
-    // AppState::ModalSurfaceWitness, the query owner
-    // modal_surface_generation, paint_handler.h). Keys read the compare at
-    // the platform's fork (deliver_key, through set_dialog_stale_probe
-    // below); pointer and touch read it at the GUI's four dialog entry
-    // points (input_pointer.cpp).
-    // MAIN-focused input in a lag span: keys are consumed by that same fork
-    // (a generation mismatch swallows every key, focus aside), while a
-    // main-surface POINTER event is admitted once the modal state has
-    // answered — the GUI's veil reads that state — and that is the right
-    // answer by arrival order: anything queued while the modal still stood
-    // was dispatched BEFORE the answer and met the veil; anything after it
-    // is the user's own next act on a window that is no longer inert.
-    // THE ARRIVAL-ORDER READING IS SCOPED, AND THE SCOPE IS THE WHOLE OF ITS
-    // TRUTH (codex round 9): it holds for input that ORIGINATES after the
-    // answer — a fresh click, a fresh wheel — because for those, dispatch order
-    // and origin order are the same thing. It says NOTHING about input that
-    // originated BEFORE the answer and RESOLVES after it, which this platform
-    // produces by design (a touch down converting at its lift or its expiry, a
-    // key press arming a repeat that fires later): for those the answer is the
-    // ORIGIN RULE's, enforced in the platform — the touch poison
-    // (dialog_modality_stands, origin semantics distinct from the admission
-    // compare) and the consumption-aware repeat arm (the rule and both sites
-    // at platform_wayland.h's dialog_open() block). Read together: the
-    // admission compare owns everything dialog-bound, the origin rule owns
-    // the deferred input born inside a modal span, arrival order owns the
-    // fresh main-surface pointer, and nothing is left to decide ad hoc.
-    // The CLOSE arm
-    // also zeroes the published geometry and the hover index — the painter's
-    // old no-dialog arm, moved to the one owner that knows the window came
-    // down (the dialog painter runs only while a window stands, so it cannot
-    // zero its own stash after the close).
-    std::string modal_dialog_fingerprint;
-    auto sync_modal_dialog_window = [&]() {
-        const GuiPaintHandler::ModalDialogWindowPlan plan =
-            paint_handler.modal_dialog_window_plan();
-        if (!plan.open) {
-            if (gui.dialog_open()) {
-                gui.close_dialog();
-                app.modal_dialog        = AppState::ModalDialogGeometry{};
-                app.dialog_editor_text  = AppState::DialogEditorText{};
-                app.modal_dialog_hovered = -1;
-                // A field text-drag whose release died with the window (the
-                // press was the dialog's; OK/commit closed it mid-hold) must
-                // not stay armed against a main window that will never
-                // deliver its release — the editor it selected in is gone,
-                // so there is nothing to finalize, only the flag to drop.
-                app.editor_text_drag.active = false;
-                modal_dialog_fingerprint.clear();
-            }
-        } else if (!gui.dialog_open()) {
-            app.modal_dialog_hovered = -1;
-            gui.open_dialog(plan.w, plan.h, plan.title);
-            modal_dialog_fingerprint = plan.fingerprint;
-        } else if (plan.fingerprint != modal_dialog_fingerprint) {
-            app.modal_dialog_hovered = -1;
-            gui.resize_dialog(plan.w, plan.h, plan.title);
-            modal_dialog_fingerprint = plan.fingerprint;
-        }
-        // THE GENERATION RECORD, unconditional at the sync's end: after the
-        // arms above the window mirrors the modal state BY CONSTRUCTION
-        // (opened, closed, reshaped, or already matching — the fingerprint
-        // is modal_surface_identity's own bytes, one derivation), so the
-        // live generation is by definition "the identity synced into the
-        // window" and this is its ONE writer. Recording on the no-op arms
-        // too is load-bearing: an identity that moved and moved back between
-        // tails (its generation bumped by whichever gate observed it) must
-        // re-admit here, or the mismatch would outlive the window it
-        // described and the keyboard would die permanently.
-        app.modal_surface.synced_generation = modal_surface_generation(app);
-    };
-
     gui.set_loop_settled_hook([&](GuiInputState mods) {
-        // The dialog sync runs FIRST: the two consumers below read state the
-        // sync can move (a closed dialog re-admits the cursor map's zones;
-        // the order costs nothing the other way, but this one states the
-        // dependency).
-        sync_modal_dialog_window();
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
-    });
-
-    // The dialog window's own hooks: content paint, pointer input in
-    // dialog-local coordinates, and the WM close (the session's Esc). The
-    // per-surface routing is the platform's (dialog_open()'s contract,
-    // platform_wayland.h); these bodies are the GUI halves.
-    gui.set_dialog_redraw([&](cairo_t* cr, int /*x*/, int /*y*/,
-                              int w, int h) {
-        paint_handler.on_dialog_redraw(cr, w, h);
-    });
-    gui.set_dialog_button_press([&](GuiMouseButton button, int x, int y,
-                                    GuiInputState mods) {
-        input_handler.on_dialog_button_press(button, x, y, mods);
-    });
-    gui.set_dialog_button_release([&](GuiMouseButton button, int x, int y,
-                                      GuiInputState mods) {
-        input_handler.on_dialog_button_release(button, x, y, mods);
-    });
-    gui.set_dialog_motion([&](int x, int y, GuiInputState mods) {
-        input_handler.on_dialog_motion(x, y, mods);
-    });
-    gui.set_dialog_close([&]() {
-        input_handler.on_dialog_close_request();
-    });
-    // The ORIGIN witness for the platform's touch poison: does a modal state
-    // stand? (dialog_modality_stands ORs it with the toplevel — "was the GUI
-    // modal when this finger landed".)
-    gui.set_dialog_modal_probe([&]() {
-        return input_handler.modal_dialog_state_standing();
-    });
-    // The ADMISSION witness for the platform's keyboard fork: has the modal
-    // surface moved since the sync above last recorded it? (The invariant's
-    // one compare — the pointer and touch halves on the DIALOG surface ask
-    // the same function directly inside the four entry points.)
-    gui.set_dialog_stale_probe([&]() {
-        return modal_surface_out_of_sync(app);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
@@ -2070,8 +1932,7 @@ int main(int argc, char** argv) {
             }
         }
         // Same shape for the settings prompt (a dialog editor); the
-        // status-lane owner's rider pings the dialog WINDOW, so the blink
-        // repaints the box where it actually lives.
+        // status-lane owner's rider carries the dialog's stashed box.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.settings_editor);

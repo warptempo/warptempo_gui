@@ -253,21 +253,12 @@ struct Viewport {
     // against the arrows. The bottom row's high-traffic string owner — the queue /
     // render / transient strings, the selection readout — and the DEFAULT
     // for anything writing a string down there. SINCE 2026-08-12 IT ALSO
-    // RIDES THE MODAL DIALOG'S DAMAGE while one stands (the rider and its
-    // rationale are at the definition — since that evening the dialog is its
-    // own labwc WINDOW, so the rider pings the dialog SURFACE rather than a
-    // stashed in-window box): the four modal editors' repaint sites all
-    // speak this call from their bottom-strip tenancy, so the one rider
-    // keeps every typing/blink/flash/closer honest without re-classifying
-    // the sites.
+    // CARRIES THE MODAL DIALOG'S STASHED BOX while one stands (the rider and
+    // its rationale are at the definition): the four modal editors' repaint
+    // sites all speak this call from their bottom-strip tenancy, and the
+    // editors paint in the centered dialog now, so the one rider keeps every
+    // typing/blink/flash/closer honest without re-classifying the sites.
     void invalidate_status_row_area();
-    // THE DIALOG WINDOW'S DAMAGE (2026-08-12 evening): the modal dialog's
-    // one damage granule — the whole small window
-    // (GuiPlatform::invalidate_dialog). Callers: the rider above (every
-    // editor repaint site by inheritance), the dialog surface's own hover /
-    // caret / drag writers (input_pointer.cpp's on_dialog_* entry points),
-    // and nothing else. A no-op while no dialog window stands.
-    void invalidate_dialog();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one

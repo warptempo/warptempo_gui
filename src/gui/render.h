@@ -760,9 +760,8 @@ inline constexpr GuiColor kRedesignPopupDisabledLabel  = hex(0x686A6C);
 inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 
 // THE MODAL DIALOG'S CHROME (architect 2026-08-12, "we should institute real
-// modals" — kdenlive's dialog model; the dialog is its OWN labwc WINDOW since
-// that evening, and on_dialog_redraw (paint_handler.cpp) is the one
-// consumer). Sampled off modal_popup.png (the Save/Do Not Save/
+// modals" — kdenlive's own dialog model painted in-window; paint_modal_dialog
+// is the one consumer). Sampled off modal_popup.png (the Save/Do Not Save/
 // Cancel warning dialog) and editor.png (the "FFmpeg:" label + dark inset
 // field row of the settings dialog):
 //
@@ -774,13 +773,12 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 //   kRedesignRowGroundUnfocused).
 //   BOX BORDER — the crop's 1px frame on all four edges reads #535659
 //   (x=2 / x=722 columns, y=3 / y=154 rows), which coincides with
-//   kRedesignLine, same rule. SINCE THE REAL-WINDOW MOVE (2026-08-12
-//   evening) kModalBorder is a PROVENANCE RECORD with no painter: the frame
-//   and the titlebar are labwc's server-side decoration now, exactly the
-//   #292c30 band + seam the crop carries and the in-window box deliberately
-//   did not transcribe — the WM supplies what the sample showed the WM
-//   supplying. (The crop's highlighted default button — #2d4655 fill under a
-//   #4882a1 frame — is still not transcribed: this product's prompts have
+//   kRedesignLine, same rule. (The crop also carries a #292c30 TITLEBAR band
+//   under the frame's top edge with a second #535659 seam below it — that is
+//   the WM's decoration on kdenlive's separate dialog window; ours is
+//   in-window and paints NO title bar, so the band is deliberately not
+//   transcribed. The crop's highlighted default button — #2d4655 fill under a
+//   #4882a1 frame — is likewise not transcribed: this product's prompts have
 //   no Enter-default, the recorded decision at PromptState.)
 //
 //   FIELD GROUND — editor.png's inset interior reads #141618 (y=6..34 at
@@ -1592,8 +1590,7 @@ inline int playhead_half_px() {
 // editor_text_glyph0_x and the pre-first-paint metric seeds all served ONE
 // surface by the end: the three bottom-strip editors' chip-shaped text box,
 // measured in glyph counts times one advance. Those editors are SHAPED now and
-// paint in paint_handler.cpp (in the modal dialog since 2026-08-12, its own
-// labwc window since that evening),
+// paint in paint_handler.cpp (in the centered modal dialog since 2026-08-12),
 // publishing their
 // caret geometry the way the flag editor does — measurement, paint and hit all
 // off the same ShapedRun. Nothing in the tree measures text by counting
@@ -2218,7 +2215,7 @@ struct FlagEditorBox {
 // kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
-// on_dialog_redraw, in the dialog's own window since that evening), so there is one
+// paint_modal_dialog), so there is one
 // invalid red in the product; the pre-redesign dark-red chip
 // pair they used to flash was the last tunable colour in the tree and went with
 // the whole palette-config system the next day.

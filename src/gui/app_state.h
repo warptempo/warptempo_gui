@@ -1623,11 +1623,9 @@ enum class DialogTrigger {
     ERROR_NOTICE,
 };
 
-// Modal prompt state. When `active` is true, the MODAL DIALOG — its own
-// labwc WINDOW since 2026-08-12 evening (on_dialog_redraw + GuiPlatform's
-// dialog block; the same morning's centered in-window box was the interim,
-// and the prompts lived on the bottom row's modal span before that) —
-// carries the prompt's text as its message line (and as the window's TITLE)
+// In-window modal prompt state. When `active` is true, the CENTERED MODAL
+// DIALOG (paint_modal_dialog, 2026-08-12 — the prompts lived on the bottom
+// row's modal span before that) carries the prompt's text as its message line
 // and one REAL BUTTON per response, right-aligned in the box.
 // Keyboard input is owned by the prompt exactly as it always was: only the
 // response keys (and Esc, which activates the rightmost response) do
@@ -2377,21 +2375,17 @@ struct AppState {
     // geometry contract for the settings / load / commit-title / BPM editors,
     // which paint inside the MODAL DIALOG's inset field since 2026-08-12 (they
     // lived on the status lane, row 9, from row 7 until then; the press region
-    // is the dialog's published FIELD rect, modal_dialog.field, not a lane —
-    // and since that evening the dialog is its OWN labwc window, so every
-    // coordinate here is DIALOG-LOCAL and only the dialog input entry points
-    // read it).
+    // is the dialog's published FIELD rect, modal_dialog.field, not a lane).
     //
     // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
     // left pad is already spent in it — and `byte_x` holds pending.size()+1
     // pen offsets RELATIVE to that origin, so the pair reads exactly like
     // FlagEditorBox's and editor_byte_index_at searches either the same way.
-    // Written by the dialog painter (on_dialog_redraw): zeroed at the top of
-    // every dialog paint, filled by whichever editor the dialog actually
-    // paints, and zeroed by the lifecycle sync when the window closes. That
-    // makes it a statement about what is ON the dialog's SCREEN — an editor
-    // the dialog's precedence hides (a prompt is up) publishes nothing and
-    // takes no clicks, which is the correct answer.
+    // Written by paint_modal_dialog: zeroed at the top of every run, filled by
+    // whichever editor the dialog actually paints. That makes it a statement
+    // about what is ON SCREEN — an editor the dialog's precedence hides (a
+    // prompt is up) publishes nothing and takes no clicks, which is the
+    // correct answer.
     struct DialogEditorText {
         bool                valid         = false;
         double              text_origin_x = 0.0;
@@ -2400,18 +2394,12 @@ struct AppState {
     DialogEditorText dialog_editor_text;
 
     // THE MODAL DIALOG'S PAINTED GEOMETRY (architect 2026-08-12: "we should
-    // institute real modals" — kdenlive's dialog model; its OWN labwc WINDOW
-    // since that evening's "lifting it from the GUI to its own labwc window",
-    // so every rect here is DIALOG-LOCAL). The
-    // prompts and the four dialog editors paint as ONE content block centered
-    // in the dialog window; this is the painter's stash of what was drawn,
-    // the roster
-    // model: on_dialog_redraw rewrites it every dialog paint (and the
-    // lifecycle sync zeroes it at the window's close), and the DIALOG input
-    // entry points read it instead of re-deriving
-    // layout — no main-window handler reads it at all, so a main press can
-    // never alias a dialog rect. `box` is the centered content block;
-    // `field` is the
+    // institute real modals" — kdenlive's own dialog model, in-window). The
+    // prompts and the four dialog editors paint as ONE centered box over an
+    // inert window; this is the painter's stash of what was drawn, the roster
+    // model: paint_modal_dialog rewrites it every run (zero/invalid when no
+    // dialog stands), and the pointer path reads it instead of re-deriving
+    // layout. `box` is the whole frame including its border; `field` is the
     // editor field's INTERIOR (zero for prompts) — the click-to-caret / text-
     // drag claim region; `buttons` are the answer buttons in painted order.
     //
@@ -2435,38 +2423,11 @@ struct AppState {
     };
     ModalDialogGeometry modal_dialog;
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
-    // pointer-derived face state in the roster's own model (the dialog
-    // motion writes it, the dialog painter reads it, a change damages the
-    // dialog window). Cleared by the lifecycle sync alongside the stash at
-    // every window open and close, so a fresh
+    // pointer-derived face state in the roster's own model (the hover walk
+    // writes it, the painter reads it, a change damages the box). Cleared by
+    // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
-
-    // THE MODAL-SURFACE WITNESS (codex round 11, 2026-08-13 — the one
-    // mechanism behind the dialog arc's admission invariant: INPUT MAY ONLY
-    // ANSWER A MODAL SURFACE THE USER HAS SEEN, stated whole at GuiPlatform's
-    // dialog_open() block). The IDENTITY names WHICH modal surface stands —
-    // empty for none, else the window plan's own fingerprint (kind plus its
-    // fixed strings: a prompt's message + response labels, an editor's label
-    // prefix) — deliberately EXCLUDING content bytes (buffer text, caret,
-    // red-flash): typing mutates content, never identity, so a queued typing
-    // burst flows. The GENERATION is the identity's monotonic epoch,
-    // ABA-proof: the query owner (modal_surface_generation, paint_handler.h)
-    // derives the identity FRESH on every call and bumps the generation iff
-    // it moved since this cache — no per-raiser bump site exists anywhere,
-    // which is what makes a missed-site drift impossible (the round 8-10
-    // chain's repeated lesson: every replicated spelling of the span rule
-    // drifted). synced_generation is written by ONE site — main.cpp's
-    // settled-tail lifecycle sync, after it applies the window plan — so
-    // "generation != synced_generation" reads "the modal surface moved since
-    // the window last mirrored it", which covers the opening edge, the
-    // zombie span and the content switch as one compare.
-    struct ModalSurfaceWitness {
-        std::string cached_identity;      // last identity the query observed
-        uint64_t    generation        = 0;
-        uint64_t    synced_generation = 0; // the tail's record; one writer
-    };
-    ModalSurfaceWitness modal_surface;
 
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
@@ -2541,19 +2502,13 @@ struct AppState {
     //   the platform consumes them without calling on_key — reported through
     //   ONE wired cancellation hook (set_keyboard_intent_cancel_hook,
     //   platform_wayland.h, whose contract carries the per-edge reasoning;
-    //   main.cpp wires it to this field's disarm). MEMBERSHIP RE-DERIVED FROM
-    //   THE HOOK'S FIRE SITES 2026-08-13 (codex round 11), which are THREE:
-    //   wl_keyboard.leave and keyboard-capability loss (forget_keyboard_state —
-    //   a keyboard-driven focus change must not leave a pointer-held arrow
-    //   authoring into an unfocused window), every SUPER-SWALLOWED
-    //   non-synthesized key press, and every DIALOG-SWALLOWED one — the modal
-    //   dialog's keyboard fork in BOTH of its classes (a MAIN-focused key
-    //   behind the dialog, and any key in a GENERATION-MISMATCH span — the
-    //   modal surface moved, the window not yet synced), which fires the
-    //   hook through the one branch that swallows them. Both swallows are
-    //   intervening key arrivals on_key never sees, disarmed per swallowed
-    //   delivery because that is the platform's own edge for its own repeats,
-    //   deliberately not at Super's press edge.
+    //   main.cpp wires it to this field's disarm): wl_keyboard.leave and
+    //   keyboard-capability loss (forget_keyboard_state — a keyboard-driven
+    //   focus change must not leave a pointer-held arrow authoring into an
+    //   unfocused window), and every SUPER-SWALLOWED non-synthesized key press
+    //   (deliver_key's drop — an intervening key arrival on_key never sees,
+    //   disarmed per swallowed delivery because that is the platform's own
+    //   edge for its own repeats, deliberately not at Super's press edge).
     //   EACH FIRE RE-CHECKS the press-time predicate and the enabled bit
     //   (layer 2's shape), and PAUSES while the pointer is off the button.
     //   THE HOLD'S OWN ENDS — the release, the pointer leave, capability loss —
@@ -3659,7 +3614,7 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // The command prompt, a MODAL DIALOG WINDOW (on_dialog_redraw, 2026-08-12
+    // The command prompt, a CENTERED MODAL DIALOG (paint_modal_dialog, 2026-08-12
     // — one box painted last over an inert window, its responses real buttons;
     // the bottom strip's own prompt line is retired). Active only when a
     // close / re-detect gesture fires while a confirmation is required.
@@ -3798,8 +3753,7 @@ struct AppState {
     // dirtying the project and pressing Ctrl+Q raises the close prompt over a
     // live run (the prompt cancels nothing), and the run's own completion can
     // then rewrite or clear this string while the prompt stands — the string
-    // keeps its row-9 slot on the MAIN window, which the dialog — its own
-    // labwc window — floats over entirely; the slot is
+    // keeps its row-9 slot and paints UNDER the centered dialog box, which is
     // the honest picture (the run really is still going). While the two
     // shared row 9's one cell the prompt was the chain's first tier; that
     // ordering is superseded structurally.

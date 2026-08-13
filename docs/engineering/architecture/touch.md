@@ -4,7 +4,7 @@
 
 ### The Unified-Mode Ruling
 
-THE PREMISE IS ONE UNIFIED MODE, the architect's one settled ruling for the arc: same look, same behavior, same interaction language for mouse and touch. Phase 1 makes it literal — TOUCH IS THE POINTER, translated whole at the platform boundary (`platform_wayland.cpp`), and the GUI cannot tell which device produced an event. No touch mode, no flag, no detection, no GUI-side branch. Everything inherits by construction: every gate, refusal, modal claim, read-only rule, hit test and gesture the pointer has applies to a finger with zero new GUI semantics — stated here once rather than re-proven per gesture. The premise carries TWO ruled divergences since the eighth glass ruling, both scoped to the pan zone: the phone model's single-finger pan (its section below) and the region hold (the Pan-Primary section below), which drives the same region former the mouse's shift press drives; the only other touch-specific gesture is the two-finger navigation.
+THE PREMISE IS ONE UNIFIED MODE, the architect's one settled ruling for the arc: same look, same behavior, same interaction language for mouse and touch. Phase 1 makes it literal — TOUCH IS THE POINTER, translated whole at the platform boundary (`platform_wayland.cpp`), and the GUI cannot tell which device produced an event. No touch mode, no flag, no detection, no GUI-side branch. Everything inherits by construction: every gate, refusal, modal claim, read-only rule, hit test and gesture the pointer has applies to a finger with zero new GUI semantics — stated here once rather than re-proven per gesture. The premise carries TWO ruled divergences since the eighth glass ruling, both scoped to the pan zone: the phone model's single-finger pan (its section below) and the region hold (the Pan-Primary section below), which drives the same region former the mouse's shift press drives; the only other touch-specific gesture is the two-finger navigation. THE MODAL DIALOG IS IN-WINDOW AGAIN, which keeps that inheritance intact for the modal surfaces too: a finger meets the veil, the field and the buttons exactly as the mouse does, and the glass modal trap stays closed by the Quit/Save reach-through — the real-labwc-window dialog of 2026-08-12..13, whose per-surface input routing would have been the arc's one platform-level device branch, was reverted whole on 2026-08-13 (conventions.md's modality section carries the succession and the do-not-re-propose).
 
 ### The Windowed Model Returns (Sixth Glass Ruling, 2026-08-12 — Authoritative)
 
@@ -166,90 +166,6 @@ THE RULING (architect, dictated with the windowed model's return, landed as its 
 ON GLASS IT FELL OUT OF THE WINDOWED CONTRACT, zero touch code, for the half-day it stood: the ruler was off the pan zone then, so a one-finger ruler drag resolved to the POINTER and was the region former from a quick drag and a hold alike. (THE WHOLE RULER-SCOPED FORMER LIVED THAT HALF-DAY: the eighth ruling's mouse half made the ruler a navigation-surface lane — plain drag = the grab-pan, shift = the one former, `RegionDragState::ruler` deleted — and its touch half put the ruler ON the pan zone, so a finger's quick ruler drag PANS and the region there is the hold, the Pan-Primary section above.) Zoom on glass is the two-finger pinch, PERIOD — that half of the ruling stands.
 
 THE SCROLLBAR PLAN IS DEAD, the architect's own conclusion: the interim scrollbar he had sketched for glass navigation is not coming — the phone-model one-finger pan (grown to the whole navigation surface at the eighth ruling) plus the region former are its replacement, the pan covering the travel the scrollbar would have and the hold covering the span-marking. Do not re-propose it. (The OVERVIEW STRIP — landed and REWORKED 2026-08-12, zoom-viewport-strip.md — is a different surface: a whole-song lane whose plain drag is the capture-free box pan, with the teleport, the endcap zoom drags and the ctrl strip drag beside it; its capture oddity is CLOSED at the note above.)
-
-### The Dialog Window's Per-Surface Routing (2026-08-12 evening)
-
-THE MODAL DIALOG IS A SECOND SURFACE (its own labwc window — conventions.md
-owns the modality contract), and the touch stream ROUTES BY ITS FIRST
-FINGER'S SURFACE: wl_touch.down carries the touched surface, the platform
-captures it once at the stream's open (the pan-zone answer's own pattern —
-one capture, fixed for the stream's life), and the whole stream follows it.
-
-- A DIALOG-owned stream is the plain one-finger pointer translation into the
-  dialog's own hooks, in dialog-local coordinates: a tap is a click at the
-  lift (a prompt button answers, OK/Cancel answer, the field takes the
-  caret), hold unlocks the pointer at the 60 ms mark (hold-then-drag drags a
-  field selection). The PAN-ZONE QUERY IS NEVER ASKED for a dialog down —
-  it answers MAIN-window geometry — so the zone answer rests false, the
-  window runs the short deadline, and nothing nav- or region-shaped can arm
-  on a dialog: a SECOND finger on a dialog stream is ignored whole (there is
-  no pinch and no upgrade there; nothing in a dialog pans or zooms). The
-  translation's end delivers its release and nothing more — the leave hook
-  and the restore motion are MAIN-window state repairs, and a finger lifting
-  from the dialog moved none of them. THE ADMISSION GATE COVERS GLASS BY
-  CONSTRUCTION: a dialog stream translates into the dialog's own entry
-  points, and those refuse while the modal surface has MOVED since the
-  settled tail last synced the window — the dialog invariant's generation
-  compare (`modal_surface_out_of_sync`, codex round 11; one gate for mouse
-  and finger alike, covering the zombie span AND the content switch as one
-  mismatch — the full statement at `GuiPlatform`'s `dialog_open()` block) —
-  so a tap queued behind the answer cannot press a button whose answer no
-  longer exists, and one queued behind a content switch cannot act on the
-  replacing surface's stash. A DELIVERY-TIME GATE IS SOUND *HERE* and
-  nowhere else on glass: the dialog's entry points ask the admission
-  question on behalf of the surface that owns the input, so "the surface
-  moved" and "this input is dead" are the same fact — whereas a MAIN-surface
-  stream's deferred act is measured against the main window's veil, which
-  the answer itself removes, which is why that side is poisoned at its
-  origin instead (next bullet).
-- A MAIN-owned stream BORN WHILE A DIALOG STANDS IS POISONED AT ITS FIRST
-  DOWN (codex round 9, 2026-08-12): the platform enters `Drain` right there
-  instead of `Pending`, so the stream delivers NOTHING for its whole life —
-  no tap, no slop-crossing pointer or single-finger pan, no region hold, no
-  two-finger nav (the stream is one unit; a second finger landing in a drain
-  is ignored like any other) — and the poison's whole lifecycle is that
-  phase: set at the down, cleared by the ordinary drain exit when every
-  finger has lifted. THE TEST IS "WAS THE GUI MODAL WHEN THIS FINGER LANDED",
-  BY EITHER WITNESS — the dialog toplevel OR the modal state alone, which
-  stands with no window from an opener's own dispatch until the settled tail
-  opens it, equally reachable inside one dispatch batch — asked through
-  `dialog_modality_stands()`, THE ORIGIN TEST, whose ONE caller this down is
-  since codex round 11: the keyboard fork briefly shared it (round 10, after
-  the keyboard half was found still asking the toplevel alone and a queued
-  Delete answered the freshly raised close prompt's DISCARD) and has since
-  moved onto the dialog invariant's ADMISSION compare (the modal-surface
-  generation, `dialog_open()`'s block), which asks a DIFFERENT QUESTION IN
-  KIND: origin is about the input's BIRTH under a veil that may lift before
-  it resolves — a finger landing under a live, fully-synced dialog must die
-  here, where a dialog-focused key is admitted — while admission is about
-  whether the window the user sees matches the modal state the input would
-  answer. Neither subsumes the other; the distinction is stated at the
-  helper. THE ORIGIN IS WHAT DECIDES ON GLASS: this window converts a down
-  at its LIFT, its SLOP CROSSING or its EXPIRY, so a resolution that re-asks
-  the modal state reads a state the answering input may already have cleared
-  — finger down under the modal, Esc, finger up, and the tap OUTRUNS the
-  settled tail into a main-window command behind a dialog still on screen
-  (over Delete/Render/Quit, a fired command). Delivery-time gating cannot
-  answer that; origin-time gating can, and does. The rule it instances —
-  AN INPUT THAT ORIGINATED WHILE THE GUI WAS MODAL IS DEAD, whatever the state
-  when it resolves — is stated once at `GuiPlatform`'s `dialog_open()` block,
-  with its keyboard sibling beside it (the consumption-aware repeat arm; the
-  queued-key spans themselves are the admission compare's since round 11).
-  The GUI's standing veil gates still answer everything a LIVE-modal stream
-  used to reach (a tap's press-release consumed, a two-finger nav frozen at
-  the per-frame wheel-context refusal, a region hold refused in its begin);
-  the poison makes main-window glass inert BY CONSTRUCTION rather than by
-  the veil's reach, which is what closes the span the veil does not cover.
-- The two-deadline window therefore applies PER SURFACE by construction: the
-  deadline is picked from the captured surface's own answer at the down, and
-  no mid-stream event can re-ask it.
-
-This is what makes every dialog ANSWERABLE ENTIRELY ON GLASS with no special
-case: the dialog's buttons are ordinary tap targets on its own surface, and
-the WM close button (the session's Esc) is labwc's own tap target — the
-modal-trap class of defect (an exit-less accidental editor, 2026-08-11) is
-structurally gone, which is why the veil's Quit/Save reach-through was
-deleted with the move (the succession record at input_pointer.cpp's top).
 
 ### Out of Scope — Deliberately
 

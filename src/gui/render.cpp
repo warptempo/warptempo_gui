@@ -1715,8 +1715,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // missing on open and come back on commit. (The DIALOG editors' invalid
     // flash carried this same flag-box anatomy from 2026-08-02 until
     // 2026-08-12, when it became the dialog FIELD's recolor in the same red
-    // pair — on_dialog_redraw, painting in the dialog's own labwc window
-    // since that evening; the flag editor's box is the anatomy's one
+    // pair — paint_modal_dialog; the flag editor's box is the anatomy's one
     // editor tenant now.)
     //
     // The border sits OUTSIDE the fill like the flag's, so nothing the clamp,

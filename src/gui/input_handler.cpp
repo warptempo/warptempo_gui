@@ -50,14 +50,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // run one while a prompt or a keyboard-modal editor is up — the rule is at
     // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
     // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
-    // input_pointer.cpp) — and the veil is TOTAL since the dialog became its
-    // own labwc window (2026-08-12 evening): under a PROMPT or an EDITOR
-    // dialog alike, EVERY roster face derives dark, so a modal opened by this
-    // key cannot leave a lit pill behind it. (The one-day Quit/Save
-    // reach-through this comment used to except died with the move — a real
-    // window cannot trap; the succession record is at the top of
-    // input_pointer.cpp.) The pointer-transparent FLAG editor raises no veil
-    // and needs none: its roster presses were never blocked.
+    // input_pointer.cpp) — under a PROMPT every roster face goes dark, and
+    // under an EDITOR dialog every face but the veil-admitted pair (Quit and
+    // Save, the modal trap's reach-through) does, so a modal opened by this key
+    // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
+    // raises no veil and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
     // ANY KEY PRESS ALSO ENDS THE MENU ROW'S MODE, the keyboard half of the same
     // blanket rule at the top of on_button_press. It needs no exception list for
@@ -100,8 +97,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.invalidate_status_row_area();
     }
 
-    // The modal prompt (a dialog, its own labwc window since 2026-08-12
-    // evening) owns input while
+    // The modal prompt (a centered dialog since 2026-08-12) owns input while
     // active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
     // marker edits / playback / viewport keys cannot sneak in while
@@ -179,8 +175,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // contend with route_modal_editor_key — and the claim rests on TWO
     // mechanisms, one per class. The popup opens only from row 1, and while a
     // DIALOG editor is up the press that would open it dies at the dialog's
-    // veil in on_button_press (total — no press of any kind survives it
-    // since the reach-through's deletion). The pointer-transparent FLAG
+    // veil in on_button_press (the two menu anchors carry no chord, so the
+    // modal-trap lift never reaches them). The pointer-transparent FLAG
     // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
     // open path discards the edit, exactly as a press outside its box does. The
     // reverse direction is this gate's own doing — `;` is swallowed here, so no
@@ -1046,7 +1042,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `;` opens the settings prompt as a modal dialog window.
+    // Bare `;` opens the settings prompt as a centered modal dialog.
     // Keyboard-only (no click analogue). The active-editor block at the top of
     // on_key routes subsequent keystrokes; opening here just primes the State.
     // The settings editor is a modal DIALOG surface, so its open takes the
@@ -1063,7 +1059,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `'` opens the load prompt as a modal dialog window: load a chosen
+    // Bare `'` opens the load prompt as a centered modal dialog: load a chosen
     // render in place as the new authoring baseline by NAME — or, while the `h`
     // history mode stands, a COMMIT by its SHA, the editor's other subject
     // (open_load_editor's own branch; the mode admits this one key through

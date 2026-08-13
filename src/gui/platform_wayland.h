@@ -118,45 +118,6 @@ public:
     // so a press that opens an editor — evaluated before the open — does not
     // arm, while typing inside an already-open editor does.
     using RepeatEligibleProbe  = std::function<bool(GuiKey, GuiInputState)>;
-    // Predicate installed by main.cpp: true while the GUI's MODAL STATE stands
-    // (a prompt or one of the four dialog editors). It is the truth the
-    // dialog WINDOW mirrors, and the WINDOW LAGS IT AT BOTH ENDS — the run
-    // loop's settled tail is the one opener and the one teardown owner, so the
-    // state moves inside an input's own dispatch and the toplevel catches up at
-    // the tail. Its consumer is THE ORIGIN TEST (dialog_modality_stands(),
-    // which ORs it with the toplevel — "was the GUI modal, by either witness,
-    // when this input happened"), and since codex round 11 that test serves
-    // ORIGIN SEMANTICS ALONE: the touch poison at wl_touch.down, where a
-    // main-surface finger landing while ANY modal stands is dead whatever
-    // happens later. ADMISSION semantics — may a dialog-bound input act? —
-    // are the DialogStaleProbe's below; the two questions are different in
-    // kind (dialog_modality_stands()'s definition states the distinction).
-    // Unwired (null) means "cannot tell" and reads as no modal state.
-    // WHAT IT DELIBERATELY DOES NOT COVER: the top-strip FLAG editor in its
-    // FlagPayload kind, which is keyboard-modal but is NOT a dialog (it is
-    // positional — the marker's flag unrolled where it stands) and never opens a
-    // window; the probe is false while it alone stands, so its keys keep flowing
-    // to the GUI's route_modal_editor_key. (That same editor struct's
-    // BpmBracket kind IS the BPM dialog and is inside the probe — the
-    // membership is composed once GUI-side.) That is why the witness is this
-    // narrow predicate
-    // and not some broader "any modal" question: the tests below must answer
-    // "is there a dialog window, or is one about to exist", nothing wider.
-    using DialogModalProbe     = std::function<bool()>;
-    // Predicate installed by main.cpp: true while the live MODAL-SURFACE
-    // GENERATION differs from the one the settled tail last synced into the
-    // dialog window (modal_surface_out_of_sync, paint_handler.h — the one
-    // spelling of the admission compare, whose cache and query owner live
-    // GUI-side so the four dialog GUI entry points read the identical rule).
-    // It is THE ADMISSION WITNESS of the dialog invariant (dialog_open()'s
-    // block): while it answers true the window on screen does not show the
-    // modal state input would answer — the OPENING EDGE (a modal raised, no
-    // window yet), the ZOMBIE SPAN (window standing, state answered) and the
-    // CONTENT SWITCH (a prompt replacing an editor on the standing toplevel)
-    // are all this one mismatch — so dialog_swallows_key() consumes every
-    // key for its duration. Unwired (null) means "cannot tell" and the
-    // swallow falls back to the main-focused veil alone, the honest reading.
-    using DialogStaleProbe     = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -191,210 +152,6 @@ public:
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
     void paint_now();
-
-    // -- THE MODAL DIALOG AS A REAL labwc WINDOW (architect-ratified
-    // 2026-08-12: "lifting it from the GUI to its own labwc window" —
-    // kdenlive's exact dialog model; it supersedes the same day's in-window
-    // centered box, which lived one morning). --
-    //
-    // A SECOND xdg_toplevel: its own wl_surface, xdg_surface, toplevel role,
-    // xdg_toplevel.set_parent(main window), server-side decorations through
-    // the REQUIRED xdg-decoration manager (labwc always advertises it), a
-    // real title, and an APP-CHOSEN INITIAL SIZE — the content size the GUI
-    // hands open_dialog. The WM makes it draggable and maximizable for free;
-    // every configure is honored by the GUI centering its fixed content block
-    // in the granted size (the redraw callback receives the live dimensions).
-    // Window POSITION is the WM's — labwc centers new windows — so nothing
-    // here positions anything (no xdg_positioner; that is popup machinery,
-    // not toplevel machinery). A compositor that refuses the second toplevel
-    // is not a case (labwc-only scope).
-    //
-    // A NONZERO CONFIGURED SIZE IS MANDATORY AND ALWAYS WINS (the xdg-shell
-    // contract, 2026-08-12 evening): the client may self-size ONLY when the
-    // compositor left the size to it — the latest configure carried 0x0, or
-    // none has arrived yet. So resize_dialog (the CONTENT-SWITCH route) is a
-    // pure retitle-and-repaint while a mandatory size stands, and takes the
-    // client-side size change only on a FREE (floating, 0x0-configured)
-    // dialog. Attaching a content-sized buffer against a MAXIMIZED configure
-    // was the defect this rule closes: xdg-shell calls that
-    // invalid_surface_state and labwc may disconnect the client. The rule is
-    // stated in terms of the SIZE alone, which is why nothing here
-    // enumerates maximize / fullscreen / tiled / unmaximize — every one of
-    // them is "the compositor granted a size" (the maximized bit is parsed
-    // and kept for the record only; it decides nothing).
-    //
-    // INPUT ROUTES BY SURFACE while the dialog stands (the per-surface fork
-    // lives HERE, in this class — the GUI never tests a surface):
-    //   * POINTER: enter/leave carry the surface, so the platform knows which
-    //     window the pointer rests in; motion/button on the DIALOG surface
-    //     deliver through the dialog hooks below in DIALOG-LOCAL coordinates,
-    //     and main-surface input keeps its ordinary callbacks (where the
-    //     GUI's veil consumes it — the veil is the GUI's, the routing is
-    //     ours). The WHEEL over the dialog is swallowed here (nothing in a
-    //     dialog scrolls; the sub-detent remainder is dropped so it cannot
-    //     bridge back onto the main window). The dialog surface wears the
-    //     ARROW cursor everywhere — applied at its enter, without touching
-    //     the remembered main-window kind, which the main enter restores.
-    //   * KEYBOARD: focus follows the compositor (clicking either surface
-    //     focuses it; labwc focuses the dialog when it maps). DIALOG-focused
-    //     keys deliver through the ordinary on_key — the GUI's modal
-    //     contract (route_modal_editor_key / the prompt dispatch) runs there
-    //     byte-identically — while a MAIN-focused key with a dialog standing
-    //     is CONSUMED HERE (deliver_key's veil fork, the Super drop's own
-    //     shape, keyboard-intent cancel fired per swallowed physical press),
-    //     so the modal contract's reach is focus-scoped by construction. And
-    //     a key queued behind any input that MOVED the modal surface — the
-    //     raise, the answer, a content switch — is consumed by that same
-    //     fork's generation arm until the settled tail syncs the window
-    //     (dialog_swallows_key(), the invariant below).
-    //     Modifier state needs no special care across the surface hop: the
-    //     leave-edge reset (forget_keyboard_state) is healed by the
-    //     wl_keyboard.modifiers event the protocol delivers after every
-    //     enter.
-    //   * TOUCH: the stream's surface is captured at the FIRST finger's down
-    //     (wl_touch.down carries it) and the whole stream routes by it — a
-    //     dialog-owned stream is the plain one-finger pointer translation
-    //     into the dialog hooks (tap = click at the lift, hold unlocks the
-    //     drag; the pan-zone query is never asked, so the window runs the
-    //     short 60 ms deadline and NOTHING nav- or region-shaped can arm on a
-    //     dialog: a second finger there is ignored whole), while a
-    //     main-owned stream keeps the full phase machine and the GUI's
-    //     standing veil gates consume what it delivers — EXCEPT that a
-    //     main-owned stream BORN while a dialog stands is not delivered at all:
-    //     it is poisoned at its first down and drains (the origin rule below,
-    //     the phase list's Drain clause), because a deferred conversion cannot
-    //     be trusted to the veil it may outlive.
-    //
-    // LIFETIME: open_dialog is idempotent while one stands (resize_dialog is
-    // the content-switch route — new title, new content, same window, and a
-    // new SIZE only where the size is still ours to choose, per the rule
-    // above);
-    // close_dialog tears the whole chain down and is idempotent;
-    // destroy_wayland_state tears it down at program exit, so a quit with a
-    // dialog standing leaks nothing. The dialog's WM CLOSE button fires the
-    // dialog close hook (the GUI maps it to the session's Esc — the
-    // abandon/cancel arm, never a destructive answer).
-    //
-    // THE INVARIANT (codex round 11, 2026-08-13 — the one mechanism that
-    // ended the round 8-10 span patchwork): INPUT MAY ONLY ANSWER A MODAL
-    // SURFACE THE USER HAS SEEN. Concretely: DIALOG-BOUND INPUT IS ADMITTED
-    // ONLY WHILE THE LIVE MODAL-SURFACE IDENTITY EQUALS THE IDENTITY THE
-    // SETTLED TAIL LAST SYNCED INTO THE WINDOW. The identity names WHICH
-    // modal surface stands — none / a prompt's message+response shape / a
-    // dialog editor's kind, content bytes deliberately excluded so a queued
-    // typing burst flows — and is DERIVED FRESH AT EVERY QUERY by one owner
-    // (modal_surface_generation, paint_handler.h), which bumps a monotonic
-    // GENERATION iff the identity moved; the settled tail records the
-    // generation it applied (AppState::ModalSurfaceWitness). A generation
-    // mismatch therefore reads "the modal surface moved since the window
-    // last mirrored it", and dialog_swallows_key() consumes every key for
-    // its duration, while the four dialog GUI entry points refuse pointer
-    // and touch on the same compare (input_pointer.cpp). No per-raiser bump
-    // site exists — deriving on query is what makes a missed-site drift
-    // impossible, this chain's repeated lesson.
-    //
-    // THE DERIVATION RECORD — the three lag spans the invariant subsumes,
-    // each found as its own leak and patched as its own arm before round 11
-    // collapsed them into the one compare (HISTORY, kept as motivation):
-    //   * THE ZOMBIE SPAN (round 8): the modal state goes false inside the
-    //     answering input's own dispatch while the toplevel lives to the
-    //     settled tail, and one wl_display_dispatch_pending() batch can
-    //     carry more queued events behind the answering one — Esc and Space
-    //     arriving together toggled playback behind a standing dialog.
-    //     Identity Something -> None: generation mismatch.
-    //   * THE OPENING EDGE (round 10): the tail is the one OPENER too, so
-    //     from the raising input's dispatch until the tail the GUI is modal
-    //     with NO window — Ctrl+Q and Delete queued together discarded the
-    //     work and exited, the dialog never painted. Identity None ->
-    //     Something: generation mismatch.
-    //   * THE CONTENT SWITCH (round 11, the inter-fix seam): a prompt can
-    //     REPLACE an editor on the standing toplevel — modality stood, focus
-    //     stayed, no zombie — so a dialog-focused Delete queued behind the
-    //     Ctrl+Q that tore the editor down answered the unseen prompt's
-    //     DISCARD. Identity A -> B: generation mismatch. The round-8/9/10
-    //     arms each covered one span; this third proved the class general.
-    //
-    // THE SWEEP, recorded at the round-11 conversion — every prior scenario
-    // re-run against the one mechanism, no case needing an arm beyond the
-    // generation compare + the focus-routed veil + the origin poison:
-    //   * queued keys at OPEN / at ANSWER / at editor->prompt / at
-    //     prompt->prompt (Save-failed replacing unsaved-close inside the
-    //     [S]ave answer's own dispatch): each moves the identity, the next
-    //     key's query observes it, mismatch swallows until the tail syncs;
-    //   * TYPING BURSTS into a live editor: buffer/caret/red-flash are
-    //     content, not identity — no bump, the burst flows;
-    //   * the BARE-E branch: same fork, swallowed over the same spans; under
-    //     a live synced prompt it still synthesizes the main press the GUI's
-    //     prompt veil consumes (the branch's own recorded case);
-    //   * HELD REPEATS across each edge: fires are swallowed per delivery
-    //     while mismatched or veiled and the report is discarded for
-    //     synthesized repeats (a burst must not kill a burst), the arm never
-    //     forms on a swallowed press, and layer (2)'s context checks disarm
-    //     an editor-armed burst at the editor's close;
-    //   * TOUCH on the MAIN surface at each edge: poisoned at the down by
-    //     the origin test (modality stands by either witness over every one
-    //     of these spans); on the DIALOG surface: delivered into the entry
-    //     points, where the same generation compare refuses the moved spans
-    //     and admits the synced window.
-    //
-    // THE ORIGIN RULE STANDS BESIDE THE INVARIANT, for DEFERRED input
-    // (codex round 9, which found three leaks that were all this one rule
-    // missing): SUPPRESSED OR DEFERRED INPUT RESOLVES AGAINST ITS ORIGIN,
-    // NOT ITS DELIVERY — this platform defers by design (the touch window
-    // converts a finger's down at its LIFT or EXPIRY; key repeat arms at a
-    // press and fires later), so a resolution that re-asks the live state
-    // reads one the answering input may already have cleared. Its two
-    // enforcement sites: THE TOUCH POISON (a main-surface stream whose
-    // FIRST finger lands while the GUI is modal by EITHER witness — the
-    // toplevel OR the modal probe, dialog_modality_stands() — enters Drain
-    // at that down and delivers nothing, ever; ORIGIN semantics, distinct
-    // in kind from the admission compare — the distinction is stated at
-    // dialog_modality_stands()), and THE CONSUMPTION-AWARE REPEAT ARM (a
-    // key the platform swallowed never arms repeat, so no burst can outlive
-    // the span that swallowed its press; a generation swallow is a consumed
-    // key like any other and reports no delivery). Input that originates
-    // AFTER an answer is a different question and is the arrival-order
-    // reading's (main.cpp's lifecycle sync).
-    //
-    // PAINTING: the dialog has its own small double-buffered wl_shm pool and
-    // its own frame-callback chain; damage is whole-window (the surface is
-    // small, so per-rect bookkeeping would buy nothing). invalidate_dialog
-    // marks it and the next dialog frame repaints everything through the
-    // dialog redraw callback.
-    bool dialog_open() const { return dialog_xdg_toplevel_ != nullptr; }
-    void open_dialog(int content_w, int content_h, const std::string& title);
-    void resize_dialog(int content_w, int content_h, const std::string& title);
-    void close_dialog();
-    void invalidate_dialog();
-    int  dialog_width() const  { return dialog_width_; }
-    int  dialog_height() const { return dialog_height_; }
-    // The latest dialog configure's MAXIMIZED bit — the record the size rule
-    // deliberately does not consult (a granted size is mandatory whatever
-    // state produced it). Exposed so the fact is answerable; the GUI has no
-    // reason to branch on it and does not.
-    bool dialog_maximized() const { return dialog_maximized_; }
-
-    // The dialog's own hooks. The redraw callback receives the dialog's cairo
-    // context and (0, 0, w, h) — the whole window, every paint. The pointer
-    // hooks carry DIALOG-LOCAL coordinates and the live GuiInputState
-    // (current_mods(), so a text drag can read the held button). The close
-    // hook is xdg_toplevel.close on the dialog — the WM titlebar X. All
-    // null-safe.
-    void set_dialog_redraw(RedrawCallback cb);
-    void set_dialog_button_press(ButtonCallback cb);
-    void set_dialog_button_release(ButtonCallback cb);
-    void set_dialog_motion(MotionCallback cb);
-    void set_dialog_close(CloseCallback cb);
-    // The ORIGIN witness (DialogModalProbe above): wired to the GUI's
-    // modal-state predicate; consumed by dialog_modality_stands(), the touch
-    // poison's origin test. Unwired (null) means "cannot tell" — the
-    // toplevel is then the whole origin answer.
-    void set_dialog_modal_probe(DialogModalProbe cb);
-    // The ADMISSION witness (DialogStaleProbe above): wired to the GUI's
-    // modal_surface_out_of_sync, the invariant's one compare. Unwired (null)
-    // means "cannot tell", and the keyboard fork falls back to the
-    // main-focused veil alone — the honest answer with no probe.
-    void set_dialog_stale_probe(DialogStaleProbe cb);
 
     // THE SYSTEM CLIPBOARD (the CLIPBOARD selection). PRIMARY is deliberately
     // absent — middle-click paste is out of scope and zwp_primary_selection is
@@ -502,26 +259,16 @@ public:
     //     loss, the edges that clear repeat_key_ itself: a keyboard-driven
     //     focus change must not leave a pointer-held arrow authoring into an
     //     unfocused window;
-    //   * deliver_key's TWO SWALLOWS, per swallowed NON-SYNTHESIZED press —
-    //     membership re-greped 2026-08-13 (codex round 11; unchanged at TWO fire
-    //     statements), the fire sites being the SUPER DROP and THE DIALOG
-    //     SWALLOW (dialog_swallows_key(), which the round-8 dialog arc added
-    //     with this same fire, whose TWO classes since round 11 — the
-    //     GENERATION MISMATCH, itself covering the opening edge, the zombie
-    //     span and the content switch as one compare, and the main-focused
-    //     VEIL — both fire it through that one branch, no per-class arm): a
-    //     swallowed press is an intervening key ARRIVAL the
-    //     application's on_key disarm never sees, and the platform's own layer-1
-    //     disarms its armed repeat at that very press — the arming branch in
-    //     on_keyboard_key runs on deliver_key's RETURN and takes its else arm,
-    //     the swallow having reported no delivery (the consumption-aware arm;
-    //     before round 9 the arm's own `!mod_super_` term did that job for the
-    //     Super path, one line earlier — the outcome was always this one).
-    //     Per-delivery is the faithful mirror. Deliberately NOT at Super's
-    //     press edge: the Super keysym itself "disarms nothing" platform-side,
-    //     and a bare Super hold with no key pressed runs no command (adjacency
-    //     stands), while the hold itself is a POINTER act, which the Super
-    //     ruling explicitly scopes out (Super+click clicks).
+    //   * deliver_key's SUPER DROP, per swallowed NON-SYNTHESIZED press: the
+    //     swallowed press is an intervening key ARRIVAL the application's
+    //     on_key disarm never sees, and the platform's own layer-1 disarms its
+    //     armed repeat at that very press (the arming else-branch in
+    //     on_keyboard_key runs BEFORE the drop) — per-delivery is the faithful
+    //     mirror. Deliberately NOT at Super's press edge: the Super keysym
+    //     itself "disarms nothing" platform-side, and a bare Super hold with no
+    //     key pressed runs no command (adjacency stands), while the hold
+    //     itself is a POINTER act, which the Super ruling explicitly scopes
+    //     out (Super+click clicks).
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The full edge inventory the consumer
     // rides is at AppState::transport_repeat. Null-safe.
@@ -871,72 +618,6 @@ private:
     struct xdg_toplevel*     xdg_toplevel_     = nullptr;
     struct zxdg_toplevel_decoration_v1* xdg_toplevel_decoration_ = nullptr;
 
-    // -- The dialog toplevel (the modal dialog as a real labwc window; the
-    //    public contract is at dialog_open() above) --
-    // The surface chain mirrors the main window's; the decoration object is
-    // unconditional for the same reason the main one is (the manager is a
-    // REQUIRED global). dialog_width_/dialog_height_ are the LIVE dimensions —
-    // the app-chosen content size until a configure grants something else
-    // (a WM drag-resize or maximize), after which they track the grant.
-    struct wl_surface*   dialog_surface_      = nullptr;
-    struct xdg_surface*  dialog_xdg_surface_  = nullptr;
-    struct xdg_toplevel* dialog_xdg_toplevel_ = nullptr;
-    struct zxdg_toplevel_decoration_v1* dialog_decoration_ = nullptr;
-    struct wl_callback*  dialog_frame_callback_ = nullptr;
-    bool dialog_has_initial_configure_ = false;
-    // Whole-window damage flag — the dialog's one damage granule (public
-    // contract: the surface is small, per-rect bookkeeping buys nothing).
-    bool dialog_damage_    = false;
-    int  dialog_width_     = 0;
-    int  dialog_height_    = 0;
-    int  dialog_pending_w_ = 0;   // xdg_toplevel.configure staging, the main
-    int  dialog_pending_h_ = 0;   // window's own pending_w_/pending_h_ pattern
-    // THE MANDATORY SIZE: the LATEST configure's granted size, adopted at the
-    // xdg_surface.configure ack (0 = the compositor left the size to us —
-    // either it granted 0x0 or none has arrived). Distinct from the pending
-    // pair, which is per-configure staging: this one STANDS between
-    // configures, which is what resize_dialog consults.
-    int  dialog_configured_w_ = 0;
-    int  dialog_configured_h_ = 0;
-    // THE CONTENT SIZE the GUI asked for (open_dialog / resize_dialog): the
-    // size a FREE dialog wears, and the fallback whenever the standing
-    // configure leaves the size to us.
-    int  dialog_content_w_ = 0;
-    int  dialog_content_h_ = 0;
-    // XDG_TOPLEVEL_STATE_MAXIMIZED off the latest configure's state array.
-    // FOR THE RECORD ONLY — the mandatory-size rule decides every branch off
-    // the granted SIZE, so nothing branches on this; its one reader is the
-    // dialog_maximized() accessor above, which exists so "why is the size
-    // mandatory here?" is answerable (contract at dialog_open()).
-    bool dialog_maximized_ = false;
-
-    // (The dialog's own double-buffered pool lives below the ShmBuffer
-    // definition it reuses — see the buffer pool block.)
-
-    // -- Per-surface input routing (the fork's own state) --
-    // KEYBOARD focus surface: true while wl_keyboard.enter last named the
-    // dialog surface. deliver_key's veil fork reads it — a main-focused key
-    // with a dialog standing is consumed there (the invariant's focus-routing
-    // half; the generation arm owns every surface-moved span). It is read
-    // only WHILE THE TOPLEVEL STANDS: with no window there is no dialog
-    // surface to be focused on, so every key is main-focused by definition
-    // and the swallow needs no focus term there.
-    bool keyboard_on_dialog_ = false;
-    // POINTER focus surface and the dialog-local position. Deliberately
-    // SEPARATE from pointer_focused_/pointer_x_/pointer_y_, which stay the
-    // MAIN surface's own (the touch state block's split, restated for the
-    // second window): dialog button events carry no coordinates, so the
-    // dialog needs its own last-known pair, and nothing main-side may read a
-    // dialog-local point as a window point.
-    bool pointer_on_dialog_ = false;
-    int  dialog_pointer_x_  = 0;
-    int  dialog_pointer_y_  = 0;
-    // TOUCH stream routing: captured at the FIRST finger's down from the
-    // surface wl_touch.down names, fixed for the stream's life (the pan-zone
-    // answer's own pattern). A dialog-owned stream translates to the dialog
-    // hooks and never arms nav or region (the public contract above).
-    bool touch_stream_on_dialog_ = false;
-
     // -- Frame callback (one in flight at a time, or none) --
     struct wl_callback*      frame_callback_   = nullptr;
 
@@ -973,17 +654,6 @@ private:
     void*     shm_pool_map_  = nullptr;
     size_t    shm_pool_size_ = 0;
     struct wl_shm_pool* shm_pool_ = nullptr;
-
-    // The DIALOG's own double-buffered pool — the main pool's pattern at the
-    // dialog's size, torn down and rebuilt on every dialog size change.
-    // Reuses ShmBuffer (and its release listener) verbatim; the per-buffer
-    // pending lists go unused, the dialog's damage granule being the whole
-    // window (dialog_damage_, the dialog block above).
-    ShmBuffer dialog_shm_buffers_[kShmBufferCount];
-    int       dialog_shm_pool_fd_   = -1;
-    void*     dialog_shm_pool_map_  = nullptr;
-    size_t    dialog_shm_pool_size_ = 0;
-    struct wl_shm_pool* dialog_shm_pool_ = nullptr;
 
     // -- Window state --
     int  width_  = 0;
@@ -1299,26 +969,9 @@ private:
     //     translation end — the single-finger Nav model, not the Pointer
     //     one. A second finger landing here is IGNORED whole (a committed
     //     gesture — the moved-drag rule's family).
-    //   * Drain   — waiting for every remaining finger to lift; nothing is
-    //     delivered, and nothing can be (motion, further downs, ups and the
-    //     hard ends are all bookkeeping in here). Entered from Pointer, Nav
-    //     and Region ends that leave ignored fingers on the glass — AND, since
-    //     codex round 9, AT THE FIRST DOWN OF A POISONED STREAM: a
-    //     MAIN-surface stream whose first finger lands while the GUI is modal
-    //     BY EITHER WITNESS — the dialog toplevel (live modal or zombie) or the
-    //     modal state itself, which stands alone in the span before the settled
-    //     tail opens the window — is DEAD AT ITS ORIGIN and enters Drain right
-    //     there, never Pending. That is the origin rule's touch half
-    //     (dialog_open()'s block): this window converts a down at its LIFT, its
-    //     SLOP CROSSING or its EXPIRY, so a delivery-time modal test reads a
-    //     state the answering input may already have cleared — down under the
-    //     modal, Esc, up, and the tap outruns the settled tail into a
-    //     main-window command behind a standing dialog. The poison's whole
-    //     lifecycle is the phase: set at that down, cleared by the ordinary
-    //     Drain exit when every finger has lifted. A DIALOG-owned stream is
-    //     deliberately never poisoned — it is the dialog's own tap-to-click,
-    //     and its surface-moved spans are gated at the GUI's four dialog
-    //     entry points (the invariant's generation compare, dialog_open()).
+    //   * Drain   — waiting for every remaining (ignored) finger to lift;
+    //     nothing is delivered. Entered from Pointer, Nav and Region ends
+    //     that leave ignored fingers on the glass.
     //
     // THE EDGE INVENTORY — every route that ends or transforms touch state,
     // authoritative here (the transport_repeat precedent; each fire site
@@ -1419,13 +1072,6 @@ private:
     //   * third DOWN during two-finger Nav / any DOWN during Drain — ignored:
     //     recorded (the point count), not routed — the mid-gesture rule
     //     above.
-    //   * FIRST DOWN, main surface, THE GUI MODAL BY EITHER WITNESS (the
-    //     toplevel or the modal state) — THE POISON (codex
-    //     round 9): Idle -> Drain instead of Pending, nothing staged, no
-    //     deadline, the pan-zone query not asked; every later event for the
-    //     stream is Drain bookkeeping and the stream ends at the ordinary
-    //     Drain exit. The Drain clause above and dialog_open()'s origin rule
-    //     carry the reasoning.
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
@@ -1702,18 +1348,6 @@ private:
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
-    // The dialog's own hooks (public contract at set_dialog_redraw). All
-    // null-safe at their fire sites.
-    RedrawCallback dialog_on_redraw_;
-    ButtonCallback dialog_on_button_press_;
-    ButtonCallback dialog_on_button_release_;
-    MotionCallback dialog_on_motion_;
-    CloseCallback  dialog_on_close_;
-    // The origin witness (contract at set_dialog_modal_probe).
-    DialogModalProbe dialog_modal_probe_;
-    // The admission witness (contract at set_dialog_stale_probe).
-    DialogStaleProbe dialog_stale_probe_;
-
     // -- Internal helpers --
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
@@ -1733,62 +1367,6 @@ private:
     void schedule_frame_callback();
     void paint_one_frame();
     void destroy_wayland_state();
-
-    // -- The dialog toplevel's helpers (the main window's own shapes, at the
-    //    dialog's whole-window damage granule) --
-    void recreate_dialog_shm_pool(int w, int h);
-    void destroy_dialog_shm_pool();
-    ShmBuffer* acquire_free_dialog_buffer();
-    void schedule_dialog_frame_callback();
-    void paint_dialog_frame();
-    // ONE teardown for the whole dialog chain (close_dialog's body and
-    // destroy_wayland_state's dialog arm — two exits, one owner, the
-    // clipboard teardown's own lesson). Idempotent. It also drops the
-    // per-surface routing bits, and a touch stream the dialog owned is
-    // hard-ended (its surface is going away; the compositor's cancel may
-    // never arrive on a destroyed surface).
-    void destroy_dialog_window();
-    // THE ONE SIZE DECISION (the mandatory-configure rule at dialog_open()):
-    // the effective size is the standing configured size when it is nonzero
-    // and the content size otherwise; adopting it recreates the pool and
-    // marks damage. Called from open_dialog's answer path (the configure ack)
-    // and from resize_dialog, so both branches read one rule.
-    void apply_dialog_effective_size();
-    // THE ORIGIN TEST — "was the GUI modal when this input happened", by
-    // EITHER witness: the dialog toplevel exists, OR the modal probe says a
-    // modal state stands with the window not created yet. Its one consumer
-    // since round 11 is the TOUCH POISON at wl_touch.down (the origin rule
-    // at dialog_open(); the witness's own scope at DialogModalProbe). ORIGIN
-    // semantics, deliberately distinct from the keyboard fork's ADMISSION
-    // semantics below: a main-surface finger landing while ANY modal stands
-    // is dead — a live, fully-synced dialog included, because the main
-    // window is veiled under it and a deferred conversion cannot be trusted
-    // to a veil it may outlive — whereas admission asks whether the window
-    // the user sees matches the modal state the input would answer, which a
-    // live synced dialog passes. One question is about the input's BIRTH,
-    // the other about the surface's TRUTH; neither subsumes the other.
-    bool dialog_modality_stands() const;
-    // DOES THE MODAL DIALOG SWALLOW THIS KEY? The ONE keyboard veil fork
-    // (the invariant at dialog_open()), shared by its exactly two callers:
-    // deliver_key and the kLeftClickKey synthesized-button branch, which
-    // returns before deliver_key and so must carry the fork itself (they
-    // were spelled inline and DRIFTED — round 9's lesson). TWO arms since
-    // round 11: the GENERATION MISMATCH (the admission witness — the
-    // opening edge, the zombie span and the content switch are all this one
-    // compare; it subsumed the old zombie term and dialog_is_zombie() with
-    // it, and the old windowless origin-test precondition), and the
-    // main-focused VEIL while a toplevel stands.
-    bool dialog_swallows_key() const;
-    // The dialog surface's one cursor: the theme ARROW, applied at its enter
-    // serial WITHOUT touching cursor_kind_ (the main window's remembered
-    // kind, which the main enter restores).
-    void apply_dialog_arrow_cursor();
-    void on_dialog_xdg_surface_configure(struct xdg_surface* xs,
-                                         uint32_t serial);
-    void on_dialog_toplevel_configure(int32_t width, int32_t height,
-                                      struct wl_array* states);
-    void on_dialog_toplevel_close();
-    void on_dialog_frame_done(struct wl_callback* cb);
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
 
@@ -1842,13 +1420,7 @@ private:
     // remainder and a held synthesized-left button are all dropped together.
     // Hoisted so a third such edge cannot land with one of the four forgotten.
     void forget_keyboard_state();
-    // Deliver one key press to the application — and REPORT WHETHER IT
-    // REACHED DISPATCH (codex round 9). The return is what makes the repeat
-    // arm consumption-aware: a swallowed key (Super, the dialog veil, the
-    // generation mismatch) must not arm a burst that fires the moment the
-    // swallow lifts. False = nothing dispatched, for any reason including an
-    // unwired on_key_.
-    bool deliver_key(GuiKey key, GuiInputState mods);
+    void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
     // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
     // callback and the loop-settled hook are built from, read out of the tracked
@@ -1915,10 +1487,7 @@ private:
 
     // -- Touch handlers (wl_touch as the pointer; the phase machine and edge
     // inventory are at the touch state block above) --
-    // `surface` is the touched surface — the stream's routing key, captured
-    // at the FIRST finger's down (touch_stream_on_dialog_ above).
-    void on_touch_down(uint32_t serial, uint32_t time,
-                       struct wl_surface* surface, int32_t id,
+    void on_touch_down(uint32_t serial, uint32_t time, int32_t id,
                        int32_t fx, int32_t fy);
     void on_touch_up(uint32_t serial, uint32_t time, int32_t id);
     void on_touch_motion(uint32_t time, int32_t id, int32_t fx, int32_t fy);
