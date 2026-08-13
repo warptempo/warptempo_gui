@@ -167,6 +167,44 @@ ON GLASS IT FELL OUT OF THE WINDOWED CONTRACT, zero touch code, for the half-day
 
 THE SCROLLBAR PLAN IS DEAD, the architect's own conclusion: the interim scrollbar he had sketched for glass navigation is not coming — the phone-model one-finger pan (grown to the whole navigation surface at the eighth ruling) plus the region former are its replacement, the pan covering the travel the scrollbar would have and the hold covering the span-marking. Do not re-propose it. (The OVERVIEW STRIP — landed and REWORKED 2026-08-12, zoom-viewport-strip.md — is a different surface: a whole-song lane whose plain drag is the capture-free box pan, with the teleport, the endcap zoom drags and the ctrl strip drag beside it; its capture oddity is CLOSED at the note above.)
 
+### The Dialog Window's Per-Surface Routing (2026-08-12 evening)
+
+THE MODAL DIALOG IS A SECOND SURFACE (its own labwc window — conventions.md
+owns the modality contract), and the touch stream ROUTES BY ITS FIRST
+FINGER'S SURFACE: wl_touch.down carries the touched surface, the platform
+captures it once at the stream's open (the pan-zone answer's own pattern —
+one capture, fixed for the stream's life), and the whole stream follows it.
+
+- A DIALOG-owned stream is the plain one-finger pointer translation into the
+  dialog's own hooks, in dialog-local coordinates: a tap is a click at the
+  lift (a prompt button answers, OK/Cancel answer, the field takes the
+  caret), hold unlocks the pointer at the 60 ms mark (hold-then-drag drags a
+  field selection). The PAN-ZONE QUERY IS NEVER ASKED for a dialog down —
+  it answers MAIN-window geometry — so the zone answer rests false, the
+  window runs the short deadline, and nothing nav- or region-shaped can arm
+  on a dialog: a SECOND finger on a dialog stream is ignored whole (there is
+  no pinch and no upgrade there; nothing in a dialog pans or zooms). The
+  translation's end delivers its release and nothing more — the leave hook
+  and the restore motion are MAIN-window state repairs, and a finger lifting
+  from the dialog moved none of them.
+- A MAIN-owned stream while a dialog stands keeps the full phase machine and
+  delivers as ever — and everything it delivers dies at the GUI's standing
+  veil gates: a tap's press-release is consumed, a two-finger nav freezes at
+  the per-frame wheel-context refusal (wheel_context answers -1 under a
+  prompt or a dialog editor), a region hold refuses in its begin. The veil
+  is total, so main-window glass is inert exactly as the main-window mouse
+  is.
+- The two-deadline window therefore applies PER SURFACE by construction: the
+  deadline is picked from the captured surface's own answer at the down, and
+  no mid-stream event can re-ask it.
+
+This is what makes every dialog ANSWERABLE ENTIRELY ON GLASS with no special
+case: the dialog's buttons are ordinary tap targets on its own surface, and
+the WM close button (the session's Esc) is labwc's own tap target — the
+modal-trap class of defect (an exit-less accidental editor, 2026-08-11) is
+structurally gone, which is why the veil's Quit/Save reach-through was
+deleted with the move (the succession record at input_pointer.cpp's top).
+
 ### Out of Scope — Deliberately
 
 None of these constrains the current shape:

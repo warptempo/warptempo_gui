@@ -153,6 +153,90 @@ public:
     void drain_events();
     void paint_now();
 
+    // -- THE MODAL DIALOG AS A REAL labwc WINDOW (architect-ratified
+    // 2026-08-12: "lifting it from the GUI to its own labwc window" —
+    // kdenlive's exact dialog model; it supersedes the same day's in-window
+    // centered box, which lived one morning). --
+    //
+    // A SECOND xdg_toplevel: its own wl_surface, xdg_surface, toplevel role,
+    // xdg_toplevel.set_parent(main window), server-side decorations through
+    // the REQUIRED xdg-decoration manager (labwc always advertises it), a
+    // real title, and an APP-CHOSEN INITIAL SIZE — the content size the GUI
+    // hands open_dialog. The WM makes it draggable and maximizable for free;
+    // every configure is honored by the GUI centering its fixed content block
+    // in the granted size (the redraw callback receives the live dimensions).
+    // Window POSITION is the WM's — labwc centers new windows — so nothing
+    // here positions anything (no xdg_positioner; that is popup machinery,
+    // not toplevel machinery). A compositor that refuses the second toplevel
+    // is not a case (labwc-only scope).
+    //
+    // INPUT ROUTES BY SURFACE while the dialog stands (the per-surface fork
+    // lives HERE, in this class — the GUI never tests a surface):
+    //   * POINTER: enter/leave carry the surface, so the platform knows which
+    //     window the pointer rests in; motion/button on the DIALOG surface
+    //     deliver through the dialog hooks below in DIALOG-LOCAL coordinates,
+    //     and main-surface input keeps its ordinary callbacks (where the
+    //     GUI's veil consumes it — the veil is the GUI's, the routing is
+    //     ours). The WHEEL over the dialog is swallowed here (nothing in a
+    //     dialog scrolls; the sub-detent remainder is dropped so it cannot
+    //     bridge back onto the main window). The dialog surface wears the
+    //     ARROW cursor everywhere — applied at its enter, without touching
+    //     the remembered main-window kind, which the main enter restores.
+    //   * KEYBOARD: focus follows the compositor (clicking either surface
+    //     focuses it; labwc focuses the dialog when it maps). DIALOG-focused
+    //     keys deliver through the ordinary on_key — the GUI's modal
+    //     contract (route_modal_editor_key / the prompt dispatch) runs there
+    //     byte-identically — while a MAIN-focused key with a dialog standing
+    //     is CONSUMED HERE (deliver_key's veil fork, the Super drop's own
+    //     shape, keyboard-intent cancel fired per swallowed physical press),
+    //     so the modal contract's reach is focus-scoped by construction.
+    //     Modifier state needs no special care across the surface hop: the
+    //     leave-edge reset (forget_keyboard_state) is healed by the
+    //     wl_keyboard.modifiers event the protocol delivers after every
+    //     enter.
+    //   * TOUCH: the stream's surface is captured at the FIRST finger's down
+    //     (wl_touch.down carries it) and the whole stream routes by it — a
+    //     dialog-owned stream is the plain one-finger pointer translation
+    //     into the dialog hooks (tap = click at the lift, hold unlocks the
+    //     drag; the pan-zone query is never asked, so the window runs the
+    //     short 60 ms deadline and NOTHING nav- or region-shaped can arm on a
+    //     dialog: a second finger there is ignored whole), while a
+    //     main-owned stream keeps the full phase machine and the GUI's
+    //     standing veil gates consume what it delivers.
+    //
+    // LIFETIME: open_dialog is idempotent while one stands (resize_dialog is
+    // the content-switch route — new size, new title, same window);
+    // close_dialog tears the whole chain down and is idempotent;
+    // destroy_wayland_state tears it down at program exit, so a quit with a
+    // dialog standing leaks nothing. The dialog's WM CLOSE button fires the
+    // dialog close hook (the GUI maps it to the session's Esc — the
+    // abandon/cancel arm, never a destructive answer).
+    //
+    // PAINTING: the dialog has its own small double-buffered wl_shm pool and
+    // its own frame-callback chain; damage is whole-window (the surface is
+    // small, so per-rect bookkeeping would buy nothing). invalidate_dialog
+    // marks it and the next dialog frame repaints everything through the
+    // dialog redraw callback.
+    bool dialog_open() const { return dialog_xdg_toplevel_ != nullptr; }
+    void open_dialog(int content_w, int content_h, const std::string& title);
+    void resize_dialog(int content_w, int content_h, const std::string& title);
+    void close_dialog();
+    void invalidate_dialog();
+    int  dialog_width() const  { return dialog_width_; }
+    int  dialog_height() const { return dialog_height_; }
+
+    // The dialog's own hooks. The redraw callback receives the dialog's cairo
+    // context and (0, 0, w, h) — the whole window, every paint. The pointer
+    // hooks carry DIALOG-LOCAL coordinates and the live GuiInputState
+    // (current_mods(), so a text drag can read the held button). The close
+    // hook is xdg_toplevel.close on the dialog — the WM titlebar X. All
+    // null-safe.
+    void set_dialog_redraw(RedrawCallback cb);
+    void set_dialog_button_press(ButtonCallback cb);
+    void set_dialog_button_release(ButtonCallback cb);
+    void set_dialog_motion(MotionCallback cb);
+    void set_dialog_close(CloseCallback cb);
+
     // THE SYSTEM CLIPBOARD (the CLIPBOARD selection). PRIMARY is deliberately
     // absent — middle-click paste is out of scope and zwp_primary_selection is
     // not bound — and so is drag-and-drop, retired with the in-session file
@@ -618,6 +702,50 @@ private:
     struct xdg_toplevel*     xdg_toplevel_     = nullptr;
     struct zxdg_toplevel_decoration_v1* xdg_toplevel_decoration_ = nullptr;
 
+    // -- The dialog toplevel (the modal dialog as a real labwc window; the
+    //    public contract is at dialog_open() above) --
+    // The surface chain mirrors the main window's; the decoration object is
+    // unconditional for the same reason the main one is (the manager is a
+    // REQUIRED global). dialog_width_/dialog_height_ are the LIVE dimensions —
+    // the app-chosen content size until a configure grants something else
+    // (a WM drag-resize or maximize), after which they track the grant.
+    struct wl_surface*   dialog_surface_      = nullptr;
+    struct xdg_surface*  dialog_xdg_surface_  = nullptr;
+    struct xdg_toplevel* dialog_xdg_toplevel_ = nullptr;
+    struct zxdg_toplevel_decoration_v1* dialog_decoration_ = nullptr;
+    struct wl_callback*  dialog_frame_callback_ = nullptr;
+    bool dialog_has_initial_configure_ = false;
+    // Whole-window damage flag — the dialog's one damage granule (public
+    // contract: the surface is small, per-rect bookkeeping buys nothing).
+    bool dialog_damage_    = false;
+    int  dialog_width_     = 0;
+    int  dialog_height_    = 0;
+    int  dialog_pending_w_ = 0;   // xdg_toplevel.configure staging, the main
+    int  dialog_pending_h_ = 0;   // window's own pending_w_/pending_h_ pattern
+
+    // (The dialog's own double-buffered pool lives below the ShmBuffer
+    // definition it reuses — see the buffer pool block.)
+
+    // -- Per-surface input routing (the fork's own state) --
+    // KEYBOARD focus surface: true while wl_keyboard.enter last named the
+    // dialog surface. deliver_key's veil fork reads it — a main-focused key
+    // with a dialog standing is consumed there (the public contract above).
+    bool keyboard_on_dialog_ = false;
+    // POINTER focus surface and the dialog-local position. Deliberately
+    // SEPARATE from pointer_focused_/pointer_x_/pointer_y_, which stay the
+    // MAIN surface's own (the touch state block's split, restated for the
+    // second window): dialog button events carry no coordinates, so the
+    // dialog needs its own last-known pair, and nothing main-side may read a
+    // dialog-local point as a window point.
+    bool pointer_on_dialog_ = false;
+    int  dialog_pointer_x_  = 0;
+    int  dialog_pointer_y_  = 0;
+    // TOUCH stream routing: captured at the FIRST finger's down from the
+    // surface wl_touch.down names, fixed for the stream's life (the pan-zone
+    // answer's own pattern). A dialog-owned stream translates to the dialog
+    // hooks and never arms nav or region (the public contract above).
+    bool touch_stream_on_dialog_ = false;
+
     // -- Frame callback (one in flight at a time, or none) --
     struct wl_callback*      frame_callback_   = nullptr;
 
@@ -654,6 +782,17 @@ private:
     void*     shm_pool_map_  = nullptr;
     size_t    shm_pool_size_ = 0;
     struct wl_shm_pool* shm_pool_ = nullptr;
+
+    // The DIALOG's own double-buffered pool — the main pool's pattern at the
+    // dialog's size, torn down and rebuilt on every dialog size change.
+    // Reuses ShmBuffer (and its release listener) verbatim; the per-buffer
+    // pending lists go unused, the dialog's damage granule being the whole
+    // window (dialog_damage_, the dialog block above).
+    ShmBuffer dialog_shm_buffers_[kShmBufferCount];
+    int       dialog_shm_pool_fd_   = -1;
+    void*     dialog_shm_pool_map_  = nullptr;
+    size_t    dialog_shm_pool_size_ = 0;
+    struct wl_shm_pool* dialog_shm_pool_ = nullptr;
 
     // -- Window state --
     int  width_  = 0;
@@ -1348,6 +1487,14 @@ private:
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
+    // The dialog's own hooks (public contract at set_dialog_redraw). All
+    // null-safe at their fire sites.
+    RedrawCallback dialog_on_redraw_;
+    ButtonCallback dialog_on_button_press_;
+    ButtonCallback dialog_on_button_release_;
+    MotionCallback dialog_on_motion_;
+    CloseCallback  dialog_on_close_;
+
     // -- Internal helpers --
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
@@ -1367,6 +1514,30 @@ private:
     void schedule_frame_callback();
     void paint_one_frame();
     void destroy_wayland_state();
+
+    // -- The dialog toplevel's helpers (the main window's own shapes, at the
+    //    dialog's whole-window damage granule) --
+    void recreate_dialog_shm_pool(int w, int h);
+    void destroy_dialog_shm_pool();
+    ShmBuffer* acquire_free_dialog_buffer();
+    void schedule_dialog_frame_callback();
+    void paint_dialog_frame();
+    // ONE teardown for the whole dialog chain (close_dialog's body and
+    // destroy_wayland_state's dialog arm — two exits, one owner, the
+    // clipboard teardown's own lesson). Idempotent. It also drops the
+    // per-surface routing bits, and a touch stream the dialog owned is
+    // hard-ended (its surface is going away; the compositor's cancel may
+    // never arrive on a destroyed surface).
+    void destroy_dialog_window();
+    // The dialog surface's one cursor: the theme ARROW, applied at its enter
+    // serial WITHOUT touching cursor_kind_ (the main window's remembered
+    // kind, which the main enter restores).
+    void apply_dialog_arrow_cursor();
+    void on_dialog_xdg_surface_configure(struct xdg_surface* xs,
+                                         uint32_t serial);
+    void on_dialog_toplevel_configure(int32_t width, int32_t height);
+    void on_dialog_toplevel_close();
+    void on_dialog_frame_done(struct wl_callback* cb);
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
 
@@ -1487,7 +1658,10 @@ private:
 
     // -- Touch handlers (wl_touch as the pointer; the phase machine and edge
     // inventory are at the touch state block above) --
-    void on_touch_down(uint32_t serial, uint32_t time, int32_t id,
+    // `surface` is the touched surface — the stream's routing key, captured
+    // at the FIRST finger's down (touch_stream_on_dialog_ above).
+    void on_touch_down(uint32_t serial, uint32_t time,
+                       struct wl_surface* surface, int32_t id,
                        int32_t fx, int32_t fy);
     void on_touch_up(uint32_t serial, uint32_t time, int32_t id);
     void on_touch_motion(uint32_t time, int32_t id, int32_t fx, int32_t fy);

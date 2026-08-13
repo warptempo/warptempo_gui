@@ -111,7 +111,9 @@ void GuiSettingsEditor::open() {
                        /*locked_prefix=*/"",
                        /*initial_pending=*/"",
                        text_editor::Kind::SettingsAssignment);
-    // A modal-dialog OPEN damages the whole window: the centered box's rect
+    // A modal-dialog OPEN damages the whole main window (the ordinary
+    // repaint; the dialog WINDOW itself is the lifecycle sync's, opened at
+    // this iteration's tail): the old in-window box's rect
     // does not exist before its first paint (the stash is the painter's), so
     // the status-row owner's dialog rider cannot cover it here. Every later
     // repaint of the session rides that owner (viewport.cpp).
@@ -369,7 +371,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // does, the membership stated at the head of input_trim.cpp). It
             // moves the cursor from inside a modal editor, which is accepted
             // for uniformity: a typed commit is a commit, and the editor lives
-            // in the centered dialog while the move is out on the waveform. The
+            // in the dialog window while the move is out on the waveform. The
             // INACTIVE-band arm below stays out of the rule — it writes a
             // PARKED pair, not the live window, and moves nothing visible.
             input->commit_trim_mutation();

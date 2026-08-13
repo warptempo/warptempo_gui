@@ -97,7 +97,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.invalidate_status_row_area();
     }
 
-    // The modal prompt (a centered dialog since 2026-08-12) owns input while
+    // The modal prompt (a dialog, its own labwc window since 2026-08-12
+    // evening) owns input while
     // active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
     // marker edits / playback / viewport keys cannot sneak in while
@@ -175,8 +176,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // contend with route_modal_editor_key — and the claim rests on TWO
     // mechanisms, one per class. The popup opens only from row 1, and while a
     // DIALOG editor is up the press that would open it dies at the dialog's
-    // veil in on_button_press (the two menu anchors carry no chord, so the
-    // modal-trap lift never reaches them). The pointer-transparent FLAG
+    // veil in on_button_press (total — no press of any kind survives it
+    // since the reach-through's deletion). The pointer-transparent FLAG
     // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
     // open path discards the edit, exactly as a press outside its box does. The
     // reverse direction is this gate's own doing — `;` is swallowed here, so no
@@ -1042,7 +1043,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `;` opens the settings prompt as a centered modal dialog.
+    // Bare `;` opens the settings prompt as a modal dialog window.
     // Keyboard-only (no click analogue). The active-editor block at the top of
     // on_key routes subsequent keystrokes; opening here just primes the State.
     // The settings editor is a modal DIALOG surface, so its open takes the
@@ -1059,7 +1060,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `'` opens the load prompt as a centered modal dialog: load a chosen
+    // Bare `'` opens the load prompt as a modal dialog window: load a chosen
     // render in place as the new authoring baseline by NAME — or, while the `h`
     // history mode stands, a COMMIT by its SHA, the editor's other subject
     // (open_load_editor's own branch; the mode admits this one key through

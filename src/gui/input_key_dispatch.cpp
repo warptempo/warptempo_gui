@@ -2809,18 +2809,20 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // The DIALOG-HOSTED modal editors: the settings editor, the load
 // editor, the bpm editor (top_flag_editor reused with Kind::BpmBracket) and,
 // since 2026-08-07, the history view's commit-title editor — the four
-// surfaces painting in the centered modal dialog since 2026-08-12 (they
+// surfaces painting in the modal dialog since 2026-08-12 (they
 // lived on the bottom strip before, whence the predicate's old
-// modal_bottom_strip_editor_active name; the membership is unchanged) —
+// modal_bottom_strip_editor_active name; the membership is unchanged, and
+// the dialog is its OWN labwc window since that evening, so the predicate's
+// pointer-facing answer is now "consume main-surface input" whole) —
 // plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it names is the POINTER-facing
 // behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (seven since the dialog arc: the wheel swallow, the
-// cursor map's blanket Arrow, the modal-trap block, the dialog button claim,
-// the dialog-hover motion branch, the roster hover walk's veil term, and the
-// dialog painter's fork by proxy) is
+// the caller roster (re-derived at the real-window move: the wheel swallow,
+// the cursor map's blanket Arrow, the veil's press and motion gates, the
+// dialog surface's entry points, and the dialog content resolver by proxy)
+// is
 // the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
@@ -4447,12 +4449,19 @@ void GuiInputHandler::load_editor_commit() {
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
-// else is swallowed as a backstop. THE COMMAND ADMISSION HAS A POINTER-SIDE
-// MIRROR since 2026-08-11 (the modal-trap fix):
-// modal_editor_admits_command_chord (input_pointer.cpp) restates the
-// Esc/Ctrl+S/Ctrl+Q command set so a roster button whose chord is admitted
-// here dispatches while a dialog editor stands — the two spellings must
-// move together. `autocomplete` is the optional
+// else is swallowed as a backstop. THE CONTRACT'S REACH IS FOCUS-SCOPED
+// since 2026-08-12 evening (the dialog's move to its own labwc window):
+// keyboard focus follows the compositor — clicking either window focuses it,
+// and labwc focuses the dialog as it maps — DIALOG-focused keys arrive here
+// and run this contract byte-identically, while a MAIN-focused chord with a
+// dialog standing is consumed at the platform's veil fork (deliver_key,
+// platform_wayland.cpp) and never reaches on_key at all. The four dialog
+// editors' contract therefore runs on dialog-focused keys; the top-strip
+// FLAG editor is not a dialog and its keys stay main-focused as ever. (The
+// pointer-side command-admission mirror of 2026-08-11 —
+// modal_editor_admits_command_chord — is DELETED with the reach-through it
+// served; the succession record is at the top of input_pointer.cpp.)
+// `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
 // Alt + Tab fall through to handle_key unchanged); the commit-title, bpm and
 // flag editors pass an empty hook, but bare Tab never reaches this route for

@@ -611,6 +611,20 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
+    // THE DIALOG SURFACE'S ENTRY POINTS (2026-08-12 evening; bodies in
+    // input_pointer.cpp), wired from main.cpp to the platform's dialog input
+    // hooks — the dialog window's own press/release/motion in DIALOG-LOCAL
+    // coordinates, and its WM close, which is the session's Esc (the
+    // abandon/cancel arm, never a destructive answer). The main-window
+    // handlers above never see dialog input; their whole answer while a
+    // dialog stands is the veil.
+    void on_dialog_button_press(GuiMouseButton button, int x, int y,
+                                GuiInputState mods);
+    void on_dialog_button_release(GuiMouseButton button, int x, int y,
+                                  GuiInputState mods);
+    void on_dialog_motion(int x, int y, GuiInputState mods);
+    void on_dialog_close_request();
+
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
     // model's single-finger frames are back since the windowed model's
     // return, the sixth glass ruling 2026-08-12): the
@@ -2126,26 +2140,30 @@ private:
     // It names the DIALOG-HOSTED modal editors — the settings editor, the
     // load editor, the commit-title editor and the bpm bracket editor (plus
     // the prompts, gated separately), the four surfaces that paint in the
-    // centered modal dialog since 2026-08-12 (it was
+    // modal dialog since 2026-08-12 (it was
     // modal_bottom_strip_editor_active while they lived on the status lane;
     // the MEANING — this exact four-editor set — is unchanged, only their
-    // home and therefore the name moved). SEVEN CALLERS (re-derived
-    // 2026-08-12, the dialog arc), each asking the same question about a
-    // pointer fact: wheel_context's swallow (input_handler.cpp), because the
+    // home and therefore the name moved; the dialog became its OWN labwc
+    // WINDOW the same evening, which is when the predicate's answer became
+    // "consume main-surface input" whole). THE CALLERS (re-derived
+    // 2026-08-12 evening, the real-window move — the modal-trap block, the
+    // main-window dialog button claim and the veil's admit exception all
+    // DIED with it, the succession record at the top of input_pointer.cpp),
+    // each asking the same question about a pointer fact: wheel_context's
+    // swallow (input_handler.cpp), because the
     // wheel's stepped pan is NAVIGATION, not a chord, so it still punches
     // through an open top-strip flag editor; pointer_cursor_kind
     // (2026-08-03), because these four editors are exactly the ones whose
-    // veil SWALLOWS a pointer press, so they are exactly the ones over which
-    // no cursor may promise a gesture; the MODAL-TRAP block at
-    // on_button_press's top (2026-08-11), because these four are exactly the
-    // swallows the admitted Quit/Save button presses must be lifted OVER
-    // (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord); the dialog BUTTON claim beside it
-    // and on_motion's dialog-hover branch (2026-08-12), the box's own two
-    // pointer surfaces; the roster hover walk's veil term
-    // (recompute_redesign_button_hover — under an editor dialog only the
-    // veil-admitted buttons hover); and paint_modal_dialog's editor fork by
-    // proxy (it reads the same four is_active tests in the same order). The
+    // veil SWALLOWS a main-window pointer press, so they are exactly the
+    // ones over which no cursor may promise a gesture; the VEIL's press and
+    // motion gates (on_button_press / on_motion — every main-surface press
+    // and motion consumed whole, the roster hover walk's veil term deriving
+    // every face DARK); the DIALOG surface's own entry points
+    // (on_dialog_button_press / on_dialog_motion / on_dialog_close_request,
+    // which act only while a dialog editor or prompt stands); and the dialog
+    // content resolver by proxy (resolve_modal_dialog_content,
+    // paint_handler.cpp, which reads the same four is_active tests in the
+    // same order for the plan and the painter both). The
     // flag editor's exemption is the same fact in all of them: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // scrub reaches the audio under it, and its roster presses were never
@@ -2166,12 +2184,11 @@ private:
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE MODAL DIALOG'S POINTER HALF (2026-08-12; bodies in
-    // input_pointer.cpp — the painter's stash is AppState::modal_dialog and
-    // the veil contract lives at on_button_press's two dialog gates):
-    // the button hit test over the stash, the hover-face writer the motion
-    // branches call, and the editor dialog's OK/Cancel dispatch — the
-    // session's own Enter/Esc through the per-editor key routes,
-    // button-is-its-chord.
+    // input_pointer.cpp — the painter's stash is AppState::modal_dialog, in
+    // DIALOG-LOCAL coordinates since the dialog became its own labwc window
+    // that evening): the button hit test over the stash, the hover-face
+    // writer, and the editor dialog's OK/Cancel dispatch — the session's own
+    // Enter/Esc through the per-editor key routes, button-is-its-chord.
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
     void dispatch_modal_dialog_editor_act(bool ok);

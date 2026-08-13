@@ -1640,9 +1640,86 @@ int main(int argc, char** argv) {
     // NEITHER RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED: each refuses on
     // app.pointer_in_window inside its own body, so a per-iteration call cannot
     // resurrect a face from coordinates the pointer has left behind.
+    // -- THE MODAL DIALOG WINDOW'S LIFECYCLE SYNC (2026-08-12 evening: the
+    // dialog is a real labwc window — GuiPlatform's dialog block owns the
+    // surface, paint_handler's plan/painter own the content). ONE derived
+    // owner instead of a call at every opener and closer, the roster model:
+    // the modal state (a prompt or one of the four dialog editors standing)
+    // is re-read at every loop tail, and the WINDOW mirrors it — opened when
+    // a modal stands and none is up, closed when none stands, resized and
+    // retitled when the standing content's fingerprint moved (a prompt
+    // raised over an editor by the WM close, the Save-failed mutation). Every
+    // opener and closer therefore participates by mutating the modal state
+    // it already owns, and a route added later joins with no call to
+    // remember. The tail runs in the SAME iteration that dispatched the
+    // opening key or press, before any further input can arrive, so nothing
+    // user-visible slips between the state and the window. The CLOSE arm
+    // also zeroes the published geometry and the hover index — the painter's
+    // old no-dialog arm, moved to the one owner that knows the window came
+    // down (the dialog painter runs only while a window stands, so it cannot
+    // zero its own stash after the close).
+    std::string modal_dialog_fingerprint;
+    auto sync_modal_dialog_window = [&]() {
+        const GuiPaintHandler::ModalDialogWindowPlan plan =
+            paint_handler.modal_dialog_window_plan();
+        if (!plan.open) {
+            if (gui.dialog_open()) {
+                gui.close_dialog();
+                app.modal_dialog        = AppState::ModalDialogGeometry{};
+                app.dialog_editor_text  = AppState::DialogEditorText{};
+                app.modal_dialog_hovered = -1;
+                // A field text-drag whose release died with the window (the
+                // press was the dialog's; OK/commit closed it mid-hold) must
+                // not stay armed against a main window that will never
+                // deliver its release — the editor it selected in is gone,
+                // so there is nothing to finalize, only the flag to drop.
+                app.editor_text_drag.active = false;
+                modal_dialog_fingerprint.clear();
+            }
+            return;
+        }
+        if (!gui.dialog_open()) {
+            app.modal_dialog_hovered = -1;
+            gui.open_dialog(plan.w, plan.h, plan.title);
+            modal_dialog_fingerprint = plan.fingerprint;
+        } else if (plan.fingerprint != modal_dialog_fingerprint) {
+            app.modal_dialog_hovered = -1;
+            gui.resize_dialog(plan.w, plan.h, plan.title);
+            modal_dialog_fingerprint = plan.fingerprint;
+        }
+    };
+
     gui.set_loop_settled_hook([&](GuiInputState mods) {
+        // The dialog sync runs FIRST: the two consumers below read state the
+        // sync can move (a closed dialog re-admits the cursor map's zones;
+        // the order costs nothing the other way, but this one states the
+        // dependency).
+        sync_modal_dialog_window();
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
+    });
+
+    // The dialog window's own hooks: content paint, pointer input in
+    // dialog-local coordinates, and the WM close (the session's Esc). The
+    // per-surface routing is the platform's (dialog_open()'s contract,
+    // platform_wayland.h); these bodies are the GUI halves.
+    gui.set_dialog_redraw([&](cairo_t* cr, int /*x*/, int /*y*/,
+                              int w, int h) {
+        paint_handler.on_dialog_redraw(cr, w, h);
+    });
+    gui.set_dialog_button_press([&](GuiMouseButton button, int x, int y,
+                                    GuiInputState mods) {
+        input_handler.on_dialog_button_press(button, x, y, mods);
+    });
+    gui.set_dialog_button_release([&](GuiMouseButton button, int x, int y,
+                                      GuiInputState mods) {
+        input_handler.on_dialog_button_release(button, x, y, mods);
+    });
+    gui.set_dialog_motion([&](int x, int y, GuiInputState mods) {
+        input_handler.on_dialog_motion(x, y, mods);
+    });
+    gui.set_dialog_close([&]() {
+        input_handler.on_dialog_close_request();
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
@@ -1932,7 +2009,8 @@ int main(int argc, char** argv) {
             }
         }
         // Same shape for the settings prompt (a dialog editor); the
-        // status-lane owner's rider carries the dialog's stashed box.
+        // status-lane owner's rider pings the dialog WINDOW, so the blink
+        // repaints the box where it actually lives.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.settings_editor);

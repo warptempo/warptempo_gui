@@ -1623,9 +1623,11 @@ enum class DialogTrigger {
     ERROR_NOTICE,
 };
 
-// In-window modal prompt state. When `active` is true, the CENTERED MODAL
-// DIALOG (paint_modal_dialog, 2026-08-12 — the prompts lived on the bottom
-// row's modal span before that) carries the prompt's text as its message line
+// Modal prompt state. When `active` is true, the MODAL DIALOG — its own
+// labwc WINDOW since 2026-08-12 evening (on_dialog_redraw + GuiPlatform's
+// dialog block; the same morning's centered in-window box was the interim,
+// and the prompts lived on the bottom row's modal span before that) —
+// carries the prompt's text as its message line (and as the window's TITLE)
 // and one REAL BUTTON per response, right-aligned in the box.
 // Keyboard input is owned by the prompt exactly as it always was: only the
 // response keys (and Esc, which activates the rightmost response) do
@@ -2375,17 +2377,21 @@ struct AppState {
     // geometry contract for the settings / load / commit-title / BPM editors,
     // which paint inside the MODAL DIALOG's inset field since 2026-08-12 (they
     // lived on the status lane, row 9, from row 7 until then; the press region
-    // is the dialog's published FIELD rect, modal_dialog.field, not a lane).
+    // is the dialog's published FIELD rect, modal_dialog.field, not a lane —
+    // and since that evening the dialog is its OWN labwc window, so every
+    // coordinate here is DIALOG-LOCAL and only the dialog input entry points
+    // read it).
     //
     // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
     // left pad is already spent in it — and `byte_x` holds pending.size()+1
     // pen offsets RELATIVE to that origin, so the pair reads exactly like
     // FlagEditorBox's and editor_byte_index_at searches either the same way.
-    // Written by paint_modal_dialog: zeroed at the top of every run, filled by
-    // whichever editor the dialog actually paints. That makes it a statement
-    // about what is ON SCREEN — an editor the dialog's precedence hides (a
-    // prompt is up) publishes nothing and takes no clicks, which is the
-    // correct answer.
+    // Written by the dialog painter (on_dialog_redraw): zeroed at the top of
+    // every dialog paint, filled by whichever editor the dialog actually
+    // paints, and zeroed by the lifecycle sync when the window closes. That
+    // makes it a statement about what is ON the dialog's SCREEN — an editor
+    // the dialog's precedence hides (a prompt is up) publishes nothing and
+    // takes no clicks, which is the correct answer.
     struct DialogEditorText {
         bool                valid         = false;
         double              text_origin_x = 0.0;
@@ -2394,12 +2400,18 @@ struct AppState {
     DialogEditorText dialog_editor_text;
 
     // THE MODAL DIALOG'S PAINTED GEOMETRY (architect 2026-08-12: "we should
-    // institute real modals" — kdenlive's own dialog model, in-window). The
-    // prompts and the four dialog editors paint as ONE centered box over an
-    // inert window; this is the painter's stash of what was drawn, the roster
-    // model: paint_modal_dialog rewrites it every run (zero/invalid when no
-    // dialog stands), and the pointer path reads it instead of re-deriving
-    // layout. `box` is the whole frame including its border; `field` is the
+    // institute real modals" — kdenlive's dialog model; its OWN labwc WINDOW
+    // since that evening's "lifting it from the GUI to its own labwc window",
+    // so every rect here is DIALOG-LOCAL). The
+    // prompts and the four dialog editors paint as ONE content block centered
+    // in the dialog window; this is the painter's stash of what was drawn,
+    // the roster
+    // model: on_dialog_redraw rewrites it every dialog paint (and the
+    // lifecycle sync zeroes it at the window's close), and the DIALOG input
+    // entry points read it instead of re-deriving
+    // layout — no main-window handler reads it at all, so a main press can
+    // never alias a dialog rect. `box` is the centered content block;
+    // `field` is the
     // editor field's INTERIOR (zero for prompts) — the click-to-caret / text-
     // drag claim region; `buttons` are the answer buttons in painted order.
     //
@@ -2423,9 +2435,10 @@ struct AppState {
     };
     ModalDialogGeometry modal_dialog;
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
-    // pointer-derived face state in the roster's own model (the hover walk
-    // writes it, the painter reads it, a change damages the box). Cleared by
-    // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
+    // pointer-derived face state in the roster's own model (the dialog
+    // motion writes it, the dialog painter reads it, a change damages the
+    // dialog window). Cleared by the lifecycle sync alongside the stash at
+    // every window open and close, so a fresh
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
 
@@ -3614,7 +3627,7 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // The command prompt, a CENTERED MODAL DIALOG (paint_modal_dialog, 2026-08-12
+    // The command prompt, a MODAL DIALOG WINDOW (on_dialog_redraw, 2026-08-12
     // — one box painted last over an inert window, its responses real buttons;
     // the bottom strip's own prompt line is retired). Active only when a
     // close / re-detect gesture fires while a confirmation is required.
@@ -3753,7 +3766,8 @@ struct AppState {
     // dirtying the project and pressing Ctrl+Q raises the close prompt over a
     // live run (the prompt cancels nothing), and the run's own completion can
     // then rewrite or clear this string while the prompt stands — the string
-    // keeps its row-9 slot and paints UNDER the centered dialog box, which is
+    // keeps its row-9 slot on the MAIN window, which the dialog — its own
+    // labwc window — floats over entirely; the slot is
     // the honest picture (the run really is still going). While the two
     // shared row 9's one cell the prompt was the chain's first tier; that
     // ordering is superseded structurally.

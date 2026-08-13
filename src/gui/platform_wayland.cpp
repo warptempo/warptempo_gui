@@ -304,6 +304,40 @@ struct WaylandListeners {
         static_cast<GuiPlatform*>(data)->on_frame_done(cb);
     }
 
+    // The DIALOG toplevel's own listeners (the modal dialog as a real labwc
+    // window). Separate statics rather than a surface test inside the main
+    // ones: each xdg object carries its own listener, so the fork costs
+    // nothing at dispatch and the main handlers keep their one-window
+    // assumptions.
+    static void dialog_xdg_surface_configure(void* data, struct xdg_surface* xs,
+                                             uint32_t serial) {
+        static_cast<GuiPlatform*>(data)->on_dialog_xdg_surface_configure(
+            xs, serial);
+    }
+    static void dialog_toplevel_configure(void* data, struct xdg_toplevel*,
+                                          int32_t width, int32_t height,
+                                          struct wl_array* /*states*/) {
+        // The state array is deliberately unread: the dialog has no
+        // activation-darkened chrome of its own (the MAIN window's configure
+        // losing ACTIVATED is what darkens the header when the dialog takes
+        // focus — the unfocused-window face, exactly kdenlive's look), and
+        // maximize needs no flag — the granted size is the whole story, the
+        // GUI centering its content in whatever is granted.
+        static_cast<GuiPlatform*>(data)->on_dialog_toplevel_configure(width,
+                                                                      height);
+    }
+    static void dialog_toplevel_close(void* data, struct xdg_toplevel*) {
+        static_cast<GuiPlatform*>(data)->on_dialog_toplevel_close();
+    }
+    static void dialog_toplevel_configure_bounds(void*, struct xdg_toplevel*,
+                                                 int32_t, int32_t) {}
+    static void dialog_toplevel_wm_capabilities(void*, struct xdg_toplevel*,
+                                                struct wl_array*) {}
+    static void dialog_frame_done(void* data, struct wl_callback* cb,
+                                  uint32_t /*time*/) {
+        static_cast<GuiPlatform*>(data)->on_dialog_frame_done(cb);
+    }
+
     // wl_buffer (release)
     static void buffer_release(void* data, struct wl_buffer*) {
         static_cast<GuiPlatform::ShmBuffer*>(data)->busy = false;
@@ -404,9 +438,12 @@ struct WaylandListeners {
     // panel's contact geometry is nothing this program reads — a touch is a
     // point here, exactly as a pointer is.
     static void touch_down(void* data, struct wl_touch*, uint32_t serial,
-                           uint32_t time, struct wl_surface* /*surface*/,
+                           uint32_t time, struct wl_surface* surface,
                            int32_t id, wl_fixed_t x, wl_fixed_t y) {
-        static_cast<GuiPlatform*>(data)->on_touch_down(serial, time, id, x, y);
+        // The surface is the stream's routing key since the dialog toplevel
+        // (a finger on the dialog window is the dialog's pointer).
+        static_cast<GuiPlatform*>(data)->on_touch_down(serial, time, surface,
+                                                       id, x, y);
     }
     static void touch_up(void* data, struct wl_touch*, uint32_t serial,
                          uint32_t time, int32_t id) {
@@ -549,6 +586,21 @@ const struct xdg_toplevel_listener s_toplevel_listener = {
 
 const struct wl_callback_listener s_frame_listener = {
     WaylandListeners::frame_done,
+};
+
+const struct xdg_surface_listener s_dialog_xdg_surface_listener = {
+    WaylandListeners::dialog_xdg_surface_configure,
+};
+
+const struct xdg_toplevel_listener s_dialog_toplevel_listener = {
+    WaylandListeners::dialog_toplevel_configure,
+    WaylandListeners::dialog_toplevel_close,
+    WaylandListeners::dialog_toplevel_configure_bounds,
+    WaylandListeners::dialog_toplevel_wm_capabilities,
+};
+
+const struct wl_callback_listener s_dialog_frame_listener = {
+    WaylandListeners::dialog_frame_done,
 };
 
 const struct wl_buffer_listener s_buffer_listener = {
@@ -936,6 +988,12 @@ void GuiPlatform::destroy_wayland_state() {
         wl_touch_release(wl_touch_);
         wl_touch_ = nullptr;
     }
+
+    // The dialog toplevel comes down with the program — a quit with a dialog
+    // standing leaks nothing. Ordered after the input proxies above (its
+    // touch hard-end is gated on a live wl_touch, so this path delivers
+    // nothing) and before the main surface chain below.
+    destroy_dialog_window();
     if (wl_seat_) {
         // wl_seat.release is a v5+ request. We now bind at v8, but
         // wl_seat_destroy (plain wl_proxy_destroy) is still correct at
@@ -1297,6 +1355,12 @@ void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     // knowledge of it, which is what lets its one per-iteration refresh run the
     // same way whether or not a capture is live.
     if (pointer_position_unknown_) return;
+    // THE DIALOG OWNS THE POINTER WHILE IT RESTS THERE, and its one cursor is
+    // the Arrow (applied at its enter): a kind named now would be about a
+    // main-window position the pointer does not occupy, so it is dropped —
+    // the unknown-span rule's shape — and the remembered kind stays what the
+    // main window last derived, which is what its re-enter restores.
+    if (pointer_on_dialog_) return;
     // APPLY ONLY ON A CHANGE. The GUI calls this once per run-loop iteration —
     // its cursor has ONE owner and that owner runs at the loop boundary — so an
     // unmoving answer must cost nothing, and a set_cursor per iteration would be
@@ -1411,6 +1475,328 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (has_initial_configure_ && !frame_callback_) {
         schedule_frame_callback();
     }
+}
+
+// ---------------------------------------------------------------------------
+// The dialog toplevel (the modal dialog as a real labwc window, 2026-08-12).
+// The public contract is at dialog_open()'s block in platform_wayland.h; the
+// bodies below are the main window's own shapes restated at the dialog's
+// whole-window damage granule.
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::recreate_dialog_shm_pool(int w, int h) {
+    destroy_dialog_shm_pool();
+    if (w <= 0 || h <= 0) return;
+
+    const int    stride       = w * 4;                         // ARGB32
+    const size_t buffer_bytes =
+        static_cast<size_t>(stride) * static_cast<size_t>(h);
+    const size_t pool_bytes = buffer_bytes * kShmBufferCount;
+
+    dialog_shm_pool_fd_ = open_shm_fd(pool_bytes);
+    if (dialog_shm_pool_fd_ < 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Failed to open dialog shm fd: %s\n",
+                     std::strerror(errno));
+        return;
+    }
+    dialog_shm_pool_map_ = mmap(nullptr, pool_bytes, PROT_READ | PROT_WRITE,
+                                MAP_SHARED, dialog_shm_pool_fd_, 0);
+    if (dialog_shm_pool_map_ == MAP_FAILED) {
+        std::fprintf(stderr,
+                     "warptempo_gui: mmap of dialog shm pool failed: %s\n",
+                     std::strerror(errno));
+        close(dialog_shm_pool_fd_);
+        dialog_shm_pool_fd_  = -1;
+        dialog_shm_pool_map_ = nullptr;
+        return;
+    }
+    dialog_shm_pool_size_ = pool_bytes;
+    dialog_shm_pool_ = wl_shm_create_pool(wl_shm_, dialog_shm_pool_fd_,
+                                          static_cast<int32_t>(pool_bytes));
+    for (int i = 0; i < kShmBufferCount; ++i) {
+        const size_t offset = static_cast<size_t>(i) * buffer_bytes;
+        dialog_shm_buffers_[i].pixels =
+            static_cast<char*>(dialog_shm_pool_map_) + offset;
+        dialog_shm_buffers_[i].busy = false;
+        dialog_shm_buffers_[i].pending.clear();
+        dialog_shm_buffers_[i].buffer = wl_shm_pool_create_buffer(
+            dialog_shm_pool_, static_cast<int32_t>(offset), w, h, stride,
+            WL_SHM_FORMAT_ARGB8888);
+        wl_buffer_add_listener(dialog_shm_buffers_[i].buffer,
+                               &s_buffer_listener, &dialog_shm_buffers_[i]);
+        dialog_shm_buffers_[i].surface = cairo_image_surface_create_for_data(
+            static_cast<unsigned char*>(dialog_shm_buffers_[i].pixels),
+            CAIRO_FORMAT_ARGB32, w, h, stride);
+    }
+}
+
+void GuiPlatform::destroy_dialog_shm_pool() {
+    for (int i = 0; i < kShmBufferCount; ++i) {
+        if (dialog_shm_buffers_[i].surface) {
+            cairo_surface_destroy(dialog_shm_buffers_[i].surface);
+            dialog_shm_buffers_[i].surface = nullptr;
+        }
+        if (dialog_shm_buffers_[i].buffer) {
+            wl_buffer_destroy(dialog_shm_buffers_[i].buffer);
+            dialog_shm_buffers_[i].buffer = nullptr;
+        }
+        dialog_shm_buffers_[i].pixels = nullptr;
+        dialog_shm_buffers_[i].busy   = false;
+        dialog_shm_buffers_[i].pending.clear();
+    }
+    if (dialog_shm_pool_) {
+        wl_shm_pool_destroy(dialog_shm_pool_);
+        dialog_shm_pool_ = nullptr;
+    }
+    if (dialog_shm_pool_map_) {
+        munmap(dialog_shm_pool_map_, dialog_shm_pool_size_);
+        dialog_shm_pool_map_  = nullptr;
+        dialog_shm_pool_size_ = 0;
+    }
+    if (dialog_shm_pool_fd_ >= 0) {
+        close(dialog_shm_pool_fd_);
+        dialog_shm_pool_fd_ = -1;
+    }
+}
+
+GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_dialog_buffer() {
+    for (int i = 0; i < kShmBufferCount; ++i) {
+        if (!dialog_shm_buffers_[i].busy && dialog_shm_buffers_[i].buffer)
+            return &dialog_shm_buffers_[i];
+    }
+    return nullptr;
+}
+
+void GuiPlatform::open_dialog(int content_w, int content_h,
+                              const std::string& title) {
+    if (dialog_xdg_toplevel_) return;   // idempotent while one stands
+    if (!wl_compositor_ || !xdg_wm_base_ || !xdg_decoration_manager_) return;
+
+    dialog_width_     = content_w;
+    dialog_height_    = content_h;
+    dialog_pending_w_ = 0;
+    dialog_pending_h_ = 0;
+    dialog_has_initial_configure_ = false;
+    dialog_damage_ = true;
+
+    dialog_surface_     = wl_compositor_create_surface(wl_compositor_);
+    dialog_xdg_surface_ =
+        xdg_wm_base_get_xdg_surface(xdg_wm_base_, dialog_surface_);
+    xdg_surface_add_listener(dialog_xdg_surface_,
+                             &s_dialog_xdg_surface_listener, this);
+    dialog_xdg_toplevel_ = xdg_surface_get_toplevel(dialog_xdg_surface_);
+    xdg_toplevel_add_listener(dialog_xdg_toplevel_,
+                              &s_dialog_toplevel_listener, this);
+    xdg_toplevel_set_title(dialog_xdg_toplevel_,
+                           title_bytes_to_utf8(title).c_str());
+    xdg_toplevel_set_app_id(dialog_xdg_toplevel_, "warptempo_gui");
+    // The dialog is the main window's child: labwc keeps it above its parent
+    // and treats it as the dialog it is. Position is the WM's — nothing here
+    // places it (no xdg_positioner; that is popup machinery).
+    if (xdg_toplevel_) xdg_toplevel_set_parent(dialog_xdg_toplevel_,
+                                               xdg_toplevel_);
+    // The content is a fixed block: refuse shrinking below it (a compositor
+    // that ignores the hint is answered by the GUI's own narrow-window clamp
+    // in the dialog layout). Growth is free — the GUI centers the block.
+    xdg_toplevel_set_min_size(dialog_xdg_toplevel_, content_w, content_h);
+    dialog_decoration_ =
+        zxdg_decoration_manager_v1_get_toplevel_decoration(
+            xdg_decoration_manager_, dialog_xdg_toplevel_);
+    zxdg_toplevel_decoration_v1_set_mode(
+        dialog_decoration_, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+
+    recreate_dialog_shm_pool(dialog_width_, dialog_height_);
+
+    // The initial commit — the compositor answers with the first configure,
+    // whose handler paints the first frame (the main window's own startup
+    // shape).
+    wl_surface_commit(dialog_surface_);
+}
+
+void GuiPlatform::resize_dialog(int content_w, int content_h,
+                                const std::string& title) {
+    // The CONTENT-SWITCH route: the standing dialog's content changed kind or
+    // size (a prompt raised over an editor, the Save-failed mutation), so the
+    // window re-sizes itself by attaching a buffer of the new size — a
+    // client-side resize, legal for a floating toplevel — and re-titles. A
+    // compositor-granted size (a WM resize or maximize) simply wins the next
+    // configure, exactly as it would have; the GUI centers either way.
+    if (!dialog_xdg_toplevel_) return;
+    xdg_toplevel_set_title(dialog_xdg_toplevel_,
+                           title_bytes_to_utf8(title).c_str());
+    xdg_toplevel_set_min_size(dialog_xdg_toplevel_, content_w, content_h);
+    if (content_w != dialog_width_ || content_h != dialog_height_) {
+        dialog_width_  = content_w;
+        dialog_height_ = content_h;
+        recreate_dialog_shm_pool(dialog_width_, dialog_height_);
+    }
+    dialog_damage_ = true;
+    if (dialog_has_initial_configure_) paint_dialog_frame();
+}
+
+void GuiPlatform::close_dialog() {
+    destroy_dialog_window();
+}
+
+void GuiPlatform::destroy_dialog_window() {
+    if (!dialog_surface_ && !dialog_xdg_toplevel_) {
+        // Nothing stands; still drop the routing bits defensively.
+        keyboard_on_dialog_ = false;
+        pointer_on_dialog_  = false;
+        return;
+    }
+    // A touch stream the dialog owned dies with its surface: hard-end it now
+    // (the wl_touch.cancel contract), because no further event for it can be
+    // routed once the surface is gone.
+    if (wl_touch_ && touch_stream_on_dialog_ &&
+        touch_phase_ != TouchPhase::Idle) {
+        // (Gated on a live wl_touch so the SHUTDOWN teardown — which releases
+        // the touch proxy before reaching here — stays a no-delivery path,
+        // per destroy_wayland_state's contract.)
+        hard_end_touch_stream();
+    }
+    if (dialog_frame_callback_) {
+        wl_callback_destroy(dialog_frame_callback_);
+        dialog_frame_callback_ = nullptr;
+    }
+    if (dialog_decoration_) {
+        zxdg_toplevel_decoration_v1_destroy(dialog_decoration_);
+        dialog_decoration_ = nullptr;
+    }
+    if (dialog_xdg_toplevel_) {
+        xdg_toplevel_destroy(dialog_xdg_toplevel_);
+        dialog_xdg_toplevel_ = nullptr;
+    }
+    if (dialog_xdg_surface_) {
+        xdg_surface_destroy(dialog_xdg_surface_);
+        dialog_xdg_surface_ = nullptr;
+    }
+    if (dialog_surface_) {
+        wl_surface_destroy(dialog_surface_);
+        dialog_surface_ = nullptr;
+    }
+    destroy_dialog_shm_pool();
+    dialog_has_initial_configure_ = false;
+    dialog_damage_    = false;
+    dialog_width_     = 0;
+    dialog_height_    = 0;
+    dialog_pending_w_ = 0;
+    dialog_pending_h_ = 0;
+    // A left button still held ON the dialog dies with it: its release
+    // belongs to the destroyed surface and may never be delivered (the
+    // compositor's implicit grab has nothing left to deliver to), and a
+    // latched bit would swallow the next main-window press's 0->1 edge. No
+    // delivery — the press was the dialog's, and the dialog is gone; a
+    // release that does arrive later finds the bit already down and is the
+    // ordinary no-edge swallow.
+    if (pointer_on_dialog_) pointer_left_held_ = false;
+    // The routing bits drop with the window. The compositor re-focuses the
+    // main window on its own (keyboard enter + modifiers re-sync; a pointer
+    // over where the dialog was gets an enter on whatever is under it now).
+    keyboard_on_dialog_ = false;
+    pointer_on_dialog_  = false;
+}
+
+void GuiPlatform::invalidate_dialog() {
+    if (!dialog_surface_) return;
+    dialog_damage_ = true;
+    if (dialog_has_initial_configure_ && !dialog_frame_callback_) {
+        schedule_dialog_frame_callback();
+    }
+}
+
+void GuiPlatform::schedule_dialog_frame_callback() {
+    if (dialog_frame_callback_ || !dialog_surface_) return;
+    dialog_frame_callback_ = wl_surface_frame(dialog_surface_);
+    wl_callback_add_listener(dialog_frame_callback_, &s_dialog_frame_listener,
+                             this);
+    wl_surface_commit(dialog_surface_);
+}
+
+void GuiPlatform::paint_dialog_frame() {
+    // Whole-window paint, damage-driven: unlike the main loop this schedules
+    // a follow-up frame callback only while damage is still pending, so an
+    // idle dialog costs no wakeups.
+    if (!dialog_surface_ || !dialog_has_initial_configure_) return;
+    if (!dialog_damage_) return;
+    ShmBuffer* buf = acquire_free_dialog_buffer();
+    if (!buf) {
+        // Both buffers in flight — try again next dialog frame.
+        schedule_dialog_frame_callback();
+        return;
+    }
+    cairo_t* cr = cairo_create(buf->surface);
+    if (dialog_on_redraw_) {
+        dialog_on_redraw_(cr, 0, 0, dialog_width_, dialog_height_);
+    }
+    cairo_destroy(cr);
+    wl_surface_damage_buffer(dialog_surface_, 0, 0, dialog_width_,
+                             dialog_height_);
+    wl_surface_attach(dialog_surface_, buf->buffer, 0, 0);
+    wl_surface_commit(dialog_surface_);
+    buf->busy = true;
+    dialog_damage_ = false;
+}
+
+void GuiPlatform::on_dialog_xdg_surface_configure(struct xdg_surface* xs,
+                                                  uint32_t serial) {
+    // The dialog can be torn down between the compositor sending a configure
+    // and this client dispatching it; a stale ack would address a destroyed
+    // proxy.
+    if (xs != dialog_xdg_surface_ || !dialog_xdg_surface_) return;
+    xdg_surface_ack_configure(xs, serial);
+
+    if (dialog_pending_w_ > 0 && dialog_pending_h_ > 0 &&
+        (dialog_pending_w_ != dialog_width_ ||
+         dialog_pending_h_ != dialog_height_)) {
+        // The compositor granted a size (a WM drag-resize, a maximize, or an
+        // un-maximize): honor it. A 0x0 toplevel configure means "you
+        // choose", which keeps the app-chosen content size.
+        dialog_width_  = dialog_pending_w_;
+        dialog_height_ = dialog_pending_h_;
+        recreate_dialog_shm_pool(dialog_width_, dialog_height_);
+        dialog_damage_ = true;
+    }
+    dialog_has_initial_configure_ = true;
+    // Every configure ends in a paint — the main window's own rule ("a
+    // reconfigure with no size change still gets honored"): the ack must be
+    // followed by a commit for the compositor to apply the new state, and
+    // the dialog's whole-window granule makes the honest repaint cheap.
+    dialog_damage_ = true;
+    paint_dialog_frame();
+}
+
+void GuiPlatform::on_dialog_toplevel_configure(int32_t width, int32_t height) {
+    dialog_pending_w_ = width;
+    dialog_pending_h_ = height;
+}
+
+void GuiPlatform::on_dialog_toplevel_close() {
+    // The dialog's WM close (titlebar X) — the GUI maps it to the session's
+    // Esc (the abandon/cancel arm, never a destructive answer). The window
+    // itself comes down when the GUI's modal state drops and the lifecycle
+    // sync closes it; honoring the close directly here would bypass the
+    // session's own cancel bodies.
+    if (dialog_on_close_) dialog_on_close_();
+}
+
+void GuiPlatform::on_dialog_frame_done(struct wl_callback* cb) {
+    if (cb == dialog_frame_callback_) dialog_frame_callback_ = nullptr;
+    wl_callback_destroy(cb);
+    paint_dialog_frame();
+}
+
+void GuiPlatform::apply_dialog_arrow_cursor() {
+    if (!wl_pointer_) return;
+    // The dialog answers ARROW everywhere (the field's I-beam waits on the
+    // Text cursor kind landing; for now one cue). cursor_kind_ is deliberately
+    // untouched — it is the MAIN window's remembered kind, and the main
+    // enter's apply_cursor_kind restores it on the way back. A theme with no
+    // arrow hides the cursor, the loader's own degraded state.
+    const ThemeCursor& a = cursors_[cursor_kind_index(GuiCursorKind::Arrow)];
+    wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, a.surface,
+                          a.hotspot_x, a.hotspot_y);
 }
 
 // ---------------------------------------------------------------------------
@@ -2047,10 +2433,16 @@ void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
 }
 
 void GuiPlatform::on_keyboard_enter(uint32_t /*serial*/,
-                                    struct wl_surface* /*surface*/,
+                                    struct wl_surface* surface,
                                     struct wl_array* /*keys*/) {
-    // No-op. Modifier state arrives via the modifiers event; per-key
+    // THE KEYBOARD FOCUS SURFACE — the veil fork's routing key (deliver_key):
+    // dialog-focused keys reach the GUI, main-focused keys with a dialog
+    // standing are consumed. Everything else stays a no-op here: modifier
+    // state arrives via the modifiers event the protocol delivers right
+    // after every enter (which is also what heals the leave-edge reset
+    // below — the tracker cannot go stale across a surface hop), and per-key
     // state arrives via subsequent key events.
+    keyboard_on_dialog_ = (dialog_surface_ && surface == dialog_surface_);
 }
 
 void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
@@ -2059,7 +2451,9 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     // performs: focus commonly leaves on a Super chord labwc grabbed, and that
     // is exactly the departure that would otherwise latch mod_super_ and deaden
     // the keyboard for the rest of the session. The teardown is
-    // forget_keyboard_state's, in full.
+    // forget_keyboard_state's, in full. The focus-surface bit drops too: no
+    // surface of ours has the keyboard until the next enter names one.
+    keyboard_on_dialog_ = false;
     forget_keyboard_state();
 }
 
@@ -2165,6 +2559,15 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     // would for a physical BTN_LEFT device (see kLeftClickKey's comment).
     if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
+        // THE VEIL'S SYNTHESIZED-BUTTON ARM (the dialog toplevel): this path
+        // returns before deliver_key, so it carries the veil fork itself — a
+        // main-focused `e` with a dialog standing arms nothing, exactly as
+        // deliver_key consumes the main-focused chords. (Dialog-focused under
+        // a PROMPT — the one dialog state whose editor probe is false — the
+        // press still lands at the MAIN pointer coordinates and the GUI's
+        // prompt veil consumes it; the release path below stays ungated, a
+        // hold must always end.)
+        if (dialog_xdg_toplevel_ && !keyboard_on_dialog_) return;
         if (!synth_left_held_ && pointer_focused_) {
             // The synthesized button is a button: this press is a context event
             // that kills an armed key repeat (layer 1), same as a physical one.
@@ -2359,6 +2762,20 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
             keyboard_intent_cancel_hook_();
         return;
     }
+    // THE VEIL'S KEYBOARD HALF (the dialog toplevel, 2026-08-12): while a
+    // dialog stands, a key focused on the MAIN window is CONSUMED here — the
+    // Super drop's own shape, keyboard-intent cancel per swallowed physical
+    // press — so the GUI's modal keyboard contract runs on DIALOG-focused
+    // keys alone and its reach is focus-scoped by construction (the public
+    // contract at dialog_open()). Keyboard focus follows the compositor;
+    // labwc focuses the dialog as it maps, so the ordinary open types
+    // straight into it — the main-focused span is a user's own click back
+    // onto the inert window, and consuming there IS the veil.
+    if (dialog_xdg_toplevel_ && !keyboard_on_dialog_) {
+        if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
+            keyboard_intent_cancel_hook_();
+        return;
+    }
     if (on_key_) on_key_(key, mods);
 }
 
@@ -2416,6 +2833,23 @@ void GuiPlatform::maybe_fire_repeat() {
 void GuiPlatform::on_pointer_enter(uint32_t serial,
                                    struct wl_surface* surface,
                                    int32_t surface_x, int32_t surface_y) {
+    // THE DIALOG SURFACE'S ENTER (the per-surface fork's pointer half): the
+    // dialog gets its own focus bit and its own last-known position — the
+    // MAIN pair below stays the main window's — plus the ARROW (its one
+    // cursor) and the synthesized entry motion, delivered through the dialog
+    // hooks in dialog-local coordinates.
+    if (dialog_surface_ && surface == dialog_surface_) {
+        pointer_on_dialog_    = true;
+        dialog_pointer_x_     = wl_fixed_to_int(surface_x);
+        dialog_pointer_y_     = wl_fixed_to_int(surface_y);
+        pointer_enter_serial_ = serial;
+        apply_dialog_arrow_cursor();
+        if (dialog_on_motion_) {
+            dialog_on_motion_(dialog_pointer_x_, dialog_pointer_y_,
+                              current_mods());
+        }
+        return;
+    }
     // Only our own surface should fire this, but a stale enter could
     // arrive after a hypothetical multi-surface setup. Guard.
     if (surface != wl_surface_) return;
@@ -2448,6 +2882,17 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
 
 void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
                                    struct wl_surface* surface) {
+    // The DIALOG surface's leave: drop its focus bit and hand the GUI one
+    // out-of-window motion at (-1, -1) — outside every published rect — so a
+    // dialog button lit under the departing pointer goes out (the dialog has
+    // no leave hook of its own; one synthesized resting motion is the whole
+    // need, and an implicit grab keeps focus through any held press, so this
+    // edge never lands mid-drag).
+    if (dialog_surface_ && surface == dialog_surface_) {
+        pointer_on_dialog_ = false;
+        if (dialog_on_motion_) dialog_on_motion_(-1, -1, current_mods());
+        return;
+    }
     if (surface != wl_surface_) return;
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
@@ -2545,6 +2990,19 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
 
 void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
                                     int32_t surface_x, int32_t surface_y) {
+    // Motion carries no surface — it belongs to the focused one, which the
+    // enter recorded. On the dialog it feeds the dialog hooks in
+    // dialog-local coordinates and touches none of the main window's
+    // position state (the fork's own state block, platform_wayland.h).
+    if (pointer_on_dialog_) {
+        dialog_pointer_x_ = wl_fixed_to_int(surface_x);
+        dialog_pointer_y_ = wl_fixed_to_int(surface_y);
+        if (dialog_on_motion_) {
+            dialog_on_motion_(dialog_pointer_x_, dialog_pointer_y_,
+                              current_mods());
+        }
+        return;
+    }
     pointer_x_ = wl_fixed_to_int(surface_x);
     pointer_y_ = wl_fixed_to_int(surface_y);
     // The pointer's real position, from the compositor: the post-capture unknown
@@ -2610,6 +3068,30 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     // left-button logical-edge model swallows this event below — re-pressing
     // the held key re-arms cleanly.
     if (pressed) repeat_key_ = 0;
+
+    // THE DIALOG SURFACE'S BUTTONS, at the dialog's own last-known position
+    // (button events carry no coordinates). The left-held bit still tracks —
+    // it is seat truth, and the dialog's text drag reads primary_button_held
+    // through current_mods() — crossing its transition on the same side of
+    // the delivery the main path uses (set before a press, cleared before a
+    // release). The logical-OR edge model is not consulted: no sibling
+    // source can share a dialog press (`e` types or is veiled while a dialog
+    // stands, and a dialog-owned touch stream delivers through its own
+    // fork), and no capture can be live (every gesture was finalized before
+    // any dialog could open), so there is no deferred motion to flush.
+    if (pointer_on_dialog_) {
+        if (button == BTN_LEFT) pointer_left_held_ = pressed;
+        if (pressed) {
+            if (dialog_on_button_press_) {
+                dialog_on_button_press_(mb, dialog_pointer_x_,
+                                        dialog_pointer_y_, current_mods());
+            }
+        } else if (dialog_on_button_release_) {
+            dialog_on_button_release_(mb, dialog_pointer_x_,
+                                      dialog_pointer_y_, current_mods());
+        }
+        return;
+    }
 
     // Left button rides the logical edge model shared with the kLeftClickKey
     // synthesized hold: deliver a press only on the 0->1 edge of
@@ -2755,7 +3237,14 @@ void GuiPlatform::on_pointer_frame() {
     // deliberately survives — it is consumed under the same context key and
     // no frame arrived to re-probe. The defect this guards against is
     // cross-context attribution, not staleness.
-    if (frame_have_v120_ || frame_have_axis_) {
+    if ((frame_have_v120_ || frame_have_axis_) && pointer_on_dialog_) {
+        // THE DIALOG SWALLOWS THE WHEEL (nothing in a dialog scrolls), and
+        // the remainder dies with the frame: sub-detent travel accumulated
+        // over the dialog must never assemble a detent back on the main
+        // window, and the probe below reads MAIN coordinates it does not
+        // have. The blocked-context arm's own shape.
+        scroll_accum_ = 0.0;
+    } else if (frame_have_v120_ || frame_have_axis_) {
         const int probe = wheel_context_probe_
             ? wheel_context_probe_(pointer_x_, pointer_y_)
             : 0;
@@ -2920,7 +3409,18 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // panels, and this is the project's one fractional->integer conversion.
     const int down_x = static_cast<int>(std::nearbyint(touch_down_x_));
     const int down_y = static_cast<int>(std::nearbyint(touch_down_y_));
-    if (on_motion_) on_motion_(down_x, down_y, current_mods());
+    // THE STREAM'S DELIVERY TARGET (the dialog toplevel's per-surface fork):
+    // a dialog-owned stream delivers the same burst through the DIALOG hooks
+    // in dialog-local coordinates; everything else about the translation —
+    // the hold bit, the moved latch, the repeat kill, the OR edge — is
+    // shared.
+    const bool dlg = touch_stream_on_dialog_;
+    if (dlg) {
+        if (dialog_on_motion_) dialog_on_motion_(down_x, down_y,
+                                                 current_mods());
+    } else if (on_motion_) {
+        on_motion_(down_x, down_y, current_mods());
+    }
     // A pointer-button press is a context event that kills an armed key repeat
     // (layer 1 of the repeat contract), exactly as the physical BTN_LEFT and
     // the synthesized-`e` presses do at their own delivery sites.
@@ -2929,20 +3429,31 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // only on the 0->1 edge, with the bit already raised above so the press —
     // and the entry motion before it — reads held (the on_pointer_button
     // ordering, widened to the whole burst).
-    if (!was_held && on_button_press_) {
-        flush_deferred_motion();
-        on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods());
+    if (!was_held) {
+        if (dlg) {
+            if (dialog_on_button_press_) {
+                dialog_on_button_press_(GuiMouseButton::Left, down_x, down_y,
+                                        current_mods());
+            }
+        } else if (on_button_press_) {
+            flush_deferred_motion();
+            on_button_press_(GuiMouseButton::Left, down_x, down_y,
+                             current_mods());
+        }
     }
     // The queued motion: sub-slop drift for the expiry and tap resolutions,
     // the slop-crossing position itself for the motion one — either way the
     // finger's latest position, delivered after the press so a drag armed by
     // the press sees its first motion in the same burst.
     if (touch_window_moved_ &&
-        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_) &&
-        on_motion_) {
-        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
-                   static_cast<int>(std::nearbyint(touch_last_y_)),
-                   current_mods());
+        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_)) {
+        const int lx = static_cast<int>(std::nearbyint(touch_last_x_));
+        const int ly = static_cast<int>(std::nearbyint(touch_last_y_));
+        if (dlg) {
+            if (dialog_on_motion_) dialog_on_motion_(lx, ly, current_mods());
+        } else if (on_motion_) {
+            on_motion_(lx, ly, current_mods());
+        }
     }
     touch_window_moved_         = false;
     touch_frame_motion_pending_ = false;
@@ -3014,10 +3525,16 @@ void GuiPlatform::flush_touch_frame_motion() {
     // flushed or never deliverable: the resolution's replay tail (Pending
     // never stages this flag) and forget_touch_state (which runs after the
     // hard-end contract has already ended the hold through the flush here).
-    if (touch_frame_motion_pending_ && on_motion_) {
-        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
-                   static_cast<int>(std::nearbyint(touch_last_y_)),
-                   current_mods());
+    if (touch_frame_motion_pending_) {
+        const int lx = static_cast<int>(std::nearbyint(touch_last_x_));
+        const int ly = static_cast<int>(std::nearbyint(touch_last_y_));
+        // The stream's own delivery target (the dialog fork at
+        // resolve_touch_window_to_pointer).
+        if (touch_stream_on_dialog_) {
+            if (dialog_on_motion_) dialog_on_motion_(lx, ly, current_mods());
+        } else if (on_motion_) {
+            on_motion_(lx, ly, current_mods());
+        }
     }
     touch_frame_motion_pending_ = false;
 }
@@ -3037,15 +3554,22 @@ bool GuiPlatform::end_touch_left_hold() {
     // the logical 1->0 edge (neither sibling source held); the deferred
     // POINTER motion flushes ahead of the delivery it exists for; then clear;
     // then deliver at the owner's last position.
+    const bool dlg = touch_stream_on_dialog_;
     const bool deliver_release =
-        !pointer_left_held_ && !synth_left_held_ && on_button_release_;
-    if (deliver_release) flush_deferred_motion();
+        !pointer_left_held_ && !synth_left_held_ &&
+        (dlg ? static_cast<bool>(dialog_on_button_release_)
+             : static_cast<bool>(on_button_release_));
+    if (deliver_release && !dlg) flush_deferred_motion();
     touch_left_held_ = false;
     if (deliver_release) {
-        on_button_release_(GuiMouseButton::Left,
-                           static_cast<int>(std::nearbyint(touch_last_x_)),
-                           static_cast<int>(std::nearbyint(touch_last_y_)),
-                           current_mods());
+        const int lx = static_cast<int>(std::nearbyint(touch_last_x_));
+        const int ly = static_cast<int>(std::nearbyint(touch_last_y_));
+        // The stream's own delivery target (the dialog fork at
+        // resolve_touch_window_to_pointer).
+        if (dlg) dialog_on_button_release_(GuiMouseButton::Left, lx, ly,
+                                           current_mods());
+        else     on_button_release_(GuiMouseButton::Left, lx, ly,
+                                    current_mods());
     }
     // The return is the END'S OWN EDGE (codex round 2): both callers end the
     // translation through deliver_touch_translation_end, which acts iff the
@@ -3065,6 +3589,13 @@ void GuiPlatform::deliver_touch_translation_end() {
     // finger last was — the accepted-glitch class, self-healing on the next
     // pointer event.
     if (!end_touch_left_hold()) return;
+    // A DIALOG-owned translation ends with its release and nothing more: the
+    // leave hook and the restore motion below are MAIN-window state repairs
+    // (hover faces, the menu row's mode, the settled cursor), and a finger
+    // that lifted from the dialog moved none of them — the dialog's own
+    // resting hover heals on the pointer's next dialog event, the leave
+    // synthesis's model.
+    if (touch_stream_on_dialog_) return;
     // THE END FORKS ON PHYSICAL POINTER FOCUS (codex round 3, the
     // cursor-residue fix): a resolved touch drives the GUI's remembered
     // position to the finger, and the loop-settled cursor owner applies the
@@ -3107,7 +3638,8 @@ void GuiPlatform::deliver_touch_translation_end() {
 }
 
 void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
-                                int32_t id, int32_t fx, int32_t fy) {
+                                struct wl_surface* surface, int32_t id,
+                                int32_t fx, int32_t fy) {
     // An event past the deadline sees the resolved phase (Pointer).
     maybe_resolve_touch_window();
     ++touch_point_count_;
@@ -3124,12 +3656,21 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             touch_down_x_ = touch_last_x_ = x;
             touch_down_y_ = touch_last_y_ = y;
             touch_window_moved_ = false;
+            // THE STREAM'S SURFACE, captured once at the first down (the
+            // pan-zone answer's own pattern): a DIALOG-owned stream is the
+            // plain pointer translation into the dialog hooks — the pan-zone
+            // query is never asked (it answers MAIN geometry), so the zone
+            // answer rests false, the window runs the short deadline, and
+            // nothing nav- or region-shaped can arm on a dialog.
+            touch_stream_on_dialog_ =
+                dialog_surface_ && surface == dialog_surface_;
             // The PAN-ZONE answer is captured ONCE, here at the down (the
             // phone model): the window's slop-crossing resolution AND its
             // expiry fork on it. Surface geometry only, by the query's
             // contract; nearbyint is the
             // one fractional->integer rule. Null hook = no pan surface.
             touch_down_in_pan_zone_ =
+                !touch_stream_on_dialog_ &&
                 touch_pan_zone_hook_ &&
                 touch_pan_zone_hook_(static_cast<int>(std::nearbyint(x)),
                                      static_cast<int>(std::nearbyint(y)));
@@ -3151,6 +3692,10 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             break;
         case TouchPhase::Pending: {
             if (id == touch_owner_id_) break;  // protocol nonsense; ignore
+            // A DIALOG-owned window admits no second finger: nothing nav-
+            // shaped exists on a dialog, so the extra finger is recorded (the
+            // count above) and ignored whole, the mid-gesture rule's shape.
+            if (touch_stream_on_dialog_) break;
             // A SECOND finger inside the window: the two-finger navigation
             // gesture, and no press was ever delivered — nothing to unwind,
             // which is the window's whole purpose (the jump-free pinch).
@@ -3203,6 +3748,9 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             //     apart than the window) alive instead of dead; a sub-latch
             //     release of that pair delivers nothing more.
             if (touch_translation_moved_) break;
+            // A DIALOG-owned translation has no nav to upgrade to: the hold
+            // stays a hold and the extra finger is ignored whole.
+            if (touch_stream_on_dialog_) break;
             deliver_touch_translation_end();
             touch_phase_      = TouchPhase::Nav;
             touch_nav_single_ = false;
@@ -3604,6 +4152,7 @@ void GuiPlatform::forget_touch_state() {
     // still reach here with it clear.
     touch_frame_motion_pending_ = false;
     touch_down_in_pan_zone_     = false;
+    touch_stream_on_dialog_     = false;
     touch_region_frame_dirty_   = false;
     touch_translation_moved_    = false;
     touch_nav_single_ = false;
@@ -4207,6 +4756,11 @@ void GuiPlatform::set_touch_nav_hooks(
     touch_region_end_hook_    = std::move(region_end);
 }
 void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) { loop_settled_hook_ = std::move(cb); }
+void GuiPlatform::set_dialog_redraw(RedrawCallback cb)          { dialog_on_redraw_ = std::move(cb); }
+void GuiPlatform::set_dialog_button_press(ButtonCallback cb)    { dialog_on_button_press_ = std::move(cb); }
+void GuiPlatform::set_dialog_button_release(ButtonCallback cb)  { dialog_on_button_release_ = std::move(cb); }
+void GuiPlatform::set_dialog_motion(MotionCallback cb)          { dialog_on_motion_ = std::move(cb); }
+void GuiPlatform::set_dialog_close(CloseCallback cb)            { dialog_on_close_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

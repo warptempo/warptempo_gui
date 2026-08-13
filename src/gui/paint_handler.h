@@ -66,9 +66,12 @@ inline int bottom_row_pad_x() {
 }
 
 // Single source for the modal editor prefixes, read by the dialog painter
-// (paint_modal_dialog) alone since the editors moved into the centered
-// dialog (2026-08-12; they were the bottom-strip prefixes from row 7 until
-// then). Each is the dialog's LABEL, painted beside the inset field; the
+// alone since the editors moved into the modal dialog (2026-08-12; they were
+// the bottom-strip prefixes from row 7 until then, and the dialog became its
+// own labwc WINDOW the same evening — on_dialog_redraw paints them now, and
+// the window's TITLE derives from them too: the prefix up to its ':', so
+// "Setting" / "BPM" / "Load" / "Commit", modal_dialog_window_plan's rule).
+// Each is the dialog's LABEL, painted beside the inset field; the
 // pointer path never measures one — the painter publishes the field's own
 // click-to-caret origin (AppState::DialogEditorText), so the mapped
 // geometry IS the painted one rather than a re-derivation that could drift.
@@ -575,6 +578,41 @@ struct GuiPaintHandler {
     };
     PlateViewportBasis plate_viewport_basis() const;
 
+    // THE MODAL DIALOG — A REAL labwc WINDOW since 2026-08-12 evening (the
+    // same-morning centered in-window box was the interim; the design record
+    // is at on_dialog_redraw's definition, the sampled chrome constants at
+    // render.h's kModal* block). Both members are PUBLIC because main.cpp is
+    // their caller: the lifecycle sync reads the plan, and the platform's
+    // dialog redraw hook is wired to the painter.
+    //
+    // modal_dialog_window_plan answers "should a dialog window stand, at what
+    // content size, under what title" from the modal state alone (the prompt
+    // outranks every editor, the old painter fork's own precedence). The
+    // fingerprint is the content's IDENTITY — kind plus its fixed strings —
+    // so the lifecycle sync (main.cpp) can tell a standing window's content
+    // switched (a prompt raised over an editor, the Save-failed mutation)
+    // and resize/retitle it without deep-comparing anything per iteration.
+    // Sizing shapes text, so the plan spins a 1x1 scratch cairo context —
+    // once per call, and the sync calls it only per loop iteration while a
+    // modal stands or just stood.
+    struct ModalDialogWindowPlan {
+        bool        open = false;
+        int         w    = 0;      // content size = the window's initial size
+        int         h    = 0;
+        std::string title;
+        std::string fingerprint;
+    };
+    ModalDialogWindowPlan modal_dialog_window_plan();
+
+    // The dialog WINDOW's whole-window painter (the platform's dialog redraw
+    // callback): kModalGround fill over (w, h), the fixed content block
+    // CENTERED in the granted size (no reflow — kdenlive's dialogs don't
+    // reflow at this scale either), geometry published DIALOG-LOCAL into
+    // AppState::modal_dialog and AppState::dialog_editor_text for the dialog
+    // input entry points. The 1px kModalBorder frame of the in-window box is
+    // NOT painted any more — labwc's server-side decoration is the frame.
+    void on_dialog_redraw(cairo_t* cr, int w, int h);
+
 private:
     // Waveform fingerprint inputs derived from current app state. This is
     // the single source of truth for the desired waveform fingerprint —
@@ -814,12 +852,4 @@ private:
     // and the content gates on loaded audio inside. Full design record at the
     // definition.
     void paint_overview_strip(cairo_t* cr);
-    // THE MODAL DIALOG (2026-08-12): the centered in-window box hosting the
-    // prompts and the four modal editors (settings / load / commit-title /
-    // BPM), painted LAST from on_redraw's tail, unconditionally — it
-    // publishes AppState::modal_dialog and AppState::dialog_editor_text, the
-    // geometry the pointer path's veil, button claims and click-to-caret
-    // read. The full design record is at the definition; the sampled chrome
-    // constants are at render.h's kModal* block.
-    void paint_modal_dialog(cairo_t* cr);
 };
