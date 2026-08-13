@@ -2529,6 +2529,61 @@ struct AppState {
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
 
+    // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
+    // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
+    // "everything else acts on lift"), so this index is what a release
+    // resolves against, not merely what is painted dark. A press on a dialog
+    // button writes it; the release with the pointer STILL ON that same button
+    // runs the act; anything else drops it and nothing dispatches.
+    //
+    // IT IS DELIBERATELY NOT `redesign_pressed`, which structurally cannot
+    // carry it on either count: that field indexes THE ROSTER (a dialog
+    // button is not a roster member and the two index spaces would have to be
+    // sentinel-encoded into one int), and its lifetime is the opposite rule —
+    // the roster's chord already fired at the press, so its face deliberately
+    // SURVIVES the pointer wandering off mid-hold, while this arm must DIE
+    // there or a slide-off would still commit. Two facts, one shape; the
+    // roster's owner (clear_redesign_button_press) is left alone.
+    //
+    // Its edges: the press claims write it (on_button_press's two dialog
+    // gates, input_pointer.cpp), the release claims read and clear it, the
+    // hover walk drops it the moment the pointer leaves the armed button
+    // (update_modal_dialog_hover — "sliding off cancels", and sliding back on
+    // does NOT re-arm: there is no new press), clear_modal_dialog_press drops
+    // it on the pointer-leave / capability-loss edge (main.cpp's hook, beside
+    // the roster's own clear), and paint_modal_dialog drops it with the stash
+    // whenever the dialog closes or CHANGES. Every write damages the box.
+    int modal_dialog_pressed = -1;
+
+    // THE KEYBOARD FOCUS RING (architect 2026-08-13, part D of the modal
+    // button ruling — kdenlive-sampled face, the navigation his own
+    // derivation): the index into modal_dialog.buttons the keyboard is on, or
+    // -1, WHOSE MEANING THE OWNER SELECTS — on an EDITOR dialog -1 is THE
+    // FIELD, a real ring stop and where every editor opens (the user is there
+    // to type, which is also what keeps the editors' keyboard contract
+    // byte-identical); on a PROMPT -1 is NO FOCUS AT ALL, the state every
+    // prompt opens in and one Tab or arrow leaves for good. THAT ASYMMETRY IS
+    // THE POINT: a prompt must not be answerable by a stray Enter — this
+    // prompt system has no Enter answer by ruling (the label rule at
+    // PromptState says the same thing about the default face) — so Enter acts
+    // only once the user has deliberately stepped onto a button.
+    //
+    // THE RING: Tab cycles every stop including the field, Left/Right move
+    // between BUTTONS only and are inert in the field (the arrows belong to
+    // the text there, and the editors' own motion arm owns them), Enter
+    // activates the focused button. The one route is
+    // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by the
+    // prompt gate and by route_modal_editor_key alike.
+    //
+    // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
+    // stash when no dialog stands, on any change of the stash's OWNER, and on
+    // a prompt's FIRST PAINT — which rides PromptState::painted, false at the
+    // one raise route, so a prompt replacing a prompt (the save-failed rung)
+    // cannot inherit the previous question's focus either. Editor-to-editor is
+    // unreachable (every opener refuses while another editor owns the
+    // keyboard), so those three cover every edge.
+    int modal_dialog_focus = -1;
+
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
     // centre in monospace; the row unification merged that row and the status

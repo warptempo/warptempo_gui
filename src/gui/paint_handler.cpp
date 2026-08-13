@@ -4458,12 +4458,22 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 //
 // THE BUTTONS ARE THE ARCHITECT'S EXPLICIT MIX: the deleted toolbar row's box
 // (row 2's 32px height and its own label pads, the icon slot dropped — these
-// buttons carry words, not glyphs) wearing the ICON ROW's face colors — rest
-// is the bare label, hover the 1px accent outline at the icon row's radius.
-// THE CLICK FACE IS DELIBERATELY NOT PAINTED: dialog buttons act ON PRESS
-// like every roster button, and the press closes (or mutates) the dialog on
-// the same frame, so a held-interior fill would never be seen; the surface
-// does not join redesign_pressed.
+// buttons carry words, not glyphs) wearing the ICON ROW's face colors — "the
+// modal buttons should basically look like the icons, but with a resting
+// outline" (2026-08-13). FIVE FACES, the ladder stated at the paint site
+// below: REST is that resting 1px kRedesignLine outline over the bare row
+// ground, HOVER swaps it for the accent, PRESSED adds the icon row's own 30%
+// accent interior, FOCUSED the sampled #2d4655 fill plus a 2px halo outside
+// the box, and there is no selected and no disabled face at all.
+//
+// AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
+// lift"), which is what makes the click face real: a press ARMS the button
+// and paints it, the lift on that same button runs the act, and sliding off
+// or lifting elsewhere cancels with nothing dispatched. The arm is
+// AppState::modal_dialog_pressed — deliberately not the roster's
+// redesign_pressed, whose index space and whose survives-a-wander lifetime
+// are both wrong for an act that has not happened yet (the reasoning is at
+// the field's declaration).
 //
 // METRICS. The row's own pad (bottom_row_pad_x) is the left and right margin,
 // which is what makes the modal sit on the same margins as the tenants it
@@ -4485,6 +4495,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 //                          margin — the editors still do not scroll, the same
 //                          accepted cost, and the published byte geometry
 //                          stays the painter's unclipped truth.
+//   kModalFocusRingPx 2  — the keyboard focus halo, RESERVED around every
+//                          button and painted for the focused one (the
+//                          reflow-free rule and the per-scale fit are at the
+//                          constant).
 // THE FIELD ABSORBS THE SHRINK on a narrow window exactly as it did in the
 // box — it takes whatever is left between the label and the buttons, floored
 // at 40px so it stays a field.
@@ -4521,13 +4535,39 @@ constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
 constexpr double kModalBtnBoxPx       = 32.0;
 constexpr double kModalBtnPadLeftPx   = 9.0;
 constexpr double kModalBtnPadRightPx  = 10.0;
+// THE FOCUS RING'S WIDTH — the 2px halo a keyboard-focused button wears
+// OUTSIDE its box (kModalFocusRing, render.h, where the sampled face is
+// recorded). RESERVED FOR EVERY BUTTON AND PAINTED FOR ONE, which is what
+// makes moving the focus reflow nothing: the cluster's right anchor and the
+// content's right bound both spend it, and the buttons themselves never move.
+// IT FITS AT EVERY SCALE BY CONSTRUCTION, both axes riding one factor: the
+// vertical margin is (50 - 32)/2 = 9 authored px against the ring's 2 (at 50%
+// the floored ring is 1px against a 4px margin, at 200% it is 4 against 18),
+// and horizontally the 8px inter-button gap absorbs one ring from each
+// neighbour with half of it to spare.
+constexpr double kModalFocusRingPx    = 2.0;
+
+// THE MODAL'S THREE FACE INDICES, dropped together. They all name slots in
+// modal_dialog.buttons, so they all go stale on exactly the same edges — and
+// this painter owns every one of those edges (the full rule and the edge list
+// are at AppState::modal_dialog_focus). No damage of its own: every caller is
+// mid-frame on the lane it is about to repaint.
+void reset_modal_dialog_face_state(AppState& app) {
+    app.modal_dialog_hovered = -1;
+    app.modal_dialog_pressed = -1;
+    app.modal_dialog_focus   = -1;
+}
 
 } // namespace
 
 void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // The publication reset, every run — a dialog that is not painted leaves
-    // nothing behind for the pointer path to grab.
+    // nothing behind for the pointer path to grab. THE OUTGOING OWNER is read
+    // first: it is the last frame's statement of which surface these face
+    // indices name, and the face-state reset below is what keeps them from
+    // outliving it.
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    const AppState::ModalDialogOwner prev_owner = dlg.owner;
     dlg.valid = false;
     dlg.owner = AppState::ModalDialogOwner::None;
     dlg.box   = GuiRect{0, 0, 0, 0};
@@ -4546,10 +4586,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const text_editor::State* ed =
         prompt_up ? nullptr : dialog_editor_to_paint(app, prefix);
     if (!prompt_up && ed == nullptr) {
-        // No dialog: the hover index resets WITH the stash, so a fresh dialog
-        // cannot inherit the previous one's lit button.
-        app.modal_dialog_hovered = -1;
+        // No dialog: the three pointer/keyboard face indices reset WITH the
+        // stash, so a fresh dialog cannot inherit the previous one's lit
+        // button, its armed button or its keyboard focus.
+        reset_modal_dialog_face_state(app);
         return;
+    }
+
+    // THE FACE STATE'S OTHER TWO RESET EDGES, both of which keep a dialog
+    // STANDING and so never reach the arm above (the whole rule is at
+    // AppState::modal_dialog_focus):
+    //   A CHANGE OF OWNER — prompt over editor, editor after prompt. The
+    //   indices name buttons of a surface that is gone, and an armed or
+    //   focused index carried across would be aimed at whatever now sits at
+    //   that slot.
+    //   A PROMPT'S FIRST PAINT — `painted` is false at PromptState::present,
+    //   the one raise route, so this catches a prompt REPLACING a prompt (the
+    //   save-failed rung), which the owner test cannot see.
+    // Read before the branches below write either bit.
+    if (prev_owner != (prompt_up ? AppState::ModalDialogOwner::Prompt
+                                 : AppState::ModalDialogOwner::Editor) ||
+        (prompt_up && !app.prompt.painted)) {
+        reset_modal_dialog_face_state(app);
     }
 
     // THE MODAL'S SURFACE IS THE BOTTOM ROW'S CONTENT BAND — the lane's ground
@@ -4560,8 +4618,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const GuiRect content = bottom_row_content_area(app);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) {
         // A degenerate row publishes nothing, the cold answer the pointer path
-        // already reads correctly (a zero stash contains no point).
-        app.modal_dialog_hovered = -1;
+        // already reads correctly (a zero stash contains no point) — and it
+        // names no buttons, so the face state goes with it.
+        reset_modal_dialog_face_state(app);
         return;
     }
 
@@ -4580,6 +4639,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int btn_h = scaled_px(kModalBtnBoxPx);
     const int btn_pad_l = scaled_px(kModalBtnPadLeftPx);
     const int btn_pad_r = scaled_px(kModalBtnPadRightPx);
+    // The focus halo's reserved band (kModalFocusRingPx, above): spent by the
+    // layout for EVERY button whether or not one is focused, so the ring can
+    // never push the row around when the focus moves.
+    const int ring = scaled_px(kModalFocusRingPx, 1);
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
     //    row's total before anything can be placed). --
@@ -4619,10 +4682,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // run from its LEFT pad, with one pad of clearance between them: the
     // content's right bound is the buttons' left edge less a pad, and every
     // content surface clips (the message) or shrinks (the field) at it, so the
-    // two blocks can never overlap whatever the strings do.
+    // two blocks can never overlap whatever the strings do. THE FOCUS RING IS
+    // RESERVED ON BOTH SIDES OF THE CLUSTER — inside the right pad so the
+    // rightmost button's halo cannot touch the window edge, and inside the
+    // clearance so it cannot touch the message or the field.
     const int cx0 = content.x + pad;                        // content left
-    const int buttons_x0 = content.x + content.w - pad - buttons_w;
-    const int cx1 = buttons_x0 - pad;                       // content right
+    const int buttons_x0 = content.x + content.w - pad - ring - buttons_w;
+    const int cx1 = buttons_x0 - ring - pad;                // content right
     const int btn_y = content.y + (content.h - btn_h) / 2;
 
     if (prompt_up) {
@@ -4794,14 +4860,48 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (size_t i = 0; i < plan.size(); ++i) {
         if (i > 0) x += bgap;
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
-        // The icon row's face rule, the two faces this surface has: rest is
-        // the bare label, hover the accent outline (the fill/outline split's
-        // hover half; there is no selected state here and the click face is
-        // deliberately unpainted, the header's act-on-press note).
-        if (static_cast<int>(i) == app.modal_dialog_hovered) {
-            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
-                              nullptr, &kRedesignAccent);
+        // THE FACE LADDER (architect 2026-08-13: "the modal buttons should
+        // basically look like the icons, but with a resting outline"). It IS
+        // the icon row's, read off paint_icon_row's own body — the fill says
+        // the STATE and the outline says where the pointer or the keyboard
+        // IS, decided separately, so every combination falls out instead of
+        // being enumerated — with two differences, both the ruling's:
+        //   REST paints the 1px kRedesignLine outline where the icon row
+        //   paints nothing (the row ground still shows through — no fill, the
+        //   icon buttons plus that one line), so has_line is unconditional
+        //   here where the icon row makes it a term.
+        //   FOCUS is a face the icon row does not have (nothing up there takes
+        //   the keyboard): its own fill under the accent outline, plus the
+        //   halo painted below.
+        // There is NO selected and NO disabled state on this surface — a
+        // dialog button is always live while its dialog stands — so the icon
+        // row's kRedesignSelectedFill and its kRedesignDisabledMix `keep` term
+        // have no counterparts here and are deliberately not invented.
+        // THE CLICK FACE IS REAL NOW: these buttons act at the RELEASE, so the
+        // pressed interior is the standing statement that the act is armed and
+        // the lift will run it (it was unpainted while they acted at the
+        // press, when there was nothing to hold a face for).
+        const bool pressed = static_cast<int>(i) == app.modal_dialog_pressed;
+        const bool hovered = static_cast<int>(i) == app.modal_dialog_hovered;
+        const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
+        if (focused) {
+            // THE HALO, drawn first so the button's own outline lands over its
+            // inner edge: a `ring`-wide stroke whose centreline runs half a
+            // ring outside the box, i.e. a band filling exactly the reserved
+            // pixels from the box edge outward. The radius grows by the same
+            // ring so the corner stays concentric with the button's.
+            redesign_face_box(cr, r.x - ring, r.y - ring,
+                              r.w + 2 * ring, r.h + 2 * ring,
+                              ring, rad + ring, nullptr, &kModalFocusRing);
         }
+        const GuiColor fill =
+            pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                                kRedesignClickMix)
+                    : kModalFocusFill;
+        const GuiColor line =
+            (hovered || pressed || focused) ? kRedesignAccent : kRedesignLine;
+        redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
+                          (pressed || focused) ? &fill : nullptr, &line);
         show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
                       redesign_baseline(font, static_cast<double>(r.y),
                                         static_cast<double>(r.h)),

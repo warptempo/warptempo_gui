@@ -1040,6 +1040,14 @@ struct GuiInputHandler {
     // does, so every edge that ends one ends both.
     void clear_redesign_button_press();
 
+    // THE MODAL DIALOG'S ARMED BUTTON, dropped on that same edge (2026-08-13):
+    // the dialog buttons act at the RELEASE, so a pointer that has left the
+    // window is holding an act that must not still be waiting for a lift that
+    // may never arrive. Its two siblings — the arm and the release's verdict —
+    // are private, beside the modal's other pointer readers; the contract is at
+    // the definition and the full edge list at AppState::modal_dialog_pressed.
+    void clear_modal_dialog_press();
+
     // ROW 8's ARROW HOLD-REPEAT, the tick's firing body (2026-08-11): while a
     // transport-row arrow button is held (armed at the press by
     // dispatch_redesign_chord, disarmed by clear_redesign_button_press) and
@@ -2131,9 +2139,11 @@ private:
     // modal_bottom_strip_editor_active while they wrote onto the status lane;
     // the MEANING — this exact four-editor set — has never moved, and the
     // surface is a modal that yields the whole row now rather than a tenant
-    // of its status span). SEVEN CALLERS (re-derived
-    // 2026-08-12, the dialog arc), each asking the same question about a
-    // pointer fact: wheel_context's swallow (input_handler.cpp), because the
+    // of its status span). NINE CALLERS (re-derived
+    // 2026-08-13, with the act-at-release / focus-ring arc), eight asking the
+    // same question about a
+    // pointer fact and one — the newest — about a KEY: wheel_context's swallow
+    // (input_handler.cpp), because the
     // wheel's stepped pan is NAVIGATION, not a chord, so it still punches
     // through an open top-strip flag editor; pointer_cursor_kind
     // (2026-08-03), because these four editors are exactly the ones whose
@@ -2142,11 +2152,16 @@ private:
     // on_button_press's top (2026-08-11), because these four are exactly the
     // swallows the admitted Quit/Save button presses must be lifted OVER
     // (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord); the dialog BUTTON claim beside it
+    // modal_editor_admits_command_chord); the dialog BUTTON claim beside it,
+    // ITS RELEASE MIRROR in on_button_release (2026-08-13 — the buttons act at
+    // the lift, so the gesture is claimed on both edges),
     // and on_motion's dialog-hover branch (2026-08-12), the modal's own two
     // pointer surfaces; the roster hover walk's veil term
     // (recompute_redesign_button_hover — under an editor dialog only the
-    // veil-admitted buttons hover); and paint_modal_dialog's editor fork by
+    // veil-admitted buttons hover); modal_editor_key_blocked's bare-Tab
+    // admission (2026-08-13, THE ONE KEYBOARD READER: the focus ring's Tab is
+    // admitted for exactly these four, the flag editor publishing no dialog
+    // and so having no ring to walk); and paint_modal_dialog's editor fork by
     // proxy (it reads the same four is_active tests in the same order). The
     // flag editor's exemption is the same fact in all of them: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
@@ -2177,6 +2192,36 @@ private:
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
     void dispatch_modal_dialog_editor_act(bool ok);
+
+    // THE DIALOG BUTTONS ACT AT THE RELEASE (architect 2026-08-13,
+    // "everything else acts on lift"), which is what these three own — the
+    // arm, its hard end, and the lift's verdict. The arm itself is
+    // AppState::modal_dialog_pressed, whose declaration carries the whole edge
+    // list and the reason it is not the roster's redesign_pressed.
+    //   arm_modal_dialog_press    — press: arm the hit button and paint it,
+    //                               dispatching nothing. True iff one was hit.
+    //   take_modal_dialog_release — release: consume the arm and return the
+    //                               button the lift LANDED on if it is the one
+    //                               armed, else -1. The caller dispatches,
+    //                               because a prompt's buttons and an editor's
+    //                               mean different things.
+    //   clear_modal_dialog_press  — the pointer-leave / capability-loss edge
+    //                               (main.cpp's hook, beside the roster's own
+    //                               clear; PUBLIC for that one caller, like
+    //                               the roster's own clear beside it).
+    bool arm_modal_dialog_press(int x, int y);
+    int  take_modal_dialog_release(int x, int y);
+
+    // THE MODAL'S KEYBOARD FOCUS RING, one route for both surfaces (2026-08-13;
+    // the state and the two meanings of its -1 are at
+    // AppState::modal_dialog_focus, the navigation rules at the definition,
+    // input_key_dispatch.cpp). Called by the prompt gate (input_handler.cpp)
+    // and by route_modal_editor_key, and returns true when it consumed the
+    // key. `field_owns_tab` is the caller's statement that the editor's FIELD
+    // has its own bare-Tab meaning — its autocomplete — which the ring then
+    // declines rather than overrides; a prompt has no field and passes false.
+    bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods,
+                                      bool field_owns_tab);
 
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The

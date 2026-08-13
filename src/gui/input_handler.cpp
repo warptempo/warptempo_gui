@@ -148,6 +148,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             prompt.request_close();
             return;
         }
+        // THE FOCUS RING (2026-08-13), the prompt's half: bare Tab and bare
+        // Left/Right walk the answer buttons and bare Enter activates the one
+        // focused. It is ranked here — under the painted gate, over the
+        // response match — because it is navigation over an unanswered
+        // question and must obey the same "only a surface the user has seen"
+        // rule the answers do. A PROMPT OPENS WITH NO BUTTON FOCUSED and Enter
+        // is inert until the user deliberately steps onto one: this prompt
+        // system has no Enter answer by ruling (PromptState), and a ring that
+        // opened on a button would have grown one by the back door. The route
+        // is shared with the editor dialogs' — one ring, one owner
+        // (route_modal_dialog_focus_key, input_key_dispatch.cpp); `false` is
+        // the field's-own-Tab hand-off, which a prompt has no field for. The
+        // response letters below are untouched, so the keyboard contract that
+        // existed before this ring is byte-identical.
+        if (route_modal_dialog_focus_key(key, mods,
+                                         /*field_owns_tab=*/false)) {
+            return;
+        }
         char k = 0;
         if (!ctrl && !shift && !alt) {
             if (mods.codepoint >= 'a' && mods.codepoint <= 'z') {

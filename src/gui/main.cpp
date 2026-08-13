@@ -1552,6 +1552,11 @@ int main(int argc, char** argv) {
             input_handler.disarm_menu_row();
         }
         input_handler.clear_redesign_button_press();
+        // The MODAL's armed dialog button goes on the same edge and for a
+        // sharper reason than the roster's face: that arm is an act that has
+        // not happened yet, and the pointer is on no button now (the contract
+        // is at clear_modal_dialog_press).
+        input_handler.clear_modal_dialog_press();
         input_handler.clear_dropdown_pointer_state();
     });
 

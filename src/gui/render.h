@@ -778,20 +778,57 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 // frame), kModalBorderPx, kModalPadPx (the crop's 11px content margin — the
 // row's own bottom_row_pad_x is the margin now) and kModalWindowMarginPx (the
 // narrow-window clamp — the row IS the clamp) are all deleted producer-less.
-// The crop's #292c30 titlebar band and its #2d4655/#4882a1 default-button face
-// were never transcribed and stay untranscribed: ours has no title bar, and
-// this prompt system has no Enter-default (the recorded decision at
-// PromptState). Their values are git history; a reinstatement is a ruling.
+// The crop's #292c30 titlebar band stays untranscribed (ours has no title
+// bar), as does the #4882a1 half of its default-button face — this prompt
+// system has no Enter-default (the recorded decision at PromptState). Its
+// #2d4655 companion WAS transcribed 2026-08-13, as the keyboard-focus fill
+// below, which is a different fact wearing the same shade: focus is where the
+// keyboard is, not which answer Enter would pick.
 //
-// The modal's BUTTONS carry no constants here: they are the deleted toolbar
+// The modal's BUTTONS carry no constants here APART FROM THE FOCUS PAIR below:
+// their box is the deleted toolbar
 // row's 32px box (kModalBtnBoxPx and the 9/10 label pads, paint_handler.cpp —
 // row 2's own arithmetic, kept when the row dissolved into the icon row at the
-// 2026-08-12 relayout) at the icon row's face colors, both REUSED not
-// re-sampled (the architect's explicit mix), and the invalid red flash
+// 2026-08-12 relayout) and their pointer faces are the icon row's, both REUSED
+// not re-sampled (the architect's explicit mix — "the modal buttons should
+// basically look like the icons, but with a resting outline", 2026-08-13, the
+// resting outline being kRedesignLine, which is both this product's chrome-line
+// grey AND the grey modal_popup.png measures on its own non-default buttons:
+// two facts that agree, so the existing constant ships and no kModal one
+// exists). The invalid red flash
 // recolors the FIELD in the marker-flag red pair (kMarkerFlagFillRed /
 // kMarkerFlagEdgeRed — the one invalid red), called not copied.
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
+
+// THE KEYBOARD-FOCUS FACE — the modal's ONE face with no icon-row counterpart,
+// so it is the one that needed sampling (architect 2026-08-13, his own values
+// off kdenlive's dialog buttons; the focus ring itself is the ruling's part D).
+// A focused dialog button paints THREE things, outermost last:
+//   kModalFocusRing #284c61 — a 2px stroke OUTSIDE the button box, the halo
+//                   that says "this is where the keyboard is". It grows the
+//                   button by 2px on every side, which is why the button row
+//                   RESERVES that ring's space for every button and paints it
+//                   for one (kModalFocusRingPx, paint_handler.cpp): moving the
+//                   focus must never reflow the row.
+//   kRedesignAccent — the ordinary 1px outline, the hover face's own, so a
+//                   focused button reads as "pointed at" plus the halo rather
+//                   than as a fourth outline color.
+//   kModalFocusFill #2d4655 — the interior, a shade the crop carries and this
+//                   product had never transcribed (the kModal block above
+//                   records it as untranscribed until now; the crop's
+//                   #4882a1 Enter-default face stays untranscribed, this
+//                   prompt system having no Enter default — PromptState).
+// Literals, not derivations: nothing clean generates either from this row's
+// ground and the accent, and both are Breeze's own focus shades.
+// PROVENANCE, stated exactly: #2d4655 IS in the committed crop —
+// modal_popup.png carries 1988 pixels of it, the fill of the very
+// Enter-default button whose face this product declines to have — while
+// #284c61 appears in NO committed crop and is the architect's own value from
+// his machine. Both ship on his word; the first one happens to be checkable
+// and checks out.
+inline constexpr GuiColor kModalFocusFill = hex(0x2D4655);
+inline constexpr GuiColor kModalFocusRing = hex(0x284C61);
 
 // (THE GUI FONT SIZE AXIS IS GONE — architect approval 2026-08-01.
 // kDefaultFontSizePt, set_gui_font_size_pt, gui_font_scale and the
