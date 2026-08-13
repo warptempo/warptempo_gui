@@ -2856,18 +2856,78 @@ bool GuiInputHandler::keyboard_modal_editor_active() const {
     return any_text_editor_active();
 }
 
+namespace {
+
+// THE MODAL FOCUS RING'S TAB SHAPE — the ONE predicate four sites read (the
+// keyboard-modal gate's admission, the ring's own walk, the completion arm
+// that must fire on the FORWARD shape alone, and repeat_eligible's ring arm
+// just below), so the spellings cannot drift apart the way hand-kept lists
+// would.
+//
+// IT MIRRORS THE LIVE MARKER CYCLE'S SPELLINGS EXACTLY (`is_tab_cycle` and
+// handle_tab_switch_keys' three arms, both in this file) rather than inventing
+// a second convention for the same physical gesture: bare Tab forward,
+// Shift+Tab back, and IsoLeftTab back SHIFT-AGNOSTICALLY — that keysym lives on
+// the Tab key's shift level, so a layout may deliver the reverse either with or
+// without the shift bit and the product reads both as the one shape everywhere
+// it binds a reverse Tab (the `h` view's diff-flag cycle does the same). CTRL
+// AND ALT ARE REFUSED on every arm, again as the live cycle refuses them: a
+// ctrl-carrying Tab is the tab-cycle family's, not this ring's, and alt binds
+// nothing in it.
+enum class ModalRingTab { None, Forward, Reverse };
+
+ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
+    if (mods.ctrl || mods.alt) return ModalRingTab::None;
+    if (key == GuiKeys::IsoLeftTab) return ModalRingTab::Reverse;
+    if (key != GuiKeys::Tab) return ModalRingTab::None;
+    return mods.shift ? ModalRingTab::Reverse : ModalRingTab::Forward;
+}
+
+}  // namespace
+
 // Press-time key-repeat eligibility (see the declaration). Repeat serves
 // held-step gestures and editor typing; edge-triggered commands never repeat.
 // Eligibility is judged under the PRESS-TIME context, so a press that opens an
 // editor (evaluated before the open) does not arm, while typing inside an
 // already-open editor does.
 bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
-    // A press the prompt or a live pointer gesture would swallow must not arm:
-    // its owning context rejected the press, and the gate lifting later must not
+    // A press a live pointer gesture would swallow must not arm: its owning
+    // context rejected the press, and the gate lifting later must not
     // retroactively empower the hold (e.g. a chord held through a marker drag
     // must not repeat onto the just-committed marker once the mouse releases).
-    if (app.prompt.active) return false;
     if (any_pointer_gesture_active(app)) return false;
+    // THE MODAL FOCUS RING'S TAB WALK REPEATS (architect 2026-08-13, at his
+    // live test: "a held tab does not key repeat. It should"), and it is the
+    // ONE thing that repeats on a modal surface. It is a continuous step
+    // gesture in exactly the sense the marker cycle is — walk the stops
+    // quickly — and its shapes are that cycle's own, read from the one
+    // predicate the gate, the walk and the completion arm share rather than
+    // re-spelled here.
+    //
+    // THE TWO SURFACES ARE THE TWO THAT HAVE A RING: a prompt (whose buttons
+    // cycle) and a DIALOG editor (field plus buttons). The top-strip flag
+    // editor publishes no dialog and so has no ring; its whole Tab family
+    // drops at modal_editor_key_blocked before anything could act on it, and
+    // it is deliberately absent here.
+    //
+    // A REPEATING WALK IS COHERENT WITH THE ONE AUTOCOMPLETE MODEL
+    // (route_modal_editor_key): the first fire in a field with a live
+    // completion completes and is consumed, and no later fire can complete
+    // again — the buffer is already AT its completion, so the advancement test
+    // answers false and every subsequent fire walks. The completion cannot
+    // fire repeatedly under a hold for that reason alone; nothing here has to
+    // suppress it.
+    if ((app.prompt.active || modal_dialog_editor_active()) &&
+        modal_ring_tab_shape(key, mods) != ModalRingTab::None)
+        return true;
+    // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
+    // blanket stays exactly as it was: a prompt's one-key answers must be
+    // one-shot, because a held response key repeating is the destructive shape
+    // the painted gate (PromptState::painted) exists to prevent — the second
+    // fire would answer a question raised by the first. The ring's walk is
+    // safe under a hold precisely because it decides nothing; it only moves
+    // where the keyboard is.
+    if (app.prompt.active) return false;
     if (any_text_editor_active()) {
         // Only the editor's motion/edit and printable-insert keys auto-repeat
         // while held; its session (bare Escape/Return) and chord (ctrl-exact
@@ -2875,10 +2935,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // repeat — the keyboard-modal gate drops it before anything could act on
         // it anyway. An ALT-carrying motion press is in that last bucket and so
         // does not repeat, which falls out of the classifier rather than being
-        // spelled here. This consumes the one editor-key owner:
-        // Tab/IsoLeftTab classify as NotEditorKey (handle_key never consumes Tab
-        // — the autocompletes are intercepted at the gate before handle_key) and
-        // so do not repeat here, matching the prior explicit one-shot exclusion.
+        // spelled here. This consumes the one editor-key owner.
+        //
+        // THE TAB FAMILY NEVER REACHES THIS ARM: it classifies NotEditorKey
+        // (handle_key never consumes a Tab — the ring and the completions are
+        // route_modal_editor_key's, above handle_key in that route, not the
+        // editor's own keymap), and a DIALOG editor's ring already answered it
+        // in the arm above this one. What falls through to here is a Tab under
+        // the FLAG editor, which has no ring and does not repeat.
         const auto kc = text_editor::classify_key(key, mods);
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
@@ -2949,34 +3013,6 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return true;
     return false;
 }
-
-namespace {
-
-// THE MODAL FOCUS RING'S TAB SHAPE — the ONE predicate three sites read (the
-// keyboard-modal gate's admission, the ring's own walk, and the completion arm
-// that must fire on the FORWARD shape alone), so the spellings cannot drift
-// apart the way two hand-kept lists would.
-//
-// IT MIRRORS THE LIVE MARKER CYCLE'S SPELLINGS EXACTLY (`is_tab_cycle` and
-// handle_tab_switch_keys' three arms, both in this file) rather than inventing
-// a second convention for the same physical gesture: bare Tab forward,
-// Shift+Tab back, and IsoLeftTab back SHIFT-AGNOSTICALLY — that keysym lives on
-// the Tab key's shift level, so a layout may deliver the reverse either with or
-// without the shift bit and the product reads both as the one shape everywhere
-// it binds a reverse Tab (the `h` view's diff-flag cycle does the same). CTRL
-// AND ALT ARE REFUSED on every arm, again as the live cycle refuses them: a
-// ctrl-carrying Tab is the tab-cycle family's, not this ring's, and alt binds
-// nothing in it.
-enum class ModalRingTab { None, Forward, Reverse };
-
-ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
-    if (mods.ctrl || mods.alt) return ModalRingTab::None;
-    if (key == GuiKeys::IsoLeftTab) return ModalRingTab::Reverse;
-    if (key != GuiKeys::Tab) return ModalRingTab::None;
-    return mods.shift ? ModalRingTab::Reverse : ModalRingTab::Forward;
-}
-
-}  // namespace
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be

@@ -2270,10 +2270,13 @@ struct FlagEditorBox {
 // Left/Right/Home/End then navigate it exactly like any one-line field —
 // nothing in the key path knows the box scrolls.
 //
-// Takes AppState by NON-CONST reference, alone among the renderers, and for two
-// honest reasons: it advances the editor's view offset (session state that must
-// persist across frames) and it publishes app.flag_editor_box. Both are the
-// painter owning what only the painter can compute.
+// Takes AppState by NON-CONST reference, alone among the renderers here, and
+// for two honest reasons: it advances the editor's view offset (session state
+// that must persist across frames) and it publishes app.flag_editor_box. Both
+// are the painter owning what only the painter can compute. (The DIALOG field's
+// painter — paint_modal_dialog, paint_handler.cpp — does exactly the same two
+// things for exactly the same reasons since 2026-08-13, when that field grew
+// this scroll; it is a GuiPaintHandler method and already holds an AppState&.)
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 
 // The phase-reset column's flags: the identical box, the identical class ladder

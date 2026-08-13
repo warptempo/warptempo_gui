@@ -2487,9 +2487,14 @@ struct AppState {
     // the lane is the row, not the editor).
     //
     // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
-    // left pad is already spent in it — and `byte_x` holds pending.size()+1
-    // pen offsets RELATIVE to that origin, so the pair reads exactly like
-    // FlagEditorBox's and editor_byte_index_at searches either the same way.
+    // left pad AND ITS HORIZONTAL SCROLL OFFSET are already spent in it (the
+    // field travels to keep the caret visible since 2026-08-13; the rule is at
+    // text_editor::State::view_offset_px) — and `byte_x` holds
+    // pending.size()+1 pen offsets RELATIVE to that origin, so the pair reads
+    // exactly like FlagEditorBox's and editor_byte_index_at searches either
+    // the same way. That is what makes the click, the F2.1 text drag and the
+    // double-click word select land on the right byte however far the field
+    // has scrolled: byte 0 is where byte 0 PAINTS, never where the pad is.
     // Written by paint_modal_dialog: zeroed at the top of every run, filled by
     // whichever editor the dialog actually paints. That makes it a statement
     // about what is ON SCREEN — an editor the dialog's precedence hides (a
@@ -2572,6 +2577,18 @@ struct AppState {
     // paint_modal_dialog's no-dialog arm alongside the stash, so a fresh
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
+
+    // THE POINTER IS OVER THE EDITOR FIELD — the same pointer fact as the
+    // index above, in the same model and written by the same walk
+    // (update_modal_dialog_hover: one motion, one answer, one damage of the
+    // stashed box), because the field grew a HOVER FACE when it took the
+    // buttons' chrome (architect 2026-08-13: "the same outline — the breeze
+    // blue highlight — when it's hovered and when it has the focus"). It is a
+    // bool rather than a second index because there is exactly one field.
+    // Resolved against modal_dialog.field, which a prompt publishes zero, so
+    // this is false under a prompt by construction; reset with the three face
+    // indices in paint_modal_dialog's no-dialog and owner-change arms.
+    bool modal_dialog_field_hovered = false;
 
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,

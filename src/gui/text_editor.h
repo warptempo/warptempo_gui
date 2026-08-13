@@ -78,15 +78,16 @@ constexpr int kMaxPendingCharsBpm = 60;
 // commits and persists unchanged, and can be shortened, but the editor will not
 // grow any pending past the cap.
 //
-// HORIZONTAL SCROLLING EXISTS NOW, AND ONLY ON ONE SURFACE (row 5, 2026-08-01).
+// HORIZONTAL SCROLLING EXISTS ON EVERY EDITOR (the flag editor from row 5,
+// 2026-08-01; the four DIALOG editors' field from 2026-08-13, architect at his
+// live test — a recalled `notes=` value is longer than the field and "the
+// viewport in the text field is always stuck on the left edge of the text").
 // This note used to record "running off the right edge while typing — no
-// horizontal scroll" as the settings prompt's accepted behaviour. The FLAG
-// editor grew a view offset when it became the unrolled flag box, because that
-// box is clamped on-window and its text genuinely does not fit; the DIALOG
-// editors are UNCHANGED and still run off the right edge of their field,
-// deliberately — the
-// feature is scoped to the surface that needed it, not adopted product-wide.
-// See `view_offset_px` below for which side writes it.
+// horizontal scroll" as the settings prompt's accepted behaviour, and then
+// recorded the feature as scoped to the flag editor alone; both readings are
+// retired. ONE mechanism serves both surfaces — `view_offset_px` below, whose
+// minimal-travel rule each painter applies — so the two cannot scroll
+// differently.
 constexpr int kMaxPendingCharsSettings = 1024;
 // Load prompt (bare `'`). Holds a render entry's identifier relative
 // to renders/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
@@ -161,17 +162,35 @@ struct State {
     // scrolled right through `pending`. Byte 0 paints at (text origin -
     // view_offset_px), so a positive value hides text off the box's left edge.
     //
-    // ONE WRITER, ONE READER, AND BOTH ARE THE FLAG EDITOR. Its unrolled box is
-    // clamped fully on-window, so a long payload does not fit and the view must
-    // travel to keep the caret visible; the painter recomputes the MINIMAL
-    // offset that shows the caret each frame (scroll only as far as it must, in
-    // whichever direction the caret left the window) and the click-to-byte path
-    // reads the same published geometry. The DIALOG editors never touch
-    // it — their inset field does not scroll (an over-long buffer clips, the
-    // standing accepted cost) — so this
-    // field is 0 for their whole session. It lives on State rather than beside
-    // the geometry because it is SESSION state: it must survive from frame to
-    // frame and die with the edit, which enter/deactivate already own.
+    // THE PAINTERS WRITE IT AND THE PAINTERS READ IT — two of them since
+    // 2026-08-13, one rule. THE FLAG EDITOR's unrolled box is clamped fully
+    // on-window and THE DIALOG EDITORS' inset field is a fixed 520px, so on
+    // both surfaces a long buffer does not fit and the view must travel to
+    // keep the caret visible.
+    //
+    // THE MINIMAL-TRAVEL RULE, which both painters apply and neither may
+    // reinvent: each frame, scroll only as far as the caret demands and in
+    // whichever direction it left the window, then clamp to the run's own
+    // travel (so the view never shows blank space past the end of the text).
+    // A caret walking right pushes the view right one glyph at a time and
+    // walking back left pulls it back the same way — it never jumps, and it
+    // never moves at all while the caret sits inside the window. The caret's
+    // own column is RESERVED at the right edge so a caret at end-of-text
+    // stands fully inside rather than half past it.
+    //
+    // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: each painter folds the
+    // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,
+    // AppState::DialogEditorText::text_origin_x — both "the window x byte 0
+    // paints at"), so editor_byte_index_at's nearest-boundary search, the
+    // F2.1 text drag and the double-click word select all land correctly on a
+    // scrolled field with no knowledge that it scrolled.
+    //
+    // It lives on State rather than beside either geometry because it is
+    // SESSION state: it must survive from frame to frame — recomputing it from
+    // nothing each paint would jitter a caret resting mid-string — and must
+    // die with the edit. enter/deactivate already own exactly that lifetime
+    // and are its only reset sites; a change of which editor a dialog hosts is
+    // structurally a change of State, so nothing else needs keeping in step.
     double view_offset_px = 0.0;
 
     // Cursor blink: monotonic timestamp at which the cursor became

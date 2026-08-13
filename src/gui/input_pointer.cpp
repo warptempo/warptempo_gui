@@ -1939,10 +1939,20 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // nothing" means for a pointer that never left the button's row.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
+    // THE FIELD'S OWN HOVER FACE rides this same walk (2026-08-13, when the
+    // field took the buttons' outline on hover and focus): one pointer fact
+    // resolved beside the buttons', against the painter's published field
+    // rect, damaging the same stashed box on the same transition. A prompt
+    // publishes a zero field, so this is false there without a term.
+    const bool in_field =
+        app.modal_dialog.valid &&
+        rect_contains(app.modal_dialog.field, x, y);
     const bool arm_lost =
         app.modal_dialog_pressed >= 0 && app.modal_dialog_pressed != hit;
-    if (app.modal_dialog_hovered != hit || arm_lost) {
-        app.modal_dialog_hovered = hit;
+    if (app.modal_dialog_hovered != hit || arm_lost ||
+        app.modal_dialog_field_hovered != in_field) {
+        app.modal_dialog_hovered       = hit;
+        app.modal_dialog_field_hovered = in_field;
         if (arm_lost) app.modal_dialog_pressed = -1;
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);

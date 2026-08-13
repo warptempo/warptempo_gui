@@ -4048,8 +4048,13 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // be open at a time — every opener refuses while another owns the keyboard —
 // so the order is free. A standing PROMPT outranks every editor and is the
 // caller's own test, not this one's.
-static const text_editor::State* dialog_editor_to_paint(const AppState& app,
-                                                        const char*& prefix) {
+//
+// IT HANDS BACK A MUTABLE STATE because the field's painter WRITES one field
+// of it: the horizontal view offset (text_editor::State::view_offset_px, whose
+// minimal-travel rule the painter owns for the flag editor too). The boolean
+// caller below wants only the null test and is unaffected.
+static text_editor::State* dialog_editor_to_paint(AppState& app,
+                                                  const char*& prefix) {
     if (app.history_mode.active && text_editor::is_active(app.load_editor)) {
         prefix = kLoadEditorHistoryPrefix;
         return &app.load_editor;
@@ -4077,7 +4082,7 @@ static const text_editor::State* dialog_editor_to_paint(const AppState& app,
 // "A modal owns the bottom row" — the prompt or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
-static bool modal_owns_bottom_row(const AppState& app) {
+static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     const char* prefix = nullptr;
     return dialog_editor_to_paint(app, prefix) != nullptr;
@@ -4549,11 +4554,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 //   kModalFieldWidthPx 520 — AUTHORED, not sampled (the crop's field width is
 //                          its dialog's layout, not a rule): wide enough for
 //                          every render-entry id and settings line met in
-//                          practice; an over-long buffer CLIPS at the field
-//                          exactly as the old status row clipped at its
-//                          margin — the editors still do not scroll, the same
-//                          accepted cost, and the published byte geometry
-//                          stays the painter's unclipped truth.
+//                          practice. AN OVER-LONG BUFFER SCROLLS since
+//                          2026-08-13 (architect at his live test; the
+//                          standing "the dialog editors do not scroll"
+//                          accepted cost recorded here is RETIRED): the field
+//                          travels horizontally to keep the caret inside it,
+//                          through the flag editor's own mechanism and rule
+//                          (text_editor::State::view_offset_px), while the
+//                          published byte geometry stays the painter's
+//                          unclipped truth.
 //   kModalFocusRingPx 2  — the keyboard focus halo, RESERVED around every
 //                          button and painted for the focused one (the
 //                          reflow-free rule and the per-scale fit are at the
@@ -4606,15 +4615,17 @@ constexpr double kModalBtnPadRightPx  = 10.0;
 // neighbour with half of it to spare.
 constexpr double kModalFocusRingPx    = 2.0;
 
-// THE MODAL'S THREE FACE INDICES, dropped together. They all name slots in
-// modal_dialog.buttons, so they all go stale on exactly the same edges — and
-// this painter owns every one of those edges (the full rule and the edge list
-// are at AppState::modal_dialog_focus). No damage of its own: every caller is
+// THE MODAL'S FACE STATE, dropped together. The three indices all name slots
+// in modal_dialog.buttons and the field bit names modal_dialog.field, so they
+// all go stale on exactly the same edges — and this painter owns every one of
+// those edges (the full rule and the edge list are at
+// AppState::modal_dialog_focus). No damage of its own: every caller is
 // mid-frame on the lane it is about to repaint.
 void reset_modal_dialog_face_state(AppState& app) {
-    app.modal_dialog_hovered = -1;
-    app.modal_dialog_pressed = -1;
-    app.modal_dialog_focus   = -1;
+    app.modal_dialog_hovered       = -1;
+    app.modal_dialog_pressed       = -1;
+    app.modal_dialog_focus         = -1;
+    app.modal_dialog_field_hovered = false;
 }
 
 } // namespace
@@ -4642,7 +4653,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // tenants down for a dialog this body then declines to paint.
     const bool prompt_up = app.prompt.active;
     const char* prefix = nullptr;
-    const text_editor::State* ed =
+    text_editor::State* ed =
         prompt_up ? nullptr : dialog_editor_to_paint(app, prefix);
     if (!prompt_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
@@ -4772,6 +4783,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int btn_y = content.y + (content.h - btn_h) / 2;
     int buttons_x0 = cx0;   // set by whichever branch runs, below
 
+    // THE CORNER RADIUS, resolved once for the whole modal: the icon buttons'
+    // own kIconCornerRadiusPx on their own scale. The buttons below take it,
+    // and since 2026-08-13 so does the EDITOR'S FIELD — the architect's "the
+    // same rounded corner as the buttons have, the same corner radius" — so
+    // one expression describes every corner on this surface.
+    const double rad = std::nearbyint(kIconCornerRadiusPx * gui_scale_factor());
+
     if (prompt_up) {
         // THE PAINTED GATE'S ONE WRITER OF TRUE (2026-08-13): this branch is
         // drawing the question into the buffer paint_one_frame commits at the
@@ -4844,46 +4862,138 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         show_row_text(cr, font, static_cast<double>(cx0), baseline,
                       prefix, kRedesignLabel);
 
-        // The field chrome. THE RED FLASH RECOLORS THE FIELD — the editors'
-        // one invalid state paints the interior in the marker-flag red pair
-        // (fill under its 1px top edge, the flag anatomy's own order), so
-        // there is ONE invalid red in the product and no second box.
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kModalFieldBorder.r, kModalFieldBorder.g,
-                             kModalFieldBorder.b);
-        cairo_rectangle(cr, field_outer.x, field_outer.y,
-                        field_outer.w, field_outer.h);
-        cairo_fill(cr);
+        // THE FIELD CHROME — THE BUTTONS' OWN BOX (architect 2026-08-13, at
+        // his live test: "give the text editor the same rounded corner as the
+        // buttons have, the same corner radius, and the same outline — the
+        // breeze blue highlight — when it's hovered and when it has the
+        // focus"). It draws through redesign_face_box, the very path the
+        // buttons below take, so field and button describe their corners with
+        // one expression and cannot drift; `rad` is the buttons' own
+        // kIconCornerRadiusPx on the buttons' own scale, resolved once for
+        // this whole body just under the button plan.
+        //
+        // THE LINE SAYS WHERE THE POINTER OR THE KEYBOARD IS, exactly as it
+        // does on a button — and NOTHING ELSE MOVES WITH IT. A focused BUTTON
+        // wears fill + accent outline + a 2px halo; THE FIELD'S FOCUS
+        // INDICATOR IS THE OUTLINE ALONE, deliberately: its dark inset ground
+        // is what makes typed text readable, a button's focus fill would
+        // destroy that, and a halo would need reserved room the field (which
+        // absorbs the row's shrink) has none of. So rest keeps the field's own
+        // sampled kModalFieldBorder over kModalFieldGround, and hover and
+        // focus each swap that 1px border for kRedesignAccent with the ground
+        // untouched.
+        //
+        // FOCUS IS `modal_dialog_focus < 0` and needs no term of its own: on
+        // an editor dialog -1 IS the field, the ring's own meaning for it
+        // (AppState::modal_dialog_focus), so the field is lit exactly while
+        // the ring has not stepped onto a button — which includes the open,
+        // where the user is there to type.
+        //
+        // THE RED FLASH STILL RECOLORS THE FIELD — the editors' one invalid
+        // state paints the interior in the marker-flag red pair (fill under
+        // its 1px top edge, the flag anatomy's own order), so there is ONE
+        // invalid red in the product and no second box. THE TOP EDGE IS
+        // CLIPPED TO THE ROUNDED INTERIOR (2026-08-13, when the box grew
+        // corners): a straight 1px band across a rounded box would poke out
+        // past both upper corners. Clipping it keeps the anatomy the flag
+        // editor and this field have always shared — a fill under a 1px edge
+        // — rather than dropping the edge and making the invalid state read
+        // differently on the two surfaces that share the red.
+        const bool field_focused = app.modal_dialog_focus < 0;
         const GuiColor field_ground =
             ed->red ? kMarkerFlagFillRed : kModalFieldGround;
-        cairo_set_source_rgb(cr, field_ground.r, field_ground.g,
-                             field_ground.b);
-        cairo_rectangle(cr, field_inner.x, field_inner.y,
-                        field_inner.w, field_inner.h);
-        cairo_fill(cr);
+        const GuiColor field_line =
+            (app.modal_dialog_field_hovered || field_focused)
+                ? kRedesignAccent : kModalFieldBorder;
+        redesign_face_box(cr, field_outer.x, field_outer.y,
+                          field_outer.w, field_outer.h,
+                          fbord, rad, &field_ground, &field_line);
         if (ed->red) {
+            cairo_save(cr);
+            redesign_rounded_rect_path(
+                cr, static_cast<double>(field_inner.x),
+                static_cast<double>(field_inner.y),
+                static_cast<double>(field_inner.w),
+                static_cast<double>(field_inner.h),
+                rad - static_cast<double>(fbord));
+            cairo_clip(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r,
                                  kMarkerFlagEdgeRed.g, kMarkerFlagEdgeRed.b);
             cairo_rectangle(cr, field_inner.x, field_inner.y,
                             field_inner.w, marker_flag_edge_h_px());
             cairo_fill(cr);
+            cairo_restore(cr);
         }
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
-        // The pending run, its selection and the caret, clipped to the field
-        // interior (no scroll, the standing accepted cost — the caret can sit
-        // outside the clip on a pathological string, and the published byte
-        // geometry stays the painter's unclipped truth).
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, ed->pending);
         const std::vector<double> bx_off =
             text_shape::byte_offsets_px(run, ed->pending.size());
-        const double tx =
-            static_cast<double>(field_inner.x) + scaled_px(kModalFieldPadXPx);
+
+        // THE FIELD SCROLLS HORIZONTALLY (architect 2026-08-13, at his live
+        // test — `notes=` Tab recalls a long value and "the text field has no
+        // viewport scroll... it should allow me to, just like in a regular
+        // text editor, use left and right or home and end to go to the end of
+        // the string"). The standing "the dialog editors do not scroll"
+        // accepted cost, recorded here and at kModalFieldWidthPx, is RETIRED
+        // BY THAT RULING: the caret and the editing always worked, only the
+        // VIEW never followed, so a caret walked past the right pad went on
+        // editing text nobody could see.
+        //
+        // The mechanism is the FLAG EDITOR'S, called not copied in the only
+        // sense a painter can call one — the same state field
+        // (text_editor::State::view_offset_px, whose contract and whose
+        // minimal-travel rule live at that declaration) and the same four
+        // lines of arithmetic, which is what keeps the two surfaces' scrolling
+        // identical. Scroll only as far as the caret demands, in whichever
+        // direction it left the window, then clamp to the run's own travel: a
+        // caret walking right pushes the view right one glyph at a time and
+        // walking back left pulls it back the same way, never jumping and
+        // never showing blank space past the end of the text.
+        //
+        // ITS HOME IS THE EDITOR SESSION, not this painter and not the modal
+        // stash, and that is the deliberate choice: the offset must survive
+        // frame to frame (recomputing it from nothing each paint would jitter
+        // a caret resting mid-string) and must die with the edit. enter() and
+        // deactivate() already zero it, so it RESETS when a dialog opens and
+        // when it closes, with no reset site of its own to keep in step — and
+        // since each of the four dialog editors owns its own State, a change
+        // of the stash's owner is structurally a change of offset too. A
+        // prompt has no field and writes none.
+        //
+        // The caret's own column is RESERVED at the right edge, so the travel
+        // is measured against (view_w - caret) rather than view_w: a caret at
+        // end-of-text stops with its column inside the field instead of half
+        // past it.
+        const double pad_x    = scaled_px(kModalFieldPadXPx);
+        const int    caret_px = scaled_px(1.0, 1);
+        const double view_x0  = static_cast<double>(field_inner.x) + pad_x;
+        const double view_w   =
+            std::max(1.0, static_cast<double>(field_inner.w) - 2.0 * pad_x);
+        const int cursor_pos = std::clamp(
+            ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
+        const double caret_off = bx_off[static_cast<size_t>(cursor_pos)];
+        const double travel_w  = view_w - static_cast<double>(caret_px);
+        double vo = ed->view_offset_px;
+        if (caret_off - vo < 0.0)      vo = caret_off;
+        if (caret_off - vo > travel_w) vo = caret_off - travel_w;
+        const double max_vo =
+            run.width_px + static_cast<double>(caret_px) - view_w;
+        if (vo > max_vo) vo = max_vo;
+        if (vo < 0.0)    vo = 0.0;
+        ed->view_offset_px = vo;
+
+        const double tx = view_x0 - vo;
 
         // PUBLISH the click-to-caret geometry: origin at pending's byte 0,
         // the same shape as FlagEditorBox's pair, so editor_byte_index_at
-        // searches this exactly as it searches the flag editor's.
+        // searches this exactly as it searches the flag editor's. IT CARRIES
+        // THE SCROLL OFFSET, which is the whole reason it is an origin and not
+        // a pad: byte 0 is where byte 0 PAINTS, so a click, the F2.1 text drag
+        // and the double-click's word select all land on the byte under the
+        // pointer however far the field has travelled — the same rule, and the
+        // same one origin, the flag editor's scrolled box has always followed.
         AppState::DialogEditorText& out = app.dialog_editor_text;
         out.valid         = true;
         out.text_origin_x = tx;
@@ -4894,9 +5004,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int band_h =
             static_cast<int>(std::nearbyint(fe.ascent + fe.descent));
 
+        // Everything from here paints CLIPPED TO THE TEXT VIEWPORT — the band
+        // between the pads, not the whole interior — so scrolled-out glyphs,
+        // the selection highlight and the caret all stop where the ink is
+        // allowed to start instead of bleeding into the pad the border needs.
+        // It is the clip that hides the overflow, and the PUBLISHED byte
+        // geometry above stays the painter's UNCLIPPED truth: a click outside
+        // the visible run still resolves through the nearest-boundary search,
+        // exactly as it did before the field travelled.
         cairo_save(cr);
-        cairo_rectangle(cr, field_inner.x, field_inner.y,
-                        field_inner.w, field_inner.h);
+        cairo_rectangle(cr, view_x0, static_cast<double>(field_inner.y),
+                        view_w, static_cast<double>(field_inner.h));
         cairo_clip(cr);
 
         const bool   has_sel = text_editor::has_selection(*ed);
@@ -4920,27 +5038,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         if (has_sel) {
             // The selected substring knocked out in the FIELD ground — the
             // whole run re-shown under a clip (shaping the substring alone
-            // could kern its first glyph differently and shift the ink).
+            // could kern its first glyph differently and shift the ink). It
+            // reads the RESOLVED ground, not the resting constant, so a
+            // selection standing through an invalid flash knocks out in the
+            // red the field is actually wearing rather than in the dark it is
+            // not (the flash keeps its selection: only a keystroke that
+            // mutates the buffer clears the red).
             cairo_save(cr);
             cairo_rectangle(cr, tx + bx_off[s0], static_cast<double>(band_y),
                             bx_off[s1] - bx_off[s0],
                             static_cast<double>(band_h));
             cairo_clip(cr);
-            cairo_set_source_rgb(cr, kModalFieldGround.r, kModalFieldGround.g,
-                                 kModalFieldGround.b);
+            cairo_set_source_rgb(cr, field_ground.r, field_ground.g,
+                                 field_ground.b);
             text_shape::show_shaped_run(cr, run, tx, baseline);
             cairo_restore(cr);
         }
         if (text_editor::cursor_visible_now(*ed)) {
-            const int cursor_pos = std::clamp(
-                ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
-            const double caret_x = tx + bx_off[static_cast<size_t>(cursor_pos)];
+            // The caret's column is the one the scroll arithmetic RESERVED
+            // above, so the two cannot disagree about how wide it is: the
+            // travel stops with exactly this many pixels of room left at the
+            // right pad, and the caret fills exactly them.
+            const double caret_x = tx + caret_off;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
-                            band_y, 1, band_h);
+                            band_y, caret_px, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
         }
@@ -4950,9 +5075,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     // -- The button row, starting where the content above left off. --
-    const int lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
-    const double rad = std::nearbyint(kIconCornerRadiusPx *
-                                      gui_scale_factor());
+    const int lw = std::max(1, scaled_px(kIconOutlineStrokePx));
     int x = buttons_x0;
     for (size_t i = 0; i < plan.size(); ++i) {
         if (i > 0) x += bgap;

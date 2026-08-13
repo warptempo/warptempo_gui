@@ -1221,7 +1221,10 @@ struct GuiInputHandler {
     // under the PRESS-TIME context (the platform evaluates it before dispatch),
     // so a press that opens an editor is judged pre-open and does not arm, while
     // typing inside an already-open editor does. Public because main.cpp's
-    // probe lambda calls it.
+    // probe lambda calls it. ONE THING REPEATS ON A MODAL SURFACE, the focus
+    // ring's Tab walk (architect 2026-08-13) — on a prompt and under a dialog
+    // editor alike, both surfaces having a ring; every OTHER key a prompt
+    // could answer with stays one-shot, the definition's ring arm saying why.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
     // Per-iteration promotion check for the archival status message, wired from
