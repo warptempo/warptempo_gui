@@ -1234,12 +1234,10 @@ enum class RedesignButton {
     // ever live and the pair reads as a transport rather than as a toggle.
     // The arm is at redesign_button_enabled below.
     //
-    // THE FOUR ARROWS HOLD-REPEAT (the row's own affordance, matching the
-    // keyboard's): the press dispatches once and arms
-    // AppState::transport_repeat; the tick then synthesizes repeats stamped
-    // GuiInputState::synthesized_repeat, so the undo coalescing is the held
-    // key's own repeat-identity rule with nothing new. The transport four do
-    // not repeat. Machinery at tick_transport_arrow_repeat (input_pointer.cpp).
+    // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
+    // hold-repeat that shipped with the row; the physical arrow KEYS keep
+    // their platform repeat). His reasoning is recorded at the arrows' rows in
+    // kToolbarChords (input_pointer.cpp), which is where the machinery lived.
     TransportSkipBack, TransportPlay, TransportStop, TransportSkipForward,
     TransportLeft, TransportDown, TransportUp, TransportRight
 };
@@ -2398,7 +2396,8 @@ struct AppState {
     // `hovered` is written only on a TRANSITION (the motion tail's recompute and
     // the pointer-leave hook), a transition paying one invalidate_top_strip. A
     // press does not change it — the hover face survives a click; what a press
-    // writes instead is `redesign_pressed` below, row 2's third face.
+    // writes instead is the armed chrome press (AppState::ChromePress), whose
+    // Roster arm is the click face.
     //
     // `enabled` is the ENABLED VECTOR THE PAINTER LAST PAINTED, stashed beside
     // the rect for one reason: the facts it derives from (the undo/redo stacks,
@@ -2617,14 +2616,16 @@ struct AppState {
     // button writes it; the release with the pointer STILL ON that same button
     // runs the act; anything else drops it and nothing dispatches.
     //
-    // IT IS DELIBERATELY NOT `redesign_pressed`, which structurally cannot
-    // carry it on either count: that field indexes THE ROSTER (a dialog
-    // button is not a roster member and the two index spaces would have to be
-    // sentinel-encoded into one int), and its lifetime is the opposite rule —
-    // the roster's chord already fired at the press, so its face deliberately
-    // SURVIVES the pointer wandering off mid-hold, while this arm must DIE
-    // there or a slide-off would still commit. Two facts, one shape; the
-    // roster's owner (clear_redesign_button_press) is left alone.
+    // IT IS DELIBERATELY NOT THE ROSTER'S ARM (AppState::ChromePress): a
+    // dialog button is not a roster member, so the two index spaces would have
+    // to be sentinel-encoded into one field, and the two arms can stand at
+    // once in principle (the veil-admitted roster pair is pressable under an
+    // editor dialog while its buttons are too). Since 2026-08-13 the roster's
+    // arm carries the SAME act-at-release lifetime as this one — this arm was
+    // the model the chrome conversion copied — so the split is index-space
+    // bookkeeping now, not a difference in rule; each keeps its own owner
+    // (clear_redesign_button_press / clear_modal_dialog_press) on the shared
+    // hard-end hook.
     //
     // THE ARM SURVIVES THE WHOLE HOLD AND TRACKS THE POINTER — THE FEINT
     // (architect 2026-08-13, at his live test, SUPERSEDING the "sliding off
@@ -2789,77 +2790,73 @@ struct AppState {
     // modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
 
-    // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
-    // machinery the redesigned rows have. A roster index while a left button is
-    // physically held down on an ENABLED button that HAS the face AND the
-    // pointer's claim on that hold still stands, -1 otherwise.
-    // Written by exactly two routes, each damaging the strip on the transition:
-    // the press claim sets it (input_pointer.cpp) and clear_redesign_button_press
-    // clears it (the left release and the pointer-leave / capability-loss hook).
-    // The face rides the PHYSICAL hold, not the action — the chord already fired
-    // at the press — so it is visual only and survives the pointer wandering off
-    // the button mid-hold. THE ONE PLACE THE INDEX AND THE HOLD PART COMPANY is
-    // the leave: the pointer going out of the window drops the face while the
-    // button may still be physically down, because a face is a statement about
-    // where the pointer IS. After an ordinary leave the release still arrives
-    // normally and simply finds nothing to clear. WHICH buttons have it is the
-    // chord table's
-    // `click_face` column (rows 2, 4 and 8 do; rows 1 and 3 keep two faces),
-    // not a
-    // fact restated here.
-    int redesign_pressed = -1;
-
-    // THE ARROW BUTTONS' HOLD-REPEAT (row 8, 2026-08-11): a pointer press on
-    // one of the transport row's four cardinal arrows dispatches its chord
-    // once at the press and arms this; holding past the delay then synthesizes
-    // repeats stamped GuiInputState::synthesized_repeat, so the undo
-    // coalescing is the held KEY's own repeat-identity rule — the physical
-    // press pushes, the repeats coalesce, nothing new. `owner` is the roster
-    // index of the held arrow (-1 = none), `next_due_ms` the CLOCK_MONOTONIC
-    // stamp of the next repeat.
+    // THE ARMED CHROME PRESS — the redesigned rows' ACT-AT-RELEASE record, and
+    // the CLICK FACE with it (architect 2026-08-13, generalizing the modal
+    // dialog buttons' model to the whole chrome roster: "Icon buttons are
+    // triggered on mouse down, but they should be triggered on mouse up or
+    // finger up for consistency"). A press on any chrome target ARMS this and
+    // dispatches nothing; the release with the pointer ON that same target
+    // runs the act; a release anywhere else — or a release under a prompt or
+    // a non-admitting dialog veil — drops it and nothing dispatches. The
+    // authoritative statement of the rule and its scope is
+    // kdenlive-redesign.md's act-at-release section.
     //
-    // THE HOLD JOINS THE PLATFORM'S OWN KEY-REPEAT CONTRACT WHOLE (codex round
-    // 3, 2026-08-11), both layers, and this is the AUTHORITATIVE INVENTORY of
-    // its edges (every site carries its own member plus a pointer here):
-    //   ARMING is judged under the PRESS-TIME context by the keyboard's own
-    //   predicate SHARED, not mirrored — repeat_eligible, exactly what the
-    //   platform's arming probe asks for a physical key — evaluated before the
-    //   press's own on_key dispatch (dispatch_redesign_chord), so a press a
-    //   modal context consumes arms no burst that would start firing when the
-    //   modal closes under a held button.
-    //   THE STORED INTENT DIES ON THE PLATFORM'S THREE LAYER-1 EDGES, mirrored
-    //   at the GUI's own chokepoints: any non-synthesized KEY arrival (on_key's
-    //   top), any POINTER-BUTTON press (on_button_press's top — the arrow's own
-    //   press re-arms after its dispatch), and any COMPLETED WHEEL emission
-    //   (on_wheel's top). The mirror is LOAD-BEARING FOR UNDO, not hand-feel:
-    //   Undo::coalesce_gesture merges a synthesized repeat by KIND ALONE, no
-    //   subject test, on the premise that no command can run between a burst's
-    //   physical press and its repeats — the platform's disarms are what make
-    //   that true for held keys, and these are what make it true for held
-    //   buttons.
-    //   AND ON THE PLATFORM'S OWN CONSUMED KEYBOARD EDGES (codex round 4,
-    //   2026-08-11), which the three chokepoints above can never see because
-    //   the platform consumes them without calling on_key — reported through
-    //   ONE wired cancellation hook (set_keyboard_intent_cancel_hook,
-    //   platform_wayland.h, whose contract carries the per-edge reasoning;
-    //   main.cpp wires it to this field's disarm): wl_keyboard.leave and
-    //   keyboard-capability loss (forget_keyboard_state — a keyboard-driven
-    //   focus change must not leave a pointer-held arrow authoring into an
-    //   unfocused window), and every SUPER-SWALLOWED non-synthesized key press
-    //   (deliver_key's drop — an intervening key arrival on_key never sees,
-    //   disarmed per swallowed delivery because that is the platform's own
-    //   edge for its own repeats, deliberately not at Super's press edge).
-    //   EACH FIRE RE-CHECKS the press-time predicate and the enabled bit
-    //   (layer 2's shape), and PAUSES while the pointer is off the button.
-    //   THE HOLD'S OWN ENDS — the release, the pointer leave, capability loss —
-    //   disarm through clear_redesign_button_press, the click face's edges,
-    //   which the repeat rides.
-    // The firing body is tick_transport_arrow_repeat (input_pointer.cpp).
-    struct TransportArrowRepeat {
-        int     owner       = -1;
-        int64_t next_due_ms = 0;
+    // `kind` names the TARGET CLASS, because three chrome surfaces arm and
+    // only one of them is a roster button:
+    //   Roster         — a chord-table button; `index` is the roster index.
+    //   TabLock        — the active tab's padlock (bare `o`'s pointer
+    //                    affordance); the rect is `tab_lock_rect`, so `index`
+    //                    is unused.
+    //   HistoryWalkTab — the `h` view's walk-selector tabs; `index` is TabA's
+    //                    or TabB's roster index, and the act is
+    //                    set_history_reading, not a chord.
+    // (The two dropdown ANCHORS are deliberately NOT armed: their toggle is
+    // the recorded press-time exception — the reasoning is at their press
+    // claim in on_button_press.)
+    //
+    // `shift` is THE PRESS-TIME MODIFIER, carried with the arm because the
+    // release deliberately does not re-read modifiers (the modal release's own
+    // rule): the shift-admitting buttons must see the shift that was held when
+    // the user PRESSED, and a shift tapped or dropped mid-hold changes
+    // nothing.
+    //
+    // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the
+    // roster's surface: true from the press (a press is inside what it hit),
+    // rewritten by recompute_redesign_button_hover on every motion and tick
+    // under a standing arm. The pressed face paints only while it is true, so
+    // sliding off un-presses the face, sliding back on restores it, and the
+    // arm itself survives the whole hold. (The pre-2026-08-13 note here said
+    // the face SURVIVES the pointer wandering off because the chord had
+    // already fired at the press; the act moved to the release, so that
+    // reasoning is dead and the face now tracks the pointer exactly as the
+    // dialog buttons' does.) The RELEASE does not read this bit — it re-hits
+    // the armed target's published rect at its own coordinates, the derive
+    // doctrine; the bit serves the paint alone.
+    //
+    // Its edges: the band claims' arm route writes it (arm_redesign_press and
+    // the tab row's two direct claims, input_pointer.cpp), the release takes
+    // it whole at the top of on_button_release (take_chrome_press — armed or
+    // not, so an early return cannot strand it), and
+    // clear_redesign_button_press drops it on the pointer-leave /
+    // capability-loss edge (main.cpp's hook): a pointer that has left the
+    // window is on no button, and an act that has not happened yet must not
+    // wait on a release that may never come. WHICH buttons paint the face is
+    // the chord table's `click_face` column, not restated here; TabLock and
+    // HistoryWalkTab paint no pressed face at all (their rows keep their own
+    // faces) and use the arm for the act alone.
+    struct ChromePress {
+        enum class Kind { None, Roster, TabLock, HistoryWalkTab };
+        Kind kind   = Kind::None;
+        int  index  = -1;
+        bool shift  = false;
+        bool inside = true;
     };
-    TransportArrowRepeat transport_repeat;
+    ChromePress chrome_press;
+
+    // (THE ARROW BUTTONS' HOLD-REPEAT IS DELETED — architect 2026-08-13, with
+    // the act-at-release conversion; the record is at the arrows' chord-table
+    // rows, input_pointer.cpp. The physical arrow KEYS keep their platform
+    // repeat unchanged.)
 
     // THE RENDER BUTTON IS CANCEL WHILE AN EXPLICIT RENDER ACT IS LIVE
     // (architect 2026-08-11: "change the render button into a cancel button
@@ -2884,10 +2881,11 @@ struct AppState {
     // mirror's edge is what repaints the face (the drift-comparator pattern
     // for an input that vector cannot see).
     // FACE-MIRRORS-THE-ACT HONESTY, both halves at the click
-    // (dispatch_redesign_chord's Render arm): a press on a painted Cancel
+    // (finish_chrome_press_release's Render arm — the lift, since the chrome
+    // act moved to the release): a lift on a painted Cancel
     // never dispatches a render (the arm claims on THIS bit), and the ACT is
     // gated on the LIVE queue_running — so on the stale edge (the explicit
-    // render finished, the click landed before the next tick) the press is a
+    // render finished, the click landed before the next tick) the lift is a
     // consumed no-op, and it can NEVER reach a preview session through
     // cancel_archival_session's wider is_busy branch: a preview that happens
     // to be the busy session when queue_running is false is exactly what the
@@ -2895,8 +2893,8 @@ struct AppState {
     // and keeps its own wider reach.
     // READERS: redesign_button_label (the "Cancel" label, ranked above the
     // iteration label), redesign_button_icon (Icon::DialogCancel), the
-    // stateful tooltip overload, and dispatch_redesign_chord's Render arm —
-    // the roster's ONE ruled exception to THE BUTTON IS ITS CHORD (the
+    // stateful tooltip overload, and finish_chrome_press_release's Render
+    // arm — the roster's ONE ruled exception to THE BUTTON IS ITS CHORD (the
     // divergence is recorded at that arm).
     bool render_cancel_face = false;
 
@@ -2971,11 +2969,10 @@ struct AppState {
     // Every rect is zero while closed, which is the correct cold answer: an
     // empty rect contains no point.
     // `pressed_item` is the ARMED item: set by a press on one, cleared by the
-    // release, by every close and by the same pointer-leave drop. It exists
-    // because the dropdown is the ONE redesign surface that acts on RELEASE —
-    // every row button fires on press, a menu triggers on release by universal
-    // convention — which is also the only reason a pressed face is visible long
-    // enough to be worth painting.
+    // release, by every close and by the same pointer-leave drop. The items
+    // were the redesign's FIRST act-on-release surface (a menu triggers on
+    // release by universal convention), the model the modal dialog buttons
+    // took 2026-08-13 and the whole chrome roster took the same day.
     // THE ARM FOLLOWS THE POINTER while the press is live (architect
     // 2026-08-03): sliding from one item to the next moves it, and sliding onto
     // the separator, the chrome or off the box sets it to -1 with the press
@@ -5305,6 +5302,17 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     return false;
 }
 
+// THE PRESSED FACE'S ONE TEST — is this roster button's click face down? True
+// while the armed chrome press names it AND the pointer is inside it (the
+// feint's bit; the whole arm contract is at AppState::ChromePress). The three
+// painters that show a pressed interior read this instead of the arm's raw
+// fields, so the inside term cannot be forgotten at one of them.
+inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
+    return a.chrome_press.kind == AppState::ChromePress::Kind::Roster &&
+           a.chrome_press.inside &&
+           a.chrome_press.index == redesign_button_index(b);
+}
+
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
 // FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
@@ -5553,7 +5561,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   and THE ROSTER'S ONE CHORD DIVERGENCE: its click runs the cancel act
 //   itself (architect 2026-08-11 — the ruling, the rank over the iteration
 //   hint and the bit are at AppState::render_cancel_face and the divergence
-//   record at dispatch_redesign_chord's Render arm; Ctrl+Alt+R on the keyboard
+//   record at finish_chrome_press_release's Render arm; Ctrl+Alt+R on the keyboard
 //   keeps its own kill-and-redispatch semantics unchanged).
 //
 //   RENDER, WITH ITERATION MODE ON (and nothing live) → the SAME media-record
@@ -5643,7 +5651,8 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // same thing the four resting-disabled row-4 buttons show.
     // RENDER'S MID-RENDER HINT, ranked above its iteration form like the
     // label: one line, "Cancel", NO KEY NAMED — deliberately. The act is the
-    // button's own (the ruled chord divergence at dispatch_redesign_chord),
+    // button's own (the ruled chord divergence at
+    // finish_chrome_press_release's Render arm),
     // and naming Esc would lie whenever a region rests: bare Esc ranks the
     // region clear above the render cancel, so the key and the button part
     // company in exactly that state. NO SHIFT LINE either: while the face is

@@ -1735,7 +1735,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             is at AppState::HistoryMode).
 //                             THE VIEW BAR AND THE S/T + W/P RADIOS need no rule
 //                             of their own: they synthesize these very chords
-//                             through dispatch_redesign_chord, like every other
+//                             through the chrome press's release half
+//                             (finish_chrome_press_release), like every other
 //                             redesigned button.
 //   - ' (bare)              → THE LOAD EDITOR, and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
@@ -1937,7 +1938,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //
 // THE REDESIGNED BUTTONS AND THE NAVIGATION MENU'S ITEMS PASS THROUGH HERE
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
-// chord and call on_key (dispatch_redesign_chord and finish_dropdown_release),
+// chord and call on_key (finish_chrome_press_release and
+// finish_dropdown_release, each at its own lift),
 // so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
 // their keys do. AND THE MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
 // merely in principle: that menu now OPENS inside the view (the architect

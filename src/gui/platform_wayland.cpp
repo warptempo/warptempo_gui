@@ -1865,8 +1865,8 @@ void GuiPlatform::forget_keyboard_state() {
     // The key stream is over (or its modeled state untrustworthy), and the
     // application's own held key intent must die with the platform's: this is
     // the keyboard-intent cancellation hook's first fire class (contract at
-    // set_keyboard_intent_cancel_hook; the consumer's edge inventory at
-    // AppState::transport_repeat).
+    // set_keyboard_intent_cancel_hook; the consumer's effect list at
+    // main.cpp's hook body).
     if (keyboard_intent_cancel_hook_) keyboard_intent_cancel_hook_();
 
     // A held synthesized-left button can never see its keycode-matched release
@@ -2371,7 +2371,8 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // behaves exactly like Super+click, which binds nothing here either way.
     if (mod_super_) {
         // THE DROPPED PRESS IS STILL AN INTERVENING KEY ARRIVAL for the
-        // application's held transport intent — the on_key disarm never sees
+        // application's held key intent (the modal dialog's keyboard press
+        // arm) — no application disarm ever sees
         // it — and the platform's own layer-1 disarmed its armed repeat at
         // this very press (the arming else-branch above, which runs before
         // this drop). So the keyboard-intent cancellation hook fires per
@@ -2532,7 +2533,8 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // WHAT MAKES THAT SAFE IS THE ORDERING, NOT UNREACHABILITY, and the
     // distinction matters for anyone editing below: THE HOOK RUNS IMMEDIATELY
     // AFTER THIS CALL, and it drops precisely what such a delivery can touch —
-    // the in-window bit, the hover faces, the tooltip dwell, the click face and
+    // the in-window bit, the hover faces, the tooltip dwell, the armed chrome
+    // press and
     // the popup's pointer state — an invariant restore placed after the last
     // thing that can disturb the invariant. ANY future change that separates the
     // hook from directly-after-this-flush has to re-establish that guarantee.

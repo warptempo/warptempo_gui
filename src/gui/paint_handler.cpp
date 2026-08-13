@@ -1162,8 +1162,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                 GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
-                app.redesign_pressed ==
-                redesign_button_index(kViewBarButtons[i].id);
+                redesign_button_pressed_face(app, kViewBarButtons[i].id);
             const ViewBarFace f =
                 view_bar_face(bar_bg, app.window_activated, face.hovered,
                               face.selected, pressed);
@@ -1733,8 +1732,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // pointer event to refresh it (row 2's outline carries the same guard).
         const bool hovered = face.hovered && face.enabled;
         const bool pressed =
-            face.enabled &&
-            app.redesign_pressed == redesign_button_index(def.id);
+            face.enabled && redesign_button_pressed_face(app, def.id);
 
         // THE FILL AND THE OUTLINE ARE DECIDED SEPARATELY, which is exactly the
         // architect's reading of the five crops: the outline says "the pointer
@@ -1826,8 +1824,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE CARDINAL ARROWS, right-anchored again (their unification-era seat
 //   beside the transport lasted one day), VIM ORDER
 //   left-to-right — left, down, up, right (bare Left/Down/Up/Right), a single
-//   line and not a d-pad, press-fire with hold-to-repeat like their keys,
-//   everything about them unchanged but the anchor.
+//   line and not a d-pad, one act per press-and-lift like every chrome
+//   button (their hold-to-repeat is deleted — architect 2026-08-13, the
+//   record at the arrows' chord-table rows, input_pointer.cpp), everything
+//   about them unchanged but the anchor.
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
 // was DELETED at the architect's live pass — "looks like a missing button
@@ -1995,8 +1995,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
         const bool hovered = face.hovered && face.enabled;
         const bool pressed =
-            face.enabled &&
-            app.redesign_pressed == redesign_button_index(def.id);
+            face.enabled && redesign_button_pressed_face(app, def.id);
 
         const bool has_fill = pressed || face.selected;
         const bool has_line = hovered || pressed || face.selected;
@@ -2469,8 +2468,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             // because one has an outline and the other does not:
             //   PRESSED — the FULL accent fill over the WHOLE item box. No
             //     stroke, so no inset: the fill's own edge is the visible edge.
-            //     It is visible at all only because items act on RELEASE, the
-            //     one redesign surface that does.
+            //     It is visible at all only because items act on RELEASE —
+            //     the redesign's first such surface, and since 2026-08-13 the
+            //     whole chrome roster's rule.
             //     EXACTLY ONE ITEM IS EVER LIT, and that is the input side's
             //     doing rather than a rule here: the ARM FOLLOWS THE POINTER
             //     while a press is live, so the pressed and hovered indices are
@@ -4537,10 +4537,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 // lift"), which is what makes the click face real: a press ARMS the button
 // and paints it, the lift on that same button runs the act, and sliding off
 // or lifting elsewhere cancels with nothing dispatched. The arm is
-// AppState::modal_dialog_pressed — deliberately not the roster's
-// redesign_pressed, whose index space and whose survives-a-wander lifetime
-// are both wrong for an act that has not happened yet (the reasoning is at
-// the field's declaration).
+// AppState::modal_dialog_pressed — deliberately not the roster's own arm
+// (AppState::ChromePress), which carries the same act-at-release lifetime
+// since the chrome conversion but a different index space (the reasoning is
+// at the field's declaration).
 //
 // METRICS. The row's own pad (bottom_row_pad_x) is the left and right margin,
 // which is what makes the modal sit on the same margins as the tenants it

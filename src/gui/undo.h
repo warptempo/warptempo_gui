@@ -21,13 +21,12 @@ struct GuiTargetRender;
 // phase-reset position nudges (bare Left/Right in the
 // marker lane) and the tempo cent step (bare Up/Down; no wheel route) — collapses
 // into ONE undo entry under EITHER rule:
-//   (1) REPEAT IDENTITY, for a HELD key or a held transport-row ARROW BUTTON:
-//       the PHYSICAL press pushes the pre-burst snapshot, and every SYNTHESIZED
-//       REPEAT of that press (GuiInputState::synthesized_repeat — TWO producers
-//       since row 8, 2026-08-11: GuiPlatform::maybe_fire_repeat for held keys
-//       and GuiInputHandler::tick_transport_arrow_repeat for held arrow
-//       buttons, both under the ONE repeat contract inventoried at
-//       AppState::transport_repeat) SKIPS its
+//   (1) REPEAT IDENTITY, for a HELD key: the PHYSICAL press pushes the
+//       pre-burst snapshot, and every SYNTHESIZED REPEAT of that press
+//       (GuiInputState::synthesized_repeat — ONE producer again since the
+//       transport arrows' hold-repeat was deleted 2026-08-13:
+//       GuiPlatform::maybe_fire_repeat, for held keys; the arrow BUTTONS are
+//       one act per press-and-lift now) SKIPS its
 //       own push. NO CLOCK IS CONSULTED on this arm, and that independence is the
 //       point of keeping it: a hold coalesces for any compositor at any key-repeat
 //       delay, so nothing here can drift out of sync with the desktop's repeat
@@ -44,11 +43,9 @@ struct GuiTargetRender;
 //
 // "Same target / same tab / same history" follow for FREE on arm (1): a
 // synthesized repeat can
-// only arrive while the hold is still armed, and BOTH producers' holds die on
-// the same three input edges — every intervening pointer press, key press, and
-// completed wheel emission (layer (1), stated at maybe_fire_repeat for the
-// platform's key holds and mirrored at the GUI's own chokepoints for the
-// transport button hold — the inventory is at AppState::transport_repeat) — so
+// only arrive while the hold is still armed, and the platform's hold dies on
+// three input edges — every intervening pointer press, key press, and
+// completed wheel emission (layer (1), stated at maybe_fire_repeat) — so
 // no command can run
 // between a burst's physical press and its repeats. ARM (2) HAS NO SUCH
 // STRUCTURE — a pointer click, a Tab, a view switch can all run between two taps

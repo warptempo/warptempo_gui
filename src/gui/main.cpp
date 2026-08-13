@@ -1429,7 +1429,8 @@ int main(int argc, char** argv) {
     });
 
     // Pointer-leave / capability-loss drop. THIS BODY IS THE AUTHORITATIVE
-    // EFFECT LIST for the hook — tooltip hide, roster click face, the popup's two
+    // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
+    // modal dialog's armed button, the popup's two
     // item faces plus its press claim, and the PAIR that a leave through row 1
     // skips, the roster hover clear and the menu-row disarm (which is itself
     // gated a second time, on no menu being open). The platform-side sites name
@@ -1472,12 +1473,13 @@ int main(int argc, char** argv) {
     // redesigned rows' button hover is the only ROSTER hover left (an open
     // dropdown's item hover is the other pointer-position-dependent surface
     // this edge drops, below), and it is separate state with its own clear.
-    // Row 2's CLICK face joins it: this is the BUTTON-LOST edge as far as the
-    // FACE is concerned — the hold stops being the pointer's to show — and a
-    // stranded pressed interior would outlive it. A release that does arrive
-    // later (the ordinary-leave case) finds the face already cleared and clears
-    // nothing, on_button_release's own top call being transition-gated too:
-    // the harmless no-op named above. Both are transition-gated.
+    // THE ARMED CHROME PRESS joins it, and since the act moved to the release
+    // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
+    // this is the BUTTON-LOST edge — the hold stops being the pointer's to
+    // show and the act must not wait on a release that may never come. A
+    // release that does arrive later (the ordinary-leave case) finds no arm
+    // and dispatches nothing: the harmless no-op named above, and the intended
+    // answer — a release outside the window's visit runs nothing.
     // AN OPEN POPUP'S TWO FACES GO WITH THEM, and only they: the item under
     // the pointer is lit by `hovered_item` with no in-window term in the
     // painter, and the armed item by `pressed_item`, so both would outlive the
@@ -1581,26 +1583,21 @@ int main(int argc, char** argv) {
         viewport.invalidate_top_strip();
     });
 
-    // THE PLATFORM'S CONSUMED KEYBOARD EDGES end the transport arrows'
-    // hold-repeat (codex round 4, 2026-08-11): keyboard leave / keyboard-
-    // capability loss and every Super-swallowed press are key events the GUI's
-    // three chokepoint disarms can never see — the platform consumes them
-    // without calling on_key — so the platform reports them through this one
-    // hook instead of the application growing a second, partial list. The fire
-    // classes and the per-swallowed-delivery decision are at the setter's
-    // contract (platform_wayland.h); the consumer's authoritative edge
-    // inventory is at AppState::transport_repeat. THIS BODY IS THE
+    // THE PLATFORM'S CONSUMED KEYBOARD EDGES (codex round 4, 2026-08-11):
+    // keyboard leave / keyboard-capability loss and every Super-swallowed
+    // press are key events the GUI's own chokepoints can never see — the
+    // platform consumes them without calling on_key — so the platform reports
+    // them through this one hook instead of the application growing a second,
+    // partial list. The fire classes and the per-swallowed-delivery decision
+    // are at the setter's contract (platform_wayland.h). THIS BODY IS THE
     // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
-    // model, and it holds TWO application-side key holds since 2026-08-13:
-    //   * the transport arrows' hold-repeat — the disarm itself, no damage (the
-    //     hold has no face of its own; the click face is cleared by its own
-    //     edges) and no other state;
-    //   * THE MODAL DIALOG'S KEYBOARD PRESS ARM, which is sharper than a face:
-    //     that button is painted down waiting for a RELEASE that these edges
-    //     guarantee will never be delivered, so the arm is dropped and the box
-    //     damaged (clear_modal_dialog_key_press).
+    // model, and it holds ONE application-side key hold since the transport
+    // arrows' hold-repeat was deleted (2026-08-13, act-at-release — its disarm
+    // was this body's other member): THE MODAL DIALOG'S KEYBOARD PRESS ARM,
+    // which is sharper than a face — that button is painted down waiting for
+    // a RELEASE that these edges guarantee will never be delivered, so the
+    // arm is dropped and the box damaged (clear_modal_dialog_key_press).
     gui.set_keyboard_intent_cancel_hook([&] {
-        app.transport_repeat.owner = -1;
         input_handler.clear_modal_dialog_key_press();
     });
 
@@ -1931,16 +1928,9 @@ int main(int argc, char** argv) {
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 
-        // ROW 8's ARROW HOLD-REPEAT (2026-08-11): while a transport-row arrow
-        // button is physically held, this synthesizes its chord on the
-        // keyboard repeat's labwc-matching cadence, stamped as a repeat so the
-        // undo coalescing is the held key's own rule. One int compare when
-        // idle; every firing condition (the hold, the pointer on the button,
-        // the enabled bit, the schedule) lives in the body. Deliberately NOT
-        // gated on any_pointer_gesture_active: the held button IS a live
-        // pointer act, and the rows' presses arm no gesture that predicate
-        // names.
-        input_handler.tick_transport_arrow_repeat();
+        // (ROW 8's ARROW HOLD-REPEAT TICK ran here until the repeat's deletion
+        // — architect 2026-08-13, act-at-release; the record is at the arrows'
+        // chord-table rows, input_pointer.cpp.)
 
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position

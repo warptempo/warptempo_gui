@@ -8,6 +8,10 @@ Moved verbatim from CLAUDE.md in the 2026-07-25 slim-down (project feature-compl
 
 Render dispatch validates NOTHING (`warp_render_preflight` is removed — every failure it could surface was unreachable from the live store; the worker's own resolve→build chain and its stderr are the tripwire surface). Target-view entry (`validate_target_view_entry`, shared by the `t` toggle and load's `active_audio_view=T` restore) is likewise resolve-then-build only — marker arrangements always enter, trim plays no part, and there is no kick-back tick gate (an edit made in target view just re-previews through the same normalizing resolver).
 
+### Chrome Acts at the Lift (2026-08-13)
+
+EVERY CLICKABLE CHROME SURFACE ACTS AT THE RELEASE — the roster's band claims arm (`arm_redesign_press` / `AppState::ChromePress`, press-time shift carried) and the lift on the same button dispatches (`finish_chrome_press_release`, every press-time gate re-asked), with the dropdown anchors' press-time toggle the one recorded exception and every DISMISSAL still a press act. The band claims' press-side ORDER did not move. The authoritative statement is kdenlive-redesign.md's act-at-release section; this file's press-claim descriptions state each claim's own class.
+
 ### Mouse Reach: No Global Halo, One Grab Constant Per Surface
 
 THE ONE GLOBAL HIT HALF-WIDTH IS GONE — `kMarkerHitHalfPx`, the 4 px tolerance stems, flags and trim bounds all shared, DELETED 2026-08-02 with its last reader long behind it (no code had read it since 2026-07-20; the deletion record, including the rule that outlived it, is at the site in `app_state.h`). The redesign gave each surface its own authored, `gui_scale`-aware constant instead, of which ONE survives:
