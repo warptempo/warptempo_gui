@@ -1147,10 +1147,12 @@ int cursor_kind_index(GuiCursorKind kind) {
 }
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
-// cursor art: six standard freedesktop names, all present in Breeze and in
-// Adwaita. (`crosshair` LEFT THE TABLE with the Scrub kind, 2026-08-13 — the
-// waveform's two halves became one surface and the lower half's audition became
-// a click act, which carries no cue; the enum's own comment holds the ruling.)
+// cursor art: SEVEN KINDS over eight standard freedesktop names, all present
+// in Breeze and in Adwaita. (`crosshair` LEFT THE TABLE with the Scrub kind,
+// 2026-08-13 — the waveform's two halves became one surface and the lower
+// half's audition became a click act, which carries no cue; the enum's own
+// comment holds the ruling.
+// `text` JOINED IT the same day with the Text kind, the editors' I-beam.)
 //
 // THE HOTSPOT IS THE FILE'S, NEVER A CENTRE WE COMPUTE, and the installed theme
 // is what settles it. What load_theme_cursor reads is wl_cursor_image's INTEGER
@@ -1159,10 +1161,11 @@ int cursor_kind_index(GuiCursorKind kind) {
 // that default request from its 32x32 images, whose declared hotspots are:
 //
 //     left_ptr 4,4   grab 16,16   zoom-in 15,15
-//     ew-resize 16,15   left_side 4,15   right_side 27,15
+//     ew-resize 16,15   left_side 4,15   right_side 27,15   text 16,15
 //
 // The POINTER-ISH shapes are centred (grab exactly, zoom-in within a pixel of
-// it) while left_side and right_side sit hard against their OWN edge
+// it, the I-beam's 16,15 on its own waist) while left_side and right_side sit
+// hard against their OWN edge
 // — 4,15 and 27,15, which is the whole point of an edge cue — and left_ptr sits
 // at its tip. No single rule we could compute produces all three, which is
 // exactly why the file's declaration is taken verbatim. The numbers scale with
@@ -1178,9 +1181,17 @@ int cursor_kind_index(GuiCursorKind kind) {
 // considered and refused: it would flash for the frame before the hide and then
 // be invisible for the whole gesture. The hidden-during-capture behaviour is
 // unchanged by any of this.
+//
+// `alt_name` is the ONE row-level option in this table: a second spelling to
+// try before the per-kind degrade, for a shape the freedesktop world names two
+// ways. Only the I-beam carries one (`text`, then the older `xterm` — Breeze
+// ships the second as a symlink to the first, and a theme carrying only the
+// legacy name still gets its cue). Null everywhere else: a kind with one
+// conventional name gets one lookup.
 struct CursorKindName {
     GuiCursorKind kind;
     const char*   name;
+    const char*   alt_name = nullptr;
 };
 //
 // left_side / right_side ARE THE BOUNDARY-EXTENSION SHAPES — the arrow-with-a-bar
@@ -1195,10 +1206,11 @@ constexpr CursorKindName kCursorKindNames[] = {
     {GuiCursorKind::TrimResize,     "ew-resize"},
     {GuiCursorKind::TrimBoundBegin, "left_side"},
     {GuiCursorKind::TrimBoundEnd,   "right_side"},
+    {GuiCursorKind::Text,           "text", "xterm"},
 };
 static_assert(static_cast<int>(std::size(kCursorKindNames)) ==
                   kGuiCursorKindCount,
-              "Every GuiCursorKind needs exactly one xcursor name");
+              "Every GuiCursorKind needs exactly one row in this table");
 
 }  // namespace
 
@@ -1244,6 +1256,11 @@ bool GuiPlatform::load_cursor_theme() {
 
     for (const CursorKindName& row : kCursorKindNames) {
         if (load_theme_cursor(row.kind, row.name)) continue;
+        // THE SECOND SPELLING, where the row carries one: a missing primary
+        // name is not yet a missing cue if the shape has an older conventional
+        // name (the I-beam's `xterm`). Tried in the row's own order, and a hit
+        // reports nothing — the kind has its cursor.
+        if (row.alt_name && load_theme_cursor(row.kind, row.alt_name)) continue;
         // left_ptr is the freedesktop standard arrow name. If the active theme
         // is missing it, the theme is broken; report and move on without a
         // cursor rather than guess at an alternative.
@@ -1256,10 +1273,19 @@ bool GuiPlatform::load_cursor_theme() {
         // A MISSING NAME DEGRADES TO THE ARROW, per kind — the theme-load
         // failure's own shape, one stderr line and nothing stops working. A
         // theme without these names is a poor environment, not a broken one:
-        // the zone loses its cue and every gesture in it still runs.
-        std::fprintf(stderr,
-            "warptempo_gui: Cursor theme has no \"%s\"; "
-            "that pointer cue falls back to the arrow\n", row.name);
+        // the zone loses its cue and every gesture in it still runs. The line
+        // names every spelling that was tried, so a row with a second name
+        // reports both rather than blaming its primary alone.
+        if (row.alt_name) {
+            std::fprintf(stderr,
+                "warptempo_gui: Cursor theme has no \"%s\" or \"%s\"; "
+                "that pointer cue falls back to the arrow\n",
+                row.name, row.alt_name);
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: Cursor theme has no \"%s\"; "
+                "that pointer cue falls back to the arrow\n", row.name);
+        }
     }
     return true;
 }

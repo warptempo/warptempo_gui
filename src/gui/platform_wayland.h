@@ -23,9 +23,9 @@
 // and its own declared hotspot are what the compositor gets.
 //
 // Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
-// also the FALLBACK: a theme missing one of the other five names degrades that
+// also the FALLBACK: a theme missing one of the other six names degrades that
 // KIND to the arrow with one stderr line, which costs the cue and nothing else.
-// The five beside it each mark a zone whose gesture the arrow cannot promise —
+// The six beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.
 //
@@ -46,6 +46,15 @@
 // rather than a left/right one because the bound is what the gesture names; the
 // two happen to coincide because the begin bound is always the window's left
 // edge.
+//
+// TEXT IS THE SEVENTH (architect 2026-08-13): the I-beam every desktop shows
+// over editable text, worn over the ONE thing in this product that is editable
+// text under the pointer — the top-strip flag editor's unrolled box (which wore
+// the navigation surface's PAN until this kind existed, the marker lane being
+// nav surface under it) and the modal dialog's inset FIELD. It is the only kind
+// with a SECOND name to try (`text`, then the older `xterm`) before the per-kind
+// degrade, the two spellings being one shape with two conventional names; the
+// fallback chain is the loader's, at kCursorKindNames.
 enum class GuiCursorKind {
     Arrow,
     Pan,
@@ -53,10 +62,11 @@ enum class GuiCursorKind {
     TrimResize,
     TrimBoundBegin,
     TrimBoundEnd,
+    Text,
 };
 // Roster size, for the platform's per-kind cursor array. Keep it equal to the
 // enumerator count above.
-inline constexpr int kGuiCursorKindCount = 6;
+inline constexpr int kGuiCursorKindCount = 7;
 
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
@@ -1273,7 +1283,8 @@ private:
     //
     // The BUFFERS belong to libwayland-cursor and die with wl_cursor_theme_; the
     // surfaces are ours and are destroyed before the theme (shutdown). A null
-    // surface means that name was missing from the theme: apply_cursor_kind
+    // surface means EVERY name that kind's table row carries was missing from
+    // the theme (one for all but the I-beam, which tries two): apply_cursor_kind
     // falls back to Arrow's, and Arrow's own null (a theme with no left_ptr, or
     // no theme at all) is the protocol hide.
     struct ThemeCursor {

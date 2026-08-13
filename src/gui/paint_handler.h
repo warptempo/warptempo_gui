@@ -385,8 +385,10 @@ struct FlagCache {
 // transparent outside the ink exactly like the plate, so the lane's ground
 // shows through.
 //
-// THE INVALIDATION KEY IS (width, height) AND NOTHING ELSE — the lane's
-// content dimensions, which move only on a window resize or a gui_scale
+// THE INVALIDATION KEY IS (width, height) AND NOTHING ELSE — the LANE's own
+// dimensions (the cache surface is lane-sized and blits at the lane's origin;
+// the bars are drawn into the content band inside it, borders excluded), which
+// move only on a window resize or a gui_scale
 // commit (both funnel through the lane accessor this cache is measured
 // against). THE KEY'S SHAPE IS UNCHANGED BY THE RELAYOUT'S COMMIT B, which
 // fixed the lane's HEIGHT on every host (render.h's kOverviewHeightPx): the
@@ -625,7 +627,7 @@ private:
 
     // The overview strip's bar cache and its dirty-detect (the key contract at
     // OverviewBarCache above): rebuild the whole-song bars iff the lane's
-    // content dimensions moved; called from paint_overview_strip only.
+    // dimensions moved; called from paint_overview_strip only.
     OverviewBarCache overview_bar_cache;
     void maybe_rebuild_overview_bar_cache(const GuiRect& lane);
 

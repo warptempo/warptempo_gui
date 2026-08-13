@@ -130,8 +130,9 @@ namespace {
 // window top), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3),
 // ICON ROW (icon_row_h_px(), row 4), the OVERVIEW STRIP
 // (overview_lane_h_px(), the whole-song lane — ONE fixed tiny height on every
-// host now, 24 content + its 1px border-bottom; the render.h constant carries
-// the ruling and the deleted min/max pair), then row 5's three: the TRIM lane
+// host now, 24 content + a 1px border at EACH edge since 2026-08-13; the
+// render.h constant carries the ruling, the top border's arrival and the
+// deleted min/max pair), then row 5's three: the TRIM lane
 // (trim_lane_h_px(), the bar and its endcaps — the one lane that also rides
 // kTrimBarScalePercent, resting at 100 since the seventh glass ruling), the
 // RULER lane
@@ -191,16 +192,21 @@ namespace {
 // (the top block being taller than the bottom row) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
-// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 195 =
-// menu 35 + tab 31 + icon 47 + overview 25 + trim 9 + ruler 28 + marker 20, of
-// which 160 is the block above the waveform, and the bottom row 51):
-//   1920x1080: leftover 834 -> waveform CLAMPED at 500, gap 1 = 95, gap 2 = 239
-//     — 35 menu / 95 blank / 160 block / 500 waveform / 239 blank / 51 row,
-//     the waveform spanning y 290..790 about the window's midline 540.
-//   1024x600 (the Pi): leftover 354 -> waveform UNCLAMPED at 354, both gaps 0
-//     — 35 / 0 / 160 / 354 / 0 / 51. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -72), so the waveform keeps everything,
-//     which is the rule's own floor rather than a special case.
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 196 =
+// menu 35 + tab 31 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
+// which 161 is the block above the waveform, and the bottom row 51 — the
+// overview lane went 25 -> 26 on 2026-08-13 when it gained its top border, and
+// every number below is re-derived from that table rather than adjusted):
+//   1920x1080: leftover 833 -> waveform CLAMPED at 500, gap 1 = 94, gap 2 = 239
+//     — 35 menu / 94 blank / 161 block / 500 waveform / 239 blank / 51 row,
+//     the waveform still spanning y 290..790 about the window's midline 540
+//     (the clamp fixes its height and the midpoint rule its centre, so the
+//     extra border row comes out of gap 1 and the waveform does not move).
+//   1024x600 (the Pi): leftover 353 -> waveform UNCLAMPED at 353, both gaps 0
+//     — 35 / 0 / 161 / 353 / 0 / 51. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -72), so the waveform keeps everything
+//     and pays the border row itself, which is the rule's own floor rather
+//     than a special case.
 //
 // THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
 // chrome erase paints both and no lane painter covers them; a press in either
@@ -264,13 +270,15 @@ namespace {
 // font metric any more. The two-axes ruling and what became of the font axis are
 // at those accessors' declarations in render.h.
 //
-// The tab, icon and OVERVIEW lanes INCLUDE their 1px border (bottom-side on all
-// three), and the UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side,
+// The tab and icon lanes INCLUDE their 1px border (bottom-side on both), the
+// OVERVIEW lane its TWO (one per edge since 2026-08-13), and the UNIFIED
+// BOTTOM ROW its 1px border-TOP — the waveform side,
 // its only border (the CSS box model: the architect's stated content height
 // excludes its borders, and the lane owns every pixel it paints). The overview
 // lane was border-free under its old bottom-strip home, wearing the waveform's
-// own 2px rows at BOTH ends instead; commit B reduced that chrome to the one
-// line (the derivation is at kOverviewHeightPx, render.h).
+// own 2px rows at BOTH ends instead; commit B reduced that chrome to a single
+// bottom line, and a top line returned the next day at 1px (the
+// derivation is at kOverviewHeightPx, render.h).
 constexpr int kTopLaneCount    = 7;
 constexpr int kBottomLaneCount = 1;
 int top_lane_height(int lane) {
@@ -288,11 +296,11 @@ int top_lane_height(int lane) {
         case 2: return icon_row_h_px();          // icon row (+ border-bottom)
         // THE OVERVIEW STRIP's home since commit B: the whole-song lane between
         // the icon row and the trim bar, ONE fixed tiny height on every host
-        // (content + its 1px border-bottom; the ruling, the deleted min/max
-        // clamp pair and the border's edge choice are at kOverviewHeightPx,
+        // (content + a 1px border at each edge; the ruling, the deleted min/max
+        // clamp pair and the top border's arrival are at kOverviewHeightPx,
         // render.h). Its height no longer depends on the window, which is why
         // this table takes no win_h any more.
-        case 3: return overview_lane_h_px();     // overview strip (+ border)
+        case 3: return overview_lane_h_px();     // overview strip (+ 2 borders)
         // ROW 5 REPLACED THE FOUR LEGACY LANES WITH THREE (2026-08-01). The old
         // trim-chip / marker-text / flag / triangle stack is gone: the chips
         // became the trim BAR, the marker-text lane died with its occlusion

@@ -2012,9 +2012,17 @@ private:
     //   endcaps, plain (the lane rework): the plain drag there is the
     //   box-follows-pointer PAN, a move-the-whole-span gesture, "left/right
     //   arrows like on plain trim hover" (the architect's words); the
-    //   teleport under the same press is a click act and needs no cue. The
-    //   pan's cue is HOVER-ONLY like every other — a live box pan answers
-    //   the uniform Arrow, only the EDGE drags keeping their cue (below).
+    //   teleport under the same press is a click act and needs no cue. A LIVE
+    //   box pan KEEPS the cue since 2026-08-13, the edge drags' own rule
+    //   (below) grown by one member.
+    //   AND EVERY MARKER FLAG BOX, plain (architect 2026-08-13): markers move
+    //   SIDE TO SIDE, the bridge's own promise, and the flag box is the
+    //   marker's one pointer surface in every view since stems went
+    //   pointer-inert. It names the SURFACE rather than one press branch — the
+    //   plain drag is the flag drag in a live view at home, while an off-home
+    //   flag, a locked tab and the `h` view's click-only diff flags wear it
+    //   too — through the press path's own hit_test_flag, so the live lane and
+    //   the diff lane answer on one term.
     // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the routes
     //   that do it — the trim bar's BEGIN / END endcap on a plain hover (the
     //   single-bound drags), the bound-set clicks that write the same two
@@ -2024,11 +2032,19 @@ private:
     //   endcap claim outranks the lane's pan, and a LIVE edge drag keeps its
     //   cue for its whole life, the trim exception's rule). Every one of
     //   those arms a single-bound drag, so the cue is one shape for one act.
-    // - Arrow: everything else — the flag boxes (lane vocabulary), the button
-    //   rows, the gap band, and every modified press with no claim (SHIFT
-    //   deliberately unnamed: it is the region former, which carries no cue —
-    //   the deferred placement's own model; ALT unnamed because its pointer
-    //   vocabulary is empty).
+    // - Text: EDITABLE TEXT UNDER THE POINTER, which in this product is two
+    //   published rects and nothing else (2026-08-13) — the open top-strip
+    //   FLAG EDITOR's unrolled box (which wore the nav surface's Pan before
+    //   the kind existed) and the MODAL DIALOG's inset FIELD. Both are the
+    //   click-to-caret / text-drag claim regions the press path reads, so the
+    //   cue is that claim's own shape. The field's arm is THE VEIL'S ONE
+    //   EXCEPTION, stated at the gate below; the flag editor's sits ABOVE the
+    //   modifier arms because its press claim does.
+    // - Arrow: everything else — the button rows, the gap band, and every
+    //   modified press with no claim (SHIFT deliberately unnamed: it is the
+    //   region former, which carries no cue — the deferred placement's own
+    //   model; ALT unnamed because its pointer vocabulary is empty). The FLAG
+    //   BOXES left this list 2026-08-13 for the TrimResize arm above.
     // THE TRIM BAR'S THREE ZONES READ THE ROUTER'S OWN OWNERS and re-derive
     // nothing: hit_test_trim_endcap and point_in_trim_bridge_span for the plain
     // hover (exactly what route_trim_bar_press calls, in its order), and
@@ -2072,8 +2088,13 @@ private:
     // WHAT IT IS BLIND TO, deliberately and by ruling:
     // - The FLAG editor does not refuse — it is pointer-transparent by ruling, so
     //   a scrub still acts under an open one and the cursor must not lie about
-    //   that. The four DIALOG modal editors DO refuse, because their veil really
-    //   does swallow the press (modal_dialog_editor_active).
+    //   that. Its own BOX is the exception and not a refusal: that rect takes
+    //   the caret press, so it answers Text (above) while everything around it
+    //   answers whatever the surface under the editor would. The four DIALOG
+    //   modal editors DO refuse, because their veil really
+    //   does swallow the press (modal_dialog_editor_active) — with the FIELD
+    //   the one rect inside that veil which takes an act, and so the one thing
+    //   the veil's blanket names rather than blanks.
     //
     // THE CUES ARE HOVER-ONLY WITH ONE NAMED EXCEPTION (architect 2026-08-03):
     // a LIVE TRIM GESTURE — pending or past the threshold; an endcap drag, the
@@ -2085,9 +2106,15 @@ private:
     // the pointer leaves the band nor reverts to the Arrow mid-drag. Trim can
     // be the one exception because on this gesture alone the thing being
     // dragged is the thing the cursor names, so the cue stays true throughout.
+    // THE OVERVIEW BOX'S THREE DRAGS ARE THE SAME EXCEPTION, on the same
+    // reasoning: the two EDGE drags joined at the lane rework (2026-08-12) and
+    // THE BOX PAN 2026-08-13 (architect), so all three keep the kind their own
+    // record names — TrimBoundBegin / TrimBoundEnd / TrimResize — for the
+    // gesture's life. They can, for the same reason trim can: the box is the
+    // thing being dragged and the cue names it.
     // EVERY OTHER gesture keeps the uniform refusal — no cursor changes during
-    // the marker, region, strip or pan drags (the captured two hide the cursor
-    // anyway).
+    // the marker, region, strip or grab-pan drags (the captured two hide the
+    // cursor anyway).
     //
     // THE ACCEPTED STALENESS IS ONE POLL WAKEUP WIDE, and that is the whole of
     // it since the cursor became a per-iteration answer (2026-08-03). Every

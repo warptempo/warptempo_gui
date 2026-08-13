@@ -1162,12 +1162,13 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 195
-// (menu 35 + tab 31 + icon 47 + overview 25 + trim 9 + ruler 28 + marker 20)
-// and the bottom row 51: the 1920x1080 monitor's leftover is 834, so the
-// waveform CLAMPS at 500 and the two gaps take 95 (top) + 239 (bottom); the
-// Pi's 1024x600 leftover is 354, UNCLAMPED, and the centering is infeasible
-// there so both gaps floor at 0 and the waveform keeps the whole 354. The full
+// produces by construction. At 100% scale, with the top lanes summing 196
+// (menu 35 + tab 31 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
+// the overview lane grew a row 2026-08-13 with its top border)
+// and the bottom row 51: the 1920x1080 monitor's leftover is 833, so the
+// waveform CLAMPS at 500 and the two gaps take 94 (top) + 239 (bottom); the
+// Pi's 1024x600 leftover is 353, UNCLAMPED, and the centering is infeasible
+// there so both gaps floor at 0 and the waveform keeps the whole 353. The full
 // stacks are recorded at main.cpp's vertical block.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
@@ -1206,18 +1207,21 @@ inline int waveform_max_h_px() {
 // pair's own minimum, the sliver the Pi already read well.
 //
 // THE CSS BOX MODEL, as every bordered lane takes it (rows 3, 4 and the bottom
-// row): 24 is CONTENT and the 1px border sits OUTSIDE it, so the LANE the strip
-// stack allocates is 25 at 100%. THE BORDER IS ONE LINE, THE LANE'S BOTTOM
-// (architect at commit B: the lane's chrome comes down to "a single pixel
-// border in the same border color" it wore below its old home, where
-// render_canvas gave it 2px kWaveformBorder rows at BOTH ends). The bottom edge
-// is the one that carries it because the ICON ROW ABOVE ALREADY ENDS IN ITS OWN
-// border-bottom, while the TRIM LANE below opens with bare ground — so one line
-// at the seam facing the trim bar is exactly the separation the lane still
-// needs, and a top line would double the icon row's. Both SCALED lengths
-// riding gui_scale like every authored height.
+// row): 24 is CONTENT and the 1px borders sit OUTSIDE it. THE LANE CARRIES TWO
+// OF THEM, ONE AT EACH EDGE, so the LANE the strip stack allocates is 26 at
+// 100%. THE TOP LINE JOINED 2026-08-13 (architect: the lane "gains an
+// almost-black top border, the same colour as the bottom one"), SUPERSEDING
+// commit B's single bottom line — the lane GREW by that row rather than eating
+// one of its own 24, which is what "gains" says and what keeps the miniature
+// waveform exactly as tall as it has been. It is deliberately ADJACENT to the
+// ICON ROW'S OWN border-bottom, two 1px lines at that seam: the architect's
+// ask, the lane reading as its own framed object rather than as ground the
+// icon row happens to end above. Commit B's reasoning for the single line (a
+// top line would double the icon row's) is the superseded half; the bottom
+// line facing the trim bar's bare ground is unchanged. Both SCALED lengths
+// riding gui_scale like every authored height, the border PER EDGE.
 inline constexpr int kOverviewHeightPx = 24;
-inline constexpr int kOverviewBorderPx = 1;    // border-bottom, the trim side
+inline constexpr int kOverviewBorderPx = 1;    // per edge: top and bottom
 inline int overview_lane_border_h_px() {
     return scaled_px(kOverviewBorderPx, 1);
 }
@@ -1225,20 +1229,21 @@ inline int overview_lane_content_h_px() {
     return scaled_px(kOverviewHeightPx, 5);
 }
 inline int overview_lane_h_px() {
-    return overview_lane_content_h_px() + overview_lane_border_h_px();
+    return overview_lane_content_h_px() + 2 * overview_lane_border_h_px();
 }
-// The overview lane's CONTENT band — the lane less its ONE border row (above),
-// the band the bars, the viewport box and the cached blit live in. The
-// waveform's own waveform_content_rect cannot serve: that one takes a
-// SYMMETRIC border off both ends, which is the waveform area's chrome and not
-// this lane's. The TICK deliberately reads the whole LANE instead, crossing the
-// border like every 1px position vertical in the product. A degenerate lane
-// (too short to carry the border) passes through unshrunk rather than
-// inverting, waveform_content_rect's own shape.
+// The overview lane's CONTENT band — the lane less its TWO border rows
+// (above), the band the bars, the viewport box and the cached blit live in.
+// SYMMETRIC since the top border landed, which makes it the same SHAPE as the
+// waveform's own waveform_content_rect — but not the same function: that one
+// takes the waveform area's own thicker chrome (waveform_border_px), and the
+// two lanes' borders are separately authored. The TICK deliberately reads the
+// whole LANE instead, crossing both borders like every 1px position vertical in
+// the product. A degenerate lane (too short to carry both rows) passes through
+// unshrunk rather than inverting, waveform_content_rect's own shape.
 inline GuiRect overview_content_rect(GuiRect lane) {
     const int b = overview_lane_border_h_px();
-    if (lane.h <= b) return lane;
-    return GuiRect{lane.x, lane.y, lane.w, lane.h - b};
+    if (lane.h <= 2 * b) return lane;
+    return GuiRect{lane.x, lane.y + b, lane.w, lane.h - 2 * b};
 }
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the

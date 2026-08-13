@@ -958,10 +958,12 @@ struct ScrollDragState {
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's
 // funnel, the edge drags apply_strip_drag_zoom's either-axis term — the
 // producer inventory at follow_overridden_for_session. Cursors: the edges
-// wear the trim endcaps' own pair and a live EDGE drag keeps its cue for its
-// whole life (the trim exception's rule); the pan hover is TrimResize over
-// the rest of the lane, hover-only — a live pan shows the Arrow like every
-// other gesture (pointer_cursor_kind). Cleared on button release / lost
+// wear the trim endcaps' own pair, the rest of the lane TrimResize for the
+// pan, and ALL THREE DRAGS KEEP THEIR CUE for the gesture's life, read from
+// this record's own `kind` (the trim exception's rule — the edges took it at
+// the lane rework and the PAN joined 2026-08-13, the architect closing the one
+// live lane drag that fell back to the Arrow mid-slide; pointer_cursor_kind).
+// Cleared on button release / lost
 // button, by the force-end finalizer, and on file load; pointer gestures
 // have no cancel.
 enum class OverviewDragKind { Pan, EdgeBegin, EdgeEnd };

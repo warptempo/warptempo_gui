@@ -1160,7 +1160,22 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
     if (app.prompt.active) return GuiCursorKind::Arrow;
-    if (modal_dialog_editor_active()) return GuiCursorKind::Arrow;
+    // THE VEIL'S ONE EXCEPTION IS THE FIELD (architect 2026-08-13, with the
+    // Text kind). The blanket above it is unchanged in kind: a dialog editor
+    // consumes every press outside its own box, so every zone this map would
+    // otherwise answer is a lie while one stands. But the INSET FIELD is the
+    // one place inside the veil that TAKES a pointer act — the click-to-caret
+    // and the text drag claim exactly this published rect (on_button_press's
+    // caret block reads app.modal_dialog.field, the painter's own stash) — so
+    // naming the I-beam there is the map's own rule (the cue promises the
+    // gesture), not an escape from the veil. The BUTTONS are the veil's other
+    // reachable surface and take no cue, a button carrying none anywhere; a
+    // PROMPT publishes a zero field, so it cannot reach this arm even if the
+    // return above it ever moved.
+    if (modal_dialog_editor_active()) {
+        return rect_contains(app.modal_dialog.field, x, y)
+                   ? GuiCursorKind::Text : GuiCursorKind::Arrow;
+    }
     if (app.dropdown.open()) return GuiCursorKind::Arrow;
     if (app.loading || audio.total_frames() <= 0) return GuiCursorKind::Arrow;
 
@@ -1192,22 +1207,42 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         return is_begin ? GuiCursorKind::TrimBoundBegin
                         : GuiCursorKind::TrimBoundEnd;
     }
-    // THE OVERVIEW BOX'S LIVE EDGE DRAG KEEPS ITS CUE on the trim rule (the
-    // thing dragged is the thing the cursor names, read from the drag's own
-    // record — the lane rework, 2026-08-12). Deliberately EDGE-ONLY: the box
-    // PAN's TrimResize is a HOVER cue like every other, so a live pan falls
-    // to the uniform Arrow below — the ruled scope, "the cues are hover-only
-    // except the live-trim-style exception for the endcap drag". No pending
-    // twin: the lane's drag has no separate pending struct, the sub-threshold
-    // press resting on the endcap it pressed and the hover map answering the
-    // same pair there.
-    if (app.overview_drag.active &&
-        app.overview_drag.kind != OverviewDragKind::Pan) {
-        return app.overview_drag.kind == OverviewDragKind::EdgeBegin
-                   ? GuiCursorKind::TrimBoundBegin
-                   : GuiCursorKind::TrimBoundEnd;
+    // THE OVERVIEW BOX'S LIVE DRAGS KEEP THEIR CUE on the trim rule (the thing
+    // dragged is the thing the cursor names, read from the drag's own record —
+    // the lane rework, 2026-08-12), AND THE BOX PAN JOINED THEM 2026-08-13
+    // (architect): the pan drags the box exactly as an edge drag drags an edge,
+    // so its TrimResize stays true for the whole gesture and dropping to the
+    // Arrow mid-slide was the odd one out. The gesture keeps no cursor of any
+    // other kind — the pan is capture-free, so there is a visible cursor to
+    // keep. No pending twin for any of the three: the lane's drag has no
+    // separate pending struct, the sub-threshold press resting on the geometry
+    // it pressed and the hover map answering the same kind there.
+    if (app.overview_drag.active) {
+        switch (app.overview_drag.kind) {
+            case OverviewDragKind::Pan:
+                return GuiCursorKind::TrimResize;
+            case OverviewDragKind::EdgeBegin:
+                return GuiCursorKind::TrimBoundBegin;
+            case OverviewDragKind::EdgeEnd:
+                return GuiCursorKind::TrimBoundEnd;
+        }
     }
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
+
+    // THE OPEN FLAG EDITOR'S BOX IS EDITABLE TEXT, so it wears the I-beam
+    // (architect 2026-08-13, with the Text kind: it showed the navigation
+    // surface's PAN before, the marker lane being nav surface under it, and a
+    // hand over a text field is simply wrong). ABOVE THE MODIFIER ARMS,
+    // because that is where the press path puts the claim: the caret / text-drag
+    // block in on_button_press tests this same published rect
+    // (app.flag_editor_box.box, the painter's stash) for ANY left press,
+    // before any modifier is looked at, so ctrl or shift over the open box
+    // still places a caret and the cue must say so. The editor's
+    // pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
+    // the box reaches, and outside is exactly where this arm stops. A cold or
+    // closed editor publishes a zero rect, which contains no point.
+    if (rect_contains(app.flag_editor_box.box, x, y))
+        return GuiCursorKind::Text;
 
     const GuiRect top  = top_strip_area(app);
     const bool inside_top = rect_contains(top, x, y);
@@ -1363,9 +1398,31 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 return GuiCursorKind::TrimResize;
             return GuiCursorKind::Arrow;
         }
-        // The rest of the strip: the flag boxes (lane vocabulary, no cue), the
-        // button rows (claimed far above the waveform in the press path, no
-        // cue of their own) and GAP 1's blank band — all Arrow.
+        // A MARKER FLAG BOX WEARS TrimResize (architect 2026-08-13): markers
+        // MOVE SIDE TO SIDE, which is exactly what ew-resize promises on the
+        // trim bridge — the pair drag, the product's other move-me-horizontally
+        // gesture — and the flag box is the marker's ONE pointer surface in
+        // every view since stems went pointer-inert (the seventh glass ruling).
+        // THE CUE NAMES THE SURFACE HERE, not one branch of it — the ruled
+        // exception to this map's usual derive-one-arm-per-press-branch shape,
+        // and the architect's: a flag box is the marker, and the marker is a
+        // thing you slide along the timeline. The plain press's own gesture IS
+        // the drag in a live view at home; where the drag refuses (off the
+        // column's home view, a read-only tab) or does not exist (the `h`
+        // view's diff flags, which take clicks alone) the box still wears it,
+        // one shape for the one surface. It reads
+        // hit_test_flag — the painter's published boxes, the same predicate the
+        // press claims and the nav surface carves itself out with — so it
+        // answers the LIVE marker lane and the `h` view's DIFF flags through
+        // one term, that stash being whatever was drawn. It sits under the
+        // modifier arms by their own rank (a ctrl or shift press on a flag is a
+        // selection act, which carries no cue) and AHEAD of the strip's Arrow,
+        // which is what used to answer here.
+        if (hit_test_flag(app, audio, x, y) >= 0)
+            return GuiCursorKind::TrimResize;
+        // The rest of the strip: the button rows (claimed far above the
+        // waveform in the press path, no cue of their own) and GAP 1's blank
+        // band — all Arrow.
         return GuiCursorKind::Arrow;
     }
     // Below the top strip and off the waveform (the flexible gap, the bottom

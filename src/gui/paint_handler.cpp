@@ -4174,16 +4174,19 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // for the afternoon it landed).
 //
 // FOUR LAYERS, bottom to top, all inside the lane:
-//   1. GROUND + ONE BORDER, spelled here rather than through render_canvas:
+//   1. GROUND + TWO BORDERS, spelled here rather than through render_canvas:
 //      the waveform's kWaveformCanvas ground (reused rather than resampled —
 //      the lane IS a miniature of the waveform surface, and a third ground
-//      would be a new color with no crop behind it) under ONE 1px
-//      kWaveformBorder row at the lane's BOTTOM edge. render_canvas cannot
-//      serve any more: it paints 2px of that border at BOTH ends, which is the
-//      chrome the lane wore below the bottom row, and commit B cut it to the
-//      single line facing the trim bar (the edge choice and the CSS box model
-//      are recorded at the constant). Painted on every frame class, audio or
-//      none.
+//      would be a new color with no crop behind it) under a 1px
+//      kWaveformBorder row at the lane's TOP edge and another at its BOTTOM.
+//      The top row landed 2026-08-13 (architect: the lane "gains an
+//      almost-black top border, the same colour as the bottom one"), the lane
+//      growing by it — commit B's single bottom line is superseded, its own
+//      predecessor having been the waveform's 2px rows at both ends under the
+//      old bottom-strip home. render_canvas still cannot serve: its rows are
+//      waveform_border_px thick, this lane's are its own 1px (the CSS box
+//      model and the succession are recorded at the constant). Painted on
+//      every frame class, audio or none.
 //   2. THE BARS (the cached blit; maybe_rebuild_overview_bar_cache below):
 //      the WHOLE PIECE as per-column min/max bars in kWaveformInk, two
 //      channel bands exactly as the plate stacks them. THE DATA IS THE
@@ -4191,8 +4194,8 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      TARGET domain does not exist as audio (the preview buffer is
 //      trim-scoped), so the overview shows the piece itself in every view
 //      and the BOX does the domain work. Clipped to the lane's content band
-//      (overview_content_rect — the lane less its one border row, which
-//      survives every frame) exactly as the plate clips to the waveform's.
+//      (overview_content_rect — the lane less its two border rows, which
+//      survive every frame) exactly as the plate clips to the waveform's.
 //   3. THE VIEWPORT BOX: a 1px outline marking the visible span, in
 //      kOverviewBoxLine — brightened off kRedesignLine at the lane rework
 //      (2026-08-12, "increase contrast on the outline": the outline is a
@@ -4210,9 +4213,13 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      column.
 //   4. THE PLAYHEAD TICK: one kPlayheadStem column at the playhead's source
 //      position — the scanner while one is live, the resting cursor
-//      otherwise — full LANE height, crossing the border like every
-//      position line (the 1px-verticals convention at
-//      waveform_content_rect). Its per-frame damage is the two scanner
+//      otherwise — full LANE height, OVER BOTH border rows: this stem is a
+//      boundary line and the borders do not clip it, which is the recorded
+//      z-intent of every 1px position vertical in the product (render_canvas's
+//      own note, and waveform_content_rect's). It is layered here exactly as
+//      it always was — last, over layer 1 — so the top border inherited the
+//      overlap the bottom one already had, with no second arrangement.
+//      Its per-frame damage is the two scanner
 //      sites' narrow column pair (main.cpp); every discrete write is covered
 //      by Viewport::invalidate_waveform_area's one rect, which contains this
 //      lane since commit B moved it into the block (that owner's dedicated
@@ -4261,20 +4268,24 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
     }
     // TWO CHANNEL BANDS, the plate's own stack (stereo is structural), filling
     // the CONTENT band whole — the plate's symmetric waveform_inset_px serves
-    // the playhead head's clearance there and would eat a third of this 24px
-    // lane, so the bars run the whole band. The band is the lane less its ONE
-    // border row (commit B's chrome; the split is computed with a ZERO inset
-    // over that band's height, the channel splitter's own arithmetic — its
-    // symmetric-inset form would take the border off both ends), and the odd
-    // spare row falls at the band's bottom where nothing draws, exactly as in
-    // the plate.
+    // the playhead head's clearance there and would eat a third of this lane's
+    // 24px content band, so the bars run the whole band. The band is the lane
+    // less its TWO border rows (the split is computed with a ZERO inset over
+    // that band's OWN height, the channel splitter's own arithmetic — the
+    // borders are already off, so asking it for a symmetric inset would take
+    // them twice),
+    // and the odd spare row falls at the band's bottom where nothing draws,
+    // exactly as in the plate. The cache surface is LANE-sized and blitted at
+    // the lane's own origin, so the band's y offset is carried into both
+    // channel rects here and the bars land inside the borders rather than
+    // under the top one.
     const GuiRect band = overview_content_rect(GuiRect{0, 0, lane.w, lane.h});
     const int split = waveform_channel_split_row(band.h, /*inset_px=*/0);
     const double spp = overview_samples_per_pixel(app, audio);
     if (split >= 0 && spp > 0.0) {
         const int ch_h = split;
-        const GuiRect ch0{0, 0, lane.w, ch_h};
-        const GuiRect ch1{0, split, lane.w, ch_h};
+        const GuiRect ch0{0, band.y, lane.w, ch_h};
+        const GuiRect ch1{0, band.y + split, lane.w, ch_h};
         // THE BASIS: viewport start 0, the whole piece over the lane's width.
         // THE PYRAMID RUNG IS THE ONE OWNER'S PICK, per column from this spp
         // (GuiAudio::level_for_span inside render_waveform — the coarse rungs
@@ -4295,10 +4306,13 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     const GuiRect lane = top_overview_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // Layer 1 — the waveform's ground under the ONE border row at the lane's
-    // bottom edge (the trim side; the edge choice is at kOverviewHeightPx). One
-    // pass, integer-edged with AA off like render_canvas's own, so ground and
-    // line can never disagree about where the lane ends. Every frame class.
+    // Layer 1 — the waveform's ground under the TWO border rows, one at the
+    // lane's top edge and one at its bottom (the succession is at
+    // kOverviewHeightPx). One pass, integer-edged with AA off like
+    // render_canvas's own, so ground and lines can never disagree about where
+    // the lane ends. A lane too short to carry both rows draws NEITHER rather
+    // than overlapping them — render_canvas's own shape, and the shape
+    // overview_content_rect degenerates to. Every frame class.
     {
         const int b = overview_lane_border_h_px();
         cairo_save(cr);
@@ -4307,9 +4321,10 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
                              kWaveformCanvas.b);
         cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
         cairo_fill(cr);
-        if (lane.h > b) {
+        if (lane.h > 2 * b) {
             cairo_set_source_rgb(cr, kWaveformBorder.r, kWaveformBorder.g,
                                  kWaveformBorder.b);
+            cairo_rectangle(cr, lane.x, lane.y, lane.w, b);
             cairo_rectangle(cr, lane.x, lane.y + lane.h - b, lane.w, b);
             cairo_fill(cr);
         }
@@ -4365,7 +4380,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // Layer 4 — the playhead tick: the scanner while live (its precise
     // position, the value the waveform scanner paints from), the resting
     // cursor otherwise; through the ONE column owner the damage sites share
-    // (overview_tick_column), full LANE height across the border row.
+    // (overview_tick_column), full LANE height across both border rows.
     {
         const double active_pos = app.playhead_scanner_active
             ? app.playhead_scanner_precise
