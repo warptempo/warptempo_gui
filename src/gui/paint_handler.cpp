@@ -163,9 +163,9 @@ namespace {
 // the ground fill itself, the disabled face's mix target, and the click face's.
 // Focused it is the crops' #292c30; unfocused it darkens to #202326 with the
 // labwc titlebar above (the ruling and the constant's provenance are at
-// kRedesignRowGroundUnfocused, render.h). Row 3 does NOT call this — its ground
-// is a fixed value that already equals the unfocused shade, so it has nothing
-// to swap.
+// kRedesignRowGroundUnfocused, render.h). Row 3 does NOT call this — its
+// ground is the resting tab's own fixed #1b1d20 (the 2026-08-13 identity
+// ruling), darker than either shade here and with nothing to swap.
 //
 // THE TWO MIXES FOLLOW THE GROUND rather than the focused constant, which is
 // the whole reason this is a function and not two literals at the fill sites: a
@@ -890,8 +890,10 @@ constexpr double kPopupPadRightPx     = 30.0;
 // The openness matters ONLY to the STROKE (the 1px side borders), which is
 // exactly where it must: a closed path would lay a line across the tab's foot
 // and wall off the opening the whole design is about. cairo_fill closes any
-// open subpath implicitly, so the same helper still fills correctly for the
-// trim band above.
+// open subpath implicitly, so the same helper still fills correctly for the two
+// FILLED uses — the blue trim band, and the tab's own interior, which it lays
+// over the darker bar since the 2026-08-13 ground ruling (the shape is what
+// puts the bar's colour in the corner notches).
 void redesign_rounded_top_rect_path(cairo_t* cr, double x, double y,
                                     double w, double h, double r) {
     constexpr double kPi = 3.14159265358979323846;
@@ -1211,14 +1213,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // THE TAB ROW (top lane 2, row 3 of the redesign): the Breeze tab bar for
     // the A/B navigational tabs — "Tab A" and "Tab B", flush at the left edge,
-    // over a #202326 ground, with a 1px border-bottom across the whole window
-    // width that BREAKS under the selected tab.
+    // over the RESTING TAB'S OWN #1b1d20 ground (architect 2026-08-13; the
+    // ruling and the constant it retired are at render.h's row-3 block), with a
+    // 1px border-bottom across the whole window width that BREAKS under the
+    // selected tab.
     //
     // THE SELECTED TAB IS app.active_tab_view, read live every paint. Its face
-    // is a 3px accent trim with rounded top corners over an interior that is the
-    // row ground itself — so it reads as an opening rather than as a filled
-    // shape — flanked by 1px side borders. The inactive tab is a flat fill, rest
-    // or hover; there is no selected-hover face and no click face anywhere in
+    // is a 3px accent trim with rounded top corners over an interior in
+    // kRedesignContentGround — the surface below the row, so the tab reads as
+    // an opening into the icon row rather than as a filled shape — flanked by
+    // 1px side borders. An INACTIVE tab is a flat fill, rest or hover, and at
+    // rest it is the bar's own colour: it recedes, which is the whole point of
+    // the ground ruling and leaves the selected tab the one thing standing
+    // proud. There is no selected-hover face and no click face anywhere in
     // this row (a tab press is a chord, never a refusal), and this row has NO
     // disabled face at all.
     //
@@ -1261,15 +1268,19 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
     cairo_save(cr);
 
-    // Ground over the WHOLE lane, border row included. It is the content band's
-    // ground, it is the selected tab's interior (the architect's ruling that the
-    // two are one color), it is what the corner arcs antialias against — and
-    // covering the border row too is what the BREAK below is made of: where the
-    // border does not paint, this ground shows, so the selected tab's opening
-    // carries the tab's own color instead of whatever render_background happened
-    // to leave there.
-    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                         kRedesignTabGround.b);
+    // THE BAR, over the WHOLE lane, border row included: the RESTING TAB'S OWN
+    // FILL by the architect's identity ruling, read from kRedesignTabRest
+    // itself rather than from a second constant holding the same number (the
+    // reasoning is at render.h's row-3 block). It is what an unselected tab
+    // disappears into, and it is what the selected tab's corner arcs antialias
+    // against — the arcs now have a real edge to describe, where under the old
+    // ruling they blended one #202326 into another. It is NOT the selected
+    // tab's interior any more: that tab paints its own ground in the walk
+    // below, over this one and down THROUGH the border row, which is what the
+    // BREAK is made of — where the border does not paint, the tab's own colour
+    // shows and the opening leads into the icon row.
+    cairo_set_source_rgb(cr, kRedesignTabRest.r, kRedesignTabRest.g,
+                         kRedesignTabRest.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -1347,19 +1358,45 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // its producer rather than sitting here unreachable; the product's one
         // disabled blend is unchanged and still the rule on row 4.
         const bool hovered = face.hovered;
-        // The face this tab wears — the fill for an inactive tab, and the ground
-        // every ink below sits on.
+        // The face this tab wears — the fill it paints (the selected tab lays
+        // its own interior since the ground ruling; the resting tab's fill
+        // coincides with the bar it sits on, and is still painted rather than
+        // left to show through, because the tab owns its face and hover moves
+        // it) and the ground every ink below sits on.
         const GuiColor tab_face =
-            selected ? kRedesignTabGround
+            selected ? kRedesignContentGround
                      : (hovered ? kRedesignTabHover : kRedesignTabRest);
 
         if (selected) {
             sel_x = x;
             sel_w = tab_w;
 
-            // ONE SHAPE, TWO CLIPPED USES, and the clips are complementary — so
-            // no pixel is written twice and the two halves cannot describe
-            // different tabs. FILLED under a clip to the top trim band it is the
+            // THE INTERIOR, which the bar no longer supplies (architect
+            // 2026-08-13: the row's ground is the RESTING tab's colour now, so
+            // the selected tab has to lay its own). THE SAME OPEN ROUNDED-TOP
+            // PATH the trim and the border use, filled: the corner notches are
+            // therefore the BAR's colour, which is what makes the tab read as a
+            // rounded shape standing proud of it — under the retired identity
+            // both sides of those arcs were #202326 and a square fill would
+            // have been indistinguishable. IT RUNS THE WHOLE LANE HEIGHT,
+            // border row included, so the BREAK in the border-bottom below
+            // exposes this colour and the tab opens into the icon row, which is
+            // the same surface: that seam is the reason the constant is shared
+            // and it is unaffected by the ruling.
+            redesign_rounded_top_rect_path(cr, x, lane.y,
+                                           static_cast<double>(tab_w),
+                                           static_cast<double>(lane.h),
+                                           radius);
+            cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                                 kRedesignContentGround.g,
+                                 kRedesignContentGround.b);
+            cairo_fill(cr);
+
+            // THE SAME SHAPE AGAIN, TWO CLIPPED USES, and these two clips are
+            // complementary — so neither writes the other's pixels and the two
+            // halves cannot describe different tabs (the interior above is
+            // unclipped and deliberately underneath both). FILLED under a clip
+            // to the top trim band it is the
             // 3px blue top, whose only antialiasing is the two corner arcs;
             // STROKED under a clip to everything below that band it is the 1px
             // side borders, picking those same arcs up where the blue leaves off
@@ -1503,7 +1540,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
     // THE BORDER-BOTTOM, full window width at the lane's last row — EXCEPT under
     // the selected tab, where it BREAKS because that tab opens into the content
-    // below. Two pixel-bound rectangle fills (left of the tab, right of it),
+    // below, and the pixels it leaves alone are that tab's own interior, run
+    // down here by the fill above. Two pixel-bound rectangle fills (left of the
+    // tab, right of it),
     // either of which is empty when the selected tab sits at an edge; crisp on
     // integer bounds like every other axis-aligned 1px fill in these rows.
     cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
@@ -1529,8 +1568,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 2, row 4 of the redesign): the same #202326 ground
-    // the tab row above opens into, a 1px border-bottom across the WHOLE window
+    // THE ICON ROW (top lane 2, row 4 of the redesign): the same #202326
+    // content ground the SELECTED TAB above opens into (the tab row's own bar
+    // is the darker resting-tab shade since 2026-08-13; this row did not move
+    // with it), a 1px border-bottom across the WHOLE window
     // width, separator-divided groups of 32x32 buttons — TWENTY-NINE members
     // in nine groups since the 2026-08-12 grand relayout: the toolbar four
     // (Save / Undo / Redo / Render, the deleted row 2's, leading the row),
@@ -1611,8 +1652,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
     cairo_save(cr);
 
-    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                         kRedesignTabGround.b);
+    cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                         kRedesignContentGround.g,
+                         kRedesignContentGround.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, content_h);
     cairo_fill(cr);
 
@@ -1756,7 +1798,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const bool has_line = hovered || pressed || face.selected;
         // What the glyph ends up sitting on, which is the ground its own dim
         // mixes toward: the painted fill where there is one, else the row.
-        GuiColor under = kRedesignTabGround;
+        GuiColor under = kRedesignContentGround;
         if (has_fill || has_line) {
             // The shared face box (redesign_face_box — one path, filled and
             // stroked, the half-stroke inset rule stated there). THIS ROW'S FIT
@@ -1766,15 +1808,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             // one, and it is what the source widget does (a single rounded rect
             // drawn with both a brush and a pen).
             const GuiColor fill = mix_color(
-                pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
                                     kRedesignClickMix)
                         : kRedesignSelectedFill,
-                kRedesignTabGround, keep);
+                kRedesignContentGround, keep);
             // Accent when the pointer is on it or it is held; otherwise the
             // calm grey that frames a resting toggled-on button.
             const GuiColor line = mix_color(
                 (hovered || pressed) ? kRedesignAccent : kRedesignLine,
-                kRedesignTabGround, keep);
+                kRedesignContentGround, keep);
             redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
                               has_line ? &line : nullptr);
@@ -2013,16 +2055,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
         const bool has_fill = pressed || face.selected;
         const bool has_line = hovered || pressed || face.selected;
-        GuiColor under = kRedesignTabGround;
+        GuiColor under = kRedesignContentGround;
         if (has_fill || has_line) {
             const GuiColor fill = mix_color(
-                pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
                                     kRedesignClickMix)
                         : kRedesignSelectedFill,
-                kRedesignTabGround, keep);
+                kRedesignContentGround, keep);
             const GuiColor line = mix_color(
                 (hovered || pressed) ? kRedesignAccent : kRedesignLine,
-                kRedesignTabGround, keep);
+                kRedesignContentGround, keep);
             redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
                               has_fill ? &fill : nullptr,
                               has_line ? &line : nullptr);
@@ -2648,8 +2690,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                         kRedesignTabGround.b);
+    cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                         kRedesignContentGround.g,
+                         kRedesignContentGround.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
     cairo_fill(cr);
 
@@ -4167,8 +4210,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                              kRedesignTabLine.b);
         cairo_rectangle(cr, lane.x, lane.y, lane.w, border);
         cairo_fill(cr);
-        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
-                             kRedesignTabGround.b);
+        cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                             kRedesignContentGround.g,
+                             kRedesignContentGround.b);
         cairo_rectangle(cr, content.x, content.y, content.w, content.h);
         cairo_fill(cr);
         cairo_restore(cr);
@@ -5200,7 +5244,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                               ring, rad + ring, nullptr, &kModalFocusRing);
         }
         const GuiColor fill =
-            pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+            pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
                                 kRedesignClickMix)
                     : kModalFocusFill;
         const GuiColor line =

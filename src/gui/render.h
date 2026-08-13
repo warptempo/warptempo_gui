@@ -186,12 +186,15 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // above it, which darkens on the same edge. A HARD SWAP — no transition, no
 // fade — driven by AppState::window_activated, and it moves the GROUND ONLY:
 // separators, border lines, the accent, labels and icons all keep their colors.
-// Row 3's ground is ALREADY this value and therefore does not change at all.
+// NO ROW BELOW ROW 2 SWAPS: row 3's ground is the resting tab's #1b1d20 since
+// the 2026-08-13 identity ruling (it was this very value before that, which is
+// why the swap never had anything to do there), and rows 4 and below sit on
+// kRedesignContentGround, itself the unfocused shade.
 //
-// NOTE it coincides with kBackground and with kRedesignTabGround (all three
-// sample the same Breeze Window color) and is nonetheless its OWN constant by
-// the hard-coded rule — three facts that happen to agree, not one fact
-// referenced three times.
+// NOTE it coincides with kBackground and with kRedesignContentGround (all
+// three sample the same Breeze Window color) and is nonetheless its OWN
+// constant by the hard-coded rule — three facts that happen to agree, not one
+// fact referenced three times.
 inline constexpr GuiColor kRedesignRowGroundUnfocused = hex(0x202326);
 
 // ROW 2'S CLICK FACE (row_2_button_click.png): the pressed button's interior,
@@ -249,8 +252,8 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is
 // the UNFOCUSED BAR, sampled from kdenlive's own unfocused crop. Two facts that
-// happen to agree, like kRedesignTabGround and kBackground — a retune of one
-// must not follow the other.
+// happen to agree, like kRedesignContentGround and kBackground — a retune of
+// one must not follow the other.
 inline constexpr GuiColor kRedesignViewBarBg          = hex(0x1E5774);
 inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 
@@ -308,14 +311,34 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // and row_3_bottom_border.png. Same carve-out as the four above: constexpr, not
 // config keys, the crop wins over any Breeze-derived scheme.
 //
-// kRedesignTabGround is BOTH the row's ground outside the tabs AND the selected
-// tab's interior — one value by the architect's ruling ("the background of the
-// row outside the tabs = the selected tab's background minus the blue trim"),
-// which is what makes the selected tab read as seamless with the row. ROW 4 (the
-// icon row) PAINTS ON IT TOO, and shares the constant rather than declaring a
-// fourth copy of the value: the icon row is literally the surface the selected
-// tab opens into through its broken bottom border, so that is one fact seen
-// twice rather than two samples that agree. NOTE that
+// THE ROW'S GROUND OUTSIDE THE TABS IS THE UNSELECTED TAB'S OWN FILL
+// (architect 2026-08-13), which SUPERSEDES THE RULING THIS BLOCK USED TO
+// CARRY: "the background of the row outside the tabs = the selected tab's
+// background minus the blue trim". That older identity is why ONE constant
+// served the row and the selected tab both, and it made the row read LIGHTER
+// than the tabs sitting on it. The identity has moved, not been abandoned —
+// the row ground is now #1b1d20, so an UNSELECTED TAB RECEDES INTO THE BAR
+// and the SELECTED tab is the one thing standing proud of it.
+//
+// THE NEW IDENTITY IS EXPRESSED THE OLD ONE'S WAY: the painter fills row 3
+// with kRedesignTabRest itself rather than with a fresh constant holding the
+// same number, because the ruling states one FACT seen twice (the bar IS what
+// an unselected tab is made of — retune the resting tab and the bar must
+// follow it, or the tab stops receding), which is the palette's own test for
+// one constant versus two that agree. The derivation runs tab -> row, so the
+// tab keeps the name.
+//
+// kRedesignContentGround (RENAMED from kRedesignTabGround at the same ruling —
+// the old name named the one surface it had just stopped painting, and the
+// palette's row-independent naming rule at the top of this file says exactly
+// why that could not stand) is THE SURFACE THE SELECTED TAB OPENS INTO, one
+// fact seen on every lane below the tab row: the SELECTED TAB'S INTERIOR (the
+// tab is a mouth into the content, which is what its broken bottom border
+// makes literal), the ICON ROW's ground, row 5's trim/ruler/marker lane
+// grounds, the unified BOTTOM ROW's ground, and the ground term every face
+// mix over those rows resolves against (the icon row's and the transport
+// row's five faces, the modal dialog buttons' pressed interior, the disabled
+// marker blend). One constant, not six copies of the number. NOTE that
 // it COINCIDES with kBackground #202326 (both sample Breeze's Window color);
 // it is its OWN constant by the hard-coded rule, never a reference to the
 // palette, and a retune of one must not follow the other.
@@ -324,11 +347,13 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // kRedesignLine #535659: the tab frame and the row's bottom border measure
 // #4c4e51 in every crop. Two constants, both sampled, neither derived from the
 // other.
-inline constexpr GuiColor kRedesignTabGround    = hex(0x202326);
-inline constexpr GuiColor kRedesignTabRest      = hex(0x1B1D20);
-inline constexpr GuiColor kRedesignTabHover     = hex(0x263F4D);
-inline constexpr GuiColor kRedesignTabHoverEdge = hex(0x496170);
-inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
+inline constexpr GuiColor kRedesignContentGround = hex(0x202326);
+// The UNSELECTED TAB's resting fill AND, since the ruling above, the tab row's
+// own ground outside the tabs — one value for the two by that identity.
+inline constexpr GuiColor kRedesignTabRest       = hex(0x1B1D20);
+inline constexpr GuiColor kRedesignTabHover      = hex(0x263F4D);
+inline constexpr GuiColor kRedesignTabHoverEdge  = hex(0x496170);
+inline constexpr GuiColor kRedesignTabLine       = hex(0x4C4E51);
 
 // -- Row 4, the ICON ROW's one new color -----------------------------------
 //
@@ -356,8 +381,11 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // died; the machinery itself was retired whole on 2026-08-02 (the palette
 // header carries that record).
 //
-// The three lanes share row 3's #202326 ground (kRedesignTabGround), one fact
-// seen again rather than a fourth copy of the number.
+// The three lanes share the #202326 content ground (kRedesignContentGround) —
+// the surface the selected tab opens into, one fact seen again rather than a
+// fourth copy of the number. It was "row 3's ground" until the 2026-08-13
+// identity ruling moved that row onto the resting tab's own #1b1d20; these
+// lanes did not move with it, being content rather than tab bar.
 
 // THE TRIM LANE is 9 rows of exactly THREE surfaces — ground, bar, endcap — and
 // each carries its own 2-row BOTTOM BEVEL: row 7 a lighter shade, row 8 a
@@ -520,7 +548,7 @@ inline constexpr GuiColor kHistoryRemovedEdgeSel = hex(0x8E3C44);
 inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 
 // THE DISABLED FACE OF A MARKER IS A BLEND, NEVER AN ALPHA (architect): 25% of
-// the class color over the lane ground (kRedesignTabGround #202326), per
+// the class color over the lane ground (kRedesignContentGround #202326), per
 // channel, through the ONE mix_color owner. Alpha would be wrong here for a
 // reason specific to this lane — flags OVERLAP, so a translucent disabled flag
 // would show its neighbour through itself and read as a third color.
@@ -639,11 +667,13 @@ inline constexpr int      kWaveformBorderPx = 2;
 // Measured off row_7_text.png (407x33): a 1px #4c4e51 TOP border, 31 rows of
 // #202326 ground, and a 1px #17181a BOTTOM border which was the window's LAST
 // row. THE GROUND AND THE TOP LINE ARE THE ROW-3/4 CONSTANTS REUSED, on the
-// judgment those rows already set: #202326 is kRedesignTabGround (the tab
-// row's ground, the selected tab's interior, the icon row's ground — one
-// Breeze Window fact seen again, not a fifth sample of the same number), and
-// #4c4e51 is kRedesignTabLine (row 3's frame grey, row 4's separators and
-// border) — which is why this block declares nothing today.
+// judgment those rows already set: #202326 is kRedesignContentGround (the
+// selected tab's interior, the icon row's ground, row 5's lane grounds — one
+// Breeze Window fact seen again, not a fifth sample of the same number; the
+// TAB ROW's own ground left that set on 2026-08-13 and this row did not follow
+// it, being content), and #4c4e51 is kRedesignTabLine (row 3's frame grey,
+// row 4's separators and border) — which is why this block declares nothing
+// today.
 //
 // kRedesignBottomLine (hex 0x17181A, the crop's near-black window-foot seam)
 // WAS declared here and is RETIRED (2026-08-12, the row unification): its one

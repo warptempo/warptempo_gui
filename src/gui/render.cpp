@@ -625,7 +625,7 @@ void render_trim_flags(cairo_t* cr,
     // over that — painting back to front means no run has to know what its
     // neighbour is, and an inverted or degenerate window simply leaves the
     // ground showing.
-    surface(lane_x, lane_w, kRedesignTabGround,
+    surface(lane_x, lane_w, kRedesignContentGround,
             kTrimGroundBevelHi, kTrimGroundBevelLo);
 
     // THE BAR SPANS THE WINDOW, and it follows a bound OFFSCREEN rather than
@@ -1002,8 +1002,10 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
             base_fill = kMarkerFlagFill;
             base_edge = kMarkerFlagEdge;
         }
-        f.fill  = mix_color(base_fill, kRedesignTabGround, kMarkerDisabledMix);
-        f.edge  = mix_color(base_edge, kRedesignTabGround, kMarkerDisabledMix);
+        f.fill  = mix_color(base_fill, kRedesignContentGround,
+                            kMarkerDisabledMix);
+        f.edge  = mix_color(base_edge, kRedesignContentGround,
+                            kMarkerDisabledMix);
         // THE BORDER DIMS WITH THE REST (architect 2026-08-02, overturning the
         // structural-edge reading it shipped with the same day): same mix owner,
         // same kMarkerDisabledMix fraction, same base — the marker lane's own
@@ -1018,7 +1020,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         // with the lane exactly as the fill loses contrast with it, which is the
         // property the disabled face is after. A reader expecting "dimmer =
         // darker" would mis-read the direction and try to fix it.
-        f.border = mix_color(kMarkerFlagBorder, kRedesignTabGround,
+        f.border = mix_color(kMarkerFlagBorder, kRedesignContentGround,
                              kMarkerDisabledMix);
         f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
         f.stem  = f.fill;
