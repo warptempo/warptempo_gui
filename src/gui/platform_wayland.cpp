@@ -316,15 +316,18 @@ struct WaylandListeners {
     }
     static void dialog_toplevel_configure(void* data, struct xdg_toplevel*,
                                           int32_t width, int32_t height,
-                                          struct wl_array* /*states*/) {
-        // The state array is deliberately unread: the dialog has no
-        // activation-darkened chrome of its own (the MAIN window's configure
-        // losing ACTIVATED is what darkens the header when the dialog takes
-        // focus — the unfocused-window face, exactly kdenlive's look), and
-        // maximize needs no flag — the granted size is the whole story, the
-        // GUI centering its content in whatever is granted.
+                                          struct wl_array* states) {
+        // ACTIVATION is deliberately not read off this array: the dialog has
+        // no activation-darkened chrome of its own (the MAIN window's
+        // configure losing ACTIVATED is what darkens the header when the
+        // dialog takes focus — the unfocused-window face, exactly kdenlive's
+        // look). The array is walked for the MAXIMIZED bit alone, and that
+        // bit is a record rather than a decider: the granted SIZE is the
+        // whole story (mandatory when nonzero — the rule at dialog_open()),
+        // the GUI centering its content in whatever is granted.
         static_cast<GuiPlatform*>(data)->on_dialog_toplevel_configure(width,
-                                                                      height);
+                                                                      height,
+                                                                      states);
     }
     static void dialog_toplevel_close(void* data, struct xdg_toplevel*) {
         static_cast<GuiPlatform*>(data)->on_dialog_toplevel_close();
@@ -1573,10 +1576,17 @@ void GuiPlatform::open_dialog(int content_w, int content_h,
     if (dialog_xdg_toplevel_) return;   // idempotent while one stands
     if (!wl_compositor_ || !xdg_wm_base_ || !xdg_decoration_manager_) return;
 
-    dialog_width_     = content_w;
-    dialog_height_    = content_h;
-    dialog_pending_w_ = 0;
-    dialog_pending_h_ = 0;
+    // The APP-CHOSEN INITIAL SIZE: no configure has arrived, so the size is
+    // ours (the mandatory-size rule's own free branch).
+    dialog_content_w_    = content_w;
+    dialog_content_h_    = content_h;
+    dialog_width_        = content_w;
+    dialog_height_       = content_h;
+    dialog_pending_w_    = 0;
+    dialog_pending_h_    = 0;
+    dialog_configured_w_ = 0;
+    dialog_configured_h_ = 0;
+    dialog_maximized_    = false;
     dialog_has_initial_configure_ = false;
     dialog_damage_ = true;
 
@@ -1617,22 +1627,52 @@ void GuiPlatform::open_dialog(int content_w, int content_h,
 void GuiPlatform::resize_dialog(int content_w, int content_h,
                                 const std::string& title) {
     // The CONTENT-SWITCH route: the standing dialog's content changed kind or
-    // size (a prompt raised over an editor, the Save-failed mutation), so the
-    // window re-sizes itself by attaching a buffer of the new size — a
-    // client-side resize, legal for a floating toplevel — and re-titles. A
-    // compositor-granted size (a WM resize or maximize) simply wins the next
-    // configure, exactly as it would have; the GUI centers either way.
+    // size (a prompt raised over an editor, the Save-failed mutation). It
+    // always retitles and always re-hints the min size to the new content —
+    // and THE SIZE OBEYS THE MANDATORY RULE (dialog_open()'s block): a
+    // MAXIMIZED (or WM-resized, or tiled) dialog keeps the granted size and
+    // this is a PURE REPAINT, because the painter centers the fixed content
+    // block in whatever is granted; only a FREE dialog — one the compositor
+    // left the size to — takes the client-side size change here. Attaching a
+    // content-sized buffer against a maximized configure is
+    // invalid_surface_state (labwc may disconnect us), which is exactly what
+    // the one rule below prevents.
     if (!dialog_xdg_toplevel_) return;
     xdg_toplevel_set_title(dialog_xdg_toplevel_,
                            title_bytes_to_utf8(title).c_str());
     xdg_toplevel_set_min_size(dialog_xdg_toplevel_, content_w, content_h);
-    if (content_w != dialog_width_ || content_h != dialog_height_) {
-        dialog_width_  = content_w;
-        dialog_height_ = content_h;
-        recreate_dialog_shm_pool(dialog_width_, dialog_height_);
-    }
+    dialog_content_w_ = content_w;
+    dialog_content_h_ = content_h;
+    apply_dialog_effective_size();
     dialog_damage_ = true;
     if (dialog_has_initial_configure_) paint_dialog_frame();
+}
+
+void GuiPlatform::apply_dialog_effective_size() {
+    // THE ONE SIZE DECISION. A nonzero CONFIGURED size is mandatory and wins;
+    // 0x0 (or no configure yet) means the compositor left the size to us, and
+    // then the content size is the answer. Nothing here enumerates window
+    // states: maximize, fullscreen, tiling and unmaximize all arrive as "the
+    // compositor granted a size" and fall under the same line.
+    const bool mandatory =
+        dialog_configured_w_ > 0 && dialog_configured_h_ > 0;
+    const int w = mandatory ? dialog_configured_w_ : dialog_content_w_;
+    const int h = mandatory ? dialog_configured_h_ : dialog_content_h_;
+    if (w <= 0 || h <= 0) return;
+    if (w == dialog_width_ && h == dialog_height_) return;
+    dialog_width_  = w;
+    dialog_height_ = h;
+    recreate_dialog_shm_pool(dialog_width_, dialog_height_);
+    dialog_damage_ = true;
+}
+
+bool GuiPlatform::dialog_is_zombie() const {
+    // The span between the answering input and the settled tail's teardown
+    // (the contract at dialog_open()). With no probe wired the honest answer
+    // is "not a zombie" — nothing here can tell.
+    if (!dialog_xdg_toplevel_) return false;
+    if (!dialog_modal_probe_)  return false;
+    return !dialog_modal_probe_();
 }
 
 void GuiPlatform::close_dialog() {
@@ -1678,11 +1718,16 @@ void GuiPlatform::destroy_dialog_window() {
     }
     destroy_dialog_shm_pool();
     dialog_has_initial_configure_ = false;
-    dialog_damage_    = false;
-    dialog_width_     = 0;
-    dialog_height_    = 0;
-    dialog_pending_w_ = 0;
-    dialog_pending_h_ = 0;
+    dialog_damage_       = false;
+    dialog_width_        = 0;
+    dialog_height_       = 0;
+    dialog_pending_w_    = 0;
+    dialog_pending_h_    = 0;
+    dialog_configured_w_ = 0;
+    dialog_configured_h_ = 0;
+    dialog_content_w_    = 0;
+    dialog_content_h_    = 0;
+    dialog_maximized_    = false;
     // A left button still held ON the dialog dies with it: its release
     // belongs to the destroyed surface and may never be delivered (the
     // compositor's implicit grab has nothing left to deliver to), and a
@@ -1747,29 +1792,50 @@ void GuiPlatform::on_dialog_xdg_surface_configure(struct xdg_surface* xs,
     if (xs != dialog_xdg_surface_ || !dialog_xdg_surface_) return;
     xdg_surface_ack_configure(xs, serial);
 
-    if (dialog_pending_w_ > 0 && dialog_pending_h_ > 0 &&
-        (dialog_pending_w_ != dialog_width_ ||
-         dialog_pending_h_ != dialog_height_)) {
-        // The compositor granted a size (a WM drag-resize, a maximize, or an
-        // un-maximize): honor it. A 0x0 toplevel configure means "you
-        // choose", which keeps the app-chosen content size.
-        dialog_width_  = dialog_pending_w_;
-        dialog_height_ = dialog_pending_h_;
-        recreate_dialog_shm_pool(dialog_width_, dialog_height_);
-        dialog_damage_ = true;
-    }
+    // THE STANDING GRANT, adopted here (the configure sequence's commit
+    // point): whatever the toplevel configure staged is now what the
+    // compositor has told us — a size (a WM drag-resize, a maximize, an
+    // un-maximize) or 0x0, which means "you choose" and hands the size back
+    // to the content. It is remembered BETWEEN configures because
+    // resize_dialog must know whether a size is mandatory when a content
+    // switch arrives with no configure in sight.
+    dialog_configured_w_ = dialog_pending_w_ > 0 ? dialog_pending_w_ : 0;
+    dialog_configured_h_ = dialog_pending_h_ > 0 ? dialog_pending_h_ : 0;
+    apply_dialog_effective_size();
     dialog_has_initial_configure_ = true;
     // Every configure ends in a paint — the main window's own rule ("a
     // reconfigure with no size change still gets honored"): the ack must be
     // followed by a commit for the compositor to apply the new state, and
-    // the dialog's whole-window granule makes the honest repaint cheap.
+    // the dialog's whole-window granule makes the honest repaint cheap. That
+    // is also what makes the ORDERING right on every branch: ack, then adopt
+    // the mandatory size, then attach a buffer of exactly that size.
     dialog_damage_ = true;
     paint_dialog_frame();
 }
 
-void GuiPlatform::on_dialog_toplevel_configure(int32_t width, int32_t height) {
+void GuiPlatform::on_dialog_toplevel_configure(int32_t width, int32_t height,
+                                               struct wl_array* states) {
     dialog_pending_w_ = width;
     dialog_pending_h_ = height;
+
+    // THE MAXIMIZED BIT, for the record (the rule reads the SIZE alone — see
+    // dialog_open()). The array is walked by hand rather than with
+    // wl_array_for_each for the same reason the main window's walk is: that
+    // macro's void* assignment is a C conversion C++ rejects. The protocol
+    // sends the complete state set every configure, so absence IS
+    // un-maximized.
+    bool maximized = false;
+    if (states != nullptr && states->data != nullptr) {
+        const uint32_t* v = static_cast<const uint32_t*>(states->data);
+        const size_t    n = states->size / sizeof(uint32_t);
+        for (size_t i = 0; i < n; ++i) {
+            if (v[i] == XDG_TOPLEVEL_STATE_MAXIMIZED) {
+                maximized = true;
+                break;
+            }
+        }
+    }
+    dialog_maximized_ = maximized;
 }
 
 void GuiPlatform::on_dialog_toplevel_close() {
@@ -2771,7 +2837,15 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // labwc focuses the dialog as it maps, so the ordinary open types
     // straight into it — the main-focused span is a user's own click back
     // onto the inert window, and consuming there IS the veil.
-    if (dialog_xdg_toplevel_ && !keyboard_on_dialog_) {
+    // THE SECOND TERM IS THE ZOMBIE GATE: a DIALOG-focused key whose modal
+    // state has already answered is consumed too. The state goes false inside
+    // the answering key's own dispatch while the toplevel lives to the run
+    // loop's settled tail, and ONE dispatch_pending batch can carry more
+    // queued keys behind it (Esc then Space would otherwise toggle playback
+    // through ordinary global dispatch, behind a dialog still on screen). So
+    // the whole span is inert on both surfaces, which is what makes the tail
+    // safe as the single teardown owner.
+    if (dialog_xdg_toplevel_ && (!keyboard_on_dialog_ || dialog_is_zombie())) {
         if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
             keyboard_intent_cancel_hook_();
         return;
@@ -4761,6 +4835,7 @@ void GuiPlatform::set_dialog_button_press(ButtonCallback cb)    { dialog_on_butt
 void GuiPlatform::set_dialog_button_release(ButtonCallback cb)  { dialog_on_button_release_ = std::move(cb); }
 void GuiPlatform::set_dialog_motion(MotionCallback cb)          { dialog_on_motion_ = std::move(cb); }
 void GuiPlatform::set_dialog_close(CloseCallback cb)            { dialog_on_close_ = std::move(cb); }
+void GuiPlatform::set_dialog_modal_probe(DialogModalProbe cb)   { dialog_modal_probe_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

@@ -625,6 +625,18 @@ struct GuiInputHandler {
     void on_dialog_motion(int x, int y, GuiInputState mods);
     void on_dialog_close_request();
 
+    // DOES A MODAL STATE STAND? — a prompt or one of the four dialog editors,
+    // exactly what the dialog window mirrors (the lifecycle sync's plan asks
+    // the same question through resolve_modal_dialog_content). PUBLIC because
+    // the PLATFORM asks it: main.cpp wires it to set_dialog_modal_probe, and
+    // the platform uses it to tell a live dialog from a ZOMBIE one — the
+    // toplevel outliving its state through the span between the answering
+    // input and the settled tail that tears it down. Inside this class the
+    // four dialog entry points read it as their own zombie gate: a queued
+    // press, release, motion or WM close that arrives in that span acts on
+    // nothing (input_pointer.cpp).
+    bool modal_dialog_state_standing() const;
+
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
     // model's single-finger frames are back since the windowed model's
     // return, the sixth glass ruling 2026-08-12): the

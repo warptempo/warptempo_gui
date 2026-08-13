@@ -1954,6 +1954,23 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // field: a plain left press acts, every modified or non-left press is a
 // consumed nothing, and there is nothing to scroll (the platform swallows
 // the dialog wheel outright).
+//
+// THE ZOMBIE WINDOW IS INERT — the gate all four of them carry. The modal
+// state goes false inside the answering input's own dispatch, while the
+// toplevel and the platform's routing facts live to the run loop's SETTLED
+// TAIL, which is the teardown owner (main.cpp's lifecycle sync); one
+// wl_display_dispatch_pending() batch can carry MORE queued events behind the
+// answering one, and they route to this surface because the surface is still
+// there. So a press, release, motion or WM close arriving in that span acts on
+// NOTHING — modal_dialog_state_standing() is the one term, and it covers TOUCH
+// by construction, a finger on the dialog being the plain pointer translation
+// into these same entry points. THE ZEROED STASH IS NOT THE FIX: the painter's
+// rects are zeroed by that SAME tail, not earlier, so they are still published
+// for the whole span and a queued click can still resolve a button on them.
+// (The prompt arm's live response-set match makes such a click answer nothing
+// in practice — it is a backstop against a stale stash, and the gate above is
+// what makes "nothing acts" the rule.) The keyboard half of the same span is
+// the platform's (deliver_key's fork).
 
 void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
                                              int y, GuiInputState mods) {
@@ -1965,6 +1982,12 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
     // press, whose coordinates are its own space's.
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
+
+    // The zombie gate (the block above), BELOW the candidate clear so that
+    // "any press clears the pending candidate" stays true without exception —
+    // a consumed press is still a press for that rule's purposes, and the
+    // cleared candidate cannot then be consumed by the NEXT dialog's field.
+    if (!modal_dialog_state_standing()) return;
 
     if (button != GuiMouseButton::Left || mods.ctrl || mods.shift || mods.alt)
         return;   // the dialog answers plain left presses and nothing else
@@ -1986,11 +2009,10 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
         }
         return;
     }
-    // A press on a window whose modal state already dropped (one frame wide
-    // at most — the lifecycle sync closes it at the iteration's tail) is a
-    // consumed nothing.
-    if (!modal_dialog_editor_active()) return;
-
+    // (No second "did the modal drop?" test here: the zombie gate at the top
+    // owns that question for the whole function, so reaching this line with
+    // no prompt up means a dialog EDITOR stands by construction.)
+    //
     // An editor dialog's OK / Cancel — the session's own Enter / Esc through
     // the one modal key route (dispatch_modal_dialog_editor_act above),
     // button-is-its-chord: a red-flash refusal, the BPM commit's render
@@ -2029,6 +2051,12 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
 void GuiInputHandler::on_dialog_button_release(GuiMouseButton button, int x,
                                                int y,
                                                GuiInputState /*mods*/) {
+    // The zombie gate first (the block above this group): a release queued
+    // behind the answering input finalizes nothing. A field drag that was
+    // live when the session answered is disarmed by the lifecycle sync's own
+    // close arm (main.cpp), which is where that flag's cleanup belongs — the
+    // editor it selected in is gone.
+    if (!modal_dialog_state_standing()) return;
     if (button != GuiMouseButton::Left) return;
     // F2.1's release, the main handler's own shape: finalize the drag and
     // seed the EditorText double-click candidate on a motionless click (a
@@ -2047,6 +2075,11 @@ void GuiInputHandler::on_dialog_button_release(GuiMouseButton button, int x,
 }
 
 void GuiInputHandler::on_dialog_motion(int x, int y, GuiInputState mods) {
+    // The zombie gate (the block above this group): no caret moves and no
+    // hover face lights on a window whose modal state has answered. The
+    // hover index is zeroed by the lifecycle sync's close arm, so nothing
+    // stale survives the span either.
+    if (!modal_dialog_state_standing()) return;
     // The field's live text drag first (the main on_motion's own order),
     // then the buttons' hover face. A lost button finalizes like release,
     // mirroring the main handlers. The platform's dialog leave delivers a
@@ -2068,6 +2101,12 @@ void GuiInputHandler::on_dialog_motion(int x, int y, GuiInputState mods) {
 }
 
 void GuiInputHandler::on_dialog_close_request() {
+    // The zombie gate (the block above this group), stated here too so all
+    // four entry points read the one rule: a WM close queued behind the
+    // answering input answers nothing. The two arms below would already both
+    // refuse on their own — that is a coincidence of this body's shape, not
+    // the span's guarantee, and the gate is what makes it the rule.
+    if (!modal_dialog_state_standing()) return;
     // The dialog window's WM CLOSE (titlebar X) is the session's Esc — the
     // abandon/cancel arm, never a destructive answer: a prompt takes its Esc
     // response (every prompt carries one — the rightmost Cancel, or the

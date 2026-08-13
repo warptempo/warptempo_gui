@@ -186,7 +186,13 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   no pinch and no upgrade there; nothing in a dialog pans or zooms). The
   translation's end delivers its release and nothing more — the leave hook
   and the restore motion are MAIN-window state repairs, and a finger lifting
-  from the dialog moved none of them.
+  from the dialog moved none of them. THE ZOMBIE GATE COVERS GLASS BY
+  CONSTRUCTION: a dialog stream translates into the dialog's own entry points,
+  and those refuse while the window stands over an answered modal state (the
+  span between the answering input and the run loop's settled tail — one
+  gate, `modal_dialog_state_standing`, for mouse and finger alike), so a tap
+  queued behind the answer cannot press a button whose answer no longer
+  exists.
 - A MAIN-owned stream while a dialog stands keeps the full phase machine and
   delivers as ever — and everything it delivers dies at the GUI's standing
   veil gates: a tap's press-release is consumed, a two-finger nav freezes at

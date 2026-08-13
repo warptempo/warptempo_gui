@@ -1651,9 +1651,24 @@ int main(int argc, char** argv) {
     // raised over an editor by the WM close, the Save-failed mutation). Every
     // opener and closer therefore participates by mutating the modal state
     // it already owns, and a route added later joins with no call to
-    // remember. The tail runs in the SAME iteration that dispatched the
-    // opening key or press, before any further input can arrive, so nothing
-    // user-visible slips between the state and the window. The CLOSE arm
+    // remember.
+    // THE TAIL IS THE TEARDOWN OWNER, AND THE ZOMBIE GATES ARE WHAT MAKE THE
+    // SPAN SAFE: the tail runs in the same iteration that dispatched the
+    // opening or answering input, but NOT before further input can arrive —
+    // one wl_display_dispatch_pending() batch can carry several queued events,
+    // so between a dialog-focused key that answers the session and this tail's
+    // close there is a real span in which the toplevel still stands over a
+    // modal state that is already gone. Every input reaching the dialog in
+    // that span is a CONSUMED NO-OP by ruling: keys at the platform's fork
+    // (deliver_key, which asks set_dialog_modal_probe below), pointer and
+    // touch at the GUI's four dialog entry points (input_pointer.cpp).
+    // MAIN-focused input in the span: keys are consumed by that same fork
+    // (its first term is the WINDOW's existence, not the modal state), while a
+    // main-surface POINTER event is admitted — the GUI's veil reads the modal
+    // state, which has answered — and that is the right answer by arrival
+    // order: anything queued while the modal still stood was dispatched
+    // BEFORE the answer and met the veil; anything after it is the user's own
+    // next act on a window that is no longer inert. The CLOSE arm
     // also zeroes the published geometry and the hover index — the painter's
     // old no-dialog arm, moved to the one owner that knows the window came
     // down (the dialog painter runs only while a window stands, so it cannot
@@ -1720,6 +1735,12 @@ int main(int argc, char** argv) {
     });
     gui.set_dialog_close([&]() {
         input_handler.on_dialog_close_request();
+    });
+    // The zombie span's truth for the platform's keyboard fork: does a modal
+    // state still stand? (The same question the plan above asks; the pointer
+    // and touch halves ask it directly inside the entry points.)
+    gui.set_dialog_modal_probe([&]() {
+        return input_handler.modal_dialog_state_standing();
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

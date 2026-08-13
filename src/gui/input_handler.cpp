@@ -50,11 +50,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // run one while a prompt or a keyboard-modal editor is up — the rule is at
     // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
     // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
-    // input_pointer.cpp) — under a PROMPT every roster face goes dark, and
-    // under an EDITOR dialog every face but the veil-admitted pair (Quit and
-    // Save, the modal trap's reach-through) does, so a modal opened by this key
-    // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
-    // raises no veil and needs none: its roster presses were never blocked.
+    // input_pointer.cpp) — and the veil is TOTAL since the dialog became its
+    // own labwc window (2026-08-12 evening): under a PROMPT or an EDITOR
+    // dialog alike, EVERY roster face derives dark, so a modal opened by this
+    // key cannot leave a lit pill behind it. (The one-day Quit/Save
+    // reach-through this comment used to except died with the move — a real
+    // window cannot trap; the succession record is at the top of
+    // input_pointer.cpp.) The pointer-transparent FLAG editor raises no veil
+    // and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
     // ANY KEY PRESS ALSO ENDS THE MENU ROW'S MODE, the keyboard half of the same
     // blanket rule at the top of on_button_press. It needs no exception list for

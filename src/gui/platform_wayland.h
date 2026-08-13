@@ -118,6 +118,13 @@ public:
     // so a press that opens an editor — evaluated before the open — does not
     // arm, while typing inside an already-open editor does.
     using RepeatEligibleProbe  = std::function<bool(GuiKey, GuiInputState)>;
+    // Predicate installed by main.cpp: true while the GUI's MODAL STATE stands
+    // (a prompt or one of the four dialog editors). It is the truth the
+    // dialog WINDOW mirrors, so the platform can tell a live dialog from a
+    // ZOMBIE one — the toplevel outliving the state it was opened for, until
+    // the run loop's settled tail tears it down (the zombie span at
+    // dialog_open()'s block). Consulted only while a dialog toplevel exists.
+    using DialogModalProbe     = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -170,6 +177,20 @@ public:
     // not toplevel machinery). A compositor that refuses the second toplevel
     // is not a case (labwc-only scope).
     //
+    // A NONZERO CONFIGURED SIZE IS MANDATORY AND ALWAYS WINS (the xdg-shell
+    // contract, 2026-08-12 evening): the client may self-size ONLY when the
+    // compositor left the size to it — the latest configure carried 0x0, or
+    // none has arrived yet. So resize_dialog (the CONTENT-SWITCH route) is a
+    // pure retitle-and-repaint while a mandatory size stands, and takes the
+    // client-side size change only on a FREE (floating, 0x0-configured)
+    // dialog. Attaching a content-sized buffer against a MAXIMIZED configure
+    // was the defect this rule closes: xdg-shell calls that
+    // invalid_surface_state and labwc may disconnect the client. The rule is
+    // stated in terms of the SIZE alone, which is why nothing here
+    // enumerates maximize / fullscreen / tiled / unmaximize — every one of
+    // them is "the compositor granted a size" (the maximized bit is parsed
+    // and kept for the record only; it decides nothing).
+    //
     // INPUT ROUTES BY SURFACE while the dialog stands (the per-surface fork
     // lives HERE, in this class — the GUI never tests a surface):
     //   * POINTER: enter/leave carry the surface, so the platform knows which
@@ -205,12 +226,28 @@ public:
     //     standing veil gates consume what it delivers.
     //
     // LIFETIME: open_dialog is idempotent while one stands (resize_dialog is
-    // the content-switch route — new size, new title, same window);
+    // the content-switch route — new title, new content, same window, and a
+    // new SIZE only where the size is still ours to choose, per the rule
+    // above);
     // close_dialog tears the whole chain down and is idempotent;
     // destroy_wayland_state tears it down at program exit, so a quit with a
     // dialog standing leaks nothing. The dialog's WM CLOSE button fires the
     // dialog close hook (the GUI maps it to the session's Esc — the
     // abandon/cancel arm, never a destructive answer).
+    //
+    // THE ZOMBIE SPAN, AND THE ZOMBIE WINDOW IS INERT: the GUI's modal state
+    // goes false the instant a dialog-focused key answers the session, but
+    // the toplevel and the per-surface routing facts live until the run
+    // loop's SETTLED TAIL, which is the teardown owner (main.cpp's lifecycle
+    // sync). One wl_display_dispatch_pending() batch can carry MORE queued
+    // events behind the answering one — Esc and Space arriving together — so
+    // that span is real input time, not a formality. While it stands, EVERY
+    // dialog-focused input is a CONSUMED NO-OP: the keyboard half is
+    // deliver_key's fork below (dialog-focused with no modal standing =
+    // consumed, exactly as a main-focused key is), the pointer and touch half
+    // is the GUI's own gate at the four dialog entry points (they route
+    // through the dialog hooks, so one gate there covers both devices —
+    // input_pointer.cpp). The modal-state truth is set_dialog_modal_probe's.
     //
     // PAINTING: the dialog has its own small double-buffered wl_shm pool and
     // its own frame-callback chain; damage is whole-window (the surface is
@@ -224,6 +261,11 @@ public:
     void invalidate_dialog();
     int  dialog_width() const  { return dialog_width_; }
     int  dialog_height() const { return dialog_height_; }
+    // The latest dialog configure's MAXIMIZED bit — the record the size rule
+    // deliberately does not consult (a granted size is mandatory whatever
+    // state produced it). Exposed so the fact is answerable; the GUI has no
+    // reason to branch on it and does not.
+    bool dialog_maximized() const { return dialog_maximized_; }
 
     // The dialog's own hooks. The redraw callback receives the dialog's cairo
     // context and (0, 0, w, h) — the whole window, every paint. The pointer
@@ -236,6 +278,11 @@ public:
     void set_dialog_button_release(ButtonCallback cb);
     void set_dialog_motion(MotionCallback cb);
     void set_dialog_close(CloseCallback cb);
+    // The zombie span's truth (DialogModalProbe above): wired to the GUI's
+    // modal-state predicate. Unwired (null) means "cannot tell", and the
+    // keyboard fork then treats every dialog-focused key as live — the
+    // pre-2026-08-12-evening behavior, and the honest answer with no probe.
+    void set_dialog_modal_probe(DialogModalProbe cb);
 
     // THE SYSTEM CLIPBOARD (the CLIPBOARD selection). PRIMARY is deliberately
     // absent — middle-click paste is out of scope and zwp_primary_selection is
@@ -722,6 +769,24 @@ private:
     int  dialog_height_    = 0;
     int  dialog_pending_w_ = 0;   // xdg_toplevel.configure staging, the main
     int  dialog_pending_h_ = 0;   // window's own pending_w_/pending_h_ pattern
+    // THE MANDATORY SIZE: the LATEST configure's granted size, adopted at the
+    // xdg_surface.configure ack (0 = the compositor left the size to us —
+    // either it granted 0x0 or none has arrived). Distinct from the pending
+    // pair, which is per-configure staging: this one STANDS between
+    // configures, which is what resize_dialog consults.
+    int  dialog_configured_w_ = 0;
+    int  dialog_configured_h_ = 0;
+    // THE CONTENT SIZE the GUI asked for (open_dialog / resize_dialog): the
+    // size a FREE dialog wears, and the fallback whenever the standing
+    // configure leaves the size to us.
+    int  dialog_content_w_ = 0;
+    int  dialog_content_h_ = 0;
+    // XDG_TOPLEVEL_STATE_MAXIMIZED off the latest configure's state array.
+    // FOR THE RECORD ONLY — the mandatory-size rule decides every branch off
+    // the granted SIZE, so nothing branches on this; its one reader is the
+    // dialog_maximized() accessor above, which exists so "why is the size
+    // mandatory here?" is answerable (contract at dialog_open()).
+    bool dialog_maximized_ = false;
 
     // (The dialog's own double-buffered pool lives below the ShmBuffer
     // definition it reuses — see the buffer pool block.)
@@ -729,7 +794,8 @@ private:
     // -- Per-surface input routing (the fork's own state) --
     // KEYBOARD focus surface: true while wl_keyboard.enter last named the
     // dialog surface. deliver_key's veil fork reads it — a main-focused key
-    // with a dialog standing is consumed there (the public contract above).
+    // with a dialog standing is consumed there, and so is a DIALOG-focused
+    // key on a zombie window (the public contract above).
     bool keyboard_on_dialog_ = false;
     // POINTER focus surface and the dialog-local position. Deliberately
     // SEPARATE from pointer_focused_/pointer_x_/pointer_y_, which stay the
@@ -1494,6 +1560,8 @@ private:
     ButtonCallback dialog_on_button_release_;
     MotionCallback dialog_on_motion_;
     CloseCallback  dialog_on_close_;
+    // The zombie span's truth (contract at set_dialog_modal_probe).
+    DialogModalProbe dialog_modal_probe_;
 
     // -- Internal helpers --
     void recreate_shm_pool(int w, int h);
@@ -1529,13 +1597,24 @@ private:
     // hard-ended (its surface is going away; the compositor's cancel may
     // never arrive on a destroyed surface).
     void destroy_dialog_window();
+    // THE ONE SIZE DECISION (the mandatory-configure rule at dialog_open()):
+    // the effective size is the standing configured size when it is nonzero
+    // and the content size otherwise; adopting it recreates the pool and
+    // marks damage. Called from open_dialog's answer path (the configure ack)
+    // and from resize_dialog, so both branches read one rule.
+    void apply_dialog_effective_size();
+    // Is the dialog a ZOMBIE — the toplevel standing with the GUI's modal
+    // state already answered (the span at dialog_open())? False when no
+    // dialog stands and false when no probe is wired.
+    bool dialog_is_zombie() const;
     // The dialog surface's one cursor: the theme ARROW, applied at its enter
     // serial WITHOUT touching cursor_kind_ (the main window's remembered
     // kind, which the main enter restores).
     void apply_dialog_arrow_cursor();
     void on_dialog_xdg_surface_configure(struct xdg_surface* xs,
                                          uint32_t serial);
-    void on_dialog_toplevel_configure(int32_t width, int32_t height);
+    void on_dialog_toplevel_configure(int32_t width, int32_t height,
+                                      struct wl_array* states);
     void on_dialog_toplevel_close();
     void on_dialog_frame_done(struct wl_callback* cb);
     int  detect_refresh_rate_ms();
