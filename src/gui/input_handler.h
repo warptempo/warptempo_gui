@@ -601,7 +601,9 @@ struct GuiInputHandler {
 
     // The SINGLE wheel routing predicate. Returns -1 when the wheel is
     // swallowed at (x, y), else a region code: 1 inside the waveform area,
-    // 2 inside the top strip, 0 outside both. on_wheel's
+    // 2 inside the top strip, 3 the overview lane, 0 outside them all. It reads
+    // POSITION AND STATE ONLY — never a modifier — so the plain pan and the
+    // ctrl zoom step are live over exactly the same surfaces. on_wheel's
     // completed-detent gate and the platform's per-frame sub-detent accumulator
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
@@ -635,11 +637,11 @@ struct GuiInputHandler {
     // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
     // ONE CONSEQUENCE IS RULED RATHER THAN INCIDENTAL (2026-08-12): entering
     // BELOW apply_strip_drag_at means the pinch does not take the DIRECTIONAL
-    // SEGMENT STABILIZATION (the flat off-axis damping;
-    // kStripSegmentClassifyPx / kOffAxisDampFactor, app_state.h). That damping
-    // exists to stop a wrist arc's incidental off-axis travel jittering the
-    // other axis, a problem a distance RATIO does not have — the content
-    // tracks the fingers, so the pinch stays exactly log2-linear.
+    // SEGMENT STABILIZATION (the HARD PER-SEGMENT AXIS LOCK since round four,
+    // 2026-08-12; kStripSegmentClassifyPx, app_state.h). That lock exists to
+    // stop a wrist arc's incidental off-axis travel moving the other axis, a
+    // problem a distance RATIO does not have — the content tracks the fingers,
+    // so the pinch stays exactly log2-linear and keeps both axes at once.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture
@@ -1397,12 +1399,15 @@ private:
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
-    // Shared wheel handler for source and target view; on_wheel is
-    // its only caller. Exact-match modifiers: plain = zoom, Alt = pan (10% of
-    // the visible span per detent) everywhere it is over the waveform or top
-    // strip. Ctrl+Alt is no longer a wheel chord — it, like every other
-    // combination (Shift+wheel, Ctrl+wheel, ...), no-ops. `inside_top` is true
-    // anywhere over the top strip.
+    // Shared wheel handler for source and target view; on_wheel is its only
+    // caller. Exact-match modifiers, TWO arms (2026-08-12): PLAIN = the stepped
+    // pan (a tenth of the visible span per detent, through the scroll_viewport
+    // funnel) and CTRL = the zoom step (one whole level per detent, up = in,
+    // through Viewport::zoom_steps — the `=`/`-` commands' own coalesced body).
+    // Every other combination — Alt+wheel, Shift+wheel and every mixed pair —
+    // no-ops. `inside_waveform` is true over the waveform area or the overview
+    // lane, `inside_top` anywhere over the top strip; both mean "a wheel-live
+    // navigation surface" and neither forks the vocabulary.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
                       bool alt, bool inside_waveform, bool inside_top);
 

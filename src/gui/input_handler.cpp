@@ -1004,6 +1004,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (!alt && !shift && !ctrl && key == GuiKeys::Down) {
         warpops.adjust_tempo_cents(-1, mods.synthesized_repeat); return;
     }
+    // The two zoom-step commands. CTRL+WHEEL DISPATCHES THESE SAME BODIES
+    // (handle_wheel, via Viewport::zoom_steps — the coalesced form, one whole
+    // level per completed detent; architect 2026-08-12), so the key and the
+    // wheel chord cannot drift apart in feel.
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
         viewport.zoom_in(); return;
     }
@@ -1498,32 +1502,62 @@ void GuiInputHandler::run_span_framing_command() {
     frame_span_into_view(app, audio, viewport, lo, hi, margin);
 }
 
-// Shared wheel handler. THE PLAIN WHEEL IS THE STEPPED PAN (architect
-// 2026-08-12, the eighth glass ruling: "alt+wheel is step pan... that comes
-// from Reaper" — with alt leaving the pointer entirely, the pan moved onto
-// the PLAIN wheel, and THE WHEEL ZOOM IS DELETED, "superseded by the
-// ctrl-drag zoom... we already have the =/- hotkeys"). One arm: plain-exact
-// pans by the alt+wheel's exact old body — the samples_visible /
-// kViewportLeadDivisor stride through the scroll_viewport funnel, which is
-// what carries the follow suppression — over the waveform and the top strip
-// alike (both context ids, one route). Every modified wheel is swallowed.
+// Shared wheel handler. TWO ARMS, BOTH EXACT-MATCHED.
+//
+// THE PLAIN WHEEL IS THE STEPPED PAN (architect 2026-08-12, the eighth glass
+// ruling: "alt+wheel is step pan... that comes from Reaper" — with alt leaving
+// the pointer entirely, the pan moved onto the PLAIN wheel): the alt+wheel's
+// exact old body — the samples_visible / kViewportLeadDivisor stride through
+// the scroll_viewport funnel, which is what carries the follow suppression —
+// over the waveform, the overview lane and the top strip alike (every context
+// id, one route; the two bools below say only "a wheel-live surface").
+//
+// CTRL+WHEEL IS THE ZOOM STEP (architect-ruled 2026-08-12, later the same day's
+// field session): one whole zoom level per completed detent, up = in, down =
+// out, dispatching the `=` / `-` commands' own bodies through Viewport::
+// zoom_steps — the coalesced form whose final state equals calling
+// zoom_in()/zoom_out() once per detent, including the floor's
+// recenter-on-playhead and the effective ceiling's saturation. NOT A REVERT of
+// that morning's wheel-zoom deletion: what was deleted is the PLAIN wheel zoom
+// ("superseded by the ctrl-drag zoom... we already have the =/- hotkeys"), and
+// the plain wheel remains the pan — this is a NEW binding on a chord that bound
+// nothing, adding the zoom back as the ctrl-drag's own detent-sized sibling
+// (same modifier, same axis, same surfaces).
+//
+// IT IS THE KEYBOARD ZOOM'S SEMANTICS, NOT THE DRAG'S, deliberately: dispatching
+// the `=`/`-` bodies means it CENTERS on the playhead (the scanner while one
+// runs, the resting cursor otherwise — apply_zoom_change's split) rather than
+// pivoting on the column under the pointer, and it suppresses follow no more
+// than the keys do, being a zoom that centers ON the scanner. The
+// pointer-anchored pivot is what the ctrl-DRAG is for. Pure viewport move like
+// the keys otherwise: no playhead write, no selection change, no region clear,
+// no playback stop, read-only-legal.
+//
+// Every OTHER combination stays a swallowed no-op (strict modifier validation):
+// alt+wheel, shift+wheel and every mixed pair alike.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                                    bool ctrl, bool shift, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
-    // (always >= 1 from the platform). The one arm scales its per-step
-    // stride by that count and applies it in ONE viewport call, so the
-    // damage / hover / worker-kick path fires once per frame regardless of
-    // burst size. count == 1 reproduces the single-detent behavior.
+    // (always >= 1 from the platform). Each arm scales its per-step quantity
+    // by that count and applies it in ONE viewport call, so the damage /
+    // hover / worker-kick path fires once per frame regardless of burst size.
+    // count == 1 reproduces the single-detent behavior.
     if (count < 1) count = 1;
-    // Strict modifier matching: the plain shape is the whole wheel
-    // vocabulary. Alt+wheel (the pan's old home), the plain zoom, and every
-    // mixed pair are swallowed alike.
     if (!ctrl && !shift && !alt) {
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / kViewportLeadDivisor);
         viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
+        return;
+    }
+    if (ctrl && !shift && !alt) {
+        // Positive steps zoom in. The platform's sub-detent accumulator keys
+        // its remainder on the modifier chord as well as the hit region, and
+        // clears it outright on any modifier change, so remainder grown while
+        // panning can never complete a detent as a zoom (platform_wayland.cpp's
+        // context key).
+        viewport.zoom_steps(button == GuiMouseButton::WheelUp ? +count : -count);
     }
 }
 
@@ -1552,8 +1586,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // wheel is the stepped pan like the areas above it) — plus the ONE
     // row-wise carve-out below, the redesigned rows' inert band. ALL THREE
     // take the same one route since 2026-08-12 (the eighth glass ruling: the
-    // plain wheel is the STEPPED PAN everywhere, the wheel zoom and the alt
-    // forms deleted), so the context ids differ only for the platform's
+    // plain wheel is the STEPPED PAN everywhere and the alt forms are deleted;
+    // the same day's ctrl+wheel zoom step rides the identical route, the
+    // modifier forking inside handle_wheel and never here), so the context ids
+    // differ only for the platform's
     // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
     // it emits nothing at all. THE TWO BLANK BANDS SPLIT (the relayout's commit
@@ -1676,11 +1712,15 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     app.transport_repeat.owner = -1;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All take the
-    // one plain route — the
-    // stepped pan (the eighth glass ruling; the wheel zoom is deleted). The
+    // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take
+    // the same two-arm vocabulary — plain = the stepped pan, ctrl = the zoom
+    // step (the eighth glass ruling and the same day's ctrl+wheel binding). The
     // overview rides the waveform's slot: handle_wheel only asks "am I on a
-    // panning surface", and the lane is one.
+    // wheel-live navigation surface", and the lane is one — so the modifier
+    // alone picks pan or zoom there too. THE CONTEXT ANSWER IS
+    // MODIFIER-INDEPENDENT by construction (wheel_context takes only x/y and
+    // reads no modifier state), so ctrl cannot change WHERE the wheel is live,
+    // only what it does there.
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
                  ctx == 1 || ctx == 3, ctx == 2);
 }

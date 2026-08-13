@@ -1304,16 +1304,19 @@ void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
 // private method on this struct.
 
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
-    // Dual-axis strip drag, INCREMENTAL (the v6 model). Every event reads the
-    // LIVE zoom level and viewport and applies its own dx/dy on top — there is no
-    // press baseline to go stale across composed pan/zoom phases (the earlier
-    // axis-lock model died of exactly that staleness). The song anchor
+    // Dual-axis strip drag, INCREMENTAL (the v6 model) — dual-axis ACROSS the
+    // drag, ONE AXIS AT A TIME inside a classified segment (the hard lock at
+    // step (1)). Every event reads the LIVE zoom level and viewport and applies
+    // its own dx/dy on top — there is no press baseline to go stale across
+    // composed pan/zoom phases (the 2026-07 PRESS-BASELINE axis-lock model died
+    // of exactly that staleness; today's lock is a different mechanism — it
+    // zeroes one per-event delta and stores no baseline at all). The song anchor
     // (anchor_sample) is the zoom focus; the pan re-derives its drifted column
     // each event and the edge trick rebinds it when it leaves the screen.
     StripDragState& sd = app.strip_drag;
 
     // (0) MOTION PAUSE = SEGMENT RESET (the directional segment stabilization —
-    // the model and its three retunables at kStripSegmentClassifyPx,
+    // the model and its two retunables at kStripSegmentClassifyPx,
     // app_state.h). If the time since the segment's previous motion event
     // exceeds kStripSegmentPauseMs, FIRST reset the segment — origin = the
     // previous resting point, mode back to Unclassified — THEN process this
@@ -1336,20 +1339,24 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // folds the whole accumulated delta since the press (last_x/last_y were
     // seeded there and no sub-threshold event advanced them). THE MODE FORK
     // derives the EFFECTIVE deltas: in an Unclassified segment both axes are
-    // plain; in a classified segment the ON-axis is plain 1:1 and the OFF-axis
-    // is scaled by the FLAT kOffAxisDampFactor. STATELESS PER EVENT — a plain
-    // multiply, nothing accumulated, nothing that wakes up.
+    // plain; in a classified segment the ON axis is plain 1:1 and THE OFF AXIS
+    // IS ZERO — the HARD PER-SEGMENT AXIS LOCK (architect 2026-08-12, round
+    // four: "disable cross axis - force either horizontal or vertical
+    // movement"). Stateless per event: the mode alone decides, nothing
+    // accumulates, and the dropped axis is a literal 0.0 rather than a small
+    // response (kStripSegmentPauseMs's pause reset and the next press are the
+    // whole route between the axes — the model and the succession that killed
+    // both the cumulative curve and the flat damping factor are at
+    // kStripSegmentClassifyPx, app_state.h).
     //
-    // THE WALL CONSEQUENCE, WHICH IS WHY THE FACTOR IS FLAT (the architect's
-    // standing complaint, stated per the ruling): a Horizontal segment whose
-    // pan saturates at a viewport wall keeps producing motion events —
-    // NOTHING PANS, SO THE HAND SWEEPS EXTRA — and the segment neither
-    // reclassifies (classification is once per segment) nor resets (each event
-    // refreshes last_motion_ms), so a wall drag OF ANY LENGTH keeps the zoom
-    // held at the same small fraction. The deleted cumulative curve failed
-    // exactly here: its rate grew with accumulated off-axis travel, so the
-    // extra sweeping woke it up and dumped the arc into zoom (succession at
-    // kOffAxisDampFactor, app_state.h). No special wall arm exists.
+    // THE WALL CONSEQUENCE IS ABSOLUTE (the architect's standing complaint,
+    // stated per the ruling): a Horizontal segment whose pan saturates at a
+    // viewport wall keeps producing motion events — NOTHING PANS, SO THE HAND
+    // SWEEPS EXTRA — and that extra sweep cannot move the level BY ANY AMOUNT,
+    // the zoom contribution being zero for the segment's whole life. The
+    // segment neither reclassifies (classification is once per segment) nor
+    // resets (each event refreshes last_motion_ms), so a wall drag OF ANY
+    // LENGTH holds the zoom exactly. No special wall arm exists.
     const double dx = static_cast<double>(x - sd.last_x);
     const double dy = static_cast<double>(y - sd.last_y);
     double effective_dx = dx;
@@ -1358,13 +1365,11 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     case StripSegmentMode::Unclassified:
         break;  // both axes plain — no dead zone at the arm
     case StripSegmentMode::Horizontal:
-        // Pan plain 1:1; the zoom axis flat-damped.
-        effective_dy = dy * kOffAxisDampFactor;
+        effective_dy = 0.0;  // PAN ONLY — the level cannot move
         break;
     case StripSegmentMode::Vertical:
-        // Zoom plain linear (the pre-curve response); the pan axis damped by
-        // the same factor — the ruled symmetry, both axes stabilized.
-        effective_dx = dx * kOffAxisDampFactor;
+        effective_dx = 0.0;  // ZOOM ONLY — the viewport cannot pan (the ruled
+                             // symmetry: both axes lock the same way)
         break;
     }
     sd.last_x = x;
@@ -1375,10 +1380,10 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // segment's sub-slop opening, tiny by construction): when Chebyshev travel
     // from the segment origin reaches kStripSegmentClassifyPx, classify on the
     // 45° diagonal — |Δy| > |Δx| = Vertical, else Horizontal (TIES HORIZONTAL,
-    // the pan-primary bias). The mode is the whole damping state — the flat
-    // factor needs no origin and no accumulator — so the plain→damped
-    // transition is a change of RATE only, continuous by construction with no
-    // jump.
+    // the pan-primary bias). The mode is the whole lock state — no origin and
+    // no accumulator — so the plain→locked transition costs no jump: the axis
+    // that survives keeps responding at exactly the rate it already had, and
+    // the other simply stops contributing from the next event on.
     if (sd.seg_mode == StripSegmentMode::Unclassified) {
         const double seg_dx = std::abs(static_cast<double>(x - sd.seg_x0));
         const double seg_dy = std::abs(static_cast<double>(y - sd.seg_y0));
@@ -1397,7 +1402,7 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // (3) Pan at the old level, in the double domain: grab sign — drag right
     // (dx>0) reveals earlier content, so the viewport moves left. The dx that
     // pans is the mode fork's effective_dx — plain 1:1 in Unclassified and
-    // Horizontal segments, flat-damped in a Vertical one. The result is
+    // Horizontal segments, ZERO in a Vertical one. The result is
     // WALL-CLAMPED here, at the old level, to the SAME right wall the downstream
     // clamp_viewport_start rests at — the shared max_viewport_start_grid owner
     // (the level mid-gesture is the live level, so it reads exactly the state the
@@ -1421,17 +1426,13 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
     // (4) Zoom INCREMENTALLY off the live level: the mode fork's effective_dy
     // applies to the current level (drag DOWN, dy>0, lowers the level → zooms
-    // in) — plain linear in Unclassified and Vertical segments, flat-damped in
-    // a Horizontal one. No press baseline, so a level-clamp reversal responds
+    // in) — plain linear in Unclassified and Vertical segments, ZERO in a
+    // Horizontal one. No press baseline, so a level-clamp reversal responds
     // immediately — the older absolute-dy formula had a dead zone after a
     // clamp (dy had to unwind all the way back before the level moved); this
-    // incremental form has none, and the flat factor keeps it: a linear scale
-    // of the per-event delta reverses sign with the delta, so the first
-    // reversed event already produces an opposite effective dy, at the same
-    // rate as every other event in the segment.
-    //
-    // A dy of 0 through the multiply is exactly 0.0 (0.0 · 0.08 == 0.0), so the
-    // pure-pan identity at step (6) is bit-exact rather than nearly so.
+    // incremental form has none, and the lock does not reintroduce one: inside
+    // a Vertical segment the raw per-event delta reverses sign with the hand,
+    // so the first reversed event already moves the level back.
     double new_level = app.zoom_level - effective_dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
         W, total, audio.sample_rate());
@@ -1471,10 +1472,11 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
     // clamp. IDENTITY PROOFS, argued across the mode fork: PURE PAN (dy=0)
     // yields an EXACTLY-ZERO zoom delta in EVERY mode — the plain arms
-    // (Unclassified, Vertical) take the raw dy = 0, and the Horizontal damped
-    // arm multiplies that same zero by kOffAxisDampFactor, which IEEE-754
-    // returns as exactly 0.0 (a finite times zero is zero, sign-preserving and
-    // never rounded) — so new_level == old bit-exact, apply reproduces vp =
+    // (Unclassified, Vertical) take the raw dy = 0 and the Horizontal arm
+    // substitutes a literal 0.0, so the two are the same value by two routes,
+    // with no arithmetic to argue about (the flat factor's finite-times-zero
+    // argument died with the multiply) — so new_level == old bit-exact, apply
+    // reproduces vp =
     // anchor_sample - anchor_col·spp_old bit-for-bit (the column was derived
     // from that same vp), and the level-unchanged dispatch takes the same
     // synchronous full rebuild. Off the walls the pan arithmetic is unchanged,
@@ -1482,10 +1484,14 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // viewport that will rest, the anchor column re-derives against it
     // consistently, and apply reproduces the wall value — a saturated pan is a
     // true no-op. PURE ZOOM (dx=0) is symmetric: the plain arms take the raw
-    // dx = 0, the Vertical damped arm's multiply is exactly 0.0 by the same
-    // rule, so effective_dx·spp_old subtracts nothing and vp is the resting
-    // viewport bit-exact — the anchor's current (possibly edge-pinned) column
-    // stays fixed and the rescale pivots around it. The segment machinery
+    // dx = 0 and the Vertical arm substitutes 0.0, so effective_dx·spp_old
+    // subtracts nothing and vp is the resting viewport bit-exact — the anchor's
+    // current (possibly edge-pinned) column stays fixed and the rescale pivots
+    // around it. AND THE LOCK STRENGTHENS BOTH PROOFS RATHER THAN COMPLICATING
+    // THEM: inside a classified segment the off-axis identity no longer depends
+    // on the raw delta being zero at all — a Horizontal segment's zoom delta is
+    // zero for EVERY dy, so its whole life is a sequence of exact pans, and a
+    // Vertical segment's is a sequence of exact zooms. The segment machinery
     // beyond the deltas (the pause reset, the classification) reads and writes
     // only its own record — the anchor arithmetic, the edge trick and the
     // capture-restore drive never see it. A both-unchanged event (level and
@@ -1556,8 +1562,10 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     app.strip_drag.anchor_sample = anchor_sample;
     // The first directional segment starts here: origin at the press (the
     // whole-struct reset above already left the mode Unclassified, which is
-    // the segment's whole damping state), clock seeded so the first motion
-    // event measures its pause gap from the arm.
+    // the segment's whole lock state), clock seeded so the first motion event
+    // measures its pause gap from the arm. EVERY PRESS THEREFORE RE-AIMS the
+    // axis lock — one half of why it is not the reversed whole-drag lock, the
+    // pause reset being the other (the model at kStripSegmentClassifyPx).
     app.strip_drag.seg_x0 = x;
     app.strip_drag.seg_y0 = y;
     app.strip_drag.last_motion_ms = monotonic_ms();

@@ -2252,8 +2252,8 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         XKB_STATE_MODS_EFFECTIVE);
     // SUPER, tracked for ONE purpose: gating key DELIVERY (deliver_key). It is
     // deliberately absent from current_mods() and from the scroll-chord reset
-    // below — the wheel chords are plain / Alt only, so a Super press changes no
-    // chord and must not drop an accumulating sub-detent remainder.
+    // below — the wheel chords are plain and Ctrl only, so a Super press changes
+    // no chord and must not drop an accumulating sub-detent remainder.
     mod_super_ = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_LOGO,
         XKB_STATE_MODS_EFFECTIVE);
@@ -2268,12 +2268,12 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         mod_alt_ != prev_alt) {
         // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
-        // scroll frame that would re-probe. The plain stepped pan is the one
-        // live wheel chord (2026-08-12), but the rule is shape-general —
-        // remainder accumulated under
-        // one chord must never assemble a detent under another — and a
-        // modified wheel is a swallowed non-chord the remainder must not
-        // bridge into.
+        // scroll frame that would re-probe. TWO live wheel chords since
+        // 2026-08-12 (the plain stepped pan and the Ctrl zoom step), which is
+        // exactly the case the shape-general rule exists for — remainder
+        // accumulated while panning must never assemble a detent as a zoom, or
+        // the reverse — and every other modified wheel is a swallowed non-chord
+        // the remainder must not bridge into either.
         scroll_accum_ = 0.0;
         // THE POINTER CURSOR USED TO BE THE SECOND CONSUMER HERE, through a
         // hook fired on this same test — modifiers SELECT between cursor kinds
@@ -2746,9 +2746,9 @@ void GuiPlatform::on_pointer_frame() {
     // The context key binds remainder within one continuous chord session; a
     // modifier-state change clears scroll_accum_ outright at the modifiers
     // event (and at keyboard leave / capability loss), so remainder can never
-    // bridge a chord release — the routing differs by chord (plain zoom vs Alt
-    // pan), so remainder grown under one must not complete a detent under
-    // another.
+    // bridge a chord release — the routing differs by chord (plain = the
+    // stepped pan, Ctrl = the zoom step; every other combination no-ops), so
+    // remainder grown under one must not complete a detent under another.
     //
     // Accepted: a remainder contributed in an accepted context, interrupted
     // by a modal that opens and closes with NO scroll frames in between,

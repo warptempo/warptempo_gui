@@ -210,7 +210,11 @@ struct Viewport {
     // state to calling zoom_in()/zoom_out() |in_steps| times, but resolves
     // to one apply_zoom_change so invalidate + worker-kick fire once per
     // pointer frame instead of once per detent. in_steps == +/-1 reproduces
-    // zoom_in()/zoom_out() exactly.
+    // zoom_in()/zoom_out() exactly. THE SOLE CALLER is the CTRL+WHEEL ZOOM STEP
+    // (handle_wheel, input_handler.cpp — architect 2026-08-12): the wheel's
+    // coalesced net detent count for one pointer frame is exactly this
+    // parameter. It was briefly producer-less between that morning's plain
+    // wheel-zoom deletion and the ctrl binding the same day.
     void zoom_steps(int in_steps);
     // `continuous` marks a drag-driven scroll, which suppresses the per-event
     // playback predictor resync (re-anchored once at gesture end). There is no
