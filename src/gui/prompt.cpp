@@ -20,8 +20,6 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // Space is swallowed while the prompt is up, so playback cannot restart
     // until it closes.
     playback_lifecycle.stop_playback_for_modal_open();
-    app.prompt.active          = true;
-    app.prompt.text            = "Save unsaved changes?";
     // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
     // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
@@ -37,9 +35,13 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // bracket-accelerator spelling retired with the bottom-strip prompt
     // line, 2026-08-12), so the Delete sentinel wears its meaning,
     // "Discard", and Escape wears "Cancel".
-    app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"Save", "Discard", "Cancel"};
-    app.prompt.trigger         = t;
+    // Through `present`, the state's one raise route: it clears the PAINTED
+    // bit, so nothing this prompt asks can be answered until the painter has
+    // put it on the screen (the rule is at PromptState).
+    app.prompt.present("Save unsaved changes?",
+                       {'s', '\x7f', '\x1b'},
+                       {"Save", "Discard", "Cancel"},
+                       t);
     viewport.invalidate_all();
 }
 
@@ -54,11 +56,10 @@ void GuiPrompt::open_error_notice(std::string text) {
     // A modal surface is opening: the shared modal stop, same rule as every
     // other prompt open.
     playback_lifecycle.stop_playback_for_modal_open();
-    app.prompt.active          = true;
-    app.prompt.text            = std::move(text);
-    app.prompt.response_keys   = {'\x1b'};
-    app.prompt.response_labels = {"OK"};
-    app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
+    // The one raise route (PromptState::present), so the painted gate holds
+    // here too.
+    app.prompt.present(std::move(text), {'\x1b'}, {"OK"},
+                       DialogTrigger::ERROR_NOTICE);
     viewport.invalidate_all();
 }
 
@@ -100,9 +101,15 @@ void GuiPrompt::activate_response(char k) {
         if (k == 's' || k == 'r') {
             const bool ok = save_ops.save();
             if (!ok) {
-                app.prompt.text            = "Save failed.";
-                app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
-                app.prompt.response_labels = {"Retry", "Discard", "Cancel"};
+                // A NEW QUESTION, so it goes through the same raise route and
+                // clears the painted bit with it: the new set is answerable
+                // only once this text and these buttons have been painted.
+                // That is what closes the stale-rect press this rung used to
+                // leave answerable (the reasoning is at PromptState).
+                app.prompt.present("Save failed.",
+                                   {'r', '\x7f', '\x1b'},
+                                   {"Retry", "Discard", "Cancel"},
+                                   trigger);
                 viewport.invalidate_all();
                 return;
             }

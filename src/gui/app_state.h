@@ -1646,12 +1646,71 @@ enum class DialogTrigger {
 // Enter-default, and this prompt system HAS no Enter answer — Return is not a
 // response key and does nothing — so every button wears the plain face
 // rather than inventing a default (the brief's recorded decision).
+//
+// A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13, codex round 13 —
+// the one lag span the in-window dialog still had). One dispatch batch is
+// delivered whole (wl_display_dispatch_pending) before the loop paints, so a
+// prompt can be RAISED and RECEIVE INPUT while the surface still shows the
+// prior world: dirty work + an editor dialog up + Ctrl+Q and Delete in one
+// batch tore the editor down, raised this prompt, and let the Delete answer
+// Discard — the work gone, the question never seen. `painted` closes that
+// span BY THE PAINTER'S OWN HAND: it is false at every raise (`present`
+// below is the one route, so no raiser can forget it) and the ONE writer of
+// true is paint_modal_dialog's prompt branch — the same surface, the same
+// run-loop iteration, the same buffer the frame then commits. No
+// synchronization machinery, no generation counter, no probe: that locality
+// IS the mechanism, and it is precisely what a SECOND Wayland surface cannot
+// have (the scrapped real-window modal needed five commits of
+// tail-sync machinery and each round found another span; the record is in
+// conventions.md).
+// WHAT THE GATE COSTS: while `painted` is false the prompt consumes EVERY
+// key — not just the response letters but Esc and Delete too (the prompt
+// dispatch, input_handler.cpp), because a consumed no-answer is the only
+// safe reading of input aimed at an unseen surface — and the pointer's
+// response claim is gated on it as well (on_button_press; the veil still
+// swallows the press, it just answers nothing). The claim needs the gate
+// because the button RECTS the pointer reads are the previous paint's
+// publication: an editor dialog's buttons publish a zero response key and the
+// live-set test refuses them already, but a PROMPT REPLACING A PROMPT — the
+// save-failed rung, the one such route — leaves rects whose Discard/Cancel
+// keys are still live at coordinates the new (differently sized, differently
+// laid out) box no longer uses, so the stale-rect press was answerable and
+// destructive. The button HOVER face is deliberately not gated: a stale
+// index only mislights a button for one frame and self-heals on the next
+// motion.
+// EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
+// buffer, which is non-destructive and self-evident the moment the field
+// paints, and the commit is a separate deliberate Enter. The destructive
+// shape is the prompt's ONE-KEY ANSWERS, which is exactly what this bit
+// guards. A frame deferral (both buffers in flight) simply keeps the bit
+// false longer — keys consumed, which is the correct answer.
 struct PromptState {
     bool                     active = false;
+    bool                     painted = false;   // see the block above
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
     std::vector<std::string> response_labels;   // button words, e.g. "Save"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
+
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the three raisers
+    // (the unsaved-work prompt, the error notice, the paste confirmation) and
+    // the save-failed rung's in-place restatement, which is a raise as far as
+    // this bit is concerned (a new question the user has not seen). Structural
+    // rather than disciplinary: `painted` cannot be left true by a site that
+    // forgot to clear it, because there is nowhere else to write the question.
+    // The callers own their own damage (invalidate_all — the box's rect does
+    // not exist before the first paint) and the modal playback stop.
+    void present(std::string t,
+                 std::vector<char> keys,
+                 std::vector<std::string> labels,
+                 DialogTrigger trig) {
+        active          = true;
+        painted         = false;
+        text            = std::move(t);
+        response_keys   = std::move(keys);
+        response_labels = std::move(labels);
+        trigger         = trig;
+    }
 };
 
 // Trim store (architect-ruled hardfail model). begin and end are authored

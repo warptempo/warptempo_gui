@@ -4562,6 +4562,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int cy0 = by + bord + pad;                 // content top
 
     if (prompt_up) {
+        // THE PAINTED GATE'S ONE WRITER OF TRUE (2026-08-13): this branch is
+        // drawing the question into the buffer paint_one_frame commits at the
+        // end of this same iteration, so from here on the prompt is a surface
+        // the user has seen and its keys and buttons may answer. Same surface,
+        // same iteration, no sync machinery — the locality IS the mechanism;
+        // the full rule, the gate's two sites and the editor asymmetry are at
+        // PromptState (app_state.h). Set before the drawing calls because the
+        // fact being recorded is the frame, not the ink: every raise
+        // invalidates the whole window, so the frame that reaches here always
+        // carries the box's pixels, and each of the frame's damage rects runs
+        // this branch (idempotent).
+        app.prompt.painted = true;
         // The message line, clipped to the box interior — an over-long error
         // text cuts at the frame exactly as the old row cut at its margin.
         cairo_save(cr);

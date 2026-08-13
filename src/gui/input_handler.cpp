@@ -126,6 +126,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // plain words now, PromptState's declaration owning the label rule, and
     // the match here is deliberately unchanged.)
     if (app.prompt.active) {
+        // THE PAINTED GATE (2026-08-13): a prompt the user has not SEEN
+        // answers nothing. One dispatch batch arrives whole before the loop
+        // paints, so a key queued behind the raise itself (Ctrl+Q tearing an
+        // editor down and raising the unsaved-work prompt, Delete right behind
+        // it) was answering a question that had never been on screen. EVERY
+        // key is consumed while the bit is false — the response letters, Esc,
+        // Delete, and the Ctrl+Q hatch below with them: a consumed no-answer is
+        // the only safe reading of input aimed at an unseen surface, and
+        // nothing is lost that a second press after the paint does not
+        // recover. The bit's writer is paint_modal_dialog's prompt branch and
+        // the whole rule lives at PromptState (app_state.h).
+        if (!app.prompt.painted) return;
         // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
         // path. The unsaved-work dialog (CLOSE_WINDOW) deliberately falls

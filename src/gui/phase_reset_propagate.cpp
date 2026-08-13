@@ -256,15 +256,17 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // A modal surface is opening: stop playback. Space is swallowed while
     // the prompt is up, so playback cannot restart until it closes.
     playback_lifecycle.stop_playback_if_playing();
-    app.prompt.active          = true;
-    app.prompt.text            =
-        "Paste phase resets into matching blocks? "
-        "Existing phase resets in matched ranges will be cleared.";
     // Button words in the dialog's plain-word spelling (PromptState owns the
-    // rule): `y` answers Yes from the keyboard exactly as before.
-    app.prompt.response_keys   = {'y', '\x1b'};
-    app.prompt.response_labels = {"Yes", "Cancel"};
-    app.prompt.trigger         = DialogTrigger::PASTE_CONFIRM;
+    // rule): `y` answers Yes from the keyboard exactly as before. Raised
+    // through PromptState::present, the one raise route — which clears the
+    // PAINTED bit, so the confirmation cannot be answered before it is on the
+    // screen (the rule is at PromptState).
+    app.prompt.present(
+        "Paste phase resets into matching blocks? "
+        "Existing phase resets in matched ranges will be cleared.",
+        {'y', '\x1b'},
+        {"Yes", "Cancel"},
+        DialogTrigger::PASTE_CONFIRM);
     viewport.invalidate_all();
 }
 
