@@ -186,18 +186,22 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   no pinch and no upgrade there; nothing in a dialog pans or zooms). The
   translation's end delivers its release and nothing more — the leave hook
   and the restore motion are MAIN-window state repairs, and a finger lifting
-  from the dialog moved none of them. THE ZOMBIE GATE COVERS GLASS BY
-  CONSTRUCTION: a dialog stream translates into the dialog's own entry points,
-  and those refuse while the window stands over an answered modal state (the
-  span between the answering input and the run loop's settled tail — one
-  gate, `modal_dialog_state_standing`, for mouse and finger alike), so a tap
-  queued behind the answer cannot press a button whose answer no longer
-  exists. A DELIVERY-TIME GATE IS SOUND *HERE* and nowhere else on glass:
-  the dialog's entry points ask the modal-state question on behalf of the
-  surface that owns the input, so "the state is gone" and "this input is
-  dead" are the same fact — whereas a MAIN-surface stream's deferred act is
-  measured against the main window's veil, which the answer itself removes,
-  which is why that side is poisoned at its origin instead (next bullet).
+  from the dialog moved none of them. THE ADMISSION GATE COVERS GLASS BY
+  CONSTRUCTION: a dialog stream translates into the dialog's own entry
+  points, and those refuse while the modal surface has MOVED since the
+  settled tail last synced the window — the dialog invariant's generation
+  compare (`modal_surface_out_of_sync`, codex round 11; one gate for mouse
+  and finger alike, covering the zombie span AND the content switch as one
+  mismatch — the full statement at `GuiPlatform`'s `dialog_open()` block) —
+  so a tap queued behind the answer cannot press a button whose answer no
+  longer exists, and one queued behind a content switch cannot act on the
+  replacing surface's stash. A DELIVERY-TIME GATE IS SOUND *HERE* and
+  nowhere else on glass: the dialog's entry points ask the admission
+  question on behalf of the surface that owns the input, so "the surface
+  moved" and "this input is dead" are the same fact — whereas a MAIN-surface
+  stream's deferred act is measured against the main window's veil, which
+  the answer itself removes, which is why that side is poisoned at its
+  origin instead (next bullet).
 - A MAIN-owned stream BORN WHILE A DIALOG STANDS IS POISONED AT ITS FIRST
   DOWN (codex round 9, 2026-08-12): the platform enters `Drain` right there
   instead of `Pending`, so the stream delivers NOTHING for its whole life —
@@ -206,22 +210,22 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   is ignored like any other) — and the poison's whole lifecycle is that
   phase: set at the down, cleared by the ordinary drain exit when every
   finger has lifted. THE TEST IS "WAS THE GUI MODAL WHEN THIS FINGER LANDED",
-  BY EITHER WITNESS — the dialog toplevel (live modal or zombie) OR the modal
-  state alone, which is the span from an opener's own dispatch until the
-  settled tail opens the window, the zombie span's mirror image at the other
-  end and equally reachable inside one dispatch batch —
-  and THE KEYBOARD SHARES THAT EXACT TEST SINCE CODEX ROUND 10 (2026-08-13):
-  `dialog_modality_stands()` is one named helper both this down and
-  `dialog_swallows_key()` call, after the keyboard half was found still asking
-  the toplevel ALONE — in the opening span every further main-focused key in
-  the batch reached ordinary dispatch, where a queued Delete answered the
-  freshly raised close prompt's DISCARD response and the program exited
-  unsaved with the dialog never painted. ONE WITNESS, TWO MODALITIES, BOTH
-  EDGES: glass and keyboard are now dead over exactly the same spans by
-  construction, not by two spellings of one rule (which is how round 9's
-  drift happened and how this one did) —
-  because THE ORIGIN IS WHAT DECIDES: this window converts a down at
-  its LIFT, its SLOP CROSSING or its EXPIRY, so a resolution that re-asks
+  BY EITHER WITNESS — the dialog toplevel OR the modal state alone, which
+  stands with no window from an opener's own dispatch until the settled tail
+  opens it, equally reachable inside one dispatch batch — asked through
+  `dialog_modality_stands()`, THE ORIGIN TEST, whose ONE caller this down is
+  since codex round 11: the keyboard fork briefly shared it (round 10, after
+  the keyboard half was found still asking the toplevel alone and a queued
+  Delete answered the freshly raised close prompt's DISCARD) and has since
+  moved onto the dialog invariant's ADMISSION compare (the modal-surface
+  generation, `dialog_open()`'s block), which asks a DIFFERENT QUESTION IN
+  KIND: origin is about the input's BIRTH under a veil that may lift before
+  it resolves — a finger landing under a live, fully-synced dialog must die
+  here, where a dialog-focused key is admitted — while admission is about
+  whether the window the user sees matches the modal state the input would
+  answer. Neither subsumes the other; the distinction is stated at the
+  helper. THE ORIGIN IS WHAT DECIDES ON GLASS: this window converts a down
+  at its LIFT, its SLOP CROSSING or its EXPIRY, so a resolution that re-asks
   the modal state reads a state the answering input may already have cleared
   — finger down under the modal, Esc, finger up, and the tap OUTRUNS the
   settled tail into a main-window command behind a dialog still on screen
@@ -229,8 +233,8 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   answer that; origin-time gating can, and does. The rule it instances —
   AN INPUT THAT ORIGINATED WHILE THE GUI WAS MODAL IS DEAD, whatever the state
   when it resolves — is stated once at `GuiPlatform`'s `dialog_open()` block,
-  with the keyboard's two sites beside it (the shared swallow fork and the
-  consumption-aware repeat arm).
+  with its keyboard sibling beside it (the consumption-aware repeat arm; the
+  queued-key spans themselves are the admission compare's since round 11).
   The GUI's standing veil gates still answer everything a LIVE-modal stream
   used to reach (a tap's press-release consumed, a two-finger nav frozen at
   the per-frame wheel-context refusal, a region hold refused in its begin);

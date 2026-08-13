@@ -2834,12 +2834,12 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
-// THE MODAL STATE THE DIALOG WINDOW MIRRORS (the zombie-span truth; the
-// contract is at the declaration). It is the prompt PLUS the four dialog
-// editors — the same pair of questions the lifecycle sync's plan asks through
-// resolve_modal_dialog_content (paint_handler.cpp), composed here from the
-// predicate above rather than restating the membership, so the four editors
-// live in exactly one place.
+// THE MODAL STATE THE DIALOG WINDOW MIRRORS (the touch poison's origin
+// truth; the contract is at the declaration). It is the prompt PLUS the four
+// dialog editors — the same pair of questions the lifecycle sync's plan asks
+// through resolve_modal_dialog_content (paint_handler.cpp), composed here
+// from the predicate above rather than restating the membership, so the four
+// editors live in exactly one place.
 bool GuiInputHandler::modal_dialog_state_standing() const {
     return app.prompt.active || modal_dialog_editor_active();
 }

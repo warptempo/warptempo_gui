@@ -853,3 +853,33 @@ private:
     // definition.
     void paint_overview_strip(cairo_t* cr);
 };
+
+// -- THE MODAL-SURFACE IDENTITY AND ITS GENERATION (codex round 11,
+//    2026-08-13; the cache is AppState::ModalSurfaceWitness, the invariant's
+//    full statement at GuiPlatform's dialog_open() block) --
+//
+// modal_surface_identity names WHICH modal surface stands, derived fresh from
+// the live state through the ONE content resolver the window plan and the
+// dialog painter already share: the empty string for none, else EXACTLY the
+// window plan's fingerprint bytes (a prompt's message + response labels, an
+// editor's label prefix — modal_dialog_window_plan calls this, so "what the
+// window shows" and "what admission is judged against" are one derivation and
+// can never drift). Content bytes are deliberately outside it: an editor's
+// buffer, caret and red-flash mutate content, never identity, so a queued
+// typing burst flows through every gate below.
+std::string modal_surface_identity(const AppState& app);
+
+// THE QUERY OWNER: derives the identity fresh, bumps the witness's generation
+// iff it moved since the cache, returns the generation. Every observation
+// point is a call site of this one function — there is NO per-raiser bump
+// anywhere, which is what makes a missed-site drift impossible. Idempotent
+// between identity moves; an A -> None -> A re-raise whose intermediate state
+// any gate observed yields gen+2, never a false match.
+uint64_t modal_surface_generation(AppState& app);
+
+// THE ADMISSION COMPARE, one spelling for its every reader (the platform's
+// staleness probe and the four dialog GUI entry points): true while the live
+// modal-surface identity differs from the one the settled tail last synced
+// into the dialog window — the opening edge, the zombie span and the content
+// switch are all this one mismatch.
+bool modal_surface_out_of_sync(AppState& app);

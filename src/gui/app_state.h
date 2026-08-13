@@ -2442,6 +2442,32 @@ struct AppState {
     // dialog cannot inherit the previous one's lit face.
     int modal_dialog_hovered = -1;
 
+    // THE MODAL-SURFACE WITNESS (codex round 11, 2026-08-13 — the one
+    // mechanism behind the dialog arc's admission invariant: INPUT MAY ONLY
+    // ANSWER A MODAL SURFACE THE USER HAS SEEN, stated whole at GuiPlatform's
+    // dialog_open() block). The IDENTITY names WHICH modal surface stands —
+    // empty for none, else the window plan's own fingerprint (kind plus its
+    // fixed strings: a prompt's message + response labels, an editor's label
+    // prefix) — deliberately EXCLUDING content bytes (buffer text, caret,
+    // red-flash): typing mutates content, never identity, so a queued typing
+    // burst flows. The GENERATION is the identity's monotonic epoch,
+    // ABA-proof: the query owner (modal_surface_generation, paint_handler.h)
+    // derives the identity FRESH on every call and bumps the generation iff
+    // it moved since this cache — no per-raiser bump site exists anywhere,
+    // which is what makes a missed-site drift impossible (the round 8-10
+    // chain's repeated lesson: every replicated spelling of the span rule
+    // drifted). synced_generation is written by ONE site — main.cpp's
+    // settled-tail lifecycle sync, after it applies the window plan — so
+    // "generation != synced_generation" reads "the modal surface moved since
+    // the window last mirrored it", which covers the opening edge, the
+    // zombie span and the content switch as one compare.
+    struct ModalSurfaceWitness {
+        std::string cached_identity;      // last identity the query observed
+        uint64_t    generation        = 0;
+        uint64_t    synced_generation = 0; // the tail's record; one writer
+    };
+    ModalSurfaceWitness modal_surface;
+
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
     // centre in monospace; the row unification merged that row and the status
@@ -2516,14 +2542,14 @@ struct AppState {
     //   ONE wired cancellation hook (set_keyboard_intent_cancel_hook,
     //   platform_wayland.h, whose contract carries the per-edge reasoning;
     //   main.cpp wires it to this field's disarm). MEMBERSHIP RE-DERIVED FROM
-    //   THE HOOK'S FIRE SITES 2026-08-13 (codex round 10), which are THREE:
+    //   THE HOOK'S FIRE SITES 2026-08-13 (codex round 11), which are THREE:
     //   wl_keyboard.leave and keyboard-capability loss (forget_keyboard_state —
     //   a keyboard-driven focus change must not leave a pointer-held arrow
     //   authoring into an unfocused window), every SUPER-SWALLOWED
     //   non-synthesized key press, and every DIALOG-SWALLOWED one — the modal
-    //   dialog's keyboard fork in all THREE of its classes (a MAIN-focused key
-    //   behind the dialog, a DIALOG-focused key in the zombie span, and a key
-    //   queued in the OPENING EDGE before the window exists), which fires the
+    //   dialog's keyboard fork in BOTH of its classes (a MAIN-focused key
+    //   behind the dialog, and any key in a GENERATION-MISMATCH span — the
+    //   modal surface moved, the window not yet synced), which fires the
     //   hook through the one branch that swallows them. Both swallows are
     //   intervening key arrivals on_key never sees, disarmed per swallowed
     //   delivery because that is the platform's own edge for its own repeats,

@@ -1955,40 +1955,53 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // consumed nothing, and there is nothing to scroll (the platform swallows
 // the dialog wheel outright).
 //
-// THE ZOMBIE WINDOW IS INERT — the gate all four of them carry. The modal
-// state goes false inside the answering input's own dispatch, while the
-// toplevel and the platform's routing facts live to the run loop's SETTLED
-// TAIL, which is the teardown owner (main.cpp's lifecycle sync); one
-// wl_display_dispatch_pending() batch can carry MORE queued events behind the
-// answering one, and they route to this surface because the surface is still
-// there. So a press, release, motion or WM close arriving in that span acts on
-// NOTHING — modal_dialog_state_standing() is the one term, and it covers TOUCH
-// by construction, a finger on the dialog being the plain pointer translation
-// into these same entry points. THE ZEROED STASH IS NOT THE FIX: the painter's
-// rects are zeroed by that SAME tail, not earlier, so they are still published
-// for the whole span and a queued click can still resolve a button on them.
-// (The prompt arm's live response-set match makes such a click answer nothing
-// in practice — it is a backstop against a stale stash, and the gate above is
-// what makes "nothing acts" the rule.) The keyboard half of the same span is
-// the platform's (deliver_key's fork).
+// THE STALE WINDOW IS INERT — the gate all four of them carry, THE
+// INVARIANT'S OWN COMPARE (the full statement at GuiPlatform's dialog_open()
+// block; codex round 11): dialog-bound input acts only while the live
+// modal-surface identity equals the identity the settled tail last synced
+// into the window — modal_surface_out_of_sync (paint_handler.h), the same
+// generation compare the platform's keyboard fork reads through its probe,
+// asked GUI-side here because these points can. It refuses every lag span as
+// one rule: the ZOMBIE (the modal state answered inside its own dispatch
+// while the toplevel lives to the settled tail — one
+// wl_display_dispatch_pending() batch can carry MORE queued events behind
+// the answering one, still routed to the standing surface) and the CONTENT
+// SWITCH (a prompt replacing an editor on the standing toplevel: a queued
+// click on the STALE window's button rects must not act on the NEW
+// surface's stash — the old modal-state-standing gate admitted exactly
+// that, the round-11 keyboard scenario's pointer twin). It covers TOUCH by
+// construction, a finger on the dialog being the plain pointer translation
+// into these same entry points. GATE-THEN-READ IS COHERENT with the stash:
+// the tail (and the dialog paint it triggers) rewrites the published rects
+// in the same iteration that records the synced generation, so a gate that
+// passes reads a stash the synced content published — and before a fresh
+// window's first paint the stash is still zeroed/invalid, which resolves no
+// button and no field (the cold answer, stated at modal_dialog_button_hit).
+// THE ZEROED STASH IS NOT THE FIX: the painter's rects are zeroed by that
+// same tail, not earlier, so they are still published for the whole zombie
+// span and a queued click could still resolve a button on them. (The prompt
+// arm's live response-set match makes such a click answer nothing in
+// practice — a backstop against a stale stash; the gate above is what makes
+// "nothing acts" the rule.) The keyboard half of the same spans is the
+// platform's (deliver_key's fork, the same compare via the probe).
 //
-// WHY A DELIVERY-TIME GATE IS THE RIGHT SHAPE *HERE*, where the platform's own
-// halves are origin-scoped (the ORIGIN RULE at GuiPlatform's dialog_open()
+// WHY A DELIVERY-TIME GATE IS THE RIGHT SHAPE *HERE*, where the platform's
+// touch half is origin-scoped (the ORIGIN RULE at GuiPlatform's dialog_open()
 // block, codex round 9): these four points are reached only by input that
-// ROUTES TO THE DIALOG SURFACE, so they ask the modal-state question on behalf
-// of the very surface that owns the input — "the state is gone" and "this input
-// is dead" are then the same fact, and there is no deferral in between (a
-// dialog pointer event dispatches at arrival; a dialog TOUCH stream defers, but
-// it defers into these same points and re-asks here). The main-surface side has
-// no such luxury: its deferred acts are measured against the main window's
-// VEIL, which is the GUI modal state that the answer itself removes — so those
-// are gated AT THEIR ORIGIN in the platform instead (the shared key-swallow
-// fork, the consumption-aware repeat arm, the touch poison; the fork and the
-// poison ask the ONE origin test since codex round 10, so keyboard and touch
-// are dead over the same spans — the zombie one and the windowless OPENING EDGE
-// both). A main-surface POINTER event needs no origin term of its own: it
-// dispatches at arrival and the GUI's veil, which is that modal state, is
-// exactly the right question for it.
+// ROUTES TO THE DIALOG SURFACE, so they ask the admission question on behalf
+// of the very surface that owns the input — "the surface moved" and "this
+// input is dead" are then the same fact, and there is no deferral in between
+// (a dialog pointer event dispatches at arrival; a dialog TOUCH stream
+// defers, but it defers into these same points and re-asks here). The
+// main-surface side has no such luxury: its deferred acts are measured
+// against the main window's VEIL, which is the GUI modal state that the
+// answer itself removes — so those are gated AT THEIR ORIGIN in the platform
+// instead (the touch poison's dialog_modality_stands, ORIGIN semantics
+// distinct from this gate's ADMISSION semantics — the distinction at that
+// helper — plus the consumption-aware repeat arm). A main-surface POINTER
+// event needs no origin term of its own: it dispatches at arrival and the
+// GUI's veil, which is that modal state, is exactly the right question for
+// it.
 
 void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
                                              int y, GuiInputState mods) {
@@ -2001,11 +2014,11 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
 
-    // The zombie gate (the block above), BELOW the candidate clear so that
+    // The staleness gate (the block above), BELOW the candidate clear so that
     // "any press clears the pending candidate" stays true without exception —
     // a consumed press is still a press for that rule's purposes, and the
     // cleared candidate cannot then be consumed by the NEXT dialog's field.
-    if (!modal_dialog_state_standing()) return;
+    if (modal_surface_out_of_sync(app)) return;
 
     if (button != GuiMouseButton::Left || mods.ctrl || mods.shift || mods.alt)
         return;   // the dialog answers plain left presses and nothing else
@@ -2027,9 +2040,9 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
         }
         return;
     }
-    // (No second "did the modal drop?" test here: the zombie gate at the top
-    // owns that question for the whole function, so reaching this line with
-    // no prompt up means a dialog EDITOR stands by construction.)
+    // (No second "did the modal move?" test here: the staleness gate at the
+    // top owns that question for the whole function, so reaching this line
+    // with no prompt up means a dialog EDITOR stands by construction.)
     //
     // An editor dialog's OK / Cancel — the session's own Enter / Esc through
     // the one modal key route (dispatch_modal_dialog_editor_act above),
@@ -2069,12 +2082,12 @@ void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
 void GuiInputHandler::on_dialog_button_release(GuiMouseButton button, int x,
                                                int y,
                                                GuiInputState /*mods*/) {
-    // The zombie gate first (the block above this group): a release queued
-    // behind the answering input finalizes nothing. A field drag that was
-    // live when the session answered is disarmed by the lifecycle sync's own
-    // close arm (main.cpp), which is where that flag's cleanup belongs — the
-    // editor it selected in is gone.
-    if (!modal_dialog_state_standing()) return;
+    // The staleness gate first (the block above this group): a release queued
+    // behind the input that moved the modal surface finalizes nothing. A
+    // field drag that was live when the session answered is disarmed by the
+    // lifecycle sync's own close arm (main.cpp), which is where that flag's
+    // cleanup belongs — the editor it selected in is gone.
+    if (modal_surface_out_of_sync(app)) return;
     if (button != GuiMouseButton::Left) return;
     // F2.1's release, the main handler's own shape: finalize the drag and
     // seed the EditorText double-click candidate on a motionless click (a
@@ -2093,11 +2106,11 @@ void GuiInputHandler::on_dialog_button_release(GuiMouseButton button, int x,
 }
 
 void GuiInputHandler::on_dialog_motion(int x, int y, GuiInputState mods) {
-    // The zombie gate (the block above this group): no caret moves and no
-    // hover face lights on a window whose modal state has answered. The
+    // The staleness gate (the block above this group): no caret moves and no
+    // hover face lights on a window whose modal surface has moved. The
     // hover index is zeroed by the lifecycle sync's close arm, so nothing
     // stale survives the span either.
-    if (!modal_dialog_state_standing()) return;
+    if (modal_surface_out_of_sync(app)) return;
     // The field's live text drag first (the main on_motion's own order),
     // then the buttons' hover face. A lost button finalizes like release,
     // mirroring the main handlers. The platform's dialog leave delivers a
@@ -2119,12 +2132,14 @@ void GuiInputHandler::on_dialog_motion(int x, int y, GuiInputState mods) {
 }
 
 void GuiInputHandler::on_dialog_close_request() {
-    // The zombie gate (the block above this group), stated here too so all
+    // The staleness gate (the block above this group), stated here too so all
     // four entry points read the one rule: a WM close queued behind the
-    // answering input answers nothing. The two arms below would already both
-    // refuse on their own — that is a coincidence of this body's shape, not
-    // the span's guarantee, and the gate is what makes it the rule.
-    if (!modal_dialog_state_standing()) return;
+    // input that moved the modal surface answers nothing. The two arms below
+    // would already both refuse a dropped modal on their own — that is a
+    // coincidence of this body's shape, not the span's guarantee, and the
+    // gate is what makes it the rule (and what refuses the content-switch
+    // span, which the arms alone would NOT: the new surface's arm is live).
+    if (modal_surface_out_of_sync(app)) return;
     // The dialog window's WM CLOSE (titlebar X) is the session's Esc — the
     // abandon/cancel arm, never a destructive answer: a prompt takes its Esc
     // response (every prompt carries one — the rightmost Cancel, or the

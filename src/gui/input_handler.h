@@ -628,13 +628,13 @@ struct GuiInputHandler {
     // DOES A MODAL STATE STAND? — a prompt or one of the four dialog editors,
     // exactly what the dialog window mirrors (the lifecycle sync's plan asks
     // the same question through resolve_modal_dialog_content). PUBLIC because
-    // the PLATFORM asks it: main.cpp wires it to set_dialog_modal_probe, and
-    // the platform uses it to tell a live dialog from a ZOMBIE one — the
-    // toplevel outliving its state through the span between the answering
-    // input and the settled tail that tears it down. Inside this class the
-    // four dialog entry points read it as their own zombie gate: a queued
-    // press, release, motion or WM close that arrives in that span acts on
-    // nothing (input_pointer.cpp).
+    // the PLATFORM asks it: main.cpp wires it to set_dialog_modal_probe, the
+    // ORIGIN witness behind the touch poison's dialog_modality_stands()
+    // ("was the GUI modal when this finger landed" — origin semantics; the
+    // ADMISSION question is the modal-surface generation's, a different
+    // witness, and since codex round 11 the four dialog entry points gate on
+    // THAT compare — modal_surface_out_of_sync, paint_handler.h — not on
+    // this predicate).
     bool modal_dialog_state_standing() const;
 
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone

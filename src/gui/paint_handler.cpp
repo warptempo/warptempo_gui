@@ -4564,6 +4564,45 @@ ModalDialogLayout compute_modal_dialog_layout(const AppState& app,
 
 } // namespace
 
+// The modal-surface identity (contract at the declaration, paint_handler.h):
+// the window plan's fingerprint bytes, composed from the one content
+// resolver above. A prompt's identity is its message plus its response
+// labels — each distinct response-set/message shape is a distinct surface
+// (the unsaved-close and Save-failed rungs differ in both, so PromptState
+// needs no separate kind field for this) — and an editor's is its label
+// prefix, which distinguishes the four dialog editors (the load editor's
+// history fork included: the resolver already forks the prefix there).
+std::string modal_surface_identity(const AppState& app) {
+    const ModalDialogContent c = resolve_modal_dialog_content(app);
+    if (!c.any()) return std::string();
+    if (c.prompt_up) {
+        std::string id = "P\x1f" + app.prompt.text;
+        for (const std::string& l : app.prompt.response_labels) {
+            id += '\x1f';
+            id += l;
+        }
+        return id;
+    }
+    return std::string("E\x1f") + c.prefix;
+}
+
+// The query owner (contract at the declaration): fresh derivation, bump iff
+// moved, no other writer of the generation anywhere.
+uint64_t modal_surface_generation(AppState& app) {
+    std::string id = modal_surface_identity(app);
+    if (id != app.modal_surface.cached_identity) {
+        app.modal_surface.cached_identity = std::move(id);
+        ++app.modal_surface.generation;
+    }
+    return app.modal_surface.generation;
+}
+
+// The admission compare (contract at the declaration).
+bool modal_surface_out_of_sync(AppState& app) {
+    return modal_surface_generation(app) !=
+           app.modal_surface.synced_generation;
+}
+
 GuiPaintHandler::ModalDialogWindowPlan
 GuiPaintHandler::modal_dialog_window_plan() {
     ModalDialogWindowPlan p;
@@ -4574,26 +4613,22 @@ GuiPaintHandler::modal_dialog_window_plan() {
     // "BPM" / "Load" / "Commit" — derived from the one prefix source, never a
     // second string); a prompt wears its own message — the one-line question
     // IS its headline, and the error notice's longer string ellipsizes in
-    // labwc's titlebar while the body shows it whole. The FINGERPRINT is the
-    // content's identity — kind plus its fixed strings — so the lifecycle
-    // sync resizes/retitles exactly when the content switched (a prompt
-    // raised over an editor, the Save-failed mutation) and never on a mere
-    // buffer edit, which moves no window dimension (the field width is
-    // authored).
+    // labwc's titlebar while the body shows it whole. The FINGERPRINT IS THE
+    // MODAL-SURFACE IDENTITY (modal_surface_identity — one derivation, so
+    // the resize decision and the admission gates can never disagree about
+    // what stands): kind plus its fixed strings, meaning the lifecycle sync
+    // resizes/retitles exactly when the content switched (a prompt raised
+    // over an editor, the Save-failed mutation) and never on a mere buffer
+    // edit, which moves no window dimension (the field width is authored).
     if (c.prompt_up) {
-        p.title       = app.prompt.text;
-        p.fingerprint = "P\x1f" + app.prompt.text;
-        for (const std::string& l : app.prompt.response_labels) {
-            p.fingerprint += '\x1f';
-            p.fingerprint += l;
-        }
+        p.title = app.prompt.text;
     } else {
         const char* colon = std::strchr(c.prefix, ':');
         p.title.assign(c.prefix,
                        colon ? static_cast<size_t>(colon - c.prefix)
                              : std::strlen(c.prefix));
-        p.fingerprint = std::string("E\x1f") + c.prefix;
     }
+    p.fingerprint = modal_surface_identity(app);
     // Sizing shapes text, and shaping needs a font selected on a live cairo
     // context: a 1x1 scratch surface serves — once per plan call, and the
     // sync calls this only while a modal stands or just stood.
