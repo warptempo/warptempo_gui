@@ -210,6 +210,16 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   state alone, which is the span from an opener's own dispatch until the
   settled tail opens the window, the zombie span's mirror image at the other
   end and equally reachable inside one dispatch batch —
+  and THE KEYBOARD SHARES THAT EXACT TEST SINCE CODEX ROUND 10 (2026-08-13):
+  `dialog_modality_stands()` is one named helper both this down and
+  `dialog_swallows_key()` call, after the keyboard half was found still asking
+  the toplevel ALONE — in the opening span every further main-focused key in
+  the batch reached ordinary dispatch, where a queued Delete answered the
+  freshly raised close prompt's DISCARD response and the program exited
+  unsaved with the dialog never painted. ONE WITNESS, TWO MODALITIES, BOTH
+  EDGES: glass and keyboard are now dead over exactly the same spans by
+  construction, not by two spellings of one rule (which is how round 9's
+  drift happened and how this one did) —
   because THE ORIGIN IS WHAT DECIDES: this window converts a down at
   its LIFT, its SLOP CROSSING or its EXPIRY, so a resolution that re-asks
   the modal state reads a state the answering input may already have cleared
@@ -217,9 +227,10 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   settled tail into a main-window command behind a dialog still on screen
   (over Delete/Render/Quit, a fired command). Delivery-time gating cannot
   answer that; origin-time gating can, and does. The rule it instances —
-  AN INPUT THAT ORIGINATED WHILE A DIALOG STOOD IS DEAD, whatever the state
+  AN INPUT THAT ORIGINATED WHILE THE GUI WAS MODAL IS DEAD, whatever the state
   when it resolves — is stated once at `GuiPlatform`'s `dialog_open()` block,
-  with the keyboard's two sites beside it.
+  with the keyboard's two sites beside it (the shared swallow fork and the
+  consumption-aware repeat arm).
   The GUI's standing veil gates still answer everything a LIVE-modal stream
   used to reach (a tap's press-release consumed, a two-finger nav frozen at
   the per-frame wheel-context refusal, a region hold refused in its begin);

@@ -1562,7 +1562,10 @@ int main(int argc, char** argv) {
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES end the transport arrows'
     // hold-repeat (codex round 4, 2026-08-11): keyboard leave / keyboard-
-    // capability loss and every Super-swallowed press are key events the GUI's
+    // capability loss, every Super-swallowed press and every press the MODAL
+    // DIALOG's keyboard fork swallows (its veil, zombie and opening-edge
+    // classes alike — membership re-greped from the hook's fire sites
+    // 2026-08-13, codex round 10) are key events the GUI's
     // three chokepoint disarms can never see — the platform consumes them
     // without calling on_key — so the platform reports them through this one
     // hook instead of the application growing a second, partial list. The fire
@@ -1663,7 +1666,10 @@ int main(int argc, char** argv) {
     // (deliver_key, which asks set_dialog_modal_probe below), pointer and
     // touch at the GUI's four dialog entry points (input_pointer.cpp).
     // MAIN-focused input in the span: keys are consumed by that same fork
-    // (its first term is the WINDOW's existence, not the modal state), while a
+    // (it asks the ORIGIN TEST — the toplevel OR the modal state — so the
+    // window's existence alone is enough for the zombie span, and the state
+    // alone is enough for the OPENING EDGE this tail's open arm produces at the
+    // other end), while a
     // main-surface POINTER event is admitted — the GUI's veil reads the modal
     // state, which has answered — and that is the right answer by arrival
     // order: anything queued while the modal still stood was dispatched
@@ -1681,7 +1687,15 @@ int main(int argc, char** argv) {
     // three sites at platform_wayland.h's dialog_open() block). Read together:
     // the gates own everything that originated inside the span, arrival order
     // owns everything that originated after it, and nothing is left to decide
-    // at delivery time. The CLOSE arm
+    // at delivery time.
+    // THE SPAN THE GATES OWN RUNS FROM THE OPENING EDGE, because this tail is
+    // the one OPENER as well as the one teardown: the modal state stands with NO
+    // window from the raising input's own dispatch until the open below, so the
+    // platform's gates ask BOTH witnesses (the toplevel or the modal probe) and
+    // that window-less span is not a hole. Codex round 10 found the keyboard
+    // half asking the toplevel alone: a Delete queued behind the Ctrl+Q that
+    // raised the close prompt answered its DISCARD response through ordinary
+    // dispatch and the program exited unsaved with nothing yet painted. The CLOSE arm
     // also zeroes the published geometry and the hover index — the painter's
     // old no-dialog arm, moved to the one owner that knows the window came
     // down (the dialog painter runs only while a window stands, so it cannot

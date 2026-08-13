@@ -1983,7 +1983,12 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // no such luxury: its deferred acts are measured against the main window's
 // VEIL, which is the GUI modal state that the answer itself removes — so those
 // are gated AT THEIR ORIGIN in the platform instead (the shared key-swallow
-// fork, the consumption-aware repeat arm, the touch poison).
+// fork, the consumption-aware repeat arm, the touch poison; the fork and the
+// poison ask the ONE origin test since codex round 10, so keyboard and touch
+// are dead over the same spans — the zombie one and the windowless OPENING EDGE
+// both). A main-surface POINTER event needs no origin term of its own: it
+// dispatches at arrival and the GUI's veil, which is that modal state, is
+// exactly the right question for it.
 
 void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
                                              int y, GuiInputState mods) {

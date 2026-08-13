@@ -2515,13 +2515,19 @@ struct AppState {
     //   the platform consumes them without calling on_key — reported through
     //   ONE wired cancellation hook (set_keyboard_intent_cancel_hook,
     //   platform_wayland.h, whose contract carries the per-edge reasoning;
-    //   main.cpp wires it to this field's disarm): wl_keyboard.leave and
-    //   keyboard-capability loss (forget_keyboard_state — a keyboard-driven
-    //   focus change must not leave a pointer-held arrow authoring into an
-    //   unfocused window), and every SUPER-SWALLOWED non-synthesized key press
-    //   (deliver_key's drop — an intervening key arrival on_key never sees,
-    //   disarmed per swallowed delivery because that is the platform's own
-    //   edge for its own repeats, deliberately not at Super's press edge).
+    //   main.cpp wires it to this field's disarm). MEMBERSHIP RE-DERIVED FROM
+    //   THE HOOK'S FIRE SITES 2026-08-13 (codex round 10), which are THREE:
+    //   wl_keyboard.leave and keyboard-capability loss (forget_keyboard_state —
+    //   a keyboard-driven focus change must not leave a pointer-held arrow
+    //   authoring into an unfocused window), every SUPER-SWALLOWED
+    //   non-synthesized key press, and every DIALOG-SWALLOWED one — the modal
+    //   dialog's keyboard fork in all THREE of its classes (a MAIN-focused key
+    //   behind the dialog, a DIALOG-focused key in the zombie span, and a key
+    //   queued in the OPENING EDGE before the window exists), which fires the
+    //   hook through the one branch that swallows them. Both swallows are
+    //   intervening key arrivals on_key never sees, disarmed per swallowed
+    //   delivery because that is the platform's own edge for its own repeats,
+    //   deliberately not at Super's press edge.
     //   EACH FIRE RE-CHECKS the press-time predicate and the enabled bit
     //   (layer 2's shape), and PAUSES while the pointer is off the button.
     //   THE HOLD'S OWN ENDS — the release, the pointer leave, capability loss —

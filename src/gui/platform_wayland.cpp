@@ -1666,6 +1666,33 @@ void GuiPlatform::apply_dialog_effective_size() {
     dialog_damage_ = true;
 }
 
+bool GuiPlatform::dialog_modality_stands() const {
+    // THE ORIGIN TEST, over the TWO WITNESSES of one fact (the declaration
+    // states why it is hoisted; the rule and both edges at dialog_open()). The
+    // window LAGS the modal state at both ends, the run loop's settled tail
+    // being its one opener and its one teardown owner, so neither witness alone
+    // covers the whole of "the GUI was modal when this input happened":
+    //   * the TOPLEVEL exists — the live modal span and the ZOMBIE span after
+    //     it, where the state has answered and the window has not yet come
+    //     down;
+    //   * the MODAL PROBE answers true — that plus no toplevel is the OPENING
+    //     EDGE, the mirror image: the raising input is still in dispatch, and
+    //     one dispatch_pending batch can carry more queued input into the gap.
+    // Its two callers are the keyboard swallow below and the touch poison at
+    // wl_touch.down. With no probe wired the toplevel is the whole answer,
+    // which is the honest reading — nothing here can see a state it was not
+    // given.
+    // THE WINDOWLESS ARM CANNOT BECOME PERMANENT, which is what makes swallowing
+    // on it safe: the settled tail runs at the end of EVERY loop iteration and
+    // opens the window in the same one that raised the modal, and open_dialog's
+    // only refusal is a missing wl_compositor / xdg_wm_base / decoration
+    // manager — all three REQUIRED globals at startup, so the program that
+    // reaches here has them. The span is one dispatch batch wide by
+    // construction, never a state a user can sit in with a dead keyboard.
+    return dialog_xdg_toplevel_ != nullptr ||
+           (dialog_modal_probe_ && dialog_modal_probe_());
+}
+
 bool GuiPlatform::dialog_is_zombie() const {
     // The span between the answering input and the settled tail's teardown
     // (the contract at dialog_open()). With no probe wired the honest answer
@@ -1677,14 +1704,36 @@ bool GuiPlatform::dialog_is_zombie() const {
 
 bool GuiPlatform::dialog_swallows_key() const {
     // THE ONE KEYBOARD VEIL FORK (the declaration states why it is hoisted;
-    // the origin rule is at dialog_open()). Two terms over one precondition:
-    //   * the WINDOW exists at all — the first term, deliberately not the
-    //     modal state, which is what makes the whole zombie span inert;
-    //   * MAIN-focused (the veil: the GUI's modal contract is focus-scoped, so
-    //     a key typed into the inert window behind the dialog is consumed
-    //     here), or DIALOG-focused on a ZOMBIE (the answer already ran; the
-    //     queued keys behind it in the same dispatch batch are dead).
-    if (!dialog_xdg_toplevel_) return false;
+    // the origin rule is at dialog_open()). ITS PRECONDITION IS THE ORIGIN TEST
+    // ITSELF since codex round 10 — the same witness the touch poison asks, so
+    // the two modalities are dead over exactly the same spans — and inside it
+    // the answer forks on whether a WINDOW exists yet:
+    //   * NO TOPLEVEL, modal state standing = THE OPENING EDGE, and EVERY key
+    //     there is swallowed: there is no dialog surface to be focused on, so
+    //     every key in that span is main-focused by definition, which is the
+    //     veil's own case. Testing the toplevel alone was the round-10 defect —
+    //     the keys queued behind the raising input flowed into ordinary
+    //     dispatch, where GuiInputHandler::on_key handed them to the freshly
+    //     raised prompt's response matcher (Ctrl+Q and Delete in one batch =
+    //     discard-and-exit with the dialog never painted).
+    //   * TOPLEVEL STANDING: MAIN-focused (the veil: the GUI's modal contract
+    //     is focus-scoped, so a key typed into the inert window behind the
+    //     dialog is consumed here), or DIALOG-focused on a ZOMBIE (the answer
+    //     already ran; the queued keys behind it in the same dispatch batch are
+    //     dead).
+    // THE FLAG EDITOR IS DELIBERATELY UNAFFECTED, and it is why the witness is
+    // the narrow DialogModalProbe (prompt.active || modal_dialog_editor_active)
+    // rather than some broader "any modal" predicate: the top-strip flag editor
+    // in its FlagPayload kind is keyboard-modal but is NOT a dialog —
+    // positional, the marker's flag unrolled where it stands, no window ever —
+    // so the probe is false while it alone stands and its keys keep flowing to
+    // the GUI's route_modal_editor_key exactly as before. (The same editor
+    // struct's BpmBracket kind IS the BPM dialog and IS in the probe; the
+    // membership is the GUI's, composed once at
+    // modal_dialog_editor_active.) Nothing here may grow a term that a
+    // windowless GUI-side modality could satisfy.
+    if (!dialog_modality_stands()) return false;
+    if (!dialog_xdg_toplevel_)     return true;
     return !keyboard_on_dialog_ || dialog_is_zombie();
 }
 
@@ -2638,7 +2687,7 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     // would for a physical BTN_LEFT device (see kLeftClickKey's comment).
     if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
-        // THE VEIL'S SYNTHESIZED-BUTTON ARM (the dialog toplevel): this path
+        // THE VEIL'S SYNTHESIZED-BUTTON ARM (the modal dialog): this path
         // returns before deliver_key, so it carries the veil fork itself —
         // THROUGH THE SHARED HELPER since codex round 9, which caught the
         // drift the inline copy had already produced: this site's own fork was
@@ -2647,10 +2696,14 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
         // synthesized a main-window left press at the pointer's resting
         // coordinates — over Delete/Render/Quit that is a fired command behind
         // a dialog still on screen. One predicate now, two callers (the origin
-        // rule at dialog_open()). (Dialog-focused under a LIVE prompt — the
-        // one dialog state whose editor probe is false — the press still lands
-        // at the MAIN pointer coordinates and the GUI's prompt veil consumes
-        // it; the release path above stays ungated, a hold must always end.)
+        // rule at dialog_open()), and it inherits the OPENING EDGE with round
+        // 10 — a bare `e` queued behind the input that raised the modal is
+        // swallowed here too, where before it synthesized a main-window press
+        // under a modal the window had not caught up with. (Dialog-focused
+        // under a LIVE prompt — the one dialog state whose editor probe is
+        // false — the press still lands at the MAIN pointer coordinates and the
+        // GUI's prompt veil consumes it; the release path above stays ungated,
+        // a hold must always end.)
         if (dialog_swallows_key()) return;
         if (!synth_left_held_ && pointer_focused_) {
             // The synthesized button is a button: this press is a context event
@@ -2698,9 +2751,11 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     // present and future swallow path is covered by construction. Without it a
     // press the platform threw away still armed a burst that started firing the
     // moment the swallow lifted, carrying synthesized_repeat — an undo merge
-    // into an OLDER entry, from a press the application never saw. THE THREE
+    // into an OLDER entry, from a press the application never saw. THE FOUR
     // SWALLOW PATHS AND WHAT EACH COULD ACTUALLY ARM, walked at deliver_key
-    // rather than assumed:
+    // rather than assumed (three until codex round 10 grew the keyboard fork to
+    // the opening edge; the count is the fork's CLASSES, not its call sites —
+    // one branch reports them all as "not delivered"):
     //   * SUPER — the pre-round-9 arm carried its own `!mod_super_` term for
     //     exactly this reason; that term is DELETED here, subsumed by the
     //     report (the drop returns false), so the rule has one home instead of
@@ -2722,9 +2777,18 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     //     layer (2) has nothing to catch and the burst fires into ordinary
     //     global dispatch the moment the tail takes the window down. Esc plus a
     //     held Ctrl+Z was a silent undo behind a dialog.
+    //   * THE OPENING EDGE (modal state standing, the window not created yet —
+    //     the class round 10 added to the fork) — the DIALOG VEIL bullet's
+    //     reasoning verbatim, because it probes against the same standing modal
+    //     state: under a PROMPT repeat_eligible refuses on app.prompt.active,
+    //     under a dialog EDITOR the arm carries repeat_editor_ctx_ true and
+    //     layer (2) disarms it at the close. Covered by the report all the same
+    //     — the point of reading deliver_key's answer instead of walking the
+    //     paths is that a class added later joins by being swallowed.
     // THE OTHER DIRECTION IS ORIGIN-CORRECT AND DELIBERATELY UNTOUCHED: an arm
-    // that predates the dialog keeps firing (swallowed while the window
-    // stands, resuming after), because its press originated when the keyboard
+    // that predates the dialog keeps firing (swallowed for the whole modal
+    // span — the opening edge included, since round 10 — and resuming after),
+    // because its press originated when the keyboard
     // was live. Its only producer is the WM close of the MAIN window raising
     // the unsaved-close prompt — the one dialog opener that is neither a key
     // press (which re-arms or disarms here by eligibility) nor a pointer press
@@ -2891,7 +2955,7 @@ bool GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
             keyboard_intent_cancel_hook_();
         return false;
     }
-    // THE VEIL'S KEYBOARD HALF (the dialog toplevel, 2026-08-12): while a
+    // THE VEIL'S KEYBOARD HALF (the modal dialog, 2026-08-12): while a
     // dialog stands, a key focused on the MAIN window is CONSUMED here — the
     // Super drop's own shape, keyboard-intent cancel per swallowed physical
     // press — so the GUI's modal keyboard contract runs on DIALOG-focused
@@ -2900,7 +2964,7 @@ bool GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // labwc focuses the dialog as it maps, so the ordinary open types
     // straight into it — the main-focused span is a user's own click back
     // onto the inert window, and consuming there IS the veil.
-    // THE SECOND TERM IS THE ZOMBIE GATE: a DIALOG-focused key whose modal
+    // THE ZOMBIE GATE: a DIALOG-focused key whose modal
     // state has already answered is consumed too. The state goes false inside
     // the answering key's own dispatch while the toplevel lives to the run
     // loop's settled tail, and ONE dispatch_pending batch can carry more
@@ -2908,9 +2972,17 @@ bool GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // through ordinary global dispatch, behind a dialog still on screen). So
     // the whole span is inert on both surfaces, which is what makes the tail
     // safe as the single teardown owner.
-    // BOTH TERMS LIVE IN dialog_swallows_key(), the one fork the kLeftClickKey
-    // synthesized-button branch shares (it returns before this function, and
-    // its inline copy of the fork had already drifted — codex round 9).
+    // AND THE OPENING EDGE, the mirror image (codex round 10): the tail is the
+    // one OPENER too, so from the raising input's own dispatch until that tail
+    // the GUI is modal with NO window — and every further main-focused key in
+    // the batch used to flow into ordinary dispatch, where on_key handed it to
+    // the LIVE PROMPT's response matcher (Ctrl+Q and Delete queued together
+    // discarded the work and exited, the dialog never painted).
+    // ALL THREE CLASSES LIVE IN dialog_swallows_key(), the one fork the
+    // kLeftClickKey synthesized-button branch shares (it returns before this
+    // function, and its inline copy of the fork had already drifted — codex
+    // round 9), whose precondition is the touch poison's own origin test — one
+    // witness, two modalities, both edges.
     if (dialog_swallows_key()) {
         if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
             keyboard_intent_cancel_hook_();
@@ -3862,22 +3934,23 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             // window's veil is the GUI's modal state — which is exactly what
             // the answer clears.
             //
-            // TWO TERMS, THE WINDOW *OR* THE STATE, because the lifecycle sync
-            // runs at the loop's SETTLED TAIL and the zombie span therefore has
-            // a MIRROR IMAGE at the other end: from the opening input's own
-            // dispatch until that tail, the GUI is modal with NO toplevel yet,
-            // and one dispatch batch can carry a touch down into exactly that
-            // gap. Poisoning on the window alone would let such a stream go
-            // Pending and then convert at a lift that outran the answer — the
-            // same defect at the opening edge instead of the closing one. So
-            // the test is "was the GUI modal, by either witness, when this
-            // finger landed", which is the origin rule read literally.
-            // (Spelled inline rather than through a local: this case label is
-            // unbraced, and a declaration with an initializer here would make
-            // every later label a jump across its initialization.)
-            if (!touch_stream_on_dialog_ &&
-                (dialog_xdg_toplevel_ ||
-                 (dialog_modal_probe_ && dialog_modal_probe_()))) {
+            // TWO WITNESSES, THE WINDOW *OR* THE STATE, because the lifecycle
+            // sync runs at the loop's SETTLED TAIL and the zombie span
+            // therefore has a MIRROR IMAGE at the other end: from the opening
+            // input's own dispatch until that tail, the GUI is modal with NO
+            // toplevel yet, and one dispatch batch can carry a touch down into
+            // exactly that gap. Poisoning on the window alone would let such a
+            // stream go Pending and then convert at a lift that outran the
+            // answer — the same defect at the opening edge instead of the
+            // closing one. So the test is "was the GUI modal, by either
+            // witness, when this finger landed", which is the origin rule read
+            // literally — and it is asked through the SHARED
+            // dialog_modality_stands(), the keyboard swallow's own precondition
+            // since codex round 10 (two spellings of one rule drift: the
+            // keyboard half was still testing the toplevel alone, and the
+            // opening edge leaked keys straight into the raised prompt's
+            // response matcher).
+            if (!touch_stream_on_dialog_ && dialog_modality_stands()) {
                 touch_phase_ = TouchPhase::Drain;
                 // The two Pending-only facts are cleared rather than left to
                 // the arm below: a Drain exit does not run forget_touch_state

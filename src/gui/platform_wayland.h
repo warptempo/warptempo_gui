@@ -120,10 +120,33 @@ public:
     using RepeatEligibleProbe  = std::function<bool(GuiKey, GuiInputState)>;
     // Predicate installed by main.cpp: true while the GUI's MODAL STATE stands
     // (a prompt or one of the four dialog editors). It is the truth the
-    // dialog WINDOW mirrors, so the platform can tell a live dialog from a
-    // ZOMBIE one — the toplevel outliving the state it was opened for, until
-    // the run loop's settled tail tears it down (the zombie span at
-    // dialog_open()'s block). Consulted only while a dialog toplevel exists.
+    // dialog WINDOW mirrors, and the WINDOW LAGS IT AT BOTH ENDS — the run
+    // loop's settled tail is the one opener and the one teardown owner, so the
+    // state moves inside an input's own dispatch and the toplevel catches up at
+    // the tail. THIS PROBE IS THEREFORE THE MODAL WITNESS FOR BOTH EDGES OF THE
+    // WINDOW'S LIFE, not just the closing one:
+    //   * THE OPENING EDGE — modal state standing, NO toplevel yet (the input
+    //     that raised it is still being dispatched, and one
+    //     wl_display_dispatch_pending() batch can carry more queued input
+    //     behind it);
+    //   * THE ZOMBIE SPAN — toplevel standing, modal state already answered.
+    // It is consulted by THE ORIGIN TEST (dialog_modality_stands(), which ORs
+    // it with the toplevel) wherever suppressed or deferred input must die —
+    // the keyboard swallow and the touch poison share that one test, so neither
+    // edge can be covered at one device and missed at the other. The zombie
+    // half additionally needs the toplevel-scoped reading (dialog_is_zombie()),
+    // which is where the "the answer already ran" term comes from.
+    // Unwired (null) means "cannot tell" and reads as no modal state.
+    // WHAT IT DELIBERATELY DOES NOT COVER: the top-strip FLAG editor in its
+    // FlagPayload kind, which is keyboard-modal but is NOT a dialog (it is
+    // positional — the marker's flag unrolled where it stands) and never opens a
+    // window; the probe is false while it alone stands, so its keys keep flowing
+    // to the GUI's route_modal_editor_key. (That same editor struct's
+    // BpmBracket kind IS the BPM dialog and is inside the probe — the
+    // membership is composed once GUI-side.) That is why the witness is this
+    // narrow predicate
+    // and not some broader "any modal" question: the tests below must answer
+    // "is there a dialog window, or is one about to exist", nothing wider.
     using DialogModalProbe     = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
@@ -210,7 +233,10 @@ public:
     //     byte-identically — while a MAIN-focused key with a dialog standing
     //     is CONSUMED HERE (deliver_key's veil fork, the Super drop's own
     //     shape, keyboard-intent cancel fired per swallowed physical press),
-    //     so the modal contract's reach is focus-scoped by construction.
+    //     so the modal contract's reach is focus-scoped by construction. A key
+    //     queued behind the input that RAISED the modal — the window not
+    //     created yet — is consumed by that same fork on the origin test's
+    //     windowless arm (dialog_swallows_key()).
     //     Modifier state needs no special care across the surface hop: the
     //     leave-edge reset (forget_keyboard_state) is healed by the
     //     wl_keyboard.modifiers event the protocol delivers after every
@@ -253,11 +279,25 @@ public:
     // through the dialog hooks, so one gate there covers both devices —
     // input_pointer.cpp). The modal-state truth is set_dialog_modal_probe's.
     //
+    // THE SPAN HAS A MIRROR IMAGE AT THE OTHER END — THE OPENING EDGE — for the
+    // same reason (the tail is the one opener too): from the moment an input
+    // makes the GUI modal until that tail creates the toplevel, the GUI is
+    // MODAL WITH NO WINDOW, and the same dispatch batch can carry more queued
+    // input into exactly that gap. Both edges are therefore answered by ONE
+    // test over the two witnesses — dialog_modality_stands(), "toplevel OR
+    // modal state" — which the keyboard swallow and the touch poison share; a
+    // rule spelled twice drifts (round 9's lesson, and round 10 found the
+    // keyboard half testing the toplevel alone: in the opening span every
+    // further main-focused key in the batch flowed into ordinary dispatch,
+    // where a queued Delete answered the freshly raised close prompt's DISCARD
+    // response and exited without saving, the dialog never painted).
+    //
     // THE ROOT RULE, stated once here and referenced everywhere it bites
     // (codex round 9, which found three leaks that were all this one rule
     // missing): SUPPRESSED OR DEFERRED INPUT RESOLVES AGAINST ITS ORIGIN, NOT
-    // ITS DELIVERY — AN INPUT THAT ORIGINATED WHILE A DIALOG STOOD (modal OR
-    // zombie) IS DEAD, whatever the state is when it finally resolves. The
+    // ITS DELIVERY — AN INPUT THAT ORIGINATED WHILE THE GUI WAS MODAL (a
+    // toplevel standing, live or zombie, OR a modal state with the window not
+    // yet created) IS DEAD, whatever the state is when it finally resolves. The
     // guarantee has to be origin-scoped because this platform DEFERS input by
     // design: the touch disambiguation window converts a finger's down at its
     // LIFT or its EXPIRY, and key repeat arms at a press and fires later — so
@@ -269,10 +309,13 @@ public:
     // they drifted apart until round 9), THE CONSUMPTION-AWARE REPEAT ARM (a
     // key the platform swallowed never arms repeat, so no burst can outlive
     // the span that swallowed its press), and THE TOUCH POISON (a
-    // main-surface stream whose FIRST finger landed while a dialog stood
-    // enters Drain at that down and delivers nothing, ever). Input that
-    // originates AFTER the answer is a different question and is the arrival-
-    // order reading's (main.cpp's lifecycle sync).
+    // main-surface stream whose FIRST finger landed while the GUI was modal
+    // enters Drain at that down and delivers nothing, ever). ONE WITNESS, TWO
+    // MODALITIES, BOTH EDGES since round 10: the keyboard fork and the touch
+    // poison ask the same dialog_modality_stands(), so keyboard and touch are
+    // dead over exactly the same spans by construction. Input that originates
+    // AFTER the answer is a different question and is the arrival-order
+    // reading's (main.cpp's lifecycle sync).
     //
     // PAINTING: the dialog has its own small double-buffered wl_shm pool and
     // its own frame-callback chain; damage is whole-window (the surface is
@@ -416,10 +459,13 @@ public:
     //     focus change must not leave a pointer-held arrow authoring into an
     //     unfocused window;
     //   * deliver_key's TWO SWALLOWS, per swallowed NON-SYNTHESIZED press —
-    //     membership re-greped 2026-08-12 (codex round 9), the fire sites being
-    //     the SUPER DROP and THE DIALOG VEIL FORK (dialog_swallows_key(), which
-    //     the round-8 dialog arc added with this same fire and this list had not
-    //     yet named): a swallowed press is an intervening key ARRIVAL the
+    //     membership re-greped 2026-08-13 (codex round 10; unchanged at TWO fire
+    //     statements), the fire sites being the SUPER DROP and THE DIALOG
+    //     SWALLOW (dialog_swallows_key(), which the round-8 dialog arc added
+    //     with this same fire, whose THREE classes — the main-focused VEIL, the
+    //     ZOMBIE span, and the windowless OPENING EDGE round 10 added — all fire
+    //     it through that one branch, no per-class arm): a swallowed press is an
+    //     intervening key ARRIVAL the
     //     application's on_key disarm never sees, and the platform's own layer-1
     //     disarms its armed repeat at that very press — the arming branch in
     //     on_keyboard_key runs on deliver_key's RETURN and takes its else arm,
@@ -826,7 +872,10 @@ private:
     // KEYBOARD focus surface: true while wl_keyboard.enter last named the
     // dialog surface. deliver_key's veil fork reads it — a main-focused key
     // with a dialog standing is consumed there, and so is a DIALOG-focused
-    // key on a zombie window (the public contract above).
+    // key on a zombie window (the public contract above). It is read only
+    // WHILE THE TOPLEVEL STANDS: on the opening edge there is no dialog surface
+    // to be focused on, so every key in that span is main-focused by
+    // definition and the swallow needs no focus term there.
     bool keyboard_on_dialog_ = false;
     // POINTER focus surface and the dialog-local position. Deliberately
     // SEPARATE from pointer_focused_/pointer_x_/pointer_y_, which stay the
@@ -1657,18 +1706,30 @@ private:
     // marks damage. Called from open_dialog's answer path (the configure ack)
     // and from resize_dialog, so both branches read one rule.
     void apply_dialog_effective_size();
+    // THE ORIGIN TEST — "was the GUI modal when this input happened", by
+    // EITHER witness: the dialog toplevel exists, OR the modal probe says a
+    // modal state stands with the window not created yet (the opening edge).
+    // The one shared test behind BOTH origin-scoped suppressions — the keyboard
+    // swallow below and the touch poison at wl_touch.down — so the two
+    // modalities die over exactly the same spans and neither edge can be
+    // covered at one device and missed at the other (round 10; the rule and
+    // both edges at dialog_open(), the witness's own scope at
+    // DialogModalProbe).
+    bool dialog_modality_stands() const;
     // Is the dialog a ZOMBIE — the toplevel standing with the GUI's modal
     // state already answered (the span at dialog_open())? False when no
     // dialog stands and false when no probe is wired.
     bool dialog_is_zombie() const;
-    // DOES A STANDING DIALOG SWALLOW THIS KEY? The ONE keyboard veil fork
+    // DOES THE MODAL DIALOG SWALLOW THIS KEY? The ONE keyboard veil fork
     // (the origin rule at dialog_open()), shared by its exactly two callers:
     // deliver_key and the kLeftClickKey synthesized-button branch, which
     // returns before deliver_key and so must carry the fork itself. It was
     // spelled inline at both and DRIFTED — the synthesized-button copy never
     // grew the zombie term, so a queued dialog-focused `e` in the span
     // synthesized a main-window left press onto whatever the pointer rested
-    // over. Hoisted so the two cannot diverge again.
+    // over. Hoisted so the two cannot diverge again — and grown to the ORIGIN
+    // TEST above in round 10, which closed the same drift against the touch
+    // poison (the toplevel-alone reading missed the opening edge).
     bool dialog_swallows_key() const;
     // The dialog surface's one cursor: the theme ARROW, applied at its enter
     // serial WITHOUT touching cursor_kind_ (the main window's remembered
