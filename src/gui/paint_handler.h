@@ -65,10 +65,11 @@ inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }
 
-// Single source for the modal editor prefixes, read by the dialog painter
-// (paint_modal_dialog) alone since the editors moved into the centered
-// dialog (2026-08-12; they were the bottom-strip prefixes from row 7 until
-// then). Each is the dialog's LABEL, painted beside the inset field; the
+// Single source for the modal editor prefixes, read by the modal painter
+// (paint_modal_dialog) alone since the editors became dialogs (2026-08-12;
+// they were the bottom-strip prefixes from row 7 until then, and the modal is
+// back on that row since 2026-08-13). Each is the modal's LABEL, painted at
+// the row's left pad beside the inset field; the
 // pointer path never measures one — the painter publishes the field's own
 // click-to-caret origin (AppState::DialogEditorText), so the mapped
 // geometry IS the painted one rather than a re-derivation that could drift.
@@ -814,12 +815,12 @@ private:
     // and the content gates on loaded audio inside. Full design record at the
     // definition.
     void paint_overview_strip(cairo_t* cr);
-    // THE MODAL DIALOG (2026-08-12): the centered in-window box hosting the
-    // prompts and the four modal editors (settings / load / commit-title /
-    // BPM), painted LAST from on_redraw's tail, unconditionally — it
-    // publishes AppState::modal_dialog and AppState::dialog_editor_text, the
-    // geometry the pointer path's veil, button claims and click-to-caret
-    // read. The full design record is at the definition; the sampled chrome
-    // constants are at render.h's kModal* block.
+    // THE MODAL (2026-08-13): the BOTTOM ROW, hosting the prompts and the
+    // four modal editors (settings / load / commit-title / BPM) while one
+    // stands — the row's own painter yields the lane to it. Painted LAST from
+    // on_redraw's tail, unconditionally: it publishes AppState::modal_dialog
+    // and AppState::dialog_editor_text, the geometry the pointer path's veil,
+    // button claims and click-to-caret read. The full design record is at the
+    // definition; the field's sampled chrome is at render.h's kModal* block.
     void paint_modal_dialog(cairo_t* cr);
 };

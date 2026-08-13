@@ -2037,20 +2037,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Responses still answer from the keyboard unchanged.
     // THE PAINTED GATE reaches the CLAIM too (2026-08-13): the rects read
     // below are the LAST PAINT'S publication, so between a raise and its first
-    // paint they belong to the previous dialog. An editor dialog's buttons
-    // publish a zero response key and the live-set test already refuses them,
-    // but a
-    // PROMPT REPLACING A PROMPT — the save-failed rung, the one such route —
-    // leaves Discard and Cancel rects whose keys ARE live in the new set, at
-    // coordinates the new box (different text, different button words, so a
-    // different size and layout) no longer uses: a press there answered
-    // destructively against a question that had not been painted. Gated on the
-    // same bit the keyboard reads, so both halves of the answer wait for the
-    // same frame. The veil is unchanged either way — the press is still
-    // consumed by the `return` below, it just answers nothing.
+    // paint they belong to the previous dialog. A PROMPT REPLACING A PROMPT —
+    // the save-failed rung, the one such route — leaves Discard and Cancel
+    // rects whose keys ARE live in the new set, at coordinates the new layout
+    // (different text, different button words, so different widths) no longer
+    // uses: a press there answered destructively against a question that had
+    // not been painted. Gated on the same bit the keyboard reads, so both
+    // halves of the answer wait for the same frame. The veil is unchanged
+    // either way — the press is still consumed by the `return` below, it just
+    // answers nothing.
+    // AND THE OWNER TAG IS THE CLAIM'S OTHER HALF: a stash an EDITOR painted
+    // never answers a prompt, whatever its keys say (published geometry may
+    // only select; live state decides — the doctrine is at
+    // ModalDialogGeometry, app_state.h). The live-response-set test below
+    // stays: it is the KEY half, and the two are different questions.
     if (app.prompt.active) {
         if (app.prompt.painted && button == GuiMouseButton::Left &&
-            !mods.ctrl && !mods.shift && !mods.alt) {
+            !mods.ctrl && !mods.shift && !mods.alt &&
+            app.modal_dialog.owner == AppState::ModalDialogOwner::Prompt) {
             const int hit = modal_dialog_button_hit(x, y);
             if (hit >= 0) {
                 const char rk =
@@ -2114,18 +2118,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // chord, so a red-flash refusal, the BPM commit's render sweep and every
     // teardown are the keyboard's own bodies. A PROMPT's buttons are claimed
     // in the prompt gate above, not here.
-    // NO PAINTED GATE HERE, and the residual is recorded rather than machined
-    // away (2026-08-13, with the prompt's gate above): in the one batch between
-    // an editor's OPEN and its first paint the stash can still be a PROMPT's
-    // (editor→editor is unreachable — every opener refuses while another editor
-    // owns the keyboard), and a prompt publishes editor_ok FALSE on every
-    // button, so the worst a stale rect can do is CANCEL an editor that just
-    // opened with nothing typed in it — visible, non-destructive, and one
-    // gesture from reopening. Closing it would need a per-dialog identity, the
-    // generation machinery the real-window arc was scrapped for (conventions.md
-    // carries that ruling); the prompt's one-key ANSWERS are what earned a bit.
+    // THE OWNER TAG IS THIS CLAIM'S GATE (2026-08-13): in the one batch
+    // between an editor's OPEN and its first paint the stash can still be a
+    // PROMPT'S (editor→editor is unreachable — every opener refuses while
+    // another editor owns the keyboard), and a prompt publishes editor_ok
+    // FALSE on every button, so a stale rect used to CANCEL an editor that had
+    // just opened. Refusing a tag that disagrees with the surface owning input
+    // closes it — no per-dialog identity, no generation machinery, one enum
+    // the painter writes with its own hand (the doctrine and the tag's
+    // writer/readers are at ModalDialogGeometry, app_state.h).
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
-        !mods.alt && modal_dialog_editor_active()) {
+        !mods.alt && modal_dialog_editor_active() &&
+        app.modal_dialog.owner == AppState::ModalDialogOwner::Editor) {
         const int hit = modal_dialog_button_hit(x, y);
         if (hit >= 0) {
             dispatch_modal_dialog_editor_act(

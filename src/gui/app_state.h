@@ -1623,32 +1623,40 @@ enum class DialogTrigger {
     ERROR_NOTICE,
 };
 
-// In-window modal prompt state. When `active` is true, the CENTERED MODAL
-// DIALOG (paint_modal_dialog, 2026-08-12 — the prompts lived on the bottom
-// row's modal span before that) carries the prompt's text as its message line
-// and one REAL BUTTON per response, right-aligned in the box.
+// In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
+// PROMPT (paint_modal_dialog, 2026-08-13 — the row's tenants stand down whole
+// and the lane carries the prompt's text at its left pad with one REAL BUTTON
+// per response right-aligned at its right pad; the centered box of 2026-08-12
+// is scrapped, and before that arc the prompts were a tier in this same row's
+// status span).
 // Keyboard input is owned by the prompt exactly as it always was: only the
 // response keys (and Esc, which activates the rightmost response) do
 // anything; everything else is swallowed. `response_keys` holds lowercase
 // letters and the match is CASE-SENSITIVE on the codepoint (the rule is at
 // the prompt dispatch, input_handler.cpp); the two non-letter responses match
 // on the GuiKey (Delete, Escape) instead.
-// `response_labels` are the BUTTONS' words — plain words in the kdenlive
-// dialog look ("Save", "Discard", "Cancel"), one per response, parallel to
-// response_keys. THE BRACKET-ACCELERATOR SPELLING IS RETIRED WITH THE ROW
-// (2026-08-12): "[S]ave" / "[Delete]" / "[Esc]" named the answering keys
-// inline because the row's one line was the whole surface; a button wears the
-// answer's MEANING, and the keyboard letters still answer unchanged. The two
-// key-named sentinels therefore wear meaning words too — '\x7f' (Delete, the
-// discard-and-proceed) is "Discard", '\x1b' (Escape) is "Cancel" ("OK" on the
-// dismiss-only error notice, where nothing is being cancelled).
+// `response_labels` are the BUTTONS' words, one per response, parallel to
+// response_keys, IN THE BRACKETED ACCELERATOR SPELLING — "[S]ave",
+// "[D]iscard", "[C]ancel", "[R]etry", "[Y]es". That spelling is the old
+// bottom-strip line's, retired on 2026-08-12 with the row and REINSTATED
+// 2026-08-13 with it (architect): the buttons are touch targets that also
+// name the letter that answers them, which is what the plain-word labels of
+// the box gave up. The two key-named sentinels take the letter their MEANING
+// spells rather than their key's name — '\x7f' (Delete, the
+// discard-and-proceed) is "[D]iscard", '\x1b' (Escape) is "[C]ancel" — and
+// the dismiss-only ERROR NOTICE is the one exception, wearing a plain "OK":
+// nothing is being cancelled there and it advertises no letter. NONE OF THIS
+// REACHES THE MATCHING: response_keys and the codepoint-exact lowercase
+// compare are untouched, so a typed capital still does not answer.
 // NO BUTTON WEARS THE DEFAULT FACE: the crop's highlighted Save is Qt's
 // Enter-default, and this prompt system HAS no Enter answer — Return is not a
 // response key and does nothing — so every button wears the plain face
 // rather than inventing a default (the brief's recorded decision).
 //
 // A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13, codex round 13 —
-// the one lag span the in-window dialog still had). One dispatch batch is
+// the one lag span the in-window modal still had; unchanged in substance by
+// the move onto the bottom row later that day, which moved the modal's
+// rectangle and nothing about this gate). One dispatch batch is
 // delivered whole (wl_display_dispatch_pending) before the loop paints, so a
 // prompt can be RAISED and RECEIVE INPUT while the surface still shows the
 // prior world: dirty work + an editor dialog up + Ctrl+Q and Delete in one
@@ -1673,11 +1681,13 @@ enum class DialogTrigger {
 // publication: an editor dialog's buttons publish a zero response key and the
 // live-set test refuses them already, but a PROMPT REPLACING A PROMPT — the
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
-// keys are still live at coordinates the new (differently sized, differently
-// laid out) box no longer uses, so the stale-rect press was answerable and
-// destructive. The button HOVER face is deliberately not gated: a stale
-// index only mislights a button for one frame and self-heals on the next
-// motion.
+// keys are still live at coordinates the new (differently laid out) button row
+// no longer uses, so the stale-rect press was answerable and destructive. The
+// button HOVER face is deliberately not gated: a stale index mislights a
+// button until THE NEXT DELIVERED MOTION, which is what re-runs
+// update_modal_dialog_hover (the modal branches of on_motion are its only
+// callers — it does not ride the per-tick roster recompute), and mislighting
+// is all it can do.
 // EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
 // buffer, which is non-destructive and self-evident the moment the field
 // paints, and the commit is a separate deliberate Enter. The destructive
@@ -1689,7 +1699,7 @@ struct PromptState {
     bool                     painted = false;   // see the block above
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // button words, e.g. "Save"
+    std::vector<std::string> response_labels;   // e.g. "[S]ave"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 
     // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the three raisers
@@ -1698,8 +1708,9 @@ struct PromptState {
     // this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
     // forgot to clear it, because there is nowhere else to write the question.
-    // The callers own their own damage (invalidate_all — the box's rect does
-    // not exist before the first paint) and the modal playback stop.
+    // The callers own their own damage (invalidate_all — the modal's rect
+    // does not exist before the first paint, which the painted gate's own
+    // reasoning depends on) and the modal playback stop.
     void present(std::string t,
                  std::vector<char> keys,
                  std::vector<std::string> labels,
@@ -2432,9 +2443,11 @@ struct AppState {
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
     // geometry contract for the settings / load / commit-title / BPM editors,
-    // which paint inside the MODAL DIALOG's inset field since 2026-08-12 (they
-    // lived on the status lane, row 9, from row 7 until then; the press region
-    // is the dialog's published FIELD rect, modal_dialog.field, not a lane).
+    // which paint inside the MODAL's inset field since 2026-08-12 (they wrote
+    // straight onto the status lane, row 9, from row 7 until then; the press
+    // region is the published FIELD rect, modal_dialog.field, and it stays the
+    // field alone now that the modal paints on the bottom row — the rest of
+    // the lane is the row, not the editor).
     //
     // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
     // left pad is already spent in it — and `byte_x` holds pending.size()+1
@@ -2452,23 +2465,50 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL DIALOG'S PAINTED GEOMETRY (architect 2026-08-12: "we should
-    // institute real modals" — kdenlive's own dialog model, in-window). The
-    // prompts and the four dialog editors paint as ONE centered box over an
-    // inert window; this is the painter's stash of what was drawn, the roster
-    // model: paint_modal_dialog rewrites it every run (zero/invalid when no
-    // dialog stands), and the pointer path reads it instead of re-deriving
-    // layout. `box` is the whole frame including its border; `field` is the
-    // editor field's INTERIOR (zero for prompts) — the click-to-caret / text-
-    // drag claim region; `buttons` are the answer buttons in painted order.
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the four dialog
+    // editors paint ON THE BOTTOM ROW since 2026-08-13 (architect, scrapping
+    // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
+    // shadow, and faking one wouldn't work"): while one stands the row's
+    // tenants stand down whole and the modal has the lane. This is the
+    // painter's stash of what was drawn, the roster model:
+    // paint_modal_dialog rewrites it every run (zero/invalid when no dialog
+    // stands), and the pointer path reads it instead of re-deriving layout.
+    // `box` is the modal's whole SURFACE — the bottom row's lane, which is
+    // what the hover invalidation and the damage ride; `field` is the editor
+    // field's INTERIOR (zero for prompts) — the click-to-caret / text-drag
+    // claim region; `buttons` are the answer buttons in painted order.
     //
     // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
     // `response_key` is the PromptState response char the click activates
-    // (validated against the LIVE response_keys at dispatch, so a one-frame
-    // stale stash — the Save-failed mutation — answers nothing rather than the
-    // wrong set); for an EDITOR, `editor_ok` selects the session's own Enter
-    // (true) or Esc (false), dispatched through the editor's one key route —
-    // button-is-its-chord.
+    // (validated against the LIVE response_keys at dispatch); for an EDITOR,
+    // `editor_ok` selects the session's own Enter (true) or Esc (false),
+    // dispatched through the editor's one key route — button-is-its-chord.
+    //
+    // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine,
+    // recorded here once, 2026-08-13). The icon roster always obeyed it —
+    // button-is-its-chord plus the live gates the chord meets — and these
+    // buttons were the one outlier, their rects carrying baked command
+    // payloads. Hit geometry stays the PAINTED stash (the displayed basis:
+    // screen and hit agree always, the marker stems' delay-and-sync model of
+    // 2026-07-24, whose recorded cold-start no-hit price is exactly the shape
+    // the painted gate takes at PromptState), and `owner` is that model's
+    // RE-VALIDATE-AT-DISPATCH half: the painter tags the stash with the
+    // surface it drew, and each press claim refuses a tag that disagrees with
+    // the surface currently owning input. THERE IS NO INPUT LAG IN THIS,
+    // because nothing defers — the mismatch span is one dispatch batch,
+    // reachable only by a queued burst, which is exactly what must be refused.
+    //
+    // THE PAINTER IS `owner`'S ONE WRITER (Prompt on the prompt branch, Editor
+    // on the editor branch, None in the no-dialog reset arm beside the rest of
+    // the stash), and its READERS are the two press claims in on_button_press
+    // (input_pointer.cpp): the prompt response claim requires Prompt, the
+    // editor OK/Cancel claim requires Editor, each refusing a disagreeing tag
+    // as a consumed no-op — which is what closes the stale-PROMPT-rect press
+    // that could cancel a just-opened editor. THE FIELD CLAIM NEEDS NO TAG
+    // TERM and deliberately has none: a prompt publishes a zero field and
+    // leaves DialogEditorText.valid false, so the claim's own two tests
+    // already answer it.
+    enum class ModalDialogOwner { None, Prompt, Editor };
     struct ModalDialogButton {
         GuiRect rect{0, 0, 0, 0};
         char    response_key = 0;      // prompt dialogs; 0 on editor dialogs
@@ -2476,6 +2516,7 @@ struct AppState {
     };
     struct ModalDialogGeometry {
         bool                           valid = false;
+        ModalDialogOwner               owner = ModalDialogOwner::None;
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
         std::vector<ModalDialogButton> buttons;
@@ -2505,7 +2546,10 @@ struct AppState {
     // left bound (the right-aligned chain clips against the clock, so the
     // cell edge bounds everything a string write can move). Zero before the
     // row's first paint, which both owners answer with the whole lane — the
-    // first frame paints everything anyway.
+    // first frame paints everything anyway — AND ZERO WHILE THE ROW YIELDS TO
+    // A MODAL (2026-08-13): the clock is not painted then, so the painter
+    // publishes no cell and both owners widen to the lane, which is the
+    // modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
 
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
@@ -3673,10 +3717,10 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // The command prompt, a CENTERED MODAL DIALOG (paint_modal_dialog, 2026-08-12
-    // — one box painted last over an inert window, its responses real buttons;
-    // the bottom strip's own prompt line is retired). Active only when a
-    // close / re-detect gesture fires while a confirmation is required.
+    // The command prompt, THE BOTTOM ROW'S MODAL (paint_modal_dialog,
+    // 2026-08-13 — the row's tenants stand down and the lane carries the
+    // question, its responses real buttons). Active only when a close /
+    // re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
     // Shared text-editor state for two editors distinguished by Kind: the
@@ -3684,8 +3728,8 @@ struct AppState {
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips) and the BPM editor
-    // (Kind::BpmBracket), which paints in the CENTERED MODAL DIALOG like the
-    // other three dialog editors (2026-08-12). The editor
+    // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
+    // other three dialog editors (2026-08-13). The editor
     // owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
@@ -3693,8 +3737,8 @@ struct AppState {
     bool top_flag_editor_blink_last = false;
 
     // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
-    // line, writes to engine_settings on commit. Paints in the CENTERED MODAL
-    // DIALOG (2026-08-12); separate from top_flag_editor so the two paint
+    // line, writes to engine_settings on commit. Paints as the BOTTOM ROW'S
+    // MODAL (2026-08-13); separate from top_flag_editor so the two paint
     // regions stay independent (the in-practice mutual exclusion comes from the
     // flag editor swallowing all keys while active).
     text_editor::State settings_editor;
@@ -3768,6 +3812,13 @@ struct AppState {
     // PERMANENT: nothing in the input layer can clear it, there is no timer
     // behind it, and there is nothing to dismiss.
     //
+    // ONE THING HIDES IT, and hides it without touching it: while a MODAL
+    // stands the bottom row yields whole (2026-08-13), so the chip is not
+    // painted until the modal closes, at which point the row paints it again
+    // unchanged. That is the row's rule rather than an exception for this
+    // string — a modal and a row tenant are never on the lane together — and
+    // it costs the chip nothing, the state being untouched and permanent.
+    //
     // ITS ONE CLEARING ROUTE IS A LATER SUCCESS: a checkpoint act that ends
     // Committed or NothingToCommit clears it, because a success supersedes the
     // stale failure it replaces — the message says what the repository's last
@@ -3807,15 +3858,16 @@ struct AppState {
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status —
     // render the timestamp normally."
-    // IT COEXISTS WITH prompt.active, and since the modal dialog (2026-08-12)
-    // the two no longer even share a surface: an archival render runs on, so
-    // dirtying the project and pressing Ctrl+Q raises the close prompt over a
-    // live run (the prompt cancels nothing), and the run's own completion can
-    // then rewrite or clear this string while the prompt stands — the string
-    // keeps its row-9 slot and paints UNDER the centered dialog box, which is
-    // the honest picture (the run really is still going). While the two
-    // shared row 9's one cell the prompt was the chain's first tier; that
-    // ordering is superseded structurally.
+    // IT COEXISTS WITH prompt.active AS STATE, and the STRING IS SIMPLY NOT
+    // PAINTED while a modal stands: an archival render runs on, so dirtying
+    // the project and pressing Ctrl+Q raises the close prompt over a live run
+    // (the prompt cancels nothing), and the run's own completion can rewrite
+    // or clear this string while the prompt stands — but the bottom row
+    // YIELDS WHOLE to the modal (2026-08-13), so nothing of the chain shows
+    // until the modal closes, at which point the row paints whatever the
+    // string then holds. NO PRECEDENCE TIER IS INVOLVED: the old shared-cell
+    // ordering (the prompt as the chain's first tier) is superseded
+    // structurally, and no status write needs a modal test of its own.
     std::string queue_progress_text;
 
     // Transient one-line status message shown in the bottom row's status
@@ -4391,9 +4443,14 @@ std::pair<long long, long long> compute_trim_samples(
 //   history line) and the critical chip, right-aligned against the arrows.
 //   Reached through
 //   Viewport::invalidate_status_row_area, which is where its callers are and
-//   which ALSO carries the modal dialog's stashed box while one stands (the
+//   which ALSO carries the modal's stashed surface while one stands (the
 //   rider, 2026-08-12 — the dialog editors' repaint sites all speak that
 //   call); the great majority of them write a STRING into C.
+//
+//   BOTH OWNERS WIDEN TO THE WHOLE LANE WHILE A MODAL STANDS (2026-08-13),
+//   and by construction rather than by a test of their own: the row yields
+//   whole to the modal, so its painter publishes no clock cell, and a zero
+//   cell is already each owner's honest widening.
 //
 //   clock_invalidate_rect — the reserved CLOCK CELL at the lane's centre, and
 //   nothing else on the row: every route that moves the PLAYHEAD or the

@@ -253,11 +253,12 @@ struct Viewport {
     // against the arrows. The bottom row's high-traffic string owner — the queue /
     // render / transient strings, the selection readout — and the DEFAULT
     // for anything writing a string down there. SINCE 2026-08-12 IT ALSO
-    // CARRIES THE MODAL DIALOG'S STASHED BOX while one stands (the rider and
-    // its rationale are at the definition): the four modal editors' repaint
-    // sites all speak this call from their bottom-strip tenancy, and the
-    // editors paint in the centered dialog now, so the one rider keeps every
-    // typing/blink/flash/closer honest without re-classifying the sites.
+    // CARRIES THE MODAL'S STASHED SURFACE while one stands (the rider and its
+    // rationale are at the definition) — which since 2026-08-13 is this row's
+    // own lane, the modal having moved onto the row: the four modal editors'
+    // repaint sites all speak this call from their bottom-strip tenancy, so
+    // the one rider keeps every typing/blink/flash/closer honest without
+    // re-classifying the sites.
     void invalidate_status_row_area();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it

@@ -914,6 +914,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // WHOLE lane — the honest widening, and unreachable in practice: the first
 // frame damages the window entire (the arrow stash starts zero too, and its
 // fallback is the lane's right edge for the same reason).
+// THE SAME ZERO IS THE MODAL'S ANSWER (2026-08-13): while a prompt or a dialog
+// editor stands the row yields whole and its painter zeroes the clock cell, so
+// this widens to the lane — which is exactly the modal's surface, and exactly
+// what a status write during a modal owes. The arrow stash is zero then too
+// and is never consulted: the cell test above has already returned.
 GuiRect status_row_invalidate_rect(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
     const GuiRect cell = a.clock_cell_rect;
@@ -936,7 +941,10 @@ GuiRect status_row_invalidate_rect(const AppState& a) {
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
-// damages the window entire.
+// damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):
+// the row's painter zeroes the cell while it yields to a prompt or a dialog
+// editor, so a clock-moving route during a modal widens to the lane instead of
+// damaging a cell that is not being painted.
 GuiRect clock_invalidate_rect(const AppState& a) {
     const GuiRect cell = a.clock_cell_rect;
     if (cell.w <= 0 || cell.h <= 0) return bottom_row_area(a);

@@ -104,7 +104,7 @@ struct GuiPlaybackLifecycle {
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
     //   * DIALOG modal surfaces — the four editors and the prompts, all
-    //     hosted by the centered modal dialog since 2026-08-12 — STOP.
+    //     painted as the bottom row's modal since 2026-08-13 — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
     //     wheel-transparent), and editing flag text while listening to the

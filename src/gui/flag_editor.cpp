@@ -612,7 +612,7 @@ void GuiFlagEditor::wipe_bpm_state() {
     }
 }
 
-// Open the BPM editor on `idx` — a centered modal dialog since 2026-08-12.
+// Open the BPM editor on `idx` — a modal on the bottom row since 2026-08-13.
 // Seed pending is the
 // current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
@@ -631,9 +631,9 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
         /*locked_prefix=*/"",
         format_bpm_bracket_text(mv[idx]));
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
-    // draws in the centered modal dialog, whose box does not exist before its
-    // first paint — so a modal-dialog OPEN damages the whole window (the
-    // settings opener carries the rule).
+    // draws in the bottom row's modal, whose rect does not exist before its
+    // first paint — so a MODAL OPEN damages the whole window (the settings
+    // opener carries the rule).
     viewport.invalidate_all();
 }
 

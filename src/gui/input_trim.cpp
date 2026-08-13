@@ -63,7 +63,7 @@
 //   * the SETTINGS EDITOR's `:trim_*=` ACTIVE-tab commits (settings_editor.cpp),
 //     which move the cursor from inside a modal editor — accepted for
 //     uniformity: a typed commit is a commit, and the editor's own surface is
-//     the centered dialog, not the waveform. The INACTIVE-band arm parks nothing:
+//     the bottom row's modal, not the waveform. The INACTIVE-band arm parks nothing:
 //     it writes a PARKED pair, not the live window;
 //   * the CROSSED / COINCIDENT RESETS, with no arm of their own — a reset IS a
 //     trim write, to the full window, so reading the committed begin parks the

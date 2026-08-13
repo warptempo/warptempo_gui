@@ -2126,10 +2126,12 @@ private:
     // It names the DIALOG-HOSTED modal editors — the settings editor, the
     // load editor, the commit-title editor and the bpm bracket editor (plus
     // the prompts, gated separately), the four surfaces that paint in the
-    // centered modal dialog since 2026-08-12 (it was
-    // modal_bottom_strip_editor_active while they lived on the status lane;
-    // the MEANING — this exact four-editor set — is unchanged, only their
-    // home and therefore the name moved). SEVEN CALLERS (re-derived
+    // MODAL since 2026-08-12 — on the BOTTOM ROW since 2026-08-13, which is
+    // where the name came from in the first place (it was
+    // modal_bottom_strip_editor_active while they wrote onto the status lane;
+    // the MEANING — this exact four-editor set — has never moved, and the
+    // surface is a modal that yields the whole row now rather than a tenant
+    // of its status span). SEVEN CALLERS (re-derived
     // 2026-08-12, the dialog arc), each asking the same question about a
     // pointer fact: wheel_context's swallow (input_handler.cpp), because the
     // wheel's stepped pan is NAVIGATION, not a chord, so it still punches
@@ -2141,7 +2143,7 @@ private:
     // swallows the admitted Quit/Save button presses must be lifted OVER
     // (the fix's contract is at that block and at
     // modal_editor_admits_command_chord); the dialog BUTTON claim beside it
-    // and on_motion's dialog-hover branch (2026-08-12), the box's own two
+    // and on_motion's dialog-hover branch (2026-08-12), the modal's own two
     // pointer surfaces; the roster hover walk's veil term
     // (recompute_redesign_button_hover — under an editor dialog only the
     // veil-admitted buttons hover); and paint_modal_dialog's editor fork by

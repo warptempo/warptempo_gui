@@ -15,9 +15,10 @@ struct GuiInputHandler;
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
 // the flag editor (text_editor::State, kind-dispatched keyboard
-// vocabulary, red on parse failure) but painted in the CENTERED MODAL DIALOG
-// (2026-08-12 — its prefix the dialog's label, the buffer in the dark inset
-// field whose recolor is the red flash) instead of over the flag rect.
+// vocabulary, red on parse failure) but painted as a MODAL ON THE BOTTOM ROW
+// (2026-08-13 — its prefix the label at the row's left pad, the buffer in the
+// dark inset field whose recolor is the red flash, OK and Cancel right-
+// aligned) instead of over the flag rect.
 //
 // The editor is a keyboard front-end to EVERY key that can appear in a
 // `.settings` file: it funnels each key into the SAME code its gesture uses

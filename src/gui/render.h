@@ -759,42 +759,37 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 inline constexpr GuiColor kRedesignPopupDisabledLabel  = hex(0x686A6C);
 inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 
-// THE MODAL DIALOG'S CHROME (architect 2026-08-12, "we should institute real
-// modals" — kdenlive's own dialog model painted in-window; paint_modal_dialog
-// is the one consumer). Sampled off modal_popup.png (the Save/Do Not Save/
-// Cancel warning dialog) and editor.png (the "FFmpeg:" label + dark inset
-// field row of the settings dialog):
-//
-//   BOX GROUND — modal_popup.png's body reads #202326 from the row under the
-//   titlebar seam down to the bottom border (vertical scan at x=360: y=31..153
-//   uniform outside the text ink). It COINCIDES with kRedesignTabGround /
-//   kBackground and is NOT them — a dialog retune must not move the tab row
-//   (the standing numerically-equal-is-not-the-same-constant rule at
-//   kRedesignRowGroundUnfocused).
-//   BOX BORDER — the crop's 1px frame on all four edges reads #535659
-//   (x=2 / x=722 columns, y=3 / y=154 rows), which coincides with
-//   kRedesignLine, same rule. (The crop also carries a #292c30 TITLEBAR band
-//   under the frame's top edge with a second #535659 seam below it — that is
-//   the WM's decoration on kdenlive's separate dialog window; ours is
-//   in-window and paints NO title bar, so the band is deliberately not
-//   transcribed. The crop's highlighted default button — #2d4655 fill under a
-//   #4882a1 frame — is likewise not transcribed: this product's prompts have
-//   no Enter-default, the recorded decision at PromptState.)
+// THE MODAL SURFACE'S CHROME — TWO CONSTANTS, THE FIELD'S (paint_modal_dialog
+// is the one consumer). THE MODAL IS THE BOTTOM ROW since 2026-08-13
+// (architect, scrapping the centered box he ratified the day before: "it looks
+// sloppy — no compositor drop shadow, and faking one wouldn't work"): while a
+// prompt or a dialog editor stands, the row's tenants stand down whole and the
+// modal paints in the lane — on THE ROW'S OWN GROUND, at THE ROW'S OWN PADS,
+// so it needs no ground, no frame and no margin of its own.
 //
 //   FIELD GROUND — editor.png's inset interior reads #141618 (y=6..34 at
 //   x=200).
 //   FIELD BORDER — its 1px frame reads #4c4e51 (y=5 / y=35), coinciding with
-//   kRedesignTabLine, same rule again.
+//   kRedesignTabLine and deliberately NOT it (the standing numerically-equal-
+//   is-not-the-same-constant rule at kRedesignRowGroundUnfocused).
 //
-// The dialog's BUTTONS carry no constants here: they are the deleted toolbar
+// THE BOX'S OWN CHROME IS RETIRED WITH THE BOX (2026-08-13): kModalGround
+// (#202326 off modal_popup.png's body), kModalBorder (#535659 off its 1px
+// frame), kModalBorderPx, kModalPadPx (the crop's 11px content margin — the
+// row's own bottom_row_pad_x is the margin now) and kModalWindowMarginPx (the
+// narrow-window clamp — the row IS the clamp) are all deleted producer-less.
+// The crop's #292c30 titlebar band and its #2d4655/#4882a1 default-button face
+// were never transcribed and stay untranscribed: ours has no title bar, and
+// this prompt system has no Enter-default (the recorded decision at
+// PromptState). Their values are git history; a reinstatement is a ruling.
+//
+// The modal's BUTTONS carry no constants here: they are the deleted toolbar
 // row's 32px box (kModalBtnBoxPx and the 9/10 label pads, paint_handler.cpp —
-// row 2's own arithmetic, kept by the dialog when the row dissolved into the
-// icon row at the 2026-08-12 relayout) at the icon row's face colors, both
-// REUSED not re-sampled (the architect's explicit mix), and the invalid red
-// flash recolors the FIELD in the marker-flag red pair (kMarkerFlagFillRed /
+// row 2's own arithmetic, kept when the row dissolved into the icon row at the
+// 2026-08-12 relayout) at the icon row's face colors, both REUSED not
+// re-sampled (the architect's explicit mix), and the invalid red flash
+// recolors the FIELD in the marker-flag red pair (kMarkerFlagFillRed /
 // kMarkerFlagEdgeRed — the one invalid red), called not copied.
-inline constexpr GuiColor kModalGround      = hex(0x202326);
-inline constexpr GuiColor kModalBorder      = hex(0x535659);
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
@@ -1590,7 +1585,7 @@ inline int playhead_half_px() {
 // editor_text_glyph0_x and the pre-first-paint metric seeds all served ONE
 // surface by the end: the three bottom-strip editors' chip-shaped text box,
 // measured in glyph counts times one advance. Those editors are SHAPED now and
-// paint in paint_handler.cpp (in the centered modal dialog since 2026-08-12),
+// paint in paint_handler.cpp (in the bottom row's modal since 2026-08-13),
 // publishing their
 // caret geometry the way the flag editor does — measurement, paint and hit all
 // off the same ShapedRun. Nothing in the tree measures text by counting
