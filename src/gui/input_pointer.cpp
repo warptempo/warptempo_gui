@@ -1931,12 +1931,18 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // reads the index back). The index resets with the stash in
 // paint_modal_dialog's no-dialog arm, so it cannot go stale across dialogs.
 //
-// IT ALSO CANCELS AN ARMED BUTTON, which is the act-at-release model's
-// sliding-off half (2026-08-13): the arm may only survive while the pointer
-// is on the button it armed, so the same walk that moves the lit face drops
-// it. Sliding back on does NOT re-arm — there is no new press — and the drag
-// ends as a cancelled click, which is what "release elsewhere dispatches
-// nothing" means for a pointer that never left the button's row.
+// IT ALSO TRACKS AN ARMED BUTTON — THE FEINT (architect 2026-08-13,
+// SUPERSEDING this walk's own "sliding off cancels, and sliding back on does
+// NOT re-arm" rule of hours earlier): "if the user feints — clicks a button
+// and then drags away before the mouse goes up — then that button receives the
+// passive focus as well." So THE ARM STAYS LIVE FOR THE WHOLE HOLD and this
+// walk only answers whether the pointer is inside it, which is what makes
+// sliding back on restore the pressed face and its release commit — nothing
+// was cancelled, so nothing has to be re-armed. Leaving the button is what
+// assigns the PASSIVE FOCUS the ruling gives the feint, and the face that
+// results (the focus fill under an accent outline, no halo) is the ladder's
+// own composition rather than a case (paint_modal_dialog). The whole rule and
+// the pair's read-as-one-fact contract are at AppState::modal_dialog_pressed.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
     // THE FIELD'S OWN HOVER FACE rides this same walk (2026-08-13, when the
@@ -1947,13 +1953,26 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const bool in_field =
         app.modal_dialog.valid &&
         rect_contains(app.modal_dialog.field, x, y);
-    const bool arm_lost =
-        app.modal_dialog_pressed >= 0 && app.modal_dialog_pressed != hit;
-    if (app.modal_dialog_hovered != hit || arm_lost ||
+    const int  armed  = app.modal_dialog_pressed;
+    const bool inside = armed >= 0 && armed == hit;
+    // THE FEINT'S ASSIGNMENT, on the leave edge alone: the pointer has left the
+    // button it armed while still holding it. It REPLACES whatever focus the
+    // dialog had, of either strength, and it is PASSIVE — the user pointed at
+    // this button, which is not the deliberate keyboard walk that earns the
+    // active face.
+    const bool feint = armed >= 0 && !inside &&
+                       (app.modal_dialog_focus != armed ||
+                        app.modal_dialog_focus_active);
+    if (app.modal_dialog_hovered != hit || feint ||
+        app.modal_dialog_press_inside != inside ||
         app.modal_dialog_field_hovered != in_field) {
         app.modal_dialog_hovered       = hit;
         app.modal_dialog_field_hovered = in_field;
-        if (arm_lost) app.modal_dialog_pressed = -1;
+        app.modal_dialog_press_inside  = inside;
+        if (feint) {
+            app.modal_dialog_focus        = armed;
+            app.modal_dialog_focus_active = false;
+        }
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
@@ -1980,7 +1999,24 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
 // box when it fires.
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
-    app.modal_dialog_pressed = -1;
+    app.modal_dialog_pressed      = -1;
+    app.modal_dialog_press_inside = false;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
+}
+
+// THE KEYBOARD ARM'S HARD END, the twin of the one above and on the twin edge:
+// the platform's keyboard-intent cancellation (keyboard leave, keyboard-
+// capability loss, a Super-swallowed press — the fire classes are at
+// set_keyboard_intent_cancel_hook, platform_wayland.h). The release this arm
+// waits for can never be delivered across those edges, and an act that has not
+// happened yet must not be left waiting for it. Transition-gated, damaging the
+// stashed box when it fires; the contract is at
+// AppState::modal_dialog_key_pressed.
+void GuiInputHandler::clear_modal_dialog_key_press() {
+    if (app.modal_dialog_key_pressed < 0) return;
+    app.modal_dialog_key_pressed     = -1;
+    app.modal_dialog_key_pressed_key = 0;
     if (app.modal_dialog.valid)
         viewport.invalidate_rect(app.modal_dialog.box);
 }
@@ -1993,25 +2029,77 @@ void GuiInputHandler::clear_modal_dialog_press() {
 bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
     if (hit < 0) return false;
-    if (app.modal_dialog_pressed != hit) {
+    if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
         app.modal_dialog_pressed = hit;
+        // A press is inside what it hit, by construction — the feint's bit
+        // starts true and only the hover walk can turn it over.
+        app.modal_dialog_press_inside = true;
         viewport.invalidate_rect(app.modal_dialog.box);
     }
     return true;
 }
 
 // A dialog button's RELEASE: the act runs iff the lift lands on the SAME
-// button the press armed. Returns that button's index, or -1 — the caller
-// owns the dispatch, because a prompt's buttons and an editor's mean
-// different things. The arm is consumed either way: a release ends the hold
-// whatever it lands on.
+// button the press armed — which, since the FEINT made the arm survive the
+// pointer wandering off, is exactly the `press_inside` bit the hover walk has
+// been maintaining. Returns that button's index, or -1 — the caller owns the
+// dispatch, because a prompt's buttons and an editor's mean different things.
+// The arm is consumed either way: a release ends the hold whatever it lands
+// on, and a release AWAY from the armed button leaves it passively focused,
+// which the walk already assigned when the pointer left it.
 int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     const int armed = app.modal_dialog_pressed;
     if (armed < 0) return -1;
-    app.modal_dialog_pressed = -1;
+    app.modal_dialog_pressed      = -1;
+    app.modal_dialog_press_inside = false;
     if (app.modal_dialog.valid)
         viewport.invalidate_rect(app.modal_dialog.box);
     return modal_dialog_button_hit(x, y) == armed ? armed : -1;
+}
+
+// THE ACT ITSELF, and THE ONE PLACE THE TWO GATES ARE RE-ASKED — hoisted
+// 2026-08-13 when the KEYBOARD grew a release of its own (Enter and Space on a
+// focused button act at the lift, exactly as the pointer's press does), so the
+// pointer's two release arms and the keyboard's one share a single body
+// instead of the gate pair being spelled a third time.
+//
+// PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine at
+// ModalDialogGeometry, app_state.h). `index` names a slot in the painter's
+// stash, and everything that DECIDES is read live here:
+//   the OWNER TAG must agree with the surface currently owning input — a stash
+//   an editor painted never answers a prompt, and the reverse;
+//   PromptState::painted must stand for a prompt — an arm outlives its press
+//   by definition and the surface under it may have been replaced (the
+//   save-failed rung leaves live-keyed rects where the new box is not);
+//   the RESPONSE KEY the stash names is validated against the LIVE response
+//   set, a different question from the tag's and asked separately.
+// Returns true iff something dispatched, so a caller can tell a consumed
+// nothing from an act.
+bool GuiInputHandler::dispatch_modal_dialog_button(int index) {
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    if (index < 0 || index >= static_cast<int>(dlg.buttons.size()))
+        return false;
+    const AppState::ModalDialogButton& b =
+        dlg.buttons[static_cast<size_t>(index)];
+    if (app.prompt.active) {
+        if (!app.prompt.painted ||
+            dlg.owner != AppState::ModalDialogOwner::Prompt) {
+            return false;
+        }
+        for (char live : app.prompt.response_keys) {
+            if (b.response_key != 0 && b.response_key == live) {
+                prompt.activate_response(b.response_key);
+                return true;
+            }
+        }
+        return false;
+    }
+    if (!modal_dialog_editor_active() ||
+        dlg.owner != AppState::ModalDialogOwner::Editor) {
+        return false;
+    }
+    dispatch_modal_dialog_editor_act(b.editor_ok);
+    return true;
 }
 
 // An editor dialog's OK / Cancel press, dispatched as the session's own
@@ -2026,9 +2114,29 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
 // mirrors the painter's precedence order,
 // though only one dialog editor can be open at a time (each opener refuses
 // while any editor owns the keyboard), so the order is free.
+//
+// THE FOCUS RETURNS TO THE FIELD FIRST, and it MUST: the key this synthesizes
+// is the FIELD'S key, and route_modal_editor_key offers every key to the focus
+// ring before the field sees it. With the focus left on a BUTTON the ring
+// would claim the synthesized Return as that button's own press — the act
+// feeding itself back into the surface that raised it — so a keyboard OK could
+// never commit. (Before this line the ring ACTIVATED at the press and the same
+// loop was unbounded recursion; it never fired in practice because the pointer
+// path reaches here with the focus in the field, but the keyboard's Enter on an
+// editor dialog's OK button had no other end. Found and closed 2026-08-13 with
+// the act-at-release ruling.) Setting the field is also the right RESTING state
+// for the one act that does not close the dialog — a red-flash refusal leaves
+// the user where the fix is typed — so this is the act's own semantics rather
+// than a workaround for the ordering.
 void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
     const GuiKey        key = ok ? GuiKeys::Return : GuiKeys::Escape;
     const GuiInputState mods{};
+    if (app.modal_dialog_focus >= 0) {
+        app.modal_dialog_focus        = -1;
+        app.modal_dialog_focus_active = false;
+        if (app.modal_dialog.valid)
+            viewport.invalidate_rect(app.modal_dialog.box);
+    }
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         handle_top_flag_editor_key(key, mods);
@@ -3789,32 +3897,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // the redesigned rows happens at a release — they have no release body.
     if (button == GuiMouseButton::Left) clear_redesign_button_press();
     // THE PROMPT DIALOG'S ACT, the press claim's other half (2026-08-13): the
-    // lift on the button the press armed activates that response through the
-    // keyboard's own dispatch body (activate_response). BOTH PRESS-TIME GATES
-    // ARE RE-ASKED HERE — the painted bit and the owner tag — because an arm
-    // outlives the press by definition and the surface under it may have
-    // changed in between; the painter drops the arm on those same edges, so
-    // this is the second wall rather than the only one. The response key comes
-    // from the painter's stash and is validated against the LIVE response set,
-    // so a stash naming a key this prompt does not have answers nothing rather
-    // than the wrong thing (published geometry may only SELECT; live state
-    // DECIDES — the doctrine at ModalDialogGeometry, app_state.h). The veil
-    // still swallows every release either way.
+    // lift on the button the press armed activates that response. A lift
+    // ANYWHERE ELSE consumes the arm and dispatches nothing — which, since the
+    // FEINT, is what leaves that button passively focused instead of simply
+    // cancelling. The gates the act re-asks (the painted bit, the owner tag,
+    // and the live response set) all live in the one shared dispatch body,
+    // which the keyboard's own release shares; the painter drops the arm on
+    // those same edges, so the body is the second wall rather than the only
+    // one. The veil still swallows every release either way.
     if (app.prompt.active) {
         if (button == GuiMouseButton::Left) {
-            const int hit = take_modal_dialog_release(x, y);
-            if (hit >= 0 && app.prompt.painted &&
-                app.modal_dialog.owner == AppState::ModalDialogOwner::Prompt) {
-                const char rk =
-                    app.modal_dialog.buttons[static_cast<size_t>(hit)]
-                        .response_key;
-                for (char live : app.prompt.response_keys) {
-                    if (rk != 0 && rk == live) {
-                        prompt.activate_response(rk);
-                        break;
-                    }
-                }
-            }
+            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
         }
         return;
     }
@@ -3825,13 +3918,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // the field claim), and above the three editor swallows below, which is
     // where an unarmed release still ends.
     if (button == GuiMouseButton::Left && modal_dialog_editor_active()) {
-        const int hit = take_modal_dialog_release(x, y);
-        if (hit >= 0 &&
-            app.modal_dialog.owner == AppState::ModalDialogOwner::Editor) {
-            dispatch_modal_dialog_editor_act(
-                app.modal_dialog.buttons[static_cast<size_t>(hit)].editor_ok);
+        if (dispatch_modal_dialog_button(take_modal_dialog_release(x, y)))
             return;
-        }
     }
     // F2.1: a left release ending an editor-text drag finalizes the
     // selection (or collapses to a caret) before the modal swallow below.

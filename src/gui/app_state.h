@@ -1657,10 +1657,30 @@ enum class DialogTrigger {
 // the button DISPATCHES. NONE OF THIS EVER REACHED THE MATCHING:
 // response_keys and the codepoint-exact lowercase compare are untouched
 // through all three spellings, so a typed capital still does not answer.
-// NO BUTTON WEARS THE DEFAULT FACE: the crop's highlighted Save is Qt's
-// Enter-default, and this prompt system HAS no Enter answer — Return is not a
-// response key and does nothing — so every button wears the plain face
-// rather than inventing a default (the brief's recorded decision).
+// A PROMPT DOES HAVE AN ENTER ANSWER, AND IT IS THE PASSIVELY FOCUSED BUTTON
+// (architect 2026-08-13, SUPERSEDING this block's own standing ruling — "no
+// button wears the default face; this prompt system HAS no Enter answer,
+// Return is not a response key and does nothing", the decision recorded here
+// when the buttons landed and again at the focus ring). Every prompt is now
+// RAISED with PASSIVE focus on its LAST button, and bare Enter or bare Space
+// presses the focused button down and commits it on the key's release. What
+// makes that safe is not the absence of a default but two facts that were not
+// available when the old rule was written:
+//   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
+//        by construction rather than by convention. All four raisers put
+//        '\x1b' last: the unsaved-work prompt (Save / Discard / CANCEL), its
+//        save-failed restatement (Retry / Discard / CANCEL), the paste
+//        confirmation (Yes / CANCEL) and the error notice (OK, whose one
+//        response IS the sentinel). So the key that answers without asking
+//        answers the way Esc already does, and no destructive response is ever
+//        one Enter away.
+//   (ii) THE PAINTED GATE below already consumes every key until the prompt
+//        has been on screen, so an Enter queued behind a raise answers
+//        nothing — the exact hazard the old rule was reaching for, closed
+//        structurally instead of by leaving the ring empty.
+// The two focus STRENGTHS (passive, assigned; active, walked onto) are at
+// AppState::modal_dialog_focus_active, which owns the model; the face ladder
+// is paint_modal_dialog's.
 //
 // A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13, codex round 13 —
 // the one lag span the in-window modal still had; unchanged in substance by
@@ -2606,15 +2626,44 @@ struct AppState {
     // there or a slide-off would still commit. Two facts, one shape; the
     // roster's owner (clear_redesign_button_press) is left alone.
     //
+    // THE ARM SURVIVES THE WHOLE HOLD AND TRACKS THE POINTER — THE FEINT
+    // (architect 2026-08-13, at his live test, SUPERSEDING the "sliding off
+    // cancels, and sliding back on does NOT re-arm: there is no new press"
+    // note this block carried since the act moved to the release): "if the
+    // user feints — clicks a button and then drags away before the mouse goes
+    // up — then that button receives the passive focus as well. And while the
+    // button is being held, but away from the button's hit area, the button
+    // looks like a hover — a passive focus with the hover. And then when they
+    // release it, it goes into being a passive focus."
+    // So the arm is one index for the life of the hold and
+    // `modal_dialog_press_inside` below is the pointer's answer about it:
+    //   pointer ON the armed button   -> the PRESSED face; the release COMMITS
+    //   pointer OFF it                -> the PASSIVE-plus-hover face; the
+    //                                    release commits NOTHING and leaves
+    //                                    the button PASSIVELY FOCUSED
+    // Sliding back on restores the pressed face and a release there DOES
+    // commit — the arm never died, so there is nothing to re-arm. The reason
+    // is in the ruling itself: a button that keeps a lit face while held away
+    // is still engaged, and a dead arm could not light anything.
+    //
     // Its edges: the press claims write it (on_button_press's two dialog
     // gates, input_pointer.cpp), the release claims read and clear it, the
-    // hover walk drops it the moment the pointer leaves the armed button
-    // (update_modal_dialog_hover — "sliding off cancels", and sliding back on
-    // does NOT re-arm: there is no new press), clear_modal_dialog_press drops
-    // it on the pointer-leave / capability-loss edge (main.cpp's hook, beside
-    // the roster's own clear), and paint_modal_dialog drops it with the stash
+    // hover walk keeps it and rewrites `press_inside` instead
+    // (update_modal_dialog_hover, which is also where the feint's passive
+    // focus is assigned, on the leave edge), clear_modal_dialog_press drops it
+    // on the pointer-leave / capability-loss edge (main.cpp's hook, beside the
+    // roster's own clear), and paint_modal_dialog drops it with the stash
     // whenever the dialog closes or CHANGES. Every write damages the box.
     int modal_dialog_pressed = -1;
+
+    // IS THE POINTER INSIDE THE ARMED BUTTON — the feint's other half, written
+    // by the press claim (true: a press is inside what it hit) and by the
+    // hover walk on every motion under a standing arm. Meaningless while
+    // `modal_dialog_pressed` is -1 and reset with it, so the pair is read as
+    // one fact: the PRESSED face and the committing release are
+    // `pressed >= 0 && press_inside`, and the held-away face is
+    // `pressed >= 0 && !press_inside`.
+    bool modal_dialog_press_inside = false;
 
     // THE KEYBOARD FOCUS RING (architect 2026-08-13, part D of the modal
     // button ruling — kdenlive-sampled face, the navigation his own
@@ -2622,20 +2671,23 @@ struct AppState {
     // -1, WHOSE MEANING THE OWNER SELECTS — on an EDITOR dialog -1 is THE
     // FIELD, a real ring stop and where every editor opens (the user is there
     // to type, which is also what keeps the editors' keyboard contract
-    // byte-identical); on a PROMPT -1 is NO FOCUS AT ALL, the state every
-    // prompt opens in and one Tab or arrow leaves for good. THAT ASYMMETRY IS
-    // THE POINT: a prompt must not be answerable by a stray Enter — this
-    // prompt system has no Enter answer by ruling (the label rule at
-    // PromptState says the same thing about the default face) — so Enter acts
-    // only once the user has deliberately stepped onto a button.
+    // byte-identical); on a PROMPT -1 is nothing at all, because a prompt is
+    // RAISED with its last button focused and its ring is its buttons alone,
+    // wrapping. (The "a prompt opens with NO button focused" rule and the
+    // no-focus stop in its cycle are RETIRED with the Enter answer's arrival
+    // the same day; the supersession and what makes it safe are at
+    // PromptState. -1 on a prompt is therefore a cold value only — the state
+    // between a raise and the paint that assigns the focus, which the painted
+    // gate makes unreachable by input.)
     //
     // THE RING: Tab cycles every stop including the field and SHIFT+TAB WALKS
     // IT BACKWARDS (architect 2026-08-13, in the live marker cycle's own
     // spellings — Shift+Tab and IsoLeftTab, the latter shift-agnostic), Left/
     // Right move
     // between BUTTONS only and are inert in the field (the arrows belong to
-    // the text there, and the editors' own motion arm owns them), Enter
-    // activates the focused button. The one route is
+    // the text there, and the editors' own motion arm owns them), and bare
+    // Enter / bare Space PRESS the focused button down for the act at their
+    // release (modal_dialog_key_pressed, below). The one route is
     // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by the
     // prompt gate and by route_modal_editor_key alike. ONE THING RANKS ABOVE
     // the ring's FORWARD Tab: an editor whose FIELD has an autocomplete offers
@@ -2651,8 +2703,68 @@ struct AppState {
     // one raise route, so a prompt replacing a prompt (the save-failed rung)
     // cannot inherit the previous question's focus either. Editor-to-editor is
     // unreachable (every opener refuses while another editor owns the
-    // keyboard), so those three cover every edge.
+    // keyboard), so those three cover every edge. THE PROMPT'S RAISE FOCUS IS
+    // ASSIGNED ON THAT SAME RESET, in the painter's prompt branch once the
+    // buttons exist: reset then assign, one edge, so there is no frame in
+    // which a standing prompt has no focus.
     int modal_dialog_focus = -1;
+
+    // THE FOCUS'S STRENGTH (architect 2026-08-13, from kdenlive): PASSIVE
+    // (false) or ACTIVE (true). Meaningless while modal_dialog_focus is -1 and
+    // reset with it; the two are read as one fact, exactly as the press arm
+    // and its inside bit are.
+    //
+    // BOTH STRENGTHS ACT — Enter and Space press the focused button whichever
+    // it wears. What separates them is HOW THE FOCUS WAS ACQUIRED and what
+    // the button then looks like:
+    //   PASSIVE is ASSIGNED, never walked onto. Two producers, and they are
+    //   the whole list: a PROMPT'S RAISE (the painter, onto the last button —
+    //   the Escape sentinel; PromptState owns why that is the safe one) and a
+    //   FEINT (a press that armed a button, then dragged off it —
+    //   update_modal_dialog_hover's leave edge; the rule is at
+    //   modal_dialog_pressed). A feint's assignment REPLACES whatever focus
+    //   the dialog had, of either strength.
+    //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — Tab, its two
+    //   reverse spellings, Left, Right — so its one producer is
+    //   route_modal_dialog_focus_key's walk, which sets it on every landing.
+    //   There is NO route back down to passive except a new passive
+    //   assignment.
+    // An EDITOR dialog opens with focus in the FIELD and no button focused at
+    // all, so it opens with neither strength — unchanged.
+    bool modal_dialog_focus_active = false;
+
+    // THE KEYBOARD'S OWN PRESS ARM — the button bare Enter or bare Space is
+    // holding down, or -1 (architect 2026-08-13, from kdenlive: "pressing
+    // Enter when a button has focus pushes down the button. It doesn't
+    // automatically commit the action... we move the playhead when the user
+    // lifts up the mouse key, so we should do that here as well"). It is the
+    // POINTER ARM'S TWIN and deliberately a separate index: the two can stand
+    // together (a feint held with the mouse while the keyboard presses the
+    // focused button), they die on different edges, and one field would have
+    // to encode both.
+    //
+    // THE ACT IS AT THE PHYSICAL RELEASE, which is the only reason this state
+    // exists: the press paints the button down and dispatches nothing, and the
+    // release of THAT SAME KEY runs the act through the one shared dispatch
+    // (dispatch_modal_dialog_button, input_pointer.cpp, which re-asks the
+    // painted gate and the owner tag exactly as the pointer's release does).
+    // `modal_dialog_key_pressed_key` is what the release matches on, so
+    // releasing the OTHER of the two keys — Enter pressed, Space released —
+    // resolves nothing.
+    //
+    // IT CANNOT FIRE TWICE UNDER A HOLD, by two independent facts: the key
+    // never arms platform repeat while the focus is on a button
+    // (repeat_eligible's own arm), and the press body refuses a delivery
+    // carrying GuiInputState::synthesized_repeat outright — so even a repeat
+    // armed before the focus moved cannot re-press or re-fire.
+    // Its edges: the ring's press arms write it; on_key_release reads and
+    // clears it; the painter drops it with the rest of the face state on every
+    // edge that changes the dialog; and the platform's keyboard-intent
+    // cancellation (keyboard leave, keyboard-capability loss, a Super-swallowed
+    // press) drops it too, because the release it is waiting for will never be
+    // delivered. Every write damages the box.
+    int    modal_dialog_key_pressed     = -1;
+    GuiKey modal_dialog_key_pressed_key = 0;
 
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's

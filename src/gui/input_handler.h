@@ -593,6 +593,16 @@ struct GuiInputHandler {
     // this same struct.)
 
     void on_key(GuiKey key, GuiInputState mods);
+    // THE KEY RELEASE, and the ONE thing in this product that acts on one
+    // (2026-08-13): bare Enter / bare Space on a focused DIALOG BUTTON press it
+    // down at the press and commit it here, the keyboard's own act-at-release
+    // matching the pointer's. Every other release is a no-op — the platform
+    // delivered releases to nothing at all before this, and the whole rest of
+    // the keyboard contract is still edge-on-press. It takes no modifiers, for
+    // the reason on_button_release names its own unused: the PRESS is what is
+    // bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
+    // in input_key_dispatch.cpp beside the ring that arms it.
+    void on_key_release(GuiKey key);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
     void on_button_release(GuiMouseButton button, int x, int y,
                            GuiInputState mods);
@@ -1056,6 +1066,14 @@ struct GuiInputHandler {
     // are private, beside the modal's other pointer readers; the contract is at
     // the definition and the full edge list at AppState::modal_dialog_pressed.
     void clear_modal_dialog_press();
+
+    // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
+    // the platform's keyboard-intent cancellation hook (keyboard leave,
+    // keyboard-capability loss, a Super-swallowed press), wired in main.cpp
+    // beside the transport arrows' disarm. Same reasoning as its pointer twin,
+    // over the stream that owes the release: the contract is at the definition
+    // and the full edge list at AppState::modal_dialog_key_pressed.
+    void clear_modal_dialog_key_press();
 
     // ROW 8's ARROW HOLD-REPEAT, the tick's firing body (2026-08-11): while a
     // transport-row arrow button is held (armed at the press by
@@ -2223,15 +2241,20 @@ private:
     //                               dispatching nothing. True iff one was hit.
     //   take_modal_dialog_release — release: consume the arm and return the
     //                               button the lift LANDED on if it is the one
-    //                               armed, else -1. The caller dispatches,
-    //                               because a prompt's buttons and an editor's
-    //                               mean different things.
+    //                               armed, else -1.
     //   clear_modal_dialog_press  — the pointer-leave / capability-loss edge
     //                               (main.cpp's hook, beside the roster's own
     //                               clear; PUBLIC for that one caller, like
     //                               the roster's own clear beside it).
+    //   dispatch_modal_dialog_button — THE ACT, shared by both pointer release
+    //                               arms and the KEYBOARD's own release: it
+    //                               owns the gate pair (the painted bit, the
+    //                               owner tag) and the live-response-set
+    //                               validation, so the three lifts cannot
+    //                               drift. True iff it dispatched.
     bool arm_modal_dialog_press(int x, int y);
     int  take_modal_dialog_release(int x, int y);
+    bool dispatch_modal_dialog_button(int index);
 
     // THE MODAL'S KEYBOARD FOCUS RING, one route for both surfaces (2026-08-13;
     // the state and the two meanings of its -1 are at
@@ -2246,7 +2269,10 @@ private:
     // one predicate modal_ring_tab_shape — is never offered to a completion at
     // all and is the ring's own one exception to bare-exactness, on the
     // strict-modifier rule's own untightened-families precedent (cited at the
-    // definition).
+    // definition). BARE ENTER AND BARE SPACE ARE THE RING'S TWO ACT KEYS since
+    // 2026-08-13: with the focus on a BUTTON they press it DOWN and the act
+    // runs at the key's release (on_key_release, public below); with the focus
+    // in the FIELD they never reach this route and keep their old meanings.
     bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods);
 
     // THE `h` HISTORY MODE's entry points (bodies in

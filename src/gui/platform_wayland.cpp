@@ -2063,6 +2063,60 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     forget_keyboard_state();
 }
 
+// THE KEYCODE -> GuiKey TRANSLATION, and the ONE place a key event's identity
+// is decided (hoisted 2026-08-13, when key RELEASES grew an application-side
+// consumer and had to agree with their press about what key they are). It
+// answers false for a keycode this GUI has no use for, which is the same thing
+// as "there is nothing to deliver".
+//
+// Drop keys the GUI never acts on, before delivery and before arming
+// repeat, for two reasons that converge on the same handling:
+//
+//   - Standalone modifier presses (Shift / Control / Alt / Super /
+//     Meta / Hyper, the Caps and Shift locks, the AltGr level-shifts):
+//     the modifier STATE this program acts on arrives SEPARATELY via
+//     on_keyboard_modifiers, and no consumer matches a modifier keysym
+//     as a GuiKey, so the key event is pure noise. "SEPARATELY", NOT
+//     "COMPLETELY": on_keyboard_modifiers tracks exactly FOUR — ctrl /
+//     shift / alt, which reach the application through GuiInputState, and
+//     SUPER, which reaches nothing because it gates key DELIVERY instead
+//     (deliver_key). The others (Meta, Hyper, the locks, the level-shifts)
+//     are modelled nowhere, so no predicate can see them; a future binding
+//     that needed one would have to model it first — which is exactly the
+//     gap Super had until 2026-07-30.
+//   - Function keys F1..F35: this GUI binds none of them.
+//
+// Ignoring both matters because a text editor treats any key it does
+// not own as "exit the edit". A bare Shift press (the prefix of
+// Shift+Left) would tear down the edit before the arrow arrived, and an
+// F-key press would discard the edit for nothing. Ignoring them is the
+// correct behavior for keys the GUI has no use for.
+bool GuiPlatform::key_from_keycode(uint32_t xkb_keycode, GuiKey& out) const {
+    if (!xkb_keymap_ || !xkb_state_) return false;
+    const xkb_layout_index_t layout =
+        xkb_state_serialize_layout(xkb_state_, XKB_STATE_LAYOUT_EFFECTIVE);
+    const xkb_keysym_t* syms = nullptr;
+    const int nsyms = xkb_keymap_key_get_syms_by_level(
+        xkb_keymap_, xkb_keycode, layout, 0, &syms);
+    if (nsyms <= 0 || !syms) return false;
+    const xkb_keysym_t sym = syms[0];
+    if (sym == XKB_KEY_NoSymbol) return false;
+    if ((sym >= XKB_KEY_F1      && sym <= XKB_KEY_F35) ||      // 0xffbe..0xffe0, function keys
+        (sym >= XKB_KEY_Shift_L && sym <= XKB_KEY_Hyper_R) ||  // 0xffe1..0xffee, modifiers
+        sym == XKB_KEY_ISO_Level3_Shift ||                     // AltGr
+        sym == XKB_KEY_ISO_Level5_Shift ||
+        sym == XKB_KEY_Mode_switch) {
+        return false;
+    }
+    // Case-fold ASCII uppercase keysyms to lowercase so consumers see a
+    // single GuiKey value per physical key regardless of shift state.
+    // Other keysyms pass through.
+    GuiKey key = static_cast<GuiKey>(sym);
+    if (key >= 'A' && key <= 'Z') key |= 0x20;
+    out = key;
+    return true;
+}
+
 void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
     // Cache the serial for wl_data_device.set_selection. Every copy is a Ctrl+C
@@ -2100,56 +2154,27 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
         // plain no-op rather than a second release.
         if (xkb_keycode == synth_left_keycode_) {
             end_left_hold_source(/*physical=*/false);
+            // That release WAS the mouse button's, so it is not a key release
+            // as well: the press it matches was swallowed here too, and
+            // delivering this one would hand the application an unpaired edge.
+            return;
         }
+        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13). It exists for exactly
+        // one consumer — the modal dialog's keyboard press-and-hold, whose act
+        // is at the lift — and it is delivered for the same key identity the
+        // press carried, through the one translation both branches read. NOT
+        // gated on Super (a release binds nothing on its own; the reasoning is
+        // at set_on_key_release, platform_wayland.h) and carrying no modifier
+        // state at all.
+        GuiKey key = 0;
+        if (on_key_release_ && key_from_keycode(xkb_keycode, key))
+            on_key_release_(key);
         return;
     }
 
     // Pressed.
-    if (!xkb_keymap_) return;
-    const xkb_layout_index_t layout =
-        xkb_state_serialize_layout(xkb_state_, XKB_STATE_LAYOUT_EFFECTIVE);
-    const xkb_keysym_t* syms = nullptr;
-    const int nsyms = xkb_keymap_key_get_syms_by_level(
-        xkb_keymap_, xkb_keycode, layout, 0, &syms);
-    if (nsyms <= 0 || !syms) return;
-    const xkb_keysym_t sym = syms[0];
-    if (sym == XKB_KEY_NoSymbol) return;
-
-    // Drop keys the GUI never acts on, before delivery and before arming
-    // repeat, for two reasons that converge on the same handling:
-    //
-    //   - Standalone modifier presses (Shift / Control / Alt / Super /
-    //     Meta / Hyper, the Caps and Shift locks, the AltGr level-shifts):
-    //     the modifier STATE this program acts on arrives SEPARATELY via
-    //     on_keyboard_modifiers, and no consumer matches a modifier keysym
-    //     as a GuiKey, so the key event is pure noise. "SEPARATELY", NOT
-    //     "COMPLETELY": on_keyboard_modifiers tracks exactly FOUR — ctrl /
-    //     shift / alt, which reach the application through GuiInputState, and
-    //     SUPER, which reaches nothing because it gates key DELIVERY instead
-    //     (deliver_key). The others (Meta, Hyper, the locks, the level-shifts)
-    //     are modelled nowhere, so no predicate can see them; a future binding
-    //     that needed one would have to model it first — which is exactly the
-    //     gap Super had until 2026-07-30.
-    //   - Function keys F1..F35: this GUI binds none of them.
-    //
-    // Ignoring both matters because a text editor treats any key it does
-    // not own as "exit the edit". A bare Shift press (the prefix of
-    // Shift+Left) would tear down the edit before the arrow arrived, and an
-    // F-key press would discard the edit for nothing. Ignoring them is the
-    // correct behavior for keys the GUI has no use for.
-    if ((sym >= XKB_KEY_F1      && sym <= XKB_KEY_F35) ||      // 0xffbe..0xffe0, function keys
-        (sym >= XKB_KEY_Shift_L && sym <= XKB_KEY_Hyper_R) ||  // 0xffe1..0xffee, modifiers
-        sym == XKB_KEY_ISO_Level3_Shift ||                     // AltGr
-        sym == XKB_KEY_ISO_Level5_Shift ||
-        sym == XKB_KEY_Mode_switch) {
-        return;
-    }
-
-    // Case-fold ASCII uppercase keysyms to lowercase so consumers see a
-    // single GuiKey value per physical key regardless of shift state.
-    // Other keysyms pass through.
-    GuiKey key = static_cast<GuiKey>(sym);
-    if (key >= 'A' && key <= 'Z') key |= 0x20;
+    GuiKey key = 0;
+    if (!key_from_keycode(xkb_keycode, key)) return;
 
     // kLeftClickKey emulates BTN_LEFT at this boundary, so downstream it IS
     // the mouse and inherits every mouse gate (read-only tabs, drag gates,
@@ -4181,6 +4206,7 @@ std::string GuiPlatform::read_clipboard_data(int read_fd) {
 void GuiPlatform::set_on_redraw(RedrawCallback cb)              { on_redraw_ = std::move(cb); }
 void GuiPlatform::set_on_resize(ResizeCallback cb)              { on_resize_ = std::move(cb); }
 void GuiPlatform::set_on_key(KeyCallback cb)                    { on_key_ = std::move(cb); }
+void GuiPlatform::set_on_key_release(KeyReleaseCallback cb)     { on_key_release_ = std::move(cb); }
 void GuiPlatform::set_on_button_press(ButtonCallback cb)        { on_button_press_ = std::move(cb); }
 void GuiPlatform::set_on_button_release(ButtonCallback cb)      { on_button_release_ = std::move(cb); }
 void GuiPlatform::set_on_wheel(WheelCallback cb)                { on_wheel_ = std::move(cb); }

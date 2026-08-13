@@ -779,11 +779,13 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 // row's own bottom_row_pad_x is the margin now) and kModalWindowMarginPx (the
 // narrow-window clamp — the row IS the clamp) are all deleted producer-less.
 // The crop's #292c30 titlebar band stays untranscribed (ours has no title
-// bar), as does the #4882a1 half of its default-button face — this prompt
-// system has no Enter-default (the recorded decision at PromptState). Its
-// #2d4655 companion WAS transcribed 2026-08-13, as the keyboard-focus fill
-// below, which is a different fact wearing the same shade: focus is where the
-// keyboard is, not which answer Enter would pick.
+// bar). ITS #4882a1 IS TRANSCRIBED SINCE 2026-08-13's SECOND MODAL RULING, as
+// kModalFocusLinePassive below: this block used to record it as the
+// Enter-default's half that we decline to have, and the two focus STRENGTHS
+// gave it a job — a passively focused button is exactly what Enter answers,
+// so the shade is doing the same work here it does in the crop, under a name
+// that says focus rather than default. Its #2d4655 companion was transcribed
+// the same day as the keyboard-focus FILL, which both strengths share.
 //
 // The modal's BUTTONS carry no constants here APART FROM THE FOCUS PAIR below:
 // their box is the deleted toolbar
@@ -804,7 +806,7 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 // THE KEYBOARD-FOCUS FACE — the modal's ONE face with no icon-row counterpart,
 // so it is the one that needed sampling (architect 2026-08-13; the focus ring
 // itself is the ruling's part D).
-// A focused dialog button paints THREE things, outermost last:
+// AN ACTIVELY focused dialog button paints THREE things, outermost last:
 //   kModalFocusRing #284c61 — a 2px stroke OUTSIDE the button box, the halo
 //                   that says "this is where the keyboard is". It grows the
 //                   button by 2px on every side, which is why the button row
@@ -815,12 +817,16 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 //                   focused button reads as "pointed at" plus the halo rather
 //                   than as a fourth outline color.
 //   kModalFocusFill #2d4655 — the interior, a shade the crop carries and this
-//                   product had never transcribed (the kModal block above
-//                   records it as untranscribed until now; the crop's
-//                   #4882a1 Enter-default face stays untranscribed, this
-//                   prompt system having no Enter default — PromptState).
-// Literals, not derivations: nothing clean generates either from this row's
-// ground and the accent, and both are Breeze's own focus shades.
+//                   product had never transcribed until that day.
+// A PASSIVELY focused button paints TWO — the same fill under
+// kModalFocusLinePassive #4882a1, and NO halo. The two strengths and where
+// each is assigned are at AppState::modal_dialog_focus_active; what the
+// palette says about them is only this: the FILL is the focus itself and both
+// strengths wear it, while the OUTLINE is the strength, rising to the accent
+// when the pointer or the keyboard's own walk has claimed the button.
+// Literals, not derivations: nothing clean generates any of the three from
+// this row's ground and the accent, and all three are Breeze's own focus
+// shades.
 // PROVENANCE — BOTH TRANSCRIBED FROM A CROP, like every other sampled color
 // here (Screenshot_2026-08-13_03-04-28.png, the kdenlive screenshots' folder;
 // the crops are authoring-time artifacts and are not in the repository, exactly
@@ -830,12 +836,20 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 // x=1225 — mirrored at the right edge (#3daee9 at 1307, #284c61 at
 // 1308..1309) — with the neighbouring unfocused button's 1px #535659 resting
 // outline at x=1215. So the three values, the 2px halo and the 1px accent
-// outline are all measured, and the ORDER above is the crop's own. (#2d4655
-// also fills modal_popup.png's Enter-default button, whose face this product
-// declines to have; the two are the same shade doing different work, which is
-// the note at that block.)
-inline constexpr GuiColor kModalFocusFill = hex(0x2D4655);
-inline constexpr GuiColor kModalFocusRing = hex(0x284C61);
+// outline are all measured, and the ORDER above is the crop's own.
+// THE PASSIVE LINE HAS ITS OWN CROP AND ITS OWN SCAN (focus_passive.png, the
+// same folder, 2026-08-13): a horizontal scan through a PASSIVELY focused
+// "Cancel" reads, left to right, the row ground, then 1px #4882a1, then the
+// #2d4655 interior — NO outer band at all, which is what makes the halo the
+// ACTIVE strength's alone rather than a thing every focused button wears.
+// Against it, the active scan above reads 2px #284c61 + 1px #3daee9 over the
+// same fill, so the two crops differ in exactly the two places the ladder
+// says they do. (#4882a1 also fills modal_popup.png's Enter-default button
+// — the same shade doing the same work under a truer name, since the
+// passively focused button IS what Enter answers.)
+inline constexpr GuiColor kModalFocusFill        = hex(0x2D4655);
+inline constexpr GuiColor kModalFocusRing        = hex(0x284C61);
+inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 
 // (THE GUI FONT SIZE AXIS IS GONE — architect approval 2026-08-01.
 // kDefaultFontSizePt, set_gui_font_size_pt, gui_font_scale and the

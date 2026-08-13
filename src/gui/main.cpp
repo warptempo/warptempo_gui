@@ -1326,6 +1326,14 @@ int main(int argc, char** argv) {
         input_handler.on_key(key, mods);
     });
 
+    // THE KEY RELEASE, this product's one act-on-lift keyboard edge: bare Enter
+    // or bare Space on a focused modal dialog button commits it here (the
+    // contract is at GuiInputHandler::on_key_release). Every other release
+    // resolves nothing.
+    gui.set_on_key_release([&](GuiKey key) {
+        input_handler.on_key_release(key);
+    });
+
     gui.set_on_close([&]() {
         // Window-manager close (title-bar X) routes through the unsaved-
         // work dialog when dirty, same as Ctrl+Q. END any in-flight pointer
@@ -1581,11 +1589,19 @@ int main(int argc, char** argv) {
     // hook instead of the application growing a second, partial list. The fire
     // classes and the per-swallowed-delivery decision are at the setter's
     // contract (platform_wayland.h); the consumer's authoritative edge
-    // inventory is at AppState::transport_repeat. The body is the disarm
-    // itself: no damage (the hold has no face of its own — the click face is
-    // cleared by its own edges) and no other state.
+    // inventory is at AppState::transport_repeat. THIS BODY IS THE
+    // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
+    // model, and it holds TWO application-side key holds since 2026-08-13:
+    //   * the transport arrows' hold-repeat — the disarm itself, no damage (the
+    //     hold has no face of its own; the click face is cleared by its own
+    //     edges) and no other state;
+    //   * THE MODAL DIALOG'S KEYBOARD PRESS ARM, which is sharper than a face:
+    //     that button is painted down waiting for a RELEASE that these edges
+    //     guarantee will never be delivered, so the arm is dropped and the box
+    //     damaged (clear_modal_dialog_key_press).
     gui.set_keyboard_intent_cancel_hook([&] {
         app.transport_repeat.owner = -1;
+        input_handler.clear_modal_dialog_key_press();
     });
 
     // THE SETTLED BOUNDARY AND ITS TWO CONSUMERS (architect 2026-08-03,
@@ -1940,12 +1956,26 @@ int main(int argc, char** argv) {
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
         // the top strip when it flips. Cheap: top_strip is small.
+        //
+        // A DIALOG EDITOR WHOSE FIELD HAS LOST THE FOCUS RUNS NO BLINK
+        // (2026-08-13, the same ruling that stopped the caret PAINTING there —
+        // "the blinking caret, the I-beam, continues to blink in the text field
+        // even though it has lost focus"). One term, the ring's own -1, so the
+        // tick and the painter cannot disagree about whether there is a caret;
+        // without it the loop would keep waking twice a second to damage a lane
+        // whose caret nobody draws. THE TOP-STRIP FLAG EDITOR IS OUTSIDE IT and
+        // must be: it is not a dialog, it has no ring, and the focus index it
+        // would be reading belongs to whatever dialog is up over it.
+        const bool dialog_field_focused = app.modal_dialog_focus < 0;
         if (text_editor::is_active(app.top_flag_editor)) {
+            const bool is_dialog =
+                app.top_flag_editor.kind == text_editor::Kind::BpmBracket;
             const bool now_visible =
+                (!is_dialog || dialog_field_focused) &&
                 text_editor::cursor_visible_now(app.top_flag_editor);
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
-                if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
+                if (is_dialog)
                     invalidate_status_row_area();
                 else
                     invalidate_top_strip();
@@ -1955,6 +1985,7 @@ int main(int argc, char** argv) {
         // status-lane owner's rider carries the dialog's stashed box.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
+                dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
@@ -1964,6 +1995,7 @@ int main(int argc, char** argv) {
         // Same shape for the load prompt.
         if (text_editor::is_active(app.load_editor)) {
             const bool now_visible =
+                dialog_field_focused &&
                 text_editor::cursor_visible_now(app.load_editor);
             if (now_visible != app.load_editor_blink_last) {
                 app.load_editor_blink_last = now_visible;
@@ -1973,6 +2005,7 @@ int main(int argc, char** argv) {
         // And for the history view's commit-title editor.
         if (text_editor::is_active(app.commit_title_editor)) {
             const bool now_visible =
+                dialog_field_focused &&
                 text_editor::cursor_visible_now(app.commit_title_editor);
             if (now_visible != app.commit_title_editor_blink_last) {
                 app.commit_title_editor_blink_last = now_visible;

@@ -335,6 +335,14 @@ void        replace_selection(State& s, const std::string& raw);
 // keystroke.
 bool cursor_visible_now(const State& s);
 
+// RESTART THE BLINK PHASE — the caret becomes visible NOW and the period runs
+// from here. Every editing key inside this module calls it for the reason
+// above; it is PUBLIC for one caller outside (2026-08-13), the modal dialog's
+// focus ring, which restarts the phase when the ring walks back onto the FIELD
+// so a field that has just been focused shows its caret at once rather than
+// possibly landing in the dark half of a period it kept running through.
+void touch_blink(State& s);
+
 // THE ONE CLICK-X -> BYTE MAPPING (row 7 deleted its monospace predecessor,
 // byte_index_from_click_x, with the face): `boundaries` is the per-byte pen offset vector the
 // shaping chokepoint produces (text_shape::byte_offsets_px — one entry per byte

@@ -151,20 +151,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         // THE FOCUS RING (2026-08-13), the prompt's half: bare Tab and bare
-        // Left/Right walk the answer buttons and bare Enter activates the one
-        // focused. It is ranked here — under the painted gate, over the
-        // response match — because it is navigation over an unanswered
-        // question and must obey the same "only a surface the user has seen"
-        // rule the answers do. A PROMPT OPENS WITH NO BUTTON FOCUSED and Enter
-        // is inert until the user deliberately steps onto one: this prompt
-        // system has no Enter answer by ruling (PromptState), and a ring that
-        // opened on a button would have grown one by the back door. The route
-        // is shared with the editor dialogs' — one ring, one owner
-        // (route_modal_dialog_focus_key, input_key_dispatch.cpp); a prompt has
-        // no field, so the editors' completion-first Tab arm has no counterpart
-        // here and this call is the whole of the prompt's ring. The
-        // response letters below are untouched, so the keyboard contract that
-        // existed before this ring is byte-identical.
+        // Left/Right walk the answer buttons, and bare Enter or bare Space
+        // presses the focused one down and commits it at the key's release. It
+        // is ranked here — under the painted gate, over the response match —
+        // because it is navigation and activation over an unanswered question
+        // and must obey the same "only a surface the user has seen" rule the
+        // answers do.
+        // A PROMPT IS RAISED WITH PASSIVE FOCUS ON ITS LAST BUTTON since later
+        // that day, SUPERSEDING this gate's own "a prompt opens with no button
+        // focused, so a stray Enter cannot answer": Enter DOES answer now, and
+        // what makes it safe is that the last button is the ESCAPE SENTINEL
+        // plus the painted gate directly above (PromptState carries the
+        // supersession in full). The route is shared with the editor dialogs' —
+        // one ring, one owner (route_modal_dialog_focus_key,
+        // input_key_dispatch.cpp); a prompt has no field, so the editors'
+        // completion-first Tab arm has no counterpart here and this call is the
+        // whole of the prompt's ring. The response letters below are untouched,
+        // so answering by letter, Delete or Esc is byte-identical to before the
+        // ring.
         if (route_modal_dialog_focus_key(key, mods)) {
             return;
         }

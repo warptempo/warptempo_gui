@@ -93,6 +93,13 @@ public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
     using ResizeCallback       = std::function<void(int w, int h)>;
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;
+    // A KEY RELEASE, carrying the key alone (2026-08-13). Key releases were
+    // platform-internal until the modal dialog's buttons grew a keyboard
+    // press-and-hold whose act is at the LIFT; the application needs the edge
+    // and needs nothing else from it, so this callback deliberately hands over
+    // no modifier state — the PRESS is what is modifier-exact, exactly as
+    // on_button_release's unused `mods` parameter says of the pointer.
+    using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
     // A scroll wheel notification carrying the NET number of detents crossed
     // in one pointer frame (always >= 1). on_pointer_frame() coalesces a
@@ -202,6 +209,20 @@ public:
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
+    // THE KEY RELEASE HOOK (2026-08-13). It fires for the SAME key identity the
+    // press delivered — the same keysym lookup, the same ASCII case-fold — and
+    // it inherits the press path's two drop classes verbatim (standalone
+    // modifier keysyms and F1..F35, keys this GUI has no use for) plus one of
+    // its own: a release that ENDS A SYNTHESIZED LEFT-BUTTON HOLD is the mouse
+    // button's release, not a key's, and the press it matches was never
+    // delivered either.
+    // IT IS DELIBERATELY NOT GATED ON SUPER, where the press path is. The Super
+    // drop exists so a chord that belongs to labwc never reaches a BINDING, and
+    // a release binds nothing on its own — it can only resolve an arm an
+    // already-delivered press created. Gating it would strand exactly the arm
+    // whose press got through before Super went down, which is the one case
+    // that could go wrong. Null-safe.
+    void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_wheel(WheelCallback cb);
@@ -1303,6 +1324,7 @@ private:
     RedrawCallback       on_redraw_;
     ResizeCallback       on_resize_;
     KeyCallback          on_key_;
+    KeyReleaseCallback   on_key_release_;
     ButtonCallback       on_button_press_;
     ButtonCallback       on_button_release_;
     WheelCallback        on_wheel_;
@@ -1420,6 +1442,12 @@ private:
     // remainder and a held synthesized-left button are all dropped together.
     // Hoisted so a third such edge cannot land with one of the four forgotten.
     void forget_keyboard_state();
+    // A raw xkb keycode -> the GuiKey the application sees, or false when this
+    // GUI has no use for the key at all (standalone modifiers, F1..F35, an
+    // unmapped keycode). THE ONE translation, read by the press path and by the
+    // release path, so a release can never disagree with its press about which
+    // key it is; the drop classes and their reasoning are at the definition.
+    bool key_from_keycode(uint32_t xkb_keycode, GuiKey& out) const;
     void deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
     // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer

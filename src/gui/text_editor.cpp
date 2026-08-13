@@ -6,11 +6,11 @@
 
 namespace text_editor {
 
-namespace {
-
 void touch_blink(State& s) {
     s.blink_epoch = std::chrono::steady_clock::now();
 }
+
+namespace {
 
 // ---------------------------------------------------------------------------
 // UTF-8, the editor's unit of movement (the contract is at the head of

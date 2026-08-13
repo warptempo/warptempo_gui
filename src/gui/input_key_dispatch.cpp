@@ -2920,6 +2920,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((app.prompt.active || modal_dialog_editor_active()) &&
         modal_ring_tab_shape(key, mods) != ModalRingTab::None)
         return true;
+    // AND THE WALK IS THE ONLY THING THAT REPEATS ONCE THE FOCUS IS ON A BUTTON
+    // (2026-08-13): from there no key reaches the field at all
+    // (route_modal_editor_key's wall), so there is nothing left that a hold
+    // could usefully continue — and the two that DO act there, bare Enter and
+    // bare Space, are a press-and-hold whose act is at the physical release
+    // (AppState::modal_dialog_key_pressed). A repeat could only re-press or
+    // re-fire them, which is exactly what must not happen. One arm covers both
+    // and everything else, derived from the wall rather than listing keys.
+    if ((app.prompt.active || modal_dialog_editor_active()) &&
+        app.modal_dialog_focus >= 0)
+        return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
     // one-shot, because a held response key repeating is the destructive shape
@@ -4544,8 +4555,7 @@ void GuiInputHandler::load_editor_commit() {
 //
 //   TAB      cycles every stop. On an EDITOR dialog the FIELD is a stop, so
 //            one field and two buttons is three stops, wrapping; on a PROMPT
-//            there is no field and the buttons alone cycle, with the opening
-//            no-focus state a place the ring leaves for good. AN EDITOR WITH AN
+//            there is no field and the buttons alone cycle. AN EDITOR WITH AN
 //            AUTOCOMPLETE GETS FIRST REFUSAL on the field's FORWARD Tab,
 //            upstream of this route — a completion that ADVANCED consumes the
 //            key and this route is never called, one that did not hands it
@@ -4562,17 +4572,27 @@ void GuiInputHandler::load_editor_commit() {
 //   LEFT /
 //   RIGHT    move between BUTTONS ONLY and are INERT in an editor's field: the
 //            arrows belong to the text there and the editors' own motion arm
-//            owns them. From a prompt's no-focus state they step onto the
-//            first (Right) or last (Left) button — "Tabbed or arrowed onto a
-//            button" is the ruling's own phrase. They wrap like Tab: one ring,
-//            one rule.
-//   ENTER    activates the focused BUTTON — the prompt's response through
-//            activate_response, an editor's OK/Cancel through the session's own
-//            Enter/Esc. With focus in an editor's FIELD it never gets here and
-//            keeps its commit; on a prompt with NO focus it never gets here
-//            either, which is deliberate: this prompt system has no Enter
-//            answer by ruling, so a question can only be answered by a
-//            deliberate step onto a button first.
+//            owns them. They wrap like Tab: one ring, one rule.
+//   ENTER /  PRESS THE FOCUSED BUTTON DOWN and commit it AT THE KEY'S RELEASE
+//   SPACE    (architect 2026-08-13, from kdenlive: "pressing Enter when a
+//            button has focus pushes down the button. It doesn't automatically
+//            commit the action... we move the playhead when the user lifts up
+//            the mouse key, so we should do that here as well"). The press arms
+//            and paints; on_key_release runs the act through the one shared
+//            dispatch. Both keys are BARE-EXACT, and both mean the button only
+//            while the focus IS on a button: with the focus in an editor's
+//            FIELD neither reaches this route at all, so Enter keeps its commit
+//            and Space still types a space, byte-identical to before the ring.
+//            A prompt has no field, so on a prompt they always mean the focused
+//            button — which since the same day's passive-focus ruling is the
+//            Escape sentinel at every raise (PromptState owns the supersession
+//            of "this prompt system has no Enter answer" and the two facts that
+//            make it safe).
+//
+// THE WALK ASSIGNS THE ACTIVE STRENGTH, and it is the strength's ONE producer:
+// every landing on a button here is a deliberate keyboard step, which is the
+// definition of active focus (AppState::modal_dialog_focus_active). Landing
+// back on an editor's FIELD carries no strength and clears it.
 //
 // EVERY SHAPE IS BARE-EXACT WITH ONE DELIBERATE EXCEPTION, THE REVERSE WALK:
 // the strict-modifier rule's own text (conventions.md) names THREE families
@@ -4616,8 +4636,9 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // The exact inverse of the forward arm — the same stops in the same
         // order, walked the other way, with the same wrap: on an editor
         // field -> last button -> ... -> first button -> field, on a prompt
-        // the no-focus state is left for good at the first press (onto the
-        // LAST button, the same step bare Left makes from there).
+        // the buttons alone, wrapping. (The prompt's `at < 0` arm below is a
+        // cold answer only: a standing prompt always has a focused button,
+        // assigned at its raise.)
         if (at < 0)            next = n - 1;
         else if (at > 0)       next = at - 1;
         else                   next = prompt_up ? n - 1 : -1;
@@ -4627,33 +4648,66 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     } else if (key == GuiKeys::Left) {
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? n - 1 : (at + n - 1) % n;
-    } else if (key == GuiKeys::Return) {
-        if (at < 0) return false;                 // no focus, no activation
-        if (prompt_up) {
-            // The KEY half of the staleness question, exactly as the pointer's
-            // release claim asks it: the stash names a response, the LIVE set
-            // decides whether this prompt has it.
-            const char rk = dlg.buttons[static_cast<size_t>(at)].response_key;
-            for (char live : app.prompt.response_keys) {
-                if (rk != 0 && rk == live) {
-                    prompt.activate_response(rk);
-                    break;
-                }
-            }
-        } else {
-            dispatch_modal_dialog_editor_act(
-                dlg.buttons[static_cast<size_t>(at)].editor_ok);
+    } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
+        // THE BUTTON'S KEYBOARD PRESS. With no button focused this is not the
+        // ring's key at all: an editor's field keeps Enter's commit and Space's
+        // typed character, and both fall through untouched.
+        if (at < 0) return false;
+        // A SYNTHESIZED REPEAT IS CONSUMED AND CHANGES NOTHING — the act
+        // happens once, at the physical release. repeat_eligible refuses to
+        // ARM these two while the focus is on a button, so this arm should see
+        // no repeats at all; it is here because the eligibility argument is
+        // about a state that could in principle be entered with a hold already
+        // armed, and "fires once" should be true by construction rather than
+        // by that argument.
+        if (mods.synthesized_repeat) return true;
+        if (app.modal_dialog_key_pressed != at ||
+            app.modal_dialog_key_pressed_key != key) {
+            app.modal_dialog_key_pressed     = at;
+            app.modal_dialog_key_pressed_key = key;
+            viewport.invalidate_rect(dlg.box);
         }
         return true;
     } else {
         return false;
     }
 
-    if (next != app.modal_dialog_focus) {
+    if (next != app.modal_dialog_focus ||
+        app.modal_dialog_focus_active != (next >= 0)) {
         app.modal_dialog_focus = next;
+        // Landing on a button by a deliberate walk IS the active strength;
+        // landing back on an editor's field carries none.
+        app.modal_dialog_focus_active = next >= 0;
         viewport.invalidate_rect(dlg.box);
     }
     return true;
+}
+
+// THE KEYBOARD PRESS ARM'S RELEASE — the act, at the lift (the ruling and the
+// arm are at AppState::modal_dialog_key_pressed). Called from on_key_release
+// for every delivered key release, above every other gate: this arm belongs to
+// a modal surface that owns input, so nothing may rank above it, and a release
+// that matches nothing costs one integer compare.
+//
+// IT MATCHES ON THE KEY, so releasing the other of the two keys resolves
+// nothing, and it re-asks the dialog's own gates through the SHARED DISPATCH
+// (dispatch_modal_dialog_button) rather than a third copy of them: if the
+// dialog changed under the hold — the owner moved, the prompt was replaced —
+// the act does not fire. The painter has usually dropped the arm outright on
+// those same edges; this is the second wall, exactly as the pointer's release
+// is.
+// MODIFIERS AT THE RELEASE ARE NOT RE-READ, the pointer release's own rule (it
+// takes the platform's modifier state and names it unused): the PRESS is what
+// is bare-exact, and a shift tapped mid-hold does not turn a committed press
+// into something else.
+void GuiInputHandler::on_key_release(GuiKey key) {
+    const int armed = app.modal_dialog_key_pressed;
+    if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
+    app.modal_dialog_key_pressed     = -1;
+    app.modal_dialog_key_pressed_key = 0;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
+    dispatch_modal_dialog_button(armed);
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
@@ -4744,7 +4798,45 @@ bool GuiInputHandler::route_modal_editor_key(
         return true;
     }
     if (route_modal_dialog_focus_key(key, mods)) {
+        // THE CARET RESTARTS WHEN THE RING WALKS BACK ONTO THE FIELD: the blink
+        // keeps its own clock, and the field's caret stops painting while the
+        // focus is on a button, so a field re-focused mid-period could
+        // otherwise show nothing for up to half a second. One site, with the
+        // editor already in hand — the ring's other caller is the prompt gate,
+        // which has no field at all.
+        if (app.modal_dialog_focus < 0) text_editor::touch_blink(ed);
         return true;
+    }
+    // NO KEY REACHES THE FIELD WHILE THE FOCUS IS ON A BUTTON (architect
+    // 2026-08-13, at his live test: "hit Tab twice more to reach Cancel, then
+    // press Space. I expect Cancel to be pressed, but instead a space character
+    // is added to the text field even though the text field has now lost
+    // focus"). Not typing, not motion, not editing: the buffer and the
+    // selection are preserved untouched and the keys simply do not arrive,
+    // which is what focus MEANS on the other surfaces this product has.
+    // Anything the ring above did not claim is a CONSUMED NO-OP here — EXCEPT
+    // the modal contract's own three commands, which work from anywhere in the
+    // dialog and keep working from a button exactly as they do from the field:
+    // bare Esc abandons the edit, Ctrl+S saves with the editor open, Ctrl+Q
+    // runs the teardown and hands the close routing on. They are spelled here
+    // as the tail below spells them, because this wall stands ABOVE the
+    // editor's own keymap and the tail is unreachable from a focused button.
+    // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
+    // ring is empty and modal_dialog_focus is structurally -1 while it stands.)
+    if (app.modal_dialog_focus >= 0) {
+        if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
+            cancel();
+            return true;
+        }
+        if (ctrl && !shift && !alt && key == GuiKeys::S) {
+            save_ops.save();
+            return true;
+        }
+        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+            ctrl_q_teardown();
+            return false;  // let on_key run the close routing
+        }
+        return true;       // modal: swallow, and the field never sees it
     }
     const auto action = text_editor::handle_key(ed, key, mods);
     if (action == text_editor::KeyAction::CommitRequested) {

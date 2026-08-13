@@ -4500,9 +4500,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 //   and names its key on its TOOLTIP instead — the bracketed accelerators are
 //   retired for the second time and with their reason recorded at PromptState,
 //   which owns the label rule; the codepoint-exact lowercase match is
-//   untouched, so a typed capital still does not answer. NO DEFAULT FACE:
-//   the crop's highlighted Save is Qt's Enter-default and this prompt system
-//   has no Enter answer, so every button is plain.
+//   untouched, so a typed capital still does not answer. THE LAST BUTTON
+//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
+//   block's "no default face: this prompt system has no Enter answer, so every
+//   button is plain") — it is the Escape sentinel, and Enter answers it; the
+//   assignment site is a few dozen lines into the body below and the whole
+//   supersession is at PromptState.
 //   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
 //   buffer in a DARK INSET FIELD (editor.png's look), then OK and Cancel. The
 //   field is the existing text_editor machinery — selection, caret,
@@ -4615,17 +4618,27 @@ constexpr double kModalBtnPadRightPx  = 10.0;
 // neighbour with half of it to spare.
 constexpr double kModalFocusRingPx    = 2.0;
 
-// THE MODAL'S FACE STATE, dropped together. The three indices all name slots
+// THE MODAL'S FACE STATE, dropped together. The four indices all name slots
 // in modal_dialog.buttons and the field bit names modal_dialog.field, so they
 // all go stale on exactly the same edges — and this painter owns every one of
 // those edges (the full rule and the edge list are at
-// AppState::modal_dialog_focus). No damage of its own: every caller is
-// mid-frame on the lane it is about to repaint.
+// AppState::modal_dialog_focus). The two companion bits ride their own index:
+// the press's inside flag and the focus's strength are meaningless without
+// one, so they reset with it rather than on rules of their own. THE KEYBOARD
+// PRESS ARM IS IN HERE FOR A SHARPER REASON than a stale face, the pointer
+// arm's own: it is an act that has not happened yet, and a dialog that changed
+// under it must not be able to receive it.
+// No damage of its own: every caller is mid-frame on the lane it is about to
+// repaint.
 void reset_modal_dialog_face_state(AppState& app) {
-    app.modal_dialog_hovered       = -1;
-    app.modal_dialog_pressed       = -1;
-    app.modal_dialog_focus         = -1;
-    app.modal_dialog_field_hovered = false;
+    app.modal_dialog_hovered         = -1;
+    app.modal_dialog_pressed         = -1;
+    app.modal_dialog_press_inside    = false;
+    app.modal_dialog_focus           = -1;
+    app.modal_dialog_focus_active    = false;
+    app.modal_dialog_key_pressed     = -1;
+    app.modal_dialog_key_pressed_key = 0;
+    app.modal_dialog_field_hovered   = false;
 }
 
 } // namespace
@@ -4674,9 +4687,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //   the one raise route, so this catches a prompt REPLACING a prompt (the
     //   save-failed rung), which the owner test cannot see.
     // Read before the branches below write either bit.
-    if (prev_owner != (prompt_up ? AppState::ModalDialogOwner::Prompt
+    // THE RESET IS ALSO THE PROMPT'S FOCUS ASSIGNMENT (2026-08-13): a prompt is
+    // raised with PASSIVE focus on its last button, so the frame that resets is
+    // the frame that assigns. The assignment itself waits until the buttons
+    // exist, a few dozen lines down — this only remembers that this frame owes
+    // it.
+    const bool face_state_reset =
+        prev_owner != (prompt_up ? AppState::ModalDialogOwner::Prompt
                                  : AppState::ModalDialogOwner::Editor) ||
-        (prompt_up && !app.prompt.painted)) {
+        (prompt_up && !app.prompt.painted);
+    if (face_state_reset) {
         reset_modal_dialog_face_state(app);
     }
 
@@ -4744,6 +4764,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             text_shape::shape_text_run(font, plan[i].label).width_px;
         plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
+    }
+
+    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON ITS LAST BUTTON (architect
+    // 2026-08-13, the ruling that gave this prompt system an Enter answer —
+    // PromptState owns the supersession and the two facts that make it safe,
+    // the first of which is that the last button is always the ESCAPE
+    // SENTINEL). This is the ONE assignment site: it rides the same reset the
+    // focus's other three edges ride, so a fresh prompt and a prompt replacing
+    // a prompt are one case, and it runs HERE rather than at the reset because
+    // "the last button" is not known until the plan exists. An EDITOR dialog is
+    // deliberately not touched: it opens with focus in its FIELD, which is what
+    // -1 already means there.
+    if (face_state_reset && prompt_up && !plan.empty()) {
+        app.modal_dialog_focus        = static_cast<int>(plan.size()) - 1;
+        app.modal_dialog_focus_active = false;
     }
 
     // -- THE ROW LAYOUT: ONE LEFT-FLUSHED BLOCK (architect 2026-08-13, at his
@@ -5054,7 +5089,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             text_shape::show_shaped_run(cr, run, tx, baseline);
             cairo_restore(cr);
         }
-        if (text_editor::cursor_visible_now(*ed)) {
+        // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
+        // IT (architect 2026-08-13, at his live test: "the blinking caret, the
+        // I-beam, continues to blink in the text field even though it has lost
+        // focus"). `field_focused` is the ring's own -1, resolved above, so
+        // this needs no term of its own and cannot disagree with the outline
+        // that says the same thing one box out. THE SELECTION HIGHLIGHT IS
+        // DELIBERATELY NOT GATED: it is buffer STATE, not focus, and it must
+        // still be visible when the user walks back onto the field to act on
+        // it. The blink's TICK carries the same gate (main.cpp), so an
+        // unfocused field wakes the loop for nothing either.
+        if (field_focused && text_editor::cursor_visible_now(*ed)) {
             // The caret's column is the one the scroll arithmetic RESERVED
             // above, so the two cannot disagree about how wide it is: the
             // travel stops with exactly this many pixels of room left at the
@@ -5101,10 +5146,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // pressed interior is the standing statement that the act is armed and
         // the lift will run it (it was unpainted while they acted at the
         // press, when there was nothing to hold a face for).
-        const bool pressed = static_cast<int>(i) == app.modal_dialog_pressed;
+        //
+        // THE THREE PIECES, DECIDED SEPARATELY (2026-08-13, when the focus grew
+        // its two STRENGTHS — AppState::modal_dialog_focus_active — and the
+        // FEINT grew a face of its own):
+        //   THE FILL says the focus. Both strengths wear kModalFocusFill; a
+        //   LIVE PRESS — armed with the pointer inside it, or armed from the
+        //   keyboard — outranks it with the icon row's own 30% click mix.
+        //   THE OUTLINE says who is claiming the button, at the accent when
+        //   the POINTER, a LIVE ARM or the keyboard's own WALK claims it, at
+        //   the new kModalFocusLinePassive when only an assigned focus does,
+        //   and at the resting kRedesignLine otherwise. A HELD-AWAY FEINT is
+        //   inside the arm term, which is exactly the ruling's "while the
+        //   button is being held, but away from the button's hit area, the
+        //   button looks like a hover".
+        //   THE HALO is the ACTIVE strength alone.
+        // Every rung of the ladder falls out of those three; none is
+        // enumerated. Two consequences worth naming because they read like
+        // omissions: ACTIVE FOCUS PLUS HOVER IS IDENTICAL TO ACTIVE FOCUS (the
+        // outline is already accent, so hover adds nothing), and PRESSED
+        // outranks every fill above it, focus included.
+        const bool armed   = static_cast<int>(i) == app.modal_dialog_pressed;
+        const bool pressed =
+            (armed && app.modal_dialog_press_inside) ||
+            static_cast<int>(i) == app.modal_dialog_key_pressed;
         const bool hovered = static_cast<int>(i) == app.modal_dialog_hovered;
         const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
-        if (focused) {
+        const bool active_focus = focused && app.modal_dialog_focus_active;
+        if (active_focus) {
             // THE HALO, drawn first so the button's own outline lands over its
             // inner edge: a `ring`-wide stroke whose centreline runs half a
             // ring outside the box, i.e. a band filling exactly the reserved
@@ -5119,7 +5188,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                 kRedesignClickMix)
                     : kModalFocusFill;
         const GuiColor line =
-            (hovered || pressed || focused) ? kRedesignAccent : kRedesignLine;
+            (hovered || armed || pressed || active_focus)
+                ? kRedesignAccent
+                : focused ? kModalFocusLinePassive
+                          : kRedesignLine;
         redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
                           (pressed || focused) ? &fill : nullptr, &line);
         show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
