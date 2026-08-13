@@ -1971,6 +1971,19 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // in practice — it is a backstop against a stale stash, and the gate above is
 // what makes "nothing acts" the rule.) The keyboard half of the same span is
 // the platform's (deliver_key's fork).
+//
+// WHY A DELIVERY-TIME GATE IS THE RIGHT SHAPE *HERE*, where the platform's own
+// halves are origin-scoped (the ORIGIN RULE at GuiPlatform's dialog_open()
+// block, codex round 9): these four points are reached only by input that
+// ROUTES TO THE DIALOG SURFACE, so they ask the modal-state question on behalf
+// of the very surface that owns the input — "the state is gone" and "this input
+// is dead" are then the same fact, and there is no deferral in between (a
+// dialog pointer event dispatches at arrival; a dialog TOUCH stream defers, but
+// it defers into these same points and re-asks here). The main-surface side has
+// no such luxury: its deferred acts are measured against the main window's
+// VEIL, which is the GUI modal state that the answer itself removes — so those
+// are gated AT THEIR ORIGIN in the platform instead (the shared key-swallow
+// fork, the consumption-aware repeat arm, the touch poison).
 
 void GuiInputHandler::on_dialog_button_press(GuiMouseButton button, int x,
                                              int y, GuiInputState mods) {

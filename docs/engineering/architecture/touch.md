@@ -192,14 +192,39 @@ one capture, fixed for the stream's life), and the whole stream follows it.
   span between the answering input and the run loop's settled tail — one
   gate, `modal_dialog_state_standing`, for mouse and finger alike), so a tap
   queued behind the answer cannot press a button whose answer no longer
-  exists.
-- A MAIN-owned stream while a dialog stands keeps the full phase machine and
-  delivers as ever — and everything it delivers dies at the GUI's standing
-  veil gates: a tap's press-release is consumed, a two-finger nav freezes at
-  the per-frame wheel-context refusal (wheel_context answers -1 under a
-  prompt or a dialog editor), a region hold refuses in its begin. The veil
-  is total, so main-window glass is inert exactly as the main-window mouse
-  is.
+  exists. A DELIVERY-TIME GATE IS SOUND *HERE* and nowhere else on glass:
+  the dialog's entry points ask the modal-state question on behalf of the
+  surface that owns the input, so "the state is gone" and "this input is
+  dead" are the same fact — whereas a MAIN-surface stream's deferred act is
+  measured against the main window's veil, which the answer itself removes,
+  which is why that side is poisoned at its origin instead (next bullet).
+- A MAIN-owned stream BORN WHILE A DIALOG STANDS IS POISONED AT ITS FIRST
+  DOWN (codex round 9, 2026-08-12): the platform enters `Drain` right there
+  instead of `Pending`, so the stream delivers NOTHING for its whole life —
+  no tap, no slop-crossing pointer or single-finger pan, no region hold, no
+  two-finger nav (the stream is one unit; a second finger landing in a drain
+  is ignored like any other) — and the poison's whole lifecycle is that
+  phase: set at the down, cleared by the ordinary drain exit when every
+  finger has lifted. THE TEST IS "WAS THE GUI MODAL WHEN THIS FINGER LANDED",
+  BY EITHER WITNESS — the dialog toplevel (live modal or zombie) OR the modal
+  state alone, which is the span from an opener's own dispatch until the
+  settled tail opens the window, the zombie span's mirror image at the other
+  end and equally reachable inside one dispatch batch —
+  because THE ORIGIN IS WHAT DECIDES: this window converts a down at
+  its LIFT, its SLOP CROSSING or its EXPIRY, so a resolution that re-asks
+  the modal state reads a state the answering input may already have cleared
+  — finger down under the modal, Esc, finger up, and the tap OUTRUNS the
+  settled tail into a main-window command behind a dialog still on screen
+  (over Delete/Render/Quit, a fired command). Delivery-time gating cannot
+  answer that; origin-time gating can, and does. The rule it instances —
+  AN INPUT THAT ORIGINATED WHILE A DIALOG STOOD IS DEAD, whatever the state
+  when it resolves — is stated once at `GuiPlatform`'s `dialog_open()` block,
+  with the keyboard's two sites beside it.
+  The GUI's standing veil gates still answer everything a LIVE-modal stream
+  used to reach (a tap's press-release consumed, a two-finger nav frozen at
+  the per-frame wheel-context refusal, a region hold refused in its begin);
+  the poison makes main-window glass inert BY CONSTRUCTION rather than by
+  the veil's reach, which is what closes the span the veil does not cover.
 - The two-deadline window therefore applies PER SURFACE by construction: the
   deadline is picked from the captured surface's own answer at the down, and
   no mid-stream event can re-ask it.

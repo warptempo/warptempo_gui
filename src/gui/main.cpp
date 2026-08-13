@@ -1668,7 +1668,20 @@ int main(int argc, char** argv) {
     // state, which has answered — and that is the right answer by arrival
     // order: anything queued while the modal still stood was dispatched
     // BEFORE the answer and met the veil; anything after it is the user's own
-    // next act on a window that is no longer inert. The CLOSE arm
+    // next act on a window that is no longer inert.
+    // THE ARRIVAL-ORDER READING IS SCOPED, AND THE SCOPE IS THE WHOLE OF ITS
+    // TRUTH (codex round 9): it holds for input that ORIGINATES after the
+    // answer — a fresh click, a fresh wheel — because for those, dispatch order
+    // and origin order are the same thing. It says NOTHING about input that
+    // originated BEFORE the answer and RESOLVES after it, which this platform
+    // produces by design (a touch down converting at its lift or its expiry, a
+    // key press arming a repeat that fires later): for those the answer is the
+    // ORIGIN RULE's, enforced in the platform — dialog_swallows_key(), the
+    // consumption-aware repeat arm, and the touch poison (the rule and the
+    // three sites at platform_wayland.h's dialog_open() block). Read together:
+    // the gates own everything that originated inside the span, arrival order
+    // owns everything that originated after it, and nothing is left to decide
+    // at delivery time. The CLOSE arm
     // also zeroes the published geometry and the hover index — the painter's
     // old no-dialog arm, moved to the one owner that knows the window came
     // down (the dialog painter runs only while a window stands, so it cannot

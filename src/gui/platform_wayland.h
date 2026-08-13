@@ -223,7 +223,11 @@ public:
     //     short 60 ms deadline and NOTHING nav- or region-shaped can arm on a
     //     dialog: a second finger there is ignored whole), while a
     //     main-owned stream keeps the full phase machine and the GUI's
-    //     standing veil gates consume what it delivers.
+    //     standing veil gates consume what it delivers — EXCEPT that a
+    //     main-owned stream BORN while a dialog stands is not delivered at all:
+    //     it is poisoned at its first down and drains (the origin rule below,
+    //     the phase list's Drain clause), because a deferred conversion cannot
+    //     be trusted to the veil it may outlive.
     //
     // LIFETIME: open_dialog is idempotent while one stands (resize_dialog is
     // the content-switch route — new title, new content, same window, and a
@@ -248,6 +252,27 @@ public:
     // is the GUI's own gate at the four dialog entry points (they route
     // through the dialog hooks, so one gate there covers both devices —
     // input_pointer.cpp). The modal-state truth is set_dialog_modal_probe's.
+    //
+    // THE ROOT RULE, stated once here and referenced everywhere it bites
+    // (codex round 9, which found three leaks that were all this one rule
+    // missing): SUPPRESSED OR DEFERRED INPUT RESOLVES AGAINST ITS ORIGIN, NOT
+    // ITS DELIVERY — AN INPUT THAT ORIGINATED WHILE A DIALOG STOOD (modal OR
+    // zombie) IS DEAD, whatever the state is when it finally resolves. The
+    // guarantee has to be origin-scoped because this platform DEFERS input by
+    // design: the touch disambiguation window converts a finger's down at its
+    // LIFT or its EXPIRY, and key repeat arms at a press and fires later — so
+    // asking "does a dialog stand?" at the resolution reads a state the
+    // answering input may already have cleared, and the deferred act then
+    // fires a MAIN-window command behind a dialog still on screen. The rule's
+    // three enforcement sites: dialog_swallows_key() (the one keyboard fork,
+    // shared by deliver_key and the kLeftClickKey synthesized-button branch —
+    // they drifted apart until round 9), THE CONSUMPTION-AWARE REPEAT ARM (a
+    // key the platform swallowed never arms repeat, so no burst can outlive
+    // the span that swallowed its press), and THE TOUCH POISON (a
+    // main-surface stream whose FIRST finger landed while a dialog stood
+    // enters Drain at that down and delivers nothing, ever). Input that
+    // originates AFTER the answer is a different question and is the arrival-
+    // order reading's (main.cpp's lifecycle sync).
     //
     // PAINTING: the dialog has its own small double-buffered wl_shm pool and
     // its own frame-callback chain; damage is whole-window (the surface is
@@ -390,16 +415,22 @@ public:
     //     loss, the edges that clear repeat_key_ itself: a keyboard-driven
     //     focus change must not leave a pointer-held arrow authoring into an
     //     unfocused window;
-    //   * deliver_key's SUPER DROP, per swallowed NON-SYNTHESIZED press: the
-    //     swallowed press is an intervening key ARRIVAL the application's
-    //     on_key disarm never sees, and the platform's own layer-1 disarms its
-    //     armed repeat at that very press (the arming else-branch in
-    //     on_keyboard_key runs BEFORE the drop) — per-delivery is the faithful
-    //     mirror. Deliberately NOT at Super's press edge: the Super keysym
-    //     itself "disarms nothing" platform-side, and a bare Super hold with no
-    //     key pressed runs no command (adjacency stands), while the hold
-    //     itself is a POINTER act, which the Super ruling explicitly scopes
-    //     out (Super+click clicks).
+    //   * deliver_key's TWO SWALLOWS, per swallowed NON-SYNTHESIZED press —
+    //     membership re-greped 2026-08-12 (codex round 9), the fire sites being
+    //     the SUPER DROP and THE DIALOG VEIL FORK (dialog_swallows_key(), which
+    //     the round-8 dialog arc added with this same fire and this list had not
+    //     yet named): a swallowed press is an intervening key ARRIVAL the
+    //     application's on_key disarm never sees, and the platform's own layer-1
+    //     disarms its armed repeat at that very press — the arming branch in
+    //     on_keyboard_key runs on deliver_key's RETURN and takes its else arm,
+    //     the swallow having reported no delivery (the consumption-aware arm;
+    //     before round 9 the arm's own `!mod_super_` term did that job for the
+    //     Super path, one line earlier — the outcome was always this one).
+    //     Per-delivery is the faithful mirror. Deliberately NOT at Super's
+    //     press edge: the Super keysym itself "disarms nothing" platform-side,
+    //     and a bare Super hold with no key pressed runs no command (adjacency
+    //     stands), while the hold itself is a POINTER act, which the Super
+    //     ruling explicitly scopes out (Super+click clicks).
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The full edge inventory the consumer
     // rides is at AppState::transport_repeat. Null-safe.
@@ -1174,9 +1205,25 @@ private:
     //     translation end — the single-finger Nav model, not the Pointer
     //     one. A second finger landing here is IGNORED whole (a committed
     //     gesture — the moved-drag rule's family).
-    //   * Drain   — waiting for every remaining (ignored) finger to lift;
-    //     nothing is delivered. Entered from Pointer, Nav and Region ends
-    //     that leave ignored fingers on the glass.
+    //   * Drain   — waiting for every remaining finger to lift; nothing is
+    //     delivered, and nothing can be (motion, further downs, ups and the
+    //     hard ends are all bookkeeping in here). Entered from Pointer, Nav
+    //     and Region ends that leave ignored fingers on the glass — AND, since
+    //     codex round 9, AT THE FIRST DOWN OF A POISONED STREAM: a
+    //     MAIN-surface stream whose first finger lands while the GUI is modal
+    //     BY EITHER WITNESS — the dialog toplevel (live modal or zombie) or the
+    //     modal state itself, which stands alone in the span before the settled
+    //     tail opens the window — is DEAD AT ITS ORIGIN and enters Drain right
+    //     there, never Pending. That is the origin rule's touch half
+    //     (dialog_open()'s block): this window converts a down at its LIFT, its
+    //     SLOP CROSSING or its EXPIRY, so a delivery-time modal test reads a
+    //     state the answering input may already have cleared — down under the
+    //     modal, Esc, up, and the tap outruns the settled tail into a
+    //     main-window command behind a standing dialog. The poison's whole
+    //     lifecycle is the phase: set at that down, cleared by the ordinary
+    //     Drain exit when every finger has lifted. A DIALOG-owned stream is
+    //     deliberately never poisoned — it is the dialog's own tap-to-click,
+    //     and its zombie half is gated at the GUI's four dialog entry points.
     //
     // THE EDGE INVENTORY — every route that ends or transforms touch state,
     // authoritative here (the transport_repeat precedent; each fire site
@@ -1277,6 +1324,13 @@ private:
     //   * third DOWN during two-finger Nav / any DOWN during Drain — ignored:
     //     recorded (the point count), not routed — the mid-gesture rule
     //     above.
+    //   * FIRST DOWN, main surface, THE GUI MODAL BY EITHER WITNESS (the
+    //     toplevel or the modal state) — THE POISON (codex
+    //     round 9): Idle -> Drain instead of Pending, nothing staged, no
+    //     deadline, the pan-zone query not asked; every later event for the
+    //     stream is Drain bookkeeping and the stream ends at the ordinary
+    //     Drain exit. The Drain clause above and dialog_open()'s origin rule
+    //     carry the reasoning.
     //   * wl_touch.cancel — the compositor claims the touches. One contract
     //     with capability loss: a live Pointer translation gets its release
     //     DELIVERED at the last position (a commit, not a vanish) then the
@@ -1607,6 +1661,15 @@ private:
     // state already answered (the span at dialog_open())? False when no
     // dialog stands and false when no probe is wired.
     bool dialog_is_zombie() const;
+    // DOES A STANDING DIALOG SWALLOW THIS KEY? The ONE keyboard veil fork
+    // (the origin rule at dialog_open()), shared by its exactly two callers:
+    // deliver_key and the kLeftClickKey synthesized-button branch, which
+    // returns before deliver_key and so must carry the fork itself. It was
+    // spelled inline at both and DRIFTED — the synthesized-button copy never
+    // grew the zombie term, so a queued dialog-focused `e` in the span
+    // synthesized a main-window left press onto whatever the pointer rested
+    // over. Hoisted so the two cannot diverge again.
+    bool dialog_swallows_key() const;
     // The dialog surface's one cursor: the theme ARROW, applied at its enter
     // serial WITHOUT touching cursor_kind_ (the main window's remembered
     // kind, which the main enter restores).
@@ -1670,7 +1733,13 @@ private:
     // remainder and a held synthesized-left button are all dropped together.
     // Hoisted so a third such edge cannot land with one of the four forgotten.
     void forget_keyboard_state();
-    void deliver_key(GuiKey key, GuiInputState mods);
+    // Deliver one key press to the application — and REPORT WHETHER IT
+    // REACHED DISPATCH (codex round 9). The return is what makes the repeat
+    // arm consumption-aware: a swallowed key (Super, the dialog veil, the
+    // zombie fork) must not arm a burst that fires the moment the swallow
+    // lifts. False = nothing dispatched, for any reason including an unwired
+    // on_key_.
+    bool deliver_key(GuiKey key, GuiInputState mods);
     void maybe_fire_repeat();
     // THE LIVE MODIFIER TRUTH, on demand — the same GuiInputState every pointer
     // callback and the loop-settled hook are built from, read out of the tracked

@@ -1675,6 +1675,19 @@ bool GuiPlatform::dialog_is_zombie() const {
     return !dialog_modal_probe_();
 }
 
+bool GuiPlatform::dialog_swallows_key() const {
+    // THE ONE KEYBOARD VEIL FORK (the declaration states why it is hoisted;
+    // the origin rule is at dialog_open()). Two terms over one precondition:
+    //   * the WINDOW exists at all — the first term, deliberately not the
+    //     modal state, which is what makes the whole zombie span inert;
+    //   * MAIN-focused (the veil: the GUI's modal contract is focus-scoped, so
+    //     a key typed into the inert window behind the dialog is consumed
+    //     here), or DIALOG-focused on a ZOMBIE (the answer already ran; the
+    //     queued keys behind it in the same dispatch batch are dead).
+    if (!dialog_xdg_toplevel_) return false;
+    return !keyboard_on_dialog_ || dialog_is_zombie();
+}
+
 void GuiPlatform::close_dialog() {
     destroy_dialog_window();
 }
@@ -2626,14 +2639,19 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
         // THE VEIL'S SYNTHESIZED-BUTTON ARM (the dialog toplevel): this path
-        // returns before deliver_key, so it carries the veil fork itself — a
-        // main-focused `e` with a dialog standing arms nothing, exactly as
-        // deliver_key consumes the main-focused chords. (Dialog-focused under
-        // a PROMPT — the one dialog state whose editor probe is false — the
-        // press still lands at the MAIN pointer coordinates and the GUI's
-        // prompt veil consumes it; the release path below stays ungated, a
-        // hold must always end.)
-        if (dialog_xdg_toplevel_ && !keyboard_on_dialog_) return;
+        // returns before deliver_key, so it carries the veil fork itself —
+        // THROUGH THE SHARED HELPER since codex round 9, which caught the
+        // drift the inline copy had already produced: this site's own fork was
+        // "window standing and MAIN-focused", missing deliver_key's zombie
+        // term, so a DIALOG-focused `e` queued behind the answering input
+        // synthesized a main-window left press at the pointer's resting
+        // coordinates — over Delete/Render/Quit that is a fired command behind
+        // a dialog still on screen. One predicate now, two callers (the origin
+        // rule at dialog_open()). (Dialog-focused under a LIVE prompt — the
+        // one dialog state whose editor probe is false — the press still lands
+        // at the MAIN pointer coordinates and the GUI's prompt veil consumes
+        // it; the release path above stays ungated, a hold must always end.)
+        if (dialog_swallows_key()) return;
         if (!synth_left_held_ && pointer_focused_) {
             // The synthesized button is a button: this press is a context event
             // that kills an armed key repeat (layer 1), same as a physical one.
@@ -2674,20 +2692,54 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     // what makes "no synthesized repeat can follow an intervening command" true,
     // which is the property undo coalescing rides. The full statement is at
     // maybe_fire_repeat, beside the bit it sets.
-    // A press dropped for SUPER arms nothing (and, through the else branch below,
-    // disarms whatever was armed — the ordinary "a different key press re-arms or
-    // disarms" edge of layer (1)). Without this the press would be swallowed at
-    // deliver_key while still arming a burst that starts firing the moment Super is
-    // released, and those fires carry synthesized_repeat — an undo merge into an
-    // OLDER entry, from a press the application never saw. The probe itself is
-    // untouched: this is a platform-side arming gate, not a modifier predicate.
+    // A CONSUMED KEY NEVER ARMS REPEAT (codex round 9, the structural form of a
+    // rule that used to be spelled once per swallow path): the arm reads
+    // deliver_key's OWN report of whether the press reached dispatch, so every
+    // present and future swallow path is covered by construction. Without it a
+    // press the platform threw away still armed a burst that started firing the
+    // moment the swallow lifted, carrying synthesized_repeat — an undo merge
+    // into an OLDER entry, from a press the application never saw. THE THREE
+    // SWALLOW PATHS AND WHAT EACH COULD ACTUALLY ARM, walked at deliver_key
+    // rather than assumed:
+    //   * SUPER — the pre-round-9 arm carried its own `!mod_super_` term for
+    //     exactly this reason; that term is DELETED here, subsumed by the
+    //     report (the drop returns false), so the rule has one home instead of
+    //     a duplicate predicate that could go stale. No behavior moves.
+    //   * THE DIALOG VEIL (main-focused, a dialog standing) — armed, but never
+    //     leaked a fire, and the reason it did not is the fragility this rule
+    //     removes: under a PROMPT the application's own repeat_eligible refuses
+    //     (app.prompt.active), and under a dialog EDITOR it arms through the
+    //     EDITOR branch with repeat_editor_ctx_ true, so when the tail closes
+    //     the editor layer (2)'s editor-context mismatch disarms with no fire.
+    //     An accidental save by a second mechanism, on a path where the arm had
+    //     no business existing.
+    //   * THE ZOMBIE FORK (dialog-focused, the modal already answered) — THE
+    //     ONE PATH THAT REACHED DISPATCH, codex's own example: the answer
+    //     cleared the modal state INSIDE its own dispatch, so the next queued
+    //     press in the same batch probes eligibility against the ORDINARY
+    //     GLOBAL context and arms a global chord (Ctrl+Z is repeat-eligible) with
+    //     repeat_editor_ctx_ false — which still MATCHES after the close, so
+    //     layer (2) has nothing to catch and the burst fires into ordinary
+    //     global dispatch the moment the tail takes the window down. Esc plus a
+    //     held Ctrl+Z was a silent undo behind a dialog.
+    // THE OTHER DIRECTION IS ORIGIN-CORRECT AND DELIBERATELY UNTOUCHED: an arm
+    // that predates the dialog keeps firing (swallowed while the window
+    // stands, resuming after), because its press originated when the keyboard
+    // was live. Its only producer is the WM close of the MAIN window raising
+    // the unsaved-close prompt — the one dialog opener that is neither a key
+    // press (which re-arms or disarms here by eligibility) nor a pointer press
+    // (which disarms at layer (1)), so every other opener leaves nothing armed
+    // to survive the span at all.
+    // Eligibility is still probed under the PRE-DISPATCH context, above the
+    // delivery, and the else branch still disarms whatever was armed — the
+    // ordinary "a different key press re-arms or disarms" edge of layer (1) —
+    // for a swallowed press exactly as for an ineligible one.
     const bool repeat_ok =
-        !mod_super_ &&
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     const bool editor_ctx =
         text_editor_active_probe_ && text_editor_active_probe_();
-    deliver_key(key, mods);
-    if (repeat_period_us_ > 0 && repeat_ok) {
+    const bool delivered = deliver_key(key, mods);
+    if (repeat_period_us_ > 0 && repeat_ok && delivered) {
         repeat_key_        = key;
         repeat_keycode_    = xkb_keycode;
         repeat_editor_ctx_ = editor_ctx;
@@ -2784,7 +2836,15 @@ GuiInputState GuiPlatform::current_mods() const {
     return s;
 }
 
-void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
+bool GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
+    // THE RETURN IS THE CONSUMPTION REPORT (codex round 9; the contract at the
+    // declaration): true iff the press reached the application. Its one reader
+    // is the repeat arm in on_keyboard_key — a swallowed key never arms — so
+    // every `return` below is a swallow that says so, and a new swallow path
+    // joins the rule by returning false. maybe_fire_repeat deliberately IGNORES
+    // it: a swallowed synthesized repeat disarms nothing anywhere else (a burst
+    // must not kill a burst) and its origin predates any swallow that catches
+    // it, so the arm stands and the fires resume when the swallow lifts.
     // SUPER IS DROPPED AT THE PLATFORM BOUNDARY (architect 2026-07-30: super
     // belongs to labwc and is not part of this program's vocabulary). STRICT
     // MODIFIER VALIDATION says an unbound modifier combination is a no-op
@@ -2816,17 +2876,20 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     if (mod_super_) {
         // THE DROPPED PRESS IS STILL AN INTERVENING KEY ARRIVAL for the
         // application's held transport intent — the on_key disarm never sees
-        // it — and the platform's own layer-1 disarmed its armed repeat at
-        // this very press (the arming else-branch above, which runs before
-        // this drop). So the keyboard-intent cancellation hook fires per
-        // swallowed NON-SYNTHESIZED press, the faithful mirror of that edge
-        // (contract and the not-at-Super's-press-edge decision at
+        // it — and the platform's own layer-1 disarms its armed repeat at this
+        // very press: the caller's arming branch runs on this function's
+        // RETURN and takes the else arm, this drop having reported no delivery
+        // (the consumption-aware arm in on_keyboard_key; before round 9 the
+        // `!mod_super_` term in repeat_ok did the same job one line earlier).
+        // So the keyboard-intent cancellation hook fires per swallowed
+        // NON-SYNTHESIZED press, the faithful mirror of that edge (contract and
+        // the not-at-Super's-press-edge decision at
         // set_keyboard_intent_cancel_hook). A swallowed synthesized repeat
         // fires nothing, exactly as it disarms nothing anywhere else — a
         // burst must not kill a burst.
         if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
             keyboard_intent_cancel_hook_();
-        return;
+        return false;
     }
     // THE VEIL'S KEYBOARD HALF (the dialog toplevel, 2026-08-12): while a
     // dialog stands, a key focused on the MAIN window is CONSUMED here — the
@@ -2845,12 +2908,17 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // through ordinary global dispatch, behind a dialog still on screen). So
     // the whole span is inert on both surfaces, which is what makes the tail
     // safe as the single teardown owner.
-    if (dialog_xdg_toplevel_ && (!keyboard_on_dialog_ || dialog_is_zombie())) {
+    // BOTH TERMS LIVE IN dialog_swallows_key(), the one fork the kLeftClickKey
+    // synthesized-button branch shares (it returns before this function, and
+    // its inline copy of the fork had already drifted — codex round 9).
+    if (dialog_swallows_key()) {
         if (!mods.synthesized_repeat && keyboard_intent_cancel_hook_)
             keyboard_intent_cancel_hook_();
-        return;
+        return false;
     }
-    if (on_key_) on_key_(key, mods);
+    if (!on_key_) return false;
+    on_key_(key, mods);
+    return true;
 }
 
 void GuiPlatform::maybe_fire_repeat() {
@@ -2896,7 +2964,12 @@ void GuiPlatform::maybe_fire_repeat() {
     // instead). Weakening a disarm would let a repeat merge a gesture into a
     // foreign command's undo entry.
     mods.synthesized_repeat = true;
-    deliver_key(repeat_key_, mods);
+    // The consumption report is DELIBERATELY DISCARDED here (the contract at
+    // deliver_key): a swallowed synthesized repeat disarms nothing anywhere
+    // else — a burst must not kill a burst — and the arm's origin predates any
+    // swallow that could catch it, so the hold stands and the fires resume when
+    // the swallow lifts. Only the PHYSICAL press's arm reads the report.
+    (void)deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;
 }
 
@@ -3048,6 +3121,16 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // or the tick's own recompute — and it is the ORDINARY pointer-frame path
     // that delivers it when no leave follows, so clearing it at the finalize
     // would change behaviour on paths with no defect behind them.
+    // THE ORIGIN RULE'S VERDICT ON THIS STAGE (codex round 9's deferred-state
+    // walk; the rule at platform_wayland.h's dialog_open()): CLEAN, and it
+    // needs no origin bit. Staging requires pointer_captured_ at stage time —
+    // so a capture, so a live strip drag, so no dialog — and the stage empties
+    // at the very next pointer frame, at this leave, or at any button delivery,
+    // all of which sit in the batch that queued it. The one crossing of a
+    // dialog OPEN is the force-finalize case above (Ctrl+Q or the WM close
+    // raising the close prompt), and what it delivers is a MOTION — a hover
+    // recompute, never a press, a release or a command — whose origin predates
+    // the dialog and which the GUI's prompt branch answers anyway.
     flush_deferred_motion();
     // OrdinaryLeave is the argument, and the sentence above is exactly what it
     // buys the consumer: the stream continues, so this is the edge on which the
@@ -3311,6 +3394,15 @@ void GuiPlatform::on_pointer_frame() {
     // deliberately survives — it is consumed under the same context key and
     // no frame arrived to re-probe. The defect this guards against is
     // cross-context attribution, not staleness.
+    // THE ORIGIN RULE'S VERDICT ON THIS ACCUMULATOR (codex round 9's
+    // deferred-state walk; the rule is at platform_wayland.h's dialog_open()):
+    // it is CLEAN and needs no origin bit. Remainder is sub-detent travel that
+    // performs nothing, and the only way it becomes an act is a later scroll
+    // frame — which re-probes wheel_context first, and that predicate returns
+    // -1 (blocked, remainder cleared) while a prompt or a dialog editor stands.
+    // So remainder can never bridge INTO the modal span, and remainder grown
+    // BEFORE the span survives it by origin — its travel happened when the
+    // wheel was live, which is precisely the accepted staleness above.
     if ((frame_have_v120_ || frame_have_axis_) && pointer_on_dialog_) {
         // THE DIALOG SWALLOWS THE WHEEL (nothing in a dialog scrolls), and
         // the remainder dies with the frame: sub-detent travel accumulated
@@ -3738,6 +3830,66 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             // nothing nav- or region-shaped can arm on a dialog.
             touch_stream_on_dialog_ =
                 dialog_surface_ && surface == dialog_surface_;
+            // THE TOUCH POISON — the origin rule's touch half (codex round 9;
+            // the rule itself at dialog_open()). A MAIN-surface stream whose
+            // first finger lands while a dialog toplevel stands — LIVE MODAL OR
+            // ZOMBIE, the window's existence is the whole test — is DEAD AT THE
+            // DOWN: it enters Drain here instead of Pending, so no resolution
+            // exists to deliver anything (Drain ignores motion, further downs,
+            // ups and the hard ends alike), and the stream's end is the
+            // ordinary Drain exit — every finger lifting takes the phase back to
+            // Idle, which is the poison's whole lifecycle. Nothing is staged,
+            // no deadline runs, the pan-zone query is not even asked.
+            //
+            // WHY DELIVERY-TIME GATING CANNOT WORK HERE, which is the defect:
+            // this window DEFERS conversion by design, so the down's act
+            // resolves at the LIFT (a tap), at the SLOP CROSSING or at the
+            // EXPIRY — and codex's scenario is finger down under the modal,
+            // Esc answers it, finger up: the up OUTRUNS the settled tail, so
+            // the resolution asks "does a modal stand?" and gets NO from a
+            // state the Esc cleared a moment earlier, and the tap then fires a
+            // main-window command behind a dialog still on screen. The answer
+            // has to be taken at the origin, where the question is still
+            // honest.
+            //
+            // MAIN-SURFACE ONLY, deliberately: a DIALOG-owned stream is the
+            // dialog's own tap-to-click and must work while the modal is live,
+            // and its zombie-span half is already gated at delivery by the four
+            // GUI dialog entry points, whose gate is safe there because it is
+            // the modal-state question asked ON BEHALF of the surface that owns
+            // the input (input_pointer.cpp). This poison is that gate's
+            // MAIN-surface mirror, and it has to live here because the main
+            // window's veil is the GUI's modal state — which is exactly what
+            // the answer clears.
+            //
+            // TWO TERMS, THE WINDOW *OR* THE STATE, because the lifecycle sync
+            // runs at the loop's SETTLED TAIL and the zombie span therefore has
+            // a MIRROR IMAGE at the other end: from the opening input's own
+            // dispatch until that tail, the GUI is modal with NO toplevel yet,
+            // and one dispatch batch can carry a touch down into exactly that
+            // gap. Poisoning on the window alone would let such a stream go
+            // Pending and then convert at a lift that outran the answer — the
+            // same defect at the opening edge instead of the closing one. So
+            // the test is "was the GUI modal, by either witness, when this
+            // finger landed", which is the origin rule read literally.
+            // (Spelled inline rather than through a local: this case label is
+            // unbraced, and a declaration with an initializer here would make
+            // every later label a jump across its initialization.)
+            if (!touch_stream_on_dialog_ &&
+                (dialog_xdg_toplevel_ ||
+                 (dialog_modal_probe_ && dialog_modal_probe_()))) {
+                touch_phase_ = TouchPhase::Drain;
+                // The two Pending-only facts are cleared rather than left to
+                // the arm below: a Drain exit does not run forget_touch_state
+                // (the established shape — every delivering end already
+                // flushed), so an unset field here would carry the PREVIOUS
+                // stream's zone answer and deadline into the next Idle.
+                // Nothing in Drain reads either; this keeps "captured at the
+                // down, false otherwise" true by construction.
+                touch_down_in_pan_zone_   = false;
+                touch_window_deadline_us_ = 0;
+                break;
+            }
             // The PAN-ZONE answer is captured ONCE, here at the down (the
             // phone model): the window's slop-crossing resolution AND its
             // expiry fork on it. Surface geometry only, by the query's
