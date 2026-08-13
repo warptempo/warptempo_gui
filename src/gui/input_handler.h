@@ -1010,7 +1010,10 @@ struct GuiInputHandler {
     // enabled bit, the radio rule, the Render cancel face — then run the act
     // (the chord through on_key; the tab lock's bare `o`; the walk tabs'
     // set_history_reading). A lift anywhere else, or a gate that no longer
-    // holds, dispatches nothing.
+    // holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
+    // measured against the arm's press stamp and ORed into the one shift term
+    // the chord is built from, on the shift-admitting buttons alone
+    // (kChromeShiftHoldMs, app_state.h, carries the ruling).
     bool arm_redesign_press(int x, int y, GuiInputState mods);
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,

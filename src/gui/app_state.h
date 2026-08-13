@@ -1765,6 +1765,38 @@ inline int dropdown_h_px(DropdownMenu m) {
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
 
+// THE CHROME ROSTER'S SHIFT LONG-PRESS BEAT (architect 2026-08-13) — how long a
+// press must be HELD on one of the four shift-admitting buttons before its lift
+// dispatches the SHIFTED twin instead of the plain act. It is what gives glass
+// the shift acts: the road rig has no keyboard, so a finger could reach only
+// half of each shifted pair. Read at exactly one site, the lift's chord build
+// (finish_chrome_press_release, input_pointer.cpp), against the press stamp the
+// arm carries (AppState::ChromePress::press_ms).
+//
+// IT IS ITS OWN CONSTANT AND NOT THE TOUCH REGION HOLD'S, though both rest at
+// the architect's "~500ms" and both are hold beats. Three reasons, in order of
+// weight: the region hold is a PLATFORM constant (platform_wayland.cpp's
+// anonymous namespace, below the GUI model by design) and sharing it would
+// mean hoisting a disambiguation deadline into the GUI's input layer; it is
+// tuned for a DRAG gesture on the waveform — the mark at which a finger that
+// has not moved stops being a possible pan and becomes a region sweep — while
+// this one is tuned for a stationary press on a small button, so the two can
+// want different numbers from the same glass session; and the surfaces have
+// different futures (the region hold answers to the pan zone's two-deadline
+// window, this to the roster). They are equal today by coincidence of the same
+// ruling, and either may be retuned without the other.
+//
+// It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
+// nothing to say about it (the same rule the drag-slop and disambiguation
+// constants carry for their own reason — they model the hand, not the pixels).
+//
+// The beat is DELIBERATELY LONG relative to a click. A shifted act is the rarer
+// one on all four buttons, so the cost of an accidental hold must land on the
+// rare act rather than on the common one; 500ms is well past any ordinary
+// click-and-lift and just short of the point where a user would assume the
+// press was lost.
+constexpr int64_t kChromeShiftHoldMs  = 500;
+
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
 // DRAG (architect-tunable), shared by EVERY press-becomes-drag surface — strip,
 // region, trim, and the marker flag (the tempo flag was a fifth until the tempo
@@ -3018,6 +3050,19 @@ struct AppState {
     // the user PRESSED, and a shift tapped or dropped mid-hold changes
     // nothing.
     //
+    // `press_ms` is THE PRESS'S OWN monotonic_ms() STAMP, and the whole of the
+    // SHIFT LONG PRESS (architect 2026-08-13): held past kChromeShiftHoldMs on
+    // a shift-admitting button, the lift dispatches the SHIFTED twin — the
+    // waveform's region hold on the roster's surface, and the route by which
+    // glass, having no keyboard, reaches the other half of each shifted pair.
+    // It is stamped by EVERY arm (a press has a time whatever it landed on) and
+    // read at ONE site, the lift's chord build, where it is ORed into the same
+    // shift term the carried bit feeds — so a physical Shift+click and a long
+    // press are two routes to one dispatch rather than two dispatches. The
+    // elapsed span is measured at the RELEASE, so nothing polls and nothing
+    // ticks; the accepted consequence is that the hold has no feedback of its
+    // own while it runs.
+    //
     // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the
     // roster's surface: true from the press (a press is inside what it hit),
     // rewritten by recompute_redesign_button_hover on every motion and tick
@@ -3044,10 +3089,11 @@ struct AppState {
     // faces) and use the arm for the act alone.
     struct ChromePress {
         enum class Kind { None, Roster, TabLock, HistoryWalkTab };
-        Kind kind   = Kind::None;
-        int  index  = -1;
-        bool shift  = false;
-        bool inside = true;
+        Kind    kind     = Kind::None;
+        int     index    = -1;
+        bool    shift    = false;
+        bool    inside   = true;
+        int64_t press_ms = 0;
     };
     ChromePress chrome_press;
 
@@ -5577,10 +5623,15 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // advertised FACE: the tooltip's shift line, at the override below.
 //
 // It lives here rather than as a column in the press claim's chord table
-// because it has TWO readers that must not drift: that table's shift rule, and
+// because it has THREE readers that must not drift: that table's shift rule,
 // the TOOLTIP — the shift hint exists exactly where a shift press does
 // something, so "which buttons admit shift" and "which buttons advertise it"
-// are one fact by construction rather than two lists to keep in step.
+// are one fact by construction rather than two lists to keep in step — and,
+// since 2026-08-13, THE SHIFT LONG PRESS, whose membership is this same
+// predicate rather than a fourth list: a press held past kChromeShiftHoldMs
+// reaches the twin exactly where a shift press does, which is what gives a
+// keyboardless glass rig the shifted half of each pair (the beat's contract is
+// at that constant, the arm's stamp at AppState::ChromePress::press_ms).
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render || b == RedesignButton::IconPaste ||
            b == RedesignButton::IconHistoryOlder ||

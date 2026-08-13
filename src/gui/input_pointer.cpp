@@ -2909,7 +2909,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         if (!redesign_button_hit(app, id, x, y)) continue;
                         app.chrome_press = AppState::ChromePress{
                             AppState::ChromePress::Kind::HistoryWalkTab,
-                            redesign_button_index(id), false, true};
+                            redesign_button_index(id), false, true,
+                            monotonic_ms()};
                         break;
                     }
                 }
@@ -2944,7 +2945,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // re-hits this same published rect before dispatching
                     // bare `o`.
                     app.chrome_press = AppState::ChromePress{
-                        AppState::ChromePress::Kind::TabLock, -1, false, true};
+                        AppState::ChromePress::Kind::TabLock, -1, false, true,
+                        monotonic_ms()};
                 } else {
                     arm_redesign_press(x, y, mods);
                 }
@@ -4897,10 +4899,14 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // row's click_face column deciding whether a pressed interior exists
         // to paint at all); the damage below is skipped for the two-face rows
         // that paint none. A SHIFT press arms too — it is the same physical
-        // hold, and the carried bit is what the lift dispatches with.
+        // hold, and the carried bit is what the lift dispatches with. THE
+        // PRESS'S CLOCK IS STAMPED HERE, unconditionally: the lift measures the
+        // hold against kChromeShiftHoldMs to decide the SHIFT LONG PRESS, and
+        // the stamp is taken for every button rather than for the four that can
+        // use it, a press having a time whatever it landed on.
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,
-            redesign_button_index(tc.id), mods.shift, true};
+            redesign_button_index(tc.id), mods.shift, true, monotonic_ms()};
         if (tc.click_face) {
             // DAMAGE FOLLOWS THE ROW'S HOME STRIP (row 8, 2026-08-11): the
             // transport row's pixels live in the BOTTOM strip, so its click
@@ -5029,7 +5035,13 @@ void GuiInputHandler::finish_chrome_press_release(
         // that cleared a resting region instead of cancelling would be a lie.
         // A SHIFT press cancels too: one face, one act — while the button IS
         // Cancel, letting shift slip through to the miscellaneous render would
-        // start a render from a button that says Cancel.
+        // start a render from a button that says Cancel. THE SHIFT LONG PRESS
+        // TAKES THE SAME ANSWER, and takes it by construction: this branch
+        // returns ABOVE the chord build where the hold is measured, so a finger
+        // held on a painted Cancel cancels exactly as a quick tap does. That is
+        // the honest reading — the face says Cancel for the whole hold, and a
+        // button that changed its act at some invisible mark while its label
+        // stood still would be the lie this exception exists to prevent.
         if (tc.id == RedesignButton::Render && app.render_cancel_face) {
             // BOTH HALVES OF THE FACE-MIRRORS-THE-ACT HONESTY (the contract is
             // at the bit's declaration): the CLAIM reads the painted bit, so a
@@ -5041,13 +5053,41 @@ void GuiInputHandler::finish_chrome_press_release(
             if (app.queue_running) cancel_archival_session();
             return;
         }
+        // THE SHIFT LONG PRESS (architect 2026-08-13): a press HELD past
+        // kChromeShiftHoldMs on a shift-admitting button reaches that button's
+        // shifted twin, the waveform region hold's shape on the roster's
+        // surface. It exists for GLASS — the road rig has no keyboard, so
+        // without it a finger could reach only the plain half of each shifted
+        // pair — and it costs the desk nothing, a 500ms hold being well past
+        // any ordinary click.
+        //
+        // THE MEMBERSHIP IS redesign_button_shift_admits AND NOT A LIST: the
+        // hold reaches a twin exactly where a shift press does, so a button
+        // with no shifted chord is held for as long as you like and still gets
+        // its plain act — which is also why the term must carry the predicate
+        // itself rather than lean on the admission gate above, that gate asking
+        // only about the CARRIED bit.
+        //
+        // AND IT COMPOSES WITH A REAL HELD SHIFT rather than competing with it:
+        // both routes feed the ONE shift term below, so a physical Shift+click
+        // is exactly what it always was and the hold is a second way to the
+        // same dispatch — holding a shift-clicked button changes nothing.
+        //
+        // Measured at the LIFT against the arm's own press stamp: no timer, no
+        // tick, nothing polled, and no state beyond the int64 the arm already
+        // carries. The accepted cost is that the hold has no feedback while it
+        // runs — the beat passes silently and the act shows only at the lift.
+        const bool held_to_shift =
+            redesign_button_shift_admits(tc.id) &&
+            monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
-        // CARRIED press-time bit — well-defined because no row sets both (see
-        // shift_admits), so this one expression spells both members of each
-        // shifted pair.
+        // CARRIED press-time bit and the hold — well-defined because no row
+        // sets both the table bit and the admission (see shift_admits), so this
+        // one expression spells both members of each shifted pair however the
+        // user asked for the shifted one.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl;
-        chord.shift = tc.shift || arm.shift;
+        chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
         on_key(tc.key, chord);
         return;
