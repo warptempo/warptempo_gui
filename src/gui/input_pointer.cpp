@@ -1947,6 +1947,17 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
+    // AND IT OWNS THIS SURFACE'S TOOLTIP DWELL (2026-08-13, when the modal
+    // buttons took hints instead of bracketed accelerators): the same helper
+    // and the same 700ms tick the roster's walk uses, keyed on the Dialog half
+    // of the owner's index space. EVERY dialog button has a hint, so there is
+    // no membership term here — the hit alone decides, and the painter's stash
+    // carries the text.
+    // IT IS INDEPENDENT OF THE PRESS ARM ABOVE: the dwell answers where the
+    // pointer IS, so a held button keeps its hint running exactly as a hovered
+    // one does, and losing the arm by sliding off is the same motion that
+    // re-keys the dwell onto whatever is under the pointer now.
+    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Dialog, hit});
 }
 
 // THE ARM'S HARD END — the pointer-leave / capability-loss hook (main.cpp),
@@ -4274,17 +4285,29 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // THE DROPDOWN NEEDS NO TERM OF ITS OWN: redesign_button_hover_zone refuses
     // the whole roster while a popup is up, so the walk finds no owner by itself
     // — the two floating surfaces cannot coexist by construction.
-    if (hovered_tip < 0) {
-        hide_shift_tooltip();
-    } else if (app.redesign_tooltip.owner != hovered_tip) {
-        // A DIFFERENT tooltip button (or the first one) — hide whatever was up
-        // and start this button's dwell from zero. Keying on the id is what
-        // makes a direct Render->Paste motion wait the full delay again instead
-        // of inheriting the dwell that was already running.
-        hide_shift_tooltip();
-        app.redesign_tooltip.owner    = hovered_tip;
-        app.redesign_tooltip.hover_ms = monotonic_ms();
+    //
+    // A STANDING DIALOG'S DWELL IS THE DIALOG'S (2026-08-13, when the modal's
+    // buttons took tooltips): this walk answers for the ROSTER's index space
+    // only, so under a dialog it neither stamps (`hovered_tip` is forced -1 by
+    // the veil and the no-dwell rule above) nor hides — the modal's own walk
+    // owns that surface's dwell. It DOES hide a ROSTER dwell caught by the
+    // dialog's open, which is a backstop rather than the mechanism (the open
+    // edge is a key press or a pointer press, and both hide already). The test
+    // reads the LIVE surfaces, not the painted stash, so the frame a dialog
+    // closes on is the frame this walk takes the dwell back — a stash-based
+    // test would leave the last hint floating for one more paint.
+    if (app.prompt.active || editor_dialog_veil) {
+        if (app.redesign_tooltip.owner.surface ==
+            AppState::RedesignTooltip::Surface::Roster) {
+            hide_shift_tooltip();
+        }
+        return;
     }
+    // Keying on the id is what makes a direct Render->Paste motion wait the
+    // full delay again instead of inheriting the dwell that was already
+    // running; the rule itself is at arm_tooltip_dwell.
+    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Roster,
+                       hovered_tip});
 }
 
 // THE OPEN DROPDOWN'S OWN HOVER AND ITS ARMED ITEM, the pointer's only hover
@@ -5237,7 +5260,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // pointer standing still has no next motion.
     hide_shift_tooltip();
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup, and
-    // redesign_button_hoverable refuses the WHOLE roster while a dropdown is up.
+    // redesign_button_hover_zone refuses the WHOLE roster while a dropdown is
+    // up.
     // A press carries no motion of its own and the pointer may then stand still
     // indefinitely ("next motion" is not a property, as the tooltip hide above
     // says), so a face lit at the moment of the open
@@ -5433,15 +5457,35 @@ void GuiInputHandler::clear_dropdown_pointer_state() {
 // dropdown's open edge hides two lines above its clear, and the leave hook now
 // hides beside its own.
 // Showing is the tick's job (the dwell); this is only the hide, plus the stamp
-// reset that makes the next hover start its dwell from zero.
+// reset that makes the next hover start its dwell from zero. It is
+// surface-agnostic: the owner clears to "none" whichever surface it named, and
+// the painted rect it damages is wherever that hint was drawn.
 void GuiInputHandler::hide_shift_tooltip() {
     app.redesign_tooltip.hover_ms = 0;
-    app.redesign_tooltip.owner    = -1;
+    app.redesign_tooltip.owner    = AppState::RedesignTooltip::Owner{};
     if (!app.redesign_tooltip.visible) return;
     const GuiRect painted = app.redesign_tooltip.rect;
     app.redesign_tooltip.visible = false;
     viewport.invalidate_top_strip();
     viewport.invalidate_rect(painted);
+}
+
+// THE DWELL'S ONE ARMING ROUTE, shared by both hover walks (the roster's and
+// the modal dialog's) so "a fresh dwell on each arrival" is one rule rather
+// than two copies: a change of owner — ACROSS surfaces as well as within one,
+// the owner being compared whole — hides whatever was up and starts the new
+// button's wait from zero, an unchanged owner keeps the wait running, and no
+// owner hides. The tick then decides visibility by comparing two numbers.
+void GuiInputHandler::arm_tooltip_dwell(
+        AppState::RedesignTooltip::Owner o) {
+    if (o.index < 0) {
+        hide_shift_tooltip();
+        return;
+    }
+    if (app.redesign_tooltip.owner == o) return;
+    hide_shift_tooltip();
+    app.redesign_tooltip.owner    = o;
+    app.redesign_tooltip.hover_ms = monotonic_ms();
 }
 
 // THE CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
@@ -5703,7 +5747,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // after the close (the veil term reads the live editor state), which is
     // the roster's ordinary staleness window.
     //
-    // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hoverable,
+    // AN OPEN DROPDOWN REFUSES THE WHOLE ROSTER (redesign_button_hover_zone,
     // app_state.h), so its branch below recomputes for one reason only: the frame
     // on which a row-1 button CLOSES the menu must also light that button, and
     // running the recompute after the close is what makes it one frame rather than
@@ -5736,8 +5780,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         //
         // IT RUNS BEFORE THE ROSTER RECOMPUTE so the frame that closes the menu is
         // the frame the button lights on: with the popup already gone,
-        // redesign_button_hoverable's dropdown refusal no longer applies and the
-        // button under the pointer resolves to hovered in the very same call.
+        // redesign_button_hover_zone's dropdown refusal no longer applies and
+        // the button under the pointer resolves to hovered in the very same
+        // call.
         //
         // THE FAMILY RULE, stated here at its first member in this branch (codex
         // rounds 2-3 built it one member at a time): NO ROW-1 HOVER ACT FIRES
@@ -5772,10 +5817,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             }
         }
         // The roster's own faces. While a popup is up this re-derives false for
-        // the WHOLE roster (redesign_button_hoverable refuses every button then —
-        // the pointer belongs to the popup), and after the close above it resolves
-        // the row-1 button the pointer landed on normally, which is the one case
-        // that needs it here.
+        // the WHOLE roster (redesign_button_hover_zone refuses every button
+        // then — the pointer belongs to the popup), and after the close above
+        // it resolves the row-1 button the pointer landed on normally, which is
+        // the one case that needs it here.
         recompute_redesign_button_hover();
         // HOVERING THE OTHER MENU'S BUTTON SWITCHES TO IT (architect
         // 2026-08-03) — the menu bar's standing behaviour: open one menu, slide

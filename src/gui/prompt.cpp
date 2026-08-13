@@ -30,17 +30,16 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
     // the GUI never writes a LOAD-invalid state. `s` = Save / Delete =
-    // discard-and-proceed / Esc = cancel; the labels are the BUTTONS' words
-    // in the BRACKETED ACCELERATOR spelling (PromptState's declaration owns
-    // the rule — reinstated 2026-08-13 when the modal moved onto the bottom
-    // row), so the Delete sentinel wears "[D]iscard" and Escape wears
-    // "[C]ancel".
+    // discard-and-proceed / Esc = cancel; the labels are the BUTTONS' PLAIN
+    // WORDS (PromptState's declaration owns the rule and the retired bracket
+    // spelling's record), so the Delete sentinel wears "Discard" and Escape
+    // wears "Cancel" — each button naming its key on its TOOLTIP instead.
     // Through `present`, the state's one raise route: it clears the PAINTED
     // bit, so nothing this prompt asks can be answered until the painter has
     // put it on the screen (the rule is at PromptState).
     app.prompt.present("Save unsaved changes?",
                        {'s', '\x7f', '\x1b'},
-                       {"[S]ave", "[D]iscard", "[C]ancel"},
+                       {"Save", "Discard", "Cancel"},
                        t);
     viewport.invalidate_all();
 }
@@ -48,10 +47,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // Dismiss-only error notice. The text is the caller's error string —
 // the parser's own message, verbatim. Single acknowledge response:
 // Esc (the '\x1b' sentinel; see open_unsaved's key-mapping note). Its
-// one button wears the plain "OK" rather than a bracketed accelerator or
-// "Cancel": nothing is being cancelled, the act already refused, and a
-// dismiss-only notice has no letter to advertise — the one exception to the
-// bracketed spelling (PromptState owns the rule).
+// one button wears "OK" rather than "Cancel": nothing is being cancelled and
+// the act already refused. Its tooltip names Escape like every other Esc
+// button's does (modal_dialog_button_hint, app_state.h).
 // Modal like every other prompt while active: the pointer veil consumes
 // everything outside the dialog and on_key routes only the response key.
 void GuiPrompt::open_error_notice(std::string text) {
@@ -110,7 +108,7 @@ void GuiPrompt::activate_response(char k) {
                 // leave answerable (the reasoning is at PromptState).
                 app.prompt.present("Save failed.",
                                    {'r', '\x7f', '\x1b'},
-                                   {"[R]etry", "[D]iscard", "[C]ancel"},
+                                   {"Retry", "Discard", "Cancel"},
                                    trigger);
                 viewport.invalidate_all();
                 return;

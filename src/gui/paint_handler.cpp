@@ -1778,7 +1778,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // shaped LETTER faces were the only other kind, and they took real
         // Breeze glyphs that day (kIconRowButtons carries the record). The row
         // paints no text at all now, which is why nothing here selects a font.
-        icons::draw(cr, def.icon,
+        //
+        // THE GLYPH IS THE STATE RESOLVER'S, not the table's
+        // (redesign_button_icon, above): this row hosts the TOOLBAR PAIR since
+        // the 2026-08-12 relayout dissolved row 2 into it, and their stateful
+        // faces are glyph swaps now that the labels are gone — Save wears
+        // VcsCommit in the history view and while a checkpoint publishes,
+        // Render wears DialogCancel mid-render. It goes through the resolver
+        // for EVERY button because the table icon is what the resolver returns
+        // when a button has no override, so there is no membership to keep.
+        // (This is the site the relayout dropped: it took the table icon
+        // directly, which left the resolver caller-less and both ruled faces
+        // unpainted for a day — fixed 2026-08-13. Row 8's own draw needs no
+        // such call: none of the transport eight has a stateful glyph, the
+        // play/stop pair being TWO buttons over one chord rather than one
+        // button with two faces.)
+        icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
                     static_cast<double>(x + (btn - glyph_px) / 2),
                     static_cast<double>(btn_y + (btn - glyph_px) / 2),
                     static_cast<double>(glyph_px), keep, under);
@@ -2000,6 +2015,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                               has_line ? &line : nullptr);
             if (has_fill) under = fill;
         }
+        // The TABLE glyph, deliberately: no button on this row has a stateful
+        // face (redesign_button_icon's two subjects, Save and Render, are icon
+        // row members), so nothing here has a state to resolve.
         icons::draw(cr, def.icon,
                     static_cast<double>(x + (btn - glyph_px) / 2),
                     static_cast<double>(btn_y + (btn - glyph_px) / 2),
@@ -2120,8 +2138,8 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
-    // THE HOVER TOOLTIP, on whichever roster button the dwell belongs to — at
-    // most one, because at most one button is under the pointer. The tick owns
+    // THE HOVER TOOLTIP, on whichever button the dwell belongs to — at most
+    // one, because at most one button is under the pointer. The tick owns
     // WHEN it appears (the dwell); this owns only what it looks like, and
     // publishes the rect it painted so the hide edge can damage it.
     app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
@@ -2129,25 +2147,56 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
     // THE DWELL'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
     // input side decided which button the hint belongs to when it stamped the
-    // clock (recompute_redesign_button_hover), and `visible` is only ever set for
-    // a stamp, so an owner is always standing here. Re-walking the roster for a
-    // hovered button would be a SECOND membership rule to keep in step with that
-    // one — and since 2026-08-07 it could not be the same rule anyway: A
+    // clock (the two hover walks, one per surface), and `visible` is only ever
+    // set for a stamp, so an owner is always standing here. Re-walking for a
+    // hovered button would be a SECOND membership rule to keep in step with
+    // that one — and since 2026-08-07 it could not be the same rule anyway: A
     // DISABLED BUTTON SHOWS ITS HINT (the architect's kdenlive-parity ruling)
     // while it never sets the hover FACE, so `hovered` no longer names the
     // tooltip's subject.
-    const int hovered = app.redesign_tooltip.owner;
-    if (hovered < 0 || hovered >= kRedesignButtonCount) return;
+    const AppState::RedesignTooltip::Owner owner = app.redesign_tooltip.owner;
+    if (owner.index < 0) return;
 
-    const RedesignTooltipText text =
-        redesign_button_tooltip(app, static_cast<RedesignButton>(hovered));
-    // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the walk-selector tabs drop
-    // their tooltips when the `h` view opens — and a hint with no line 1 is no
-    // hint.
-    // The stamp's own hides cover every other route; this is the one state that
-    // needs no pointer event to reach.
-    if (text.line1 == nullptr) return;
-    const GuiRect& btn = app.redesign_buttons[hovered].rect;
+    // THE TWO SURFACES (the encoding is at the field): a ROSTER owner reads
+    // the roster's constant/stateful hint table and the roster's painted rect;
+    // a DIALOG owner reads the modal stash the painter itself publishes — its
+    // composed hint and its button rect, both written by paint_modal_dialog,
+    // which runs BEFORE this body precisely so the rect this hangs off is the
+    // one this frame draws.
+    const char* line1 = nullptr;
+    const char* line2 = nullptr;
+    GuiRect     btn{0, 0, 0, 0};
+    bool        flip_above = false;
+    if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
+        const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+        if (!dlg.valid ||
+            owner.index >= static_cast<int>(dlg.buttons.size())) {
+            return;
+        }
+        const AppState::ModalDialogButton& b =
+            dlg.buttons[static_cast<size_t>(owner.index)];
+        if (b.tooltip.empty()) return;
+        line1 = b.tooltip.c_str();
+        btn   = b.rect;
+        // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
+        // same flip the row's own eight buttons take, for the same reason
+        // (nothing exists below that lane).
+        flip_above = true;
+    } else {
+        if (owner.index >= kRedesignButtonCount) return;
+        const RedesignButton id = static_cast<RedesignButton>(owner.index);
+        const RedesignTooltipText text = redesign_button_tooltip(app, id);
+        // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the walk-selector tabs
+        // drop their tooltips when the `h` view opens — and a hint with no
+        // line 1 is no hint.
+        // The stamp's own hides cover every other route; this is the one state
+        // that needs no pointer event to reach.
+        if (text.line1 == nullptr) return;
+        line1      = text.line1;
+        line2      = text.line2;
+        btn        = app.redesign_buttons[owner.index].rect;
+        flip_above = redesign_button_in_transport_row(id);
+    }
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
@@ -2171,11 +2220,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const double size1 = redesign_font_size_px();
     const double size2 =
         kTooltipShiftFontSizePt * 96.0 / 72.0 * gui_scale_factor();
-    const bool two_line = (text.line2 != nullptr);
+    const bool two_line = (line2 != nullptr);
 
     cairo_set_font_size(cr, size1);
     cairo_scaled_font_t* f1 = cairo_get_scaled_font(cr);
-    const text_shape::ShapedRun r1 = text_shape::shape_text_run(f1, text.line1);
+    const text_shape::ShapedRun r1 = text_shape::shape_text_run(f1, line1);
     cairo_font_extents_t fe1;
     cairo_scaled_font_extents(f1, &fe1);
     const double band1 = fe1.ascent + fe1.descent;
@@ -2185,7 +2234,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (two_line) {
         cairo_set_font_size(cr, size2);
         cairo_scaled_font_t* f2 = cairo_get_scaled_font(cr);
-        r2 = text_shape::shape_text_run(f2, text.line2);
+        r2 = text_shape::shape_text_run(f2, line2);
         cairo_font_extents_t fe2;
         cairo_scaled_font_extents(f2, &fe2);
         band2 = fe2.ascent + fe2.descent;
@@ -2203,19 +2252,20 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
                   2 * pad_y;
 
-    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for the bottom
-    // row's transport/arrow eight, whose lane rests on the WINDOW'S FOOT since
-    // the relayout's commit B (it was the blank foot's own band before, zero on
-    // a short window): there is nothing below them at all, so the hint
-    // hangs upward there, the same box flipped about the button. Then CLAMPED
+    // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for every BOTTOM-ROW
+    // owner, whose lane rests on the WINDOW'S FOOT since the relayout's commit
+    // B (it was the blank foot's own band before, zero on a short window):
+    // there is nothing below them at all, so the hint hangs upward there, the
+    // same box flipped about the button. That covers BOTH bottom-row surfaces —
+    // the transport/arrow eight and, since 2026-08-13, the modal's own buttons,
+    // which paint in the same lane (the fork was resolved with the owner,
+    // above). Then CLAMPED
     // FULLY ON-WINDOW so a
     // button near an edge cannot push it off. The clamp is a pure position fix —
     // the box never shrinks, because a truncated hint would be worse than one
     // that shifted.
     int x = btn.x;
-    int y = redesign_button_in_transport_row(static_cast<RedesignButton>(hovered))
-                ? btn.y - h
-                : btn.y + btn.h;
+    int y = flip_above ? btn.y - h : btn.y + btn.h;
     if (x + w > app.width)  x = app.width - w;
     if (x < 0) x = 0;
     if (y + h > app.height) y = app.height - h;
@@ -4435,26 +4485,35 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 // paints into the lane the row's tenants left.
 //
 // CONTENT PER KIND, on the row's own ground (there is no box, no frame and no
-// window margin):
-//   A PROMPT — the message left-anchored at the row's left pad, and the
-//   answer buttons RIGHT-ALIGNED, ending at the row's right pad, in painted
-//   order. The message CLIPS at the buttons' left edge, so the two can never
-//   overlap whatever the string does — the collision discipline the chain,
-//   the clock and the button clusters already keep on this row. Each button
-//   wears its response's BRACKETED ACCELERATOR ("[S]ave", "[D]iscard",
-//   "[C]ancel", "[R]etry", "[Y]es"), the old bottom-strip labels reborn as
-//   touch targets, with the dismiss-only error notice keeping its plain "OK"
-//   (PromptState owns the label rule; the codepoint-exact lowercase match is
-//   untouched, so a typed capital still does not answer). NO DEFAULT FACE:
+// window margin), EVERYTHING FLUSH LEFT since the architect's live look later
+// on 2026-08-13 ("your eyes have to go the whole distance of the screen") —
+// the layout rule and what gives when the row runs out of width are at the
+// layout block below:
+//   A PROMPT — the message at the row's left pad, one pad, then the answer
+//   buttons in painted order. Each button wears its response's PLAIN WORD
+//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK" on the error notice)
+//   and names its key on its TOOLTIP instead — the bracketed accelerators are
+//   retired for the second time and with their reason recorded at PromptState,
+//   which owns the label rule; the codepoint-exact lowercase match is
+//   untouched, so a typed capital still does not answer. NO DEFAULT FACE:
 //   the crop's highlighted Save is Qt's Enter-default and this prompt system
 //   has no Enter answer, so every button is plain.
 //   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
-//   buffer in a DARK INSET FIELD (editor.png's look), then OK and Cancel
-//   right-aligned. NO BRACKETS ON THOSE TWO (architect: "Enter and Escape are
-//   universal; on an editor you don't want to reroute letters"). The field is
-//   the existing text_editor machinery — selection, caret, click-to-caret,
-//   byte-identical editing — and the red flash RECOLORS THE FIELD in the
-//   marker-flag red pair (the one invalid red, called not copied).
+//   buffer in a DARK INSET FIELD (editor.png's look), then OK and Cancel. The
+//   field is the existing text_editor machinery — selection, caret,
+//   click-to-caret, byte-identical editing — and the red flash RECOLORS THE
+//   FIELD in the marker-flag red pair (the one invalid red, called not
+//   copied).
+//
+// EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
+// just like the regular icon tooltips"), through the roster's own machinery
+// end to end — the same 700ms dwell, the same box, the same painter, the same
+// AppState::redesign_tooltip state, whose owner names either surface now. The
+// TEXT is composed per button from the word it wears plus the key it
+// dispatches (modal_dialog_button_hint, app_state.h) and published in the
+// stash beside the rect; the DWELL is stamped by this surface's own hover walk
+// (update_modal_dialog_hover), which is independent of the press arm, so
+// holding a button neither starts nor stops a hint.
 //
 // THE BUTTONS ARE THE ARCHITECT'S EXPLICIT MIX: the deleted toolbar row's box
 // (row 2's 32px height and its own label pads, the icon slot dropped — these
@@ -4676,20 +4735,42 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
 
-    // -- THE ROW LAYOUT: content from the left pad, buttons from the right. --
+    // -- THE ROW LAYOUT: ONE LEFT-FLUSHED BLOCK (architect 2026-08-13, at his
+    //    live look: "right now you have to read the bottom left and then the
+    //    bottom right — your eyes have to go the whole distance of the screen.
+    //    Everything should be just flushed left"). --
     //
-    // The buttons anchor at the row's RIGHT pad and the message/label/field
-    // run from its LEFT pad, with one pad of clearance between them: the
-    // content's right bound is the buttons' left edge less a pad, and every
-    // content surface clips (the message) or shrinks (the field) at it, so the
-    // two blocks can never overlap whatever the strings do. THE FOCUS RING IS
-    // RESERVED ON BOTH SIDES OF THE CLUSTER — inside the right pad so the
-    // rightmost button's halo cannot touch the window edge, and inside the
-    // clearance so it cannot touch the message or the field.
-    const int cx0 = content.x + pad;                        // content left
-    const int buttons_x0 = content.x + content.w - pad - ring - buttons_w;
-    const int cx1 = buttons_x0 - ring - pad;                // content right
+    // The row reads left to right from its own left pad: a PROMPT is its
+    // message, one pad, then the buttons in painted order; an EDITOR is its
+    // label, the field, one pad, then the buttons. The right-aligned cluster
+    // of hours earlier is retired with the reserved right-pad ring that
+    // anchored it.
+    //
+    // NOTHING OVERFLOWS THE LANE, and the primacy is the STATUS CHAIN'S OWN
+    // (the critical chip's rule, one row and one collision discipline): THE
+    // BUTTONS STAY WHOLE AND THE CONTENT GIVES. A prompt with no reachable
+    // button is a modal with no way out, while a clipped message is still
+    // readable to its clip — so the cluster's left edge is capped at
+    // `buttons_x_max`, the rightmost start that still leaves the last button
+    // and its halo inside the right pad, and whatever precedes it CLIPS (the
+    // message) or SHRINKS (the field) against that cap. In the pathological
+    // case where the buttons alone are wider than the lane, the cap floors at
+    // the left pad and the cluster runs past the right one: the content is
+    // then zero-wide and the buttons are what is left, which is the same
+    // choice made twice.
+    //
+    // THE FOCUS RING IS RESERVED, NOT PAINTED, on both ends of the cluster —
+    // one ring inside the right pad so the last button's halo cannot touch the
+    // window edge, one inside the left clearance so the first button's cannot
+    // touch the message or the field. Between neighbours the 8px gap absorbs
+    // both halves with room to spare (the per-scale fit is at
+    // kModalFocusRingPx). So the focus can move anywhere on the row without
+    // reflowing it, which is the whole point of reserving.
+    const int cx0 = content.x + pad;                    // content left
+    const int cx1 = content.x + content.w - pad;        // the row's right pad
+    const int buttons_x_max = std::max(cx0, cx1 - ring - buttons_w);
     const int btn_y = content.y + (content.h - btn_h) / 2;
+    int buttons_x0 = cx0;   // set by whichever branch runs, below
 
     if (prompt_up) {
         // THE PAINTED GATE'S ONE WRITER OF TRUE (2026-08-13): this branch is
@@ -4705,33 +4786,49 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // runs this branch (idempotent).
         app.prompt.painted = true;
         dlg.owner = AppState::ModalDialogOwner::Prompt;
-        // The message, left-anchored on the row's baseline and CLIPPED at the
-        // buttons' left edge — an over-long error text cuts there exactly as
-        // the status chain cuts at its own bound, and the two can never
-        // overlap.
+        // THE MESSAGE SETS WHERE THE BUTTONS START — one pad of clearance
+        // plus the reserved ring past its ink — up to the cap, which is where
+        // an over-long message stops pushing and starts CLIPPING instead.
+        // Shaped once here and shown from the run: the width is needed for the
+        // layout, and re-shaping it to paint would measure the same string
+        // twice.
+        const text_shape::ShapedRun msg =
+            text_shape::shape_text_run(font, app.prompt.text);
+        const int msg_w = static_cast<int>(std::ceil(msg.width_px));
+        buttons_x0 = std::min(cx0 + msg_w + pad + ring, buttons_x_max);
+        const int msg_clip = std::max(0, (buttons_x0 - ring - pad) - cx0);
         cairo_save(cr);
-        cairo_rectangle(cr, cx0, content.y,
-                        std::max(0, cx1 - cx0), content.h);
+        cairo_rectangle(cr, cx0, content.y, msg_clip, content.h);
         cairo_clip(cr);
-        show_row_text(cr, font, static_cast<double>(cx0),
-                      redesign_baseline(font,
-                                        static_cast<double>(content.y),
-                                        static_cast<double>(content.h)),
-                      app.prompt.text, kRedesignLabel);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(
+            cr, msg, static_cast<double>(cx0),
+            redesign_baseline(font, static_cast<double>(content.y),
+                              static_cast<double>(content.h)));
         cairo_restore(cr);
     } else {
         // -- The editor: the label at the left pad, then the inset field,
-        //    which absorbs whatever the buttons leave (floored so it stays a
-        //    field — the box's own narrow-window rule, now measured against
-        //    the row instead of a window margin). --
+        //    then the buttons after it. The field absorbs whatever the label
+        //    and the buttons leave (floored so it stays a field — the box's
+        //    own narrow-window rule, now measured against the row instead of
+        //    a window margin), and its width is what places the cluster. --
         dlg.owner = AppState::ModalDialogOwner::Editor;
         const int label_w = static_cast<int>(
             std::ceil(text_shape::shape_text_run(font, prefix).width_px));
         const int fbord = scaled_px(kModalFieldBorderPx, 1);
         const int fx    = cx0 + label_w + scaled_px(kModalLabelGapPx);
+        // The room a field may take before the buttons would have to give:
+        // the cluster's cap, less its reserved left ring and the pad.
+        const int field_room = (buttons_x_max - ring - pad) - fx;
         const int field_w = std::max(std::min(scaled_px(kModalFieldWidthPx),
-                                              cx1 - fx),
+                                              field_room),
                                      scaled_px(40.0, 1));
+        // The 40px floor is the ONE thing that can push past the cap (a window
+        // too narrow for label + field + buttons), and the cap is what stops
+        // it there — the buttons stay whole and the field is the surface that
+        // has already given everything it can.
+        buttons_x0 = std::min(fx + field_w + pad + ring, buttons_x_max);
         const int field_h = scaled_px(kModalFieldHeightPx);
         const int field_y = content.y + (content.h - field_h) / 2;
         const GuiRect field_outer{fx, field_y, field_w, field_h};
@@ -4852,7 +4949,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.field = field_inner;
     }
 
-    // -- The button row, right-aligned at the row's right pad. --
+    // -- The button row, starting where the content above left off. --
     const int lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double rad = std::nearbyint(kIconCornerRadiusPx *
                                       gui_scale_factor());
@@ -4910,6 +5007,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.rect         = r;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
+        // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
+        // ruling that took the accelerators off the labels and put the key on
+        // a tooltip): the composer is the one owner of the format and of the
+        // key's spelling (modal_dialog_button_hint, app_state.h) and it reads
+        // the very fields the click and the ring's Enter dispatch on, so a
+        // button cannot advertise a key it does not send. Published with the
+        // rect because the WORD is the half the pointer path cannot re-derive.
+        out.tooltip = modal_dialog_button_hint(plan[i].label,
+                                               plan[i].response_key,
+                                               plan[i].editor_ok);
         dlg.buttons.push_back(out);
         x += plan[i].w;
     }
@@ -5094,11 +5201,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      reasoning is at that block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
-        //  12. the flag editor's box, then the dropdown and the tooltip — the
-        //      floating surfaces, after every pass above and outside this
-        //      branch — and LAST the MODAL DIALOG (paint_modal_dialog,
-        //      2026-08-12), the centered box the prompts and the four modal
-        //      editors paint in, over everything.
+        //  12. the flag editor's box, then the dropdown — the floating
+        //      surfaces, after every pass above and outside this branch — then
+        //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
+        //      row the prompts and the four modal editors paint in since
+        //      2026-08-13), and LAST the TOOLTIP, which reads that stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and
         // overlaps none of these passes.)
@@ -5212,9 +5319,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // skipped would strand a stale rect for the hit tests and the damage to
     // read. Hidden, each costs one boolean.
     //
-    // THEY CANNOT COEXIST, so their order between themselves is moot: the
-    // dropdown opens on a PRESS and a press hides the tooltip, and while the
-    // dropdown is open no roster button hovers, so no tooltip can arm under it.
+    // THE DROPDOWN AND THE TOOLTIP CANNOT COEXIST, so their order between
+    // themselves is moot: the dropdown opens on a PRESS and a press hides the
+    // tooltip, and while the dropdown is open no roster button hovers, so no
+    // tooltip can arm under it.
     //
     // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
     // pass above — including the flag blit it must cover — and UNCONDITIONALLY,
@@ -5226,17 +5334,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // missing.
     render_flag_editor_box(cr, app, audio);
     paint_dropdown(cr);
-    paint_shift_tooltip(cr);
 
-    // THE MODAL DIALOG PAINTS LAST OF ALL (2026-08-12): it floats over the
-    // whole window — the veil's visual half — and cannot coexist with the two
-    // floating surfaces above (a dropdown and a modal are never open together
-    // by the standing two-mechanism claim, and no tooltip dwell starts under
-    // a modal), so painting it after them costs nothing and states the stack
-    // honestly. UNCONDITIONAL for the floating surfaces' own reason: it
-    // publishes the geometry the pointer path reads (AppState::modal_dialog),
-    // and a run that skipped would strand a stale box.
+    // THE MODAL DIALOG PAINTS AFTER THOSE TWO (2026-08-12): it owns the bottom
+    // row while it stands and cannot coexist with either (a dropdown and a
+    // modal are never open together by the standing two-mechanism claim, and
+    // the flag editor is ended by any dialog's open), so the order costs
+    // nothing and states the stack honestly. UNCONDITIONAL for the floating
+    // surfaces' own reason: it publishes the geometry the pointer path reads
+    // (AppState::modal_dialog), and a run that skipped would strand a stale
+    // box.
     paint_modal_dialog(cr);
+
+    // THE TOOLTIP IS LAST OF ALL since 2026-08-13, when the MODAL's buttons
+    // took hints of their own: this body READS the modal stash the call above
+    // publishes — the hovered dialog button's composed hint and its rect — so
+    // running after it is what makes the hint hang off the box THIS frame
+    // draws rather than the previous one's. It also puts the one surface that
+    // floats OUT of its lane on top of everything, which is what a tooltip is.
+    paint_shift_tooltip(cr);
 
     cairo_restore(cr);
 

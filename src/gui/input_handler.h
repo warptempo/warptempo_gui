@@ -955,12 +955,21 @@ struct GuiInputHandler {
     // no key press reaches. Showing is NOT here: the run loop's
     // tick owns the dwell, comparing AppState::redesign_tooltip.hover_ms against
     // the delay. Damages the strip and the box's last painted rect.
-    // A MODAL SURFACE NEEDS NO HIDE OF ITS OWN beyond the key press that opened
-    // it: recompute_redesign_button_hover refuses to run a dwell at all while a
-    // prompt or a keyboard-modal editor is up (the rule is stated there), so a
-    // tooltip cannot come back under one, which the per-tick recompute and the
-    // hover that stays live under modals would otherwise let it do.
+    // NO ROSTER DWELL RUNS UNDER A MODAL SURFACE:
+    // recompute_redesign_button_hover refuses to stamp one while a prompt or a
+    // keyboard-modal editor is up (the
+    // rule is stated there), so a roster tooltip cannot come back under one,
+    // which the per-tick recompute and the hover that stays live under modals
+    // would otherwise let it do. THE MODAL'S OWN BUTTONS DO carry hints since
+    // 2026-08-13 — a different surface in the same one dwell state, armed by
+    // that dialog's hover walk.
     void hide_shift_tooltip();
+
+    // THE DWELL'S ONE ARMING ROUTE, for both hover walks (the roster's and the
+    // modal dialog's). Hides and re-stamps on any change of owner, keeps a
+    // running dwell when the owner is unchanged, and hides when there is none.
+    // The owner's two-surface encoding is at AppState::RedesignTooltip.
+    void arm_tooltip_dwell(AppState::RedesignTooltip::Owner o);
 
     // THE ONE CHORD-DISPATCH BODY shared by every redesigned band claim (rows 1
     // through 4). Hit-tests the painter-published rects against the chord table
@@ -1542,11 +1551,12 @@ private:
     // (architect 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
-    // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, empty for the
-    // commit-title, bpm and flag editors, and bare Tab never arrives for them at
-    // all: the
-    // on_key gate (modal_editor_key_blocked) swallows it before this route ever
-    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
+    // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, passed by
+    // THE LOAD EDITOR ALONE since 2026-08-13, when the settings editor's
+    // completion moved onto the typed `=` (the settings, commit-title, bpm and
+    // flag editors all pass an empty hook now; for the flag editor bare Tab
+    // never arrives at all, the on_key gate swallowing it before this route
+    // sees it). Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the four dialog surfaces
     // pass the status-lane owner (whose dialog rider carries the stashed box,
@@ -1572,8 +1582,10 @@ private:
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor through
-    // route_modal_editor_key, with bare Tab autocompleting the value side
-    // of `key=` from the key's current stored value.
+    // route_modal_editor_key. It passes NO autocomplete hook since 2026-08-13:
+    // the value completion rides the TYPED `=` instead of bare Tab (the
+    // architect's ruling, the trigger's exact condition and the recall's own
+    // no-ops are at the definition), so bare Tab walks the focus ring here.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
     // Load prompt (bare `'`). A dialog modal editor, structural
@@ -2219,7 +2231,9 @@ private:
     // and by route_modal_editor_key, and returns true when it consumed the
     // key. `field_owns_tab` is the caller's statement that the editor's FIELD
     // has its own bare-Tab meaning — its autocomplete — which the ring then
-    // declines rather than overrides; a prompt has no field and passes false.
+    // declines rather than overrides; a prompt has no field and passes false,
+    // and since 2026-08-13 THE LOAD EDITOR IS THE ONLY editor that passes
+    // true, the settings editor's completion having moved onto the typed `=`.
     bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods,
                                       bool field_owns_tab);
 

@@ -121,10 +121,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // gate stays as the modifier rule it always was, and the Delete / Escape
     // responses keep matching on the GuiKey (they carry no case and no codepoint
     // worth reading). (The bracket-accelerator LABELS this match once shipped
-    // beside — "[S]ave", pacman's Y/n convention — retired with the
-    // bottom-strip prompt line, 2026-08-12: the responses are BUTTONS wearing
-    // plain words now, PromptState's declaration owning the label rule, and
-    // the match here is deliberately unchanged.)
+    // beside — "[S]ave", pacman's Y/n convention — went out with the
+    // bottom-strip prompt line on 2026-08-12, came back with the row hours
+    // later and are RETIRED AGAIN, with their reason recorded, on 2026-08-13:
+    // the responses are BUTTONS wearing plain words that name their key on a
+    // TOOLTIP, PromptState's declaration owning the label rule. THE MATCH HERE
+    // WAS UNCHANGED BY ALL THREE, deliberately.)
     if (app.prompt.active) {
         // THE PAINTED GATE (2026-08-13): a prompt the user has not SEEN
         // answers nothing. One dispatch batch arrives whole before the loop

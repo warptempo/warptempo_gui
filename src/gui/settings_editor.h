@@ -86,7 +86,11 @@ struct GuiSettingsEditor {
     void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
-    // Tab handler for the prompt: when any settable key is typed with an empty
+    // The value completion, run when the user TYPES the `=` (architect
+    // 2026-08-13, moving it off bare Tab so Tab walks the modal's focus ring
+    // here like everywhere else; the trigger's exact condition is at its one
+    // caller, handle_settings_editor_key) and by open_prefilled: when any
+    // settable key is typed with an empty
     // value side (e.g. `notes=`, `playback_speed=`, `tab_a_trim_begin=`),
     // replace the value side with that key's current live value for recall and
     // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance

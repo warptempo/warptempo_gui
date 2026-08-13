@@ -802,8 +802,8 @@ inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
 // THE KEYBOARD-FOCUS FACE — the modal's ONE face with no icon-row counterpart,
-// so it is the one that needed sampling (architect 2026-08-13, his own values
-// off kdenlive's dialog buttons; the focus ring itself is the ruling's part D).
+// so it is the one that needed sampling (architect 2026-08-13; the focus ring
+// itself is the ruling's part D).
 // A focused dialog button paints THREE things, outermost last:
 //   kModalFocusRing #284c61 — a 2px stroke OUTSIDE the button box, the halo
 //                   that says "this is where the keyboard is". It grows the
@@ -821,12 +821,19 @@ inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 //                   prompt system having no Enter default — PromptState).
 // Literals, not derivations: nothing clean generates either from this row's
 // ground and the accent, and both are Breeze's own focus shades.
-// PROVENANCE, stated exactly: #2d4655 IS in the committed crop —
-// modal_popup.png carries 1988 pixels of it, the fill of the very
-// Enter-default button whose face this product declines to have — while
-// #284c61 appears in NO committed crop and is the architect's own value from
-// his machine. Both ship on his word; the first one happens to be checkable
-// and checks out.
+// PROVENANCE — BOTH TRANSCRIBED FROM A CROP, like every other sampled color
+// here (Screenshot_2026-08-13_03-04-28.png, the kdenlive screenshots' folder;
+// the crops are authoring-time artifacts and are not in the repository, exactly
+// as modal_popup.png and editor.png are not). A horizontal scan through the
+// focused "Cancel" button's middle (y=584) reads, left to right: 2px #284c61
+// at x=1222..1223, 1px #3daee9 at x=1224, then the #2d4655 interior from
+// x=1225 — mirrored at the right edge (#3daee9 at 1307, #284c61 at
+// 1308..1309) — with the neighbouring unfocused button's 1px #535659 resting
+// outline at x=1215. So the three values, the 2px halo and the 1px accent
+// outline are all measured, and the ORDER above is the crop's own. (#2d4655
+// also fills modal_popup.png's Enter-default button, whose face this product
+// declines to have; the two are the same shade doing different work, which is
+// the note at that block.)
 inline constexpr GuiColor kModalFocusFill = hex(0x2D4655);
 inline constexpr GuiColor kModalFocusRing = hex(0x284C61);
 

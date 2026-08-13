@@ -1831,14 +1831,21 @@ int main(int argc, char** argv) {
             // publishes it is the frame this schedules), so it damages the
             // owner's strip plus the full-width band the box can hang into —
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
-            // owner: a top-row tooltip hangs BELOW the top strip, a bottom-row
-            // one (the transport/arrow eight since row 8, 2026-08-11) hangs
-            // ABOVE its lane, the painter's
-            // own flip. The HIDE edge has the published rect and damages
-            // exactly that.
-            if (app.redesign_tooltip.owner >= 0 &&
-                redesign_button_in_transport_row(static_cast<RedesignButton>(
-                    app.redesign_tooltip.owner))) {
+            // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
+            // one hangs ABOVE its lane, the painter's own flip — and that
+            // second arm covers both of the row's surfaces, the transport /
+            // arrow eight (row 8, 2026-08-11) and the MODAL's own buttons
+            // (2026-08-13), which paint in the same lane. The HIDE edge has the
+            // published rect and damages exactly that.
+            const AppState::RedesignTooltip::Owner tip_owner =
+                app.redesign_tooltip.owner;
+            const bool tip_on_bottom_row =
+                tip_owner.index >= 0 &&
+                (tip_owner.surface ==
+                     AppState::RedesignTooltip::Surface::Dialog ||
+                 redesign_button_in_transport_row(
+                     static_cast<RedesignButton>(tip_owner.index)));
+            if (tip_on_bottom_row) {
                 const GuiRect tr = bottom_row_area(app);
                 viewport.invalidate_rect(tr);
                 viewport.invalidate_rect(GuiRect{

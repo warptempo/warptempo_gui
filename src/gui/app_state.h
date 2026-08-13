@@ -20,6 +20,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -1636,18 +1637,26 @@ enum class DialogTrigger {
 // the prompt dispatch, input_handler.cpp); the two non-letter responses match
 // on the GuiKey (Delete, Escape) instead.
 // `response_labels` are the BUTTONS' words, one per response, parallel to
-// response_keys, IN THE BRACKETED ACCELERATOR SPELLING — "[S]ave",
-// "[D]iscard", "[C]ancel", "[R]etry", "[Y]es". That spelling is the old
-// bottom-strip line's, retired on 2026-08-12 with the row and REINSTATED
-// 2026-08-13 with it (architect): the buttons are touch targets that also
-// name the letter that answers them, which is what the plain-word labels of
-// the box gave up. The two key-named sentinels take the letter their MEANING
-// spells rather than their key's name — '\x7f' (Delete, the
-// discard-and-proceed) is "[D]iscard", '\x1b' (Escape) is "[C]ancel" — and
-// the dismiss-only ERROR NOTICE is the one exception, wearing a plain "OK":
-// nothing is being cancelled there and it advertises no letter. NONE OF THIS
-// REACHES THE MATCHING: response_keys and the codepoint-exact lowercase
-// compare are untouched, so a typed capital still does not answer.
+// response_keys, IN PLAIN WORDS — "Save", "Discard", "Cancel", "Retry",
+// "Yes", and "OK" on the dismiss-only error notice. The two key-named
+// sentinels take the word their MEANING spells rather than their key's name:
+// '\x7f' (Delete, the discard-and-proceed) is "Discard", '\x1b' (Escape) is
+// "Cancel".
+//
+// THE BRACKETED ACCELERATOR SPELLING ("[S]ave", "[D]iscard") IS RETIRED FOR
+// THE SECOND TIME AND WITH ITS REASON RECORDED, so it is not proposed a third
+// (architect 2026-08-13, at his live look): it went with the bottom-strip
+// status line on 2026-08-12, came back with the row hours later — the buttons
+// being touch targets that could also name the letter that answers them — and
+// he read the result plainly: "the brackets now look odd... a normal button
+// would use an underline for the character... I guess what we could do is do
+// tooltips for the buttons. So we don't do underscores or underline or
+// brackets or anything like that." SO THE KEY IS NAMED ON THE BUTTON'S
+// TOOLTIP, the product's own way of naming a chord (the roster's hint format
+// verbatim — "Save (s)"), composed at modal_dialog_button_hint below from what
+// the button DISPATCHES. NONE OF THIS EVER REACHED THE MATCHING:
+// response_keys and the codepoint-exact lowercase compare are untouched
+// through all three spellings, so a typed capital still does not answer.
 // NO BUTTON WEARS THE DEFAULT FACE: the crop's highlighted Save is Qt's
 // Enter-default, and this prompt system HAS no Enter answer — Return is not a
 // response key and does nothing — so every button wears the plain face
@@ -1699,7 +1708,7 @@ struct PromptState {
     bool                     painted = false;   // see the block above
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // e.g. "[S]ave"
+    std::vector<std::string> response_labels;   // plain words, e.g. "Save"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 
     // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the three raisers
@@ -1723,6 +1732,34 @@ struct PromptState {
         trigger         = trig;
     }
 };
+
+// A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
+// the bracketed accelerators: "we just do a tooltip just like the regular icon
+// tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
+// "Set trim from region (x)" — and so is the accelerator's spelling, the one
+// rule that table states for itself (redesign_button_tooltip, below): a bare
+// letter is LOWERCASE, because it is the key AS TYPED, and here that is not
+// merely a convention but the truth about the surface — the prompt match is
+// codepoint-exact on the lowercase letter, so a capital would name a press
+// that does not answer. Named keys are themselves ("Delete", "Escape",
+// "Enter").
+//
+// THE KEY IS DERIVED FROM WHAT THE BUTTON DISPATCHES, never hand-listed beside
+// the words: a PROMPT button carries its response char (the two sentinels
+// '\x7f' and '\x1b' being Delete and Escape — PromptState's own mapping), an
+// EDITOR button carries `editor_ok`, which IS the session's Enter-or-Escape.
+// So a prompt that grows a response, or an editor button that changes which
+// key it sends, cannot drift from its own hint.
+inline std::string modal_dialog_button_hint(std::string_view word,
+                                            char response_key,
+                                            bool editor_ok) {
+    std::string key;
+    if (response_key == '\x7f')      key = "Delete";
+    else if (response_key == '\x1b') key = "Escape";
+    else if (response_key != 0)      key = std::string(1, response_key);
+    else                             key = editor_ok ? "Enter" : "Escape";
+    return std::string(word) + " (" + key + ")";
+}
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
@@ -2483,6 +2520,12 @@ struct AppState {
     // (validated against the LIVE response_keys at dispatch); for an EDITOR,
     // `editor_ok` selects the session's own Enter (true) or Esc (false),
     // dispatched through the editor's one key route — button-is-its-chord.
+    // `tooltip` is the composed hint the painter drew this button's word for
+    // (modal_dialog_button_hint, above — the word plus the key that dispatch
+    // names), stashed rather than re-composed because the WORD is the only
+    // half the pointer path cannot see: the prompt's labels are its own and
+    // the editors' two are literals. Every dialog button has one, so
+    // membership needs no test beyond the index.
     //
     // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine,
     // recorded here once, 2026-08-13). The icon roster always obeyed it —
@@ -2510,9 +2553,10 @@ struct AppState {
     // already answer it.
     enum class ModalDialogOwner { None, Prompt, Editor };
     struct ModalDialogButton {
-        GuiRect rect{0, 0, 0, 0};
-        char    response_key = 0;      // prompt dialogs; 0 on editor dialogs
-        bool    editor_ok    = false;  // editor dialogs; OK vs Cancel
+        GuiRect     rect{0, 0, 0, 0};
+        char        response_key = 0;   // prompt dialogs; 0 on editor dialogs
+        bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
+        std::string tooltip;            // "<word> (<key>)"; never empty
     };
     struct ModalDialogGeometry {
         bool                           valid = false;
@@ -2726,15 +2770,41 @@ struct AppState {
     // runs, it compares two numbers, and it damages ONCE on each edge.
     // `rect` is the painter's published tooltip box, needed only for damage
     // (nothing hit-tests a tooltip).
-    // `owner` is the roster index the dwell belongs to (-1 = none). It is what
-    // makes "a fresh dwell on each arrival" TRUE rather than merely intended: a
-    // single motion can leave one tooltip-bearing button and enter the other in
-    // the same recompute, and without the id the stamp would survive that change
-    // — the second button would inherit however much of the first's dwell had
+    // `owner` is the BUTTON the dwell belongs to. It is what makes "a fresh
+    // dwell on each arrival" TRUE rather than merely intended: a single motion
+    // can leave one tooltip-bearing button and enter the other in the same
+    // recompute, and without the id the stamp would survive that change — the
+    // second button would inherit however much of the first's dwell had
     // already elapsed, showing instantly if the first tooltip was already up.
+    //
+    // IT NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's buttons
+    // took tooltips too (architect, retiring the bracketed accelerators: "we
+    // just do a tooltip just like the regular icon tooltips"). THE ENCODING,
+    // stated once here and nowhere restated: `surface` says WHICH index space
+    // `index` lives in — Roster indexes the redesign roster
+    // (redesign_buttons / RedesignButton), Dialog indexes
+    // AppState::modal_dialog.buttons — and `index` < 0 means NO OWNER in
+    // either. The pair is compared whole (the defaulted ==), which is what
+    // keeps "a fresh dwell on each arrival" true ACROSS the two surfaces as
+    // well as within one: index 0 of the roster and index 0 of a dialog are
+    // different buttons and compare unequal. It is deliberately ONE field
+    // rather than two parallel tooltip states — there is at most one dwell in
+    // the product, one painter for it and one dwell clock, and a second state
+    // would have to be kept mutually exclusive with the first by hand.
+    //
+    // WHO WRITES IT: the two hover walks, each for its own surface and each
+    // through the one arming helper (GuiInputHandler::arm_tooltip_dwell) —
+    // recompute_redesign_button_hover for the roster, update_modal_dialog_hover
+    // for a standing dialog — plus hide_shift_tooltip, which clears it.
     struct RedesignTooltip {
+        enum class Surface { Roster, Dialog };
+        struct Owner {
+            Surface surface = Surface::Roster;
+            int     index   = -1;
+            bool operator==(const Owner&) const = default;
+        };
         int64_t hover_ms = 0;
-        int     owner    = -1;
+        Owner   owner{};
         bool    visible  = false;
         GuiRect rect{0, 0, 0, 0};
     };
@@ -5532,10 +5602,9 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     return true;
 }
 
-// Hoverability = the zone plus ENABLED: a disabled button never sets `hovered`
-// and therefore never wears a hover face. Consulted only by the hover recompute,
-// so the refusal is one line at one site rather than a condition smeared over
-// the painter.
+// TWO NOTES THE ZONE KEEPS, both about the term it deliberately does NOT
+// carry — ENABLED, which the hover FACE adds at its one site and the hint does
+// not:
 //
 // ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and that asymmetry with
 // the tabs is the crops': both ship a selected-hover state (the accent outline
@@ -5543,11 +5612,15 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // tabs alone; the icon row's radios and the view bar's three are hoverable in
 // both states, and their already-selected press is refused in the ACTION (the
 // chord table's `radio` flag), not in their hoverability.
-inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
-                                      RedesignButton b) {
-    return redesign_button_hover_zone(a, b) &&
-           redesign_button_enabled(a, total_frames, b);
-}
+//
+// AND redesign_button_hoverable — this zone AND the enabled term, one call —
+// IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead
+// since the 2026-08-07 tooltips-on-disabled ruling split its two consumers
+// apart. The hover recompute is its only conceivable caller and cannot use it:
+// it needs the zone answer BY ITSELF for the hint and the zone-plus-enabled
+// answer for the face, so it reads this predicate once and adds the enabled
+// term inline. Nothing was rewired; the composition it stood for is spelled at
+// that site.
 
 // Snapshot the undo-tracked settings from `app` (engine_settings; trim is
 // excluded). Called by Undo's push helpers at push time so every entry

@@ -720,6 +720,12 @@ private:
     // AppState::dropdown.rect + item_rects) — the dropdown's for its hit
     // tests, the tooltip's only so the hide edge can damage it — and both write
     // a zero rect when not shown, which is the correct empty answer.
+    // THE TOOLTIP SERVES TWO SURFACES since 2026-08-13 — the roster and the
+    // MODAL DIALOG's buttons, one dwell state whose owner names which (the
+    // encoding is at AppState::RedesignTooltip) — which is why it paints
+    // AFTER paint_modal_dialog rather than beside the dropdown: it reads the
+    // stash that call publishes, and a hint over the modal is the one floating
+    // surface a modal does coexist with.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_dropdown(cairo_t* cr);
     // The shared box shape both draw, dressed by the caller: the tooltip takes

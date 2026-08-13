@@ -2979,8 +2979,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // tail are those last two chords.
 // THE ADMITTED SET GREW EXACTLY ONCE since the dialog arc, and by exactly one
 // shape: bare Tab, from "the settings and load editors only" to "any dialog
-// editor", when the focus ring landed 2026-08-13. Nothing else about the
-// contract moved — Left / Right / Enter were always admitted as editor keys
+// editor", when the focus ring landed 2026-08-13. (WHAT THE KEY DOES inside
+// that set moved once more the same day — the settings editor's completion
+// took the typed `=` — but the ADMISSION did not, which is why this line is
+// unchanged by it.) Nothing else about the contract moved — Left / Right /
+// Enter were always admitted as editor keys
 // and still are, and what the ring does with them is decided downstream, on a
 // focus state that did not exist before.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
@@ -2993,11 +2996,11 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
          text_editor::KeyClass::NotEditorKey);
     // BARE TAB, admitted while any DIALOG editor stands (2026-08-13) — the
     // gate's one addition since the focus ring landed, and a superset of what
-    // it admitted before: the settings and load editors' value/entry-name
-    // autocompletes are dialog editors and keep the key exactly as they had
-    // it, while the commit-title and BPM editors, which complete nothing and
-    // dropped Tab here, now let it walk the ring (route_modal_dialog_focus_key
-    // owns which of the two a given Tab is). The top-strip FLAG editor is
+    // it admitted before: the LOAD editor's entry-name autocomplete is a
+    // dialog editor and keeps the key exactly as it had it, while the
+    // commit-title, BPM and (since the `=` ruling later that day) SETTINGS
+    // editors let it walk the ring instead (route_modal_dialog_focus_key owns
+    // which of the two a given Tab is). The top-strip FLAG editor is
     // deliberately outside it: it is not a dialog, publishes no buttons, and
     // so has no ring for Tab to walk — bare Tab still drops here while it
     // stands.
@@ -4460,7 +4463,10 @@ void GuiInputHandler::load_editor_commit() {
 //            no-focus state a place the ring leaves for good. `field_owns_tab`
 //            is the caller's statement that the field has its own Tab
 //            (autocomplete) — the ring then declines the key there and the
-//            editor's completion runs, unchanged.
+//            editor's completion runs, unchanged. ONE EDITOR STILL SAYS TRUE:
+//            the load editor, whose entry-identifier completion is on bare Tab
+//            (the settings editor's moved onto the typed `=` on 2026-08-13,
+//            which is what gave THAT editor's field a ring stop Tab can leave).
 //   LEFT /
 //   RIGHT    move between BUTTONS ONLY and are INERT in an editor's field: the
 //            arrows belong to the text there and the editors' own motion arm
@@ -4556,8 +4562,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // here dispatches while a dialog editor stands — the two spellings must
 // move together. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
-// Alt + Tab fall through to handle_key unchanged); the commit-title, bpm and
-// flag editors pass an empty hook.
+// Alt + Tab fall through to handle_key unchanged); THE LOAD EDITOR IS ITS ONE
+// PASSER since 2026-08-13, the settings editor having moved its completion
+// onto the typed `=` and joined the commit-title, bpm and flag editors in
+// passing an empty hook.
 //
 // THE FOCUS RING RUNS FIRST (2026-08-13; the whole model is at
 // AppState::modal_dialog_focus). It is the ONE addition this route has taken:
@@ -4566,11 +4574,15 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // ONLY while the focus is on a BUTTON — a state that did not exist before, so
 // every key's behaviour with the focus in the field is byte-identical to what
 // it has always been. THE FIELD'S TAB IS THE ONE PLACE THE TWO CONTEND, and
-// the field wins: an editor that HAS an autocomplete (settings, load) keeps
-// bare Tab as its completion exactly as before, and the ring's field stop
-// hands the key on rather than stepping (`field_owns_tab` below is that
-// hand-off, and it is why the ring is entered by Tab only on the two editors
-// that complete nothing).
+// the field wins: an editor that HAS a bare-Tab autocomplete keeps it exactly
+// as before, and the ring's field stop hands the key on rather than stepping
+// (`field_owns_tab` below is that hand-off). THAT IS THE LOAD EDITOR ALONE
+// since later the same day, when the settings editor's completion moved onto
+// the typed `=` at the architect's ruling — so three of the four dialog
+// editors now enter the ring by Tab, and the load editor's own ring is
+// reachable by the arrows and the pointer but not by Tab. That residual is
+// KNOWN AND DELIBERATE, pending an architect ruling on which key the load
+// editor's completion should take; do not invent one for it.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the four
 // dialog surfaces pass invalidate_status_row_area (whose rider carries the
@@ -5129,17 +5141,58 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 }
 
 // Settings-prompt editor key routing, through the shared modal route.
-// Bare Tab autocompletes the value side of `key=` with the key's current
-// stored value — every settings key, engine and GUI-kind alike
-// (recall_gui_setting_value / format_nonengine_value in settings_io) —
-// for recall and editing.
+//
+// THE VALUE COMPLETION RIDES `=`, NOT TAB (architect 2026-08-13: "instead of
+// using tab for autocomplete, when the user types a valid key on the settings
+// editor and then hits equal, that should autocomplete — the equal key — and
+// then tab goes back to its normal behavior of walking the fields"). So this
+// editor passes NO autocomplete hook: bare Tab walks the modal's focus ring
+// here exactly as it does in the commit-title and BPM editors, and the
+// completion happens as a CONSEQUENCE of an ordinary typed character.
+//
+// THE TYPED `=` IS THE TRIGGER AND IT FIRES ONLY WHERE IT IS UNAMBIGUOUS: the
+// character just typed must be creating the buffer's FIRST `=`, at the very
+// END of the line. Any other `=` — a second one, one typed into the middle of
+// a line, one inside a value (URLs and free text carry them) — is an ordinary
+// character that completes nothing. The test is split around the route: the
+// PRE half says "no `=` yet, and this key is one" and the POST half says "and
+// it landed at the end, alone", which together also cover every way the insert
+// could not happen at all (the pending cap's refusal, a key the editor did not
+// consume) without this body knowing about any of them.
+//
+// The KEY is read as the platform's resolved CODEPOINT, the same field the
+// editor's own printable-insertion path reads (GuiInputState::codepoint), not
+// as a GuiKey spelling: `=` is whatever the live layout puts under the user's
+// finger, and only the codepoint knows. Ctrl and Alt are excluded by the
+// editor's own classifier before an insertion can happen at all, so the
+// "bare `=` only" rule needs no term here.
+//
+// The completion body itself is unchanged and unmoved
+// (GuiSettingsEditor::autocomplete_value): it already requires an `=`, already
+// refuses a non-empty value side and an unknown key, and already recalls every
+// settings key, engine and GUI-kind alike (recall_gui_setting_value /
+// format_engine_setting_value).
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
-    return route_modal_editor_key(
+    const bool eq_may_complete =
+        text_editor::is_active(app.settings_editor) &&
+        mods.codepoint == '=' &&
+        app.settings_editor.pending.find('=') == std::string::npos;
+    const bool consumed = route_modal_editor_key(
         app.settings_editor, key, mods,
-        [this] { settings_editor.autocomplete_value(); },
+        /*autocomplete=*/nullptr,
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_status_row_area(); });
+    if (eq_may_complete && text_editor::is_active(app.settings_editor)) {
+        const std::string& pending = app.settings_editor.pending;
+        if (!pending.empty() && pending.back() == '=' &&
+            pending.find('=') == pending.size() - 1 &&
+            app.settings_editor.cursor_pos ==
+                static_cast<int>(pending.size())) {
+            settings_editor.autocomplete_value();
+        }
+    }
+    return consumed;
 }
