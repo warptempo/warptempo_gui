@@ -267,7 +267,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         finalize_editor_text_drag();
         // THE HATCH IS A GESTURE END: this drag holds the cursor down to the
         // Arrow through any_pointer_gesture_active, so pressing Esc over the
-        // waveform's lower half must come back showing the Scrub
+        // waveform must come back showing the Pan
         // — which it does at this iteration's tail, once the editor
         // below has closed and everything else this call does has settled.
         // (The TOP FLAG EDITOR is in it too, by a different route: it is
@@ -425,8 +425,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // pan must swallow authoring keys rather than letting one run over a latched
     // pan — and its PENDING phase must, because the deferred click act reads
     // playback state at the release and no command may move it in between.
-    // (The scrub is a one-shot press action, not a gesture — it arms nothing,
-    // so it has no entry here. The tempo drag and its pending were entries until
+    // (The scrub is a one-shot ACT, not a gesture, so it has no entry of its
+    // own — but since 2026-08-13 its press arms scroll_drag like every other
+    // press on the navigation surface, which is what keeps a chord from moving
+    // playback between a lower-half press and the release that auditions. The
+    // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
@@ -821,9 +824,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // click scrub region to preview"). The region arm that stood here — a
         // left-bound launch through scrub_launch_at whenever a span rested — is
         // DELETED with the SPAN FORM: the region is trim scratch, not a launch
-        // point, and the SCRUB press is the gesture for previewing it — either
-        // entry, the waveform lower-half plain left press or the bare right
-        // press anywhere in the waveform area (one shared body): click inside
+        // point, and the SCRUB is the gesture for previewing it — the waveform
+        // lower half's plain click, its one entry (the act runs at the
+        // motionless release since 2026-08-13): click inside
         // the span and it auditions from there, the span resting untouched.
         // Space now touches no region at all, in either
         // direction: it neither reads one nor clears one.

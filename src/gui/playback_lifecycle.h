@@ -146,10 +146,11 @@ struct GuiPlaybackLifecycle {
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
     // START half of its stop-then-start), which is also the gesture for
     // previewing a resting region: click inside the span and it auditions from
-    // there. That act has ONE press entry since 2026-08-12 (the lower-half
-    // plain left press — the bare right full-height entry died with the right
-    // button's unbinding), funneled through scrub_act_at, so this stays
-    // one caller class. (Space's region left-bound launch was the second caller until the
+    // there. That act has ONE entry since 2026-08-13 (the lower-half plain
+    // press's MOTIONLESS RELEASE — its press-time dispatch moved to the lift
+    // when the waveform's two halves became one surface, and the bare right
+    // full-height entry died 2026-08-12 with the right button's unbinding),
+    // funneled through scrub_act_at, so this stays one caller class. (Space's region left-bound launch was the second caller until the
     // architect dropped it 2026-07-30; Space now always toggles from the playhead.)
     // Delegates
     // to the same launch body as toggle_playback's play edge, so the standing

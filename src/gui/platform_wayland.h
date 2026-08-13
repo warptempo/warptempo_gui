@@ -23,11 +23,19 @@
 // and its own declared hotspot are what the compositor gets.
 //
 // Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
-// also the FALLBACK: a theme missing one of the other six names degrades that
+// also the FALLBACK: a theme missing one of the other five names degrades that
 // KIND to the arrow with one stderr line, which costs the cue and nothing else.
-// The six beside it each mark a zone whose gesture the arrow cannot promise —
+// The five beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.
+//
+// SCRUB (`crosshair`) IS DELETED (architect 2026-08-13, THE WAVEFORM'S TWO
+// HALVES BECOME ONE SURFACE — "we need to just get rid of the crosshairs but
+// retain the scrub action"): the lower half's audition survives as the
+// motionless release's CLICK ACT, and a click carries no cue anywhere in the
+// product, so the whole waveform wears PAN — the drag both halves now take.
+// Seven kinds became six; a kind is deleted when the zone it promised stops
+// being a zone.
 //
 // THE TRIM BAR SPENDS THREE OF THEM, and the split is the act rather than the
 // surface (architect 2026-08-03): TrimBoundBegin and TrimBoundEnd are the
@@ -40,7 +48,6 @@
 // edge.
 enum class GuiCursorKind {
     Arrow,
-    Scrub,
     Pan,
     Zoom,
     TrimResize,
@@ -49,7 +56,7 @@ enum class GuiCursorKind {
 };
 // Roster size, for the platform's per-kind cursor array. Keep it equal to the
 // enumerator count above.
-inline constexpr int kGuiCursorKindCount = 7;
+inline constexpr int kGuiCursorKindCount = 6;
 
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop

@@ -273,21 +273,25 @@ struct UndoEntry {
 // PAN-PRIMARY: the plain drag
 // on the navigation surface is the GRAB-PAN now, so the region is the
 // deliberate secondary act — SHIFT on the desk, the REGION HOLD on glass):
-//   * the SHIFT-exact press on the NAVIGATION SURFACE — the waveform's UPPER
-//     half, the RULER lane, and the MARKER lane's empty stretches (the lanes
-//     joined the y-gate with the same ruling, being the upper half's
-//     extension; the LOWER half LEFT it — "no region sweep at all in the
-//     lower half", a shift press there a consumed nothing; a shift press on a
-//     FLAG stays the range click). It runs the one placement body
+//   * the SHIFT-exact press on the NAVIGATION SURFACE — the WHOLE waveform,
+//     the RULER lane, and the MARKER lane's empty stretches (the lanes joined
+//     the y-gate with the same ruling, being the upper half's extension; the
+//     LOWER half left it that day and CAME BACK 2026-08-13 — "shift plus drag
+//     to map out a region should also be allowed in the lower half, for
+//     consistency, since the drag motions are allowed from the top half" —
+//     which supersedes the eighth ruling's "no region sweep at all in the
+//     lower half"; a shift press on a FLAG stays the range click). It runs the
+//     one placement body
 //     (place_playhead_and_arm_region): deselect-all, playhead at the clicked
 //     column, live-playback reseek, then the arm — the region ANCHORS AT THE
 //     CLICKED COLUMN (2026-08-05) and the drag carries the playhead on the
 //     moving end, so it lands where the mouse releases. A motionless shift
 //     click-release lands the playhead and rests NO region;
 //   * the `h` HISTORY VIEW'S own SHIFT former, over the view's whole
-//     navigation surface (full waveform height — no scrub in there — plus the
-//     same two lanes), the same recipe with the MODE's focus clear in place
-//     of the store deselect;
+//     navigation surface (the same rect as the live one since 2026-08-13 —
+//     full waveform height plus the same two lanes — so the view is no longer
+//     the exception it was), the same recipe with the MODE's focus clear in
+//     place of the store deselect;
 //   * the TOUCH REGION HOLD (the eighth ruling's touch half): a ~500 ms
 //     one-finger hold on the same navigation surface (the touch pan zone)
 //     expires into begin_touch_region, which FORKS on the mode exactly as
@@ -337,9 +341,9 @@ struct UndoEntry {
 // fresh region drag — via arm_region_drag_at, all three entries), the DEFERRED
 // CLICK ACT at a plain navigation-surface press's motionless release
 // (run_nav_click_act — the placement is a point command; THE PAN ITSELF NEVER
-// CLEARS, a crossed plain drag being a pure viewport move, and a SCRUB press
-// leaves the region alone too, that gesture being the region's PREVIEW
-// gesture), the `h` view's
+// CLEARS, a crossed plain drag being a pure viewport move, and THE SAME ACT'S
+// SCRUB ARM leaves the region alone too, returning above the dissolve — that
+// act being the region's PREVIEW gesture), the `h` view's
 // three edges (the view-local rule above), and the kick validator's live-domain
 // reclamp when a bound falls outside a shrunken domain. The full clear-site
 // enumeration lives at clear_region_highlight's declaration (input_handler.h).
@@ -435,7 +439,7 @@ struct DragState {
     // the drag tows it UNCONDITIONALLY, so a later Space auditions FROM it. The
     // lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
-    // served is supplied by the scrub surface instead. Only the RESTING
+    // served is supplied by the audition scrub instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
     // (No `moved` latch and no `hit_marker`: both were group-era state with no
@@ -565,11 +569,12 @@ struct UndoHistory {
 // (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
 // is the grab-pan now, so the region is the deliberate act and takes the
 // secondary form on both devices). The SHIFT-exact PRESS
-// on the NAVIGATION SURFACE — the waveform's UPPER half, the RULER lane, and
-// the MARKER lane's empty stretches (its y-gate GREW to the lanes and SHRANK
-// off the LOWER half with the same ruling: "no region sweep at all in the
-// lower half" — a shift press there is a consumed nothing; a shift press on a
-// FLAG stays the range click) — does its press-time work (deselect-all,
+// on the NAVIGATION SURFACE — the WHOLE waveform, the RULER lane, and
+// the MARKER lane's empty stretches (its y-gate GREW to the lanes with that
+// ruling and shrank off the LOWER half, which came BACK 2026-08-13 with the
+// two-halves ruling — the halves take the same drag motions, so they take the
+// same former; a shift press on a FLAG stays the range click) — does its
+// press-time work (deselect-all,
 // playhead placement, live-playback reseek — it never SELECTS a marker),
 // DISSOLVES any resting highlight at mouse-down, and arms this drag; motion
 // past the shared press-becomes-drag threshold (kDragMovedThresholdPx) extends
@@ -841,18 +846,29 @@ struct StripDragState {
 // GRAB-PAN (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: pan is
 // the most common gesture, so it takes the primary drag; the alt+drag that
 // carried this machinery is DELETED, alt's pointer vocabulary now empty). The
-// NAVIGATION SURFACE is the waveform's UPPER half plus the RULER lane plus the
-// MARKER lane's empty stretches (the lanes are "essentially an extension of the
-// upper half" — his words — since the waveform-height clamp put them in easy
-// reach); inside the `h` history view it is the WHOLE waveform plus those
-// lanes, that view having no scrub. A plain press there arms this and DOES
-// NOTHING ELSE — nothing pops at press (the deferred-dissolve model, the
-// one-day ruler former's own pattern generalized to the whole surface):
+// NAVIGATION SURFACE is the WHOLE waveform — BOTH HALVES since 2026-08-13, in
+// every view — plus the RULER lane plus the MARKER lane's empty stretches (the
+// lanes are "essentially an extension of the upper half" — his words — since
+// the waveform-height clamp put them in easy reach). THE LOWER HALF JOINED
+// when the press-time audition scrub moved to the lift (architect 2026-08-13:
+// "the playhead scrub is an outlier. We do everything on lift the finger or on
+// mouse up, but the playhead scrub, we do right on mouse down. We should remove
+// that. And that should allow the dragging on the lower half of the waveform as
+// well, the pan"), so the halves differ in ONE thing — WHICH ACT the motionless
+// release runs — and in nothing else. A plain press anywhere on the surface
+// arms this and DOES NOTHING ELSE — nothing pops at press anywhere now (the
+// deferred-dissolve model, the one-day ruler former's own pattern generalized
+// to the whole surface):
 //   * a MOTIONLESS RELEASE (never crossed kDragMovedThresholdPx) runs THE
-//     CLICK ACT at the press column — everything the old press-time placement
-//     did: deselect-all (the mode-focus clear in the `h` view), region
-//     dissolve, playhead to the column, live-playback reseek, follow override
-//     (run_nav_click_act, input_pointer.cpp). Playback state is read AT the
+//     CLICK ACT at the press column, forked on the pressed half
+//     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
+//     press-time placement did: deselect-all (the mode-focus clear in the `h`
+//     view), region dissolve, playhead to the column, live-playback reseek,
+//     follow override. LOWER half — ONE AUDITION SCRUB ACT at the column (stop
+//     a live session, else launch), which touches no selection, no region, no
+//     cursor and no follow state: that pair of omissions is the halves' one
+//     difference, read honestly as two, and both predate this ruling.
+//     Playback state is read AT the
 //     release — the press touched nothing, so the readings agree, and a
 //     session that ended naturally under the hold is answered honestly.
 //     THE PRESS COLUMN STAYS THE COLUMN THE USER AIMED AT because the FOLLOW
@@ -896,6 +912,13 @@ struct ScrollDragState {
     // double-click's first half) beside its click act. The waveform and ruler
     // seed nothing — the lane is the one double-click surface here.
     bool   seed_empty_lane = false;
+    // The press landed on the WAVEFORM'S LOWER HALF (2026-08-13): a motionless
+    // release runs the AUDITION SCRUB at the press column instead of the
+    // placement. Read ONCE, at the press, because the press point is what the
+    // user aimed at — the same reason the click act runs at press_x. Mutually
+    // exclusive with the two flags above by geometry, and false in the `h`
+    // view, which has no scrub half.
+    bool   scrub_release = false;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —
@@ -961,18 +984,25 @@ struct OverviewDragState {
     double fixed_edge_sample = 0.0;
 };
 
-// (The SCRUB has no drag state: its ONE press entry — the plain LOWER-HALF
-// left press — runs ONE act through the one body, scrub_press_at
-// (input_pointer.cpp). The BARE RIGHT full-height scrub of 2026-08-01 is
-// DELETED (architect 2026-08-12, the eighth glass ruling: "that existed only
-// to serve a very tall waveform, and we're shrinking the waveform") — the
-// right button is fully unbound again, a right press a consumed nothing
-// everywhere. The marker-text lane's own scrub was
+// (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
+// ScrollDragState like every other act on the navigation surface — its ONE
+// entry is the plain LOWER-HALF press's MOTIONLESS RELEASE, which runs one act
+// through the one body, scrub_press_at (input_pointer.cpp). ITS PRESS-TIME
+// DISPATCH IS DELETED (architect 2026-08-13, the two-halves ruling: "we do
+// everything on lift the finger or on mouse up, but the playhead scrub, we do
+// right on mouse down. We should remove that"), which is what let the lower
+// half take the grab-pan, the region former and the pending click; the
+// architect's own 2026-08-12 carve-out — "as soon as I click, it immediately
+// starts to scrub" — is superseded by it. The BARE RIGHT full-height scrub of
+// 2026-08-01 is DELETED (architect 2026-08-12, the eighth glass ruling: "that
+// existed only to serve a very tall waveform, and we're shrinking the
+// waveform") — the right button is fully unbound again, a right press a
+// consumed nothing everywhere. The marker-text lane's own scrub was
 // deleted (architect 2026-07-27, and the lane itself in row 5). The act
 // is a ONE-SHOT (scrub_act_at: stop a live session,
-// else start one at the clicked frame), issued once per click — the press arms
-// nothing, a held press does nothing further, and motion over the scrub
-// surface is inert (architect 2026-07-23, the Ableton model; the former
+// else start one at the clicked frame), issued once per click — a held press
+// does nothing further and a drag past the threshold replaces the act with the
+// pan (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each
 // click pays AT MOST one stop-quiescence fence (a stopped session's launch
 // pays none), so the per-column fence cadence is structurally gone). The
@@ -2036,7 +2066,9 @@ struct AppState {
     //     release (run_nav_click_act — the upper half, the ruler and the empty
     //     marker lane, live and `h`-view arms alike, though the view's cannot
     //     actually produce, playback being unreachable inside it since
-    //     2026-08-05), the LIVE shift former's press, and the view's own shift
+    //     2026-08-05; the act's LOWER-HALF scrub arm is deliberately NOT a
+    //     producer — it returns above the placement and overrides no follow,
+    //     2026-08-13), the LIVE shift former's press, and the view's own shift
     //     former.
     // CLEARED at FOUR sites (re-derived 2026-07-30 by grepping every write, all in
     // playback_lifecycle.cpp): the ONE stop body, stop_playback_if_playing (both
@@ -2068,8 +2100,8 @@ struct AppState {
     // only writers of the value fields. There is no resting coincidence with the
     // cursor — a coincide-at-rest relationship would be wrong, not just unused
     // (a plain Space launches the scanner from the cursor, while the lower-half
-    // scrub gesture AND Space's region launch both launch it independently of
-    // the cursor, from a clicked frame and from the span's left bound). The cursor is
+    // scrub act launches it independently of the cursor, from a clicked
+    // frame). The cursor is
     // per-tab; the scanner is session-only and not persisted.
     // `playback_speed` is authoritative on the main thread and pushed
     // to the playback engine on every change.
@@ -4479,9 +4511,12 @@ inline int64_t snap_authored_frame(double frame) {
 // reposition drag, a trim drag, a strip-row
 // zoom/pan drag, a region-select drag, an editor
 // text drag, or a pending marker / trim drag
-// armed by a press (button held, watching for the threshold). (The scrub is a
-// one-shot press action, not a gesture — it arms nothing and so never appears
-// here. The target-view TEMPO drag and its pending were on this list until
+// armed by a press (button held, watching for the threshold). (The scrub still
+// has no entry of its own — it is a one-shot ACT, not a gesture — but since
+// 2026-08-13 its press arms the navigation surface's PENDING CLICK like every
+// other press on that surface, so a held lower-half press IS in flight here
+// through scroll_drag, exactly as a held upper-half press is. The target-view
+// TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
 // SIX CONSUMERS, re-derived by grep 2026-08-12 (the follow chase joined; the
 // eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the

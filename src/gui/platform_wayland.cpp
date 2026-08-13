@@ -1147,8 +1147,10 @@ int cursor_kind_index(GuiCursorKind kind) {
 }
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
-// cursor art: seven standard freedesktop names, all present in Breeze and in
-// Adwaita.
+// cursor art: six standard freedesktop names, all present in Breeze and in
+// Adwaita. (`crosshair` LEFT THE TABLE with the Scrub kind, 2026-08-13 — the
+// waveform's two halves became one surface and the lower half's audition became
+// a click act, which carries no cue; the enum's own comment holds the ruling.)
 //
 // THE HOTSPOT IS THE FILE'S, NEVER A CENTRE WE COMPUTE, and the installed theme
 // is what settles it. What load_theme_cursor reads is wl_cursor_image's INTEGER
@@ -1156,11 +1158,11 @@ int cursor_kind_index(GuiCursorKind kind) {
 // (cursor_theme_size above: XCURSOR_SIZE, else 24) — and Breeze_Light serves
 // that default request from its 32x32 images, whose declared hotspots are:
 //
-//     left_ptr 4,4   crosshair 17,17   grab 16,16   zoom-in 15,15
+//     left_ptr 4,4   grab 16,16   zoom-in 15,15
 //     ew-resize 16,15   left_side 4,15   right_side 27,15
 //
-// The POINTER-ISH shapes are centred (grab exactly, crosshair and zoom-in within
-// a pixel of it) while left_side and right_side sit hard against their OWN edge
+// The POINTER-ISH shapes are centred (grab exactly, zoom-in within a pixel of
+// it) while left_side and right_side sit hard against their OWN edge
 // — 4,15 and 27,15, which is the whole point of an edge cue — and left_ptr sits
 // at its tip. No single rule we could compute produces all three, which is
 // exactly why the file's declaration is taken verbatim. The numbers scale with
@@ -1188,7 +1190,6 @@ struct CursorKindName {
 // that sets begin) takes left_side and the end cap (and ctrl+shift) right_side.
 constexpr CursorKindName kCursorKindNames[] = {
     {GuiCursorKind::Arrow,          "left_ptr"},
-    {GuiCursorKind::Scrub,          "crosshair"},
     {GuiCursorKind::Pan,            "grab"},
     {GuiCursorKind::Zoom,           "zoom-in"},
     {GuiCursorKind::TrimResize,     "ew-resize"},
@@ -2458,7 +2459,7 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
     pointer_enter_serial_ = serial;
 
     // Hand the compositor the cursor the REMEMBERED KIND names — not the arrow.
-    // A pointer that left the window over the scrub surface and came back to the
+    // A pointer that left the window over the waveform and came back to the
     // same spot must return with the same cursor; the synthesized motion below
     // records the entry coordinates, and the tail of THIS loop iteration
     // re-derives the kind from them, correcting the remembered one if the GUI's
@@ -3097,7 +3098,7 @@ void GuiPlatform::deliver_touch_translation_end() {
     // position to the finger, and the loop-settled cursor owner applies the
     // finger zone's kind to the REAL wl_pointer — so before this fork a mouse
     // resting in the window kept the finger's cue (Arrow/resize over a
-    // Scrub zone, say) until its own next motion. The finger lifting means
+    // Pan zone, say) until its own next motion. The finger lifting means
     // the unified pointer is now wherever the MOUSE is:
     //   * physical pointer FOCUSED (wl_pointer enter/leave, which touch never
     //     writes) — synthesize an ordinary MOTION at its last

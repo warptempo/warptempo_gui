@@ -157,7 +157,7 @@ struct PositionNudgePrologue {
 // the focus to be towed (the two playhead forms and the empty towed category are
 // stated once at land_playhead_on_marker, input_pointer.cpp — do not restate them
 // here). The lead-in workflow (parking the playhead upstream to audition the
-// approach) is supplied by the scrub surface instead. The twins keep their own
+// approach) is supplied by the audition scrub instead. The twins keep their own
 // GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
 // consumed by the coalesce verdict alone.

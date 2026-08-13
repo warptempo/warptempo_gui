@@ -236,9 +236,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // playhead_in_marker_lane); Esc is not one of them, being unbound outside the
     // editors, the prompts, the drag swallow and the render cancel since
     // 2026-07-29.
-    // NOT the audition scrub: that is the waveform one-shot POINTER press
-    // (scrub_act_at — the lower-half left entry and the bare right one), a
-    // different gesture on a different surface, untouched here
+    // NOT the audition scrub: that is the waveform's one-shot POINTER act
+    // (scrub_act_at — the lower half's motionless-release click act, its one
+    // entry), a different act on a different surface, untouched here
     // and the sole owner of the "scrub" name.
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
@@ -827,8 +827,8 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // carry: only a bound walk knows where its live member is.
     fresh.local_index = fresh.local.live_index();
     // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
-    // removal from the view): the mode consumes bare Space and the scrub
-    // presses, so a session still running from before `h` could not be stopped
+    // removal from the view): the mode consumes bare Space and never runs a
+    // scrub act, so a session still running from before `h` could not be stopped
     // from inside — it would play on under a view that offers no transport at
     // all. THE OWNER IS THIS ENTRY OWNER rather than the toggle's arm, for the
     // reason everything else about a visit lives here: a future second entry
@@ -1541,7 +1541,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
     // (recorded at the arms 2026-08-06, where the docs had carried it alone):
     // the entry owner stops any session running before `h` and nothing in the
-    // view can start one — bare Space and the scrub press are consumed — so
+    // view can start one — bare Space is consumed and no scrub act exists in
+    // here — so
     // these calls are formalities. They stay because the REGIME is what these
     // arms re-express: a mode-local command that commits a cursor position looks
     // exactly like its live twin, and a future route that could audition in here
@@ -1654,8 +1655,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // WHAT IS ADMITTED, the whole list. SPACE IS NOT ON IT (architect 2026-08-05):
 // PLAYBACK IS REMOVED FROM THE VIEW WHOLE — it was slow, the mode's full-song
 // trim forcing a full target preview render, and buggy besides — so bare Space
-// is a consumed no-op in here, the pointer scrub press is consumed at the
-// pointer gate, and the one entry owner stops a session that was already running
+// is a consumed no-op in here, the lower half's pointer press is the mode's
+// own navigation press rather than a scrub, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
 //   - = / - (bare)          → zoom in / out
@@ -2599,8 +2600,8 @@ void GuiInputHandler::run_history_revert() {
     // NOT gated on anything this act finds: the stop is refusal-gated at its own
     // owner, and in this mode it is a formality either way — the entry owner
     // stops a session that was running before `h` and nothing in the view can
-    // start one (open_history_mode_fresh; bare Space and the scrub press are
-    // consumed here). The doc says exactly this rather than folding the stop into
+    // start one (open_history_mode_fresh; bare Space is consumed and no scrub
+    // act exists here). The doc says exactly this rather than folding the stop into
     // the "only when something changed" claim below, which covers the three
     // effects that do wait on a change.
     playback_lifecycle.stop_playback_if_playing();

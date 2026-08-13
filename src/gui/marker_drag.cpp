@@ -312,8 +312,8 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // wall-saturated drag never moved it), so the playhead lands with the marker here,
 // matching the selection, and a later Space auditions FROM it. Every marker click
 // is a land route; Tab and `c` additionally recenter / re-zoom. The lead-in
-// workflow (parking the playhead upstream) is supplied by the scrub surface
-// instead.
+// workflow (parking the playhead upstream) is supplied by the audition
+// scrub instead.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
