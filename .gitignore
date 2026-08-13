@@ -27,3 +27,4 @@ projects/*/*.wav
 projects/*/peaks/
 projects/*/renders/
 projects/*/sheet/
+projects/*test
