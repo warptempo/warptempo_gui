@@ -2612,12 +2612,21 @@ struct AppState {
     // PromptState says the same thing about the default face) — so Enter acts
     // only once the user has deliberately stepped onto a button.
     //
-    // THE RING: Tab cycles every stop including the field, Left/Right move
+    // THE RING: Tab cycles every stop including the field and SHIFT+TAB WALKS
+    // IT BACKWARDS (architect 2026-08-13, in the live marker cycle's own
+    // spellings — Shift+Tab and IsoLeftTab, the latter shift-agnostic), Left/
+    // Right move
     // between BUTTONS only and are inert in the field (the arrows belong to
     // the text there, and the editors' own motion arm owns them), Enter
     // activates the focused button. The one route is
     // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by the
-    // prompt gate and by route_modal_editor_key alike.
+    // prompt gate and by route_modal_editor_key alike. ONE THING RANKS ABOVE
+    // the ring's FORWARD Tab: an editor whose FIELD has an autocomplete offers
+    // that completion first and reaches the ring only when it did not advance
+    // the buffer — the one autocomplete model, stated at
+    // route_modal_editor_key's Tab arm, which is also what makes -1 a stop Tab
+    // can always leave. The reverse walk is offered to no completion, shift
+    // meaning "go back" and never "complete".
     //
     // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
     // stash when no dialog stands, on any change of the stash's OWNER, and on

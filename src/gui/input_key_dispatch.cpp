@@ -2183,7 +2183,8 @@ void GuiInputHandler::commit_title_editor_commit() {
 
 // Routes a key to the active commit-title editor through the shared modal
 // route. NO autocomplete hook: a commit message has no vocabulary to complete
-// against, so bare Tab is dropped by the modal gate like the bpm editor's.
+// against, so bare Tab walks the modal's focus ring here from the first press
+// (the one autocomplete model is at route_modal_editor_key).
 bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
                                                      GuiInputState mods) {
     return route_modal_editor_key(
@@ -2949,6 +2950,34 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     return false;
 }
 
+namespace {
+
+// THE MODAL FOCUS RING'S TAB SHAPE — the ONE predicate three sites read (the
+// keyboard-modal gate's admission, the ring's own walk, and the completion arm
+// that must fire on the FORWARD shape alone), so the spellings cannot drift
+// apart the way two hand-kept lists would.
+//
+// IT MIRRORS THE LIVE MARKER CYCLE'S SPELLINGS EXACTLY (`is_tab_cycle` and
+// handle_tab_switch_keys' three arms, both in this file) rather than inventing
+// a second convention for the same physical gesture: bare Tab forward,
+// Shift+Tab back, and IsoLeftTab back SHIFT-AGNOSTICALLY — that keysym lives on
+// the Tab key's shift level, so a layout may deliver the reverse either with or
+// without the shift bit and the product reads both as the one shape everywhere
+// it binds a reverse Tab (the `h` view's diff-flag cycle does the same). CTRL
+// AND ALT ARE REFUSED on every arm, again as the live cycle refuses them: a
+// ctrl-carrying Tab is the tab-cycle family's, not this ring's, and alt binds
+// nothing in it.
+enum class ModalRingTab { None, Forward, Reverse };
+
+ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
+    if (mods.ctrl || mods.alt) return ModalRingTab::None;
+    if (key == GuiKeys::IsoLeftTab) return ModalRingTab::Reverse;
+    if (key != GuiKeys::Tab) return ModalRingTab::None;
+    return mods.shift ? ModalRingTab::Reverse : ModalRingTab::Forward;
+}
+
+}  // namespace
+
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
 // dropped. It serves ALL FIVE editors — the settings and load prompts,
@@ -2973,16 +3002,21 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // carve-outs below are NOT editor consumption — they are gate policy layered on
 // top: bare Tab under any DIALOG editor (the focus ring's step and, where the
 // editor has one, its autocomplete — the fork is
-// route_modal_dialog_focus_key's, not this gate's), Ctrl+S (save), and
+// route_modal_editor_key's, not this gate's), Ctrl+S (save), and
 // Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
 // so the only NotConsumed keys that can reach route_modal_editor_key's command
 // tail are those last two chords.
-// THE ADMITTED SET GREW EXACTLY ONCE since the dialog arc, and by exactly one
-// shape: bare Tab, from "the settings and load editors only" to "any dialog
-// editor", when the focus ring landed 2026-08-13. (WHAT THE KEY DOES inside
-// that set moved once more the same day — the settings editor's completion
-// took the typed `=` — but the ADMISSION did not, which is why this line is
-// unchanged by it.) Nothing else about the contract moved — Left / Right /
+// THE ADMITTED SET HAS GROWN TWICE since the dialog arc, both times by the TAB
+// FAMILY AND NOTHING ELSE: bare Tab, from "the settings and load editors only"
+// to "any dialog editor", when the focus ring landed 2026-08-13; and THE
+// RING'S REVERSE WALK the same day (architect: "also, shift+tab should cycle
+// backward"), which admits Shift+Tab and the IsoLeftTab keysym in the live
+// marker cycle's own spellings — one predicate, modal_ring_tab_shape above,
+// read here and by the ring alike. (WHAT A TAB DOES inside the set was re-ruled
+// twice more that day and settled on the one autocomplete model — completion
+// first, ring if it did not advance, stated at route_modal_editor_key — without
+// moving the admission either time.) Nothing else about
+// the contract moved — Left / Right /
 // Enter were always admitted as editor keys
 // and still are, and what the ring does with them is decided downstream, on a
 // focus state that did not exist before.
@@ -2994,19 +3028,20 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
-    // BARE TAB, admitted while any DIALOG editor stands (2026-08-13) — the
-    // gate's one addition since the focus ring landed, and a superset of what
-    // it admitted before: the LOAD editor's entry-name autocomplete is a
-    // dialog editor and keeps the key exactly as it had it, while the
-    // commit-title, BPM and (since the `=` ruling later that day) SETTINGS
-    // editors let it walk the ring instead (route_modal_dialog_focus_key owns
-    // which of the two a given Tab is). The top-strip FLAG editor is
-    // deliberately outside it: it is not a dialog, publishes no buttons, and
-    // so has no ring for Tab to walk — bare Tab still drops here while it
-    // stands.
+    // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
+    // (2026-08-13) — a superset of what this gate admitted before: the LOAD
+    // editor's entry-name autocomplete keeps the FORWARD key as its first
+    // meaning, as the SETTINGS editor does, while the commit-title and BPM
+    // editors let it walk the ring from the first press (route_modal_editor_key
+    // owns which of the two a given forward Tab is, under the one autocomplete
+    // model), and the REVERSE shapes walk backwards for all four, completing
+    // nothing anywhere. The top-strip FLAG
+    // editor is deliberately outside it: it is not a dialog, publishes no
+    // buttons, and so has no ring for Tab to walk — its whole Tab family still
+    // drops here while it stands.
     const bool is_dialog_focus_tab =
         (modal_dialog_editor_active() &&
-         key == GuiKeys::Tab && !ctrl && !shift && !alt);
+         modal_ring_tab_shape(key, mods) != ModalRingTab::None);
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
@@ -4320,6 +4355,18 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // settings editor's no-op-on-ambiguity Tab). A unique matching candidate
 // completes fully — its whole string is the common prefix of the singleton.
 //
+// IT RETURNS WHETHER THE BUFFER ADVANCED, the one autocomplete model's whole
+// question (the rule is stated at route_modal_editor_key's Tab arm below): true
+// consumes the Tab, false lets it walk the modal's focus ring. Every early
+// return below is a false — an inactive editor, the `h` mode's foreign
+// vocabulary, no candidate carrying this prefix, a common prefix that does not
+// advance, and a UTF-8 back-off that leaves nothing to add. THAT IS WHAT MAKES
+// A SECOND TAB WALK with no state to remember the first: the buffer is already
+// AT the longest common prefix, so the advancement test below refuses it. And
+// it is what gives the `h` HISTORY MODE a working ring here — a commit spelling
+// or a member number has nothing to complete against, so every Tab in there
+// answers false and steps, a case the pre-ruling model could not reach.
+//
 // THE COMPARISON IS BY BYTE, DELIBERATELY: an entry identifier is a FILESYSTEM
 // PATH, and a path is bytes — it is not text the UTF-8 relaxation covers, and
 // the resolve below matches it byte-exactly against the same strings. Program-
@@ -4340,13 +4387,14 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // since a COMPLETE trailing sequence also ends in continuation bytes. It is a
 // provable no-op for ASCII identifiers: no ASCII byte is a continuation byte, so
 // the loop never takes a step for any name the product writes.
-void GuiInputHandler::load_editor_autocomplete() {
-    if (!text_editor::is_active(app.load_editor)) return;
+bool GuiInputHandler::load_editor_autocomplete() {
+    if (!text_editor::is_active(app.load_editor)) return false;
     // IN THE `h` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
-    // pending is a commit spelling, and the entry identifiers below name renders
-    // this route never reads. A bare Tab is a consumed no-op there rather than a
-    // completion out of the wrong vocabulary.
-    if (app.history_mode.active) return;
+    // pending is a commit spelling or a member number, and the entry
+    // identifiers below name renders this route never reads. Answering false
+    // rather than completing out of the wrong vocabulary is what hands the key
+    // to the ring.
+    if (app.history_mode.active) return false;
     const std::string pending = app.load_editor.pending;
 
     std::vector<AppState::RenderEntry> list =
@@ -4367,7 +4415,7 @@ void GuiInputHandler::load_editor_autocomplete() {
             lcp.resize(i);
         }
     }
-    if (!have) return;                          // no candidate has this prefix
+    if (!have) return false;                    // no candidate has this prefix
     // Back the prefix off to a codepoint boundary (see the note above). Runs
     // BEFORE the advancement test, so a prefix that reached only into the
     // middle of a character correctly collapses to a no-op.
@@ -4375,7 +4423,7 @@ void GuiInputHandler::load_editor_autocomplete() {
            text_editor::is_utf8_continuation_byte(
                static_cast<unsigned char>(first[lcp.size()])))
         lcp.pop_back();
-    if (lcp.size() <= pending.size()) return;   // common prefix does not advance
+    if (lcp.size() <= pending.size()) return false;  // prefix does not advance
 
     app.load_editor.pending          = std::move(lcp);
     app.load_editor.cursor_pos       =
@@ -4383,6 +4431,7 @@ void GuiInputHandler::load_editor_autocomplete() {
     app.load_editor.selection_anchor = -1;
     app.load_editor.red              = false;
     viewport.invalidate_status_row_area();
+    return true;
 }
 
 // Enter handler: resolve the pending to exactly one entry and load it in place.
@@ -4460,13 +4509,20 @@ void GuiInputHandler::load_editor_commit() {
 //   TAB      cycles every stop. On an EDITOR dialog the FIELD is a stop, so
 //            one field and two buttons is three stops, wrapping; on a PROMPT
 //            there is no field and the buttons alone cycle, with the opening
-//            no-focus state a place the ring leaves for good. `field_owns_tab`
-//            is the caller's statement that the field has its own Tab
-//            (autocomplete) — the ring then declines the key there and the
-//            editor's completion runs, unchanged. ONE EDITOR STILL SAYS TRUE:
-//            the load editor, whose entry-identifier completion is on bare Tab
-//            (the settings editor's moved onto the typed `=` on 2026-08-13,
-//            which is what gave THAT editor's field a ring stop Tab can leave).
+//            no-focus state a place the ring leaves for good. AN EDITOR WITH AN
+//            AUTOCOMPLETE GETS FIRST REFUSAL on the field's FORWARD Tab,
+//            upstream of this route — a completion that ADVANCED consumes the
+//            key and this route is never called, one that did not hands it
+//            straight here. The whole model is stated once at
+//            route_modal_editor_key's Tab arm; nothing about it is decided in
+//            this body.
+//   SHIFT+   the REVERSE walk (architect 2026-08-13: "also, shift+tab should
+//   TAB      cycle backward"), the forward arm's exact inverse — the same
+//            stops, the same wrap, the other direction — and it NEVER
+//            COMPLETES: shift means "go back", never "complete", so no
+//            autocomplete is offered on this shape at any site. Its spellings
+//            are the live marker cycle's, one predicate away at
+//            modal_ring_tab_shape.
 //   LEFT /
 //   RIGHT    move between BUTTONS ONLY and are INERT in an editor's field: the
 //            arrows belong to the text there and the editors' own motion arm
@@ -4482,17 +4538,26 @@ void GuiInputHandler::load_editor_commit() {
 //            answer by ruling, so a question can only be answered by a
 //            deliberate step onto a button first.
 //
-// EVERY SHAPE IS BARE-EXACT, the strict-modifier rule: Shift+Tab, Ctrl+Tab and
-// Shift+Left carry real meanings elsewhere (the marker march, the tab cycle,
-// the field's selection extension) and are not this ring's to take.
+// EVERY SHAPE IS BARE-EXACT WITH ONE DELIBERATE EXCEPTION, THE REVERSE WALK:
+// the strict-modifier rule's own text (conventions.md) names THREE families
+// left untightened BECAUSE the modifier is a real binding there — is_tab_cycle,
+// Ctrl+Z's shift-selects-redo, and the editors' motion arm — and the ring's
+// reverse Tab is exactly that shape, shift meaning "go back" here as it does in
+// the marker cycle this ring's spellings mirror. So the modifier guard below
+// admits the reverse shape and refuses every other modified key: Ctrl+Tab
+// (the tab-cycle family's), Shift+Left (the field's selection extension) and
+// the rest are still not this ring's to take.
 // THE OWNER TAG GATES IT like both press claims — the stash is the painter's
 // publication and may only SELECT; the surface that owns input DECIDES. A flag
 // editor publishes no dialog at all, so its ring is empty by construction and
 // every shape here declines.
 bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
-                                                   GuiInputState mods,
-                                                   bool field_owns_tab) {
-    if (mods.ctrl || mods.shift || mods.alt) return false;
+                                                   GuiInputState mods) {
+    const ModalRingTab tab_shape = modal_ring_tab_shape(key, mods);
+    if (tab_shape == ModalRingTab::None &&
+        (mods.ctrl || mods.shift || mods.alt)) {
+        return false;
+    }
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.buttons.empty()) return false;
     const bool prompt_up = app.prompt.active;
@@ -4505,13 +4570,21 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
                     app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
 
     int next = at;
-    if (key == GuiKeys::Tab) {
-        if (at < 0 && !prompt_up && field_owns_tab) return false;
+    if (tab_shape == ModalRingTab::Forward) {
         // The field is a stop only on an editor dialog, which is the one
         // place -1 is a place to come back to.
         if (at < 0)            next = 0;
         else if (at + 1 < n)   next = at + 1;
         else                   next = prompt_up ? 0 : -1;
+    } else if (tab_shape == ModalRingTab::Reverse) {
+        // The exact inverse of the forward arm — the same stops in the same
+        // order, walked the other way, with the same wrap: on an editor
+        // field -> last button -> ... -> first button -> field, on a prompt
+        // the no-focus state is left for good at the first press (onto the
+        // LAST button, the same step bare Left makes from there).
+        if (at < 0)            next = n - 1;
+        else if (at > 0)       next = at - 1;
+        else                   next = prompt_up ? n - 1 : -1;
     } else if (key == GuiKeys::Right) {
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? 0 : (at + 1) % n;
@@ -4561,28 +4634,53 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // Esc/Ctrl+S/Ctrl+Q command set so a roster button whose chord is admitted
 // here dispatches while a dialog editor stands — the two spellings must
 // move together. `autocomplete` is the optional
-// bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
-// Alt + Tab fall through to handle_key unchanged); THE LOAD EDITOR IS ITS ONE
-// PASSER since 2026-08-13, the settings editor having moved its completion
-// onto the typed `=` and joined the commit-title, bpm and flag editors in
-// passing an empty hook.
+// bare-Tab hook, PASSED BY THE SETTINGS AND LOAD EDITORS (the commit-title,
+// bpm and flag editors have no vocabulary to complete and pass an empty hook).
 //
-// THE FOCUS RING RUNS FIRST (2026-08-13; the whole model is at
-// AppState::modal_dialog_focus). It is the ONE addition this route has taken:
-// bare Tab now reaches it for the commit-title and BPM editors too, where the
-// on_key gate used to swallow it, and Left / Right / Enter change meaning
-// ONLY while the focus is on a BUTTON — a state that did not exist before, so
-// every key's behaviour with the focus in the field is byte-identical to what
-// it has always been. THE FIELD'S TAB IS THE ONE PLACE THE TWO CONTEND, and
-// the field wins: an editor that HAS a bare-Tab autocomplete keeps it exactly
-// as before, and the ring's field stop hands the key on rather than stepping
-// (`field_owns_tab` below is that hand-off). THAT IS THE LOAD EDITOR ALONE
-// since later the same day, when the settings editor's completion moved onto
-// the typed `=` at the architect's ruling — so three of the four dialog
-// editors now enter the ring by Tab, and the load editor's own ring is
-// reachable by the arrows and the pointer but not by Tab. That residual is
-// KNOWN AND DELIBERATE, pending an architect ruling on which key the load
-// editor's completion should take; do not invent one for it.
+// THE ONE AUTOCOMPLETE MODEL — the authoritative statement, architect
+// 2026-08-13: "how about first tab autocompletes, second tab (or tab on a
+// non-matching string, i.e. a string that does not autocomplete) moves focus?
+// And we revert the settings editor to that model also — we should use one
+// model for all autocompletes."
+//
+// BARE TAB WITH THE FOCUS IN THE FIELD OFFERS THE COMPLETION FIRST, AND THE
+// COMPLETION'S OWN ANSWER DECIDES: it reports whether it ADVANCED THE BUFFER —
+// advanced, and the key is consumed; did not, and the key falls through to the
+// focus ring. "Second Tab" and "Tab on a string that completes to nothing" ARE
+// THE SAME CONDITION and need no state to tell apart: after a successful
+// completion the next Tab cannot advance (the settings editor's value side is
+// no longer empty, the load editor's buffer is already at the longest common
+// prefix), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
+// AND NO "last key was Tab" BIT anywhere in this model, deliberately — wanting
+// one means the rule has been mis-derived.
+//
+// THE ORDERING, in full:
+//   * Tab with the focus ON A BUTTON walks the ring — a button has no field to
+//     complete, so the hook is not even offered (the test is
+//     modal_dialog_focus < 0, and -1 IS the field on an editor dialog;
+//     AppState::modal_dialog_focus owns that meaning).
+//   * Tab with the focus IN THE FIELD offers the completion, then walks.
+//   * Tab in a dialog editor with NO hook (commit-title, BPM) walks at once.
+//   * SHIFT+TAB NEVER COMPLETES — it is the ring's REVERSE WALK and nothing
+//     else (architect 2026-08-13: "also, shift+tab should cycle backward"),
+//     so the completion is not offered on it at any site: this arm tests the
+//     FORWARD shape alone, and shift means "go back", never "complete". Its
+//     spellings are the live marker cycle's, one predicate away at
+//     modal_ring_tab_shape (bare Tab forward, Shift+Tab and IsoLeftTab back,
+//     the latter shift-agnostic because that keysym rides the Tab key's shift
+//     level).
+//   * The top-strip FLAG editor is not a dialog: it publishes no buttons, has
+//     no ring, and its whole Tab family drops at that gate before this route
+//     sees it.
+// modal_editor_key_blocked's ADMITTED SET grew with the reverse walk and only
+// with it — bare Tab was already admitted for every dialog editor when the ring
+// landed, and the reverse spellings joined it at the same one term, read from
+// the same predicate this arm reads.
+//
+// EVERYTHING ELSE THE RING TOOK is unchanged: Left / Right / Enter change
+// meaning ONLY while the focus is on a BUTTON — a state that did not exist
+// before it — so every key's behaviour with the focus in the field is
+// byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the four
 // dialog surfaces pass invalidate_status_row_area (whose rider carries the
@@ -4590,7 +4688,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
-        const std::function<void()>& autocomplete,
+        const std::function<bool()>& autocomplete,
         const std::function<void()>& commit,
         const std::function<void()>& cancel,
         const std::function<void()>& ctrl_q_teardown,
@@ -4598,13 +4696,18 @@ bool GuiInputHandler::route_modal_editor_key(
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    if (route_modal_dialog_focus_key(key, mods,
-                                     /*field_owns_tab=*/
-                                     static_cast<bool>(autocomplete))) {
+    // THE FIELD'S FIRST REFUSAL ON THE FORWARD TAB (the one autocomplete model
+    // above): offered only with the focus in the field, and consuming the key
+    // only when it advanced the buffer. A false answer falls into the ring
+    // below, which is where a second Tab, an unknown key and an ambiguous
+    // prefix all land — as does every REVERSE shape, which is never offered
+    // here at all.
+    if (autocomplete &&
+        modal_ring_tab_shape(key, mods) == ModalRingTab::Forward &&
+        app.modal_dialog_focus < 0 && autocomplete()) {
         return true;
     }
-    if (autocomplete && key == GuiKeys::Tab && !ctrl && !shift && !alt) {
-        autocomplete();
+    if (route_modal_dialog_focus_key(key, mods)) {
         return true;
     }
     const auto action = text_editor::handle_key(ed, key, mods);
@@ -4637,13 +4740,15 @@ bool GuiInputHandler::route_modal_editor_key(
     return true;  // modal: swallow
 }
 
-// Routes a key to the active load editor through the shared modal
-// route; bare Tab autocompletes the entry identifier.
+// Routes a key to the active load editor through the shared modal route; bare
+// Tab in the field offers the entry-identifier completion and walks the focus
+// ring when it did not advance (the one autocomplete model is stated at
+// route_modal_editor_key).
 bool GuiInputHandler::handle_load_editor_key(GuiKey key,
                                                GuiInputState mods) {
     return route_modal_editor_key(
         app.load_editor, key, mods,
-        [this] { load_editor_autocomplete(); },
+        [this] { return load_editor_autocomplete(); },
         [this] { load_editor_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
@@ -5052,8 +5157,11 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // bracket editor draws in the CENTERED MODAL DIALOG (like the settings editor;
 // its damage rides the status row's dialog rider) and
 // commits into a render sweep, the FlagPayload editor draws in the TOP strip
-// and commits the flag's own payload. Neither passes a bare-Tab hook, and bare
-// Tab never reaches this route for either — the on_key gate swallows it first.
+// and commits the flag's own payload. Neither passes a bare-Tab hook, having no
+// vocabulary to complete: in the BPM editor, a DIALOG, bare Tab walks the
+// modal's focus ring from the first press, while for the top-strip FLAG editor
+// it never reaches this route at all — the on_key gate swallows it, a flag
+// editor publishing no dialog and so no ring (route_modal_editor_key).
 // For both, Ctrl+S saves with the editor left open and Esc / Enter are the
 // session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
@@ -5142,57 +5250,21 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 
 // Settings-prompt editor key routing, through the shared modal route.
 //
-// THE VALUE COMPLETION RIDES `=`, NOT TAB (architect 2026-08-13: "instead of
-// using tab for autocomplete, when the user types a valid key on the settings
-// editor and then hits equal, that should autocomplete — the equal key — and
-// then tab goes back to its normal behavior of walking the fields"). So this
-// editor passes NO autocomplete hook: bare Tab walks the modal's focus ring
-// here exactly as it does in the commit-title and BPM editors, and the
-// completion happens as a CONSEQUENCE of an ordinary typed character.
-//
-// THE TYPED `=` IS THE TRIGGER AND IT FIRES ONLY WHERE IT IS UNAMBIGUOUS: the
-// character just typed must be creating the buffer's FIRST `=`, at the very
-// END of the line. Any other `=` — a second one, one typed into the middle of
-// a line, one inside a value (URLs and free text carry them) — is an ordinary
-// character that completes nothing. The test is split around the route: the
-// PRE half says "no `=` yet, and this key is one" and the POST half says "and
-// it landed at the end, alone", which together also cover every way the insert
-// could not happen at all (the pending cap's refusal, a key the editor did not
-// consume) without this body knowing about any of them.
-//
-// The KEY is read as the platform's resolved CODEPOINT, the same field the
-// editor's own printable-insertion path reads (GuiInputState::codepoint), not
-// as a GuiKey spelling: `=` is whatever the live layout puts under the user's
-// finger, and only the codepoint knows. Ctrl and Alt are excluded by the
-// editor's own classifier before an insertion can happen at all, so the
-// "bare `=` only" rule needs no term here.
-//
-// The completion body itself is unchanged and unmoved
-// (GuiSettingsEditor::autocomplete_value): it already requires an `=`, already
-// refuses a non-empty value side and an unknown key, and already recalls every
-// settings key, engine and GUI-kind alike (recall_gui_setting_value /
-// format_engine_setting_value).
+// THE VALUE COMPLETION IS BARE TAB'S, under the one autocomplete model stated
+// at route_modal_editor_key (architect 2026-08-13: "we should use one model for
+// all autocompletes"). The TYPED `=` carried this completion for part of that
+// day and the trigger is REVERTED with the ruling: an `=` is once more an
+// ordinary character, and this route says nothing about it. Tab offers the
+// recall first and walks the focus ring when it did not advance the buffer, so
+// the completion's own refusals (no `=` yet, a non-empty value side — which is
+// every second Tab — and an unknown key) are exactly the Tabs that step.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
-    const bool eq_may_complete =
-        text_editor::is_active(app.settings_editor) &&
-        mods.codepoint == '=' &&
-        app.settings_editor.pending.find('=') == std::string::npos;
-    const bool consumed = route_modal_editor_key(
+    return route_modal_editor_key(
         app.settings_editor, key, mods,
-        /*autocomplete=*/nullptr,
+        [this] { return settings_editor.autocomplete_value(); },
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_status_row_area(); });
-    if (eq_may_complete && text_editor::is_active(app.settings_editor)) {
-        const std::string& pending = app.settings_editor.pending;
-        if (!pending.empty() && pending.back() == '=' &&
-            pending.find('=') == pending.size() - 1 &&
-            app.settings_editor.cursor_pos ==
-                static_cast<int>(pending.size())) {
-            settings_editor.autocomplete_value();
-        }
-    }
-    return consumed;
 }

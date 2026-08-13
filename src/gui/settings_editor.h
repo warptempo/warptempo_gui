@@ -86,11 +86,8 @@ struct GuiSettingsEditor {
     void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
-    // The value completion, run when the user TYPES the `=` (architect
-    // 2026-08-13, moving it off bare Tab so Tab walks the modal's focus ring
-    // here like everywhere else; the trigger's exact condition is at its one
-    // caller, handle_settings_editor_key) and by open_prefilled: when any
-    // settable key is typed with an empty
+    // The value completion, run on BARE TAB in the field and by open_prefilled:
+    // when any settable key is typed with an empty
     // value side (e.g. `notes=`, `playback_speed=`, `tab_a_trim_begin=`),
     // replace the value side with that key's current live value for recall and
     // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance
@@ -98,7 +95,16 @@ struct GuiSettingsEditor {
     // exception is closed; the remaining edge is stated at the definition).
     // No-op when the value side is already non-empty, when there is no `=`, or
     // when the key is unknown.
-    void autocomplete_value();
+    //
+    // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
+    // MODEL's whole question (architect 2026-08-13: "we should use one model
+    // for all autocompletes" — Tab offers the completion first and walks the
+    // modal's focus ring when it did not advance; the rule is stated once at
+    // route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and the typed
+    // `=` this completion rode for part of that day is reverted with it). Every
+    // no-op above answers false, so each is a Tab that walks. open_prefilled
+    // ignores the answer: it seeds the line either way.
+    bool autocomplete_value();
 
 private:
     // GUI-kind key router. Returns true when `key` is a recognized GUI-kind

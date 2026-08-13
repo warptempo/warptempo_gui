@@ -160,12 +160,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // system has no Enter answer by ruling (PromptState), and a ring that
         // opened on a button would have grown one by the back door. The route
         // is shared with the editor dialogs' — one ring, one owner
-        // (route_modal_dialog_focus_key, input_key_dispatch.cpp); `false` is
-        // the field's-own-Tab hand-off, which a prompt has no field for. The
+        // (route_modal_dialog_focus_key, input_key_dispatch.cpp); a prompt has
+        // no field, so the editors' completion-first Tab arm has no counterpart
+        // here and this call is the whole of the prompt's ring. The
         // response letters below are untouched, so the keyboard contract that
         // existed before this ring is byte-identical.
-        if (route_modal_dialog_focus_key(key, mods,
-                                         /*field_owns_tab=*/false)) {
+        if (route_modal_dialog_focus_key(key, mods)) {
             return;
         }
         char k = 0;

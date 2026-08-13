@@ -1551,12 +1551,15 @@ private:
     // (architect 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
-    // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, passed by
-    // THE LOAD EDITOR ALONE since 2026-08-13, when the settings editor's
-    // completion moved onto the typed `=` (the settings, commit-title, bpm and
-    // flag editors all pass an empty hook now; for the flag editor bare Tab
-    // never arrives at all, the on_key gate swallowing it before this route
-    // sees it). Every OTHER hook is REQUIRED and called unmodified: commit /
+    // `autocomplete` is the ONLY OPTIONAL hook — the FORWARD-Tab one (the
+    // reverse walk never completes), passed by
+    // the SETTINGS and LOAD editors and returning whether it ADVANCED the
+    // buffer, which is what decides between consuming the key and letting it
+    // walk the focus ring (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13,
+    // stated in full at the definition). The commit-title, bpm and flag editors
+    // have nothing to complete and pass an empty hook; for the flag editor bare
+    // Tab never arrives at all, the on_key gate swallowing it before this route
+    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the four dialog surfaces
     // pass the status-lane owner (whose dialog rider carries the stashed box,
@@ -1566,7 +1569,7 @@ private:
     // caller that forgets it is a program bug, not a runtime condition to guard).
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
-                                const std::function<void()>& autocomplete,
+                                const std::function<bool()>& autocomplete,
                                 const std::function<void()>& commit,
                                 const std::function<void()>& cancel,
                                 const std::function<void()>& ctrl_q_teardown,
@@ -1582,10 +1585,11 @@ private:
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor through
-    // route_modal_editor_key. It passes NO autocomplete hook since 2026-08-13:
-    // the value completion rides the TYPED `=` instead of bare Tab (the
-    // architect's ruling, the trigger's exact condition and the recall's own
-    // no-ops are at the definition), so bare Tab walks the focus ring here.
+    // route_modal_editor_key, passing GuiSettingsEditor::autocomplete_value as
+    // the bare-Tab hook: the value completion is Tab's under the one
+    // autocomplete model (architect 2026-08-13 — completion first, the focus
+    // ring when it did not advance; the typed-`=` trigger it wore for part of
+    // that day is reverted with the ruling).
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
     // Load prompt (bare `'`). A dialog modal editor, structural
@@ -1611,14 +1615,16 @@ private:
     // the mode also refuses over a running/parked render and over an empty
     // renders/, both guards being renders-side).
     // load_editor_autocomplete:
-    // bare-Tab longest-common-prefix completion over the entry identifiers; a
-    // no-op in the mode, whose vocabulary it does not speak.
+    // bare-Tab longest-common-prefix completion over the entry identifiers,
+    // returning whether it advanced the buffer (the one autocomplete model, at
+    // route_modal_editor_key); in the mode it speaks neither vocabulary, so it
+    // answers false and the Tab walks the dialog's focus ring instead.
     // load_editor_commit: resolve the pending — to exactly one render entry,
     // or in the mode to a commit — and load it in place.
     // load_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_load_editor_key:
     // the key router, through route_modal_editor_key like the settings editor.
     void open_load_editor();
-    void load_editor_autocomplete();
+    bool load_editor_autocomplete();
     void load_editor_commit();
     void load_editor_exit_no_commit();
     bool handle_load_editor_key(GuiKey key, GuiInputState mods);
@@ -1644,8 +1650,8 @@ private:
     // handle_commit_title_editor_key: the key router, through
     // route_modal_editor_key like the three editors before it. It passes NO
     // autocomplete hook — there is no vocabulary here to complete against, a
-    // commit title being free text — so bare Tab drops at the modal gate exactly
-    // as it does for the bpm and flag editors.
+    // commit title being free text — so bare Tab walks the dialog's focus ring
+    // from the first press, as it does in the bpm editor.
     void open_history_commit_editor();
     void commit_title_editor_commit();
     void commit_title_editor_exit_no_commit();
@@ -2229,13 +2235,16 @@ private:
     // AppState::modal_dialog_focus, the navigation rules at the definition,
     // input_key_dispatch.cpp). Called by the prompt gate (input_handler.cpp)
     // and by route_modal_editor_key, and returns true when it consumed the
-    // key. `field_owns_tab` is the caller's statement that the editor's FIELD
-    // has its own bare-Tab meaning — its autocomplete — which the ring then
-    // declines rather than overrides; a prompt has no field and passes false,
-    // and since 2026-08-13 THE LOAD EDITOR IS THE ONLY editor that passes
-    // true, the settings editor's completion having moved onto the typed `=`.
-    bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods,
-                                      bool field_owns_tab);
+    // key. It takes no statement about the field's own Tab: an editor with an
+    // autocomplete gets FIRST REFUSAL on the FORWARD key upstream, and by the
+    // time a Tab reaches this route the completion has already declined it (the
+    // one autocomplete model, at route_modal_editor_key). The REVERSE walk —
+    // Shift+Tab and IsoLeftTab, the live marker cycle's spellings through the
+    // one predicate modal_ring_tab_shape — is never offered to a completion at
+    // all and is the ring's own one exception to bare-exactness, on the
+    // strict-modifier rule's own untightened-families precedent (cited at the
+    // definition).
+    bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods);
 
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The

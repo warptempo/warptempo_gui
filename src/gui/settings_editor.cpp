@@ -51,7 +51,8 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // side through format_engine_setting_value / recall_gui_setting_value,
     // which is byte-identical to what a Ctrl+S writes; it leaves the cursor at
     // the line end and no-ops on an unrecallable key, so the bare `<key>=` is
-    // the honest fallback rather than an error.
+    // the honest fallback rather than an error. Its bool answer is the TAB
+    // arm's question and means nothing here, so this caller drops it.
     //
     // IT CARRIES NO GATE OF ITS OWN and needs none: it delegates to open()
     // WHOLE, so the read-only refusal (and the modal stop past it) are that one
@@ -65,7 +66,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     app.settings_editor.cursor_pos       =
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
-    autocomplete_value();
+    (void)autocomplete_value();
     viewport.invalidate_status_row_area();
 }
 
@@ -617,16 +618,23 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
-void GuiSettingsEditor::autocomplete_value() {
-    if (!text_editor::is_active(app.settings_editor)) return;
+// Returns whether the buffer CHANGED — the one autocomplete model's question
+// (the rule is stated at route_modal_editor_key's Tab arm,
+// input_key_dispatch.cpp): true consumes the Tab that ran it, false lets that
+// Tab walk the modal's focus ring. Every refusal below answers false.
+bool GuiSettingsEditor::autocomplete_value() {
+    if (!text_editor::is_active(app.settings_editor)) return false;
     const std::string pending = app.settings_editor.pending;
 
     const size_t eq = pending.find('=');
-    if (eq == std::string::npos) return;  // no `key=` yet; nothing to complete
+    // No `key=` yet; nothing to complete.
+    if (eq == std::string::npos) return false;
 
     // Only fill an empty value side, so an in-progress value is never
-    // overwritten. Whitespace-only counts as empty.
-    if (!trim_ws(pending.substr(eq + 1)).empty()) return;
+    // overwritten. Whitespace-only counts as empty. THIS is what makes a
+    // SECOND Tab walk with no state to remember the first: the completion just
+    // written is a non-empty value side.
+    if (!trim_ws(pending.substr(eq + 1)).empty()) return false;
 
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
@@ -655,7 +663,7 @@ void GuiSettingsEditor::autocomplete_value() {
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);
     if (!cur) cur = recall_gui_setting_value(app, key);
-    if (!cur) return;  // unknown key: nothing to recall
+    if (!cur) return false;  // unknown key: nothing to recall
 
     // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The
     // prefix is the typed text up to and including the first `=`, kept
@@ -667,4 +675,9 @@ void GuiSettingsEditor::autocomplete_value() {
     text_editor::replace_selection(app.settings_editor, *cur);
 
     viewport.invalidate_status_row_area();
+    // The literal answer, compared against the buffer this call started from:
+    // recalling an EMPTY value (a blank free-text key such as `audio_player=`)
+    // onto an already-bare `key=` writes the same bytes back and is honestly no
+    // advance, so its Tab walks.
+    return app.settings_editor.pending != pending;
 }
