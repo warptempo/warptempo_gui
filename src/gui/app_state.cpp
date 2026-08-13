@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 int64_t monotonic_ms() {
@@ -404,4 +405,72 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
     // invisible at whole-song scale.
     return static_cast<double>(source_frame_to_active_domain(
         a, audio, static_cast<int64_t>(std::nearbyint(src))));
+}
+
+// THE VIEWPORT BOX'S LANE COLUMNS — the box arithmetic hoisted whole out of
+// paint_overview_strip's layer 3 when the box grew grab handles (the lane
+// rework, 2026-08-12), so painter and hit geometry read ONE derivation and a
+// grabbed edge is exactly a painted one. The LIVE viewport's span in the
+// active domain, inverse-mapped to source columns in target view (the
+// memoized map — the box "does the domain work", the ruled source-domain
+// choice at the painter), wall-clamped, floored at 1px (the span is never
+// nothing). Contract at the declaration (app_state.h).
+bool overview_box_span(const AppState& a, const GuiAudio& audio,
+                       int* out_x0, int* out_x1) {
+    const GuiRect lane = top_overview_row_area(a);
+    const double spp_ov = overview_samples_per_pixel(a, audio);
+    if (spp_ov <= 0.0) return false;
+    const GuiRect area = waveform_area(a);
+    const double  spp  = current_samples_per_pixel(a, audio);
+    if (area.w <= 0 || spp <= 0.0) return false;
+    const int64_t vp_start = a.viewport_start_sample;
+    const int64_t vp_end   = viewport_end_sample(vp_start, spp, area.w);
+    int64_t src_b = vp_start;
+    int64_t src_e = vp_end;
+    if (a.active_audio_view == 'T') {
+        src_b = active_domain_to_source_frame(a, audio, vp_start);
+        src_e = active_domain_to_source_frame(a, audio, vp_end);
+    }
+    const int64_t total = audio.total_frames();
+    if (src_b < 0) src_b = 0;
+    if (src_e > total) src_e = total;
+    int x0 = static_cast<int>(
+        std::nearbyint(static_cast<double>(src_b) / spp_ov));
+    int x1 = static_cast<int>(
+        std::nearbyint(static_cast<double>(src_e) / spp_ov));
+    if (x0 < 0) x0 = 0;
+    if (x0 > lane.w - 1) x0 = lane.w - 1;
+    if (x1 > lane.w) x1 = lane.w;
+    if (x1 < x0 + 1) x1 = x0 + 1;   // >=1px: the span is never nothing
+    *out_x0 = x0;
+    *out_x1 = x1;
+    return true;
+}
+
+// The box endcaps' hit test — the trim endcap model on the box outline's two
+// edge columns (contract and the TrimHit-return reasoning at the declaration,
+// app_state.h). The bands are the 1px edges inflated by the trim bar's own
+// grab width; overlap on a narrow box resolves NEAREST EDGE with Begin
+// winning the exact tie, the trim sort's own tie-break re-expressed over two
+// fixed candidates.
+TrimHit hit_test_overview_endcap(const AppState& a, const GuiAudio& audio,
+                                 int mouse_x, int mouse_y) {
+    const GuiRect lane = top_overview_row_area(a);
+    if (mouse_y < lane.y || mouse_y >= lane.y + lane.h) return TrimHit::None;
+    if (mouse_x < lane.x || mouse_x >= lane.x + lane.w) return TrimHit::None;
+    int x0 = 0;
+    int x1 = 0;
+    if (!overview_box_span(a, audio, &x0, &x1)) return TrimHit::None;
+    const int grab  = trim_endcap_grab_px();
+    const int left  = lane.x + x0;       // the outline's left edge column
+    const int right = lane.x + x1 - 1;   // its right edge column
+    const int dl = std::abs(mouse_x - left);
+    const int dr = std::abs(mouse_x - right);
+    const bool on_left  = dl <= grab;
+    const bool on_right = dr <= grab;
+    if (on_left && on_right)
+        return dl <= dr ? TrimHit::Begin : TrimHit::End;
+    if (on_left)  return TrimHit::Begin;
+    if (on_right) return TrimHit::End;
+    return TrimHit::None;
 }

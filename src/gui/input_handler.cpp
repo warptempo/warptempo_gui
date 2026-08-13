@@ -393,6 +393,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the text-editor handlers; the pointer gestures here — the marker /
     // trim / strip / region drags, the plain-drag grab-pan and its pending
     // click (scroll_drag — one state for both phases since 2026-08-12),
+    // the overview lane's box drag (overview_drag — the pan and the edge
+    // drags, one state for the pending and moved phases since the lane
+    // rework the same day),
     // and the
     // pending marker / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
@@ -404,7 +407,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
-        app.scroll_drag.active ||
+        app.scroll_drag.active || app.overview_drag.active ||
         app.pending_marker_drag.active ||
         app.pending_trim_drag.active) {
         // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding

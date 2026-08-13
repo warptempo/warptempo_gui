@@ -407,6 +407,19 @@ inline constexpr GuiColor kPlayheadHead     = hex(0x8E8F91);
 inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
 inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
 
+// THE OVERVIEW STRIP'S VIEWPORT-BOX OUTLINE (the lane rework, 2026-08-12 —
+// the architect ordered "increase contrast on the outline" when the box grew
+// grab handles; he retunes by recompile if this pick is off). The box wore
+// kRedesignLine #535659 (the chrome-line class) from the lane's landing, and
+// at 24px lane height over kWaveformCanvas #12312b that read too quiet for a
+// surface the pointer now grabs. THE DERIVATION: #c2c2c2 is kRulerLabel's own
+// value — the navigation strip's one bright structural grey, the brightest
+// grey the strip already carries below the paper white — spelled as its own
+// constant by the hard-coded rule (two facts that agree, not one referenced
+// twice). Deliberately GREY and deliberately BELOW kPlayheadStem's #fcfcfc:
+// the lane's one WHITE vertical stays the playhead tick's.
+inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
+
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
 // 1px TOP-EDGE color, and the box carries a 1px LEFT BORDER outside that fill

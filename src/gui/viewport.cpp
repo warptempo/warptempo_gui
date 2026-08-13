@@ -363,10 +363,12 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: BOTH callers —
-    // apply_strip_drag_at and the two-finger touch-nav body
+    // `level_changed` reports a real move, not a request: ALL THREE callers —
+    // apply_strip_drag_at, the two-finger touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
-    // chokepoint per touch frame) — pre-clamp new_level into the same
+    // chokepoint per touch frame) and the overview lane's edge drags
+    // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —
+    // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
     // below, so the pre-assignment compare cannot read a wall-saturated no-op as
     // movement. A both-unchanged frame suppresses nothing either way — mid-gesture

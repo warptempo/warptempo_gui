@@ -266,6 +266,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.trim_drag = TrimDragState{};
     app.strip_drag = StripDragState{};
     app.scroll_drag = ScrollDragState{};
+    app.overview_drag = OverviewDragState{};
     app.double_click = DoubleClickCandidate{};
     app.trim_bar_press = TrimBarPressSeed{};
     // Belt-and-braces: dissolve the shift-range-select anchor on load (the

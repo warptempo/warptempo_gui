@@ -3782,9 +3782,12 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      (overview_content_rect — the lane less its one border row, which
 //      survives every frame) exactly as the plate clips to the waveform's.
 //   3. THE VIEWPORT BOX: a 1px outline marking the visible span, in
-//      kRedesignLine — the chrome-line class (the tab frame, the row
-//      borders), picked over the playhead white so the lane's one WHITE
-//      vertical stays the playhead's alone; no new sample. In TARGET view
+//      kOverviewBoxLine — brightened off kRedesignLine at the lane rework
+//      (2026-08-12, "increase contrast on the outline": the outline is a
+//      GRAB SURFACE now — its edges are the endcap handles below — and the
+//      derivation is at the constant), still grey so the lane's one WHITE
+//      vertical stays the playhead's alone. The span comes from the ONE
+//      owner the hit geometry shares (overview_box_span). In TARGET view
 //      the viewport's target span maps back to source columns through the
 //      memoized inverse map, so the box may BREATHE NONLINEARLY across a
 //      domain switch or a tempo edit — correct, the map is the truth. Drawn
@@ -3803,14 +3806,17 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      lane since commit B moved it into the block (that owner's dedicated
 //      overview rider died with the move).
 //
-// INTERACTION lives elsewhere: the plain drag = the dual-axis strip drag
-// (the press claim in input_pointer.cpp; the anchor mapping at
-// overview_anchor_sample_at_x), the wheel = the stepped pan (wheel_context's
-// overview arm), the cursor = Zoom over the whole lane (the magnifier —
-// Ableton's own hover cue). THE RECORDED LATER PHASE (architect, at the
-// ratification — record, do not build): the BOX-DRAG PAN (grab the box and
-// slide the viewport) and the TRIM-STYLE ZOOM BRACKETS on the box edges; a
-// motionless click stays a consumed nothing until that phase.
+// INTERACTION lives elsewhere (the lane rework, 2026-08-12 — the RECORDED
+// LATER PHASE of the ratification, RESOLVED: the box-drag pan and the
+// trim-style zoom brackets are BUILT, architect-ratified the same day):
+// the box's edges are ENDCAP handles (edge drags mutating the viewport
+// span), a plain press elsewhere TELEPORTS outside the box and grabs it
+// inside, the drag is the box-follows-pointer PAN, the DUAL-AXIS strip drag
+// moved behind CTRL, and the wheel is unchanged (wheel_context's overview
+// arm: plain pan / ctrl zoom step). The press claim and the drag bodies are
+// input_pointer.cpp's; the mappings are overview_anchor_sample_at_x and
+// overview_box_span; cursors: the endcap pair on the edges, TrimResize over
+// the rest of the lane, Zoom under ctrl (pointer_cursor_kind).
 void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
     if (lane.w <= 0 || lane.h <= 0) {
         overview_bar_cache.destroy_surface();
@@ -3915,38 +3921,21 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
         cairo_restore(cr);
     }
 
-    // Layer 3 — the viewport box. The visible span in the ACTIVE domain,
-    // inverse-mapped to source columns in target view (the header's domain
-    // rule; the memoized map answers per call).
+    // Layer 3 — the viewport box, off the ONE span owner the lane's hit
+    // geometry shares (overview_box_span, app_state.cpp — the arithmetic was
+    // this painter's inline block until the box grew grab handles, and the
+    // hoist is what makes a grabbed edge exactly a painted one). The visible
+    // span in the ACTIVE domain, inverse-mapped to source columns in target
+    // view inside the owner (the header's domain rule).
     {
-        const GuiRect area = waveform_area(app);
-        const double  spp  = current_samples_per_pixel(app, audio);
-        if (area.w > 0 && spp > 0.0) {
-            const int64_t vp_start = app.viewport_start_sample;
-            const int64_t vp_end =
-                viewport_end_sample(vp_start, spp, area.w);
-            int64_t src_b = vp_start;
-            int64_t src_e = vp_end;
-            if (app.active_audio_view == 'T') {
-                src_b = active_domain_to_source_frame(app, audio, vp_start);
-                src_e = active_domain_to_source_frame(app, audio, vp_end);
-            }
-            const int64_t total = audio.total_frames();
-            if (src_b < 0) src_b = 0;
-            if (src_e > total) src_e = total;
-            int x0 = static_cast<int>(
-                std::nearbyint(static_cast<double>(src_b) / spp_ov));
-            int x1 = static_cast<int>(
-                std::nearbyint(static_cast<double>(src_e) / spp_ov));
-            if (x0 < 0) x0 = 0;
-            if (x0 > lane.w - 1) x0 = lane.w - 1;
-            if (x1 > lane.w) x1 = lane.w;
-            if (x1 < x0 + 1) x1 = x0 + 1;   // >=1px: the span is never nothing
+        int x0 = 0;
+        int x1 = 0;
+        if (overview_box_span(app, audio, &x0, &x1)) {
             const GuiRect band = overview_content_rect(lane);
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g,
-                                 kRedesignLine.b);
+            cairo_set_source_rgb(cr, kOverviewBoxLine.r, kOverviewBoxLine.g,
+                                 kOverviewBoxLine.b);
             const int bx = lane.x + x0;
             const int bw = x1 - x0;
             // 1px outline: two horizontals across the span's content band,
