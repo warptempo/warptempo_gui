@@ -2393,9 +2393,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                     text_editor::select_word_at(
                         *g.ed, editor_byte_index_at(g, x));
-                    // The dialog editors' repaint owner carries the stashed
-                    // box (the rider at invalidate_status_row_area).
-                    if (g.dialog) viewport.invalidate_status_row_area();
+                    // The dialog editors' repaint owner is the bottom row's
+                    // lane (invalidate_modal_dialog_area).
+                    if (g.dialog) viewport.invalidate_modal_dialog_area();
                     else          viewport.invalidate_top_strip();
                     return;
                 }
@@ -2404,7 +2404,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // pointer then moves.
                 g.ed->selection_anchor = g.ed->cursor_pos;
                 app.editor_text_drag.active = true;
-                if (g.dialog) viewport.invalidate_status_row_area();
+                if (g.dialog) viewport.invalidate_modal_dialog_area();
                 else          viewport.invalidate_top_strip();
                 return;
             }
@@ -2676,6 +2676,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect tab_row = top_tab_row_area(app);
         if (rect_contains(tab_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
+            // THE STATUS CHAIN ON THIS ROW IS POINTER-INERT (it moved here
+            // 2026-08-13): it publishes no rect, so a press over its text is
+            // the band's own consumed nothing, exactly as the empty tail past
+            // the last tab already was. The tabs and the active tab's padlock
+            // are still this row's only targets.
+            //
             // THE ROW IS THE WALK SELECTOR WHILE THE `h` VIEW STANDS (architect
             // 2026-08-05 for the repurposing, 2026-08-08 for the axis), so its
             // presses are routed HERE and never reach the chord table below:
@@ -2783,9 +2789,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // modality then answers the dispatched chord exactly as it answers the
     // key), above the loading/empty guard, ctrl/alt strict no-ops, and every
     // press in the band that is not on a button a consumed nothing — which
-    // since the unification includes the whole clock-and-status right side,
-    // the lane's pointer-inert tenants (text takes no clicks there, exactly
-    // as the old status lane took none). The
+    // since the unification includes the clock cell and the bare ground
+    // beside it, the lane's pointer-inert span (the status chain that shared
+    // that ground until 2026-08-13 took no clicks either, and took none away
+    // with it). The
     // lane rests on the WINDOW'S FOOT
     // since the relayout's commit B, so NOTHING is below it; ABOVE it lies GAP
     // 2's blank window ground, outside every band and falling through to the
@@ -3743,7 +3750,7 @@ void GuiInputHandler::finalize_editor_text_drag() {
         // matching the existing click-to-caret.
         if (g.ed->selection_anchor == g.ed->cursor_pos)
             g.ed->selection_anchor = -1;
-        if (g.dialog) viewport.invalidate_status_row_area();
+        if (g.dialog) viewport.invalidate_modal_dialog_area();
         else          viewport.invalidate_top_strip();
     }
     app.editor_text_drag.active = false;
@@ -6168,7 +6175,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // The anchor set at press stays put; moving cursor_pos extends
             // the selection.
             set_editor_caret_from_x(g, mouse_x);
-            if (g.dialog) viewport.invalidate_status_row_area();
+            if (g.dialog) viewport.invalidate_modal_dialog_area();
             else          viewport.invalidate_top_strip();
         }
         // !g.valid (only an invalid editor target — the lane text stays

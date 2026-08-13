@@ -1588,7 +1588,7 @@ private:
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the four dialog surfaces
-    // pass the status-lane owner (whose dialog rider carries the stashed box,
+    // pass the modal's own owner (the bottom row's lane,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
@@ -1789,14 +1789,14 @@ private:
 
     // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
     // trim-SETTING commit runs the same acts in the same order
-    // (auto_clear_crossed_trim, the waveform + status-lane repaints, the
+    // (auto_clear_crossed_trim, the waveform + status-chain repaints, the
     // target-render trigger, then the playhead park above), and this member is
     // their one spelling. FOUR
     // CALLERS — `x`'s set-from-region (handle_trim_x), the drag release
     // (commit_trim_drag) and the bound-set click (set_trim_bound_at_click), all
     // input_trim.cpp, plus the settings editor's `:trim_*=` active-tab arm
     // (settings_editor.cpp, reaching it through the friendship above; its
-    // status-lane repaint rides applied() as well, harmlessly twice).
+    // status-chain repaint rides applied() as well, harmlessly twice).
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:

@@ -77,7 +77,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
 
     // Re-affirm the playhead on the just-dropped marker. The drop is authored
     // AT the playhead (drop_copy_previous_at_playhead — the `s` command and the
@@ -224,7 +224,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // No synchronous re-warp: warp authoring lives in the source home view (see
     // drop_marker), where the source waveform has no map-dependent plate to
     // re-warp. The view-independent target preview trigger stays.
@@ -335,7 +335,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // No synchronous re-warp: the Ctrl+N pass toggle authors the warp store in
     // the source home view only (see drop_marker), where the source waveform
     // has no map-dependent plate to re-warp. The target preview trigger stays.
@@ -365,7 +365,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // No synchronous re-warp: this is the WARP column's disable toggle, which
     // authors in the source home view only (see drop_marker), where the source
     // waveform has no map-dependent plate to re-warp. The target preview trigger
@@ -539,7 +539,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // repaint. In target view the synchronous re-warp below repaints anyway; this
     // is the cheaper honest owner for both.
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // Discrete warp_frame_map change that CAN run in target view: the Up/Down
     // step is a
     // warp authoring gesture reachable off its source home (the ruled exception
@@ -687,7 +687,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // repaint. In target view the synchronous re-warp below repaints anyway; this
     // is the cheaper honest owner for both.
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
     // post-step image: the marker lane owns the playhead (the rule is stated in

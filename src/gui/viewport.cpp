@@ -83,31 +83,24 @@ void Viewport::invalidate_waveform_area() {
     gui.invalidate_region(0, y0, app.width, y1 - y0);
 }
 
-void Viewport::invalidate_status_row_area() {
-    const GuiRect t = status_row_invalidate_rect(app);
+// THE STATUS CHAIN'S DAMAGE — the TAB ROW's lane whole (the chain moved there
+// 2026-08-13). The caller inventory and the reasoning for taking the lane
+// rather than a span of it are at the declaration, viewport.h.
+void Viewport::invalidate_status_chain_area() {
+    const GuiRect t = top_tab_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
-    // THE MODAL RIDES THIS OWNER (2026-08-12; unchanged when the modal moved
-    // ONTO this row on 2026-08-13): while one stands, the damage carries the
-    // modal's stashed surface too — which is now the bottom row's whole lane,
-    // border-top included, so this call covers every modal pixel outright.
-    // The four modal editors' every repaint site — typing, the caret blink,
-    // the red flash, the commit/abandon closers, the F2.1 caret and drag —
-    // already speaks this call from their bottom-strip tenancy; ONE rider
-    // here keeps every one of them honest instead of re-classifying dozens of
-    // sites per surface. IT IS KEPT RATHER THAN DERIVED even though the cell
-    // rects widen to the same lane while a modal stands (the painter zeroes
-    // the clock's cell in that state, and a zero cell answers the whole lane
-    // at status_row_invalidate_rect): the rider states the coverage directly
-    // instead of resting it on two fallbacks, and a union of a rect with
-    // itself costs nothing. With no modal stashed this is a dead test. The
-    // stash is the PAINTER's (paint_modal_dialog), so a closer that runs
-    // between paints still damages what the last frame drew, which is exactly
-    // the erase it owes; the OPENERS cannot ride it (nothing is stashed
-    // before the first paint) and invalidate the whole window instead.
-    if (app.modal_dialog.valid) {
-        const GuiRect& d = app.modal_dialog.box;
-        gui.invalidate_region(d.x, d.y, d.w, d.h);
-    }
+}
+
+// THE MODAL'S DAMAGE — the unified bottom row's lane whole, which IS the
+// modal's surface since it moved onto the row (2026-08-13). No stash rider and
+// no cell arithmetic: the row yields whole while a dialog stands, so the lane
+// is both the smallest rect that covers the modal and the rect a CLOSER owes
+// (it must erase the modal AND bring the row's own tenants back). The OPENERS
+// do not come through here — nothing is painted before a surface's first paint,
+// so they invalidate the whole window. Caller inventory at the declaration.
+void Viewport::invalidate_modal_dialog_area() {
+    const GuiRect t = bottom_row_area(app);
+    gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
 void Viewport::invalidate_clock_area() {

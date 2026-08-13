@@ -895,43 +895,16 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// THE STATUS CELL'S RECT — the unified bottom row's middle-right span, from
-// the clock's reserved cell to the ARROW CLUSTER's left edge (the four
-// cardinal arrows sit flush at the lane's right margin since the 2026-08-12
-// relayout), the span the right-aligned
-// status chain (the critical chip + section C) paints in. The chain never
-// paints left of the clock cell or right of the arrows (the painter's
-// collision rule at
-// paint_bottom_strip), so this rect covers every pixel a status-string write
-// can move; the buttons at both margins damage themselves through their own
-// face writers, and a clock advance takes the cell below instead (the two
-// cells' owners are contrasted at the declaration, app_state.h). The right
-// boundary is the painter's own TransportLeft stash — the same publication
-// the chain's clip reads — so cell and paint cannot drift.
-// (The dirty flag is not a sharer either: it lives in the window title, which
-// the compositor repaints, so a dirty transition damages nothing of ours.)
-//
-// BEFORE THE ROW'S FIRST PAINT the clock stash is zero and the answer is the
-// WHOLE lane — the honest widening, and unreachable in practice: the first
-// frame damages the window entire (the arrow stash starts zero too, and its
-// fallback is the lane's right edge for the same reason).
-// THE SAME ZERO IS THE MODAL'S ANSWER (2026-08-13): while a prompt or a dialog
-// editor stands the row yields whole and its painter zeroes the clock cell, so
-// this widens to the lane — which is exactly the modal's surface, and exactly
-// what a status write during a modal owes. The arrow stash is zero then too
-// and is never consulted: the cell test above has already returned.
-GuiRect status_row_invalidate_rect(const AppState& a) {
-    const GuiRect lane = bottom_row_area(a);
-    const GuiRect cell = a.clock_cell_rect;
-    if (cell.w <= 0 || cell.h <= 0) return lane;
-    const int x0 = cell.x + cell.w;
-    const GuiRect arrows = a.redesign_buttons[
-        redesign_button_index(RedesignButton::TransportLeft)].rect;
-    const int x1 = (arrows.w > 0 && arrows.h > 0) ? arrows.x
-                                                  : lane.x + lane.w;
-    if (x1 <= x0) return lane;   // degenerate stash order: the honest widening
-    return GuiRect{x0, lane.y, x1 - x0, lane.h};
-}
+// (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
+// the whole status chain into the TAB ROW: "just put that text in the tab row,
+// there's plenty of space there". The bottom row's middle-right span it named
+// — from the clock's reserved cell to the arrow cluster's left edge — has no
+// tenant left, so the span arithmetic, its degenerate-order widening and its
+// two pre-first-paint fallbacks all went with it, and the painter's
+// TransportLeft stash is read by the roster machinery alone again. The chain's
+// damage owner is Viewport::invalidate_status_chain_area, which takes the tab
+// row's LANE whole; the bottom row's remaining two owners are the clock cell
+// below and Viewport::invalidate_modal_dialog_area's lane.)
 
 // THE CLOCK'S RECT — the unified bottom row's reserved centre cell as the
 // painter last drew it (AppState::clock_cell_rect, whose stash contract is at
@@ -1025,8 +998,9 @@ int main(int argc, char** argv) {
     // -- Viewport + invalidation helpers ------------------------------------
     //
     // The viewport-mutation and invalidation helpers are methods on the
-    // Viewport struct (viewport.{cpp,h}), including the bottom row's two
-    // cell owners, invalidate_status_row_area and invalidate_clock_area. Every other
+    // Viewport struct (viewport.{cpp,h}), including the tab row's
+    // invalidate_status_chain_area and the bottom row's own two,
+    // invalidate_clock_area and invalidate_modal_dialog_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
     // below — stop_playback_if_playing / toggle_playback / set_playback_speed
     // on playback_lifecycle, save on save_ops, request_close /
@@ -1254,7 +1228,7 @@ int main(int argc, char** argv) {
         [&](int x, int y) { input_handler.update_touch_region(x, y); },
         [&]() { input_handler.end_touch_region(); });
 
-    auto invalidate_status_row_area  = [&]() { viewport.invalidate_status_row_area(); };
+    auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -1968,20 +1942,20 @@ int main(int argc, char** argv) {
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
                 if (is_dialog)
-                    invalidate_status_row_area();
+                    invalidate_modal_dialog_area();
                 else
                     invalidate_top_strip();
             }
         }
         // Same shape for the settings prompt (a dialog editor); the
-        // status-lane owner's rider carries the dialog's stashed box.
+        // modal's own owner is the bottom row's lane.
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
-                invalidate_status_row_area();
+                invalidate_modal_dialog_area();
             }
         }
         // Same shape for the load prompt.
@@ -1991,7 +1965,7 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.load_editor);
             if (now_visible != app.load_editor_blink_last) {
                 app.load_editor_blink_last = now_visible;
-                invalidate_status_row_area();
+                invalidate_modal_dialog_area();
             }
         }
         // And for the history view's commit-title editor.
@@ -2001,7 +1975,7 @@ int main(int argc, char** argv) {
                 text_editor::cursor_visible_now(app.commit_title_editor);
             if (now_visible != app.commit_title_editor_blink_last) {
                 app.commit_title_editor_blink_last = now_visible;
-                invalidate_status_row_area();
+                invalidate_modal_dialog_area();
             }
         }
 

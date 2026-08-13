@@ -67,7 +67,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
     (void)autocomplete_value();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
 }
 
 // THE ONE OPENER, and the ONE read-only decision for this whole surface.
@@ -121,7 +121,7 @@ void GuiSettingsEditor::open() {
 
 void GuiSettingsEditor::exit_no_commit() {
     if (!text_editor::is_active(app.settings_editor)) return;
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
 }
 
@@ -139,7 +139,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                            const std::string& value) {
     auto reject = [&](const std::string& reason) {
         app.settings_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: Settings edit rejected: %s\n", reason.c_str());
     };
@@ -147,14 +147,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         std::fprintf(stderr,
             "warptempo_gui: Setting applied: %s=%s\n",
             key.c_str(), value.c_str());
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
     };
     auto unchanged = [&]() {
         std::fprintf(stderr,
             "warptempo_gui: Setting unchanged: %s=%s\n",
             key.c_str(), value.c_str());
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
     };
 
@@ -361,7 +361,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // (GuiInputHandler::commit_trim_mutation, input_trim.cpp): the
             // crossed-commit reset first — a bound committed onto/across its
             // partner resets the pair to the song edges, silently — then the
-            // waveform + status-lane repaints and the target-render trigger.
+            // waveform + status-chain repaints and the target-render trigger.
             // History-less, like all trim. The timestamp invalidate also rides
             // applied() below; raising it twice costs nothing — the damage list
             // coalesces by containment, so the identical rect is dropped.
@@ -413,7 +413,7 @@ void GuiSettingsEditor::commit() {
     const size_t eq = pending.find('=');
     auto reject = [&](const char* reason) {
         app.settings_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: Settings edit rejected: %s\n", reason);
     };
@@ -445,14 +445,14 @@ void GuiSettingsEditor::commit() {
             std::fprintf(stderr,
                 "warptempo_gui: Setting unchanged: %s=%s\n",
                 key.c_str(), value.c_str());
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_modal_dialog_area();
             text_editor::deactivate(app.settings_editor);
             return;
         }
         app.projects_repo = value;
         std::fprintf(stderr, "warptempo_gui: projects_repo set: '%s'\n",
             value.c_str());
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
         return;
     }
@@ -462,14 +462,14 @@ void GuiSettingsEditor::commit() {
             std::fprintf(stderr,
                 "warptempo_gui: Setting unchanged: %s=%s\n",
                 key.c_str(), value.c_str());
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_modal_dialog_area();
             text_editor::deactivate(app.settings_editor);
             return;
         }
         app.audio_player = value;
         std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
             value.c_str());
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
         return;
     }
@@ -487,7 +487,7 @@ void GuiSettingsEditor::commit() {
     // snapshot on the undo stack reflects the pre-edit settings.
     if (!is_canonical_engine_key(key)) {
         app.settings_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: Settings edit rejected: unknown engine key "
             "'%s'\n", key.c_str());
@@ -498,7 +498,7 @@ void GuiSettingsEditor::commit() {
     std::string reason;
     if (!validate_engine_setting(key, value, candidate, reason)) {
         app.settings_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: Settings edit rejected: key '%s' has invalid "
             "value '%s': %s\n",
@@ -514,7 +514,7 @@ void GuiSettingsEditor::commit() {
     // app.engine_settings.
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         app.settings_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: Settings edit rejected: this would make the "
             "render output overwrite the source file (%s); choose a "
@@ -538,7 +538,7 @@ void GuiSettingsEditor::commit() {
         std::fprintf(stderr,
             "warptempo_gui: Setting unchanged: %s=%s\n",
             key.c_str(), cur_serialized->c_str());
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
         return;
     }
@@ -551,7 +551,7 @@ void GuiSettingsEditor::commit() {
         "warptempo_gui: Setting applied: %s=%s\n",
         key.c_str(), value.c_str());
 
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
     // WHOLESALE REGION CLEAR at the engine-commit chokepoint (architect
     // 2026-07-29): the scale is a warp-map input,
@@ -674,7 +674,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     app.settings_editor.selection_anchor = -1;
     text_editor::replace_selection(app.settings_editor, *cur);
 
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     // The literal answer, compared against the buffer this call started from:
     // recalling an EMPTY value (a blank free-text key such as `audio_player=`)
     // onto an already-bare `key=` writes the same bytes back and is honestly no

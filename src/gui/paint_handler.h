@@ -45,22 +45,30 @@ class GuiWaveformWorker;
 // ONE text size since row 7 — lives in render.h so render.cpp can reach it
 // without pulling paint_handler.h into the lower-layer include graph.
 
-// THE BOTTOM ROW'S PAD — the status chain's one spacing constant,
-// MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
-// row's 16px size puts the pen at x = 13 (12 and 14 both fit worse; the fit is
-// at the crop's left edge, which is the window's; the architect confirmed the
-// crop's x0 is the window edge at the relayout). Authored at 100% and scaled
-// on gui_scale_factor() like every other redesigned dimension, rounded with
-// std::nearbyint so it stays an integer.
+// THE STATUS CHAIN'S PAD, MEASURED off row_7_text.png: fitting the crop's own
+// string offscreen at the row's 16px size puts the pen at x = 13 (12 and 14
+// both fit worse; the fit is at the crop's left edge, which is the window's;
+// the architect confirmed the crop's x0 is the window edge at the relayout).
+// Authored at 100% and scaled on gui_scale_factor() like every other
+// redesigned dimension, rounded with std::nearbyint so it stays an integer.
 //
-// ONE CONSTANT, THREE USES in the unified row's status chain (re-derived at
-// the row unification, 2026-08-12, which right-aligned the chain and retired
-// the left lead-in — nothing on the row left-aligns text any more, the button
-// cluster opening with the icon row's own pad instead): the RIGHT margin the
-// chain aligns to, the gap between the CLOCK's reserved cell and the chain's
-// left clip bound, and — on a row carrying a critical message — the gap
-// between the critical chip and section C inside the chain. The reuse is an
-// eye-consistency choice, stated at the painter.
+// ONE CONSTANT, TWO USES, and it TRAVELLED WITH THE CHAIN when the architect
+// moved it into the tab row (2026-08-13): the RIGHT margin the chain aligns to
+// — the tab row's right edge now, the bottom row's arrow cluster before that —
+// and, on a row carrying a critical message, the gap between the critical chip
+// and section C inside the chain. The measured number is kept across the move
+// so the chain's own spacing did not change under it. (Its third use, the gap
+// from the bottom row's clock cell to the chain's left clip bound, died with
+// that bound.)
+inline int status_chain_pad_x() {
+    return scaled_px(13.0);
+}
+
+// THE BOTTOM ROW'S PAD — the modal dialog's left and right margin, and since
+// 2026-08-13 that surface's alone: it is the pad the row's own tenants sit on,
+// which is why the modal that displaces them takes it. Same measured 13 as the
+// chain's above and deliberately a SEPARATE accessor — two surfaces on two
+// rows that happen to agree today, not one shared fact.
 inline int bottom_row_pad_x() {
     return scaled_px(13.0);
 }
@@ -669,7 +677,9 @@ private:
     // sampled ground plus the "File", "Navigation" and "Settings" menu
     // buttons and the view bar), the TAB ROW
     // (top lane 1, row 3: the
-    // "A"/"B" Breeze tabs, their frame and its broken border-bottom), the
+    // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
+    // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
+    // the
     // ICON ROW (top lane 2, row 4: the twenty-nine view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
     // — their
@@ -697,6 +707,16 @@ private:
     // its four buttons are the icon row's first group.)
     void paint_menu_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
+    // THE STATUS CHAIN — the critical chip then section C's four-tier ladder,
+    // right-aligned at the TAB ROW's right margin (architect 2026-08-13). Called
+    // from paint_tab_row ALONE and BEFORE its tab walk, which is the whole
+    // collision rule: the tabs paint over the chain and win, and text pushed
+    // under a tab is accepted. Takes the row's already-selected face and its
+    // lane so the chain and the tab labels cannot resolve two baselines. The
+    // full layout record, the tier ladder and the chip's derived box are at the
+    // definition.
+    void paint_status_chain(cairo_t* cr, const GuiRect& lane, int content_h,
+                            cairo_scaled_font_t* font);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the arrows flush right since the same day's relayout): the
@@ -811,7 +831,7 @@ private:
     // the ruling and for why the cursor did NOT move with it.
     void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
-    void paint_bottom_strip(cairo_t* cr, int sr);
+    void paint_bottom_strip(cairo_t* cr);
     // THE OVERVIEW STRIP (top lane 3 since the relayout's commit B, 2026-08-12
     // — the Ableton model): the lane's kWaveformCanvas ground under its ONE
     // kWaveformBorder row at the bottom edge, the cached whole-song bars

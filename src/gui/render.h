@@ -1244,11 +1244,14 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B moved the overview strip up
-// into the centered block): the transport/arrow buttons on the left, the
-// monospace clock centered, and the status chain (the critical chip + section C)
-// right-aligned, all one line AT THE WINDOW'S FOOT, with the flexible blank
+// into the centered block): the transport four on the left, the monospace
+// clock centered, the four cardinal arrows flush right, all one line AT THE
+// WINDOW'S FOOT, with the flexible blank
 // gap 2 between it and the waveform above
-// it. The SUCCESSION: the status line landed as row 7 (2026-08-01, the
+// it. (The STATUS CHAIN — the critical chip + section C — right-aligned on
+// this lane from the unification until 2026-08-13, when the architect moved it
+// into the tab row; the height below is unaffected, its derivation being the
+// BUTTON's.) The SUCCESSION: the status line landed as row 7 (2026-08-01, the
 // two-lane bottom strip collapsing to one — its crops keep that name), was
 // renumbered row 9 when the transport row (row 8, 2026-08-11, the touch arc's
 // first surface) stacked above it, and both lanes merged into this one a day

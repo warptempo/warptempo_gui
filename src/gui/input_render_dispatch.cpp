@@ -191,12 +191,11 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the status cell before clearing queue_progress_text.
-    // status_row_invalidate_rect() covers the unified bottom row's status
-    // cell — the right-aligned chain's whole span — and the label lives
-    // nowhere else; keep this
+    // Invalidate the status chain before clearing queue_progress_text.
+    // invalidate_status_chain_area covers the TAB ROW's lane — the chain's
+    // home since 2026-08-13 — and the label lives nowhere else; keep this
     // ordering consistent with the other status-clear paths.
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     app.queue_progress_text.clear();
     // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
     // DIE HERE or a rung-served run — which never promoted, so this clear of the
@@ -232,7 +231,7 @@ void GuiInputHandler::park_render_status(std::string text) {
     if (status_promoted_) {
         // Invalidate before clearing, the ordering every status-clear path here
         // keeps.
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
         app.queue_progress_text.clear();
         status_promoted_ = false;
     }
@@ -308,8 +307,35 @@ void GuiInputHandler::tick_promote_render_status() {
     // the next park retract it and keeps that retraction from touching another
     // owner's message.
     status_promoted_ = true;
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
 }
+
+// THE FIELD REPORT OF 2026-08-13 AND WHAT IT ACTUALLY WAS, recorded here
+// because this is the site the answer lives at. The architect reported that
+// "Rendering..." and "Updating..." had stopped appearing since the 2026-08-12
+// relayout, and the chain was moved into the tab row that day. THE MOVE FIXED
+// NO DEFECT, and must not be credited with one: the whole path was re-traced
+// against the shipped tree — the writers, this promotion, the damage owner's
+// rect (a 774px live span at 1920x1080), the painter's own exposure gate, the
+// degenerate-span guard and the frame-class gating — and every link was sound.
+// Three facts explain the report, none of them a bug:
+//   * THE RUNG SILENCE IS THE 2026-08-08 RULING ITSELF. do_render's three
+//     reuse rungs all return ABOVE the synthesis_started store, so an archival
+//     render served by an up-to-date artifact, a project-artifact byte copy or
+//     a render-cache publish shows NOTHING — which is the point of parking the
+//     message. Re-rendering an unchanged recipe is exactly that case.
+//   * THE PREVIEW HAS THE SAME SHAPE: stamp_updating fires only on the
+//     synthesis miss and on trigger()'s busy branch, so a preview resolved on
+//     either synchronous rung (undo/redo A->B->A, an S->T entry with a current
+//     fingerprint, an out-of-window phase-reset edit) is silent too.
+//   * A SINGLE EDIT'S LABEL CAN LIVE BETWEEN TWO FRAMES. The stamp and the
+//     completion clear are both GUI-thread and nothing forces a paint between
+//     them; the run HOLD covers repeat runs only, by design (the timeline at
+//     GuiTargetRender::stamp_updating states the ~40ms single-tap lifetime).
+// What the relayout DID change is where a shown label lands: the chain went
+// from the bottom-LEFT lead-in to the gutter between the clock and the arrows.
+// The 2026-08-13 move to the tab row's top right addresses that and nothing
+// else.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
     if (app.active_audio_view == 'T' &&

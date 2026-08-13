@@ -619,7 +619,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and the bottom row's status corner rewrites its `n/N shortsha`.
+    // with it, and the tab row's status chain rewrites its `n/N shortsha`.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It
     // covers the restore's and the republication's own damage too, which is why
@@ -2146,7 +2146,7 @@ void GuiInputHandler::open_history_commit_editor() {
 
 void GuiInputHandler::commit_title_editor_exit_no_commit() {
     if (!text_editor::is_active(app.commit_title_editor)) return;
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.commit_title_editor);
 }
 
@@ -2176,11 +2176,11 @@ void GuiInputHandler::commit_title_editor_commit() {
                        std::string::npos;
     if (blank) {
         app.commit_title_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         return;
     }
     text_editor::deactivate(app.commit_title_editor);
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     run_history_commit(title);
 }
 
@@ -2196,7 +2196,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
         [this] { commit_title_editor_commit(); },
         [this] { commit_title_editor_exit_no_commit(); },
         [this] { commit_title_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_status_row_area(); });
+        [this] { viewport.invalidate_modal_dialog_area(); });
 }
 
 // THEN DO IT — the commit-title editor's Enter, and the only caller.
@@ -2508,11 +2508,11 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // a moment ago and is exactly as much a change as setting one), while
     // Unconfirmed writes only into an empty slot and may well leave the row
     // untouched. Damaging anyway costs one repaint of one row on a keypress-rare
-    // event and needs no arm to remember it. This is the bottom strip's one
-    // invalidation
-    // (invalidate_status_row_area — the row's damage owner since it carried only
-    // the clock), the same call every transient-status writer makes.
-    viewport.invalidate_status_row_area();
+    // event and needs no arm to remember it. This is the chip's one
+    // invalidation (invalidate_status_chain_area — the TAB ROW's lane, where
+    // the chip has been the chain's leftmost member since 2026-08-13), the
+    // same call every transient-status writer makes.
+    viewport.invalidate_status_chain_area();
 }
 
 // -- THE REVERT ACT --------------------------------------------------------
@@ -3842,7 +3842,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing: it marks the
@@ -4109,7 +4109,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     viewport.invalidate_clock_area();
 
     // The tail's trigger owns the rebind for a 'T' landing.
@@ -4283,7 +4283,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // HARMLESS OVER-DAMAGE, not a cursor land: a timeline state carries no
     // band, so this tail never writes the live playhead (the auto-select above
     // fires only where the land is a provable no-op) — the clock inventory
@@ -4353,14 +4353,14 @@ void GuiInputHandler::open_load_editor() {
         // batch may be irreplaceable queued work; Esc is the explicit cancel.
         if (app.queue_running || app.pending_archival.armed) {
             app.transient_status_message = "Render running; Esc cancels it";
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_status_chain_area();
             return;
         }
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
             app.transient_status_message = "No renders to load in place";
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_status_chain_area();
             return;
         }
     }
@@ -4395,7 +4395,7 @@ void GuiInputHandler::open_load_editor() {
 
 void GuiInputHandler::load_editor_exit_no_commit() {
     if (!text_editor::is_active(app.load_editor)) return;
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.load_editor);
 }
 
@@ -4480,7 +4480,7 @@ bool GuiInputHandler::load_editor_autocomplete() {
         static_cast<int>(app.load_editor.pending.size());
     app.load_editor.selection_anchor = -1;
     app.load_editor.red              = false;
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
     return true;
 }
 
@@ -4508,7 +4508,7 @@ void GuiInputHandler::load_editor_commit() {
 
     auto reject = [&]() {
         app.load_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
     };
 
     if (app.history_mode.active) {
@@ -4517,7 +4517,7 @@ void GuiInputHandler::load_editor_commit() {
                 ? load_history_local_entry_in_place(pending)
                 : load_history_commit_in_place(pending);
         if (loaded) {
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_modal_dialog_area();
             text_editor::deactivate(app.load_editor);
         } else {
             reject();
@@ -4541,7 +4541,7 @@ void GuiInputHandler::load_editor_commit() {
     // the copy is self-contained (paths + basename), so it stays valid.
     const AppState::RenderEntry entry = *found;
     if (load_render_entry_in_place(entry)) {
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.load_editor);
     } else {
         reject();
@@ -4776,8 +4776,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the four
-// dialog surfaces pass invalidate_status_row_area (whose rider carries the
-// dialog's stashed box, viewport.cpp), the top-strip flag editor
+// dialog surfaces pass invalidate_modal_dialog_area (the bottom row's lane,
+// which IS the modal's surface, viewport.cpp), the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
@@ -4883,7 +4883,7 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
         [this] { load_editor_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_status_row_area(); });
+        [this] { viewport.invalidate_modal_dialog_area(); });
 }
 
 // P / I / M letter-key handlers. See the declaration for the chord list.
@@ -5121,14 +5121,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         if (app.audio_player.empty()) {
             app.transient_status_message = "No audio_player set";
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_status_chain_area();
             return true;
         }
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
             app.transient_status_message = "No renders to play";
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_status_chain_area();
             return true;
         }
         std::vector<std::string> wavs;
@@ -5285,8 +5285,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // Top-flag editor key routing. See the declaration for the consumed/command
 // contract. BOTH kinds take the shared modal route (architect 2026-07-28) and
 // differ only in their commit / cancel bodies and their repaint area: the bpm
-// bracket editor draws in the CENTERED MODAL DIALOG (like the settings editor;
-// its damage rides the status row's dialog rider) and
+// bracket editor draws in the MODAL DIALOG on the bottom row (like the settings
+// editor; its damage is that row's own lane owner) and
 // commits into a render sweep, the FlagPayload editor draws in the TOP strip
 // and commits the flag's own payload. Neither passes a bare-Tab hook, having no
 // vocabulary to complete: in the BPM editor, a DIALOG, bare Tab walks the
@@ -5336,7 +5336,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] {
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
-                viewport.invalidate_status_row_area();
+                viewport.invalidate_modal_dialog_area();
             },
             [this] {
                 // Ctrl+Q tears the editor and the mode down together
@@ -5344,7 +5344,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
             },
-            [this] { viewport.invalidate_status_row_area(); });
+            [this] { viewport.invalidate_modal_dialog_area(); });
     }
     // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
     // on a red-flash EDGE. The invalid-commit flash reaches the marker's STEM
@@ -5397,5 +5397,5 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { settings_editor.exit_no_commit(); },
-        [this] { viewport.invalidate_status_row_area(); });
+        [this] { viewport.invalidate_modal_dialog_area(); });
 }

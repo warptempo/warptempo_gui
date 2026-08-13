@@ -136,15 +136,16 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the
-    // tick. The bottom strip's TWO lane owners then cover what the sync rebuild
-    // does not, each named for the pixels it erases: the STATUS lane for the
+    // tick. TWO OWNERS then cover what the sync rebuild
+    // does not, each named for the pixels it erases: the STATUS CHAIN for the
     // readout, whose eligibility reads the marker view, and the CLOCK CELL for
-    // the restored playhead. (The A/B letter the status lane also used to cover
+    // the restored playhead. (The A/B letter the status line also used to cover
     // left the row with the row-7 collapse; the tabs show the active tab now.
     // The clock left it for row 8 on 2026-08-11, which is why this is two calls
-    // and not one.)
+    // and not one, and the chain left the bottom row for the tab row on
+    // 2026-08-13, which is why the two now name two rows.)
     viewport.kick_waveform_sync();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     viewport.invalidate_clock_area();
 }
 
@@ -215,11 +216,11 @@ void GuiActiveViews::toggle_active_markers_view() {
     // invalidate_waveform_area this replaces — the rebuild damages the identical
     // rect (y=0 through the waveform's bottom, top strip included) — and it
     // covers the settings active_markers_view= twin by construction, that key
-    // routing through this same function. THE STATUS LANE ALONE below, unlike
+    // routing through this same function. THE STATUS CHAIN ALONE below, unlike
     // the A/B switch above: this route damages the selection READOUT (the
     // coincidence auto-select may have changed it) and MOVES NO PLAYHEAD — the
     // auto-select only selects the marker the cursor already stands on — so the
     // clock cell has nothing to repaint.
     viewport.kick_waveform_sync();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
 }

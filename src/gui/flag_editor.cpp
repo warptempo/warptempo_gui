@@ -541,7 +541,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // render recipe) and lands on dispatch_render_now's reuse rungs.
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // No synchronous re-warp: the flag editor is a warp authoring surface that
     // exists only in warp's SOURCE home view (the home-view binding, architect
     // 2026-07-22 — both open routes gate on active_column_authoring_allowed, and
@@ -653,7 +653,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     const auto& mv_const = app.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
         text_editor::deactivate(app.top_flag_editor);
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         return false;
     }
     const std::string& s = app.top_flag_editor.pending;
@@ -661,7 +661,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     double lo = 0.0, hi = 0.0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         app.top_flag_editor.red = true;
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_modal_dialog_area();
         std::fprintf(stderr,
             "warptempo_gui: BPM edit rejected: invalid syntax: %s\n",
             s.c_str());
@@ -699,7 +699,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 (!compute_base_tempo_scale(duration_seconds, beats, lo) ||
                  !compute_base_tempo_scale(duration_seconds, beats, hi))) {
                 app.top_flag_editor.red = true;
-                viewport.invalidate_status_row_area();
+                viewport.invalidate_modal_dialog_area();
                 std::fprintf(stderr,
                     "warptempo_gui: BPM edit rejected: derived tempo or "
                     "scale outside its bracket (tempo [%s, %s], scale "
@@ -734,7 +734,13 @@ bool GuiFlagEditor::commit_bpm_edit() {
     proposed[idx].bpm_hi    = hi;
     app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_status_row_area();
+    // TWO SURFACES, TWO OWNERS (2026-08-13, when the status chain left this
+    // row for the tab row): the dialog editor just came down, which is the
+    // BOTTOM row's damage, and the stamped marker is a bpm OWNER now — a
+    // class the resolved readout has nothing to resolve for — so the chain's
+    // lowest tier changes with it.
+    viewport.invalidate_modal_dialog_area();
+    viewport.invalidate_status_chain_area();
     return true;
 }
 
@@ -797,12 +803,12 @@ void GuiFlagEditor::enter_bpm_mode() {
 // The single bpm-mode-off chokepoint: every route that turns bpm mode off
 // funnels here. Wipes the session-only bpm state (mode exit IS the clear, so
 // no marker carries bpm state once the mode is down) and repaints both the
-// top strip and the status row — whose damage owner carries the modal dialog's
-// stashed box as a rider, which is what covers the bpm editor's own pixels.
+// top strip and the MODAL's own lane — the bottom row, which is where the bpm
+// editor's pixels are while it stands.
 void GuiFlagEditor::exit_bpm_mode() {
     if (!app.bpm_mode_enabled) return;
     app.bpm_mode_enabled = false;
     wipe_bpm_state();
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_modal_dialog_area();
 }

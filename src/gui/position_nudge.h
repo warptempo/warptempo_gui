@@ -215,10 +215,10 @@ int64_t stepped_anchor_frame(
 //     nudged marker's STEM move: a nudge shifts that marker's frame, and its
 //     always-on stem repaints at the new column here. Every ENABLED marker stems
 //     since row 5, so this covers the moved one whatever the selection is;
-// (d) invalidate_status_row_area then invalidate_clock_area — the unified
-//     bottom row's TWO cells, each named because this tail dirties both: the
-//     selection readout in the status cell, and the clock cell through the
-//     playhead move at (e);
+// (d) invalidate_status_chain_area then invalidate_clock_area — TWO SURFACES,
+//     each named because this tail dirties both: the selection readout in the
+//     tab row's status chain (its home since 2026-08-13), and the unified
+//     bottom row's clock cell through the playhead move at (e);
 // (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in warp's source home, a real map in phase's target home;

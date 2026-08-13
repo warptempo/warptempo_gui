@@ -80,7 +80,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // erase. See AppState::transient_status_message.
     if (!app.transient_status_message.empty()) {
         app.transient_status_message.clear();
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
     }
 
     // The modal prompt (painted on the bottom row since 2026-08-13) owns input while
@@ -646,7 +646,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         vs.read_only = !vs.read_only;
         // The bottom row still repaints here: it is cheap, and the row-2/row-4
         // enabled faces below share this flag's fate frame for frame.
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
         // AND THE TOP STRIP (2026-08-01): the active tab now WEARS its lock — a
         // padlock in the tab's close-icon slot, drawn iff that tab is read-only.
         // The tick comparator cannot cover it: it stashes
@@ -1674,8 +1674,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // The bottom row joined the family's inert band list 2026-08-11
             // (as the transport row), exactly as the rule above promises a
             // future row would, and the 2026-08-12 unification widened its
-            // band to the whole merged lane — the clock and status cells are
-            // as wheel-inert as the buttons. It is a bottom-strip
+            // band to the whole merged lane — the clock cell and the modal
+            // that displaces it are as wheel-inert as the buttons. It is a bottom-strip
             // lane, so the top-strip area test below would never have routed it
             // anyway; membership here is what stops the sub-detent accumulator
             // growing remainder over it, like its four siblings.

@@ -37,7 +37,10 @@
 // EVERY STRING THE STATUS CHAIN CARRIES — the queue/render/transient status,
 // the resolved readout, the history line and the critical chip — is the
 // redesign's sans at the redesign's size, shaped and painted through the ONE
-// chokepoint like every other redesigned row. (The dirty mark used to be on
+// chokepoint like every other redesigned row. It reads the TAB ROW's own
+// already-selected face since the chain moved up there (2026-08-13), which is
+// the same sans at the same size: the product has one text size, so the move
+// changed no glyph. (The dirty mark used to be on
 // this list; since 2026-08-01 it is in the WINDOW TITLE, which labwc paints —
 // see GuiPlatform::apply_window_title.)
 //
@@ -45,9 +48,12 @@
 // belongs to the clock and lives at its own metrics, re-derived on the
 // monospace face rather than trusted to it.
 
-// The bottom row's ONE face, selected on `cr`. Returns the scaled font every
-// shape and paint on the row must share — the text_shape precondition is that a
-// run is shown with the same font it was shaped with.
+// The bottom row's ONE sans face, selected on `cr`. Returns the scaled font
+// every shape and paint that takes it must share — the text_shape precondition
+// is that a run is shown with the same font it was shaped with. Its callers
+// are the MODAL DIALOG (whose labels, field text and button words are the
+// row's only sans left) and, through show_row_text below, the modal's own
+// strings; the clock selects monospace for itself.
 static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
     cairo_select_font_face(cr, "sans",
                            CAIRO_FONT_SLANT_NORMAL,
@@ -68,35 +74,46 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
-// THE STATUS CHAIN IS RIGHT-ALIGNED (the row unification, 2026-08-12 — "the
-// information displays can go in the bottom right"): the FIXED-SECTION layout
-// of 2026-08-01..08-12 (boundaries computed from the lane's own edges, never
-// from the text on screen) is RETIRED with the lane it laid out. The chain —
-// the CRITICAL CHIP first, then section C's status span — builds from the
-// row's RIGHT MARGIN, so its pen IS a function of the live text now. That
-// does not resurrect the twitch the fixed sections existed to prevent: the
-// per-frame changer was always the CLOCK, which keeps its own reserved
-// no-wiggle cell at the lane's centre, while the status strings change only
-// on discrete events — the same frames that rewrite the row anyway (the
-// critical chip's own-text exception of 2026-08-09, now the whole chain's
-// model).
+// THE STATUS CHAIN LIVES IN THE TAB ROW (architect 2026-08-13, scrapping the
+// waveform transient-display overlay unbuilt in the same breath: "just put
+// that text in the tab row — there's plenty of space there for all that stuff,
+// even on the touch screen, I checked"). It was the bottom row's right end
+// from the 2026-08-12 unification and the bottom-LEFT lead-in before that; the
+// painter that draws it is paint_status_chain and its one caller is
+// paint_tab_row.
 //
-// THE LAYOUT, right to left:  ... clock cell | pad | THE CHAIN | pad(margin)
+// IT IS RIGHT-ALIGNED, and its pen IS a function of the live text. That does
+// not resurrect the twitch the retired fixed-section layout existed to
+// prevent: the product's per-frame changer was always the CLOCK, which stayed
+// on the bottom row in its own reserved no-wiggle cell, while every string
+// this chain can show changes only on discrete events — the same frames that
+// rewrite the row anyway (the critical chip's own-text exception of
+// 2026-08-09, generalized to the whole chain at the unification).
+//
+// THE LAYOUT, right to left:  ... | THE CHAIN | pad(margin) | window edge
 // with the chain = [CRITICAL chip | pad |] C's status text, right-aligned as
 // one unit. THE CHIP IS THE CHAIN'S LEFTMOST MEMBER, which is what keeps its
 // impossible-to-miss primacy under right alignment: when the chain overflows
-// its span, it anchors LEFT at the clock bound instead — the chip stays
+// the lane it anchors LEFT at the lane's own edge instead — the chip stays
 // wholly visible and C clips at the right margin, so the critical report is
-// still the last thing given up. The chain CLIPS AGAINST THE CLOCK'S CELL on
-// its left (never overlapping it — the collision rule) and at the right
-// margin on its right (the standing "a screen too small for the line is a
-// user problem" ruling: no ellipsis, no shrink, no scroll).
+// still the last thing given up. No ellipsis, no shrink, no scroll (the
+// standing "a screen too small for the line is a user problem" ruling).
 //
-// The chip keeps the marker flag's whole anatomy (border, pads, fill, edge —
-// the one invalid red, called not copied) and C keeps its precedence chain;
-// only where the pen lands moved. The whole layout lives inline in
-// paint_bottom_strip's chain block now — the BottomRowSections struct and
-// bottom_row_sections, the fixed layout's owners, died with it.
+// AND THE TABS WIN, BY PAINT ORDER — that is the WHOLE collision rule
+// (architect, same ruling): the chain paints FIRST, the tab walk paints over
+// it, and text pushed under a tab is ACCEPTED and deliberately NOT engineered
+// around ("if there is ever a resolution small enough that there's a conflict,
+// the tabs should win and they should be on top of the text. But don't
+// anticipate that"). There is no clipping against the tabs, no reflow and no
+// shrink-to-fit anywhere in this painter. THE `h` HISTORY VIEW IS WHERE IT
+// GOES LIVE and it is the accepted case, not a bug: in there row 3 is the
+// Remote/Local walk selector, whose words are wider than A/B, and tier 1 —
+// the mode's own line — is exactly what the chain is showing.
+//
+// The chip keeps the marker flag's ANATOMY (1px left border, pads, fill, top
+// edge — the one invalid red, called not copied) but RE-DERIVES ITS BOX on
+// this row's own face rather than importing the marker lane's height (the
+// derivation is at the paint site). C keeps its precedence chain unchanged.
 //
 // THE DIRTY DOT is not a tenant: it rides the WINDOW TITLE beside the project
 // name, where labwc paints it (GuiPlatform::apply_window_title).
@@ -1289,6 +1306,13 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
+    // THE STATUS CHAIN, ON THE BAR AND UNDER THE TABS (architect 2026-08-13).
+    // HERE is the collision rule and there is no other: it paints on the ground
+    // the fill above just laid, and the tab walk below paints over it. It takes
+    // this row's face and lane so the chain and the tab labels solve ONE
+    // baseline, and it restores every bit of context it touches.
+    paint_status_chain(cr, lane, content_h, font);
+
     const int pad      = scaled_px(kTabLabelPadPx);
     const int min_w    = scaled_px(kTabMinWidthPx);
     const int lock_box = scaled_px(kTabLockBoxPx);
@@ -1565,6 +1589,280 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     }
 
     cairo_restore(cr);
+}
+
+// -- GuiPaintHandler::paint_status_chain ---------------------------------
+//
+// THE STATUS CHAIN, right-aligned in the TAB ROW (architect 2026-08-13; the
+// ruling, the layout and the tabs-win collision rule are at the chain block
+// near the head of this file). ONE SLOT, ONE LADDER, moved as one unit off the
+// bottom row: the critical chip then section C's four tiers, in the precedence
+// they have always resolved in.
+//
+// Called from paint_tab_row and nowhere else, BEFORE its tab walk, on the bar
+// the row has already grounded — the paint order IS the collision rule. It
+// takes the row's lane, its content height and its already-selected face
+// rather than resolving any of the three itself, which is what keeps the chain
+// and the tab labels on one baseline.
+//
+// IT IS PAINT-ONLY AND PUBLISHES NOTHING. No rect reaches AppState, so the
+// chain owns no hit test, no hover and no cursor cue: a press on the lane
+// still resolves against the TABS and their lock slots and falls through to
+// the row's consumed nothing everywhere else, exactly as it did before this
+// text arrived (the critical chip's paint-only contract, generalized to the
+// whole chain by its new home). AND IT CARRIES NO EXPOSURE GATE: the row it
+// sits on shapes its tab labels on every exposure anyway, so there is nothing
+// to spare — unlike the bottom row, where the chain's HarfBuzz passes had to
+// be kept off the clock's per-frame damage.
+//
+// ITS DAMAGE OWNER IS Viewport::invalidate_status_chain_area — the lane whole,
+// because the chain right-aligns and a shorter string must erase a longer one.
+void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& lane,
+                                         int content_h,
+                                         cairo_scaled_font_t* font) {
+    if (lane.w <= 0 || content_h <= 0) return;
+
+    // COMPOSE SECTION C's TEXT FIRST, by the precedence chain — a
+    // right-aligned pen needs the run's width before it can land, so the
+    // branches build the string and ONE layout-and-paint tail follows.
+    //
+    // PRECEDENCE, highest first: the `h` history mode's line > the queue /
+    // render / loading status > the transient message > the resolved-value
+    // readout. A MODAL IS NOT A TIER AND HAS NOT BEEN ONE SINCE THE DIALOG ARC
+    // (2026-08-12); since this chain left the bottom row it does not even share
+    // a surface with one, so a prompt or a dialog editor neither displaces nor
+    // hides it.
+    std::string status;
+    if (app.history_mode.active) {
+        // THE `h` HISTORY MODE'S ONE LINE, the chain's top tier: while the mode
+        // stands this line is what the surface is for.
+        //
+        // THE SHAPE: the commit's position in the walk and its short SHA, then
+        // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
+        // sign vocabulary and through the lane's own spelling owner
+        // (history_diff_label), so this line and the flags cannot come to
+        // bracket differently. (The "bottom-left corner" of the mode's record
+        // read bottom-RIGHT from the 2026-08-12 unification and reads TOP-RIGHT
+        // since the chain moved up here — the same line, the same precedence,
+        // another surface.)
+        //
+        // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect
+        // 2026-08-05, superseding the arc's unchanged-token report): a value
+        // that both sides agree on is not a difference, and this view shows
+        // differences. So there is no unchanged arm at all, and the both-sides-
+        // empty case is covered by the same test rather than by one of its own.
+        // A side carrying no `scale=` line has an EMPTY token and shows as its
+        // bracket with nothing after it — unreachable while `scale` is a
+        // required settings key and every walk member is strict-load clean, and
+        // kept as the least-surprising shape rather than a refusal.
+        //
+        // Plain label ink (kRedesignLabel) through the shared tail, matching
+        // the transient-message and readout branches: this is a passive
+        // report, not an editor, so it takes no caret, no prefix face and no
+        // flash.
+        // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
+        // walk_index / walk_count, so a Local tab counts the session's own
+        // timeline states with the same two numbers in the same place. THE SHA
+        // IS THE COMMIT WALK'S
+        // ALONE, and deliberately named rather than routed through an accessor:
+        // an undo entry has no commit, so the token simply does not appear on
+        // the Local tab — the empty-sha test below is that fact rather than a
+        // second branch.
+        const std::size_t count = app.history_mode.walk_count();
+        // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing
+        // at all: a blank corner beside a blank lane says only that the corner
+        // has stopped working. ONE SPELLING FOR BOTH WALKS, and since 2026-08-08
+        // only the COMMIT walk can reach it — its empty window, a visit opened
+        // before the prefetch has delivered member 0. The LOCAL walk is never
+        // empty while the mode stands: the one entry owner binds it before
+        // `active` goes up and its member count is U + R + 1, so a session that
+        // has authored nothing reads `1/1` — one state compared against itself.
+        // The zero arm therefore describes the commit side alone now, and stays
+        // one expression because the arithmetic below is the walk-agnostic one.
+        status += std::to_string(
+            count == 0 ? 0 : app.history_mode.walk_index() + 1);
+        status += '/';
+        status += std::to_string(count);
+        if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
+            // Empty for an out-of-range index, which is exactly the empty walk,
+            // so the count needs no test of its own here.
+            const std::string& sha =
+                app.history_mode.session.sha_at(app.history_mode.index);
+            if (!sha.empty()) {
+                status += ' ';
+                status += sha.substr(0, 7);
+            }
+        }
+        const GuiHistoryCommitDelta* d =
+            app.history_mode.displayed_delta(app.history_compare());
+        // No unavailable-delta arm: walk membership is the strict whole-set
+        // load (history_diff.h's gate, 2026-08-04), so every commit this line
+        // can name has a real delta — the old `Ambiguous` token died with the
+        // display machinery it named.
+        if (d && d->scale_changed) {
+            // The position always precedes it now (`0/0` at worst), so the
+            // separator is unconditional.
+            status += ' ';
+            status += "Scale: ";
+            status += history_diff_label("[-]", /*disabled=*/false,
+                                         d->then_scale_token);
+            status += ' ';
+            status += history_diff_label("[+]", /*disabled=*/false,
+                                         d->now_scale_token);
+        }
+    } else if (!app.queue_progress_text.empty()) {
+        // The render/batch/queue status AND the startup "Loading..." line —
+        // one slot, and one of the reasons this chain rides a row that paints
+        // on every frame class (it is the only feedback on the loading frame).
+        status = app.queue_progress_text;
+    } else if (!app.transient_status_message.empty()) {
+        // The transient one-line outcome report (phase-reset paste divergence,
+        // "No renders to load in place", ...). It takes its place in the
+        // chain, directly above the readout. Cleared by the next key press.
+        status = app.transient_status_message;
+    } else if (popup_eligible_marker(app, app.last_selected_marker)) {
+        // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
+        // to be "hover wins, else the last-selected marker"; the hover arm died
+        // with the whole hover-popup machinery, so what is left is the arm that
+        // was already here — the LAST-SELECTED marker's resolved tempo, computed
+        // live when it is an eligible pass/label_ref (popup_eligible_marker,
+        // itself 'W'-view + non-iteration only). Owners and phase resets have
+        // nothing to resolve, so their selection leaves the chain clean while
+        // their own value shows on their flag.
+        //
+        // compute_hover_popup_text — in the FROZEN parser, and untouched — keeps
+        // this one live caller; only the hover half of its name is now history.
+        // The out-param for the pasteable payload stays unused here: this site
+        // wants the notice-free display string, and Ctrl+C asks for the payload
+        // itself at its own site.
+        //
+        // It is the LOWEST tier of the one slot, so any status message hides it
+        // while that message is up.
+        status = compute_hover_popup_text(
+            slice_to_warp_markers(app.warpmarkers.markers()),
+            app.last_selected_marker, audio.sample_rate(),
+            audio.total_frames());
+    }
+
+    const std::string_view critical = app.critical_error_message;
+    if (status.empty() && critical.empty()) return;
+
+    // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain, chip first. ---
+    //
+    // The span runs from the lane's own left edge to ONE PAD IN FROM ITS RIGHT
+    // (the window's right edge — this lane spans the window). The chain
+    // right-aligns inside it, and when it does not fit it LEFT-anchors at the
+    // lane's edge instead: the chip (the chain's leftmost member) stays wholly
+    // visible and C clips at the right bound, the chip's primacy under right
+    // alignment. THE CLIP IS THE CONTENT BAND, never the lane, so nothing here
+    // can reach the row's own 1px border-bottom — which the tab walk's border
+    // pass would repaint over anyway, this being the honest bound rather than a
+    // reliance on that order. Nothing clips against the TABS: they paint after
+    // this and win, which is the whole rule.
+    const double pad     = static_cast<double>(status_chain_pad_x());
+    const double span_x0 = static_cast<double>(lane.x);
+    const double span_x1 = std::nearbyint(
+        static_cast<double>(lane.x + lane.w) - pad);
+    if (span_x1 <= span_x0) return;   // a lane narrower than its own margin
+
+    cairo_save(cr);
+    const double baseline = redesign_baseline(font,
+                                              static_cast<double>(lane.y),
+                                              static_cast<double>(content_h));
+
+    text_shape::ShapedRun status_run;
+    if (!status.empty())
+        status_run = text_shape::shape_text_run(font, status);
+    text_shape::ShapedRun crit_run;
+    double chip_box_w = 0.0;
+    const int pad_l    = marker_flag_pad_left_px();
+    const int pad_r    = marker_flag_pad_right_px();
+    const int border_w = marker_flag_border_px();
+    if (!critical.empty()) {
+        crit_run = text_shape::shape_text_run(font, critical);
+        chip_box_w = border_w + pad_l + std::nearbyint(crit_run.width_px) +
+                     pad_r;
+    }
+    const double chain_w =
+        (critical.empty() ? 0.0 : chip_box_w + pad) +
+        (status.empty() ? 0.0 : status_run.width_px);
+    const double chain_x = std::nearbyint(
+        std::max(span_x0, span_x1 - chain_w));
+
+    cairo_save(cr);
+    cairo_rectangle(cr, span_x0, static_cast<double>(lane.y),
+                    span_x1 - span_x0, static_cast<double>(content_h));
+    cairo_clip(cr);
+
+    double pen = chain_x;
+    if (!critical.empty()) {
+        // THE CRITICAL CHIP, the chain's leftmost member (architect
+        // 2026-08-09: a checkpoint failure may be neither missed nor used to
+        // hijack the keyboard — a paint-only chip that simply stays, until a
+        // later checkpoint succeeds or the program closes; the contract, the
+        // one producer and the one clearing route are at
+        // AppState::critical_error_message).
+        //
+        // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
+        // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px
+        // left border, in the flag's own paint order and on the flag's own
+        // horizontal pads — the marker flag's anatomy (the dialog editors'
+        // invalid flash recolors the dialog FIELD in the same red pair). The
+        // ink is the row's ordinary label colour.
+        //
+        // THE BOX IS RE-DERIVED FOR THIS ROW, and that is the one thing the
+        // chain's move changed about it (2026-08-13). The flag's box is 20 tall
+        // with its baseline at row 16 — kMarkerLaneHeightPx and
+        // kMarkerFlagBaselinePx, both authored off the row-5 crop — which is
+        // that lane's OWN height and a 16/4 split that only describes the crop
+        // it came from. What the two numbers actually express is the face's own
+        // (ascent + descent) band wrapped tight around the label, so the
+        // anatomy transfers by asking THIS row's face for that band instead of
+        // importing a lane height that does not belong here: ascent above the
+        // baseline, descent below, each rounded UP so no ink falls outside the
+        // fill. It reproduces the flag's proportions (the product has one text
+        // size, so both rows shape the same face), it centres itself on the
+        // row's own baseline, and it fits the content band at every gui_scale
+        // by construction — box and band ride the same one factor, and the
+        // band is the taller of the two at 100% by 11 px.
+        cairo_font_extents_t fe;
+        cairo_scaled_font_extents(font, &fe);
+        const int asc  = static_cast<int>(std::ceil(fe.ascent));
+        const int desc = static_cast<int>(std::ceil(fe.descent));
+        const int edge_h = marker_flag_edge_h_px();
+        const int fx = static_cast<int>(pen) + border_w;
+        const int fw = static_cast<int>(chip_box_w) - border_w;
+        const int fy = static_cast<int>(std::nearbyint(baseline)) - asc;
+        const int fh = asc + desc;
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
+                             kMarkerFlagBorder.b);
+        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
+                             kMarkerFlagFillRed.b);
+        cairo_rectangle(cr, fx, fy, fw, fh);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
+                             kMarkerFlagEdgeRed.b);
+        cairo_rectangle(cr, fx, fy, fw, edge_h);
+        cairo_fill(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, crit_run,
+                                    static_cast<double>(fx + pad_l), baseline);
+        cairo_restore(cr);
+        pen += chip_box_w + pad;
+    }
+    if (!status.empty()) {
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, status_run, pen, baseline);
+    }
+    cairo_restore(cr);   // the chain's clip
+    cairo_restore(cr);   // the row's colour state
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
@@ -1863,10 +2161,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // landed 2026-08-11 as the touch arc's first surface, its own lane for one
 // day): permanent on every host — ordinary mouse-clickable buttons, no touch
 // mode, no flag, no detection. The transport four on the row's LEFT, the
-// CLOCK centred in the lane, the status chain (paint_bottom_strip's
-// right-aligned half) beyond it, and the four ARROWS FLUSH AT THE RIGHT
+// CLOCK centred in the lane, and the four ARROWS FLUSH AT THE RIGHT
 // MARGIN (the 2026-08-12 relayout's rearrangement — "the nudge based icons
-// in the bottom right", architect-agreed):
+// in the bottom right", architect-agreed). That is the row's whole roster
+// since 2026-08-13, when the STATUS CHAIN — which right-aligned against the
+// arrows' left edge from the unification — moved into the TAB ROW:
 //
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
@@ -2090,9 +2389,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // group boundary again, exactly as it was before the rows merged, and
     // the spec constants below revert to FORWARD SPEC (their original
     // status). The clock is centred in the LANE, so it sits on the window's
-    // own midline whatever the clusters do; the status chain
-    // (paint_bottom_strip's other half) right-aligns against the ARROWS'
-    // left edge now and clips between it and the clock's cell.
+    // own midline whatever the clusters do; the span between the cell and the
+    // arrows is BARE GROUND since 2026-08-13, the status chain that
+    // right-aligned in it having moved to the tab row.
     //
     // THE CLUSTERS AND THE CELL CAN OVERLAP AT THE FLOOR, and the row accepts
     // it exactly as row 1's floats do — no collision rule anywhere in the
@@ -2114,9 +2413,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // The arrow cluster's own walk, from its right-anchored origin: the four
     // boxes and their three gaps measured whole, the LAST button's right edge
     // one pad in from the lane's right edge. The stashed TransportLeft rect
-    // this publishes is the STATUS CELL's right boundary
-    // (status_row_invalidate_rect) and the chain's clip bound below — one
-    // arithmetic, published once, read twice.
+    // this publishes is read by the ROSTER MACHINERY ALONE again — the press
+    // claim, the hover walk and the tooltip dwell — the status cell's damage
+    // owner and the chain's clip bound having both read it as their right
+    // boundary until the chain moved into the tab row (2026-08-13) and that
+    // owner was deleted.
     {
         const int arrows_w = 4 * btn + 3 * btn_gap;
         int ax = lane.x + lane.w - pad - arrows_w;
@@ -4149,24 +4450,26 @@ static bool modal_owns_bottom_row(AppState& app) {
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
-void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
+void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
     // into ONE lane — under the waveform then, on the WINDOW'S FOOT since the
     // same day's relayout commit B, which also moved the arrows FLUSH RIGHT):
     // the transport four
-    // on the left at the icon row's boxes, the monospace clock centred, the
-    // STATUS CHAIN right-aligned against the ARROW CLUSTER at the right
-    // margin — the critical chip first, then section
-    // C's precedence chain. This painter owns the lane's CHROME (ground +
-    // border-top) and the chain; the buttons and the clock are
+    // on the left at the icon row's boxes, the monospace clock centred, and
+    // the four cardinal arrows flush right. THAT IS THE WHOLE ROSTER since
+    // 2026-08-13, when the architect moved the STATUS CHAIN — the critical
+    // chip and section C's precedence ladder — up into the TAB ROW: this
+    // painter owns the lane's CHROME (ground + border-top) and nothing else;
+    // the buttons and the clock are
     // paint_bottom_row_buttons_and_clock, called from here onto the grounded
     // band (the cluster's tables and the clock's metrics live beside that
-    // body). The right-alignment ruling, the chip's primacy under it and the
-    // collision rule are at the chain block near the head of this file.
-    // THE ROW HAS A MODAL STATE since 2026-08-13, in which every one of those
-    // tenants stands down and the lane carries the prompt or the dialog
+    // body).
+    // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
+    // stand down and the lane carries the prompt or the dialog
     // editor instead (the ruling and the fork are at modal_owns_bottom_row,
-    // just above; the modal's own layout is paint_modal_dialog's).
+    // just above; the modal's own layout is paint_modal_dialog's) — and with
+    // the chain gone there is nothing left on the lane to negotiate with,
+    // which is what makes that yield clean.
     //
     // WHAT DIED WITH THE 2026-08-01 COLLAPSE, and why it is not missing: the
     // S/T · W/P · A/B view readout and the "(read-only)" token. Rows 3 and 4
@@ -4176,21 +4479,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // WINDOW TITLE beside the project name (GuiPlatform::apply_window_title)
     // — the title is the mark's only home now.
     //
-    // PRECEDENCE IN SECTION C, highest first — STATUS ONLY, no modal tier:
-    // the history mode's line > queue / loading status > transient status
-    // message > the resolved-value readout. A MODAL IS NOT A TIER IN THIS
-    // CHAIN AND NEVER WAS SINCE THE DIALOG ARC (2026-08-12) — the 0b7492b6
-    // modals-first ordering is superseded structurally, and since 2026-08-13
-    // the reason is the ROW YIELD below rather than a box floating elsewhere:
-    // while a prompt or a dialog editor stands the whole row is the modal's
-    // and this painter returns before composing anything. The readout stays
-    // the lowest tier: a passive description of the selection under
-    // everything the user is waiting on, with the transient message directly
-    // above it.
-    //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
-    // redesigned rows above it: the line is audio-independent, and the loading
-    // status is one of the things it carries.
+    // redesigned rows above it: the clock reads 00:00.000 with no source, and
+    // the buttons must be visible on every frame class their press claim is
+    // live on.
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = bottom_row_content_area(app);
     const int     border  = bottom_row_border_h_px();
@@ -4235,14 +4527,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // the play/stop pair — leaving the comparator to invalidate this row on
     // every tick with nothing to repaint but the modal.
     //
-    // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes both cell damage
-    // owners degrade HONESTLY: a zero cell answers the WHOLE LANE at
-    // status_row_invalidate_rect and clock_invalidate_rect (main.cpp), which
-    // is exactly the modal's surface. NOTHING READS THE ARROWS' ZERO as a
-    // bound: status_row_invalidate_rect tests the clock cell FIRST and has
-    // already widened by the time it would look at the TransportLeft stash,
-    // and the chain that reads the same stash as its clip bound lives below
-    // this return.
+    // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
+    // rect owner degrade HONESTLY: a zero cell answers the WHOLE LANE at
+    // clock_invalidate_rect (main.cpp), which is exactly the modal's surface.
+    // NOTHING READS THE ARROWS' ZERO as a bound — since 2026-08-13 nothing on
+    // this row is measured from a button stash at all, the status chain having
+    // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
             publish_button_face(app, audio.total_frames(), def.id,
@@ -4257,278 +4547,24 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     }
 
     // THE BUTTON CLUSTER AND THE CLOCK — publishes the clock's reserved cell
-    // (AppState::clock_cell_rect), the anchor the chain below clips against
-    // and both cell damage owners read. Runs whole on every exposure like the
-    // top button rows (it shapes no text beyond the clock's one memoised-cell
-    // run, so a narrow clip pays almost nothing for it).
+    // (AppState::clock_cell_rect), which the row's one remaining rect owner
+    // reads (clock_invalidate_rect, main.cpp). Runs whole on every exposure
+    // like the top button rows (it shapes no text beyond the clock's one
+    // memoised-cell run, so a narrow clip pays almost nothing for it) and is
+    // the LAST thing this painter does: with the status chain gone the row has
+    // no other tenant.
+    //
+    // (THE STATUS CHAIN AND ITS PER-CELL EXPOSURE GATE WERE HERE UNTIL
+    // 2026-08-13, when the architect moved the chain into the TAB ROW. Deleted
+    // with it, all of them producer-less once it left: the gate itself — a
+    // cairo clip-extents test against the clock cell's right edge, whose ONE
+    // purpose was to keep the per-frame clock damage from paying for the
+    // chain's HarfBuzz shaping, and there is no shaping left on this row to
+    // pay for; the span arithmetic between that cell and the arrow cluster's
+    // left edge, with its degenerate-span early return; and the read of the
+    // painter's own TransportLeft stash as the chain's right anchor. The chain
+    // now lives at paint_status_chain.)
     paint_bottom_row_buttons_and_clock(cr);
-
-    // --- THE STATUS CHAIN, right-aligned (the layout ruling is at the chain
-    //     block near the head of this file). ---
-    //
-    // THE EXPOSURE GATE: the chain shapes text through HarfBuzz, which the
-    // outer Cairo clip would not elide, so the per-frame clock damage — whose
-    // clip is exactly the reserved cell — and a button face's own damage must
-    // not pay for it. The chain's whole span is the STATUS CELL, from the
-    // clock cell's right edge to the right-anchored arrow cluster's left edge
-    // (status_row_invalidate_rect, the cell's damage owner): when the current
-    // damage clip ends at or left of that edge, no pixel of the chain is
-    // exposed and nothing here runs. The same per-exposure gating the top
-    // rows take per-lane in on_redraw, taken per-CELL here because two cells
-    // and a button cluster share this painter's one lane.
-    const GuiRect cell = app.clock_cell_rect;   // just published above
-    {
-        double clip_x0 = 0.0, clip_y0 = 0.0, clip_x1 = 0.0, clip_y1 = 0.0;
-        cairo_clip_extents(cr, &clip_x0, &clip_y0, &clip_x1, &clip_y1);
-        if (cell.w > 0 && clip_x1 <= static_cast<double>(cell.x + cell.w))
-            return;
-    }
-
-    // ONE FACE, ONE BASELINE for the chain. The baseline is solved the way
-    // every redesigned row solves one: center the face's own (ascent +
-    // descent) band in the content band and round to the pixel grid.
-    cairo_save(cr);
-    cairo_scaled_font_t* font = select_bottom_row_face(cr);
-    const double baseline = redesign_baseline(font,
-                                              static_cast<double>(content.y),
-                                              static_cast<double>(content.h));
-
-    // COMPOSE SECTION C's TEXT FIRST, by the precedence chain — a
-    // right-aligned pen needs the run's width before it can land, so the
-    // branches build the string and ONE layout-and-paint tail follows.
-    std::string status;
-    if (app.history_mode.active) {
-        // THE `h` HISTORY MODE'S ONE LINE, the span's top tier since the
-        // modals left for the dialog (2026-08-12): it ranks over the queue
-        // status and the readout, because while the mode stands this line is
-        // what the strip is for. A prompt or an in-mode editor no longer
-        // displaces it — the dialog floats over the row and the line stays
-        // painted beneath, which is the honest picture (the mode still
-        // stands).
-        //
-        // THE SHAPE: the commit's position in the walk and its short SHA, then
-        // the scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own
-        // sign vocabulary and through the lane's own spelling owner
-        // (history_diff_label), so the corner and the flags cannot come to
-        // bracket differently. (The "bottom-left corner" of the mode's record
-        // reads BOTTOM-RIGHT since the unification right-aligned the chain —
-        // the same line, the same precedence, the row's other end.)
-        //
-        // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect
-        // 2026-08-05, superseding the arc's unchanged-token report): a value
-        // that both sides agree on is not a difference, and this view shows
-        // differences. So there is no unchanged arm at all, and the both-sides-
-        // empty case is covered by the same test rather than by one of its own.
-        // A side carrying no `scale=` line has an EMPTY token and shows as its
-        // bracket with nothing after it — unreachable while `scale` is a
-        // required settings key and every walk member is strict-load clean, and
-        // kept as the least-surprising shape rather than a refusal.
-        //
-        // THE POSITION/SHA LEAD-IN IS THE PLANNER'S CHOICE, flagged for the
-        // architect's live pass — it is one `if` and one `+=`, deliberately
-        // removable without touching the scale half.
-        //
-        // Plain label ink (kRedesignLabel) through the shared tail, matching
-        // the transient-message and readout branches: this is a passive
-        // report, not an editor, so it takes no caret, no prefix face and no
-        // flash.
-        // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads
-        // walk_index / walk_count, so a Local tab counts the session's own
-        // timeline states with the same two numbers in the same place. THE SHA IS THE COMMIT WALK'S
-        // ALONE, and deliberately named rather than routed through an accessor:
-        // an undo entry has no commit, so the token simply does not appear on
-        // the Local tab — the empty-sha test below is that fact rather than a
-        // second branch.
-        const std::size_t count = app.history_mode.walk_count();
-        // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing
-        // at all: a blank corner beside a blank lane says only that the corner
-        // has stopped working. ONE SPELLING FOR BOTH WALKS, and since 2026-08-08
-        // only the COMMIT walk can reach it — its empty window, a visit opened
-        // before the prefetch has delivered member 0. The LOCAL walk is never
-        // empty while the mode stands: the one entry owner binds it before
-        // `active` goes up and its member count is U + R + 1, so a session that
-        // has authored nothing reads `1/1` — one state compared against itself.
-        // The zero arm therefore describes the commit side alone now, and stays
-        // one expression because the arithmetic below is the walk-agnostic one.
-        status += std::to_string(
-            count == 0 ? 0 : app.history_mode.walk_index() + 1);
-        status += '/';
-        status += std::to_string(count);
-        if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
-            // Empty for an out-of-range index, which is exactly the empty walk,
-            // so the count needs no test of its own here.
-            const std::string& sha =
-                app.history_mode.session.sha_at(app.history_mode.index);
-            if (!sha.empty()) {
-                status += ' ';
-                status += sha.substr(0, 7);
-            }
-        }
-        const GuiHistoryCommitDelta* d =
-            app.history_mode.displayed_delta(app.history_compare());
-        // No unavailable-delta arm: walk membership is the strict whole-set
-        // load (history_diff.h's gate, 2026-08-04), so every commit this line
-        // can name has a real delta — the old `Ambiguous` token died with the
-        // display machinery it named.
-        if (d && d->scale_changed) {
-            // The position always precedes it now (`0/0` at worst), so the
-            // separator is unconditional.
-            status += ' ';
-            status += "Scale: ";
-            status += history_diff_label("[-]", /*disabled=*/false,
-                                         d->then_scale_token);
-            status += ' ';
-            status += history_diff_label("[+]", /*disabled=*/false,
-                                         d->now_scale_token);
-        }
-    } else if (!app.queue_progress_text.empty()) {
-        // The render/batch/queue status AND the startup "loading..." line —
-        // one slot, and the reason this painter runs on the loading frame class
-        // too (it is the only feedback there).
-        status = app.queue_progress_text;
-    } else if (!app.transient_status_message.empty()) {
-        // The transient one-line outcome report (phase-reset paste divergence,
-        // "No renders to load in place", ...). It takes its place in the
-        // chain, directly above the readout. Cleared by the next key press.
-        status = app.transient_status_message;
-    } else if (popup_eligible_marker(app, app.last_selected_marker)) {
-        // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
-        // to be "hover wins, else the last-selected marker"; the hover arm died
-        // with the whole hover-popup machinery, so what is left is the arm that
-        // was already here — the LAST-SELECTED marker's resolved tempo, computed
-        // live when it is an eligible pass/label_ref (popup_eligible_marker,
-        // itself 'W'-view + non-iteration only). Owners and phase resets have
-        // nothing to resolve, so their strip stays clean while their own value
-        // shows on their flag.
-        //
-        // compute_hover_popup_text — in the FROZEN parser, and untouched — keeps
-        // this one live caller; only the hover half of its name is now history.
-        // The out-param for the pasteable payload stays unused here: this site
-        // wants the notice-free display string, and Ctrl+C asks for the payload
-        // itself at its own site.
-        //
-        // LIVE-TEST FLAGGED: whether the readout should follow the selection
-        // alone is the architect's call at the row-5 look. Row 7 adds a second
-        // flagged fact — it is the LOWEST tier of the one span, so any
-        // status message hides it while it is up.
-        status = compute_hover_popup_text(
-            slice_to_warp_markers(app.warpmarkers.markers()),
-            app.last_selected_marker, sr, audio.total_frames());
-    }
-
-    // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain, chip first. ---
-    //
-    // The span runs from one pad right of the clock's cell to one pad LEFT OF
-    // THE ARROW CLUSTER (the 2026-08-12 relayout parked the four arrows flush
-    // at the lane's right margin, so the chain's right anchor is their left
-    // edge — read from the painter's own just-published TransportLeft stash,
-    // the same boundary status_row_invalidate_rect reads — with the lane's
-    // right margin as the pre-first-paint fallback); the chain right-aligns
-    // inside it, and when it
-    // does not fit it LEFT-anchors at the clock bound instead — the chip (the
-    // chain's leftmost member) stays wholly visible and C clips at the right
-    // bound, the chip's primacy under right alignment. The clip never
-    // reaches the clock's cell or the arrows, which is the collision rule:
-    // the chain, the clock and the buttons cannot overlap, whatever the
-    // strings do.
-    const std::string_view critical = app.critical_error_message;
-    if (status.empty() && critical.empty()) {
-        cairo_restore(cr);
-        return;
-    }
-    const double pad = static_cast<double>(bottom_row_pad_x());
-    const double span_x0 = static_cast<double>(cell.x + cell.w) + pad;
-    const GuiRect arrows_first = app.redesign_buttons[
-        redesign_button_index(RedesignButton::TransportLeft)].rect;
-    const int chain_right_bound =
-        (arrows_first.w > 0 && arrows_first.h > 0)
-            ? arrows_first.x
-            : lane.x + lane.w;
-    const double span_x1 = std::nearbyint(
-        static_cast<double>(chain_right_bound) - pad);
-    if (span_x1 <= span_x0) {
-        // Degenerate: no span at all (unreachable at the 640px minimum on any
-        // gui_scale that fits the cluster; nothing paints rather than a
-        // backwards rect).
-        cairo_restore(cr);
-        return;
-    }
-
-    text_shape::ShapedRun status_run;
-    if (!status.empty())
-        status_run = text_shape::shape_text_run(font, status);
-    text_shape::ShapedRun crit_run;
-    double chip_box_w = 0.0;
-    const int pad_l    = marker_flag_pad_left_px();
-    const int pad_r    = marker_flag_pad_right_px();
-    const int border_w = marker_flag_border_px();
-    if (!critical.empty()) {
-        crit_run = text_shape::shape_text_run(font, critical);
-        chip_box_w = border_w + pad_l + std::nearbyint(crit_run.width_px) +
-                     pad_r;
-    }
-    const double chain_w =
-        (critical.empty() ? 0.0 : chip_box_w + pad) +
-        (status.empty() ? 0.0 : status_run.width_px);
-    const double chain_x = std::nearbyint(
-        std::max(span_x0, span_x1 - chain_w));
-
-    cairo_save(cr);
-    cairo_rectangle(cr, span_x0, static_cast<double>(content.y),
-                    span_x1 - span_x0, static_cast<double>(content.h));
-    cairo_clip(cr);
-
-    double pen = chain_x;
-    if (!critical.empty()) {
-        // THE CRITICAL CHIP, the chain's leftmost member (architect
-        // 2026-08-09: a checkpoint failure may be neither missed nor used to
-        // hijack the keyboard — a paint-only chip that simply stays, until a
-        // later checkpoint succeeds or the program closes; the contract, the
-        // one producer and the one clearing route are at
-        // AppState::critical_error_message).
-        //
-        // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
-        // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px
-        // left border, in the flag's own paint order and on the flag's own
-        // pads, height and baseline offset — the marker flag's anatomy whole
-        // (the dialog editors' invalid flash recolors the dialog FIELD in the
-        // same red pair, so the chip is the flag anatomy's one bottom-row
-        // tenant). The ink is the row's ordinary label colour.
-        const int edge_h = marker_flag_edge_h_px();
-        const int fx = static_cast<int>(pen) + border_w;
-        const int fw = static_cast<int>(chip_box_w) - border_w;
-        const int fy = static_cast<int>(std::nearbyint(baseline)) -
-                       marker_flag_baseline_px();
-        const int fh = marker_lane_h_px();
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                             kMarkerFlagBorder.b);
-        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
-                             kMarkerFlagFillRed.b);
-        cairo_rectangle(cr, fx, fy, fw, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
-                             kMarkerFlagEdgeRed.b);
-        cairo_rectangle(cr, fx, fy, fw, edge_h);
-        cairo_fill(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        text_shape::show_shaped_run(cr, crit_run,
-                                    static_cast<double>(fx + pad_l), baseline);
-        cairo_restore(cr);
-        pen += chip_box_w + pad;
-    }
-    if (!status.empty()) {
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        text_shape::show_shaped_run(cr, status_run, pen, baseline);
-    }
-    cairo_restore(cr);   // the chain's clip
-    cairo_restore(cr);   // the row's font/color state
 }
 
 // -- GuiPaintHandler::paint_modal_dialog ---------------------------------
@@ -4641,9 +4677,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 // dialog strands nothing. `box` is the whole lane — the modal's surface — and
 // it is what the hover invalidation and the damage ride. Damage: the openers
 // invalidate the whole window (no surface exists before the first paint);
-// every later edit, blink, flash and closer rides invalidate_status_row_area,
-// which carries the stashed box while one is up (the rider is at that owner,
-// viewport.cpp).
+// every later edit, blink, flash and closer rides invalidate_modal_dialog_area,
+// which takes this row's lane whole — the modal's surface, and the rect a
+// closer owes (viewport.cpp).
 
 namespace {
 
@@ -5380,6 +5416,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, top_menu_row_area(app))) {
             paint_menu_row(cr);
         }
+        // THE TAB ROW CARRIES THE STATUS CHAIN since 2026-08-13, painted
+        // inside this one pass ahead of the tabs (paint_status_chain, called
+        // from paint_tab_row): one exposure, one painter, and the tabs on top.
         if (rects_intersect(exposed, top_tab_row_area(app))) {
             paint_tab_row(cr);
         }
@@ -5387,17 +5426,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_icon_row(cr);
         }
         // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged) is one
-        // exposure and one painter: paint_bottom_strip grounds the lane,
+        // exposure and one painter: paint_bottom_strip grounds the lane and
         // paints the button cluster + clock through its
         // paint_bottom_row_buttons_and_clock half (audio-independent chrome
         // exactly like the four top rows — the press claim sits above the
         // pointer path's loading guard, and the painter publishes the hit
         // rects the claim reads, so it must paint on every frame class its
-        // lane is exposed on) and then the right-aligned status chain, which
-        // carries its own per-CELL exposure gate so a narrow clock or button
-        // damage never pays for the chain's shaping.
+        // lane is exposed on). Its per-CELL exposure gate went with the status
+        // chain on 2026-08-13: the row shapes no text but the clock's one
+        // memoised cell now, so a narrow clock or button damage has nothing
+        // left to be spared.
         if (rects_intersect(exposed, bottom_row_area(app))) {
-            paint_bottom_strip(cr, audio.sample_rate());
+            paint_bottom_strip(cr);
         }
         // THE OVERVIEW STRIP (top lane 3 since the relayout's commit B — it was
         // bottom lane 0 for the afternoon it landed), on its own
@@ -5436,8 +5476,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. render_canvas — the waveform area's ground AND its 2px black
         //      top/bottom borders (above, unconditional).
-        //   3. the three redesigned top button rows, the unified bottom row (its
-        //      chrome, buttons, clock and status chain in one painter) and
+        //   3. the three redesigned top button rows (the TAB row painting its
+        //      STATUS CHAIN first and its tabs over it), the unified bottom
+        //      row (its chrome, buttons and clock in one painter) and
         //      the OVERVIEW STRIP (ground + its one border row, cached bars,
         //      viewport box, playhead tick — paint_overview_strip), each
         //      on its own

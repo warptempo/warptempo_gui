@@ -2862,18 +2862,17 @@ struct AppState {
     // a SHAPED specimen on the monospace face at the live size, which only the
     // painter is holding a scaled font for.
     //
-    // ITS CONSUMERS ARE THE TWO CELL DAMAGE OWNERS: clock_invalidate_rect
-    // hands it to every route that moves the playhead or the scanner, so a
-    // clock advance dirties the cell instead of the whole lane and the
-    // buttons' draws fall outside on_redraw's clip, and
-    // status_row_invalidate_rect reads its RIGHT EDGE as the status cell's
-    // left bound (the right-aligned chain clips against the clock, so the
-    // cell edge bounds everything a string write can move). Zero before the
-    // row's first paint, which both owners answer with the whole lane — the
-    // first frame paints everything anyway — AND ZERO WHILE THE ROW YIELDS TO
-    // A MODAL (2026-08-13): the clock is not painted then, so the painter
-    // publishes no cell and both owners widen to the lane, which is the
-    // modal's own surface.
+    // ITS ONE CONSUMER IS clock_invalidate_rect, which hands it to every route
+    // that moves the playhead or the scanner, so a clock advance dirties the
+    // cell instead of the whole lane and the buttons' draws fall outside
+    // on_redraw's clip. (The status cell's owner read its RIGHT EDGE as a
+    // bound until 2026-08-13, when the status chain moved to the tab row and
+    // that owner was deleted; nothing on this row is measured from the cell
+    // any more.) Zero before the row's first paint, which the owner answers
+    // with the whole lane — the first frame paints everything anyway — AND
+    // ZERO WHILE THE ROW YIELDS TO A MODAL (2026-08-13): the clock is not
+    // painted then, so the painter publishes no cell and the owner widens to
+    // the lane, which is the modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
 
     // THE ARMED CHROME PRESS — the redesigned rows' ACT-AT-RELEASE record, and
@@ -4147,10 +4146,10 @@ struct AppState {
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
 
-    // THE CRITICAL SLOT — the status chain's LEFTMOST member (right-aligned on
-    // the unified bottom row since 2026-08-12, leftmost-in-chain so it can
+    // THE CRITICAL SLOT — the status chain's LEFTMOST member (right-aligned in
+    // the TAB ROW since 2026-08-13, leftmost-in-chain so it can
     // never be pushed off — the chain left-anchors when it overflows and C
-    // clips instead; the layout is at paint_bottom_strip), and the product's
+    // clips instead; the layout is at paint_status_chain), and the product's
     // one
     // permanent failure surface (architect 2026-08-09, REPLACING the acknowledge
     // modal the checkpoint's failures used to raise). A critical failure must be
@@ -4162,12 +4161,16 @@ struct AppState {
     // PERMANENT: nothing in the input layer can clear it, there is no timer
     // behind it, and there is nothing to dismiss.
     //
-    // ONE THING HIDES IT, and hides it without touching it: while a MODAL
-    // stands the bottom row yields whole (2026-08-13), so the chip is not
-    // painted until the modal closes, at which point the row paints it again
-    // unchanged. That is the row's rule rather than an exception for this
-    // string — a modal and a row tenant are never on the lane together — and
-    // it costs the chip nothing, the state being untouched and permanent.
+    // ONE THING CAN COVER IT, and covers it without touching it: a TAB drawn
+    // over it. The chain paints FIRST and the tabs paint over it (architect
+    // 2026-08-13: "if there is ever a resolution small enough that there's a
+    // conflict, the tabs should win... but don't anticipate that"), so on a
+    // window narrow enough for the two to meet the chip's box is the thing
+    // that gives. That is accepted and deliberately not engineered around —
+    // no clipping against the tabs, no reflow — and it costs the chip nothing,
+    // the state being untouched and permanent. (A MODAL used to hide it
+    // instead: the chain lived on the bottom row until 2026-08-13 and that row
+    // yields whole to a dialog. The two surfaces no longer contend.)
     //
     // ITS ONE CLEARING ROUTE IS A LATER SUCCESS: a checkpoint act that ends
     // Committed or NothingToCommit clears it, because a success supersedes the
@@ -4203,27 +4206,29 @@ struct AppState {
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
-    // Non-interactive bottom-strip status text, giving the user visual
-    // feedback while no other UI is updating. Driven by the shared batch
+    // Non-interactive status text — TIER 2 of the TAB ROW's status chain since
+    // 2026-08-13 — giving the user visual feedback while no other UI is
+    // updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
-    // target-preview updates — not a manual queue. Empty means "no status —
-    // render the timestamp normally."
-    // IT COEXISTS WITH prompt.active AS STATE, and the STRING IS SIMPLY NOT
-    // PAINTED while a modal stands: an archival render runs on, so dirtying
-    // the project and pressing Ctrl+Q raises the close prompt over a live run
-    // (the prompt cancels nothing), and the run's own completion can rewrite
-    // or clear this string while the prompt stands — but the bottom row
-    // YIELDS WHOLE to the modal (2026-08-13), so nothing of the chain shows
-    // until the modal closes, at which point the row paints whatever the
-    // string then holds. NO PRECEDENCE TIER IS INVOLVED: the old shared-cell
-    // ordering (the prompt as the chain's first tier) is superseded
-    // structurally, and no status write needs a modal test of its own.
+    // target-preview updates — not a manual queue. Empty means "no status".
+    // IT COEXISTS WITH prompt.active AS STATE, and since the chain left the
+    // bottom row IT ALSO PAINTS THROUGH A MODAL: an archival render runs on,
+    // so dirtying the project and pressing Ctrl+Q raises the close prompt over
+    // a live run (the prompt cancels nothing), and the run's own completion can
+    // rewrite or clear this string while the prompt stands — the prompt owns
+    // the BOTTOM row and the chain owns a span of the TAB row, two surfaces
+    // that no longer contend. (Until that move the row yielded whole to the
+    // modal and the string was simply not painted while one stood.) NO
+    // PRECEDENCE TIER IS INVOLVED either way: the old shared-cell ordering
+    // (the prompt as the chain's first tier) is superseded structurally, and
+    // no status write needs a modal test of its own.
     std::string queue_progress_text;
 
-    // Transient one-line status message shown in the bottom row's status
+    // Transient one-line status message shown in the TAB ROW's status
     // span, one tier above the resolved readout (the row-7
     // chain; it was an appendix on the status line when the strip had two
-    // rows and view letters). Set by a
+    // rows and view letters, and a bottom-row tenant until the chain moved up
+    // on 2026-08-13). Set by a
     // command that wants to report a non-fatal outcome (e.g. phase-reset
     // state-paste divergence); cleared on the next keyboard press in
     // on_key. Empty = nothing to show. General-purpose: not specific to
@@ -4774,33 +4779,10 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
-// THE BOTTOM ROW'S TWO DAMAGE OWNERS, one per CELL of the unified lane (the
-// row unification of 2026-08-12 merged the two bottom lanes into one; the
-// split's two families survive it unchanged as the row's clock cell and its
-// status cell), and which one a route wants is decided by WHICH PIXELS IT
-// ERASES — the product's standing rule that damage follows the basis of what
-// it repaints (playhead_pixel_x above states the same rule for the waveform's
-// two bases). The two families carried one owner until 2026-08-11, when the
-// clock left the status line for the transport row's centre and stopped
-// sharing a rect with the strings.
-//
-//   status_row_invalidate_rect — the STATUS CELL, from the clock's reserved
-//   cell to the ARROW CLUSTER's left edge (the four cardinal arrows sit flush
-//   at the lane's right margin since the 2026-08-12 relayout rearranged the
-//   row; the painter-stashed TransportLeft rect is the boundary, the lane's
-//   right edge the pre-first-paint fallback): section C's status chain (the
-//   queue / render / transient status strings, the selection readout, the
-//   history line) and the critical chip, right-aligned against the arrows.
-//   Reached through
-//   Viewport::invalidate_status_row_area, which is where its callers are and
-//   which ALSO carries the modal's stashed surface while one stands (the
-//   rider, 2026-08-12 — the dialog editors' repaint sites all speak that
-//   call); the great majority of them write a STRING into C.
-//
-//   BOTH OWNERS WIDEN TO THE WHOLE LANE WHILE A MODAL STANDS (2026-08-13),
-//   and by construction rather than by a test of their own: the row yields
-//   whole to the modal, so its painter publishes no clock cell, and a zero
-//   cell is already each owner's honest widening.
+// THE BOTTOM ROW'S ONE RECT OWNER — the CLOCK CELL. Which owner a route wants
+// is decided by WHICH PIXELS IT ERASES, the product's standing rule that damage
+// follows the basis of what it repaints (playhead_pixel_x above states the same
+// rule for the waveform's two bases).
 //
 //   clock_invalidate_rect — the reserved CLOCK CELL at the lane's centre, and
 //   nothing else on the row: every route that moves the PLAYHEAD or the
@@ -4808,14 +4790,28 @@ std::pair<long long, long long> compute_trim_samples(
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
 //
-// The transport buttons on the row's left and the arrow cluster flush at its
-// right (the 2026-08-12 relayout's split) are the button tenants and have
-// NO owner here: their damage rides the roster machinery (the face writers
-// and the tick comparator), exactly as the top rows' buttons do. A route
-// touching both cells — a load-in-place, an undo restore, a view switch —
-// calls both owners, spelling the two cells it dirties rather than widening
-// to one rect that covers them.
-GuiRect status_row_invalidate_rect(const AppState& a);
+//   IT WIDENS TO THE WHOLE LANE WHILE A MODAL STANDS, by construction rather
+//   than by a test of its own: the row yields whole to the modal, so its
+//   painter publishes no clock cell, and a zero cell is already this owner's
+//   honest widening.
+//
+// THE ROW'S OTHER TWO TENANTS NEED NO RECT FUNCTION. The transport buttons on
+// the left and the arrow cluster flush at the right are the button tenants:
+// their damage rides the roster machinery (the face writers and the tick
+// comparator), exactly as the top rows' buttons do. The MODAL takes the LANE
+// whole through Viewport::invalidate_modal_dialog_area, which spells
+// bottom_row_area directly.
+//
+// (THE STATUS CELL'S OWNER LIVED HERE UNTIL 2026-08-13, when the architect
+// moved the whole status chain — the four-tier ladder and the critical chip —
+// into the TAB ROW. Its span ran from the clock's cell to the arrow cluster's
+// left edge and it was this row's high-traffic string owner; the chain's home
+// is Viewport::invalidate_status_chain_area now, and the two families that
+// shared the old owner — the string writers and the dialog editors' repaint
+// sites — are two populations with two owners, each inventoried at its own
+// declaration in viewport.h. A route touching the clock AND the chain, as a
+// load-in-place or an undo restore does, still calls both, spelling the two
+// surfaces it dirties rather than widening to one rect over them.)
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);

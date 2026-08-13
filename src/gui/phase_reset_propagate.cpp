@@ -316,7 +316,7 @@ void PhaseResetPropagate::paste_apply() {
         // per the always-switch rule.
         if (!stop_message.empty()) {
             app.transient_status_message = std::move(stop_message);
-            viewport.invalidate_status_row_area();
+            viewport.invalidate_status_chain_area();
         }
         // Nothing materialized: land in target view with no new selection.
         land_paste_in_target_view({});
@@ -445,7 +445,7 @@ void PhaseResetPropagate::paste_apply() {
         undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
         target_render.trigger();
     }
 
@@ -454,7 +454,7 @@ void PhaseResetPropagate::paste_apply() {
     // stop_message empty and shows nothing.
     if (!stop_message.empty()) {
         app.transient_status_message = std::move(stop_message);
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
     }
 
     // Land in target view (phase reset's home) with exactly the newly pasted
@@ -592,13 +592,13 @@ void PhaseResetPropagate::paste_state_apply() {
         undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
         target_render.trigger();
     }
 
     if (!stop_message.empty()) {
         app.transient_status_message = std::move(stop_message);
-        viewport.invalidate_status_row_area();
+        viewport.invalidate_status_chain_area();
     }
 
     // Land in target view (phase reset's home) at the end of a completed
@@ -670,7 +670,9 @@ void PhaseResetPropagate::paste_state_apply() {
 // The ordinary damage stays beside it: the rebuild damages y=0 through the
 // waveform's bottom (top strip included), so invalidate_top_strip and
 // invalidate_waveform_area are coalesced duplicates, while
-// invalidate_status_row_area covers the bottom strip the rebuild does not reach.
+// invalidate_status_chain_area is a coalesced duplicate too since the status chain
+// moved into the tab row (2026-08-13), and is kept as this route's own honest
+// statement that it rewrites the chain's transient tier.
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input && app.active_audio_view != 'T') {
         input->handle_active_audio_view_toggle();
@@ -714,7 +716,7 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // the swap used to restore, deleted 2026-07-29 with the parked slots.)
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_row_area();
+    viewport.invalidate_status_chain_area();
     // LAST, after the created selection is installed, so
     // the flag cache rebuilds against the final column AND the final selection
     // hash in one pass (the reasoning, and the two entry contexts it covers, are
