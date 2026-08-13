@@ -2238,34 +2238,38 @@ private:
     // modal_bottom_strip_editor_active while they wrote onto the status lane;
     // the MEANING — this exact four-editor set — has never moved, and the
     // surface is a modal that yields the whole row now rather than a tenant
-    // of its status span). NINE CALLERS (re-derived
-    // 2026-08-13, with the act-at-release / focus-ring arc), eight asking the
-    // same question about a
-    // pointer fact and one — the newest — about a KEY: wheel_context's swallow
-    // (input_handler.cpp), because the
-    // wheel's stepped pan is NAVIGATION, not a chord, so it still punches
-    // through an open top-strip flag editor; pointer_cursor_kind
-    // (2026-08-03), because these four editors are exactly the ones whose
-    // veil SWALLOWS a pointer press, so they are exactly the ones over which
-    // no cursor may promise a gesture; the MODAL-TRAP block at
-    // on_button_press's top (2026-08-11), because these four are exactly the
-    // swallows the admitted Save button press must be lifted OVER
-    // (the fix's contract is at that block and at
-    // modal_editor_admits_command_chord); the dialog BUTTON claim beside it,
-    // ITS RELEASE MIRROR in on_button_release (2026-08-13 — the buttons act at
-    // the lift, so the gesture is claimed on both edges),
-    // and on_motion's dialog-hover branch (2026-08-12), the modal's own two
-    // pointer surfaces; the CHROME release's veil re-ask
-    // (finish_chrome_press_release, 2026-08-13 — the roster acts at the lift
-    // too, so the reach-through's admission is asked at the press AND
-    // re-asked at the release); the roster hover walk's veil term
-    // (recompute_redesign_button_hover — under an editor dialog only the
-    // veil-admitted buttons hover); modal_editor_key_blocked's bare-Tab
-    // admission (2026-08-13, THE ONE KEYBOARD READER: the focus ring's Tab is
-    // admitted for exactly these four, the flag editor publishing no dialog
-    // and so having no ring to walk); and paint_modal_dialog's editor fork by
-    // proxy (it reads the same four is_active tests in the same order). The
-    // flag editor's exemption is the same fact in all of them: it is
+    // of its status span). TEN CALLING FUNCTIONS, RE-DERIVED BY GREP
+    // 2026-08-13 at the reach-through's retirement (the previous retell said
+    // NINE and had missed two, repeat_eligible and dispatch_modal_dialog_button
+    // — this list is the grep's, not that list's descendant): EIGHT ask about a
+    // POINTER fact and TWO about a KEY.
+    //   wheel_context's swallow (input_handler.cpp), because the wheel's
+    //     stepped pan is NAVIGATION, not a chord, so it still punches through
+    //     an open top-strip flag editor;
+    //   pointer_cursor_kind (2026-08-03), because these four editors are
+    //     exactly the ones whose veil SWALLOWS a pointer press, so they are
+    //     exactly the ones over which no cursor may promise a gesture;
+    //   the dialog BUTTON claim in on_button_press, ITS RELEASE MIRROR in
+    //     on_button_release (2026-08-13 — the buttons act at the lift, so the
+    //     gesture is claimed on both edges), dispatch_modal_dialog_button's own
+    //     editor fork behind them, and on_motion's dialog-hover branch
+    //     (2026-08-12) — the modal's own two pointer surfaces;
+    //   the CHROME release's veil re-ask (finish_chrome_press_release,
+    //     2026-08-13), which since the reach-through's retirement refuses the
+    //     roster outright and exists for the editor OPENED MID-HOLD;
+    //   the roster hover walk's veil term (recompute_redesign_button_hover —
+    //     under an editor dialog nothing hovers, the prompt's own answer);
+    //   and on the KEYBOARD side, modal_editor_key_blocked's bare-Tab
+    //     admission (2026-08-13: the focus ring's Tab is admitted for exactly
+    //     these four, the flag editor publishing no dialog and so having no
+    //     ring to walk) and repeat_eligible's two arms (the ring walk repeats,
+    //     and nothing repeats once the focus is on a button).
+    // paint_modal_dialog's editor fork is a reader BY PROXY and not a caller
+    // (it reads the same four is_active tests in the same order).
+    // (THE MODAL-TRAP block at on_button_press's top was an eleventh from
+    // 2026-08-11 and is deleted; its record is at the retired predicate's site,
+    // input_pointer.cpp.)
+    // The flag editor's exemption is the same fact in all of them: it is
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // waveform press reaches the audio under it, and its roster presses were
     // never blocked to begin with.

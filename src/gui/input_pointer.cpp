@@ -300,62 +300,24 @@ static_assert(std::size(kToolbarChords) + 3 ==
               "kToolbarChords must cover every RedesignButton except the "
               "File, Settings and Navigation anchors");
 
-// THE MODAL EDITORS' COMMAND-CHORD ADMISSION, read without the act — the
-// modal-trap fix's membership test (architect 2026-08-11, from the road: an
-// accidental settings editor on GLASS, with no physical keyboard, was an
-// EXIT-LESS STATE — the Quit button did nothing). The five editors' one modal
-// contract admits exactly the editor's own keys plus bare Esc, Ctrl+S and
-// Ctrl+Q (route_modal_editor_key / modal_editor_key_blocked,
-// input_key_dispatch.cpp); this predicate is that contract's COMMAND tail —
-// the chords that are commands rather than editor keys — spelled once so the
-// roster's modal press claim can DERIVE its membership from the admission
-// instead of hand-listing buttons. The two must move together: a chord added
-// to the editors' admission belongs here in the same edit. Bare Esc is in the
-// set because the contract admits it (the cancel); no roster button carries it
-// today (row 8's Esc button died the day it shipped), so the Esc arm is the
-// derivation's completeness, not a live consumer.
-//
-// THE DERIVATION IS WHAT MOVED WHEN THE QUIT BUTTON LEFT, and it moved by
-// itself: this predicate is UNCHANGED by the 2026-08-13 File menu — Ctrl+Q is
-// still admitted, and every word above still holds — while the roster
-// MEMBERSHIP it derives now resolves to SAVE ALONE, because Ctrl+Q no longer
-// belongs to a roster button at all. That is the derivation working exactly as
-// designed (a hand-listed pair would have had to be edited), and the reach-
-// through's remaining consumer is one button. WHAT KEEPS THE ROAD'S TRAP CLOSED
-// without Quit's button is the MODAL ITSELF: since the dialog arc every editor
-// publishes real OK and Cancel buttons on the bottom row, the veil admits a
-// press on them, and Cancel dispatches the session's own Esc — so a keyboard-
-// less user always has a tappable way out of any dialog editor, which is the
-// exit the reach-through was invented to provide (architect 2026-08-13).
-bool modal_editor_admits_command_chord(GuiKey key, bool ctrl, bool shift,
-                                       bool alt) {
-    if (key == GuiKeys::Escape && !ctrl && !shift && !alt) return true;
-    if (key == GuiKeys::S && ctrl && !shift && !alt) return true;
-    if (key == GuiKeys::Q && ctrl && !shift && !alt) return true;
-    return false;
-}
-
-// THE VEIL'S ROSTER ANSWER (2026-08-12, the modal dialog arc): while an
-// EDITOR dialog stands, the window behind is inert to the pointer — so the
-// roster hover walk refuses every button EXCEPT the ones whose chord the
-// editors' modal contract admits as a command, i.e. exactly the buttons the
-// modal-trap press block above still dispatches (SAVE alone since 2026-08-13,
-// when the Quit button became the File menu's item — the membership derived
-// itself down to one, with no edit here). The
-// membership is DERIVED from the admission through the chord table, never
-// hand-listed — the modal-trap block's own rule — so the hover face and the
-// press reach cannot drift apart. The three menu ANCHORS carry no chord and
-// resolve false. Under a PROMPT the caller refuses the whole roster (a prompt
-// admits no command chord at all — its keyboard swallows everything but its
-// own responses), so this predicate is the editor-dialog half only.
-static bool modal_veil_admits_button(RedesignButton id) {
-    for (const ToolbarChord& tc : kToolbarChords) {
-        if (tc.id == id)
-            return modal_editor_admits_command_chord(tc.key, tc.ctrl,
-                                                     tc.shift, tc.alt);
-    }
-    return false;
-}
+// (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
+// drop the Save reach through". From 2026-08-11 a plain left press on a roster
+// button whose chord the editors' modal contract ADMITS AS A COMMAND was
+// lifted over the veil and dispatched, membership derived from the admission
+// through the chord table by `modal_editor_admits_command_chord`, with
+// `modal_veil_admits_button` giving the hover walk the same answer. ITS REASON
+// IS GONE: it existed because an accidentally opened settings editor on GLASS,
+// with no physical keyboard, was an exit-less state — the Quit button did
+// nothing — and the modal itself now answers that, every one of the four
+// editor dialogs publishing real OK and CANCEL buttons the veil admits, with
+// Cancel dispatching the session's own Esc. Quit's button had already left the
+// roster with the File menu, so the membership had derived down to SAVE alone;
+// the whole mechanism goes rather than surviving for one convenience chord.
+// SO THE VEIL IS EXCEPTIONLESS AGAIN: while a dialog editor stands, EVERY
+// press outside the modal is consumed, and the roster hovers nothing. THE
+// KEYBOARD CONTRACT IS UNTOUCHED — route_modal_editor_key still admits bare
+// Esc, Ctrl+S and Ctrl+Q while an editor stands, which is where that pair's
+// pointer-side mirror note used to point.)
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
 // painter's stash and nothing here re-shapes or re-measures, so the clickable
@@ -811,7 +773,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //   (architect-confirmed 2026-08-12): it is the view's OPENER, and a
 //   collapsed opener would make the view pointer-unreachable —
 //   keyboard-only, which on the glass rig (no keyboard) means unreachable
-//   outright, the exact trap class the modal reach-through fix closed. (The
+//   outright, the same trap class the modal dialogs' own OK and Cancel
+//   buttons answer. (The
 //   Cumulative toggle's dimmed-selected resting lamp of 2026-08-08 is
 //   SUPERSEDED by its collapse — the reading shows inside the view, where
 //   the bit acts.)
@@ -2454,55 +2417,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         return;
     }
 
-    // THE MODAL-TRAP FIX (architect 2026-08-11, with the trim surface arc; the
-    // defect was the road's: an accidentally opened settings editor on GLASS,
-    // with no physical keyboard, was an EXIT-LESS STATE — the Quit button did
-    // nothing). The dialog modal editors admit Ctrl+Q and Ctrl+S as
-    // CHORDS, but their pointer veil below refuses the roster wholesale —
-    // so the QUIT and SAVE buttons violated button-is-its-chord exactly where
-    // the chord is admitted. FIXED BY DERIVATION, not new semantics: while a
-    // dialog modal editor stands, a plain left press on a roster button
-    // whose chord the editors' modal contract ADMITS AS A COMMAND
-    // (modal_editor_admits_command_chord above — membership derived from the
-    // admission, never hand-listed; SINCE 2026-08-13 that resolves to SAVE
-    // ALONE, the Quit BUTTON having become the File menu's one item — the
-    // predicate is untouched and the membership fell out of it, which is the
-    // derivation doing its job)
-    // ARMS through the ordinary one press body (act at the release, like the
-    // rest of the chrome — the release re-asks this same admission before
-    // dispatching), and every other press stays refused at the swallows
-    // below. The chord the lift then dispatches meets the KEYBOARD gate's own
-    // routing — Ctrl+S saves with the editor open — so the button is
-    // its chord end to end. THE ROAD'S TRAP IS CLOSED BY THE DIALOG ITSELF
-    // now, not by this block (architect 2026-08-13, ruling on Quit's
-    // departure): every one of the four editor dialogs publishes real OK and
-    // CANCEL buttons on the bottom row, the veil admits a press on them, and
-    // Cancel dispatches that editor's own Esc — so the keyboard-less user's way
-    // out is the modal's own button, and no roster reach-through is needed for
-    // it. This block survives for Ctrl+S, which is a command rather than an
-    // exit. Faces: the admitted button already wears
-    // its enabled face (the modal gates are deliberately absent from
-    // redesign_button_enabled — a modal that greyed the chrome would be a
-    // fourth face nobody asked for, the standing note there), so face and
-    // press agree where it matters and the un-admitted rest keep the standing
-    // swallowed-press model. A MODIFIED press stays swallowed: the band
-    // claims refuse ctrl/alt and non-admitting shift anyway, and under a
-    // modal the refusal's home is the swallow. THE FLAG EDITOR IS NOT IN
-    // THIS PATH and needs nothing: it is pointer-transparent — it never
-    // blocked these presses, whose chords already dispatch into the keyboard
-    // gate through the ordinary band claims below.
-    if (button == GuiMouseButton::Left && !mods.ctrl && !mods.alt &&
-        !mods.shift && modal_dialog_editor_active()) {
-        for (const ToolbarChord& tc : kToolbarChords) {
-            if (!redesign_button_hit(app, tc.id, x, y)) continue;
-            if (modal_editor_admits_command_chord(tc.key, tc.ctrl, tc.shift,
-                                                  tc.alt)) {
-                arm_redesign_press(x, y, mods);
-                return;
-            }
-            break;   // hit a non-admitted button: the modal swallow answers
-        }
-    }
+    // (THE MODAL-TRAP REACH-THROUGH STOOD HERE, 2026-08-11..08-13, and is
+    // RETIRED — architect: "we can drop the Save reach through". It let a
+    // plain left press on a roster button whose chord the editors' modal
+    // contract admits as a command arm through the ordinary press body while a
+    // dialog editor stood, which is what gave a keyboard-less user on GLASS a
+    // way out of an accidentally opened settings editor. THE MODAL ANSWERS
+    // THAT ITSELF now: all four editor dialogs publish real OK and CANCEL
+    // buttons, the claim below admits a press on them, and Cancel dispatches
+    // the session's own Esc. With Quit's button gone to the File menu the
+    // membership had already derived down to Save, and a convenience chord is
+    // not worth an exception to the veil. SO THE VEIL HAS NO EXCEPTION: while
+    // a dialog editor stands every press outside the modal is consumed. The
+    // KEYBOARD is untouched — Ctrl+S still saves with the editor open, through
+    // the admission this block used to mirror. The full retirement record is at
+    // the deleted predicate's site near the head of this file.)
 
     // THE DIALOG'S OWN BUTTONS, claimed while an editor dialog stands and
     // ahead of the field claim below (the rects are disjoint; the order only
@@ -2592,8 +2521,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // box's field and buttons is CONSUMED, closing nothing (the
             // architect's words: "once I've done that pop-up modal, I can't
             // do anything else in the window behind it"; the dialog closes
-            // only by its own buttons and keys, and the one reach-through is
-            // the modal-trap roster block above). A flag-editor press that
+            // only by its own buttons and keys, and since 2026-08-13 the veil
+            // has no exception at all). A flag-editor press that
             // isn't on the lane text falls through to the guard-free close
             // below.
             if (g.dialog) return;
@@ -4193,10 +4122,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // THE CHROME ACT, the roster's own release body (2026-08-13): the lift on
     // the armed button runs its chord — or the lock's `o`, or the walk tabs'
     // select — through the one release half, which re-hits the target at
-    // these coordinates and re-asks every press-time gate (the veil included,
-    // so the modal-trap reach-through dispatches from here too — which is why
-    // this sits BELOW the editor dialog's own release and ABOVE the editor
-    // swallows further down). Mutually exclusive with every gesture branch
+    // these coordinates and re-asks every press-time gate, the veil included —
+    // which is why this sits BELOW the editor dialog's own release and ABOVE
+    // the editor swallows further down. Mutually exclusive with every gesture branch
     // below by construction: the press that armed chrome claimed the press
     // whole and armed nothing else.
     if (button == GuiMouseButton::Left &&
@@ -4584,15 +4512,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // stamp itself.
     const bool modal_owns_the_keyboard =
         app.prompt.active || keyboard_modal_editor_active();
-    // THE DIALOG'S VEIL (2026-08-12): under a PROMPT the whole roster is
-    // refused — nothing behind the dialog is pressable, so nothing hovers;
-    // under an EDITOR dialog only the veil-admitted buttons hover (the
-    // modal-trap reach-through the press claim still dispatches — SAVE alone
-    // since 2026-08-13, derived at modal_veil_admits_button). The
-    // pointer-transparent FLAG
+    // THE DIALOG'S VEIL (2026-08-12): under a PROMPT or an EDITOR dialog the
+    // WHOLE roster is refused — nothing behind the modal is pressable, so
+    // nothing hovers. It was two rules until 2026-08-13, the editor half
+    // admitting the reach-through's own buttons; the reach-through is retired
+    // (the record is at its deleted predicate's site near the head of this
+    // file) and the two collapsed into this one. The pointer-transparent FLAG
     // editor raises no veil: it is not a dialog and its roster presses were
     // never blocked.
-    const bool editor_dialog_veil = modal_dialog_editor_active();
+    const bool modal_veil =
+        app.prompt.active || modal_dialog_editor_active();
     bool changed_top       = false;
     bool changed_transport = false;
     int  hovered_tip = -1;
@@ -4608,10 +4537,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // all, and both refusals live in that one predicate rather than as
         // conditions here or in the painter. There is no in-window term: the
         // whole walk refused above.
-        const bool veiled =
-            app.prompt.active ||
-            (editor_dialog_veil && !modal_veil_admits_button(id));
-        const bool under_pointer = !veiled &&
+        const bool under_pointer = !modal_veil &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
         // THE FACE ADDS THE ENABLED TERM AND THE HINT DOES NOT (architect
@@ -4724,7 +4650,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // reads the LIVE surfaces, not the painted stash, so the frame a dialog
     // closes on is the frame this walk takes the dwell back — a stash-based
     // test would leave the last hint floating for one more paint.
-    if (app.prompt.active || editor_dialog_veil) {
+    if (modal_veil) {
         if (app.redesign_tooltip.owner.surface ==
             AppState::RedesignTooltip::Surface::Roster) {
             hide_shift_tooltip();
@@ -5000,18 +4926,14 @@ void GuiInputHandler::finish_chrome_press_release(
         if (redesign_button_index(tc.id) != arm.index) continue;
         // The lift must land on the armed button itself.
         if (!redesign_button_hit(app, tc.id, x, y)) return;
-        // THE VEIL, re-asked: under an editor dialog only the buttons whose
-        // chord the editors' modal contract admits may act (the modal-trap
-        // reach-through — Save alone today, derived never hand-listed). An
-        // editor OPENED mid-hold vetoes an ordinary arm here; a press armed
-        // through the reach-through re-answers yes. A PROMPT never reaches
-        // this body at all — on_button_release's prompt gate consumes the
-        // release above it.
-        if (modal_dialog_editor_active() &&
-            !modal_editor_admits_command_chord(tc.key, tc.ctrl, tc.shift,
-                                               tc.alt)) {
-            return;
-        }
+        // THE VEIL, re-asked: under an editor dialog NO roster button may act.
+        // It was a membership test until 2026-08-13, admitting the modal-trap
+        // reach-through's own buttons; with that retired the veil is blanket
+        // again and this line's whole job is the editor OPENED MID-HOLD — an
+        // arm taken before the dialog rose must not fire into it. A PROMPT
+        // never reaches this body at all — on_button_release's prompt gate
+        // consumes the release above it.
+        if (modal_dialog_editor_active()) return;
         // The press-time refusals, re-asked against the live state — the
         // shift admission under the CARRIED shift, the enabled bit, the radio
         // rule. Each held at the press; any that no longer does makes the
@@ -5075,8 +4997,14 @@ void GuiInputHandler::finish_chrome_press_release(
         //
         // Measured at the LIFT against the arm's own press stamp: no timer, no
         // tick, nothing polled, and no state beyond the int64 the arm already
-        // carries. The accepted cost is that the hold has no feedback while it
-        // runs — the beat passes silently and the act shows only at the lift.
+        // carries.
+        //
+        // NO FEEDBACK IS NEEDED WHILE THE HOLD RUNS — architect-RULED
+        // 2026-08-13, closing the open question this arc left rather than
+        // leaving it as a gap: the gesture exists for the TOUCH PANEL, and
+        // TOOLTIPS DO NOT SHOW THERE, so the surface the hint would have to
+        // ride is one the gesture's only user never sees. The beat passes
+        // silently, the act shows at the lift, and none is to be built.
         const bool held_to_shift =
             redesign_button_shift_admits(tc.id) &&
             monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
@@ -6380,10 +6308,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.prompt.active) {
         // THE PROMPT DIALOG'S MOTION: the dialog buttons' hover face, then
         // the roster recompute — which under a prompt re-derives ALL-FALSE
-        // through the veil term (modal_veil_admits_button refuses everything
-        // under a prompt), so a pill lit at the open goes out on the next
-        // motion or tick. The veil consumes the rest of the motion — nothing
-        // below this branch runs.
+        // through that walk's own veil term, so a pill lit at the open goes
+        // out on the next motion or tick. The veil consumes the rest of the
+        // motion — nothing below this branch runs.
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;
@@ -6420,9 +6347,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // (the BPM bracket included since the dialog arc; it used to fall
         // through to the gesture branches, harmlessly, its presses all
         // swallowed): the dialog buttons' hover face, then the roster
-        // recompute, whose veil term refuses everything but the veil-admitted
-        // Save so ITS face stays live (the modal-trap reach-through the press
-        // claim carries through the veil) while the rest of the roster goes
+        // recompute, whose veil term refuses the whole roster since the
+        // modal-trap reach-through's retirement, so every chrome face goes
         // dead under the pointer. The rationale for recomputing at all is the
         // one the old branch carried: hover is a separately maintained
         // pointer fact, and a modal freezing it left lit pills behind.

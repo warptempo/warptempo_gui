@@ -714,10 +714,11 @@ private:
     // from paint_tab_row ALONE and BEFORE its tab walk, which is the whole
     // collision rule: the tabs paint over the chain and win, and text pushed
     // under a tab is accepted. Takes the row's already-selected face and its
-    // lane so the chain and the tab labels cannot resolve two baselines. The
-    // full layout record, the tier ladder and the chip's derived box are at the
-    // definition.
-    void paint_status_chain(cairo_t* cr, const GuiRect& lane, int content_h,
+    // CONTENT BAND — the lane less its two border rows — so the chain and the
+    // tab labels cannot resolve two baselines and neither border is reachable
+    // from inside here. The full layout record, the tier ladder and the chip's
+    // derived box are at the definition.
+    void paint_status_chain(cairo_t* cr, const GuiRect& band,
                             cairo_scaled_font_t* font);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,

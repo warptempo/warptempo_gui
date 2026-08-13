@@ -181,8 +181,8 @@ namespace {
 // Focused it is the crops' #292c30; unfocused it darkens to #202326 with the
 // labwc titlebar above (the ruling and the constant's provenance are at
 // kRedesignRowGroundUnfocused, render.h). Row 3 does NOT call this — its
-// ground is the resting tab's own fixed #1b1d20 (the 2026-08-13 identity
-// ruling), darker than either shade here and with nothing to swap.
+// ground is the fixed content ground #202326, which happens to equal the
+// unfocused shade and has nothing to swap.
 //
 // THE TWO MIXES FOLLOW THE GROUND rather than the focused constant, which is
 // the whole reason this is a function and not two literals at the fill sites: a
@@ -1244,21 +1244,25 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // THE TAB ROW (top lane 2, row 3 of the redesign): the Breeze tab bar for
     // the A/B navigational tabs — "Tab A" and "Tab B", flush at the left edge,
-    // over the RESTING TAB'S OWN #1b1d20 ground (architect 2026-08-13; the
-    // ruling and the constant it retired are at render.h's row-3 block), with a
-    // 1px border-bottom across the whole window width that BREAKS under the
+    // over the CONTENT GROUND #202326 (Breeze's standard bar, matching the pane
+    // it opens into; the crops, the ruling that briefly darkened it and that
+    // ruling's withdrawal are all at render.h's row-3 block), between TWO
+    // border rows: a 1px #535659 line across the whole window width at the
+    // lane's TOP, and a 1px #4c4e51 line at its BOTTOM that BREAKS under the
     // selected tab.
     //
     // THE SELECTED TAB IS app.active_tab_view, read live every paint. Its face
-    // is a 3px accent trim with rounded top corners over an interior in
-    // kRedesignContentGround — the surface below the row, so the tab reads as
-    // an opening into the icon row rather than as a filled shape — flanked by
-    // 1px side borders. An INACTIVE tab is a flat fill, rest or hover, and at
-    // rest it is the bar's own colour: it recedes, which is the whole point of
-    // the ground ruling and leaves the selected tab the one thing standing
-    // proud. There is no selected-hover face and no click face anywhere in
-    // this row (a tab press is a chord, never a refusal), and this row has NO
-    // disabled face at all.
+    // is a 3px accent trim with rounded top corners flanked by 1px side
+    // borders, over the bar's own ground — the tab reads as an OPENING into
+    // the icon row rather than as a filled shape, and it lays no interior of
+    // its own because the bar's fill already IS that interior (one surface,
+    // one fill; the explicit path fill this branch carried for the few hours
+    // the ground was darker went with the ground). An INACTIVE tab is a flat
+    // fill, rest #1b1d20 or hover, RECESSED against the bar — Breeze's model,
+    // where the bar matches the pane and the unselected tab sits below both.
+    // There is no selected-hover face and no click face anywhere in this row
+    // (a tab press is a chord, never a refusal), and this row has NO disabled
+    // face at all.
     //
     // THE ROW IS THE WALK SELECTOR WHILE THE `h` HISTORY VIEW STANDS (architect
     // 2026-08-05 for the repurposing, 2026-08-08 for what it selects), which is
@@ -1293,26 +1297,51 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     const GuiRect lane = top_tab_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
+    // THE LANE IS THREE BANDS: a border row, the content band every tab box
+    // fills, and a second border row. `content_y` is the band's top and the
+    // origin EVERYTHING on this row anchors to — the tabs, their published hit
+    // rects, the lock slot, the labels' baseline and the status chain's own
+    // band — so the top border is a row nothing else can reach.
     const int border_h  = tab_row_border_h_px();
-    const int content_h = lane.h - border_h;
+    const int content_h = lane.h - 2 * border_h;
     if (content_h <= 0) return;
+    const int content_y = lane.y + border_h;
 
     cairo_save(cr);
 
-    // THE BAR, over the WHOLE lane, border row included: the RESTING TAB'S OWN
-    // FILL by the architect's identity ruling, read from kRedesignTabRest
-    // itself rather than from a second constant holding the same number (the
-    // reasoning is at render.h's row-3 block). It is what an unselected tab
-    // disappears into, and it is what the selected tab's corner arcs antialias
-    // against — the arcs now have a real edge to describe, where under the old
-    // ruling they blended one #202326 into another. It is NOT the selected
-    // tab's interior any more: that tab paints its own ground in the walk
-    // below, over this one and down THROUGH the border row, which is what the
-    // BREAK is made of — where the border does not paint, the tab's own colour
-    // shows and the opening leads into the icon row.
-    cairo_set_source_rgb(cr, kRedesignTabRest.r, kRedesignTabRest.g,
-                         kRedesignTabRest.b);
+    // THE BAR, over the WHOLE lane, both border rows included: the CONTENT
+    // GROUND, the surface the selected tab opens into. It is that tab's
+    // interior too — the crops read bar and pane as one value (render.h's
+    // row-3 block carries the measurement) — which is why the selected branch
+    // below lays no fill of its own: where the bottom border BREAKS under that
+    // tab, what shows through is this fill, and the opening leads into the
+    // icon row. It covers both border rows deliberately: the top one is
+    // overwritten immediately below, and the bottom one is meant to show this
+    // colour exactly where the border breaks — one rectangle, the row's only
+    // ground expression.
+    cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                         kRedesignContentGround.g,
+                         kRedesignContentGround.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
+    cairo_fill(cr);
+
+    // THE BORDER-TOP, full window width at the lane's FIRST row and UNBROKEN —
+    // over the trough and over every tab alike (2026-08-13). WHAT THE CROPS
+    // SHOW is exactly that: row_3_tab_example's y=0 is one #535659 run across
+    // all 281 px with two unselected tabs beginning at y=1 beneath it, and
+    // row_3_tab_trough agrees on the empty bar. WHAT THEY DO NOT SHOW is a
+    // SELECTED tab under this line — row_3_tab_selected starts AT the tab's
+    // own top row, so whether a selected tab breaks the top line the way it
+    // breaks the bottom one is UNANSWERED by the crops and is not guessed at
+    // here. The line is drawn straight across and the selected tab's rounded
+    // accent begins on the first content row below it, which is the reading
+    // the crops do support: a tab top that starts below the line, not through
+    // it. Its grey is the row's own sample and deliberately NOT the bottom
+    // border's — two Breeze roles, two constants, the reasoning at
+    // kRedesignTabTopLine.
+    cairo_set_source_rgb(cr, kRedesignTabTopLine.r, kRedesignTabTopLine.g,
+                         kRedesignTabTopLine.b);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, border_h);
     cairo_fill(cr);
 
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
@@ -1323,9 +1352,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // THE STATUS CHAIN, ON THE BAR AND UNDER THE TABS (architect 2026-08-13).
     // HERE is the collision rule and there is no other: it paints on the ground
     // the fill above just laid, and the tab walk below paints over it. It takes
-    // this row's face and lane so the chain and the tab labels solve ONE
-    // baseline, and it restores every bit of context it touches.
-    paint_status_chain(cr, lane, content_h, font);
+    // this row's CONTENT BAND so the chain and the tab labels solve ONE
+    // baseline and neither border row is reachable from inside it, and it
+    // restores every bit of context it touches.
+    paint_status_chain(cr, GuiRect{lane.x, content_y, lane.w, content_h}, font);
 
     const int pad      = scaled_px(kTabLabelPadPx);
     const int min_w    = scaled_px(kTabMinWidthPx);
@@ -1383,7 +1413,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // reads THE SAME fact the comparator replays, with no second spelling.
         AppState::RedesignButtonFace& face = publish_button_face(
             app, audio.total_frames(), def.id,
-            GuiRect{x, lane.y, tab_w, content_h});
+            GuiRect{x, content_y, tab_w, content_h});
         const bool selected = face.selected;
 
         // THE ROW HAS NO DISABLED FACE AGAIN (2026-08-05). It grew one on
@@ -1396,11 +1426,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // its producer rather than sitting here unreachable; the product's one
         // disabled blend is unchanged and still the rule on row 4.
         const bool hovered = face.hovered;
-        // The face this tab wears — the fill it paints (the selected tab lays
-        // its own interior since the ground ruling; the resting tab's fill
-        // coincides with the bar it sits on, and is still painted rather than
-        // left to show through, because the tab owns its face and hover moves
-        // it) and the ground every ink below sits on.
+        // The face this tab wears — the fill it paints and the ground every ink
+        // below sits on. THE SELECTED TAB PAINTS NO FILL AT ALL: its interior
+        // is the bar's own ground, already laid, so the name here is the ground
+        // its trim, borders, label and lock resolve against rather than a
+        // colour this branch writes.
         const GuiColor tab_face =
             selected ? kRedesignContentGround
                      : (hovered ? kRedesignTabHover : kRedesignTabRest);
@@ -1409,40 +1439,31 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             sel_x = x;
             sel_w = tab_w;
 
-            // THE INTERIOR, which the bar no longer supplies (architect
-            // 2026-08-13: the row's ground is the RESTING tab's colour now, so
-            // the selected tab has to lay its own). THE SAME OPEN ROUNDED-TOP
-            // PATH the trim and the border use, filled: the corner notches are
-            // therefore the BAR's colour, which is what makes the tab read as a
-            // rounded shape standing proud of it — under the retired identity
-            // both sides of those arcs were #202326 and a square fill would
-            // have been indistinguishable. IT RUNS THE WHOLE LANE HEIGHT,
-            // border row included, so the BREAK in the border-bottom below
-            // exposes this colour and the tab opens into the icon row, which is
-            // the same surface: that seam is the reason the constant is shared
-            // and it is unaffected by the ruling.
-            redesign_rounded_top_rect_path(cr, x, lane.y,
-                                           static_cast<double>(tab_w),
-                                           static_cast<double>(lane.h),
-                                           radius);
-            cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                                 kRedesignContentGround.g,
-                                 kRedesignContentGround.b);
-            cairo_fill(cr);
-
-            // THE SAME SHAPE AGAIN, TWO CLIPPED USES, and these two clips are
+            // NO INTERIOR FILL, and that is the ground's doing rather than an
+            // omission: the bar and the surface the tab opens into are ONE
+            // value in the crops, so the lane fill above has already painted
+            // this tab's interior — down through the bottom border row, which
+            // is what the BREAK below exposes. (The explicit rounded-path fill
+            // this branch carried for the few hours the row's ground was the
+            // resting tab's #1b1d20 is deleted with that ruling: over the
+            // restored ground it wrote the same constant over the same pixels,
+            // and keeping it would state as two facts what the crops measure
+            // as one.)
+            //
+            // THE OPEN ROUNDED-TOP PATH, TWO CLIPPED USES, and these two clips are
             // complementary — so neither writes the other's pixels and the two
-            // halves cannot describe different tabs (the interior above is
-            // unclipped and deliberately underneath both). FILLED under a clip
+            // halves cannot describe different tabs. FILLED under a clip
             // to the top trim band it is the
             // 3px blue top, whose only antialiasing is the two corner arcs;
             // STROKED under a clip to everything below that band it is the 1px
             // side borders, picking those same arcs up where the blue leaves off
-            // and running vertical to the lane's last content row.
+            // and running vertical to the lane's last content row. BOTH anchor
+            // at content_y, so the tab begins on the first row BELOW the
+            // border-top and never writes into it.
             cairo_save(cr);
-            cairo_rectangle(cr, x, lane.y, tab_w, trim_h);
+            cairo_rectangle(cr, x, content_y, tab_w, trim_h);
             cairo_clip(cr);
-            redesign_rounded_top_rect_path(cr, x, lane.y,
+            redesign_rounded_top_rect_path(cr, x, content_y,
                                            static_cast<double>(tab_w),
                                            static_cast<double>(content_h),
                                            radius);
@@ -1452,7 +1473,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             cairo_restore(cr);
 
             cairo_save(cr);
-            cairo_rectangle(cr, x, lane.y + trim_h, tab_w, content_h - trim_h);
+            cairo_rectangle(cr, x, content_y + trim_h, tab_w,
+                            content_h - trim_h);
             cairo_clip(cr);
             {
                 // THE STROKE GEOMETRY, in one expression per axis:
@@ -1462,18 +1484,18 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                 //    not call: the tab's path is open at the bottom);
                 //  - the radius inset by the SAME half, which keeps the arc
                 //    CONCENTRIC with the filled trim's arc above (both centered
-                //    on x+radius, lane.y+radius) so the border picks the blue up
-                //    exactly where it ends;
+                //    on x+radius, content_y+radius) so the border picks the blue
+                //    up exactly where it ends;
                 //  - and the height run to the content band's LAST ROW rather
                 //    than inset, because the path has no bottom edge to align:
-                //    a butt-capped vertical ending at lane.y+content_h covers
+                //    a butt-capped vertical ending at content_y+content_h covers
                 //    every row down to the border, which is what the crop shows.
                 const double half = static_cast<double>(line_w) * 0.5;
                 cairo_set_line_width(cr, static_cast<double>(line_w));
                 cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
                                      kRedesignTabLine.b);
                 redesign_rounded_top_rect_path(
-                    cr, x + half, lane.y + half,
+                    cr, x + half, content_y + half,
                     static_cast<double>(tab_w - line_w),
                     static_cast<double>(content_h) - half,
                     radius - half);
@@ -1481,18 +1503,19 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             }
             cairo_restore(cr);
         } else {
-            // The inactive tab: a flat fill, square corners, no borders. Hovered
+            // The inactive tab: a flat fill, square corners, no borders, sitting
+            // RECESSED against the bar (Breeze's model). Hovered
             // it takes the lighter blue-grey PLUS a 1px edge across its own
             // bottom row — the hover face recolors that row, which is the crop's
             // whole difference from rest.
             cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
-            cairo_rectangle(cr, x, lane.y, tab_w, content_h);
+            cairo_rectangle(cr, x, content_y, tab_w, content_h);
             cairo_fill(cr);
             if (hovered && content_h > line_w) {
                 cairo_set_source_rgb(cr, kRedesignTabHoverEdge.r,
                                      kRedesignTabHoverEdge.g,
                                      kRedesignTabHoverEdge.b);
-                cairo_rectangle(cr, x, lane.y + content_h - line_w,
+                cairo_rectangle(cr, x, content_y + content_h - line_w,
                                 tab_w, line_w);
                 cairo_fill(cr);
             }
@@ -1514,7 +1537,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             static_cast<double>(x) +
                 std::nearbyint((static_cast<double>(field_w) - run.width_px) *
                                0.5),
-            redesign_baseline(font, static_cast<double>(lane.y),
+            redesign_baseline(font, static_cast<double>(content_y),
                               static_cast<double>(content_h)));
 
         // THE LOCK, drawn last so it sits over whatever face the tab wears, and
@@ -1559,7 +1582,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // a slot one pixel wide of its parts put the LOCK's press claim
             // over the label field's last column (the record at kTabLockBoxPx).
             const int lx = x + tab_w - lock_mar - lock_box;
-            const int ly = lane.y + (content_h - lock_box) / 2;
+            const int ly = content_y + (content_h - lock_box) / 2;
             if (vs.read_only) {
                 icons::draw(cr, icons::Icon::Lock,
                             static_cast<double>(lx), static_cast<double>(ly),
@@ -1578,14 +1601,16 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
     // THE BORDER-BOTTOM, full window width at the lane's last row — EXCEPT under
     // the selected tab, where it BREAKS because that tab opens into the content
-    // below, and the pixels it leaves alone are that tab's own interior, run
-    // down here by the fill above. Two pixel-bound rectangle fills (left of the
-    // tab, right of it),
+    // below, and the pixels it leaves alone are that tab's own interior, which
+    // the lane's ground fill already laid. Two pixel-bound rectangle fills (left
+    // of the tab, right of it),
     // either of which is empty when the selected tab sits at an edge; crisp on
-    // integer bounds like every other axis-aligned 1px fill in these rows.
+    // integer bounds like every other axis-aligned 1px fill in these rows. ITS
+    // GREY IS NOT THE BORDER-TOP'S, by measurement rather than by oversight
+    // (kRedesignTabTopLine's record, render.h).
     cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
                          kRedesignTabLine.b);
-    const int border_y = lane.y + content_h;
+    const int border_y = content_y + content_h;
     if (sel_w <= 0) {
         cairo_rectangle(cr, lane.x, border_y, lane.w, border_h);
         cairo_fill(cr);
@@ -1615,9 +1640,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 //
 // Called from paint_tab_row and nowhere else, BEFORE its tab walk, on the bar
 // the row has already grounded — the paint order IS the collision rule. It
-// takes the row's lane, its content height and its already-selected face
-// rather than resolving any of the three itself, which is what keeps the chain
-// and the tab labels on one baseline.
+// takes the row's CONTENT BAND (the lane less its border rows) and its
+// already-selected face rather than resolving either itself, which is what
+// keeps the chain and the tab labels on one baseline and what makes the two
+// border rows unreachable from in here by construction rather than by care.
 //
 // IT IS PAINT-ONLY AND PUBLISHES NOTHING. No rect reaches AppState, so the
 // chain owns no hit test, no hover and no cursor cue: a press on the lane
@@ -1631,10 +1657,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 //
 // ITS DAMAGE OWNER IS Viewport::invalidate_status_chain_area — the lane whole,
 // because the chain right-aligns and a shorter string must erase a longer one.
-void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& lane,
-                                         int content_h,
+void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
                                          cairo_scaled_font_t* font) {
-    if (lane.w <= 0 || content_h <= 0) return;
+    if (band.w <= 0 || band.h <= 0) return;
 
     // COMPOSE SECTION C's TEXT FIRST, by the precedence chain — a
     // right-aligned pen needs the run's width before it can land, so the
@@ -1763,26 +1788,25 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& lane,
 
     // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain, chip first. ---
     //
-    // The span runs from the lane's own left edge to ONE PAD IN FROM ITS RIGHT
+    // The span runs from the band's own left edge to ONE PAD IN FROM ITS RIGHT
     // (the window's right edge — this lane spans the window). The chain
     // right-aligns inside it, and when it does not fit it LEFT-anchors at the
-    // lane's edge instead: the chip (the chain's leftmost member) stays wholly
+    // band's edge instead: the chip (the chain's leftmost member) stays wholly
     // visible and C clips at the right bound, the chip's primacy under right
-    // alignment. THE CLIP IS THE CONTENT BAND, never the lane, so nothing here
-    // can reach the row's own 1px border-bottom — which the tab walk's border
-    // pass would repaint over anyway, this being the honest bound rather than a
-    // reliance on that order. Nothing clips against the TABS: they paint after
-    // this and win, which is the whole rule.
+    // alignment. THE CLIP IS THE CONTENT BAND, which is the whole rect this
+    // function was handed, so nothing here can reach either of the row's 1px
+    // border rows — the caller's partition, not this site's care. Nothing clips
+    // against the TABS: they paint after this and win, which is the whole rule.
     const double pad     = static_cast<double>(status_chain_pad_x());
-    const double span_x0 = static_cast<double>(lane.x);
+    const double span_x0 = static_cast<double>(band.x);
     const double span_x1 = std::nearbyint(
-        static_cast<double>(lane.x + lane.w) - pad);
+        static_cast<double>(band.x + band.w) - pad);
     if (span_x1 <= span_x0) return;   // a lane narrower than its own margin
 
     cairo_save(cr);
     const double baseline = redesign_baseline(font,
-                                              static_cast<double>(lane.y),
-                                              static_cast<double>(content_h));
+                                              static_cast<double>(band.y),
+                                              static_cast<double>(band.h));
 
     text_shape::ShapedRun status_run;
     if (!status.empty())
@@ -1804,8 +1828,8 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& lane,
         std::max(span_x0, span_x1 - chain_w));
 
     cairo_save(cr);
-    cairo_rectangle(cr, span_x0, static_cast<double>(lane.y),
-                    span_x1 - span_x0, static_cast<double>(content_h));
+    cairo_rectangle(cr, span_x0, static_cast<double>(band.y),
+                    span_x1 - span_x0, static_cast<double>(band.h));
     cairo_clip(cr);
 
     double pen = chain_x;
@@ -1881,9 +1905,9 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& lane,
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 2, row 4 of the redesign): the same #202326
-    // content ground the SELECTED TAB above opens into (the tab row's own bar
-    // is the darker resting-tab shade since 2026-08-13; this row did not move
-    // with it), a 1px border-bottom across the WHOLE window
+    // content ground the SELECTED TAB above opens into — and that the tab row's
+    // own bar paints, the three surfaces being one value by measurement — under
+    // a 1px border-bottom across the WHOLE window
     // width, separator-divided groups of 32x32 buttons — TWENTY-NINE members
     // in nine groups since the 2026-08-12 grand relayout: the toolbar four
     // (Save / Undo / Redo / Render, the deleted row 2's, leading the row),

@@ -50,9 +50,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // run one while a prompt or a keyboard-modal editor is up — the rule is at
     // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
     // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
-    // input_pointer.cpp) — under a PROMPT every roster face goes dark, and
-    // under an EDITOR dialog every face but the veil-admitted Save (the modal
-    // trap's reach-through, one button since 2026-08-13) does, so a modal opened by this key
+    // input_pointer.cpp) — under a PROMPT or an EDITOR dialog alike every
+    // roster face goes dark, one blanket answer since the modal-trap
+    // reach-through's retirement, so a modal opened by this key
     // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
     // raises no veil and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
@@ -198,8 +198,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // contend with route_modal_editor_key — and the claim rests on TWO
     // mechanisms, one per class. The popup opens only from row 1, and while a
     // DIALOG editor is up the press that would open it dies at the dialog's
-    // veil in on_button_press (the three menu anchors carry no chord, so the
-    // modal-trap lift never reaches them). The pointer-transparent FLAG
+    // veil in on_button_press, which since 2026-08-13 swallows the roster
+    // whole. The pointer-transparent FLAG
     // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
     // open path discards the edit, exactly as a press outside its box does. The
     // reverse direction is this gate's own doing — `;` is swallowed here, so no

@@ -1427,8 +1427,9 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // — so the two cannot drift into different lists. THE HISTORY BUTTON ITSELF
 // IS DELIBERATELY NOT A MEMBER: it is the view's OPENER, and a collapsed
 // opener would make the view pointer-unreachable — keyboard-only, which on
-// the glass rig (no keyboard) means unreachable outright, the exact trap
-// class the modal reach-through fix closed (architect-confirmed 2026-08-12).
+// the glass rig (no keyboard) means unreachable outright, the same trap class
+// the modal dialogs' own OK and Cancel buttons answer (architect-confirmed
+// 2026-08-12).
 //
 // ALL FOUR PAINT TO THE RIGHT OF THE OPENER, and that is load-bearing rather
 // than cosmetic since the 2026-08-13 group move: expanding them on entry into
@@ -1795,6 +1796,11 @@ constexpr int     kDoubleClickSlackPx = 8;
 // rare act rather than on the common one; 500ms is well past any ordinary
 // click-and-lift and just short of the point where a user would assume the
 // press was lost.
+//
+// IT PASSES SILENTLY AND IS RULED TO (architect 2026-08-13): the gesture is the
+// TOUCH PANEL's, and tooltips do not show there, so a hint at the beat would
+// ride a surface the gesture's only user never sees. No feedback is to be
+// built for this constant; the ruling's home is the read site.
 constexpr int64_t kChromeShiftHoldMs  = 500;
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
@@ -3060,8 +3066,10 @@ struct AppState {
     // shift term the carried bit feeds — so a physical Shift+click and a long
     // press are two routes to one dispatch rather than two dispatches. The
     // elapsed span is measured at the RELEASE, so nothing polls and nothing
-    // ticks; the accepted consequence is that the hold has no feedback of its
-    // own while it runs.
+    // ticks, AND THE HOLD IS RULED TO NEED NO FEEDBACK (architect 2026-08-13):
+    // it exists for the touch panel, where tooltips do not show at all, so the
+    // one surface a hint could ride is invisible to the gesture's only user.
+    // The rule is stated at the read site (finish_chrome_press_release).
     //
     // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the
     // roster's surface: true from the press (a press is inside what it hit),

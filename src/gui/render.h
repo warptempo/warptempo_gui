@@ -186,10 +186,11 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // above it, which darkens on the same edge. A HARD SWAP — no transition, no
 // fade — driven by AppState::window_activated, and it moves the GROUND ONLY:
 // separators, border lines, the accent, labels and icons all keep their colors.
-// NO ROW BELOW ROW 2 SWAPS: row 3's ground is the resting tab's #1b1d20 since
-// the 2026-08-13 identity ruling (it was this very value before that, which is
-// why the swap never had anything to do there), and rows 4 and below sit on
-// kRedesignContentGround, itself the unfocused shade.
+// NO ROW BELOW ROW 2 SWAPS: row 3's ground and every row below it sit on
+// kRedesignContentGround, itself the unfocused shade, so the swap has nothing
+// to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
+// hours on 2026-08-13, under a ruling the architect withdrew the same day —
+// the record is at the row-3 block below.)
 //
 // NOTE it coincides with kBackground and with kRedesignContentGround (all
 // three sample the same Breeze Window color) and is nonetheless its OWN
@@ -304,56 +305,87 @@ inline constexpr GuiColor kRedesignViewBarLiftBase     = hex(0xFCFCFC);
 inline constexpr double   kRedesignViewBarSelectedMix  = 0.125;
 inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 
-// -- Row 3, the TAB ROW (HARD-CODED, kdenlive/Breeze-sampled) ---------------
+// -- Row 3, the TAB ROW (HARD-CODED, Breeze-sampled) ------------------------
+//
+// ROW 3 IS NOT SAMPLED FROM KDENLIVE, and that is worth stating first because
+// it explains an anomaly that otherwise reads as drift: kdenlive has NO
+// upward-facing tabs anywhere in its window, so this row's crops could not
+// come from it. They come from KWAVE and PCMANFM-QT — two other Breeze
+// applications on the same desktop — which AGREE WITH EACH OTHER on every
+// value here. That is why row 3 carries greys the kdenlive-sampled rows do
+// not, and why a value on this row disagreeing with one on rows 1, 2 or 4 is
+// evidence of two Breeze roles rather than of a mis-sample.
 //
 // Sampled off tmp/screenshots/kdenlive/redesign/row_3_tab_{rest,hover,selected}
-// .png (30 px tall), row_3_tab_pcmanfmqt.png (the padding/geometry reference)
-// and row_3_bottom_border.png. Same carve-out as the four above: constexpr, not
-// config keys, the crop wins over any Breeze-derived scheme.
+// .png (30 px tall), row_3_tab_pcmanfmqt.png (the padding/geometry reference),
+// row_3_bottom_border.png and — since 2026-08-13 — row_3_tab_example.png
+// (281x30) and row_3_tab_trough.png (1x30). Same carve-out as the four above:
+// constexpr, not config keys, the crop wins over any Breeze-derived scheme.
 //
-// THE ROW'S GROUND OUTSIDE THE TABS IS THE UNSELECTED TAB'S OWN FILL
-// (architect 2026-08-13), which SUPERSEDES THE RULING THIS BLOCK USED TO
-// CARRY: "the background of the row outside the tabs = the selected tab's
-// background minus the blue trim". That older identity is why ONE constant
-// served the row and the selected tab both, and it made the row read LIGHTER
-// than the tabs sitting on it. The identity has moved, not been abandoned —
-// the row ground is now #1b1d20, so an UNSELECTED TAB RECEDES INTO THE BAR
-// and the SELECTED tab is the one thing standing proud of it.
+// THE ROW'S GROUND OUTSIDE THE TABS IS THE CONTENT GROUND #202326 — the
+// selected tab's interior and the pane below, Breeze's standard tab bar, where
+// the BAR MATCHES THE PANE and an unselected tab is RECESSED darker than both.
+// THE TWO NEW CROPS SAY SO EXACTLY: row_3_tab_example is one #535659 row at
+// y=0 across the full 281 px, then two adjacent unselected tabs at #1b1d20
+// over x 0..178 with #202326 over x 179..280 — the TROUGH, the empty bar right
+// of the last tab — and row_3_tab_trough is that trough sampled alone, one
+// #535659 row over 29 rows of #202326.
 //
-// THE NEW IDENTITY IS EXPRESSED THE OLD ONE'S WAY: the painter fills row 3
-// with kRedesignTabRest itself rather than with a fresh constant holding the
-// same number, because the ruling states one FACT seen twice (the bar IS what
-// an unselected tab is made of — retune the resting tab and the bar must
-// follow it, or the tab stops receding), which is the palette's own test for
-// one constant versus two that agree. The derivation runs tab -> row, so the
-// tab keeps the name.
+// A RULING PASSED THROUGH THIS BLOCK AND WAS WITHDRAWN, recorded so nobody
+// re-proposes the swap from the same misreading. On 2026-08-13 the architect
+// ruled "the tab row's background = the unselected tab's own colour", the row
+// ground moved to #1b1d20 (an unselected tab receding into the bar, the
+// selected one standing proud), and he WITHDREW IT the same day once the two
+// crops above were measured: the reading behind it was that the row bled into
+// the menu row, and WHAT WAS ACTUALLY MISSING WAS THE ROW'S TOP BORDER, not a
+// darker ground. The border landed and the ground came back. Both facts are
+// the crops', and the crops were always there to be read.
 //
-// kRedesignContentGround (RENAMED from kRedesignTabGround at the same ruling —
-// the old name named the one surface it had just stopped painting, and the
-// palette's row-independent naming rule at the top of this file says exactly
-// why that could not stand) is THE SURFACE THE SELECTED TAB OPENS INTO, one
-// fact seen on every lane below the tab row: the SELECTED TAB'S INTERIOR (the
-// tab is a mouth into the content, which is what its broken bottom border
-// makes literal), the ICON ROW's ground, row 5's trim/ruler/marker lane
-// grounds, the unified BOTTOM ROW's ground, and the ground term every face
-// mix over those rows resolves against (the icon row's and the transport
-// row's five faces, the modal dialog buttons' pressed interior, the disabled
-// marker blend). One constant, not six copies of the number. NOTE that
-// it COINCIDES with kBackground #202326 (both sample Breeze's Window color);
-// it is its OWN constant by the hard-coded rule, never a reference to the
-// palette, and a retune of one must not follow the other.
+// kRedesignContentGround (RENAMED from kRedesignTabGround at the withdrawn
+// ruling and KEPT after it) is THE SURFACE THE SELECTED TAB OPENS INTO, one
+// fact seen on the tab row and every lane below it: the TAB ROW'S OWN GROUND
+// (the trough is a reader again), the SELECTED TAB'S INTERIOR (the tab is a
+// mouth into the content, which is what its broken bottom border makes
+// literal — and with the ground restored the two are the same pixels, so the
+// bar's own fill IS that interior and the tab lays no second one), the ICON
+// ROW's ground, row 5's trim/ruler/marker lane grounds, the unified BOTTOM
+// ROW's ground, and the ground term every face mix over those rows resolves
+// against (the icon row's and the transport row's five faces, the modal dialog
+// buttons' pressed interior, the disabled marker blend). One constant, not
+// seven copies of the number. THE BROADER NAME STANDS even though the trough
+// reads it again: it names the SURFACE rather than a row, which is the
+// row-independent naming rule at the top of this file, and "TabGround" would
+// again name one reader out of seven. NOTE that it COINCIDES with kBackground
+// #202326 (both sample Breeze's Window color); it is its OWN constant by the
+// hard-coded rule, never a reference to the palette, and a retune of one must
+// not follow the other.
 //
-// kRedesignTabLine is a SECOND structural line grey, distinct from row 2's
-// kRedesignLine #535659: the tab frame and the row's bottom border measure
-// #4c4e51 in every crop. Two constants, both sampled, neither derived from the
-// other.
+// THE ROW'S TWO BORDER ROWS ARE DIFFERENT GREYS AND BOTH ARE CORRECT — do not
+// "fix" either to match the other:
+//   TOP    #535659 (kRedesignTabTopLine), y=0 of both new crops, full width
+//          over tabs and trough alike.
+//   BOTTOM #4c4e51 (kRedesignTabLine), row_3_bottom_border.png, the same grey
+//          the tab frame measures.
+// They are two Breeze roles seen on one lane — the bar's outer edge against
+// the chrome above it, and the tab frame's own line — each sampled on its own
+// and neither derived from the other.
+//
+// kRedesignTabTopLine is NUMERICALLY EQUAL to row 2's kRedesignLine #535659
+// and is NOT it, the standing rule for two facts that agree (kBackground and
+// kRedesignContentGround are the same arrangement): that constant is row 2's
+// separator and border-bottom, sampled from a kdenlive crop; this one is row
+// 3's top edge, sampled from the KWave/pcmanfm-qt pair above. A retune of one
+// must not follow the other.
+//
+// kRedesignTabLine is likewise a SECOND structural line grey, distinct from
+// kRedesignLine: the tab frame and the row's bottom border measure #4c4e51 in
+// every crop. Both sampled, neither derived from the other.
 inline constexpr GuiColor kRedesignContentGround = hex(0x202326);
-// The UNSELECTED TAB's resting fill AND, since the ruling above, the tab row's
-// own ground outside the tabs — one value for the two by that identity.
 inline constexpr GuiColor kRedesignTabRest       = hex(0x1B1D20);
 inline constexpr GuiColor kRedesignTabHover      = hex(0x263F4D);
 inline constexpr GuiColor kRedesignTabHoverEdge  = hex(0x496170);
 inline constexpr GuiColor kRedesignTabLine       = hex(0x4C4E51);
+inline constexpr GuiColor kRedesignTabTopLine    = hex(0x535659);
 
 // -- Row 4, the ICON ROW's one new color -----------------------------------
 //
@@ -383,9 +415,7 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 //
 // The three lanes share the #202326 content ground (kRedesignContentGround) —
 // the surface the selected tab opens into, one fact seen again rather than a
-// fourth copy of the number. It was "row 3's ground" until the 2026-08-13
-// identity ruling moved that row onto the resting tab's own #1b1d20; these
-// lanes did not move with it, being content rather than tab bar.
+// fourth copy of the number.
 
 // THE TRIM LANE is 9 rows of exactly THREE surfaces — ground, bar, endcap — and
 // each carries its own 2-row BOTTOM BEVEL: row 7 a lighter shade, row 8 a
@@ -1041,18 +1071,28 @@ inline int menu_row_h_px() {
 
 // Authored pixel geometry of the TAB ROW — the top strip's lane 1, under the
 // menu row (row 3 of the redesign: the "Tab A" / "Tab B" Breeze tabs). Measured
-// at 100% gui_scale off row_3_tab_{rest,hover,selected}.png (30 tall) and
-// row_3_bottom_border.png.
+// at 100% gui_scale off row_3_tab_{rest,hover,selected}.png (30 tall),
+// row_3_bottom_border.png and — for the top line — row_3_tab_example.png and
+// row_3_tab_trough.png.
 //
 // THE CSS BOX MODEL IS THE RULED VOCABULARY (architect 2026-07-31): the
-// architect's stated 30 is CONTENT
-// and the 1px bottom border sits OUTSIDE it, so the LANE the strip stack
-// allocates is their sum (31 at 100%). tab_row_content_h_px() is the ground and
-// tab band — the height every tab box fills, flush, top to bottom;
+// architect's stated 30 is CONTENT and the borders sit OUTSIDE it, so the LANE
+// the strip stack allocates is their sum. tab_row_content_h_px() is the ground
+// and tab band — the height every tab box fills, flush, top to bottom;
 // tab_row_h_px() is the lane. Rides gui_scale_factor() like row 1, not
 // the monospace font's axis.
+//
+// THE LANE CARRIES TWO BORDER ROWS, ONE AT EACH EDGE, so it is 32 at 100%
+// (30 + 1 + 1). THE TOP LINE JOINED 2026-08-13, from the two crops named above:
+// both show a single #535659 row at y=0 running the FULL WIDTH, over the
+// unselected tabs and over the trough alike. It is what was actually missing
+// from the row — without it the row bled into the menu row above — and the
+// lane GREW by that row rather than eating one of its own 30, the overview
+// lane's own answer the same day and for the same reason (a border is chrome,
+// not content). The two rows are DIFFERENT GREYS and both are right: the
+// palette block's row-3 section carries the values and the reason.
 inline constexpr int kTabRowHeightPx = 30;
-inline constexpr int kTabRowBorderPx = 1;
+inline constexpr int kTabRowBorderPx = 1;   // per edge: top and bottom
 inline int tab_row_border_h_px() {
     return scaled_px(kTabRowBorderPx, 1);
 }
@@ -1060,7 +1100,7 @@ inline int tab_row_content_h_px() {
     return scaled_px(kTabRowHeightPx, 5);
 }
 inline int tab_row_h_px() {
-    return tab_row_content_h_px() + tab_row_border_h_px();
+    return tab_row_content_h_px() + 2 * tab_row_border_h_px();
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the

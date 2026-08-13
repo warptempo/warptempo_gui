@@ -127,7 +127,10 @@ namespace {
 // the TOOLBAR ROW, row 2 of the redesign — its Save / Undo / Redo / Render are
 // the icon row's first group now) — from the window edge inward: MENU ROW (its
 // own authored menu_row_h_px(), row 1 of the kdenlive redesign, PINNED at the
-// window top), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3),
+// window top), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3 —
+// 30 content inside a 1px border at EACH edge since 2026-08-13, the top line
+// being what the row had always been missing; render.h's constant carries the
+// crops and the withdrawn ground ruling that briefly stood in its place),
 // ICON ROW (icon_row_h_px(), row 4), the OVERVIEW STRIP
 // (overview_lane_h_px(), the whole-song lane — ONE fixed tiny height on every
 // host now, 24 content + a 1px border at EACH edge since 2026-08-13; the
@@ -192,20 +195,21 @@ namespace {
 // (the top block being taller than the bottom row) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
-// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 196 =
-// menu 35 + tab 31 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
-// which 161 is the block above the waveform, and the bottom row 51 — the
-// overview lane went 25 -> 26 on 2026-08-13 when it gained its top border, and
-// every number below is re-derived from that table rather than adjusted):
-//   1920x1080: leftover 833 -> waveform CLAMPED at 500, gap 1 = 94, gap 2 = 239
-//     — 35 menu / 94 blank / 161 block / 500 waveform / 239 blank / 51 row,
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 197 =
+// menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
+// which 162 is the block above the waveform, and the bottom row 51 — the
+// overview lane went 25 -> 26 on 2026-08-13 when it gained its top border and
+// the TAB ROW went 31 -> 32 the same day when it gained its own, and every
+// number below is re-derived from that table rather than adjusted):
+//   1920x1080: leftover 832 -> waveform CLAMPED at 500, gap 1 = 93, gap 2 = 239
+//     — 35 menu / 93 blank / 162 block / 500 waveform / 239 blank / 51 row,
 //     the waveform still spanning y 290..790 about the window's midline 540
-//     (the clamp fixes its height and the midpoint rule its centre, so the
+//     (the clamp fixes its height and the midpoint rule its centre, so each
 //     extra border row comes out of gap 1 and the waveform does not move).
-//   1024x600 (the Pi): leftover 353 -> waveform UNCLAMPED at 353, both gaps 0
-//     — 35 / 0 / 161 / 353 / 0 / 51. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -72), so the waveform keeps everything
-//     and pays the border row itself, which is the rule's own floor rather
+//   1024x600 (the Pi): leftover 352 -> waveform UNCLAMPED at 352, both gaps 0
+//     — 35 / 0 / 162 / 352 / 0 / 51. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -73), so the waveform keeps everything
+//     and pays the border rows itself, which is the rule's own floor rather
 //     than a special case.
 //
 // THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
@@ -270,9 +274,9 @@ namespace {
 // font metric any more. The two-axes ruling and what became of the font axis are
 // at those accessors' declarations in render.h.
 //
-// The tab and icon lanes INCLUDE their 1px border (bottom-side on both), the
-// OVERVIEW lane its TWO (one per edge since 2026-08-13), and the UNIFIED
-// BOTTOM ROW its 1px border-TOP — the waveform side,
+// The TAB and OVERVIEW lanes INCLUDE their TWO 1px borders (one per edge,
+// both pairs since 2026-08-13), the ICON lane its one (bottom-side), and the
+// UNIFIED BOTTOM ROW its 1px border-TOP — the waveform side,
 // its only border (the CSS box model: the architect's stated content height
 // excludes its borders, and the lane owns every pixel it paints). The overview
 // lane was border-free under its old bottom-strip home, wearing the waveform's
@@ -292,7 +296,7 @@ int top_lane_height(int lane) {
         // +1 again. The vertical arithmetic re-derives through this table with
         // no second site — the current stacks are at the vertical rule above.)
         case 0: return menu_row_h_px();          // menu row (proportional text)
-        case 1: return tab_row_h_px();           // tab row (+ border-bottom)
+        case 1: return tab_row_h_px();           // tab row (+ 2 borders)
         case 2: return icon_row_h_px();          // icon row (+ border-bottom)
         // THE OVERVIEW STRIP's home since commit B: the whole-song lane between
         // the icon row and the trim bar, ONE fixed tiny height on every host

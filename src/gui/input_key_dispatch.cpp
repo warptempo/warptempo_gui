@@ -2822,10 +2822,9 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it names is the POINTER-facing
 // behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (seven since the dialog arc: the wheel swallow, the
-// cursor map's blanket Arrow, the modal-trap block, the dialog button claim,
-// the dialog-hover motion branch, the roster hover walk's veil term, and the
-// dialog painter's fork by proxy) is
+// the caller roster (re-derived by grep at the reach-through's retirement,
+// 2026-08-13 — ten calling functions plus the dialog painter's fork by proxy)
+// is
 // the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
@@ -4722,12 +4721,13 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
-// else is swallowed as a backstop. THE COMMAND ADMISSION HAS A POINTER-SIDE
-// MIRROR since 2026-08-11 (the modal-trap fix):
-// modal_editor_admits_command_chord (input_pointer.cpp) restates the
-// Esc/Ctrl+S/Ctrl+Q command set so a roster button whose chord is admitted
-// here dispatches while a dialog editor stands — the two spellings must
-// move together. `autocomplete` is the optional
+// else is swallowed as a backstop. THE COMMAND ADMISSION IS KEYBOARD-ONLY
+// AGAIN (2026-08-13): it had a pointer-side mirror from 2026-08-11 — the
+// modal-trap reach-through, which let a roster button whose chord is admitted
+// here dispatch from a press while a dialog editor stood — and the architect
+// retired it once every dialog grew real OK and Cancel buttons, so nothing
+// outside this file restates this set and the veil swallows every roster
+// press. Ctrl+S here is unchanged. `autocomplete` is the optional
 // bare-Tab hook, PASSED BY THE SETTINGS AND LOAD EDITORS (the commit-title,
 // bpm and flag editors have no vocabulary to complete and pass an empty hook).
 //
