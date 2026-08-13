@@ -1543,7 +1543,7 @@ inline constexpr int64_t kTooltipDelayMs        = 700;  // kdenlive-ish; archite
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
-// THE DROPDOWNS' VERTICAL metrics — one set for both menus, out here for the
+// THE DROPDOWNS' VERTICAL metrics — one set for every menu, out here for the
 // same reason the tooltip's height is: the popup's OPEN EDGE must damage the box
 // before the box has ever been painted, and its HEIGHT is fully derivable
 // without shaping a single label (item count x item height, plus the separator

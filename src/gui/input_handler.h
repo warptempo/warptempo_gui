@@ -809,7 +809,7 @@ struct GuiInputHandler {
     void refresh_pointer_cursor(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's Quit / Navigation / Settings and
+    // writer serving the WHOLE roster — row 1's File / Navigation / Settings and
     // the view bar's three, row 3's two tabs, row 4's twenty-nine (the
     // toolbar four included since the 2026-08-12 relayout) and the bottom
     // row's eight (definitions beside on_motion in
@@ -836,7 +836,7 @@ struct GuiInputHandler {
     void clear_redesign_button_hover();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
-    // popup state both menus share (AppState::Dropdown). toggle_ is the whole
+    // popup state the menus share (AppState::Dropdown). toggle_ is the whole
     // action of BOTH non-chord buttons, Settings and Navigation: it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
@@ -989,9 +989,12 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled / radio refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). Row 1's Quit is inside it; the two buttons
-    // outside it are Settings and Navigation, whose action is a dropdown
-    // toggle — the recorded press-time exception, stated at their claim.
+    // being a consumed nothing). The three buttons
+    // outside it are row 1's File, Navigation and Settings, whose action is a
+    // dropdown
+    // toggle — the recorded press-time exception, stated at their claim (row 1
+    // had a chord button, Quit, inside it until 2026-08-13, when its act became
+    // the File menu's one item).
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed
@@ -2191,7 +2194,7 @@ private:
     // veil SWALLOWS a pointer press, so they are exactly the ones over which
     // no cursor may promise a gesture; the MODAL-TRAP block at
     // on_button_press's top (2026-08-11), because these four are exactly the
-    // swallows the admitted Quit/Save button presses must be lifted OVER
+    // swallows the admitted Save button press must be lifted OVER
     // (the fix's contract is at that block and at
     // modal_editor_admits_command_chord); the dialog BUTTON claim beside it,
     // ITS RELEASE MIRROR in on_button_release (2026-08-13 — the buttons act at

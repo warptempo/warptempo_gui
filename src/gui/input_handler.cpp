@@ -51,8 +51,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // recompute_redesign_button_hover.) The HOVER PILL needs nothing from this
     // site: THE DIALOG'S VEIL already owns it (recompute_redesign_button_hover,
     // input_pointer.cpp) — under a PROMPT every roster face goes dark, and
-    // under an EDITOR dialog every face but the veil-admitted pair (Quit and
-    // Save, the modal trap's reach-through) does, so a modal opened by this key
+    // under an EDITOR dialog every face but the veil-admitted Save (the modal
+    // trap's reach-through, one button since 2026-08-13) does, so a modal opened by this key
     // cannot leave a lit pill behind it. The pointer-transparent FLAG editor
     // raises no veil and needs none: its roster presses were never blocked.
     hide_shift_tooltip();
@@ -188,8 +188,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // It admits exactly two keys, and both DISMISS:
     //   - bare Esc CLOSES it, and that is THE SIXTH BARE-ESC BINDING (the
     //     enumeration further down carries the full list and this rank). ONE
-    //     BINDING FOR BOTH MENUS: the gate reads the shared popup state, so the
-    //     Navigation dropdown (2026-08-02) joined the existing binding rather
+    //     BINDING FOR EVERY MENU: the gate reads the shared popup state, so the
+    //     Navigation dropdown (2026-08-02) and the File one (2026-08-13) joined
+    //     the existing binding rather
     //     than adding a seventh — a dropdown is a dropdown;
     //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
     //     below, matching every other modal's Ctrl+Q hatch.
@@ -197,7 +198,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // contend with route_modal_editor_key — and the claim rests on TWO
     // mechanisms, one per class. The popup opens only from row 1, and while a
     // DIALOG editor is up the press that would open it dies at the dialog's
-    // veil in on_button_press (the two menu anchors carry no chord, so the
+    // veil in on_button_press (the three menu anchors carry no chord, so the
     // modal-trap lift never reaches them). The pointer-transparent FLAG
     // editor swallows nothing, so instead the open ENDS it: toggle_dropdown's
     // open path discards the edit, exactly as a press outside its box does. The
@@ -706,9 +707,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the top of on_key, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, the SIXTH binding).
-    //       BOTH menus, Settings and Navigation, are this ONE binding: they
+    //       ALL THREE menus — Settings, Navigation and File — are this ONE
+    //       binding: they
     //       share one popup state and one gate, so the second dropdown
-    //       (2026-08-02) added no seventh place. It cannot collide with (a)/(b):
+    //       (2026-08-02) and the third (2026-08-13) added no seventh place. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
     //       — the four dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is
@@ -1651,7 +1653,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // redesigned row does NOTHING: those rows are chrome with no scrollable
     // content and no relation to the waveform under them, so passing the event
     // through to the top-strip zoom/pan (which is what happened before row 1's
-    // ruling) made a scroll over the Quit button silently zoom the song. They sit
+    // ruling) made a scroll over row 1's buttons silently zoom the song. They sit
     // ABOVE the area tests below because they are sub-bands of the top strip and
     // must win over it. Returning -1 (rather than 0) also stops the platform's
     // sub-detent accumulator from growing remainder over them.

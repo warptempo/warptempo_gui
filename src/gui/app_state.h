@@ -1077,7 +1077,7 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's Quit, Navigation and
+// button the kdenlive rows carry, in painted order: row 1's File, Navigation and
 // Settings plus the view bar's three, row 3's two TABS, row 4's twenty-nine
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout), then the bottom row's transport
@@ -1096,11 +1096,11 @@ struct TrimBarPressSeed {
 // no disabled face of their own — which is stated at each face's site rather
 // than modelled here (row 4 takes the click face but not the disabled one; the
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
-// and is the one exception, at redesign_button_enabled below). Row 1's SETTINGS
-// and NAVIGATION are the roster's TWO non-chord entries: each press TOGGLES ITS
-// OWN DROPDOWN, which no keyboard chord does, and both are spelled at the menu
-// claim rather than in the chord table. Quit is not one of them — Ctrl+Q is its
-// chord and it sits in the table like the rest.
+// and is the one exception, at redesign_button_enabled below). Row 1's FILE,
+// NAVIGATION and SETTINGS are the roster's THREE non-chord entries (File joined
+// them 2026-08-13, taking the slot the Quit button held): each press TOGGLES ITS
+// OWN DROPDOWN, which no keyboard chord does, and all three are spelled at the
+// menu claim rather than in the chord table.
 //
 // The enum ORDER is painted order, and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
@@ -1118,7 +1118,18 @@ enum class RedesignButton {
     // is an ORDER change and nothing else — no width, no padding, no anchor
     // expression follows it. This enum and the painter's kMenuButtons table are
     // the two places that carry the order, and they move together.
-    Quit, Navigation, Settings, ViewSW, ViewTP, ViewTW,
+    //
+    // FILE HOLDS THE SLOT THE QUIT BUTTON HELD (architect 2026-08-13, with the
+    // act-at-release conversion): row 1 paints no held face at all, so a Quit
+    // button that acts at the LIFT gave no feedback while it was down and read
+    // as broken — "we can create a File entry and move Quit into File's
+    // dropdown; that's the standard way and kdenlive does it that way too". So
+    // the Quit BUTTON is retired (it existed from 2026-07-31) and File is a
+    // THIRD DROPDOWN ANCHOR whose one item is Quit; the CHORD Ctrl+Q is
+    // untouched everywhere. Nothing else moved: File takes exactly Quit's slot,
+    // so the painted order is File, Navigation, Settings and the roster's total
+    // is unchanged — the split moved, 43 chords + 2 anchors becoming 42 + 3.
+    File, Navigation, Settings, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS. They are the A/B tabs ordinarily and
     // the `h` view's WALK SELECTOR while it stands, "Remote" and "Local"
     // (architect 2026-08-08): the row grew to four for the (walk source,
@@ -1243,9 +1254,11 @@ enum class RedesignButton {
 };
 // THE ROSTER, re-derived by counting the enumerators above: six in row 1, two
 // in row 3, twenty-nine in row 4 and eight in the bottom row — 45. Of those,
-// FORTY-THREE carry a chord in kToolbarChords and TWO are the dropdown anchors
-// (Settings and Navigation), which is the split the chord table's own
-// static_assert checks. 45 = the 2026-08-12 grand relayout's roster commit:
+// FORTY-TWO carry a chord in kToolbarChords and THREE are the dropdown anchors
+// (File, Navigation and Settings), which is the split the chord table's own
+// static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
+// chord table and File joined the anchors in its slot (the count did not move).
+// 45 = the 2026-08-12 grand relayout's roster commit:
 // 37 with the toolbar row's four MOVED into row 4 (no count change) plus the
 // ZOOM GROUP's four and the SINGLE-MARKER VERBS' four. It was 37 from late
 // 2026-08-11 (the trim button joining the transport row's eight, which had
@@ -1281,7 +1294,11 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // ITS ONE CONSUMER IS THE DROPDOWN CLOSE RULE (on_motion's open-dropdown branch,
 // input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
 // not a dropdown anchor CLOSES it, because only one button in that row is lit at
-// a time. It was briefly the hover predicate's too — an exemption letting row 1
+// a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
+// inherited: row 1 is six buttons and THREE of them are anchors since File
+// joined 2026-08-13, so the close rule now covers THE VIEW BAR'S THREE alone
+// (it was "Quit or the view bar's three" while the Quit button existed).
+// It was briefly the hover predicate's too — an exemption letting row 1
 // hover under an open popup — and that exemption is retired: with the close rule
 // in front of it, a non-anchor row-1 button can no longer be hovered while a menu
 // is up (the motion that reaches it closes the menu first), and an ANCHOR's pill
@@ -1292,7 +1309,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // of silently inheriting another row's answer.
 inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     switch (b) {
-        case RedesignButton::Quit:
+        case RedesignButton::File:
         case RedesignButton::Navigation:
         case RedesignButton::Settings:
         case RedesignButton::ViewSW:
@@ -1405,18 +1422,42 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 
 // THE MENU ROW'S DROPDOWNS — WHICH ONE IS UP. There is ONE popup state in the
 // product (AppState::dropdown below), and this names its content; `None` IS the
-// closed state, which is what makes "two dropdowns are never open together"
+// closed state, which is what makes "three dropdowns are never open together"
 // structural rather than an invariant to maintain: opening one is writing this
-// field, and a field holds one value.
-enum class DropdownMenu { None, Settings, Navigation };
+// field, and a field holds one value. FILE joined 2026-08-13 with the Quit
+// button's retirement, and cost the shape nothing for exactly that reason.
+enum class DropdownMenu { None, File, Settings, Navigation };
+
+// EVERY MENU THERE IS, in one place, so the routes that must walk them all —
+// the press claim's anchor test, the hover switch, the armed hover open — walk
+// this instead of naming a pair (or a triple). `None` is deliberately absent:
+// it is the closed state, not a menu.
+inline constexpr DropdownMenu kDropdownMenus[] = {
+    DropdownMenu::File, DropdownMenu::Settings, DropdownMenu::Navigation,
+};
 
 // WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
 // emits it (architect 2026-08-02), so the painter and the open edge's damage
 // both need the anchor, and they must read ONE expression or the damaged band
 // and the painted box could start on different rows of pixels.
 inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
-    return m == DropdownMenu::Navigation ? RedesignButton::Navigation
-                                         : RedesignButton::Settings;
+    switch (m) {
+        case DropdownMenu::File:       return RedesignButton::File;
+        case DropdownMenu::Navigation: return RedesignButton::Navigation;
+        case DropdownMenu::Settings:
+        case DropdownMenu::None:       break;
+    }
+    return RedesignButton::Settings;
+}
+
+// IS THIS BUTTON A MENU ANCHOR? DERIVED from the menu list above through the
+// anchor owner, never a second list — so a menu added here is an anchor
+// everywhere at once (the close rule's skip, the press claim, the collapse
+// walk's hand-answered anchors, the history partition).
+inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
+    for (const DropdownMenu m : kDropdownMenus)
+        if (dropdown_anchor_button(m) == b) return true;
+    return false;
 }
 
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
@@ -1449,6 +1490,41 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
+
+// THE COMMAND MENUS' ITEMS — the row type BOTH command menus use (Navigation
+// since 2026-08-02, File since 2026-08-13; the settings menu is the other kind,
+// a list of keys to edit). It carries the row's LABEL, the accelerator column's
+// text, the chord the release dispatches through on_key, and where a category
+// parts. The two tables below are its only instances, and the release body
+// picks between them by menu; nothing else distinguishes them.
+struct CommandPopupItem {
+    const char* label;
+    const char* hotkey;   // the accelerator column's text, right-aligned
+    GuiKey      key;
+    bool        ctrl;
+    bool        shift;
+    bool        alt;
+    bool        separator_before;
+};
+
+// THE FILE DROPDOWN'S ITEMS (architect 2026-08-13) — ONE ROW, "Quit", the
+// standard home for it and where kdenlive keeps it. It is the whole menu by
+// ruling ("File contains Quit and nothing else"): Save and Render stay the icon
+// row's, and the menu is deliberately minimal. NO SEPARATOR — one category, and
+// chrome around a single item would be chrome around nothing.
+//
+// THE ITEM IS ITS CHORD like every Navigation row: Ctrl+Q dispatched through
+// on_key, so the drag-modal hatch, the dirty prompt and the WM-close ordering
+// are the keyboard route's own with no second body. It takes the items'
+// never-grey rule unchanged (the one ruled per-item exception is Navigation's
+// "Walk both tabs" inside the `h` view, and this is not it) — and Ctrl+Q is on
+// the history view's own allowlist, so this menu works in there exactly as the
+// Navigation one does.
+inline constexpr CommandPopupItem kFilePopupItems[] = {
+    {"Quit", "Ctrl+Q", GuiKeys::Q, true, false, false, false},
+};
+inline constexpr int kFilePopupItemCount =
+    static_cast<int>(std::size(kFilePopupItems));
 
 // THE NAVIGATION DROPDOWN'S ITEMS (architect 2026-08-02) — a COMMAND MENU,
 // where the settings one is a list of keys to edit: every row IS an existing
@@ -1488,16 +1564,7 @@ inline constexpr int kSettingsPopupItemCount =
 // (history_mode_owns_key) as re-expressions over its diff flags. The dispatch
 // below needs no arm for any of it — the items are chords, and the mode answers
 // per item at the same two gates a key does.
-struct NavigationPopupItem {
-    const char* label;
-    const char* hotkey;   // the accelerator column's text, right-aligned
-    GuiKey      key;
-    bool        ctrl;
-    bool        shift;
-    bool        alt;
-    bool        separator_before;
-};
-inline constexpr NavigationPopupItem kNavigationPopupItems[] = {
+inline constexpr CommandPopupItem kNavigationPopupItems[] = {
     {"Zoom in",         "=",              GuiKeys::Equal, false, false, false, false},
     {"Zoom out",        "-",              GuiKeys::Minus, false, false, false, false},
     {"Overview",        "0",              GuiKeys::Digit0, false, false, false, false},
@@ -1510,12 +1577,31 @@ inline constexpr int kNavigationPopupItemCount =
     static_cast<int>(std::size(kNavigationPopupItems));
 
 // The published-rect array's size: the widest menu decides it, so a menu that
-// grows a row grows the array with no second edit.
+// grows a row grows the array with no second edit. (File's one row cannot be
+// the widest and is in the expression anyway — the rule is "the widest menu",
+// not "the menus that happen to be long".)
 inline constexpr int kDropdownMaxItemCount =
-    kSettingsPopupItemCount > kNavigationPopupItemCount
-        ? kSettingsPopupItemCount : kNavigationPopupItemCount;
+    std::max({kFilePopupItemCount, kSettingsPopupItemCount,
+              kNavigationPopupItemCount});
 
-// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — what the two menus share,
+// IS THIS A COMMAND MENU? The two kinds of menu differ in what a row DOES — a
+// settings key to prefill, a chord to dispatch — and this names the second kind
+// once, for the row lookup below and for the release's dispatch fork.
+inline constexpr bool dropdown_is_command_menu(DropdownMenu m) {
+    return m == DropdownMenu::File || m == DropdownMenu::Navigation;
+}
+// THE COMMAND ROW ITSELF — the ONE place that maps a command menu to its table,
+// read by the shared view below and by the release body that dispatches the
+// chord. Callers ask dropdown_is_command_menu first; a non-command menu answers
+// with the Navigation table's row, which no caller reaches.
+inline constexpr const CommandPopupItem& command_popup_item(DropdownMenu m,
+                                                            int i) {
+    return m == DropdownMenu::File
+               ? kFilePopupItems[static_cast<size_t>(i)]
+               : kNavigationPopupItems[static_cast<size_t>(i)];
+}
+
+// THE PAINTER'S AND THE GEOMETRY'S VIEW OF AN ITEM — what the menus share,
 // which is exactly the row's TEXT and where the categories part. The ACTION is
 // deliberately not in here: the two kinds differ in kind (a settings key to
 // prefill, a chord to dispatch), each stays typed in its own table, and the
@@ -1527,6 +1613,7 @@ struct DropdownRow {
 };
 inline constexpr int dropdown_item_count(DropdownMenu m) {
     switch (m) {
+        case DropdownMenu::File:       return kFilePopupItemCount;
         case DropdownMenu::Settings:   return kSettingsPopupItemCount;
         case DropdownMenu::Navigation: return kNavigationPopupItemCount;
         case DropdownMenu::None:       break;
@@ -1534,9 +1621,8 @@ inline constexpr int dropdown_item_count(DropdownMenu m) {
     return 0;
 }
 inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
-    if (m == DropdownMenu::Navigation) {
-        const NavigationPopupItem& it =
-            kNavigationPopupItems[static_cast<size_t>(i)];
+    if (dropdown_is_command_menu(m)) {
+        const CommandPopupItem& it = command_popup_item(m, i);
         return {it.label, it.hotkey, it.separator_before};
     }
     const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
@@ -2810,7 +2896,7 @@ struct AppState {
     //   HistoryWalkTab — the `h` view's walk-selector tabs; `index` is TabA's
     //                    or TabB's roster index, and the act is
     //                    set_history_reading, not a chord.
-    // (The two dropdown ANCHORS are deliberately NOT armed: their toggle is
+    // (The three dropdown ANCHORS are deliberately NOT armed: their toggle is
     // the recorded press-time exception — the reasoning is at their press
     // claim in on_button_press.)
     //
@@ -2946,8 +3032,9 @@ struct AppState {
     };
     RedesignTooltip redesign_tooltip;
 
-    // THE MENU ROW'S DROPDOWN — ONE popup state for BOTH menus (Settings since
-    // 2026-07-31, Navigation since 2026-08-02), hanging under whichever button
+    // THE MENU ROW'S DROPDOWN — ONE popup state for ALL THREE menus (Settings
+    // since 2026-07-31, Navigation since 2026-08-02, File since 2026-08-13),
+    // hanging under whichever button
     // emits it. `menu` is the whole modality AND the whole "never two at once"
     // rule: while it is not None the popup owns the keyboard (on_key's popup
     // gate), the pointer (the press claim's popup-first block) and the wheel,
@@ -3008,7 +3095,7 @@ struct AppState {
     // drops claim and arm together).
     // `menu_row_armed` is the MENU ROW'S MODE, and it is the one field here that
     // means something while the popup is CLOSED: once a menu has been opened
-    // from the row, the row answers the pointer alone — entering either anchor's
+    // from the row, the row answers the pointer alone — entering ANY anchor's
     // rect opens that anchor's menu with no click (on_motion's no-gesture tail,
     // open_menu_row_anchor_on_hover; a RESTING pointer only — a held primary
     // button refuses the open at the call site, codex round 2), which is what
@@ -3018,7 +3105,7 @@ struct AppState {
     // an anchor answers a CLICK and nothing else, and that is the whole reason
     // the bit exists: a row that sprang a menu open at a pointer merely crossing
     // it, with no click ever given, would be a misfeature rather than this one.
-    // ARMED BY toggle_dropdown's OPEN path, the single route that opens either
+    // ARMED BY toggle_dropdown's OPEN path, the single route that opens ANY
     // menu (the click and the armed hover both go through it, and no keyboard
     // chord opens a dropdown at all), so "a menu is open" implies "the row is
     // armed" by construction.
@@ -3189,14 +3276,17 @@ struct AppState {
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
-    //   LIT — Quit (Ctrl+Q), the view bar's three (bare 1/2/3), the
+    //   LIT — the view bar's three (bare 1/2/3), the
     //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the S/T + W/P radios (bare
     //   `t` / `p`), BOTH row-3 tabs and the history button (Ctrl+Tab and
     //   bare `h`, the mode's OWN vocabulary, which the derivation asks about
-    //   first), the walk's two arrows (bare `,` / `.`, the same), and the
+    //   first), the walk's two arrows (bare `,` / `.`, the same), the
     //   NAVIGATION anchor since 2026-08-08 — the menu it opens works in here,
     //   and its one dead row greys at the ITEM (dropdown_item_enabled) rather
-    //   than through this partition, which knows only about buttons.
+    //   than through this partition, which knows only about buttons — and the
+    //   FILE anchor since 2026-08-13, whose one item is the Ctrl+Q this list
+    //   used to name as the Quit BUTTON's (that button is retired; the chord is
+    //   admitted exactly as it was).
     //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
     //   key and the face: Save greys with an empty head delta (or a checkpoint
     //   in flight), Revert greys with no diff flag selected, and the
@@ -4831,11 +4921,13 @@ inline bool history_mode_revert_subject_standing(
 // IT HAS EXACTLY ONE PRODUCER (architect 2026-08-08): the Navigation menu's
 // "Walk both tabs" row while the `h` history view stands, where Ctrl+Shift+Tab is
 // the mode's own reverse walk-tab cycle rather than the walk the label
-// promises. The argument for greying it — and for every other row on both menus
-// staying live — is at kNavigationPopupItems above. The SETTINGS menu has no
-// producer at all and answers true throughout: it does not open in that view (its
-// anchor is refused at toggle_dropdown), and outside it its six items keep the
-// never-grey rule, their own refusals answering.
+// promises. The argument for greying it — and for every other row on all three
+// menus staying live — is at kNavigationPopupItems above. The SETTINGS menu has
+// no producer at all and answers true throughout: it does not open in that view
+// (its anchor is refused at toggle_dropdown), and outside it its six items keep
+// the never-grey rule, their own refusals answering. THE FILE MENU has none
+// either (2026-08-13): its one row is Ctrl+Q, which is admitted everywhere the
+// menu can be opened, the history view included.
 //
 // THE ROW IS IDENTIFIED BY ITS CHORD, not by its table position, so reordering
 // kNavigationPopupItems cannot silently grey a different command; the alt term is
@@ -4845,7 +4937,7 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
     if (menu != DropdownMenu::Navigation) return true;
     if (!a.history_mode.active) return true;
     if (i < 0 || i >= kNavigationPopupItemCount) return true;
-    const NavigationPopupItem& it =
+    const CommandPopupItem& it =
         kNavigationPopupItems[static_cast<std::size_t>(i)];
     return !(it.ctrl && it.shift && !it.alt && it.key == GuiKeys::Tab);
 }
@@ -4854,9 +4946,10 @@ inline bool dropdown_item_enabled(const AppState& a, DropdownMenu menu, int i) {
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
 // beside the chord table it walks) asks history_mode_key_blocked about each
-// button's own chord and hand-answers the TWO ANCHORS, which have none — Settings
-// dead on the toggle_dropdown lockout, Navigation live since 2026-08-08, its menu
-// opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
+// button's own chord and hand-answers the THREE ANCHORS, which have none —
+// Settings dead on the toggle_dropdown lockout, Navigation live since
+// 2026-08-08 and File live since 2026-08-13, both menus opening in the view —
+// and IT CARRIES THE AUTHORITATIVE PARTITION INVENTORY. Read
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
@@ -4922,8 +5015,9 @@ bool redesign_button_collapsed(const AppState& app, RedesignButton b);
 //     chords are off the allowlist (2026-08-08), so the mode line at the top of
 //     this body answers for it through the derived partition, exactly as it does
 //     for Undo, Redo and the rest of the consumed roster.
-//   * Row 1's Quit and row 3's tabs answer true HERE: Quit keeps its two faces
-//     by ruling, and a tab has no disabled face of its own. Their entries exist
+//   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
+//     two faces by ruling, and a tab has no disabled face of its own. Their
+//     entries exist
 //     so the vector is total over the roster and the comparator needs no
 //     membership test. (The tabs answer true in EVERY state since 2026-08-05:
 //     the history view, which greyed them for one day, repurposes the row as
@@ -4988,7 +5082,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // three join the same arm. THE VIEW BAR STAYS LIVE IN THE HISTORY VIEW
         // (its 1/2/3 are on the mode's allowlist), so the two faces never meet
         // there either.
-        case RedesignButton::Quit:
+        case RedesignButton::File:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
         case RedesignButton::ViewSW:
@@ -5241,7 +5335,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // Publishing it unconditionally is the point — a mode term here would
         // make the row lie about the reading the moment the view closed.
         case RedesignButton::IconCumulative: return a.history_cumulative;
-        case RedesignButton::Quit:
+        case RedesignButton::File:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
         case RedesignButton::Save:
@@ -5353,10 +5447,11 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 //
 // THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
 // names (architect 2026-07-31): row 1's buttons are word labels that already
-// say what they do — "Quit" quits, "Settings" and "Navigation" open menus that
-// name themselves — so a hint repeating the label would be noise. Stating it as
+// say what they do — "File", "Settings" and "Navigation" open menus that name
+// themselves — so a hint repeating the label would be noise. Stating it as
 // the ROW's property is what let Navigation inherit the exclusion in 2026-08-02
-// without being remembered. Every button on rows 3 and 4 and the bottom row
+// and File in 2026-08-13, neither needing to be remembered. Every button on
+// rows 3 and 4 and the bottom row
 // has one; its icon or
 // single letter is not self-describing.
 //
@@ -5392,7 +5487,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Row 1 — the menu row: no tooltips, per the rule above. The view bar's
         // three joined the exclusion with the row (2026-08-02): their labels are
         // the combinations themselves, so a hint could only restate them.
-        case RedesignButton::Quit:
+        case RedesignButton::File:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
         case RedesignButton::ViewSW:

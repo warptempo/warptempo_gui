@@ -543,7 +543,8 @@ GuiRect top_flex_gap_area(const AppState& a) {
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
-// ground carrying the left float's Quit/Settings and the right float's view
+// ground carrying the left float's File/Navigation/Settings menu buttons and
+// the right float's view
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
@@ -1506,7 +1507,8 @@ int main(int argc, char** argv) {
     // is: that case already keeps the popup up, keeps the mode, and behaves
     // stickily on return, and the two must not disagree over which pixel the
     // pointer crossed. So on that leave the mode SURVIVES and the hovered row-1
-    // button KEEPS ITS FACE — Quit stays lit under a pointer resting on the
+    // button KEEPS ITS FACE — a menu button stays lit under a pointer resting
+    // on the
     // titlebar, which is the visible half of the rule — and the first motion back
     // in re-derives hover normally and, over an anchor, opens its menu (the armed
     // hover open at on_motion's tail).

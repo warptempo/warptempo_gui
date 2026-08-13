@@ -1956,8 +1956,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the two anchors alone, which have no chord to ask about: Settings dead on
-// the toggle_dropdown lockout, Navigation live since 2026-08-08), never
+// for the three anchors alone, which have no chord to ask about: Settings dead
+// on the toggle_dropdown lockout, Navigation live since 2026-08-08, File live
+// since 2026-08-13), never
 // hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.

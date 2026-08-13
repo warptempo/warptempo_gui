@@ -217,10 +217,16 @@ struct MenuButtonDef {
 // that enum order IS painted order) and in nothing else — no width, pad or
 // anchor term reads it.
 constexpr MenuButtonDef kMenuButtons[] = {
-    {RedesignButton::Quit,       "Quit"},
+    // THE THIRD DROPDOWN (architect 2026-08-13) — a COMMAND MENU of ONE row,
+    // "Quit", in the slot the Quit BUTTON held from 2026-07-31: row 1 paints no
+    // held face, so a button acting at the lift said nothing while it was down,
+    // and the standard home for Quit is a File menu (kdenlive's own). Nothing
+    // else moved — the label is shorter, so the float is 3px narrower at 100%
+    // (the measurement is in the right float's collision note below).
+    {RedesignButton::File,       "File"},
     // THE SECOND DROPDOWN (architect 2026-08-02): a COMMAND MENU of the zoom and
     // stepping commands, sharing the row's usual no gap. Like Settings its
-    // action is a popup toggle rather than a chord, and the two share one popup
+    // action is a popup toggle rather than a chord, and all three share one popup
     // state — see AppState::Dropdown.
     {RedesignButton::Navigation, "Navigation"},
     {RedesignButton::Settings,   "Settings"},
@@ -804,7 +810,7 @@ constexpr double kTooltipPadXPx      = 5.0;
 // border live in render.h with dropdown_h_px's other ingredients — the
 // popup's OPEN EDGE must size the box before it is painted. Only the HORIZONTAL
 // terms, which depend on the widest shaped label, are the painter's alone.)
-// (BOTH MENUS SHARE EVERY NUMBER IN THIS BLOCK — chrome, item height, insets,
+// (EVERY MENU SHARES EVERY NUMBER IN THIS BLOCK — chrome, item height, insets,
 // separator, faces — and since 2026-08-03 the horizontal terms below as well.)
 constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
@@ -843,9 +849,9 @@ constexpr double kPopupItemMinWidthPx = 242.0;
 // with an accelerator column is easier to state — and to check against the crop
 // — from the box's own edges than from the item box's.
 //
-// BOTH MENUS TAKE THEM (architect 2026-08-03): the settings menu's own 12px
-// item-box label pad is retired and its labels now start on this same indent,
-// so the two menus differ in one derived term (whether an accelerator column
+// EVERY MENU TAKES THEM (architect 2026-08-03): the settings menu's own 12px
+// item-box label pad is retired and its labels start on this same indent, so
+// the menus differ in one derived term (whether an accelerator column
 // exists) rather than in their padding.
 //
 //  - THE LABEL INDENT is 57px from the popup's left edge to the label's pen
@@ -929,9 +935,10 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "Quit", "Navigation" and
-    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (both
-    // 2026-08-02). No ring; the kdenlive bar is flat.
+    // ground carrying TWO FLOATS — the LEFT one, "File", "Navigation" and
+    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
+    // float 2026-08-02, File replacing the Quit button 2026-08-13). No ring;
+    // the kdenlive bar is flat.
     //
     // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for ALL
     // THREE buttons — plus ONE mode-scoped third, the history view's disabled
@@ -946,12 +953,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // only pointer-out rests it. The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
-    // THEIR ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
-    // through the shared chord table like every other redesigned button), while
-    // SETTINGS and NAVIGATION each TOGGLE A DROPDOWN — the roster's two
-    // non-chord actions, since no keyboard chord opens or closes a popup. Both
-    // menus lead only where the keyboard already goes: the bare `;` key still
-    // opens the settings editor directly, and every navigation item is a key.
+    // ALL THREE ACTIONS ARE THE SAME KIND since 2026-08-13: each button TOGGLES
+    // A DROPDOWN — the roster's three non-chord actions, since no keyboard chord
+    // opens or closes a popup. The menus lead only where the keyboard already
+    // goes: the bare `;` key still opens the settings editor directly, every
+    // navigation item is a key, and File's one item is Ctrl+Q. (The left float
+    // held a CHORD button until that day — Quit, dispatched through the shared
+    // chord table like every other redesigned button; the act is the File menu's
+    // item now, and the chord is untouched.)
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
     // div, five faces from its own crops, and three chord buttons that are bare
@@ -1006,7 +1015,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // width above exists only here, so the pointer code reads this stash
         // rather than re-shaping the string. Written every paint — a font, scale
         // or window change lands in it on the frame that displays it.
-        // Neither menu button has a selected face, and both are live during a
+        // No menu button has a selected face, and all are live during a
         // load and on a blank state — which is the whole reason this row paints
         // outside the audio branches. (The one state that DOES dead them is the
         // history view, which cannot be entered from either.) The stash is
@@ -1029,8 +1038,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         //
         // A PAINT CONDITION, NOT A `selected` BIT. Two reasons, both structural:
         // redesign_button_selected is defined as the live fact a button's CHORD
-        // flips, and neither menu button has a chord at all (they are the
-        // roster's two non-chord actions) — a dropdown is not a resting mode. And
+        // flips, and no menu button has a chord at all (they are the
+        // roster's three non-chord actions) — a dropdown is not a resting mode. And
         // the tick comparator that watches the selected bits would be pure
         // duplication here: the popup's two writers, toggle_dropdown and the one
         // close owner close_dropdown, ALREADY invalidate the top strip on both
@@ -1046,9 +1055,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // row 1 has exactly two faces and both ask for the SAME pill: were they to
         // coincide, nothing would need to win.
         // THE ROW'S THIRD FACE, AND IT EXISTS ONLY IN THE `h` HISTORY VIEW
-        // (architect 2026-08-04): while that view stands the two MENU ANCHORS
-        // are dead — toggle_dropdown refuses every open — so Settings and
-        // Navigation wear the disabled face and Quit does not. Built from the
+        // (architect 2026-08-04): while that view stands the SETTINGS ANCHOR is
+        // dead — toggle_dropdown refuses that one menu — so it alone wears the
+        // disabled face, Navigation and File staying live with their menus
+        // (2026-08-08 and 2026-08-13). Built from the
         // row's own vocabulary rather than a new sample: row 1's whole ink is
         // its label, so the label retains kRedesignDisabledMix of itself over
         // the row ground, exactly as row 2's icon+label pair does. The partition
@@ -1120,17 +1130,21 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         //
         // THERE IS STILL NO COLLISION RULE, and the measurement that used to
         // justify one has changed — recorded rather than acted on, since an
-        // overlap layout is the architect's to specify. Re-measured with the
-        // NAVIGATION button (2026-08-02, shaped-run walk at both scales): the
-        // left float is 223px at 100% (shaped labels Quit 29 + Navigation 76 +
-        // Settings 58, each plus its two 10px pads — 49 + 96 + 78; the ORDER
-        // moved 2026-08-03 and the sum did not, which is the whole content of
-        // that change) and the div 183 — 406 of the 1920px
-        // deployment width, 1514px of slack, and 310 of the 640px floor as
-        // before. At 200% they are 446 and 366: still 1108px of slack at 1920,
-        // but 812 against a 640px floor THAT DOES NOT SCALE — so at that one
+        // overlap layout is the architect's to specify. RE-DERIVED FOR THE FILE
+        // BUTTON from the face's own advance widths (Liberation Sans at this
+        // row's 16px; the method reproduces the three numbers the 2026-08-02
+        // shaped-run walk recorded — Quit 29, Navigation 76, Settings 58 —
+        // exactly, which is what makes File's 26 comparable to them): the
+        // left float is 220px at 100% (shaped labels File 26 + Navigation 76 +
+        // Settings 58, each plus its two 10px pads — 46 + 96 + 78; the ORDER
+        // moved 2026-08-03 and the sum did not, and this label swap moved the
+        // sum by exactly the 3px the two labels differ by) and the div 183 —
+        // 403 of the 1920px
+        // deployment width, 1517px of slack, and 310 of the 640px floor as
+        // before. At 200% they are 439 and 366: still 1115px of slack at 1920,
+        // but 805 against a 640px floor THAT DOES NOT SCALE — so at that one
         // corner (the schema's ceiling scale on the defensive minimum window)
-        // the floats now OVERLAP by 172px, where the pre-Navigation pair cleared
+        // the floats OVERLAP by 165px, where the pre-Navigation pair cleared
         // it by 19. What happens there is what the painters already do: the div
         // fills its background last and covers the tail of the left float's
         // labels. Nothing else changes, nothing is clickable that was not, and
@@ -2338,7 +2352,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // named in it. Navigation happens to be the only one with a producer today —
     // its "Walk both tabs" row inside the `h` history view — and Settings gets
     // the identical treatment the day it grows one. Geometry is untouched on
-    // either menu: a greyed row still occupies its slot at its full height.
+    // any menu: a greyed row still occupies its slot at its full height.
     app.dropdown.rect = GuiRect{0, 0, 0, 0};
     app.dropdown.item_rects = {};
     if (!app.dropdown.open()) return;
@@ -2392,11 +2406,13 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE OPTIONAL TERM IS DRIVEN OFF THE ITEM TABLE, not off the menu
     // enumerator: an accelerator column is a property of the rows (a menu whose
     // rows carry no hotkey has none), and expressing it that way is what leaves
-    // the two menus differing by one DERIVED term instead of by two hand-written
-    // rules. A menu that grew hotkeys would widen here with no edit.
+    // the menus differing by one DERIVED term instead of by hand-written
+    // rules per menu — which is exactly what let the FILE menu land in 2026-08-13
+    // with an accelerator column and no edit in this body at all.
     //
-    // The authored minimum applies to both — it is the item box's floor, the
-    // reason a menu of short labels still reads as a menu — and the navigation
+    // The authored minimum applies to all three — it is the item box's floor,
+    // the reason a menu of short labels still reads as a menu, and it is what
+    // gives the one-row FILE menu its width — and the navigation
     // menu simply never reaches it.
     const int pad_l    = scaled_px(kPopupLabelIndentPx);
     const int gap      = scaled_px(kPopupHotkeyGapPx);
@@ -2507,7 +2523,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         }
 
         // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
-        // edge in both menus, and vertically centred by the shared solver. On
+        // edge in every menu, and vertically centred by the shared solver. On
         // the settings menu the right side carries the leftover, which the
         // minimum width above is what guarantees; on the navigation menu the
         // accelerator carries it.

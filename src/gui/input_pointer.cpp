@@ -106,22 +106,20 @@ struct ToolbarChord {
 // body (arm_redesign_press / finish_chrome_press_release) instead of
 // accumulating a special case per row.
 //
-// ROW 1'S TWO MENU BUTTONS ARE THE ABSENTEES, and the membership changed hands
-// twice: Quit joined the table when Ctrl+Q was recognised as its chord, Settings
-// left it when its action became a DROPDOWN TOGGLE (a popup open/close is not a
-// chord at all — the bare `;` keyboard route still opens the editor directly,
-// untouched), and Navigation arrived a menu button 2026-08-02. Everything else
-// on rows 1, 3 and 4 and the bottom row is here.
+// ROW 1'S THREE MENU BUTTONS ARE THE ABSENTEES, and the membership changed
+// hands three times: Quit joined the table when Ctrl+Q was recognised as its
+// chord, Settings left it when its action became a DROPDOWN TOGGLE (a popup
+// open/close is not a chord at all — the bare `;` keyboard route still opens the
+// editor directly, untouched), Navigation arrived a menu button 2026-08-02, and
+// on 2026-08-13 QUIT LEFT THE TABLE WITH ITS BUTTON: row 1 paints no held face,
+// so a button acting at the lift gave no feedback while it was down, and the
+// architect moved the act into a THIRD MENU — File, one item, "Quit", dispatched
+// as this chord through on_key like every other dropdown command (the roster
+// record is at RedesignButton::File, app_state.h). The CHORD is untouched
+// everywhere: the keyboard, the editors' modal admission, the close routing and
+// the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
+// the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1. QUIT IS A CHORD — Ctrl+Q — and joined the table when the architect
-    // corrected the "two-call sequence" framing (2026-07-31): on_key's own
-    // Ctrl+Q route performs EXACTLY finalize_active_drags() then
-    // prompt.request_close() when a gesture is live (the drag-modal gate's one
-    // hatch), and prompt.request_close() alone otherwise — which is the same
-    // thing, finalize_active_drags being a no-op with nothing active. So the
-    // dispatch is behaviourally identical to the hand-spelled pair in every
-    // state, and the pair is gone.
-    {RedesignButton::Quit,       GuiKeys::Q,   true,  false, false, false, true},   // Ctrl+Q
     // Row 1's RIGHT FLOAT — the view bar (2026-08-02). Bare 1/2/3, the ABSOLUTE
     // view selectors: S+W, T+P, T+W. Everything the digits own arrives by
     // construction through on_key's own handler — the audio-first-then-markers
@@ -276,16 +274,18 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here, so the
-// table's length plus those two IS the roster. The check is not bookkeeping —
+// every RedesignButton but the three menu anchors carries a chord here, so the
+// table's length plus those three IS the roster. The check is not bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
-// drift a build error instead.
-static_assert(std::size(kToolbarChords) + 2 ==
+// drift a build error instead. (It was + 2 until 2026-08-13, when the Quit
+// button became the File menu's one item: the roster's total did not move, the
+// split did.)
+static_assert(std::size(kToolbarChords) + 3 ==
                   static_cast<std::size_t>(kRedesignButtonCount),
               "kToolbarChords must cover every RedesignButton except the "
-              "Settings and Navigation anchors");
+              "File, Settings and Navigation anchors");
 
 // THE MODAL EDITORS' COMMAND-CHORD ADMISSION, read without the act — the
 // modal-trap fix's membership test (architect 2026-08-11, from the road: an
@@ -301,6 +301,19 @@ static_assert(std::size(kToolbarChords) + 2 ==
 // set because the contract admits it (the cancel); no roster button carries it
 // today (row 8's Esc button died the day it shipped), so the Esc arm is the
 // derivation's completeness, not a live consumer.
+//
+// THE DERIVATION IS WHAT MOVED WHEN THE QUIT BUTTON LEFT, and it moved by
+// itself: this predicate is UNCHANGED by the 2026-08-13 File menu — Ctrl+Q is
+// still admitted, and every word above still holds — while the roster
+// MEMBERSHIP it derives now resolves to SAVE ALONE, because Ctrl+Q no longer
+// belongs to a roster button at all. That is the derivation working exactly as
+// designed (a hand-listed pair would have had to be edited), and the reach-
+// through's remaining consumer is one button. WHAT KEEPS THE ROAD'S TRAP CLOSED
+// without Quit's button is the MODAL ITSELF: since the dialog arc every editor
+// publishes real OK and Cancel buttons on the bottom row, the veil admits a
+// press on them, and Cancel dispatches the session's own Esc — so a keyboard-
+// less user always has a tappable way out of any dialog editor, which is the
+// exit the reach-through was invented to provide (architect 2026-08-13).
 bool modal_editor_admits_command_chord(GuiKey key, bool ctrl, bool shift,
                                        bool alt) {
     if (key == GuiKeys::Escape && !ctrl && !shift && !alt) return true;
@@ -313,10 +326,12 @@ bool modal_editor_admits_command_chord(GuiKey key, bool ctrl, bool shift,
 // EDITOR dialog stands, the window behind is inert to the pointer — so the
 // roster hover walk refuses every button EXCEPT the ones whose chord the
 // editors' modal contract admits as a command, i.e. exactly the buttons the
-// modal-trap press block above still dispatches (Quit and Save today). The
+// modal-trap press block above still dispatches (SAVE alone since 2026-08-13,
+// when the Quit button became the File menu's item — the membership derived
+// itself down to one, with no edit here). The
 // membership is DERIVED from the admission through the chord table, never
 // hand-listed — the modal-trap block's own rule — so the hover face and the
-// press reach cannot drift apart. The two menu ANCHORS carry no chord and
+// press reach cannot drift apart. The three menu ANCHORS carry no chord and
 // resolve false. Under a PROMPT the caller refuses the whole roster (a prompt
 // admits no command chord at all — its keyboard swallows everything but its
 // own responses), so this predicate is the editor-dialog half only.
@@ -538,10 +553,13 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // cannot drift from the allowlist: admit a chord there and its button lights on
 // the next frame with nothing to remember here.
 //
-// THE SETTINGS ANCHOR IS THE HAND ENTRY — one entry, not two, since 2026-08-08.
-// The two anchors are the roster's only NON-chord actions, so there is no chord
+// THE SETTINGS ANCHOR IS THE ONLY DEAD HAND ENTRY — one dead entry of the
+// three, since 2026-08-08.
+// The anchors are the roster's only NON-chord actions, so there is no chord
 // to ask the gate about and each has to be answered here; what changed is the
-// answer for one of them. SETTINGS stays DEAD because toggle_dropdown still
+// answer for one of them (and FILE, 2026-08-13, landed on the LIVE side: its one
+// item is Ctrl+Q, which the mode admits, so its menu works in there exactly as
+// Navigation's does). SETTINGS stays DEAD because toggle_dropdown still
 // refuses that menu while the mode stands (its first line): its six items open
 // the settings editor, a modal the view has no place for. NAVIGATION is LIVE
 // because the architect ruled its menu open in the view — the toggle no longer
@@ -604,8 +622,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // reports.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
-// 2026-08-04, re-verified 2026-08-05):
-//   LIVE — Quit (Ctrl+Q, admitted), the view bar's ViewSW/ViewTP/ViewTW (bare
+// 2026-08-04, re-verified 2026-08-05, re-derived 2026-08-13 when the Quit button
+// left the roster for the File menu — its LIVE entry is now the FILE ANCHOR's,
+// hand-answered with the other two, and the Ctrl+Q admission it rested on is
+// unchanged):
+//   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   ONLY WITH A NON-EMPTY HEAD DELTA AND NO CHECKPOINT IN FLIGHT, and greyed
@@ -646,11 +667,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   with an empty subject and LIVE the moment a click selects one. Both facts
 //   come from the same admission with nothing restated here, exactly as
 //   Save's head-delta grey does.
-//   and THE NAVIGATION ANCHOR since 2026-08-08 (architect) — the SECOND of the
-//   two hand entries, flipped: its menu opens in the view and its commands act
-//   there, so a dead face would be a lie about a working button. It is the one
-//   LIVE entry that is not a chord's admission, which is why it is spelled in the
-//   body rather than derived.
+//   and THE NAVIGATION ANCHOR since 2026-08-08 (architect) — one of the
+//   three hand entries, flipped: its menu opens in the view and its commands act
+//   there, so a dead face would be a lie about a working button. It is one of
+//   the two LIVE entries that are not a chord's admission, which is why they are
+//   spelled in the body rather than derived,
+//   and THE FILE ANCHOR joined it 2026-08-13 for the same reason: its menu opens
+//   in the view too and its one item is Ctrl+Q, which the mode's allowlist
+//   admits, so its face must be live.
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
 //   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
 //   moved onto Ctrl+S — so the button wears its ordinary Render face over this
@@ -660,8 +684,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
 //   (bare `l`); the TRIM SCISSORS (bare `x`) and the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
-//   consumed like the rest); and the SETTINGS anchor — alone here since 2026-08-08, when
-//   NAVIGATION moved to the LIVE column above with its menu.
+//   consumed like the rest); and the SETTINGS anchor — the only anchor here
+//   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its
+//   menu (FILE has never been in this column: it landed live, 2026-08-13).
 //
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
 // which since 2026-08-08 has nothing left to arbitrate on row 2: the ONE button
@@ -687,6 +712,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     if (b == RedesignButton::Settings) return true;
     if (b == RedesignButton::Navigation) return false;
+    if (b == RedesignButton::File) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -697,7 +723,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
         return history_mode_key_blocked(tc.key, chord, app);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
-    // (the table plus the two anchors is the whole roster) and stated rather
+    // (the table plus the three anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
@@ -744,7 +770,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //   enumeration puts "`'` when ineligible" among the collapsers: the walk's
 //   membership is a per-visit fact, its one mid-visit transition — the
 //   prefetch delivering member 0 — coinciding with the enabled-bit flip the
-//   tick comparator already repaints on). The two anchors and every
+//   tick comparator already repaints on). The three anchors and every
 //   non-icon-row button fall out LIVE here; the icon row is the one caller.
 //
 // EVERY collapse TRANSITION coincides with damage that already exists: the
@@ -753,9 +779,11 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // collapse needed no damage mechanism of its own.
 bool redesign_button_collapsed(const AppState& app, RedesignButton b) {
     if (!app.history_mode.active) return redesign_button_mode_companion(b);
-    if (b == RedesignButton::Settings || b == RedesignButton::Navigation)
+    if (redesign_button_is_menu_anchor(b))
         return false;   // the anchors are not icon-row members; hand-answered
-                        // live so a future caller cannot vanish a menu.
+                        // live so a future caller cannot vanish a menu. Asked
+                        // through the derived membership (app_state.h), so a
+                        // menu added later is covered by existing.
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -2256,15 +2284,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // dialog modal editor stands, a plain left press on a roster button
     // whose chord the editors' modal contract ADMITS AS A COMMAND
     // (modal_editor_admits_command_chord above — membership derived from the
-    // admission, never hand-listed; today that resolves to Quit and Save)
+    // admission, never hand-listed; SINCE 2026-08-13 that resolves to SAVE
+    // ALONE, the Quit BUTTON having become the File menu's one item — the
+    // predicate is untouched and the membership fell out of it, which is the
+    // derivation doing its job)
     // ARMS through the ordinary one press body (act at the release, like the
     // rest of the chrome — the release re-asks this same admission before
     // dispatching), and every other press stays refused at the swallows
     // below. The chord the lift then dispatches meets the KEYBOARD gate's own
-    // routing — Ctrl+S saves with the editor
-    // open, Ctrl+Q runs the teardown and the close route — so the button is
-    // its chord end to end. Faces: the two admitted buttons already wear
-    // their enabled faces (the modal gates are deliberately absent from
+    // routing — Ctrl+S saves with the editor open — so the button is
+    // its chord end to end. THE ROAD'S TRAP IS CLOSED BY THE DIALOG ITSELF
+    // now, not by this block (architect 2026-08-13, ruling on Quit's
+    // departure): every one of the four editor dialogs publishes real OK and
+    // CANCEL buttons on the bottom row, the veil admits a press on them, and
+    // Cancel dispatches that editor's own Esc — so the keyboard-less user's way
+    // out is the modal's own button, and no roster reach-through is needed for
+    // it. This block survives for Ctrl+S, which is a command rather than an
+    // exit. Faces: the admitted button already wears
+    // its enabled face (the modal gates are deliberately absent from
     // redesign_button_enabled — a modal that greyed the chrome would be a
     // fourth face nobody asked for, the standing note there), so face and
     // press agree where it matters and the un-admitted rest keep the standing
@@ -2419,8 +2456,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // half of why a popup and an editor are never open together: the popup opens
     // only from a press, and while a DIALOG editor is up
     // every press dies at the veil (the MODAL-TRAP block above lifts ONLY
-    // roster buttons whose chord the editors admit — Quit and Save today — and
-    // the two menu ANCHORS carry no chord, so no press can open a popup under
+    // roster buttons whose chord the editors admit — Save alone today — and
+    // the three menu ANCHORS carry no chord, so no press can open a popup under
     // an editor through it). The other half is not here — the
     // pointer-transparent FLAG editor swallows nothing, so a press does reach
     // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
@@ -2439,9 +2476,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // or dismiss) and nothing acts.
         if (button != GuiMouseButton::Left) return;
         const AppState::Dropdown& pop = app.dropdown;
-        const bool on_menu_button =
-            redesign_button_hit(app, RedesignButton::Settings, x, y) ||
-            redesign_button_hit(app, RedesignButton::Navigation, x, y);
+        // WALKED, NOT NAMED (the anchor membership is derived from the menu
+        // list — app_state.h — so a menu added later needs no edit here).
+        bool on_menu_button = false;
+        for (const DropdownMenu m : kDropdownMenus) {
+            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
+                on_menu_button = true;
+                break;
+            }
+        }
         if (!on_menu_button) {
             const int hit = dropdown_item_at(x, y);
             // A MODIFIED press inside the popup closes it and does nothing else:
@@ -2542,25 +2585,28 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (rect_contains(menu_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
-                // SETTINGS AND NAVIGATION ARE THE ROSTER'S TWO NON-CHORD
-                // BUTTONS, so they are spelled here rather than in the table:
-                // each action is a POPUP TOGGLE, which no keyboard chord
+                // FILE, NAVIGATION AND SETTINGS ARE THE ROSTER'S THREE
+                // NON-CHORD BUTTONS, so they are spelled here rather than in the
+                // table: each action is a POPUP TOGGLE, which no keyboard chord
                 // performs. Their menus lead to routes the keyboard already has
-                // — the bare `;` still opens the settings editor DIRECTLY, and
-                // every navigation item is a key you can press instead — so a
+                // — the bare `;` still opens the settings editor DIRECTLY, every
+                // navigation item is a key you can press instead, and File's one
+                // item is Ctrl+Q — so a
                 // dropdown is a pointer affordance for an existing road, never a
                 // second one. Shift-exact is refused like every other
                 // non-admitting button.
                 //
-                // THE ANCHOR PAIR IS WALKED rather than spelled twice — the same
-                // shape on_motion's two anchor walks take, so
+                // THE ANCHORS ARE WALKED rather than spelled one by one — the
+                // same shape on_motion's two anchor walks take, over the one
+                // menu list (app_state.h), so
                 // dropdown_anchor_button stays the one place that knows which
                 // button emits which menu — and the walk is what gives the CLAIM
-                // below exactly ONE site instead of one per branch.
+                // below exactly ONE site instead of one per branch. It is also
+                // what made File a one-row addition here: the walk grew a menu
+                // and this body did not change.
                 DropdownMenu anchored = DropdownMenu::None;
                 if (!mods.shift) {
-                    for (const DropdownMenu m : {DropdownMenu::Settings,
-                                                 DropdownMenu::Navigation}) {
+                    for (const DropdownMenu m : kDropdownMenus) {
                         if (!redesign_button_hit(app, dropdown_anchor_button(m),
                                                  x, y)) continue;
                         anchored = m;
@@ -4273,7 +4319,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit / Navigation / Settings and the view bar's three, row 3's two
+// (row 1's File / Navigation / Settings and the view bar's three, row 3's two
 // tabs, row 4's twenty-nine — the toolbar four included since the 2026-08-12
 // relayout — and the bottom row's eight: 45, the enum's
 // own count at kRedesignButtonCount — the stash is
@@ -4346,8 +4392,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // THE DIALOG'S VEIL (2026-08-12): under a PROMPT the whole roster is
     // refused — nothing behind the dialog is pressable, so nothing hovers;
     // under an EDITOR dialog only the veil-admitted buttons hover (the
-    // modal-trap pair the press claim still dispatches — Quit and Save,
-    // derived at modal_veil_admits_button). The pointer-transparent FLAG
+    // modal-trap reach-through the press claim still dispatches — SAVE alone
+    // since 2026-08-13, derived at modal_veil_admits_button). The
+    // pointer-transparent FLAG
     // editor raises no veil: it is not a dialog and its roster presses were
     // never blocked.
     const bool editor_dialog_veil = modal_dialog_editor_active();
@@ -4756,7 +4803,7 @@ void GuiInputHandler::finish_chrome_press_release(
         if (!redesign_button_hit(app, tc.id, x, y)) return;
         // THE VEIL, re-asked: under an editor dialog only the buttons whose
         // chord the editors' modal contract admits may act (the modal-trap
-        // reach-through — Quit and Save today, derived never hand-listed). An
+        // reach-through — Save alone today, derived never hand-listed). An
         // editor OPENED mid-hold vetoes an ordinary arm here; a press armed
         // through the reach-through re-answers yes. A PROMPT never reaches
         // this body at all — on_button_release's prompt gate consumes the
@@ -4942,21 +4989,26 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
     // runs, so a modal it opens never overlaps the menu even for a frame, and a
     // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
-    // The two menus' actions differ in kind and each stays with its own table.
-    if (menu == DropdownMenu::Navigation) {
+    // The two KINDS of menu differ in kind and each stays with its own table:
+    // the COMMAND menus (Navigation, and File since 2026-08-13) dispatch a
+    // chord, the SETTINGS one opens the editor prefilled.
+    if (dropdown_is_command_menu(menu)) {
         // THE ITEM IS ITS KEY, dispatched through on_key exactly as a redesigned
         // button dispatches its chord: every gate the keyboard route passes
         // (loading/blank, the modal gates, the read-only allowlist, the arm's own
         // refusals) applies identically, so an item whose command cannot act
         // right now simply does nothing — the buttons-never-grey rule, one
-        // surface further out. No stop, no modal, nothing restated here.
-        // THAT IS ALSO HOW THE `h` HISTORY VIEW ANSWERS THIS MENU (2026-08-08):
+        // surface further out. No stop, no modal, nothing restated here. THE
+        // FILE MENU'S ONE ROW RIDES THIS BODY WHOLE: Ctrl+Q reaches on_key's own
+        // close route — the drag-modal hatch, the dirty prompt, the WM-close
+        // ordering — with no second body anywhere, which is the whole reason the
+        // Quit BUTTON could be retired for a menu item without moving the act.
+        // THAT IS ALSO HOW THE `h` HISTORY VIEW ANSWERS THESE MENUS (2026-08-08):
         // per item, at the mode's own two gates — its allowlist for the zoom and
-        // framing rows, history_mode_owns_key for the rest — with the one row
-        // that would mean something else in there greyed above and never reaching
-        // this dispatch at all.
-        const NavigationPopupItem& it =
-            kNavigationPopupItems[static_cast<size_t>(armed)];
+        // framing rows and for Ctrl+Q, history_mode_owns_key for the rest — with
+        // the one row that would mean something else in there greyed above and
+        // never reaching this dispatch at all.
+        const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
         GuiInputState chord{};
         chord.ctrl  = it.ctrl;
@@ -5005,7 +5057,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // state the mode exists for. Below the return the reset re-clears the bit, which
 // costs nothing and keeps the struct one initializer.
 // THE ONE CLOSE THAT KEEPS THE MODE is the row-1 hover close in on_motion —
-// sliding onto Quit or the view bar is a step ACROSS the bar, not a dismissal —
+// sliding onto the view bar is a step ACROSS the bar, not a dismissal —
 // and it re-arms on the line after its call to this. It is the only site in the
 // tree that writes that bit true outside toggle_dropdown's open.
 // THE `h` HISTORY MODE's POINTER ALLOWLIST and its acts. True = the press is
@@ -5404,18 +5456,21 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS, and that bypass is
     // exactly what the SETTINGS half is scoped to. Every other route out of row 1
     // dispatches a synthesized chord through on_key and so meets the mode's
-    // keyboard allowlist; the two anchors do not, and a Settings item opens the
+    // keyboard allowlist; the anchors do not, and a Settings item opens the
     // settings editor by a DIRECT call (finish_dropdown_release), reaching no
     // gate at all. Refusing the menu is one line where covering that path per
     // item would be several.
     //
-    // THE NAVIGATION MENU NEEDS NO SUCH COVER AND IS LIVE IN THE VIEW (architect
-    // 2026-08-08): it has no direct call to shut — every one of its seven rows is
+    // THE COMMAND MENUS NEED NO SUCH COVER AND ARE LIVE IN THE VIEW (Navigation
+    // by the architect 2026-08-08, File by construction when it landed
+    // 2026-08-13): neither has a direct call to shut — every one of Navigation's
+    // seven rows and File's one row is
     // a CHORD, dispatched through on_key exactly as a redesigned button's is, so
     // the mode answers PER ITEM at the same two gates a key meets (the allowlist
     // admits zoom in / out / overview; history_mode_owns_key claims
     // center-on-focus and the two marker steps as re-expressions over the diff
-    // flags). The one row whose chord means something ELSE in here — "Walk both
+    // flags; File's Ctrl+Q is on that same allowlist). The one row whose chord
+    // means something ELSE in here — "Walk both
     // tabs", the mode's reverse walk-tab cycle — greys at the item instead
     // (dropdown_item_enabled, app_state.h), which is the only thing a chord
     // dispatch cannot answer for: the command runs, it is simply not the one the
@@ -5429,10 +5484,11 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // exactly as it was.
     if (app.history_mode.active && menu == DropdownMenu::Settings) return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
-    // (the gesture that opened it, closing it), and a press on the OTHER menu's
+    // (the gesture that opened it, closing it), and a press on ANOTHER menu's
     // button switches — the close below runs first, damaging the box that is
     // leaving, and the open then proceeds. "Two dropdowns are never open
-    // together" needs no rule beyond this: the field holds one value.
+    // together" needs no rule beyond this: the field holds one value, whatever
+    // the menu count.
     const bool same = (app.dropdown.menu == menu);
     close_dropdown();
     if (same) return;
@@ -5466,19 +5522,20 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // row-1 button cannot be inside the flag editor's box, which lives in the
     // marker lane below the whole top strip's button rows.
     //
-    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. Quit needs nothing: its
-    // Ctrl+Q is one of the three chords the keyboard-modal gate admits, so it
-    // tears the edit down through its own route. The view bar's bare 1/2/3 drop
-    // at that gate as consumed nothings — the modality ruling working as
-    // intended — and ending an edit there would be a behavior change nobody
-    // asked for.
+    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's bare
+    // 1/2/3 drop at the keyboard-modal gate as consumed nothings — the modality
+    // ruling working as intended — and ending an edit there would be a behavior
+    // change nobody asked for. (Quit needed nothing here while it was a button,
+    // its Ctrl+Q being one of the three chords that gate admits; since
+    // 2026-08-13 it is an ITEM of this menu, so the discard above covers it like
+    // every other row.)
     if (text_editor::is_active(app.top_flag_editor)) {
         flag_editor.exit_top_flag_edit_no_commit();
     }
     app.dropdown.menu         = menu;
     app.dropdown.hovered_item = -1;
     // OPENING A MENU ARMS THE ROW — the mode's ONE producer, and it sits here
-    // because this is the ONE route that opens either menu: the anchor click, the
+    // because this is the ONE route that opens any menu: the anchor click, the
     // hover switch, and the armed hover re-open all arrive through it, and no
     // keyboard chord opens a dropdown at all. So "a menu is open" implies "the
     // row is armed" by construction, with no second producer to keep in step.
@@ -5611,12 +5668,11 @@ void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
     // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the
     // CLICK uses, so the anchor expression, the open edge's damage and the roster
     // clear are one route with nothing restated. The walk covers every menu that
-    // HAS an anchor rather than naming the pair, so dropdown_anchor_button stays
+    // HAS an anchor rather than naming them, so dropdown_anchor_button stays
     // the one place that knows which button emits which menu. Anywhere ELSE on
-    // the row — Quit, the view bar, the ground between them — is simply not an
+    // the row — the view bar, the ground between the floats — is simply not an
     // anchor: the row stays armed and nothing opens.
-    for (const DropdownMenu m : {DropdownMenu::Settings,
-                                 DropdownMenu::Navigation}) {
+    for (const DropdownMenu m : kDropdownMenus) {
         if (!redesign_button_hit(app, dropdown_anchor_button(m),
                                  mouse_x, mouse_y)) continue;
         toggle_dropdown(m);
@@ -5916,7 +5972,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // a modal changed with the dialog veil (2026-08-12, revising the
     // 2026-07-31 "hover follows the pointer everywhere" reading): the walk's
     // veil term refuses the whole roster under a PROMPT and everything but
-    // the veil-admitted Quit/Save under an EDITOR dialog, because a hover
+    // the veil-admitted Save under an EDITOR dialog, because a hover
     // face is a PROMISE OF PRESSABILITY and the veil consumes those presses.
     // The recompute must still RUN in those branches for the original
     // ruling's reason inverted: the walk is the only writer of `hovered`
@@ -5951,7 +6007,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.dropdown.open()) {
         // A NON-MENU ROW-1 BUTTON CLOSES THE OPEN MENU (architect 2026-08-03,
         // from kdenlive: only ONE button in that row is lit at a time, so sliding
-        // from Navigation onto Quit must put Navigation's menu away rather than
+        // from Navigation onto a view-bar button must put Navigation's menu away
+        // rather than
         // leave it hanging under a second lit button). This REVERSES the earlier
         // "a menu bar keeps its menu up while the pointer crosses the rest of the
         // bar" reading — the bar's other buttons are not menu titles here, they
@@ -5959,12 +6016,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // state the row does not have.
         //
         // THE MEMBERSHIP IS redesign_button_in_menu_row (app_state.h), walked
-        // rather than named, so Quit and the view bar's three are covered by the
-        // fact "row 1" and a new row-1 button inherits the rule by existing. An
-        // ANCHOR is skipped: the OPEN menu's own does nothing at all (no re-open,
-        // no close) and the OTHER one SWITCHES through the walk below, both
-        // unchanged. The close goes through close_dropdown, the one close owner,
-        // which carries the popup's damage.
+        // rather than named, so the rule covers whatever row 1 holds by the
+        // fact "row 1" and a new row-1 button inherits it by existing. WHAT IT
+        // COVERS TODAY, re-derived from the two predicates rather than
+        // remembered: THE VIEW BAR'S THREE — row 1's other three buttons are the
+        // anchors, and an
+        // ANCHOR is skipped (the OPEN menu's own does nothing at all — no
+        // re-open, no close — and another one SWITCHES through the walk below,
+        // both unchanged). It was "Quit and the view bar's three" until
+        // 2026-08-13, when the Quit button became the File menu and joined the
+        // skipped side. The close goes through close_dropdown, the one close
+        // owner, which carries the popup's damage.
         //
         // IT RUNS BEFORE THE ROSTER RECOMPUTE so the frame that closes the menu is
         // the frame the button lights on: with the popup already gone,
@@ -5988,15 +6050,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             for (int i = 0; i < kRedesignButtonCount; ++i) {
                 const RedesignButton id = static_cast<RedesignButton>(i);
                 if (!redesign_button_in_menu_row(id)) continue;
-                if (id == dropdown_anchor_button(DropdownMenu::Settings) ||
-                    id == dropdown_anchor_button(DropdownMenu::Navigation))
-                    continue;
+                if (redesign_button_is_menu_anchor(id)) continue;
                 if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
                 close_dropdown();
                 // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the
-                // other half of the same behaviour): sliding onto Quit puts the
-                // menu away but leaves the row ARMED, so sliding BACK onto
-                // Settings or Navigation opens that menu again with no click.
+                // other half of the same behaviour): sliding onto a view-bar
+                // button puts the
+                // menu away but leaves the row ARMED, so sliding BACK onto an
+                // anchor opens that menu again with no click.
                 // This is a step across the bar, not a dismissal, and
                 // close_dropdown disarms by default — so the exception is
                 // spelled here, at the only site that needs it.
@@ -6022,8 +6083,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // bit, which is why the order of these two blocks is set by the CLOSE rule
         // above and not by the switch.
         //
-        // The walk covers every menu that HAS an anchor instead of naming the
-        // pair, so the anchor owner stays the one place that knows which button
+        // The walk covers every menu that HAS an anchor instead of naming
+        // them, so the anchor owner stays the one place that knows which button
         // emits which menu. Hovering the OPEN menu's own anchor is skipped
         // outright — no re-open, no close, no damage. A row-1 button owning no
         // dropdown never reaches here at all: the close rule above consumed it
@@ -6046,8 +6107,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // held button, so the coming release acted on a menu the press never
         // touched. The ordinary unheld hover-switch is unchanged.
         if (!mods.primary_button_held) {
-            for (const DropdownMenu m : {DropdownMenu::Settings,
-                                         DropdownMenu::Navigation}) {
+            for (const DropdownMenu m : kDropdownMenus) {
                 if (m == app.dropdown.menu) continue;
                 if (!redesign_button_hit(app, dropdown_anchor_button(m),
                                          mouse_x, mouse_y)) continue;
@@ -6121,8 +6181,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // through to the gesture branches, harmlessly, its presses all
         // swallowed): the dialog buttons' hover face, then the roster
         // recompute, whose veil term refuses everything but the veil-admitted
-        // Quit/Save so THEIR faces stay live (the modal-trap pair the press
-        // claim reaches through the veil) while the rest of the roster goes
+        // Save so ITS face stays live (the modal-trap reach-through the press
+        // claim carries through the veil) while the rest of the roster goes
         // dead under the pointer. The rationale for recomputing at all is the
         // one the old branch carried: hover is a separately maintained
         // pointer fact, and a modal freezing it left lit pills behind.
