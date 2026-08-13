@@ -145,7 +145,11 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // ~kStripSegmentPauseMs, start the stroke on the other axis, get a fresh plain
 // segment. There is no cross-swing escape hatch any more; that is the point.
 //
-// THE RULED LAST RESORT if the lock still fails (his dictated final rung):
+// THE RULED LAST RESORT — NOT NEEDED, KEPT AS HISTORY: the architect's
+// field verdict later the same day RATIFIED the lock ("zoom now works as
+// expected"; the record sits at kStripSegmentPauseMs below, where the ladder
+// closed), so the rungs in this paragraph were never reached. If the lock
+// ever fails, his dictated final rung was:
 // THE CTRL-DRAG ZOOM LOSES ITS PAN AXIS ENTIRELY — a vertical-only gesture,
 // horizontal motion ignored outright, no segments and no classification —
 // and behind that the final fallback is the pre-curve PLAIN model whole plus
@@ -171,7 +175,18 @@ constexpr double kStripSegmentClassifyPx = 8.0;
 // Lazy check only: a pause is observed by the next event that follows it. It is
 // also the ONLY route between the axes inside one hold (the lock's reachability
 // note above), which is what the architect's "keep the refresh" preserved.
-constexpr int64_t kStripSegmentPauseMs = 150;
+//
+// THE LOCK IS RATIFIED AND THE CALIBRATION LADDER IS CLOSED HERE (architect
+// field verdict 2026-08-12: "zoom now works as expected"). The lock shipped
+// with this rest at 150 and the same-day verdict ratified the MODEL; the rest
+// then tightened to 75 in the same breath, since the pause is the whole route
+// between the axes and a shorter one makes re-aiming mid-hold snappier. THE
+// COST IS RULED ACCEPTED: at 75ms an ordinary hesitation mid-stroke can be
+// read as a pause and hand the next few px a fresh unclassified segment — the
+// occasional misread, accepted by ruling rather than tuned around. The
+// ladder's remaining rungs above (the vertical-only ctrl drag, the pre-curve
+// plain fallback) are NOT NEEDED and stay recorded as history only.
+constexpr int64_t kStripSegmentPauseMs = 75;
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.

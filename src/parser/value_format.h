@@ -26,20 +26,33 @@
 // vocabulary. Tempo and scale carry separate brackets. Tempo (marker
 // tempo, sweep-derived base tempo) spans the multiplicatively symmetric
 // [0.25, 4.00] (4 = 1/0.25), held as integer cents [25, 400] so every
-// bracket comparison — adversarial load-fatal, editor red-flash, the
-// Ctrl+wheel constructive clamp, the bpm derivation's refusal, the
-// iter-bracket commit gate — is an exact integer compare. Scale — both the
-// per-marker tempo scale and the global settings scale — is tighter:
-// [0.50, 2.0000] (2 = 1/0.5), multiplicatively symmetric around 1, because
+// bracket comparison — adversarial load-fatal, the flag editor's typed-tempo
+// red flash (its candidate canonical line runs through this same strict
+// parse, so the editor and the load share one bracket compare), the bare
+// Up/Down cent step's CONSTRUCTIVE CLAMP at adjust_tempo_cents (its group
+// arm refusing at the same edge instead), the bpm derivation's refusal
+// (compute_base_tempo_scale), the iter-bracket commit gate — is an exact
+// integer compare. Scale — both the per-marker tempo scale and the global
+// settings scale — is tighter: [0.50, 2.0000] (2 = 1/0.5), multiplicatively
+// symmetric around 1, because
 // realistic scale trims sit near 1 (roughly 0.8-1.2). Scale's floor,
 // together with tempo's floor, bounds the resolved tempo-scale product
 // below by 0.25 * 0.5 * 0.5 = 1/16 — the bound the target-view whole-frame
 // nudge guarantee is computed from. Absurd magnitudes (1e307 tempos, 2^53
 // bpm bounds) are adversarial, not use cases: every GUI input surface
-// enforces these bounds — editor red-flash, constructive wheel clamp,
-// derivation refusal — so an out-of-bracket value on disk is a state the
-// GUI can never produce, and it hard-fails the load (stderr, first error
-// only).
+// enforces these bounds — the flag and settings editors' red-flash refusals,
+// each routed through the very strict parser the load itself uses (the flag
+// payload through parse_single_canonical_line, the settings block through the
+// whole-file schema load), the bare Up/Down cent step's constructive clamp,
+// and the bpm bracket's own parse plus the bpm derivation's refusal — so an
+// out-of-bracket value on disk is a state the GUI can never produce, and it
+// hard-fails the load (stderr, first error only).
+// COMMENT-ONLY CORRECTION, 2026-08-12 (architect approval 2026-08-12; frozen
+// file, comments only, no code bytes changed): both enforcer lists above used
+// to name a Ctrl+wheel / "constructive wheel clamp" tempo enforcer. That was
+// a FOSSIL of a pointer-wheel tempo gesture deleted long ago — there is no
+// tempo wheel anywhere in the product; bare Up/Down is the whole tempo-step
+// surface and its clamp lives at GuiWarpMarkersOps::adjust_tempo_cents.
 inline constexpr int64_t kTempoMinCents = 25;  // marker tempo, derived base tempo
 inline constexpr int64_t kTempoMaxCents = 400;
 inline constexpr double kScaleMin = 0.5;    // marker scale, settings scale
