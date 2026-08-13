@@ -635,11 +635,11 @@ struct GuiInputHandler {
     // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
     // ONE CONSEQUENCE IS RULED RATHER THAN INCIDENTAL (2026-08-12): entering
     // BELOW apply_strip_drag_at means the pinch does not take the DIRECTIONAL
-    // SEGMENT STABILIZATION (the off-axis damping; kStripSegmentClassifyPx /
-    // kOffAxisKneePx, app_state.h). That damping exists to stop a wrist arc's
-    // incidental off-axis travel jittering the other axis, a problem a
-    // distance RATIO does not have — the content tracks the fingers, so the
-    // pinch stays exactly log2-linear.
+    // SEGMENT STABILIZATION (the flat off-axis damping;
+    // kStripSegmentClassifyPx / kOffAxisDampFactor, app_state.h). That damping
+    // exists to stop a wrist arc's incidental off-axis travel jittering the
+    // other axis, a problem a distance RATIO does not have — the content
+    // tracks the fingers, so the pinch stays exactly log2-linear.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture

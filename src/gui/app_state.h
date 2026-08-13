@@ -76,68 +76,77 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
-// DIRECTIONAL SEGMENT STABILIZATION — THE THREE RETUNABLES (architect-dictated
-// 2026-08-12, HIS OWN design at the field report on the 200px global knee; the
-// per-event model lives in apply_strip_drag_at, input_pointer.cpp).
+// DIRECTIONAL SEGMENT STABILIZATION — FLAT OFF-AXIS DAMPING, THE THREE
+// RETUNABLES (architect-ruled 2026-08-12, round three of the field
+// calibration; the per-event model lives in apply_strip_drag_at,
+// input_pointer.cpp).
 //
-// WHY: a hand pivots at the wrist, so it traces an ARC — his hand "by default
-// just does not sweep in a straight line" — and a global curve on the drag's
-// cumulative dy (the superseded first shape, below) still leaked that arc into
-// zoom. Worst at the viewport WALLS (0 / EOF): the pan saturates while the
-// leak keeps zooming — "I lose the zoom level... the whole point is that I
-// should be able to maintain the zoom level roughly." The answer, the
-// architect's own: the drag is a sequence of MOTION SEGMENTS — a segment
-// starts at the arm and at every MOTION PAUSE — each classified ONCE by its
-// opening direction, the segment's OFF-AXIS then DAMPED, never locked.
-// Within a segment:
+// WHY THE SEGMENTS: a hand pivots at the wrist, so it traces an ARC — his hand
+// "by default just does not sweep in a straight line" — and the first shape, a
+// global curve on the drag's cumulative dy, leaked that arc into zoom. HIS
+// ERGONOMICS, for the record: side-to-side hinges on the WRIST and arcs BIG
+// (hundreds of px across the 1080p monitor, or the whole width of the glass);
+// up-down hinges on the SHOULDER and was never the problem. So the drag is a
+// sequence of MOTION SEGMENTS — a segment starts at the arm and at every
+// MOTION PAUSE — each classified ONCE by its opening direction, the segment's
+// OFF-AXIS then held at one small CONSTANT fraction for the segment's whole
+// life. Within a segment:
 //   * UNCLASSIFIED (the first few px): both axes respond PLAIN — dx pans 1:1,
 //     dy zooms linear. Sub-slop travel is tiny, so there is no dead zone at
 //     the arm and a pan's first event stays responsive.
 //   * CLASSIFICATION, once per segment, when Chebyshev travel from the segment
 //     origin reaches kStripSegmentClassifyPx — on the 45° diagonal: |Δy| >
 //     |Δx| = VERTICAL, else HORIZONTAL (ties horizontal — the pan-primary
-//     bias). The OFF-AXIS ORIGIN is set to the CURRENT off-axis coordinate,
-//     so the damping's cumulative D starts at zero there and the plain→damped
-//     transition is continuous — no jump.
-//   * HORIZONTAL: pan stays plain 1:1; ZOOM IS DAMPED through
-//         f(D) = D·|D| / (|D| + kOffAxisKneePx)
-//     over D = the off-axis travel since classification, applied as the DELTA
-//     of f across each event (off_axis_response, input_pointer.cpp) — "moving
+//     bias).
+//   * HORIZONTAL: pan stays plain 1:1; the ZOOM axis is DAMPED FLAT —
+//     effective_dy = dy · kOffAxisDampFactor, per event, STATELESS ("moving
 //     the hand up and down just the slightest amount should zoom very, very
-//     small amounts", yet still REACHABLE: f's slope grows toward 1:1 under
-//     sustained deliberate vertical travel. DAMPED-NEVER-LOCKED is what
-//     distinguishes this from the failed hard lock in the succession below.
+//     small amounts").
 //   * VERTICAL: zoom is plain linear (dy/kZoomStripPxPerLevel — the old
-//     response the architect had "gotten used to"); PAN is damped by the same
-//     f — "for symmetry... so that panning also takes more work", his words;
-//     both axes stabilized, one knee for both off-axes.
+//     response the architect had "gotten used to"); the PAN axis takes the
+//     same flat factor — "for symmetry... so that panning also takes more
+//     work", his words; both axes stabilized, one factor for both off-axes.
 //   * A MOTION PAUSE longer than kStripSegmentPauseMs resets the segment
 //     (origin = the previous resting point, mode unclassified), observed
 //     LAZILY by the next event that follows it — NO timer, no timerfd. The
 //     quick toggle he described: pan, rest a beat, pull down = free zoom; his
 //     natural pan rhythm (lift hand, carry, re-press) starts fresh segments
 //     through the arm anyway.
-// THE WALL CONSEQUENCE FALLS OUT (his first complaint): a horizontal
-// segment's pan saturating at a viewport wall keeps producing motion events
-// (the hand still moves), so the segment neither reclassifies nor resets and
-// the zoom leak stays damped — the zoom level is maintained through the wall.
-// No special wall arm exists anywhere.
+// THE WALL CONSEQUENCE, WHICH IS WHY THE FACTOR IS FLAT (his standing
+// complaint, twice): a horizontal segment's pan saturating at a viewport wall
+// (0 / EOF) keeps producing motion events — nothing pans, so the hand SWEEPS
+// EXTRA — and the flat response neither grows nor wakes up, so the zoom level
+// is held through a wall drag OF ANY LENGTH. No special wall arm exists
+// anywhere; the property is structural.
 //
-// SUCCESSION, the dead branches stay dead: the 2026-08-1x FIRST-DIRECTION
-// LOCK was a STIFF HARD LOCK, field-reversed — this model is the architect's
-// own 2026-08-12 supersession of that record, damped + pause-reset rather
-// than latched shut (the touch pinch's zoom HYSTERESIS stays dead too,
-// touch.md). The GLOBAL CUMULATIVE-DY CURVE this block replaces
-// (kZoomAccelKneePx, knee 48 → 200, both field-tested 2026-08-12) is
-// superseded whole: the same f survives, off-axis-only and per segment.
-// THIS IS THE LAST ATTEMPT at the Ableton feel by the architect's explicit
-// word: the ruled fallback if the field verdict fails is the pre-curve PLAIN
-// model whole plus the overview strip's endcap/box later phase
-// (zoom-viewport-strip.md).
+// CALIBRATION SUCCESSION, all field-tested 2026-08-12: knee 48 → 200 → 600,
+// ALL THREE the CUMULATIVE-TRAVEL CURVE f(D) = D·|D| / (|D| + knee) whose
+// response RATE grew with accumulated off-axis travel — and that
+// travel-waking shape WAS THE WALL BUG: a saturated wall drag is exactly
+// where the hand keeps sweeping, so D accumulated, f approached full response
+// and the arc dumped into zoom ("I lose the zoom level... the whole point is
+// that I should be able to maintain the zoom level roughly"). Raising the
+// knee only delayed it, which is why the curve is DELETED rather than retuned
+// — superseded whole by the FLAT factor below, the architect's pick from the
+// three presented.
 //
-// None of the three ride gui_scale: they model HAND travel and hand rhythm on
-// a physical device, like the drag slop constants, not painted metrics. All
-// three are ruled retunables, field-tuned on glass and desk.
+// REACHABILITY: the off-axis is still faintly ALIVE (never locked) — at ~0.08
+// of plain, a deliberate 500px cross-swing moves ~0.67 zoom levels — but THE
+// PAUSE RESET IS THE INTENDED ROUTE to the other axis: rest ~150ms, start the
+// stroke on the other axis, get a fresh plain segment.
+//
+// THE RULED NEXT STEP if this still fails: delete the factor and HARD-LOCK a
+// classified segment to its axis — NOT the old whole-drag first-direction
+// lock (field-reversed, and reversed because it latched the whole gesture
+// shut), because the pause reset re-aims; behind that, the final fallback is
+// the pre-curve PLAIN model whole plus the overview lane's endcap/box later
+// phase (zoom-viewport-strip.md). The touch pinch's zoom HYSTERESIS stays
+// dead throughout (touch.md).
+//
+// None of the three ride gui_scale: the two px/ms constants model HAND travel
+// and hand rhythm on a physical device, like the drag slop constants, and the
+// factor is dimensionless. All three are ruled retunables, field-tuned on
+// glass and desk.
 
 // Chebyshev travel (window px) from the segment origin at which a segment
 // classifies, once. 8.0 deliberately equals the generic press-becomes-drag
@@ -152,16 +161,14 @@ constexpr double kStripSegmentClassifyPx = 8.0;
 // Lazy check only: a pause is observed by the next event that follows it.
 constexpr int64_t kStripSegmentPauseMs = 150;
 
-// The off-axis damping knee (window px of off-axis travel since the segment's
-// classification) — kZoomAccelKneePx RENAMED AND HEAVILY RAISED with the
-// segment model, since one knee now serves BOTH off-axes. CALIBRATION
-// SUCCESSION, all field-tested 2026-08-12: 48 (the first cut, too weak
-// against the architect's ~50px incidental wrist arc) → 200 (his strong-end
-// bracket, still "not enough. We should much more heavily clamp Zoom" — his
-// explicit same-day clarification) → 600 here. At 600, 50px of arc yields
-// ~3.8px effective (~0.06 levels at kZoomStripPxPerLevel = 60) and even 100px
-// yields ~14px (~0.24 levels), against ~33px at the old 200. Still retunable.
-constexpr double kOffAxisKneePx = 600.0;
+// THE FLAT OFF-AXIS DAMPING FACTOR — the constant fraction of plain response a
+// classified segment's OFF-AXIS keeps for the segment's whole life, one factor
+// for both off-axes (the succession that killed the cumulative curve is in the
+// block above). Dimensionless, stateless, applied per event as a plain
+// multiply: 50px of incidental wrist arc yields 4px effective (~0.07 zoom
+// levels at kZoomStripPxPerLevel = 60), 100px yields 8px (~0.13), and no
+// amount of accumulated travel changes the rate. Still retunable.
+constexpr double kOffAxisDampFactor = 0.08;
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
@@ -762,7 +769,7 @@ struct TrimDragState {
 
 // The directional segment's classification (the stabilization model at
 // kStripSegmentClassifyPx above): Unclassified = both axes plain, Horizontal =
-// pan plain / zoom damped, Vertical = zoom plain / pan damped.
+// pan plain / zoom flat-damped, Vertical = zoom plain / pan flat-damped.
 enum class StripSegmentMode { Unclassified, Horizontal, Vertical };
 
 struct StripDragState {
@@ -793,15 +800,13 @@ struct StripDragState {
     // the arm then seeding seg_x0/seg_y0 and last_motion_ms — and at every
     // observed motion pause. seg_x0/seg_y0 are the segment's origin (window
     // px): the press point at the arm, the previous resting point after a
-    // pause reset.
+    // pause reset. THE MODE IS THE WHOLE DAMPING STATE: the off-axis response
+    // is a FLAT per-event multiply, so nothing accumulates and there is no
+    // off-axis origin to carry (the deleted cumulative curve's field died with
+    // it — its travel-waking shape was the wall bug).
     StripSegmentMode seg_mode = StripSegmentMode::Unclassified;
     int     seg_x0 = 0;
     int     seg_y0 = 0;
-    // The OFF-AXIS ORIGIN, set once at classification to the CURRENT off-axis
-    // coordinate (y for a Horizontal segment, x for a Vertical one), so the
-    // damping's cumulative D starts at zero there and the plain→damped
-    // transition is continuous — no jump. Meaningful only while classified.
-    double  off_axis_origin = 0.0;
     // monotonic_ms() at the previous motion event, seeded at the arm — the
     // pause detector's whole state. Lazy by design: the next event observes
     // the gap; no timer ever fires.
