@@ -382,14 +382,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // relayout): true for the chord SHAPES whose allowlist admission above is
 // conditional on MOMENT state — the commit act's Ctrl+S (head delta /
 // in-flight) and the revert act's Ctrl+H (a subject standing) — so that a
-// failing condition GREYS the button rather than COLLAPSING it out of the
-// icon row (a selection change must not reflow the row under the pointer;
-// the two-level rule is recorded at redesign_button_collapsed,
+// failing condition GREYS the button rather than letting its group COLLAPSE
+// out of the icon row (a selection change must not reflow the row under the
+// pointer; the two-level rule is recorded at redesign_button_collapsed,
 // input_pointer.cpp). The load-in-place's walk-member condition is
-// DELIBERATELY NOT here: an ineligible `'` collapses by the architect's own
-// enumeration — the walk's membership is a per-visit fact, not a
-// per-interaction one. A pure shape test like history_mode_owns_key, body
-// beside the gate whose conditional terms it names.
+// DELIBERATELY NOT here: an ineligible `'` counts as consumed — the walk's
+// membership is a per-visit fact, not a per-interaction one — which is what
+// lets the render-entry group drop whole in the memberless window. A pure
+// shape test like history_mode_owns_key, body beside the gate whose
+// conditional terms it names.
 bool history_mode_admission_is_momentary(GuiKey key, GuiInputState mods);
 
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight

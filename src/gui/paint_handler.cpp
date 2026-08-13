@@ -590,16 +590,16 @@ constexpr double kIconOutlineStrokePx = 1.0;
 // forgetting that inset; the authored constant is the thing to state.)
 constexpr double kIconCornerRadiusPx  = 5.0;
 
-// What precedes an icon-row button in the layout walk.
-enum class IconRowLead {
-    First,       // the row's left padding already placed it
-    Gap,         // 2px, between adjacent buttons
-    Separator,   // 4px, the 1px line, 4px
-};
-
-// THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, what leads it,
-// and its content, a 22px breeze ICON. The press claim's chord table
-// (input_pointer.cpp) is the other half; both key off the same ids.
+// THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
+// a 22px breeze ICON. The press claim's chord table (input_pointer.cpp) is the
+// other half; both key off the same ids.
+//
+// WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
+// IconRowLead column — First / Gap / Separator — of which only Separator ever
+// meant anything to the walk, First and Gap taking the same branch. The row's
+// GROUP BOUNDARIES moved to redesign_button_opens_icon_group (app_state.h)
+// when the collapse rule became a whole-group question and needed to ask them
+// too; one source now answers both the dividers and the collapses.
 //
 // EVERY BUTTON IN THIS ROW IS AN ICON BUTTON since 2026-08-11. The struct
 // carried a `glyph` string too — a shaped sans LETTER centered on both axes,
@@ -610,7 +610,6 @@ enum class IconRowLead {
 // branch below went with it rather than standing as a facility nothing uses.
 struct IconRowDef {
     RedesignButton id;
-    IconRowLead    lead;
     icons::Icon    icon;
 };
 constexpr IconRowDef kIconRowButtons[] = {
@@ -623,14 +622,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // swap ride redesign_button_icon below; media-record serves BOTH plain
     // render and the iteration sweep by the architect's same-day ruling, the
     // tooltip alone forking). The old labels are the tooltips.
-    {RedesignButton::Save,       IconRowLead::First,     icons::Icon::DocumentSave},
-    {RedesignButton::Undo,       IconRowLead::Gap,       icons::Icon::EditUndo},
-    {RedesignButton::Redo,       IconRowLead::Gap,       icons::Icon::EditRedo},
-    {RedesignButton::Render,     IconRowLead::Gap,       icons::Icon::MediaRecord},
-    {RedesignButton::IconS,      IconRowLead::Separator, icons::Icon::DocumentExport},
-    {RedesignButton::IconT,      IconRowLead::Gap,       icons::Icon::DocumentImport},
-    {RedesignButton::IconW,      IconRowLead::Separator, icons::Icon::Speedometer},
-    {RedesignButton::IconP,      IconRowLead::Gap,       icons::Icon::ChronometerStart},
+    {RedesignButton::Save,       icons::Icon::DocumentSave},
+    {RedesignButton::Undo,       icons::Icon::EditUndo},
+    {RedesignButton::Redo,       icons::Icon::EditRedo},
+    {RedesignButton::Render,     icons::Icon::MediaRecord},
+    {RedesignButton::IconS,      icons::Icon::DocumentExport},
+    {RedesignButton::IconT,      icons::Icon::DocumentImport},
+    {RedesignButton::IconW,      icons::Icon::Speedometer},
+    {RedesignButton::IconP,      icons::Icon::ChronometerStart},
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -639,7 +638,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // seventeen buttons in six groups, and the 2026-08-12 relayout landed the
     // toolbar four above plus the zoom and marker-verb groups below —
     // TWENTY-NINE members in nine groups, of which the mode-collapsing
-    // roster paints a subset per frame.)
+    // roster paints a subset per frame. The 2026-08-13 revision MOVED the
+    // history group left, ahead of the mass-marker category, and added no
+    // member: the count and the groups are the relayout's, the order is not.)
     // THE TRIM BUTTON (2026-08-11, the trim surface arc), a NEW SEPARATOR-LED
     // GROUP after the warp/phase radios — the architect's placement ("place it
     // after the warp/phase radio buttons, create a new separator"), a group
@@ -649,7 +650,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // later the same day, over the first cut's planner-picked transform-crop
     // (read as rectangle-select; the succession is at the icons.h entry and
     // the retired glyph's one-commit record at the icons.cpp table).
-    {RedesignButton::IconTrim,   IconRowLead::Separator, icons::Icon::EditCut},
+    {RedesignButton::IconTrim,   icons::Icon::EditCut},
     // THE ZOOM GROUP (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): zoom in (bare
     // `=`), zoom out (bare `-`), full zoom out (bare `0`) and working-zoom
@@ -657,67 +658,80 @@ constexpr IconRowDef kIconRowButtons[] = {
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair is
     // SUPERSEDED by this order — the Navigation dropdown keeps its rows, and
     // these buttons are the same commands' pointer home for the glass rig.
-    {RedesignButton::IconZoomIn,       IconRowLead::Separator, icons::Icon::ZoomIn},
-    {RedesignButton::IconZoomOut,      IconRowLead::Gap,       icons::Icon::ZoomOut},
-    {RedesignButton::IconZoomFitBest,  IconRowLead::Gap,       icons::Icon::ZoomFitBest},
-    {RedesignButton::IconZoomOriginal, IconRowLead::Gap,       icons::Icon::ZoomOriginal},
+    {RedesignButton::IconZoomIn,       icons::Icon::ZoomIn},
+    {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
+    {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
+    {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
     // THE SINGLE-MARKER VERBS (2026-08-12, the same ruling): drop (bare `s`,
     // list-add), delete (`Delete`, Breeze's RED list-remove — the resolved
     // color recorded at the icons.cpp table), disable toggle (`Ctrl+D`,
     // view-hidden's crossed-out eye) and inherit/collapse (`Ctrl+N`,
     // insert-link — a pass marker links its tempo to its neighbor). A
     // separator-led group; the mass-marker acts (copy/paste and the modes)
-    // stay in their own groups to the right.
-    {RedesignButton::IconMarkerDrop,    IconRowLead::Separator, icons::Icon::ListAdd},
-    {RedesignButton::IconMarkerDelete,  IconRowLead::Gap,       icons::Icon::ListRemove},
-    {RedesignButton::IconMarkerDisable, IconRowLead::Gap,       icons::Icon::ViewHidden},
-    {RedesignButton::IconMarkerInherit, IconRowLead::Gap,       icons::Icon::InsertLink},
-    {RedesignButton::IconCopy,   IconRowLead::Separator, icons::Icon::EditCopy},
-    {RedesignButton::IconPaste,  IconRowLead::Gap,       icons::Icon::EditPaste},
-    {RedesignButton::IconBpm,    IconRowLead::Gap,       icons::Icon::MusicNote16th},
-    {RedesignButton::IconIter,   IconRowLead::Gap,       icons::Icon::BlackSum},
+    // stay in their own group, which since 2026-08-13 is on the far side of
+    // the history group rather than immediately here.
+    {RedesignButton::IconMarkerDrop,    icons::Icon::ListAdd},
+    {RedesignButton::IconMarkerDelete,  icons::Icon::ListRemove},
+    {RedesignButton::IconMarkerDisable, icons::Icon::ViewHidden},
+    {RedesignButton::IconMarkerInherit, icons::Icon::InsertLink},
+    // THE HISTORY MODE'S BUTTON (2026-08-04) — a GROUP OF ITS OWN: the
+    // architect asked for "a separation there and then another button", and
+    // this row's vocabulary for a group boundary is exactly one thing, the
+    // 4px / 1px line / 4px separator (redesign_button_opens_icon_group,
+    // app_state.h). It reads the same way the other boundaries do rather than
+    // inventing a second kind of gap that would have to be explained.
+    //
+    // THE GROUP CLOSED THE ROW UNTIL 2026-08-13 and now sits BEFORE the
+    // mass-marker category (architect, revising the relayout's commit A). The
+    // move is a pure reorder — no member, no separator, no metric changes —
+    // and its purpose is that THE HISTORY BUTTON'S x IS THE SAME IN BOTH
+    // MODES: everything the `h` view collapses is now right of this point,
+    // and so are the four companions that expand on entry, so the opener does
+    // not travel out from under the pointer that just pressed it.
+    {RedesignButton::IconHistory, icons::Icon::VcsDiff},
+    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), immediately right of the
+    // button that opens the view — the architect's placement, and the group
+    // reads History | Cumulative | Revert | Older | Newer: the view, how it
+    // READS, what you can DO from inside it, then where you can step. The
+    // separator ahead of the group does not move; this is another 2px gap
+    // inside it, and like Revert's own insertion it shifts everything to its
+    // right one button-width and costs nothing (one left-to-right accumulation
+    // recomputed each paint, no rect or separator held anywhere).
+    {RedesignButton::IconCumulative,     icons::Icon::DeepHistory},
+    // THE REVERT ACT (2026-08-05), left of the walk's two — the architect's own
+    // order. Ordinary 2px gap like the rest of the group. Unlike the two below
+    // it, this insertion was NOT a pure append — it shifted Older and Newer one
+    // button-width right — and that cost nothing, for the reason above.
+    {RedesignButton::IconRevert,         icons::Icon::DocumentRevert},
+    // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
+    // button's group rather than opening one of their own: they are the same
+    // mode's controls, and the row's one group boundary already said where that
+    // mode starts. So they take the ordinary 2px gap, and they close the group —
+    // which reads History | Cumulative | Revert | Older | Newer left to right
+    // (the Cumulative toggle joined between them and History on 2026-08-08),
+    // each dial's triangle pointing the way that step walks.
+    {RedesignButton::IconHistoryOlder,   icons::Icon::KeyframePrevious},
+    {RedesignButton::IconHistoryNewer,   icons::Icon::KeyframeNext},
+    // THE MASS-MARKER CATEGORY — the phase-reset clipboard pair and the three
+    // mode/editor buttons. THE ONE GROUP THE `h` VIEW DROPS (architect
+    // 2026-08-13): all five chords are consumed outright in there and the
+    // group lies right of the opener, which is the whole collapse condition.
+    {RedesignButton::IconCopy,   icons::Icon::EditCopy},
+    {RedesignButton::IconPaste,  icons::Icon::EditPaste},
+    {RedesignButton::IconBpm,    icons::Icon::MusicNote16th},
+    {RedesignButton::IconIter,   icons::Icon::BlackSum},
     // Follow's icon walked twice: the provisional "F" letter, then
     // media-seek-forward (2026-07-31), then go-jump (2026-08-01) — the architect
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
-    {RedesignButton::IconFollow, IconRowLead::Gap,       icons::Icon::GoJump},
-    {RedesignButton::IconListen, IconRowLead::Separator, icons::Icon::PreviewRenderOn},
-    {RedesignButton::IconLoadInPlace,
-     IconRowLead::Gap, icons::Icon::DialogOkApply},
-    // THE HISTORY MODE'S BUTTON (2026-08-04) — the row's twelfth, and a GROUP OF
-    // ITS OWN: the architect asked for "a separation there and then another
-    // button", and this row's vocabulary for a group boundary is exactly one
-    // thing, IconRowLead::Separator (4px, the 1px line, 4px). It reads the same
-    // way the four existing boundaries do rather than inventing a second kind of
-    // gap that would have to be explained.
-    {RedesignButton::IconHistory, IconRowLead::Separator, icons::Icon::VcsDiff},
-    // THE CUMULATIVE READING'S TOGGLE (2026-08-08), immediately right of the
-    // button that opens the view — the architect's placement, and the group now
-    // reads History | Cumulative | Revert | Older | Newer: the view, how it
-    // READS, what you can DO from inside it, then where you can step. The
-    // separator gap ahead of the group does not move; this is another 2px Gap
-    // inside it, and like Revert's own insertion it shifts everything to its
-    // right one button-width and costs nothing (one left-to-right accumulation
-    // recomputed each paint, no rect or separator held anywhere).
-    {RedesignButton::IconCumulative,
-     IconRowLead::Gap, icons::Icon::DeepHistory},
-    // THE REVERT ACT (2026-08-05), left of the walk's two — the architect's own
-    // order. Ordinary 2px Gap like the rest of the group. Unlike the two below
-    // it, this insertion was NOT a pure append — it shifted Older and Newer one
-    // button-width right — and that cost nothing, for the reason above.
-    {RedesignButton::IconRevert,
-     IconRowLead::Gap, icons::Icon::DocumentRevert},
-    // THE WALK'S TWO STEPS (2026-08-05) — older, then newer, JOINING the history
-    // button's group rather than opening a sixth: they are the same mode's
-    // controls, and the row's one group boundary already said where that mode
-    // starts. So they take the ordinary 2px Gap, and they close the group —
-    // which reads History | Cumulative | Revert | Older | Newer left to right
-    // (the Cumulative toggle joined between them and History on 2026-08-08),
-    // each dial's triangle pointing the way that step walks.
-    {RedesignButton::IconHistoryOlder,
-     IconRowLead::Gap, icons::Icon::KeyframePrevious},
-    {RedesignButton::IconHistoryNewer,
-     IconRowLead::Gap, icons::Icon::KeyframeNext},
+    {RedesignButton::IconFollow, icons::Icon::GoJump},
+    // THE RENDER-ENTRY PAIR, the row's last group: listen and load in place.
+    // It does NOT drop in the `h` view, `'` being one of the mode's three
+    // admitted mutators — so listen wears the dead face beside a live `'`,
+    // and the pair collapses only in the window where the walk carries no
+    // member and both chords are refused together.
+    {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
+    {RedesignButton::IconLoadInPlace,    icons::Icon::DialogOkApply},
 };
 
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
@@ -1874,30 +1888,45 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // in nine groups since the 2026-08-12 grand relayout: the toolbar four
     // (Save / Undo / Redo / Render, the deleted row 2's, leading the row),
     // the S/T and W/P view radios, the trim button's group (2026-08-11), the
-    // ZOOM GROUP and the SINGLE-MARKER VERBS (both 2026-08-12), the
-    // phase-reset copy/paste pair with
-    // the bpm / iteration / follow modes, the listen / load-in-place pair, and
-    // the history group: the mode's own button (2026-08-04) plus the cumulative
-    // reading's toggle (2026-08-08), the revert act and the walk's older /
-    // newer arrows (2026-08-05).
+    // ZOOM GROUP and the SINGLE-MARKER VERBS (both 2026-08-12), THE HISTORY
+    // GROUP — the mode's own button (2026-08-04) plus the cumulative reading's
+    // toggle (2026-08-08), the revert act and the walk's older / newer arrows
+    // (2026-08-05) — then the phase-reset copy/paste pair with the bpm /
+    // iteration / follow modes, and the listen / load-in-place pair. The
+    // history group closed the row until 2026-08-13, when the architect moved
+    // it ahead of the mass-marker category so that the mode toggle cannot
+    // change its x (the collapse rule below is the other half of that).
     //
-    // THE MODE-COLLAPSING ROSTER (architect 2026-08-12): fewer than the
-    // twenty-nine PAINT on any given frame — the walk below SKIPS every
-    // member redesign_button_collapsed answers true for (the four history
-    // mode-companions at rest; inside the `h` view, every button whose chord
-    // the mode consumes outright), publishing a ZERO rect for it so the
-    // press claim, the hover walk and the tooltip dwell — which all read the
-    // painter's stash — cannot reach it. A group whose leader collapses hands
-    // its separator to the group's first surviving member, and two adjacent
-    // emptied groups yield ONE divider (the sep-owed state machine in the
-    // walk); the row being one left-to-right accumulation recomputed each
-    // paint is what makes collapse just skipping. THE WIDTH MATH at 100%,
-    // recorded per the relayout brief (8px lead-in + 32px boxes + 2px gaps +
-    // 4+1+4 separator slots): OUTSIDE the `h` view 25 buttons, 16 gaps, 8
-    // separators = 8 + 800 + 32 + 72 = 912px; INSIDE it 15 buttons, 9 gaps,
-    // 5 separators = 8 + 480 + 18 + 45 = 551px — both inside the Pi's 1024
-    // panel with room (the un-collapsed 29 would be 8 + 928 + 40 + 72 =
-    // 1048 > 1024, the blocker the mode-collapsing roster dissolves).
+    // THE MODE-COLLAPSING ROSTER (architect 2026-08-12, its in-view level
+    // narrowed 2026-08-13): fewer than the twenty-nine PAINT on any given
+    // frame — the walk below SKIPS every member redesign_button_collapsed
+    // answers true for (the four history mode-companions at rest; inside the
+    // `h` view, the wholly-consumed GROUPS right of the history button),
+    // publishing a ZERO rect for it so the press claim, the hover walk and
+    // the tooltip dwell — which all read the painter's stash — cannot reach
+    // it. A group whose leader collapses hands its separator to the group's
+    // first surviving member, and two adjacent emptied groups yield ONE
+    // divider (the sep-owed state machine in the walk); the row being one
+    // left-to-right accumulation recomputed each paint is what makes collapse
+    // just skipping.
+    //
+    // THE WIDTH MATH at 100%, RE-DERIVED from the roster after the group move
+    // (8px lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count
+    // of drawn separators is the number of surviving GROUPS minus one, and
+    // the count of gaps is surviving buttons minus surviving groups):
+    //   OUTSIDE the `h` view — the four companions collapse, leaving nine
+    //     groups holding 25 buttons: 8 + 800 + 16·2 + 8·9 = 912px. Unmoved by
+    //     the reorder, which changes no count.
+    //   INSIDE it, the walk carrying a member — the mass-marker five collapse,
+    //     leaving eight groups holding 24: 8 + 768 + 16·2 + 7·9 = 871px. (It
+    //     was 551 while the rule collapsed every consumed button; the greyed
+    //     ones are painted again.)
+    //   INSIDE it over a MEMBERLESS walk — the render-entry pair goes too,
+    //     seven groups holding 22: 8 + 704 + 15·2 + 6·9 = 796px.
+    // All three fit the Pi's 1024 panel; the un-collapsed 29 would be
+    // 8 + 928 + 20·2 + 8·9 = 1048 > 1024, the blocker the collapse rule
+    // dissolves and the reason its in-view level was narrowed rather than
+    // dropped.
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -2004,11 +2033,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // takes the separator ("a group emptied to one member keeps its one
     // leading separator") and two adjacent emptied groups yield ONE divider
     // rather than two. A row whose first survivors follow collapsed members
-    // opens on the pad alone (first_placed).
+    // opens on the pad alone (first_placed) — which is also why the ROW'S
+    // FIRST group leader needs no special case: it owes a separator like every
+    // other leader, and first_placed swallows it.
     bool sep_owed     = false;
     bool first_placed = false;
     for (const IconRowDef& def : kIconRowButtons) {
-        if (def.lead == IconRowLead::Separator) sep_owed = true;
+        if (redesign_button_opens_icon_group(def.id)) sep_owed = true;
         if (redesign_button_collapsed(app, def.id)) {
             // The stash still carries the LIVE predicate bits: the tick
             // comparator is total over the roster, and a zero rect with
@@ -2038,16 +2069,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
         // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `h` history view
         // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
-        // rule above, scoped to that mode alone — and SINCE THE
-        // MODE-COLLAPSING ROSTER (2026-08-12) it is worn IN THE VIEW by the
-        // MOMENT-STATE members alone: Save with an empty head delta or a
-        // checkpoint in flight, Revert with no diff flag selected. Every
-        // button the mode consumes OUTRIGHT (copy, paste, bpm, iteration,
-        // follow, listen, the trim scissors, the marker verbs, Undo / Redo /
-        // Render, `'` over a memberless walk) COLLAPSES out of the walk
-        // instead of greying (redesign_button_collapsed, which carries the
-        // two-level rule), while the S/T + W/P radios, the zoom group, the
-        // history button and its companions stay live.
+        // rule above, scoped to that mode alone, and it is what MOST of the
+        // view's consumed buttons wear: the trim scissors, the four marker
+        // verbs, Undo / Redo / Render, listen, and the MOMENT-STATE members
+        // (Save with an empty head delta or a checkpoint in flight, Revert
+        // with no diff flag selected). Only the wholly-consumed GROUPS right
+        // of the history button leave the walk instead — the mass-marker five,
+        // and the render-entry pair over a memberless walk
+        // (redesign_button_collapsed, which carries the two-level rule; the
+        // architect narrowed its in-view level on 2026-08-13, the relayout
+        // having collapsed every consumed button). The S/T + W/P radios, the
+        // zoom group, the history button and its companions stay live.
         // Which is which is DERIVED from the mode's own gates
         // (history_mode_disables_button and the collapse predicate beside it,
         // input_pointer.cpp, where the whole
