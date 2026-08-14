@@ -919,34 +919,40 @@ struct ScrollDragState {
     // overview lane's strip drag keeps its SONG anchor (StripDragState above)
     // — that gesture names a position in the piece, this one names a place on
     // the glass.
-    // RE-SEATED AT EVERY CTRL-DOWN — the press for a ctrl-armed drag, each
-    // ctrl-down edge for a plain-armed one — AND THE SEAT IS NOT "WHERE THE
-    // POINTER IS" BUT "WHERE THE CURSOR WILL COME BACK" (architect 2026-08-14,
-    // from the rig, closing the gap the screen model left: "the pivot follows
-    // the cursor until the cursor hits a clamp or a pin, in which case we know
-    // the cursor will be jumping back, so the pivot point should also jump
-    // back to the original grab point"). The two readings differ EXACTLY when
-    // the travel ran out, and the split is the architect's own:
-    //   * A SMALL PAN never clamps. The cursor is free, the pivot seats under
-    //     it, and the release puts the cursor back there — "if I just move a
-    //     little bit, I'd expect the pointer to move just a little bit".
-    //   * A RUNAWAY PAN clamps and stays clamped. The pivot jumps HOME to the
-    //     capture's start column, the stem paints there for the whole zoom so
-    //     the return is visible before it happens, and the release lands the
-    //     cursor on that same stem.
-    // His framing of why the screen model can afford this: "on a drag that's
-    // gonna go on for many screens, the cursor is going to end up teleporting
-    // there anyways, so the user can be conditioned to expect that where I grab
-    // the waveform is where the zoom and cursor stay — the only exception will
-    // be where the user drives the waveform just a little bit".
-    // The column is a PROJECTION of GuiPlatform::notional_home_x(), the ONE
-    // expression the capture's release restores to, computed on demand at the
-    // seat (nav_pivot_seat_col, input_pointer.cpp) and never accumulated here:
-    // the position is owned where the raw events are, because a second clamped
-    // accumulation advanced on the DELIVERY cadence cannot agree with it at a
-    // wall (GuiPlatform::notional_pointer_x_ carries that record, codex round
-    // 17). Sharing the expression rather than restating the rule is what makes
-    // the stem and the cursor unable to disagree.
+    // RE-SEATED AT EVERY CTRL-DOWN, at the pointer's NOTIONAL COLUMN — the
+    // press for a ctrl-armed drag, each ctrl-down edge for a plain-armed one.
+    // THE STEM IS PLACED WHEREVER THE CURSOR IS WHEN CONTROL GOES DOWN, VISIBLE
+    // OR INVISIBLE, AND THAT IS THE WHOLE RULE (architect 2026-08-14, from the
+    // rig: "how about if we say that the zoom stem is placed wherever the
+    // cursor happens to be when the user presses control? Simpler rule... as
+    // far as the drag, pan, same rules as current — those are pretty intuitive
+    // and work well"). The seat asks nothing about where the release will put
+    // the cursor.
+    // That column is a PROJECTION of the platform's one notional pointer
+    // position, computed on demand at the seat (nav_notional_col,
+    // input_pointer.cpp) and never accumulated here: the position is owned
+    // where the raw events are, because a second clamped accumulation
+    // advanced on the DELIVERY cadence cannot agree with it at a wall
+    // (GuiPlatform::notional_pointer_x_ carries that record, codex round 17).
+    // THE SUPERSEDED SEAT AND ITS FALSE PREMISE, recorded because a reader will
+    // otherwise re-derive it: the seat briefly read the position the RELEASE
+    // would restore the cursor to instead — the notional position while the
+    // hand had room, the capture's start column once the travel ran out — on
+    // the reasoning that a runaway drag's cursor "is going to end up
+    // teleporting there anyways", so the pivot should meet it at the grab
+    // column. THE PREMISE IS FALSE. The teleport-on-clamp is THE PAN'S ANSWER
+    // ONLY: the zoom phase drives the stem override on every one of its events
+    // and the override OUTRANKS the clamp fork, so a drag that zoomed at all
+    // restores the cursor ON THE STEM and never reaches the fork. Seating the
+    // pivot at the grab column therefore did not agree with a teleport that was
+    // going to happen — it MANUFACTURED one, by putting the stem there for the
+    // cursor to follow.
+    // THE CONSEQUENCE WAS RULED WITH THE RULE and is a decision, not a
+    // regression: a runaway pan FOLLOWED BY A ZOOM leaves the cursor at the
+    // wall the hand ran it into (the stem is there, the override sends it
+    // there), while a runaway pan that never zooms still comes home exactly as
+    // before. The pan half is deliberately untouched — "same rules as current,
+    // those are pretty intuitive and work well".
     // NO LIVE RE-SEAT INSIDE A ZOOM PHASE, and none is to be added: the phase
     // FREEZES the pointer's x, so it writes no notional position at all and the
     // clamp verdict cannot change under it — the seat is stable for the phase
@@ -962,13 +968,7 @@ struct ScrollDragState {
     // reversal. Clamping the notional position continuously fixed that at its
     // source, so the pivot can honestly follow the pointer again, which is
     // both the architect's first instinct and what the touch pinch already
-    // does (it zooms about the fingers, wherever they are). THE WITHDRAWAL'S
-    // ARGUMENT IS STRONGER AFTER THE RESTORE-POSITION SEAT, not weaker: the
-    // persistent pivot was a workaround for the unbounded accumulator, the
-    // clamp fixed that at the source, and seating on where the cursor comes
-    // back is the second half of the same fix — the one case the workaround
-    // was really covering, the drag that ran out of room, is now the case that
-    // sends the pivot home on its own.
+    // does (it zooms about the fingers, wherever they are).
     // A SECOND SEAT OF THE SAME GESTURE LANDS WHERE THE FIRST DID unless the
     // hand panned in between, and that is the lateral freeze's doing (the
     // paragraph above the struct): without it the zoom phase's own sideways

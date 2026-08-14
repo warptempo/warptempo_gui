@@ -3947,7 +3947,7 @@ void GuiPlatform::end_pointer_capture() {
 
 void GuiPlatform::set_capture_restore_x(double surface_x) {
     // The active zoom gesture names the surface x its anchor stem paints at;
-    // the release restore uses it in place of notional_home_x().
+    // the release restore uses it in place of the pointer's notional position.
     // Ignored when no capture is live (nothing to restore).
     if (!pointer_captured_) return;
     capture_restore_x_override_ = surface_x;
@@ -3955,7 +3955,7 @@ void GuiPlatform::set_capture_restore_x(double surface_x) {
 
 void GuiPlatform::clear_capture_restore_x() {
     // The nav drag's zoom→pan switch drops the stem override so the release
-    // goes back to notional_home_x() (contract at the declaration). Ignored
+    // goes back to the notional x (contract at the declaration). Ignored
     // when no capture is live.
     if (!pointer_captured_) return;
     capture_restore_x_override_.reset();
@@ -4028,12 +4028,8 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // override outranks it: a stem column is a place the gesture
             // NAMED, not a place travel ran to, which is what keeps the fork
             // the PAN's answer without a gesture test anywhere in it.
-            // THE FORK'S EXPRESSION LIVES IN notional_home_x() rather than
-            // here, because the nav drag's ZOOM PIVOT seats on it too: the
-            // stem has to stand where the cursor is going to reappear, and one
-            // expression is the only way two consumers cannot disagree.
-            const double restore_x =
-                capture_restore_x_override_.value_or(notional_home_x());
+            const double restore_x = capture_restore_x_override_.value_or(
+                notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),
