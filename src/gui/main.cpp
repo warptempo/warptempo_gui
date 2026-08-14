@@ -1205,14 +1205,10 @@ int main(int argc, char** argv) {
     // stays agnostic to whether capture is available. The begin hook forwards the
     // gesture's own cursor kind, which is what the release restores (contract at
     // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
-    // switches ride the restore-kind re-stamp. THE RESTORE-X CLEAR AND THE
-    // LATERAL FREEZE ARE WIRED BUT SUSPENDED (2026-08-14, the dy-reservoir
-    // test): both existed because the ctrl phase discarded dx, and that phase
-    // pans with dx now, so the clear has no firer and the freeze is asserted
-    // false at both its sites — kept here on purpose, a deliberate exception
-    // to the producer-less-mechanism rule scoped to that experiment, whose
-    // verdict decides their fate (the record is at ScrollDragState,
-    // app_state.h, and at the two hook declarations in input_handler.h).
+    // switches ride the restore-x clear, the restore-kind re-stamp and the
+    // lateral freeze that stops the zoom phase's discarded sideways travel
+    // moving the pointer's notional position (2026-08-14, the live-ctrl
+    // model).
     input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
         gui.begin_pointer_capture(restore_kind);
     };

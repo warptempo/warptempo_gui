@@ -1581,118 +1581,71 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // clamped column, projected from the platform's one notional position
         // at this instant, so the seat needs nothing kept current for it.
         sd.anchor_col = nav_notional_col();
-        // AND THE RESERVOIR EMPTIES WITH THE SEAT: a fresh ctrl phase opens
-        // with an empty band, so it never inherits the charge a previous
-        // phase left standing and its first stroke pays the band once.
-        sd.zoom_reservoir_px = 0.0;
-        // The restore X is not stamped here or anywhere in this gesture: the
-        // stem override is suspended for the dy-reservoir test (the record is
-        // at ScrollDragState), so the notional position is the honest restore
-        // in both phases.
+        // The restore X is NOT stamped here: the stem override exists to land
+        // the released cursor on a stem the edge-rebind has pinned, and the
+        // zoom phase's own applies set it. Until one runs, the notional
+        // position is still the honest restore.
         if (sd.moved) set_strip_capture_restore_kind(GuiCursorKind::Zoom);
     } else if (sd.moved) {
-        // clear_strip_capture_restore_x is NOT called: with the stem override
-        // suspended there is nothing left for it to clear. The hook stays
-        // wired (input_handler.h, main.cpp) for the same reason the freeze
-        // does — the test's verdict decides its fate.
+        clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);
     }
-    // THE LATERAL FREEZE IS SUSPENDED FOR THE DY-RESERVOIR TEST, NOT RETIRED
-    // (architect 2026-08-14: the zoom locks the x position — the record and
-    // the defect it fixed are at ScrollDragState). It exists because the ctrl
-    // phase DISCARDED dx; that phase PANS with dx now, so the pointer must
-    // track its own lateral travel and the freeze would make the restore lie.
-    // The call stays here, asserting false unconditionally at every edge, so
-    // a rejection of the test restores the mechanism by reverting the commit
-    // and a ratification deletes it and its platform owner then. This is a
-    // deliberate, recorded exception to the producer-less-mechanism rule,
-    // scoped to this experiment and extended to nothing else.
-    set_strip_capture_notional_x_frozen(false);
+    // THE POINTER'S X FREEZES FOR THE ZOOM PHASE AND RESUMES FOR THE PAN
+    // (architect 2026-08-14: the zoom locks the x position). Unconditional
+    // here — the platform's own capture guard answers a sub-threshold edge,
+    // and the crossing re-asserts what those edges could not reach. The
+    // gesture's arithmetic is untouched either way: the zoom phase already
+    // discards dx, and the pan phase already differences last_x, which BOTH
+    // phases keep current off the unfrozen travel ledger.
+    set_strip_capture_notional_x_frozen(sd.zooming);
     // The stem's paint or erase: a mode switch is a discrete edge, so full
     // waveform-area damage (the arm's own shape). This is what makes the stem
     // vanish AT the ctrl-up rather than at the next motion.
     viewport.invalidate_waveform_area();
 }
 
-// THE NAV DRAG'S CTRL PHASE, one event — DUAL-AXIS BEHIND THE DY RESERVOIR
-// (the contract and the architect's endorsement are at ScrollDragState,
-// app_state.h): dx pans 1:1 at the old level exactly as the plain phase does,
-// and dy zooms plain linear off the LIVE level (drag DOWN zooms in, the strip
-// drag's own response) about the SEATED SCREEN PIVOT — but only after the
-// reservoir has taken its cut. It is a FIELD TEST of the one mechanism that
-// matches the anatomy behind the rejected dual-axis model: a wrist-driven
-// horizontal drag is an ARC, so a pan carries an oscillating dy that the old
-// dual-axis model turned into zoom and the view breathed. Every rung of the
-// deleted calibration ladder scaled that jitter and the user's intent
-// together because it worked on AMPLITUDE; the reservoir works on SIGN
-// PERSISTENCE instead, which is the axis they actually differ on.
-// THE NAME MOVED WITH THE MEANING: the zoom-only name this body carried says
-// something that is no longer true of it — it pans — and a name that keeps an
-// old meaning is how a reader gets it wrong (the project's own precedent is
-// invalidate_status_row_area, deleted outright rather than renamed).
-// THE LATERAL FREEZE AND THE STEM'S RESTORE-X OVERRIDE ARE SUSPENDED with the
-// zoom-only phase, not retired (their record is at ScrollDragState): both
-// existed because this phase DISCARDED dx, and a phase that PANS with dx must
-// let the pointer track it and must restore the cursor where the hand
-// actually is. The test's verdict decides their fate.
-// The viewport IS moved here now, so the pan is wall-clamped at the old level
-// against the same max_viewport_start_grid owner clamp_viewport_start rests
-// at — apply_strip_drag_at's own reason, and the anchor sample is derived
-// from that post-pan value so the two axes compose. last_x / last_y stay
-// current in this phase exactly as in the plain phase, which is the ctrl-up
-// switch's whole rebase: the first plain event after a switch measures its dx
-// from the pointer's own position, so nothing can jump.
-void GuiInputHandler::apply_nav_dual_axis_at(int x, int y, bool final_event) {
+// THE NAV DRAG'S ZOOM PHASE, one event (the live-ctrl model — contract at
+// ScrollDragState, app_state.h): dy zooms plain linear off the LIVE level
+// (drag DOWN zooms in, the strip drag's own response) about the seated pivot,
+// and dx is DISCARDED — the phase's one exact axis, the deleted segment
+// lock's vertical arm reached by the modifier instead of by classification.
+// AND THE POINTER'S OWN X IS FROZEN WITH IT, which is a SEPARATE STATEMENT
+// and the one that was missing (architect 2026-08-14, from the rig: "I've
+// been operating under the assumption that the zoom control would lock the x
+// position"). Discarding the phase's dx says only that the VIEW does not
+// respond to sideways travel; the pointer's notional position kept advancing
+// through every pixel of it, invisibly, because nothing on screen moved — so
+// a later ctrl-down seated the pivot far from where the user believed the
+// pointer was, and a zoom→pan switch's release restored the cursor there.
+// The freeze is asserted at the mode edges (sync_nav_drag_mode) and lives in
+// the platform, which owns the position; the ledger is untouched.
+// The viewport itself never moves here (a pure zoom pivots about the anchor's
+// column), so no wall clamp is needed on it — the resting viewport is already
+// chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x /
+// last_y stay current in this phase exactly as in the pan phase, which is the
+// ctrl-up switch's whole rebase: the first plain event after a switch
+// measures its dx from the pointer's own position, so nothing can jump.
+void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     ScrollDragState& sd = app.scroll_drag;
-    const double dx = static_cast<double>(x - sd.last_x);
     const double dy = static_cast<double>(y - sd.last_y);
     sd.last_x = x;
     sd.last_y = y;
 
-    const double spp_old = current_samples_per_pixel(app, audio);
+    const double spp = current_samples_per_pixel(app, audio);
     const GuiRect wf_area = waveform_area(app);
     const double W = static_cast<double>(wf_area.w);
     const int64_t total = live_total_frames(app, audio);
-    if (W <= 0.0 || spp_old <= 0.0) return;
+    if (W <= 0.0 || spp <= 0.0) return;
 
-    // (1) THE RESERVOIR, ahead of every reader of dy. The charge holds in a
-    // band of +/-kNavZoomReservoirPx and only the OVERFLOW is spent, drained
-    // back out immediately so the charge sits pinned at the band edge it just
-    // crossed. That pinning IS the mechanism: a reversal must travel the full
-    // 2*kNavZoomReservoirPx before it can fire the other way, so an
-    // oscillation whose peak-to-peak stays inside the band never fires at all
-    // however fast or however often it swings; while continued motion in the
-    // SAME direction fires every further pixel 1:1, having paid the band's
-    // width once as dead travel at the start of the stroke.
-    sd.zoom_reservoir_px += dy;
-    double spend = 0.0;
-    if (sd.zoom_reservoir_px > kNavZoomReservoirPx)
-        spend = sd.zoom_reservoir_px - kNavZoomReservoirPx;
-    else if (sd.zoom_reservoir_px < -kNavZoomReservoirPx)
-        spend = sd.zoom_reservoir_px + kNavZoomReservoirPx;
-    sd.zoom_reservoir_px -= spend;   // drain exactly what was spent
-
-    // (2) Pan at the old level, in the double domain: grab sign — drag right
-    // (dx>0) reveals earlier content, so the viewport moves left. WALL-CLAMPED
-    // here, at the old level, against the SAME right wall the downstream
-    // clamp_viewport_start rests at (the shared max_viewport_start_grid
-    // owner), because step (5) derives the pivot's song frame from this value
-    // and would otherwise disagree with the viewport that actually rests.
-    double vp = static_cast<double>(app.viewport_start_sample) - dx * spp_old;
-    const double vp_hi = static_cast<double>(max_viewport_start_grid(app, audio));
-    if (vp < 0.0)   vp = 0.0;
-    if (vp > vp_hi) vp = vp_hi;
-
-    // (3) Zoom INCREMENTALLY off the live level, driven by the SPEND and never
-    // by the raw dy, pre-clamped into the chokepoint's own window exactly as
-    // apply_strip_drag_at pre-clamps.
-    double new_level = app.zoom_level - spend / kZoomStripPxPerLevel;
+    // Incremental off the live level, pre-clamped into the chokepoint's own
+    // window exactly as apply_strip_drag_at pre-clamps.
+    double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(W, total,
                                                   audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // (4) THE PIVOT IS THE SEATED COLUMN ITSELF (the screen anchor at
+    // THE PIVOT IS THE SEATED COLUMN ITSELF (the screen anchor at
     // ScrollDragState) — it does not move when the view pans, and it is never
     // re-derived from a stored song position. The clamp is a WINDOW-RESIZE arm
     // only (the seat's own source is clamped already, in the same bounds
@@ -1701,33 +1654,20 @@ void GuiInputHandler::apply_nav_dual_axis_at(int x, int y, bool final_event) {
     const double anchor_col = clamp_col_into_waveform(wf_area, sd.anchor_col);
     if (anchor_col != sd.anchor_col) sd.anchor_col = anchor_col;
 
-    // (5) The song frame the pivot stands on AFTER THIS EVENT'S PAN, derived
-    // from the wall-clamped vp rather than from the resting viewport: THIS IS
-    // THE ONE LINE THAT COMPOSES THE TWO AXES. The pan moves the viewport, and
-    // the zoom then holds whatever that pivot column now stands on stationary
-    // while the level changes.
-    const double anchor_sample = vp + anchor_col * spp_old;
+    // The song frame the pivot stands on RIGHT NOW, derived fresh from the
+    // resting viewport: apply_strip_drag_zoom holds it at anchor_col under the
+    // new level, so the content under that screen column does not move while
+    // the level changes. That is the whole of the screen anchor — the zoom
+    // arithmetic below is the song-anchored gesture's, unchanged.
+    const double anchor_sample =
+        static_cast<double>(app.viewport_start_sample) + anchor_col * spp;
 
-    // (6) Apply. IDENTITY PROOFS, the pair the neighbouring bodies carry:
-    // PURE PAN (spend == 0, which is every event whose dy stays inside the
-    // band): `spend / kZoomStripPxPerLevel` is 0.0, so new_level is
-    // app.zoom_level bit-exact and both pre-clamps are no-ops on a level that
-    // already rests inside the window — the apply therefore reads spp == the
-    // spp_old used here and computes nearbyint(anchor_sample - anchor_col*spp),
-    // which is the SAME product subtracted straight back off the sum this body
-    // formed one line above, so it lands on vp (the round trip's residue is at
-    // most an ulp of a frame count and nearbyint absorbs it). The pan
-    // arithmetic is exactly the song-anchored drag's, and AT A WALL vp is the
-    // integral grid value that will actually rest, reproduced exactly — a
-    // saturated pan is a true no-op the entry point skips.
-    // PURE ZOOM (dx == 0): dx*spp_old subtracts nothing, so vp is the resting
-    // viewport bit-exact and the rescale pivots about the seated column.
-    // NOTE what is NOT here: no set_strip_capture_restore_x. Its job was to
-    // land the released cursor dead on the stem, which was honest only while
-    // this phase discarded dx and the platform froze the pointer's x with it;
-    // under dual axis the hand has really travelled, so the release must
-    // restore at the pointer's own notional position (the suspension's record
-    // is at ScrollDragState).
+    // Drive the capture's release-restore x to the stem, the strip drag's own
+    // rule; a later pan phase clears it back to the notional x at its switch.
+    if (set_strip_capture_restore_x)
+        set_strip_capture_restore_x(
+            static_cast<double>(wf_area.x) + anchor_col + 0.5);
+
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    final_event);
 }
@@ -4289,11 +4229,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // the stem's erase — plus the moved-drag double-click drop, since a
         // zoom moves content between two clicks); either way the capture,
         // begun at the crossing, ends here and the cursor reappears as the
-        // kind the LAST mode stamped, AT THE POINTER'S OWN NOTIONAL POSITION
-        // IN EITHER PHASE — the ctrl phase's stem override is suspended for
-        // the dy-reservoir test, that phase panning with dx now (the record
-        // is at ScrollDragState). No click act on any moved end: the drag was
-        // navigation.
+        // kind the LAST mode stamped — the stem column after a zoom-phase
+        // end, the notional x after a pan-phase one. No click act on any
+        // moved end: the drag was navigation.
         // THE MODE IS NOT RE-ASKED HERE, and does not need to be: every ctrl
         // edge — the motionless one included — has already run the switch
         // through sync_nav_drag_mode, so the cached bit and the stamped
@@ -4324,7 +4262,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         const bool scrub     = app.scroll_drag.scrub_release;
         const int  press_x   = app.scroll_drag.press_x;
         if (moved && zooming) {
-            apply_nav_dual_axis_at(x, y, /*final_event=*/true);
+            apply_nav_zoom_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
         }
         app.scroll_drag = ScrollDragState{};
@@ -6551,7 +6489,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const bool moved   = sd.moved;
             const bool zooming = sd.zooming;
             if (moved && zooming)
-                apply_nav_dual_axis_at(mouse_x, mouse_y, /*final_event=*/true);
+                apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/true);
             app.scroll_drag = ScrollDragState{};
             // The stem's erase, when the zoom phase painted one — the moved
             // final apply's rebuild covers it, so this is the unmoved
@@ -6592,22 +6530,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // re-stamps it through set_strip_capture_restore_kind above.
             begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
                                                    : GuiCursorKind::Pan);
-            // THE LATERAL FREEZE IS SUSPENDED FOR THE DY-RESERVOIR TEST, NOT
-            // RETIRED — the mechanism, the defect it fixed and the verdict
-            // that decides its fate are recorded at ScrollDragState and at
-            // sync_nav_drag_mode. It exists because the ctrl phase DISCARDED
-            // dx; that phase PANS with dx now, so the pointer must track its
-            // own lateral travel. The call stays wired here, asserting false,
-            // this being the only site other than the mode sync: a deliberate,
-            // recorded exception to the producer-less-mechanism rule, scoped
-            // to this experiment.
-            set_strip_capture_notional_x_frozen(false);
+            // AND THE MODE AT THE CROSSING ALSO SETS THE LATERAL FREEZE. The
+            // capture opens unfrozen, and the ctrl edges a sub-threshold press
+            // took spoke to no capture at all (the setters are capture-
+            // guarded), so a ctrl-armed drag would otherwise reach its zoom
+            // phase with the pointer's x still advancing. This is the only
+            // other site: from here every switch rides sync_nav_drag_mode.
+            set_strip_capture_notional_x_frozen(sd.zooming);
         }
         if (sd.zooming) {
-            // The CTRL phase: dual-axis behind the dy reservoir — dx pans 1:1
-            // at the live level and only the reservoir's overflow zooms about
-            // the seated pivot (apply_nav_dual_axis_at).
-            apply_nav_dual_axis_at(mouse_x, mouse_y, /*final_event=*/false);
+            // The ZOOM phase: dy off the live level about the seated pivot,
+            // dx discarded by the gesture AND withheld from the pointer's own
+            // notional x by the freeze asserted above (apply_nav_zoom_at, the
+            // phase's one exact axis — the two are different statements).
+            apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);
             return;
         }
         const double spp = current_samples_per_pixel(app, audio);

@@ -77,32 +77,15 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
-// THE DY RESERVOIR'S HALF-WIDTH (px) — the nav drag's ctrl phase holds every
-// dy in a band of +/- this value and spends only the OVERFLOW, so the
-// effective hysteresis band is TWICE this. Its job is to separate a wrist
-// arc's oscillating dy from a deliberate vertical pull WITHOUT looking at
-// amplitude: an oscillation whose peak-to-peak stays inside the band never
-// fires at all, whatever its frequency or its speed, while a sustained pull
-// charges the band once — that much dead travel, 8 / kZoomStripPxPerLevel of
-// a level — and then passes every further pixel through 1:1. The
-// discriminator is SIGN PERSISTENCE, which is the one thing the deleted
-// amplitude ladder never used (its record is below).
-// This is the dual-axis experiment's ONE knob and is architect-tunable on the
-// labwc pass, exactly as kZoomStripPxPerLevel's scale and direction are.
-constexpr double kNavZoomReservoirPx = 8.0;
-
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
 // IT AT ANY TIME — the zoom modifier being a SECOND FINGER on glass and CTRL
 // on the desk, live MID-GESTURE in both directions. The lock answered "which
 // axis did this drag mean?", and that question is no longer asked: the
-// modifier answers it directly and reversibly, so the plain phase of the one
-// navigation drag is PAN ONLY, exact by construction rather than by
-// classification. The ctrl phase was zoom-only with it, and is DUAL-AXIS
-// again behind the dy reservoir (kNavZoomReservoirPx above) as an
-// architect-endorsed FIELD TEST — the drag's contract is at ScrollDragState
-// below, and the reservoir is not a rung of this ladder: it works in the SIGN
-// domain, not the amplitude domain every rung below worked in.
+// modifier answers it directly and reversibly, so the ctrl phase of the one
+// navigation drag is ZOOM ONLY and the plain phase is PAN ONLY, each axis
+// exact by construction rather than by classification (the drag's contract is
+// at ScrollDragState below).
 //
 // THE CALIBRATION SUCCESSION, kept so the ladder is revivable and not re-run:
 // every rung field-tested on the desk, 2026-08-12..14 — the cumulative
@@ -802,45 +785,25 @@ struct StripDragState {
 // and the one available on the go — neither is the model the other
 // translates, and asymmetry between them is ACCEPTED WHERE GENUINE, exactly
 // as warp markers carry information where phase resets carry only placement.
-// This is ONE drag with two phases, not two gestures: while ctrl is up each
-// event's dx pans 1:1 and dy is discarded — one exact axis, the plain phase's
-// smoothness being the thing everything else is measured against.
-// THE CTRL PHASE IS DUAL-AXIS BEHIND THE DY RESERVOIR, AND IT IS A FIELD TEST
-// (architect 2026-08-14, his own endorsement of the one untried mechanism):
-// each event's dx pans 1:1 at the live level and its dy zooms about the
-// seated screen pivot, but every dy first passes through a reservoir holding
-// +/-kNavZoomReservoirPx which spends only the OVERFLOW and drains exactly
-// what it spent (apply_nav_dual_axis_at, input_pointer.cpp). The zoom-only
-// ctrl phase this replaces is "technically correct" and "basically makes
-// incorrect movement impossible" but "feels quite awkward", and offered the
-// choice he "might" take dual axis "even if it's a little buggy" — so the
-// question is decided ON THE RIG and this commit is built to be ratified or
-// reverted whole. THE DIAGNOSIS THE RESERVOIR ANSWERS is anatomical: a
-// wrist-driven horizontal drag is an ARC, so a pan is never pure dx but dx
-// with an oscillating dy riding on it, while zoom comes from the SHOULDER and
-// is nearly straight; under the old dual-axis model that dy became zoom and
-// the view breathed (the "accordion"). Every rung of the deleted ladder
-// scaled jitter and intent TOGETHER because it worked in the amplitude
-// domain — arc-jitter is distinguished from intent by SIGN PERSISTENCE, which
-// is exactly what a drain-what-you-spend reservoir measures. No timer, no
-// classification, no mode, diagonal surviving.
-// THE ZOOM PHASE'S LATERAL FREEZE IS SUSPENDED FOR THIS TEST, NOT RETIRED,
-// AND ITS REASONING IS KEPT INTACT BECAUSE IT RECORDS A REAL DEFECT FOUND
-// FROM THE RIG (architect 2026-08-14: "I've been operating under the
+// This is ONE drag with
+// two phases, not two gestures: while ctrl is up each event's dx pans 1:1 and
+// dy is discarded; while ctrl is held each event's dy zooms
+// (dy/kZoomStripPxPerLevel, about the seated pivot) and dx is discarded —
+// each phase one exact axis, the deleted segment lock's answer reached by the
+// modifier instead of by classification (the ladder's record above
+// kZoomStripPxPerLevel). THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
+// THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE DISCARD
+// (architect 2026-08-14, from the rig: "I've been operating under the
 // assumption that the zoom control would lock the x position... we need to
-// clamp to zero horizontal movement on zoom"). It exists because the zoom
-// phase DISCARDED dx: discarding dx says the VIEW ignores sideways travel,
-// while the pointer's notional position went on accumulating every pixel of
-// it, invisibly, because nothing on screen answered that travel — so a later
-// ctrl-down seated the pivot far from where the pointer was believed to be,
-// and a zoom→pan switch's release restored the cursor out there too. The
-// freeze was asserted at the crossing and at every ctrl edge and lives where
-// the position is accumulated (GuiPlatform::set_notional_x_frozen), the
-// TRAVEL LEDGER untouched, so it changed no delta anywhere. A PHASE THAT PANS
-// WITH dx MUST LET THE POINTER TRACK IT, so both call sites now pass false
-// and the stem's restore-x override is dropped with it; the test's verdict
-// decides their fate — a rejection restores them by reverting this commit, a
-// ratification deletes them and their platform owners then. THE Y HAS NO
+// clamp to zero horizontal movement on zoom"). Discarding dx says the VIEW
+// ignores sideways travel; the pointer's notional position went on
+// accumulating every pixel of it, and because nothing on screen answered that
+// travel it was invisible — so a later ctrl-down seated the pivot far from
+// where the pointer was believed to be, and a zoom→pan switch's release
+// restored the cursor out there too. The freeze is asserted at the crossing
+// and at every ctrl edge and lives where the position is accumulated
+// (GuiPlatform::set_notional_x_frozen); the TRAVEL LEDGER is untouched, so
+// this changes no delta anywhere, including this drag's own. THE Y HAS NO
 // TWIN, deliberately — there is no notional y to freeze, and the restore's
 // press-row y is an unchanged ruling (the reasoning is recorded at
 // GuiPlatform::notional_pointer_x_).
@@ -862,24 +825,21 @@ struct StripDragState {
 //     notional column, EVERY time (the seat and the withdrawn persist-across-
 //     toggles experiment are recorded at anchor_col below), and the anchor stem
 //     paints there, at the edge itself (the ctrl-armed press paints it from the
-//     PRESS, the stem-at-press ruling kept). The RESERVOIR EMPTIES with the
-//     seat, so a fresh zoom phase opens uncharged and never inherits the band
-//     a previous one left standing. The level itself cannot jump — dy is a
-//     per-event delta off the LIVE level.
+//     PRESS, the stem-at-press ruling kept). The level itself cannot jump — dy
+//     is a per-event delta off the LIVE level.
 //   * ctrl UP (zoom -> pan): NOTHING re-seats, structurally — the pan is
 //     incremental on dx from last_x, which BOTH phases keep current, so the
 //     first plain event pans from the pointer's own position; the stem erases
-//     at the edge and the restore kind re-stamps to Pan. There is no
-//     restore-x override to clear any more: the dual-axis phase pans with dx,
-//     so the release restores at the pointer's own notional position in both
-//     phases.
+//     at the edge, the capture's restore-x override clears there and the
+//     restore kind re-stamps to Pan (the release goes back to the notional
+//     x unless a later zoom phase re-sets it).
 // Transitions repeat freely within one hold — pan/zoom/pan as often as ctrl
 // moves — over the ONE capture, begun at the 8px crossing whatever the mode
 // (a ctrl click never blinks the cursor either, superseding the old zoom
-// drag's capture-at-press) and untouched by every mode edge; only the restore
-// KIND rides the switches (set_strip_capture_restore_kind, so the cursor comes
-// back as the phase the gesture ENDED in) — the restore X stopped riding them
-// with the stem override's suspension above. THE ACT STAYS PRESS-TIME: `ctrl_entry` records the
+// drag's capture-at-press) and untouched by every mode edge; only the
+// restore x and the restore KIND ride the switches
+// (set_strip_capture_restore_kind, so the cursor comes back as the phase the
+// gesture ENDED in). THE ACT STAYS PRESS-TIME: `ctrl_entry` records the
 // press's own modifier, and a ctrl-armed press runs NO deferred click act at
 // its motionless release (a ctrl click was never the placement) while a
 // plain-armed press runs it even if ctrl is down at the release — press-time
@@ -928,11 +888,11 @@ struct ScrollDragState {
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
     // synced from mods.ctrl at every MODIFIER EDGE and every motion event
     // (sync_nav_drag_mode, the one body). While true the anchor stem paints at
-    // anchor_col and each event runs the DUAL-AXIS body — dx pans and the
-    // reservoir's overflow zooms; while false each event's dx pans alone.
+    // anchor_col and each event's dy zooms; while false each event's dx pans.
     // The RELEASE reads this bit and never re-asks ctrl: it cannot be stale
     // now that the edge itself syncs it, which re-stamps the capture's restore
-    // KIND there too.
+    // KIND there too (and drops the stem's restore-x override on the way back
+    // to the pan).
     bool   zooming  = false;
     // The press was the CTRL entry: the deferred click act is NOT armed (a
     // ctrl click is not the placement — press-time modifiers arm the act) and
@@ -977,24 +937,12 @@ struct ScrollDragState {
     // source, so the pivot can honestly follow the pointer again, which is
     // both the architect's first instinct and what the touch pinch already
     // does (it zooms about the fingers, wherever they are).
-    // A SECOND SEAT OF THE SAME GESTURE LANDED WHERE THE FIRST DID unless the
-    // hand panned in between, and that was the lateral freeze's doing (the
+    // A SECOND SEAT OF THE SAME GESTURE LANDS WHERE THE FIRST DID unless the
+    // hand panned in between, and that is the lateral freeze's doing (the
     // paragraph above the struct): without it the zoom phase's own sideways
     // travel — travel nothing on screen answered — walked the notional column
-    // along, and the stem jumped at the next ctrl-down. WHILE THE FREEZE IS
-    // SUSPENDED FOR THE DY-RESERVOIR TEST that property is deliberately gone,
-    // and honestly so: this phase PANS with dx, so its sideways travel is
-    // answered on screen and the re-seat follows a pointer that really moved.
+    // along, and the stem jumped at the next ctrl-down.
     double anchor_col = 0.0;
-    // THE DY RESERVOIR'S CHARGE (px), the dual-axis test's one piece of state:
-    // every ctrl-phase event adds its dy here, and only the overflow past
-    // +/-kNavZoomReservoirPx is spent on the level and drained back out
-    // (apply_nav_dual_axis_at, input_pointer.cpp). Meaningful only while
-    // `zooming`, and RESET AT EVERY CTRL-DOWN SEAT alongside the pivot, so a
-    // zoom phase never opens already charged and never inherits the band a
-    // previous phase left standing. It rides this struct's own whole-struct
-    // reset at the arm and at every end, like every other field here.
-    double zoom_reservoir_px = 0.0;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —

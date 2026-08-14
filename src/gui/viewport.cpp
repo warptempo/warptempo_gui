@@ -362,7 +362,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
     // `level_changed` reports a real move, not a request: ALL FOUR callers —
-    // apply_strip_drag_at, the nav drag's ctrl phase (apply_nav_dual_axis_at,
+    // apply_strip_drag_at, the nav drag's zoom phase (apply_nav_zoom_at,
     // which joined 2026-08-14 with the live-ctrl model), the two-finger
     // touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
