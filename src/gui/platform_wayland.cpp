@@ -3982,6 +3982,23 @@ void GuiPlatform::set_notional_x_frozen(bool frozen) {
     notional_x_frozen_ = frozen;
 }
 
+void GuiPlatform::set_notional_pointer_x(double surface_x) {
+    // The gesture states where the pointer now is (contract at the
+    // declaration). Guarded on a live capture like its four siblings — with no
+    // capture the position is the delivery funnel's, and nothing may push a
+    // gesture's idea of it in over the top.
+    // THROUGH THE CLAMP BODY, never the field: the window clamp and the
+    // ran-out verdict belong to the one owner. A stem column is interior, so
+    // the verdict comes back false, which is exactly right — the position is
+    // known again, so a later pan release follows the hand instead of going
+    // home. NOT GATED BY notional_x_frozen_, and that is the class distinction
+    // rather than an exemption: the freeze suppresses the relative stream's
+    // ACCUMULATION of dx, while this states a position, as the release's own
+    // write-back does (release_pointer_lock records the same split).
+    if (!pointer_captured_) return;
+    note_notional_pointer_x(surface_x);
+}
+
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     if (!pointer_captured_ && !locked_pointer_) return;  // idempotent
 

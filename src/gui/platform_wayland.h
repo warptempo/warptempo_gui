@@ -609,6 +609,40 @@ public:
     // single frame's hand movement rather than by the whole phase's.
     void set_notional_x_frozen(bool frozen);
 
+    // TELL THE POINTER WHERE IT NOW IS (architect 2026-08-14, from the rig, on
+    // the ctrl-up edge: "if I let go of the left mouse button first, I see the
+    // hand pop back up exactly where I expected, but if I let go of control
+    // first, the hand basically teleports... it doesn't keep track of where it
+    // should be"). The nav drag's zoom->pan switch drops the stem override, and
+    // the restore then falls back to notional_pointer_x_ — which the lateral
+    // freeze pinned at the ctrl-down column and which therefore never learned
+    // that the stem SLID, as the song-anchored pivot makes it do wherever
+    // clamp_viewport_start saturates. So the gesture HANDS THE STEM'S COLUMN
+    // OVER at that edge and the pan phase advances the position from there:
+    // a release with ctrl still held lands on the stem through the OVERRIDE, a
+    // release after ctrl-up lands on the stem through the POSITION, and the two
+    // orders agree by construction rather than by two rules kept in step.
+    //
+    // THE FIFTH MEMBER OF THE TOLD-NOT-INFERRED FAMILY (set_capture_restore_x,
+    // clear_capture_restore_x, set_capture_restore_kind, set_notional_x_frozen
+    // above): the platform applies no gesture policy and works out nothing
+    // about where a stem is; it is told, by the only thing that knows.
+    // Capture-guarded like its four siblings.
+    //
+    // FREEZE-INDEPENDENT BY CLASS, and the distinction is the one already drawn
+    // at the capture release's own write-back (release_pointer_lock): the
+    // freeze gates the RELATIVE stream's ACCUMULATION, while this STATES A REAL
+    // POSITION, which is what that write-back does too and for the same reason.
+    // No caller need order it against the freeze.
+    //
+    // IT WRITES THROUGH THE ONE CLAMP BODY, note_notional_pointer_x, never the
+    // field — so the window clamp and the ran-out verdict come from the same
+    // owner as every other write. THE CONSEQUENCE IS CORRECT: a stem column is
+    // interior by construction, so the verdict comes back FALSE and a later
+    // pan-phase release restores AT THE HAND rather than teleporting home. The
+    // debt really is gone — the pointer has been told where it is.
+    void set_notional_pointer_x(double surface_x);
+
     // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
     // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
     // just under a capture. The full contract, and why there is exactly one of
@@ -919,8 +953,13 @@ private:
     //     deliver_motion is the one funnel (wl_pointer.enter, absolute
     //     wl_pointer.motion, and all four touch-translation deliveries) —
     //     PLUS the captured relative stream, which accumulates and clamps it
-    //     per RAW event, and the capture release, which moves it to the
-    //     restore hint alongside pointer_x_/pointer_y_. Uncaptured there is
+    //     per RAW event, the capture release, which moves it to the
+    //     restore hint alongside pointer_x_/pointer_y_, and
+    //     set_notional_pointer_x, through which a live gesture STATES the
+    //     position (the nav drag's ctrl-up handover of the zoom stem's column;
+    //     contract at that method). The last two are the STATED writers and
+    //     the first two the observed ones, which is why neither is gated by
+    //     the lateral freeze. Uncaptured there is
     //     nothing virtual, so it simply IS the delivered position; captured it
     //     is the ledger with the debt taken out, MINUS whatever a frozen phase
     //     withheld (notional_x_frozen_ below). Its consumers are the release
@@ -992,6 +1031,14 @@ private:
     // across it, which is the right answer for the same reason the freeze
     // exists: a zoom moved the pointer's x not at all, so it can neither run
     // the travel out nor bring it back in.
+    // THE PHASE'S CLOSING EDGE IS A WRITE, THOUGH, and it clears the verdict
+    // honestly: the ctrl-up handover STATES the stem's column
+    // (set_notional_pointer_x), a position that is interior by construction,
+    // so a pan-phase release after a zoom follows the stem rather than going
+    // home. That is the agreement the handover exists for — with ctrl still
+    // held the same release lands on the stem through the override, which
+    // outranks this fork — and it is the honest reading besides: the pointer
+    // is not "out of room" any more, it has been TOLD where it is.
     // IT IS THE PAN'S ANSWER IN PRACTICE, and no gesture test is needed to
     // make it so: the zoom phase drives the stem override on every one of its
     // events, so a zoom that ran even one event reaches the override and never

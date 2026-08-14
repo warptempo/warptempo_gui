@@ -1582,6 +1582,36 @@ double GuiInputHandler::nav_notional_col() const {
         wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
+// THE ZOOM STEM'S SURFACE X — one owner, two callers: the zoom body's
+// per-event restore stamp and the ctrl-up handover that hands this same column
+// to the pointer's notional position (sync_nav_drag_mode). THAT THEY SHARE ONE
+// EXPRESSION IS THE POINT: the column the cursor is SENT to cannot drift from
+// the column the stem was STAMPED at, so the two release orders — button first
+// with ctrl still held (the override answers) and ctrl first then the button
+// (the notional position answers) — land on the same pixel by construction
+// rather than by two rules kept in step.
+// RECOMPUTING FROM THE ANCHOR AFTER AN APPLY REPRODUCES THE COLUMN THAT APPLY
+// PIVOTED AT, INCLUDING A REBOUND ONE: the edge trick writes
+// anchor_sample = vp + clamped_col·spp, so this derivation inverts it exactly
+// (up to the viewport's sub-pixel grid snap, which self-heals on the following
+// event exactly as the apply's own live re-read does).
+// IT READS THE LIVE VIEWPORT, while the PAINTER derives the same stem through
+// displayed_column_at on the PLATE basis. That is the standing displayed-basis
+// rule and NOT a divergence to fix: painted pixels ride the displayed basis,
+// hit and restore geometry ride the live one.
+// The column->x math is render_strip_anchor_stem's own (area.x + col + 0.5),
+// clamped in the waveform's bounds through the one clamp body above.
+double GuiInputHandler::nav_stem_surface_x() const {
+    const GuiRect wf_area = waveform_area(app);
+    const double  spp     = current_samples_per_pixel(app, audio);
+    const double  col =
+        spp > 0.0 ? (app.scroll_drag.anchor_sample -
+                     static_cast<double>(app.viewport_start_sample)) / spp
+                  : 0.0;
+    return static_cast<double>(wf_area.x) +
+           clamp_col_into_waveform(wf_area, col) + 0.5;
+}
+
 // THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
 // the reason there are two are at the declaration; both re-seat directions are
 // at ScrollDragState, app_state.h). Within the live gesture CTRL ALONE is read
@@ -1608,6 +1638,38 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // position is still the honest restore.
         if (sd.moved) set_strip_capture_restore_kind(GuiCursorKind::Zoom);
     } else if (sd.moved) {
+        // THE ZOOM PHASE'S DRIFT IS HANDED TO THE POINTER HERE, and that is
+        // what makes the override's clear honest: the fallback it falls back
+        // TO is now the stem. The phase froze the notional x at the ctrl-down
+        // column while the stem's column slid with the song frame it holds
+        // (every time clamp_viewport_start saturates), so clearing the
+        // override alone left the two naming different pixels and the cursor
+        // landed on whichever the user's release ORDER selected. Telling the
+        // platform the position — the fifth member of the told-not-inferred
+        // family, freeze-independent by class because it states a POSITION
+        // rather than accumulating a delta (GuiPlatform::set_notional_pointer_x)
+        // — makes both orders agree: with ctrl still held the release lands on
+        // the stem through the OVERRIDE, after a ctrl-up it lands on the stem
+        // through the NOTIONAL POSITION, and a pan that follows advances from
+        // there.
+        // NOT CONDITIONAL ON A CLAMP HAVING HAPPENED: where nothing saturated
+        // the stem never left the notional column, so this writes the value
+        // that was already there and costs nothing — asking would be a second
+        // predicate over a quantity that already answers.
+        // Ordering against the freeze release at this body's tail does not
+        // matter, and is stated rather than relied on silently: this write is
+        // not gated by the freeze (only the relative stream's accumulation is).
+        // ACCEPTED, HALF A PIXEL PER TOGGLE: what is handed over is the stem's
+        // painted column CENTRE (+0.5), which the next ctrl-down then reads
+        // back as the pivot's column — so ctrl tapped repeatedly inside ONE
+        // capture with the hand still walks the notional x right by 0.5 px a
+        // cycle. Below the freeze's own one-frame grain, bounded by the
+        // capture (the release write-back and the next absolute motion both
+        // restate the position), and the alternative — a second expression
+        // without the centre term — would reintroduce exactly the drift
+        // between the sent column and the stamped one this shares an owner to
+        // prevent.
+        set_strip_capture_notional_x(nav_stem_surface_x());
         clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);
     }
@@ -1701,10 +1763,13 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     }
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
-    // rule; a later pan phase clears it back to the notional x at its switch.
+    // rule; a later pan phase clears it back to the notional x at its switch —
+    // having first HANDED that switch this same column, through the one owner
+    // both sites read (nav_stem_surface_x, above). Recomputing there rather
+    // than passing anchor_col along is what keeps the ctrl-up handover and this
+    // stamp from drifting apart.
     if (set_strip_capture_restore_x)
-        set_strip_capture_restore_x(
-            static_cast<double>(wf_area.x) + anchor_col + 0.5);
+        set_strip_capture_restore_x(nav_stem_surface_x());
 
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);

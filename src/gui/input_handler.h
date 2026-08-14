@@ -535,6 +535,19 @@ struct GuiInputHandler {
     // capture opens unfrozen. A no-op while no capture is live.
     std::function<void(bool)> set_strip_capture_notional_x_frozen =
         [](bool){};
+    // THE CTRL-UP HANDOVER (2026-08-14): tell the platform that the pointer's
+    // NOTIONAL X is now the zoom stem's surface x. The zoom phase froze that
+    // position at the ctrl-down column while the stem slid with the song frame
+    // it holds (wherever the viewport saturated), so the pan phase's release —
+    // which restores at the notional x once the stem override is dropped —
+    // would otherwise strand the cursor at the pre-zoom column. Stating the
+    // position is what makes the drop honest, and it is FREEZE-INDEPENDENT BY
+    // CLASS: the freeze gates the relative stream's ACCUMULATION, while this
+    // states a real position exactly as the capture release's own write-back
+    // does (contract at GuiPlatform::set_notional_pointer_x). Fired once, at
+    // the zoom->pan edge, from the one mode-sync body; a no-op while no
+    // capture is live.
+    std::function<void(double)> set_strip_capture_notional_x = [](double){};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -1305,6 +1318,15 @@ struct GuiInputHandler {
     // and it is not this layer's, are at the definition (input_pointer.cpp)
     // and at GuiPlatform::notional_pointer_x_.
     double nav_notional_col() const;
+
+    // THE ZOOM STEM'S SURFACE X — the anchor's live column in the waveform's
+    // bounds, mapped through the painter's own column->x math. ONE OWNER for
+    // the zoom body's per-event restore stamp and the ctrl-up handover that
+    // gives the pointer's notional position that same column, so the column
+    // the cursor is sent to cannot drift from the one the stem was stamped at
+    // (the full contract, and why this reads the LIVE viewport where the
+    // painter reads the displayed basis, are at the definition).
+    double nav_stem_surface_x() const;
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded

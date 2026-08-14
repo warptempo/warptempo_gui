@@ -828,12 +828,23 @@ struct StripDragState {
 //     itself (the ctrl-armed press paints it from the PRESS, the stem-at-press
 //     ruling kept). The level itself cannot jump — dy is a per-event delta off
 //     the LIVE level.
-//   * ctrl UP (zoom -> pan): NOTHING re-seats, structurally — the pan is
-//     incremental on dx from last_x, which BOTH phases keep current, so the
-//     first plain event pans from the pointer's own position; the stem erases
-//     at the edge, the capture's restore-x override clears there and the
-//     restore kind re-stamps to Pan (the release goes back to the notional
-//     x unless a later zoom phase re-sets it).
+//   * ctrl UP (zoom -> pan): THE GESTURE'S ARITHMETIC re-seats nothing,
+//     structurally — the pan is incremental on dx from last_x, which BOTH
+//     phases keep current, so the first plain event pans from the pointer's
+//     own position; the stem erases at the edge, the capture's restore-x
+//     override clears there and the restore kind re-stamps to Pan.
+//     THE POINTER'S NOTIONAL POSITION DOES RE-SEAT, and it is the edge's one
+//     lasting write: the gesture HANDS IT THE STEM'S COLUMN
+//     (GuiPlatform::set_notional_pointer_x) before dropping the override, so
+//     the fallback the drop falls back TO is the stem. The zoom phase froze
+//     that position at the ctrl-down column while the stem SLID with the song
+//     frame it holds — anywhere clamp_viewport_start saturates — and without
+//     the handover the cursor's landing depended on the order the user lifted
+//     ctrl and the button (override on one order, stranded pre-zoom column on
+//     the other). With it both orders land on the stem, and the pan then
+//     advances from there. Where nothing clamped the stem never left that
+//     column, so the write is a no-op in effect and is deliberately not
+//     conditional on a clamp.
 // Transitions repeat freely within one hold — pan/zoom/pan as often as ctrl
 // moves — over the ONE capture, begun at the 8px crossing whatever the mode
 // (a ctrl click never blinks the cursor either, superseding the old zoom
