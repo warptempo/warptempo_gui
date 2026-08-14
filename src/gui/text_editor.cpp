@@ -308,11 +308,24 @@ void deactivate(State& s) {
     s.view_offset_px    = 0.0;
 }
 
+// The modal session id source (contract at the declaration, text_editor.h).
+// The counter is function-local so it has exactly one home and no order-of-
+// initialization to reason about; it starts at 1 so 0 is reliably "no session".
+uint64_t next_session_id() {
+    static uint64_t next = 0;
+    return ++next;
+}
+
 void enter(State& s, int target,
            std::string locked_prefix,
            std::string initial_pending,
            Kind kind,
            bool iter_grammar) {
+    // EVERY ACTIVATION IS A NEW SESSION, including a retarget of a live editor
+    // (the flag editor's) and a reopen of the same editor a keystroke after it
+    // closed: the published geometry of the old session must never be able to
+    // name the new one.
+    s.session           = next_session_id();
     s.target            = target;
     s.kind              = kind;
     s.iter_grammar      = iter_grammar;

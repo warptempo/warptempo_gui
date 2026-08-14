@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -119,11 +120,36 @@ enum class Kind {
     CommitTitle,
 };
 
+// THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
+// handing out an id that names exactly ONE raise of exactly ONE modal surface
+// for the life of the process (it starts at 1, so 0 is reliably "no session").
+//
+// IT IS HOMED HERE because four of the product's five modal surfaces are text
+// editors and `enter` below is their one activation route, which is what makes
+// the stamping STRUCTURAL rather than disciplinary: no opener can forget to
+// take an id, and a fifth dialog editor inherits the identity for free. The
+// PROMPT — the fifth surface, and not an editor — takes its id from this same
+// counter at its own one raise route (PromptState::present, app_state.h), so
+// the ids never collide across the two classes and one integer compare answers
+// "is this published geometry the surface that owns input right now" (the
+// doctrine and the comparison's one owner are at AppState::ModalDialogGeometry
+// and GuiInputHandler::modal_dialog_stash_current).
+uint64_t next_session_id();
+
 // State for a single editable rect.
 struct State {
     // Identifier of the entity being edited. -1 means "not editing".
     // The caller decides what this means (a marker index for the flag editor).
     int target = -1;
+
+    // THIS EDITING SESSION'S ID, taken from next_session_id() above at every
+    // `enter` and never rewritten while the session stands (deactivate leaves
+    // it alone — `target` is what says "not editing", and a dead session's id
+    // must not be reusable). The TOP-STRIP FLAG editor takes one too and
+    // nothing ever reads it: it publishes no dialog, so it has no geometry to
+    // validate. What the four DIALOG editors' ids are for is at
+    // AppState::ModalDialogGeometry.
+    uint64_t session = 0;
 
     // Vocabulary discriminator. The caller sets this in `enter()` and
     // the keystroke handler routes printable detection accordingly.

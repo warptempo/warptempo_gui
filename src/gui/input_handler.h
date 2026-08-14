@@ -1122,9 +1122,13 @@ struct GuiInputHandler {
 
     // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
     // the platform's keyboard-intent cancellation hook (keyboard leave,
-    // keyboard-capability loss, a Super-swallowed press), wired in main.cpp.
-    // Same reasoning as its pointer twin, over the stream that owes the
-    // release: the contract is at the definition and the full edge list at
+    // keyboard-capability loss, a Super-swallowed press), wired in main.cpp,
+    // which is why this one is public. Same reasoning as its pointer twin,
+    // over the stream that owes the release. It is ALSO the owner of the
+    // focus-move cancel since 2026-08-14 (the ring's walk, the pointer feint's
+    // passive assignment, the editor act's return of the focus to the field —
+    // three internal callers, each the site of a focus move): the contract is
+    // at the definition and the full edge list at
     // AppState::modal_dialog_key_pressed.
     void clear_modal_dialog_key_press();
 
@@ -2276,22 +2280,25 @@ private:
     // modal_bottom_strip_editor_active while they wrote onto the status lane;
     // the MEANING — this exact four-editor set — has never moved, and the
     // surface is a modal that yields the whole row now rather than a tenant
-    // of its status span). TEN CALLING FUNCTIONS, RE-DERIVED BY GREP
-    // 2026-08-13 at the reach-through's retirement (the previous retell said
-    // NINE and had missed two, repeat_eligible and dispatch_modal_dialog_button
-    // — this list is the grep's, not that list's descendant): EIGHT ask about a
-    // POINTER fact and TWO about a KEY.
+    // of its status span). THE FOUR-EDITOR MEMBERSHIP ITSELF LIVES AT
+    // AppState::dialog_editor_session (app_state.h), which names them once and
+    // hands back the live one's session id; this predicate is that id being
+    // non-zero, so the set cannot drift between the two. EIGHT CALLING
+    // FUNCTIONS, RE-DERIVED BY GREP 2026-08-14 (two left that day with the
+    // round-15 session fix — the dialog BUTTON claim in on_button_press and
+    // dispatch_modal_dialog_button, both of which ask
+    // modal_dialog_stash_current instead, a strictly narrower question that
+    // implies this one): SIX ask about a POINTER fact and TWO about a KEY.
     //   wheel_context's swallow (input_handler.cpp), because the wheel's
     //     stepped pan is NAVIGATION, not a chord, so it still punches through
     //     an open top-strip flag editor;
     //   pointer_cursor_kind (2026-08-03), because these four editors are
     //     exactly the ones whose veil SWALLOWS a pointer press, so they are
     //     exactly the ones over which no cursor may promise a gesture;
-    //   the dialog BUTTON claim in on_button_press, ITS RELEASE MIRROR in
-    //     on_button_release (2026-08-13 — the buttons act at the lift, so the
-    //     gesture is claimed on both edges), dispatch_modal_dialog_button's own
-    //     editor fork behind them, and on_motion's dialog-hover branch
-    //     (2026-08-12) — the modal's own two pointer surfaces;
+    //   the dialog button claim's RELEASE MIRROR in on_button_release
+    //     (2026-08-13 — the buttons act at the lift) and on_motion's
+    //     dialog-hover branch (2026-08-12) — the modal's own two pointer
+    //     surfaces;
     //   the CHROME release's veil re-ask (finish_chrome_press_release,
     //     2026-08-13), which since the reach-through's retirement refuses the
     //     roster outright and exists for the editor OPENED MID-HOLD;
@@ -2353,13 +2360,26 @@ private:
     //                               the roster's own clear beside it).
     //   dispatch_modal_dialog_button — THE ACT, shared by both pointer release
     //                               arms and the KEYBOARD's own release: it
-    //                               owns the gate pair (the painted bit, the
-    //                               owner tag) and the live-response-set
-    //                               validation, so the three lifts cannot
-    //                               drift. True iff it dispatched.
+    //                               owns the gate pair (the painted bit and
+    //                               the stash's identity) and the live-
+    //                               response-set validation, so the three
+    //                               lifts cannot drift. True iff it
+    //                               dispatched.
     bool arm_modal_dialog_press(int x, int y);
     int  take_modal_dialog_release(int x, int y);
     bool dispatch_modal_dialog_button(int index);
+
+    // IS THE PUBLISHED STASH THE LIVE SURFACE'S — the ONE comparison behind
+    // "published geometry may only SELECT; live state DECIDES" (the doctrine,
+    // the two identity fields and what each answers are at
+    // AppState::ModalDialogGeometry). Every site that reads the stash to ACT
+    // asks this and no site spells it twice: the two press claims in
+    // on_button_press, route_modal_dialog_focus_key, and the shared act above.
+    // Its companion returns the focus ring's index only while it holds, which
+    // is what stops a stale index swallowing a freshly opened editor's keys in
+    // the one dispatch batch before that editor paints.
+    bool modal_dialog_stash_current() const;
+    int  modal_dialog_focus_live() const;
 
     // THE MODAL'S KEYBOARD FOCUS RING, one route for both surfaces (2026-08-13;
     // the state and the two meanings of its -1 are at

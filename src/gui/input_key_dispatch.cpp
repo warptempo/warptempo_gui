@@ -2816,11 +2816,9 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
-    return text_editor::is_active(app.settings_editor) ||
-           text_editor::is_active(app.load_editor) ||
-           text_editor::is_active(app.commit_title_editor) ||
-           (text_editor::is_active(app.top_flag_editor) &&
-            app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
+    // The four are NAMED at AppState::dialog_editor_session, which hands back
+    // the live one's session id — one membership serving both questions.
+    return app.dialog_editor_session() != 0;
 }
 
 // Any text editor consuming printable keys — the THREE single-State dialog
@@ -2917,9 +2915,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // bare Space, are a press-and-hold whose act is at the physical release
     // (AppState::modal_dialog_key_pressed). A repeat could only re-press or
     // re-fire them, which is exactly what must not happen. One arm covers both
-    // and everything else, derived from the wall rather than listing keys.
+    // and everything else, derived from the wall rather than listing keys —
+    // through the wall's own reading of the focus (modal_dialog_focus_live),
+    // so the two cannot disagree about where the keyboard is.
     if ((app.prompt.active || modal_dialog_editor_active()) &&
-        app.modal_dialog_focus >= 0)
+        modal_dialog_focus_live() >= 0)
         return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
@@ -4593,10 +4593,11 @@ void GuiInputHandler::load_editor_commit() {
 // admits the reverse shape and refuses every other modified key: Ctrl+Tab
 // (the tab-cycle family's), Shift+Left (the field's selection extension) and
 // the rest are still not this ring's to take.
-// THE OWNER TAG GATES IT like both press claims — the stash is the painter's
-// publication and may only SELECT; the surface that owns input DECIDES. A flag
-// editor publishes no dialog at all, so its ring is empty by construction and
-// every shape here declines.
+// THE STASH'S IDENTITY GATES IT like both press claims — the stash is the
+// painter's publication and may only SELECT; the surface that owns input
+// DECIDES (modal_dialog_stash_current, the one comparison). A flag editor
+// publishes no dialog at all, so its ring is empty by construction and every
+// shape here declines.
 bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
                                                    GuiInputState mods) {
     const ModalRingTab tab_shape = modal_ring_tab_shape(key, mods);
@@ -4606,11 +4607,8 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     }
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.buttons.empty()) return false;
+    if (!modal_dialog_stash_current()) return false;
     const bool prompt_up = app.prompt.active;
-    if (dlg.owner != (prompt_up ? AppState::ModalDialogOwner::Prompt
-                                : AppState::ModalDialogOwner::Editor)) {
-        return false;
-    }
     const int n = static_cast<int>(dlg.buttons.size());
     const int at = (app.modal_dialog_focus >= 0 &&
                     app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
@@ -4662,8 +4660,20 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         return false;
     }
 
-    if (next != app.modal_dialog_focus ||
+    // LEAVING THE BUTTON CANCELS A HELD ENTER OR SPACE (2026-08-14), the
+    // rule's first site and the reason it exists: the arm names the button the
+    // focus was on, and the user has visibly left it. Without this the release
+    // still committed the OLD button — focus OK, hold Space, Tab onto Cancel,
+    // release, and OK fired — and the pressed face and the ring pointed at
+    // different buttons for the rest of the hold. The rule, the resulting
+    // armed == focused invariant and how it differs from the pointer's FEINT
+    // are at AppState::modal_dialog_key_pressed. It reads the INDEX alone: a
+    // one-button ring whose walk lands back where it started has left nothing,
+    // and only the focus's STRENGTH changed there.
+    const bool left_the_button = next != app.modal_dialog_focus;
+    if (left_the_button ||
         app.modal_dialog_focus_active != (next >= 0)) {
+        if (left_the_button) clear_modal_dialog_key_press();
         app.modal_dialog_focus = next;
         // Landing on a button by a deliberate walk IS the active strength;
         // landing back on an editor's field carries none.
@@ -4785,7 +4795,7 @@ bool GuiInputHandler::route_modal_editor_key(
     // here at all.
     if (autocomplete &&
         modal_ring_tab_shape(key, mods) == ModalRingTab::Forward &&
-        app.modal_dialog_focus < 0 && autocomplete()) {
+        modal_dialog_focus_live() < 0 && autocomplete()) {
         return true;
     }
     if (route_modal_dialog_focus_key(key, mods)) {
@@ -4813,8 +4823,13 @@ bool GuiInputHandler::route_modal_editor_key(
     // as the tail below spells them, because this wall stands ABOVE the
     // editor's own keymap and the tail is unreachable from a focused button.
     // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
-    // ring is empty and modal_dialog_focus is structurally -1 while it stands.)
-    if (app.modal_dialog_focus >= 0) {
+    // ring is empty and the live focus is structurally -1 while it stands.)
+    // IT READS THE LIVE FOCUS, never the raw index (modal_dialog_focus_live,
+    // input_handler.h): in the one dispatch batch between an editor's open and
+    // its first paint the raw index still names the PREVIOUS dialog's buttons,
+    // and a wall keyed on it would swallow the new editor's first keystrokes
+    // at a field the user is looking at and typing into.
+    if (modal_dialog_focus_live() >= 0) {
         if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
             cancel();
             return true;

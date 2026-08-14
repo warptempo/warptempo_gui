@@ -3366,9 +3366,19 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
                 break;
             // A nav finger lifting ENDS the gesture (any end commits); a
             // two-finger survivor is IGNORED until all fingers lift — the
-            // drain, never a downgrade to single-finger nav (the recorded
-            // asymmetry: upgrade yes, downgrade no — a lift is an end). The
-            // finger's own lift DELIVERS the staged dirty frame first (the
+            // drain, never a downgrade to single-finger nav (the asymmetry:
+            // upgrade yes, downgrade no — a lift is an end).
+            // AND THE ASYMMETRY HAS A REASON, not just a rule (the architect's,
+            // recorded 2026-08-14): TWO FINGERS CANNOT LAND ON THE SAME FRAME,
+            // so EVERY two-finger gesture is reached THROUGH a one-finger one —
+            // the upgrade is not a convenience, it is the only way in, and
+            // refusing it would leave the pinch unreachable. A DOWNGRADE buys
+            // nothing of the kind: the gesture is already live and the user has
+            // already committed to it, so "the second finger came off" is a
+            // genuinely separate question rather than the upgrade's mirror, and
+            // it is answered "a lift is an end" on the same rule that ends a
+            // one-finger nav.
+            // The finger's own lift DELIVERS the staged dirty frame first (the
             // end split's finger-up clause, at end_touch_nav_gesture). No
             // release and no translation end: a nav gesture never held the
             // logical button (a nav born of the motionless-hold upgrade had

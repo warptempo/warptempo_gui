@@ -2073,6 +2073,13 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         app.modal_dialog_field_hovered = in_field;
         app.modal_dialog_press_inside  = inside;
         if (feint) {
+            // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second
+            // site (AppState::modal_dialog_key_pressed): the two arms can
+            // stand together — a feint held with the mouse while the keyboard
+            // presses the focused button — and this assignment takes the focus
+            // off whatever the keyboard was holding, so that hold's release
+            // must commit nothing.
+            clear_modal_dialog_key_press();
             app.modal_dialog_focus        = armed;
             app.modal_dialog_focus_active = false;
         }
@@ -2160,6 +2167,40 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     return modal_dialog_button_hit(x, y) == armed ? armed : -1;
 }
 
+// DOES THE PUBLISHED STASH NAME THE SURFACE THAT OWNS INPUT RIGHT NOW — the
+// ONE comparison behind the doctrine at AppState::ModalDialogGeometry
+// (published geometry may only SELECT; live state DECIDES), and the one owner
+// of it: every site that reads the stash to act asks this and nothing spells
+// it a second time (the two press claims, the focus ring's route, and the
+// shared act below).
+//
+// TWO TERMS, ONE QUESTION. The OWNER TAG is the class the painter drew and is
+// the cheap first refusal; THE SESSION IS THE EXACT ONE — an id names one raise
+// of one surface for the life of the program (text_editor::next_session_id), so
+// it answers what the tag cannot: a dialog EDITOR replaced by another dialog
+// editor inside a single dispatch batch, which wears the same tag. A zero
+// session is an unpublished stash and can never match.
+bool GuiInputHandler::modal_dialog_stash_current() const {
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    if (!dlg.valid || dlg.session == 0) return false;
+    if (dlg.owner != (app.prompt.active ? AppState::ModalDialogOwner::Prompt
+                                        : AppState::ModalDialogOwner::Editor)) {
+        return false;
+    }
+    return dlg.session == app.modal_dialog_live_session();
+}
+
+// THE FOCUS RING'S LIVE READING — AppState::modal_dialog_focus, or -1 whenever
+// the stash it indexes is not the live surface's. The index names a slot in the
+// painter's published button list, so between a raise and its first paint it
+// names the PREVIOUS dialog's buttons; every keyboard site that asks "is the
+// focus on a button or in the field" reads it through here, so a stale index
+// cannot swallow the new editor's first keystrokes. (The painter's own reset
+// clears the field a frame later, which is too late for a queued burst.)
+int GuiInputHandler::modal_dialog_focus_live() const {
+    return modal_dialog_stash_current() ? app.modal_dialog_focus : -1;
+}
+
 // THE ACT ITSELF, and THE ONE PLACE THE TWO GATES ARE RE-ASKED — hoisted
 // 2026-08-13 when the KEYBOARD grew a release of its own (Enter and Space on a
 // focused button act at the lift, exactly as the pointer's press does), so the
@@ -2169,36 +2210,32 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
 // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine at
 // ModalDialogGeometry, app_state.h). `index` names a slot in the painter's
 // stash, and everything that DECIDES is read live here:
-//   the OWNER TAG must agree with the surface currently owning input — a stash
-//   an editor painted never answers a prompt, and the reverse;
+//   THE STASH MUST BE THE LIVE SURFACE'S — modal_dialog_stash_current above,
+//   which is class AND session, so a stash a prompt painted never answers an
+//   editor, a stash the PREVIOUS editor painted never answers the one that
+//   replaced it, and an unpublished stash answers nothing;
 //   PromptState::painted must stand for a prompt — an arm outlives its press
 //   by definition and the surface under it may have been replaced (the
 //   save-failed rung leaves live-keyed rects where the new box is not);
 //   the RESPONSE KEY the stash names is validated against the LIVE response
-//   set, a different question from the tag's and asked separately.
+//   set, a different question from the stash's and asked separately.
 // Returns true iff something dispatched, so a caller can tell a consumed
 // nothing from an act.
 bool GuiInputHandler::dispatch_modal_dialog_button(int index) {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (index < 0 || index >= static_cast<int>(dlg.buttons.size()))
         return false;
+    if (!modal_dialog_stash_current()) return false;
     const AppState::ModalDialogButton& b =
         dlg.buttons[static_cast<size_t>(index)];
     if (app.prompt.active) {
-        if (!app.prompt.painted ||
-            dlg.owner != AppState::ModalDialogOwner::Prompt) {
-            return false;
-        }
+        if (!app.prompt.painted) return false;
         for (char live : app.prompt.response_keys) {
             if (b.response_key != 0 && b.response_key == live) {
                 prompt.activate_response(b.response_key);
                 return true;
             }
         }
-        return false;
-    }
-    if (!modal_dialog_editor_active() ||
-        dlg.owner != AppState::ModalDialogOwner::Editor) {
         return false;
     }
     dispatch_modal_dialog_editor_act(b.editor_ok);
@@ -2235,6 +2272,14 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
     const GuiKey        key = ok ? GuiKeys::Return : GuiKeys::Escape;
     const GuiInputState mods{};
     if (app.modal_dialog_focus >= 0) {
+        // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's third site
+        // (AppState::modal_dialog_key_pressed): the arm names the button the
+        // focus was on, and the focus is going back to the field. The
+        // keyboard's own release has already consumed its arm before reaching
+        // here, so this is the POINTER path's due — a click on OK while Enter
+        // is held down on a focused button must not leave that Enter able to
+        // fire a second act at its release.
+        clear_modal_dialog_key_press();
         app.modal_dialog_focus        = -1;
         app.modal_dialog_focus_active = false;
         if (app.modal_dialog.valid)
@@ -2329,15 +2374,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Gated on the same bit the keyboard reads, so both halves of the answer
     // wait for the same frame. The veil is unchanged either way — the press is
     // still consumed by the `return` below, it just arms nothing.
-    // AND THE OWNER TAG IS THE CLAIM'S OTHER HALF: a stash an EDITOR painted
-    // never answers a prompt, whatever its keys say (published geometry may
-    // only select; live state decides — the doctrine is at
-    // ModalDialogGeometry, app_state.h). The live-response-set test at the
-    // release stays: it is the KEY half, and the two are different questions.
+    // AND THE STASH'S IDENTITY IS THE CLAIM'S OTHER HALF: a stash an EDITOR
+    // painted never answers a prompt, whatever its keys say (published
+    // geometry may only select; live state decides — the doctrine is at
+    // ModalDialogGeometry, app_state.h, and the one comparison is
+    // modal_dialog_stash_current). The live-response-set test at the release
+    // stays: it is the KEY half, and the two are different questions.
     if (app.prompt.active) {
         if (app.prompt.painted && button == GuiMouseButton::Left &&
             !mods.ctrl && !mods.shift && !mods.alt &&
-            app.modal_dialog.owner == AppState::ModalDialogOwner::Prompt) {
+            modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
         }
         return;
@@ -2369,18 +2415,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // red-flash refusal, the BPM commit's render sweep and every teardown are
     // the keyboard's own bodies. A PROMPT's buttons are claimed in the prompt
     // gate above, not here.
-    // THE OWNER TAG IS THIS CLAIM'S GATE (2026-08-13): in the one batch
-    // between an editor's OPEN and its first paint the stash can still be a
-    // PROMPT'S (editor→editor is unreachable — every opener refuses while
-    // another editor owns the keyboard), and a prompt publishes editor_ok
-    // FALSE on every button, so a stale rect used to CANCEL an editor that had
-    // just opened. Refusing a tag that disagrees with the surface owning input
-    // closes it — no per-dialog identity, no generation machinery, one enum
-    // the painter writes with its own hand (the doctrine and the tag's
-    // writer/readers are at ModalDialogGeometry, app_state.h).
+    // THE STASH'S IDENTITY IS THIS CLAIM'S GATE (2026-08-13, exact since
+    // 2026-08-14): in the one batch between an editor's OPEN and its first
+    // paint the stash still belongs to whatever stood before it — a PROMPT,
+    // which publishes editor_ok FALSE on every button and so used to CANCEL an
+    // editor that had just opened, or ANOTHER EDITOR, whose OK the round-15
+    // finding showed could commit at an unseen dialog. Refusing a stash that
+    // does not name the live session closes both (the doctrine and the two
+    // identity fields are at ModalDialogGeometry, app_state.h).
+    // (The claim needs no modal_dialog_editor_active term of its own and lost
+    // the one it carried: the prompt gate above has already returned, so a
+    // CURRENT stash here is an editor's by construction.)
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
-        !mods.alt && modal_dialog_editor_active() &&
-        app.modal_dialog.owner == AppState::ModalDialogOwner::Editor) {
+        !mods.alt && modal_dialog_stash_current()) {
         if (arm_modal_dialog_press(x, y)) return;
     }
 
@@ -3997,10 +4044,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // lift on the button the press armed activates that response. A lift
     // ANYWHERE ELSE consumes the arm and dispatches nothing — which, since the
     // FEINT, is what leaves that button passively focused instead of simply
-    // cancelling. The gates the act re-asks (the painted bit, the owner tag,
-    // and the live response set) all live in the one shared dispatch body,
-    // which the keyboard's own release shares; the painter drops the arm on
-    // those same edges, so the body is the second wall rather than the only
+    // cancelling. The gates the act re-asks (the painted bit, the stash's
+    // identity, and the live response set) all live in the one shared dispatch
+    // body, which the keyboard's own release shares; the painter drops the arm
+    // on those same edges, so the body is the second wall rather than the only
     // one. The veil still swallows every release either way — a CHROME arm
     // taken above dies here undispatched, which is the veil's answer.
     if (app.prompt.active) {
@@ -4166,8 +4213,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.overview_drag = OverviewDragState{};
         return;
     }
-    // (No scrub branch: the scrub is one act at the PRESS — it arms nothing,
-    // so its release is an ordinary fall-through.)
+    // (No scrub branch of its own: since 2026-08-13 the scrub has no drag
+    // state — it rides ScrollDragState like every other act on the navigation
+    // surface, and the branch above runs it, at the LOWER half's motionless
+    // release, through the `scrub` flag the press stashed. Its press-time
+    // dispatch is deleted; the contract is at ScrollDragState, app_state.h.)
     if (app.region_drag.active) {
         // The region is extended live during the drag (see on_motion); a drag
         // that moved rests the region at its final extent. A MOTIONLESS

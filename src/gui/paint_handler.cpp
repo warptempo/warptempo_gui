@@ -4726,16 +4726,17 @@ void reset_modal_dialog_face_state(AppState& app) {
 
 void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // The publication reset, every run — a dialog that is not painted leaves
-    // nothing behind for the pointer path to grab. THE OUTGOING OWNER is read
+    // nothing behind for the pointer path to grab. THE OUTGOING SESSION is read
     // first: it is the last frame's statement of which surface these face
     // indices name, and the face-state reset below is what keeps them from
     // outliving it.
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    const AppState::ModalDialogOwner prev_owner = dlg.owner;
-    dlg.valid = false;
-    dlg.owner = AppState::ModalDialogOwner::None;
-    dlg.box   = GuiRect{0, 0, 0, 0};
-    dlg.field = GuiRect{0, 0, 0, 0};
+    const uint64_t prev_session = dlg.session;
+    dlg.valid   = false;
+    dlg.owner   = AppState::ModalDialogOwner::None;
+    dlg.session = 0;
+    dlg.box     = GuiRect{0, 0, 0, 0};
+    dlg.field   = GuiRect{0, 0, 0, 0};
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -4757,26 +4758,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         return;
     }
 
-    // THE FACE STATE'S OTHER TWO RESET EDGES, both of which keep a dialog
-    // STANDING and so never reach the arm above (the whole rule is at
-    // AppState::modal_dialog_focus):
-    //   A CHANGE OF OWNER — prompt over editor, editor after prompt. The
-    //   indices name buttons of a surface that is gone, and an armed or
-    //   focused index carried across would be aimed at whatever now sits at
-    //   that slot.
-    //   A PROMPT'S FIRST PAINT — `painted` is false at PromptState::present,
-    //   the one raise route, so this catches a prompt REPLACING a prompt (the
-    //   save-failed rung), which the owner test cannot see.
-    // Read before the branches below write either bit.
+    // THE FACE STATE'S OTHER RESET EDGE, which keeps a dialog STANDING and so
+    // never reaches the arm above (the whole rule is at
+    // AppState::modal_dialog_focus): A CHANGE OF SESSION. The indices name
+    // buttons of a surface that is gone, and an armed or focused index carried
+    // across would be aimed at whatever now sits at that slot. ONE test covers
+    // every such edge because one raise takes one id: prompt over editor,
+    // editor after prompt, a prompt REPLACING a prompt at the save-failed rung
+    // (which no owner test can see), and EDITOR AFTER EDITOR — a close and an
+    // open inside one dispatch batch, the round-15 finding, which is why this
+    // reads the session rather than the owner as it did until 2026-08-14.
+    // Read before the branches below write anything.
     // THE RESET IS ALSO THE PROMPT'S FOCUS ASSIGNMENT (2026-08-13): a prompt is
     // raised with PASSIVE focus on its last button, so the frame that resets is
     // the frame that assigns. The assignment itself waits until the buttons
     // exist, a few dozen lines down — this only remembers that this frame owes
     // it.
-    const bool face_state_reset =
-        prev_owner != (prompt_up ? AppState::ModalDialogOwner::Prompt
-                                 : AppState::ModalDialogOwner::Editor) ||
-        (prompt_up && !app.prompt.painted);
+    const uint64_t live_session = app.modal_dialog_live_session();
+    const bool face_state_reset = prev_session != live_session;
     if (face_state_reset) {
         reset_modal_dialog_face_state(app);
     }
@@ -5300,8 +5299,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     // THE MODAL'S SURFACE IS THE LANE — border-top included, because that is
     // the rectangle the modal owns and the rectangle its damage must erase.
-    dlg.box   = lane;
-    dlg.valid = true;
+    // THE SESSION IS STAMPED HERE, one write for both branches at the moment
+    // the geometry becomes readable: it is the id of the surface these rects
+    // belong to, and every input site that reads them compares it against the
+    // live one (modal_dialog_stash_current, input_pointer.cpp).
+    dlg.box     = lane;
+    dlg.session = live_session;
+    dlg.valid   = true;
     cairo_restore(cr);
 }
 

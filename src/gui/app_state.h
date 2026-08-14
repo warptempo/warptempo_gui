@@ -2001,6 +2001,14 @@ enum class DialogTrigger {
 struct PromptState {
     bool                     active = false;
     bool                     painted = false;   // see the block above
+    // THIS QUESTION'S SESSION ID, from the one modal session counter
+    // (text_editor::next_session_id — homed there because four of the five
+    // modal surfaces are editors; the whole contract is at its declaration).
+    // A prompt REPLACING a prompt is a new raise and takes a new id, so the
+    // stash comparison alone tells a stale publication from a live one and
+    // needs no term about `painted` (which answers a different question: has
+    // the user SEEN this surface).
+    uint64_t                 session = 0;
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
     std::vector<std::string> response_labels;   // plain words, e.g. "Save"
@@ -2021,6 +2029,7 @@ struct PromptState {
                  DialogTrigger trig) {
         active          = true;
         painted         = false;
+        session         = text_editor::next_session_id();
         text            = std::move(t);
         response_keys   = std::move(keys);
         response_labels = std::move(labels);
@@ -2821,23 +2830,48 @@ struct AppState {
     // payloads. Hit geometry stays the PAINTED stash (the displayed basis:
     // screen and hit agree always, the marker stems' delay-and-sync model of
     // 2026-07-24, whose recorded cold-start no-hit price is exactly the shape
-    // the painted gate takes at PromptState), and `owner` is that model's
-    // RE-VALIDATE-AT-DISPATCH half: the painter tags the stash with the
-    // surface it drew, and each press claim refuses a tag that disagrees with
-    // the surface currently owning input. THERE IS NO INPUT LAG IN THIS,
-    // because nothing defers — the mismatch span is one dispatch batch,
-    // reachable only by a queued burst, which is exactly what must be refused.
+    // the painted gate takes at PromptState), and the identity pair below —
+    // `owner` and `session` — is that model's RE-VALIDATE-AT-DISPATCH half:
+    // the painter stamps the stash with WHOSE geometry it is, and every site
+    // that acts on it refuses a stash that does not name the surface currently
+    // owning input. THERE IS NO INPUT LAG IN THIS, because nothing defers —
+    // the mismatch span is one dispatch batch, reachable only by a queued
+    // burst, which is exactly what must be refused.
     //
-    // THE PAINTER IS `owner`'S ONE WRITER (Prompt on the prompt branch, Editor
-    // on the editor branch, None in the no-dialog reset arm beside the rest of
-    // the stash), and its READERS are the two press claims in on_button_press
-    // (input_pointer.cpp): the prompt response claim requires Prompt, the
-    // editor OK/Cancel claim requires Editor, each refusing a disagreeing tag
-    // as a consumed no-op — which is what closes the stale-PROMPT-rect press
-    // that could cancel a just-opened editor. THE FIELD CLAIM NEEDS NO TAG
+    // THE PAINTER IS THE ONE WRITER of both identity fields (`owner` Prompt on
+    // the prompt branch, Editor on the editor branch, None in the no-dialog
+    // reset arm beside the rest of the stash; `session` the id of whichever
+    // surface it drew), and THE COMPARISON HAS ONE OWNER —
+    // GuiInputHandler::modal_dialog_stash_current, read by the two press
+    // claims, by the focus ring's route, and by the shared act
+    // (dispatch_modal_dialog_button), each refusing a stash that does not name
+    // the surface owning input as a consumed no-op. THE FIELD CLAIM NEEDS NO
     // TERM and deliberately has none: a prompt publishes a zero field and
     // leaves DialogEditorText.valid false, so the claim's own two tests
-    // already answer it.
+    // already answer the cross-class case — and the one case they do not, a
+    // stale EDITOR field rect in the batch before the editor that replaced it
+    // paints, DECIDES NOTHING: it places a caret in the live buffer, one
+    // visible byte position out at worst, with no act behind it. The identity
+    // gate is for the claims that ACT.
+    //
+    // THE TAG IS THE CLASS AND THE SESSION IS THE IDENTITY (the session joined
+    // 2026-08-14, closing the round-15 finding that the tag alone cannot tell
+    // one EDITOR session from the next). What is and is not reachable, stated
+    // exactly: TWO DIALOG EDITORS ARE NEVER LIVE TOGETHER — every opener
+    // refuses while another editor owns the keyboard — but a CLOSE AND AN OPEN
+    // FIT IN ONE DISPATCH BATCH (Esc closes the commit-title editor, `'` opens
+    // the load editor, no paint in between), and across that edge every face
+    // index, both arms and the whole published geometry still carried an
+    // `Editor` tag that matched the NEW session. A held Enter released into
+    // that state dispatched the old editor's OK at an unseen dialog. THE
+    // SESSION ID IS WHAT MAKES THE DIFFERENCE SAFE: one raise, one id, so the
+    // stash a dead session published can never be read as the live one's, and
+    // the painter's face-state reset — keyed on the session now — makes
+    // editor-to-editor a change like any other.
+    // THIS IS NOT THE PER-WINDOW GENERATION MACHINERY the real-window arc was
+    // scrapped for: that was about RECONCILING TWO SURFACES, two toplevels
+    // whose geometry could disagree for a whole frame. This is one integer in
+    // one stash on one surface, compared where the stash is already read.
     enum class ModalDialogOwner { None, Prompt, Editor };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
@@ -2848,11 +2882,46 @@ struct AppState {
     struct ModalDialogGeometry {
         bool                           valid = false;
         ModalDialogOwner               owner = ModalDialogOwner::None;
+        // The drawn surface's session id, 0 when nothing is published.
+        uint64_t                       session = 0;
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
         std::vector<ModalDialogButton> buttons;
     };
     ModalDialogGeometry modal_dialog;
+
+    // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
+    // THE AUTHORITATIVE MEMBERSHIP of the four DIALOG-HOSTED editors (the
+    // settings editor, the load editor, the commit-title editor and the bpm
+    // bracket editor; the top-strip flag editor in its FlagPayload kind is
+    // deliberately not one of them). The predicate
+    // GuiInputHandler::modal_dialog_editor_active is this id being non-zero,
+    // and ITS declaration is the authoritative statement of what that
+    // predicate is FOR and who calls it; this is where the four are NAMED, so
+    // the set cannot drift between the two. At most one can be active at a
+    // time (every opener refuses while another owns the keyboard), so the
+    // order below is free.
+    uint64_t dialog_editor_session() const {
+        if (text_editor::is_active(settings_editor))
+            return settings_editor.session;
+        if (text_editor::is_active(load_editor))
+            return load_editor.session;
+        if (text_editor::is_active(commit_title_editor))
+            return commit_title_editor.session;
+        if (text_editor::is_active(top_flag_editor) &&
+            top_flag_editor.kind == text_editor::Kind::BpmBracket)
+            return top_flag_editor.session;
+        return 0;
+    }
+    // THE SESSION THAT OWNS INPUT RIGHT NOW, 0 when no modal stands. The
+    // prompt outranks every editor, which is the painter's own precedence (a
+    // WM close can raise the unsaved-work prompt over a standing editor), so
+    // this and paint_modal_dialog cannot disagree about whose geometry the
+    // stash holds.
+    uint64_t modal_dialog_live_session() const {
+        return prompt.active ? prompt.session : dialog_editor_session();
+    }
+
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
     // pointer-derived face state in the roster's own model (the hover walk
     // writes it, the painter reads it, a change damages the box). Cleared by
@@ -2962,15 +3031,24 @@ struct AppState {
     // meaning "go back" and never "complete".
     //
     // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
-    // stash when no dialog stands, on any change of the stash's OWNER, and on
-    // a prompt's FIRST PAINT — which rides PromptState::painted, false at the
-    // one raise route, so a prompt replacing a prompt (the save-failed rung)
-    // cannot inherit the previous question's focus either. Editor-to-editor is
-    // unreachable (every opener refuses while another editor owns the
-    // keyboard), so those three cover every edge. THE PROMPT'S RAISE FOCUS IS
-    // ASSIGNED ON THAT SAME RESET, in the painter's prompt branch once the
-    // buttons exist: reset then assign, one edge, so there is no frame in
-    // which a standing prompt has no focus.
+    // stash when no dialog stands, and ON ANY CHANGE OF THE STASH'S SESSION —
+    // ONE test since 2026-08-14, covering every edge the three tests before it
+    // named separately (prompt over editor, editor after prompt, a prompt
+    // REPLACING a prompt at the save-failed rung) plus the one they missed,
+    // EDITOR AFTER EDITOR: two dialog editors are never live together, but a
+    // close and an open fit in one dispatch batch, and an owner tag cannot see
+    // that (the full statement is at ModalDialogOwner). THE PROMPT'S RAISE
+    // FOCUS IS ASSIGNED ON THAT SAME RESET, in the painter's prompt branch
+    // once the buttons exist: reset then assign, one edge, so there is no
+    // frame in which a standing prompt has no focus.
+    //
+    // AND THE INDEX IS ONLY MEANINGFUL WHILE THE STASH IS CURRENT, because it
+    // names a slot in the painter's published button list. Between a raise and
+    // its first paint it names the PREVIOUS surface's buttons, which is one
+    // dispatch batch wide and reachable by a queued burst — so the keyboard
+    // reads it through modal_dialog_focus_live (input_handler.h), never raw.
+    // The raw field is the PAINTER'S and the TICK'S to read: the painter has
+    // just reset it, and the blink tick is a frame-cadence cosmetic.
     int modal_dialog_focus = -1;
 
     // THE FOCUS'S STRENGTH (architect 2026-08-13, from kdenlive): PASSIVE
@@ -3011,7 +3089,8 @@ struct AppState {
     // exists: the press paints the button down and dispatches nothing, and the
     // release of THAT SAME KEY runs the act through the one shared dispatch
     // (dispatch_modal_dialog_button, input_pointer.cpp, which re-asks the
-    // painted gate and the owner tag exactly as the pointer's release does).
+    // painted gate and the stash's identity exactly as the pointer's release
+    // does).
     // `modal_dialog_key_pressed_key` is what the release matches on, so
     // releasing the OTHER of the two keys — Enter pressed, Space released —
     // resolves nothing.
@@ -3021,12 +3100,33 @@ struct AppState {
     // (repeat_eligible's own arm), and the press body refuses a delivery
     // carrying GuiInputState::synthesized_repeat outright — so even a repeat
     // armed before the focus moved cannot re-press or re-fire.
+    //
+    // MOVING THE FOCUS CANCELS THE ARM (2026-08-14, closing the round-15
+    // finding that a Tab mid-hold left the arm on the button the user had
+    // visibly left: focus OK, hold Space, Tab onto Cancel, release — and OK
+    // committed). SO WHILE THIS IS >= 0 IT EQUALS modal_dialog_focus, an
+    // invariant every reader may lean on: the pressed face and the focus ring
+    // can never point at different buttons, and the release cannot commit a
+    // button that is no longer focused. Its three cancel sites are the three
+    // routes that move the focus at all — the ring's walk, the pointer FEINT's
+    // passive assignment, and the editor act's return of the focus to the
+    // field — each calling the one owner, clear_modal_dialog_key_press.
+    // IT IS THE POINTER ARM'S RULE IN THE KEYBOARD'S OWN TERMS rather than a
+    // copy of it, and the difference is the two inputs' own: the pointer can
+    // paint a HELD-AWAY face and slide back onto the button, so its arm
+    // survives the whole hold and the release away simply commits nothing (the
+    // FEINT, at modal_dialog_pressed); the keyboard has nowhere to be but on
+    // the focused button and cannot re-press a key that is already down, so
+    // leaving cancels outright. Same verdict on both surfaces — nothing
+    // commits a button the user has left — reached by each input's own shape.
+    //
     // Its edges: the ring's press arms write it; on_key_release reads and
-    // clears it; the painter drops it with the rest of the face state on every
-    // edge that changes the dialog; and the platform's keyboard-intent
-    // cancellation (keyboard leave, keyboard-capability loss, a Super-swallowed
-    // press) drops it too, because the release it is waiting for will never be
-    // delivered. Every write damages the box.
+    // clears it; the three focus moves above cancel it; the painter drops it
+    // with the rest of the face state on every edge that changes the dialog;
+    // and the platform's keyboard-intent cancellation (keyboard leave,
+    // keyboard-capability loss, a Super-swallowed press) drops it too, because
+    // the release it is waiting for will never be delivered. Every write
+    // damages the box.
     int    modal_dialog_key_pressed     = -1;
     GuiKey modal_dialog_key_pressed_key = 0;
 
