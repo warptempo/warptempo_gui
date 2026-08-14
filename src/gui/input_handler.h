@@ -1319,14 +1319,17 @@ struct GuiInputHandler {
     // and at GuiPlatform::notional_pointer_x_.
     double nav_notional_col() const;
 
-    // THE ZOOM STEM'S SURFACE X — the anchor's live column in the waveform's
-    // bounds, mapped through the painter's own column->x math. ONE OWNER for
-    // the zoom body's per-event restore stamp and the ctrl-up handover that
-    // gives the pointer's notional position that same column, so the column
-    // the cursor is sent to cannot drift from the one the stem was stamped at
-    // (the full contract, and why this reads the LIVE viewport where the
-    // painter reads the displayed basis, are at the definition).
-    double nav_stem_surface_x() const;
+    // THE ZOOM STEM'S COLUMN X — the anchor's live column in the waveform's
+    // bounds, as that column's ORIGIN in surface coordinates and NOT a pixel
+    // centre. ONE OWNER for the zoom body's per-event restore stamp and the
+    // ctrl-up handover that gives the pointer's notional position that same
+    // column, so the column the cursor is sent to cannot drift from the one
+    // the stem was stamped at. What is shared is the COLUMN; the PIXEL
+    // CONVENTION is each consumer's own (the restore adds the +0.5 a cursor
+    // wants, the handover takes the bare coordinate a pointer position wants)
+    // — that split, and why this reads the LIVE viewport where the painter
+    // reads the displayed basis, are at the definition.
+    double nav_stem_column_x() const;
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded

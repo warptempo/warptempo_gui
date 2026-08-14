@@ -1582,14 +1582,19 @@ double GuiInputHandler::nav_notional_col() const {
         wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
-// THE ZOOM STEM'S SURFACE X — one owner, two callers: the zoom body's
-// per-event restore stamp and the ctrl-up handover that hands this same column
-// to the pointer's notional position (sync_nav_drag_mode). THAT THEY SHARE ONE
-// EXPRESSION IS THE POINT: the column the cursor is SENT to cannot drift from
-// the column the stem was STAMPED at, so the two release orders — button first
-// with ctrl still held (the override answers) and ctrl first then the button
-// (the notional position answers) — land on the same pixel by construction
-// rather than by two rules kept in step.
+// THE ZOOM STEM'S COLUMN X — its column's ORIGIN in surface coordinates, not
+// a pixel centre, and the name says so because that distinction is the whole
+// reason this owner is shaped the way it is. One owner, two callers: the zoom
+// body's per-event restore stamp and the ctrl-up handover that hands this same
+// column to the pointer's notional position (sync_nav_drag_mode).
+// WHAT IS SHARED IS THE COLUMN, because that is the quantity that must never
+// diverge — one derivation, so the stem and the cursor cannot name different
+// columns. That is the sent-vs-stamped risk this owner exists to close, and it
+// is a WHOLE-COLUMN risk (a second derivation could read a stale viewport, or
+// the anchor before its edge rebind), never a sub-pixel one.
+// WHAT IS NOT SHARED IS THE PIXEL CONVENTION. A cursor position wants the
+// CENTRE of a pixel; a pointer position wants the coordinate. Each consumer
+// adds what it needs, at its own site.
 // RECOMPUTING FROM THE ANCHOR AFTER AN APPLY REPRODUCES THE COLUMN THAT APPLY
 // PIVOTED AT, INCLUDING A REBOUND ONE: the edge trick writes
 // anchor_sample = vp + clamped_col·spp, so this derivation inverts it exactly
@@ -1599,9 +1604,12 @@ double GuiInputHandler::nav_notional_col() const {
 // displayed_column_at on the PLATE basis. That is the standing displayed-basis
 // rule and NOT a divergence to fix: painted pixels ride the displayed basis,
 // hit and restore geometry ride the live one.
-// The column->x math is render_strip_anchor_stem's own (area.x + col + 0.5),
-// clamped in the waveform's bounds through the one clamp body above.
-double GuiInputHandler::nav_stem_surface_x() const {
+// The column->x math is render_strip_anchor_stem's own origin term
+// (area.x + col), clamped in the waveform's bounds through the one clamp body
+// above; that painter adds its own +0.5 to centre a 1px cairo stroke in the
+// pixel, which is the same convention split stated once more at a third
+// consumer.
+double GuiInputHandler::nav_stem_column_x() const {
     const GuiRect wf_area = waveform_area(app);
     const double  spp     = current_samples_per_pixel(app, audio);
     const double  col =
@@ -1609,7 +1617,7 @@ double GuiInputHandler::nav_stem_surface_x() const {
                      static_cast<double>(app.viewport_start_sample)) / spp
                   : 0.0;
     return static_cast<double>(wf_area.x) +
-           clamp_col_into_waveform(wf_area, col) + 0.5;
+           clamp_col_into_waveform(wf_area, col);
 }
 
 // THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
@@ -1659,17 +1667,13 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // Ordering against the freeze release at this body's tail does not
         // matter, and is stated rather than relied on silently: this write is
         // not gated by the freeze (only the relative stream's accumulation is).
-        // ACCEPTED, HALF A PIXEL PER TOGGLE: what is handed over is the stem's
-        // painted column CENTRE (+0.5), which the next ctrl-down then reads
-        // back as the pivot's column — so ctrl tapped repeatedly inside ONE
-        // capture with the hand still walks the notional x right by 0.5 px a
-        // cycle. Below the freeze's own one-frame grain, bounded by the
-        // capture (the release write-back and the next absolute motion both
-        // restate the position), and the alternative — a second expression
-        // without the centre term — would reintroduce exactly the drift
-        // between the sent column and the stamped one this shares an owner to
-        // prevent.
-        set_strip_capture_notional_x(nav_stem_surface_x());
+        // WHAT IS HANDED OVER IS THE COLUMN'S OWN COORDINATE, not the pixel
+        // centre: a pointer position is not a pixel. So the value written back
+        // here is exactly the value the next ctrl-down seat reads back through
+        // nav_notional_col(), and the handover is idempotent under repeated
+        // ctrl cycles inside one capture — that is why no ratchet exists,
+        // rather than why one is tolerated.
+        set_strip_capture_notional_x(nav_stem_column_x());
         clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);
     }
@@ -1765,11 +1769,14 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     // Drive the capture's release-restore x to the stem, the strip drag's own
     // rule; a later pan phase clears it back to the notional x at its switch —
     // having first HANDED that switch this same column, through the one owner
-    // both sites read (nav_stem_surface_x, above). Recomputing there rather
+    // both sites read (nav_stem_column_x, above). Recomputing there rather
     // than passing anchor_col along is what keeps the ctrl-up handover and this
     // stamp from drifting apart.
+    // THE +0.5 IS ADDED HERE AND NOT IN THE OWNER: the cursor is sent to the
+    // CENTRE of the stem's pixel, which is a convention belonging to the
+    // cursor and not to the column.
     if (set_strip_capture_restore_x)
-        set_strip_capture_restore_x(nav_stem_surface_x());
+        set_strip_capture_restore_x(nav_stem_column_x() + 0.5);
 
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
