@@ -617,44 +617,72 @@ struct GuiInputHandler {
     // one body: the two-finger gesture, and the phone model's SINGLE-FINGER
     // PAN — a one-finger drag whose down point lay on the waveform
     // (touch_point_in_pan_zone below), whose frames carry the finger as the
-    // centroid and dist_ratio pinned at 1.0, so the zoom term is inert by
-    // construction and the single-finger frames bypass the segment lock
-    // below (one finger has nothing to classify). The payload is a
+    // centroid and dist_ratio pinned at 1.0. The payload is a
     // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
     // horizontal delta and the finger-distance ratio against the previous
-    // delivered frame, the finger count, and the per-finger cumulative
-    // travel vectors the classification reads. The application semantics are
-    // the strip drag's own dual axes, PER-FRAME ANCHORED: the
-    // content under the PREVIOUS centroid column is placed at the CURRENT
-    // centroid column under the new level, so the centroid delta pans and the
-    // distance ratio zooms about the centroid in one placement. The level maps
-    // a distance ratio LOGARITHMICALLY (new_level = level - log2(ratio)) — no
-    // feel constant: doubling the finger gap is exactly one zoom level in, so
-    // the content between the fingers tracks the fingers.
+    // delivered frame, and the finger count.
     //
-    // BUT NEVER BOTH AXES AT ONCE INSIDE A CLASSIFIED SEGMENT (architect
-    // 2026-08-14, THE FINGER-AGREEMENT SEGMENT LOCK — the model, the
-    // classification derivation and the accordion field report it answers
-    // are at TouchNavSegState, app_state.h): each two-finger motion segment
-    // classifies ONCE as PAN (both fingers travelling the same direction
-    // within kStripSegmentZoomAngleDeg of horizontal) or ZOOM (anything
-    // else), the off mode's term is a literal zero for the segment's life,
-    // and a kStripSegmentPauseMs rest re-aims it — the mouse lock's own
-    // shape, sharing all three of its retunables. This SUPERSEDES the
-    // 2026-08-12 ruling that the pinch needed no lock ("the content tracks
-    // the fingers"): the field report proved the per-frame ratio DOES leak —
-    // two fingers moving together never hold their separation exactly, so
-    // the drift breathed the view in and out — and the binary is the fix,
-    // not damping (the mouse ladder's closed calibration history).
+    // ONE FINGER PANS, TWO FINGERS ZOOM — AND THE TWO-FINGER GESTURE NEVER
+    // PANS (architect 2026-08-14, from the rig: "on the touch panel, two
+    // fingers is zoom, one finger is pan... the two-finger gesture will never
+    // scroll on the touch panel"). The body's whole model is that one fork:
+    // a two-finger frame's centroid delta is discarded and its distance ratio
+    // applies, a single-finger frame's delta pans and its ratio is 1.0 by
+    // construction. There is nothing to classify — a pinch is the only thing
+    // two fingers can mean — so the gesture carries NO segment state, no
+    // verdict and no pause reset, and a same-direction two-finger slide
+    // barely changes the finger gap and therefore does approximately nothing,
+    // which is the intended answer rather than a classified outcome.
+    //
+    // THE APPLICATION IS PER-FRAME ANCHORED, the strip drag's own: the
+    // content under the PREVIOUS centroid column is placed at the CURRENT
+    // centroid column under the new level — so a one-finger frame's centroid
+    // delta pans, and a two-finger frame (delta discarded, previous column =
+    // current column) zooms about the centroid, in one placement either way.
+    // The level maps a distance ratio LOGARITHMICALLY (new_level = level -
+    // log2(ratio)) — no feel constant: doubling the finger gap is exactly one
+    // zoom level in, so the content between the fingers tracks the fingers.
+    //
+    // THE SUCCESSION, kept so the middle rung can be revived if the feel ever
+    // wants it: (1) THE ACCORDION — pan and zoom applied simultaneously and
+    // continuously every frame, and since two fingers moving together never
+    // hold their separation exactly, the drift fed the zoom term and the view
+    // breathed in and out during a drag ("if I move two fingers in the same
+    // direction I get the old unrestricted zoom motion... during the drag it
+    // squeezes in and out"); (2) THE FINGER-AGREEMENT SEGMENT LOCK
+    // (2026-08-14, SUPERSEDED the same day) — the mouse lock's model brought
+    // to glass: each motion segment classified ONCE on the two fingers'
+    // cumulative travel vectors, PAN iff their horizontal components agreed
+    // in sign, each vector lay within kStripSegmentZoomAngleDeg of flat, and
+    // the LESSER finger had travelled at least half kStripSegmentClassifyPx
+    // (the anchored-finger floor — a planted thumb's jitter could otherwise
+    // pass the first two tests, while a panning hand moves as one rigid
+    // unit), else ZOOM, with the off mode a literal zero, a
+    // kStripSegmentPauseMs rest re-aiming it, and the pre-classification
+    // window HOLDING AND FOLDING rather than running both axes plain
+    // (both-plain being the accordion in miniature); it worked, and it was
+    // dropped because zoom-only makes it unnecessary, not because it failed;
+    // (3) ZOOM ONLY, this shape. Damping was tried and rejected on the mouse
+    // surface before either of them (the closed calibration ladder at
+    // kStripSegmentClassifyPx, app_state.h) and is not re-proposed here.
+    //
+    // THE MOUSE KEEPS ITS PAN AXIS, AND THE ASYMMETRY IS A FRICTION
+    // ARGUMENT: the ctrl drag still classifies between pan and zoom per
+    // segment (the hard axis lock at kStripSegmentClassifyPx, app_state.h).
+    // Glass can afford zoom-only on two fingers BECAUSE one finger already
+    // pans at no cost — a bare finger, no modifier, no click — while the
+    // laptop's pan lives inside the ctrl drag, so dropping its pan axis would
+    // cost a modifier release and a re-press mid-gesture, and "clicks are
+    // naturally more frictional than touching the screen". That is why the
+    // two surfaces are allowed to differ; it is not a symmetry argument and
+    // must not be re-argued as one.
     //
     // IT DRIVES THE STRIP-DRAG FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
     // synchronous per-frame rebuild, and the either-axis follow suppression
-    // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
-    // The lock is applied HERE rather than in apply_strip_drag_at because
-    // the two surfaces classify DIFFERENT questions — the mouse a single
-    // pointer's stroke direction between two axes, the touch the agreement
-    // between two fingers' vectors — over the same shared knobs.
+    // all come from it), and DELIBERATELY NOT the family's pointer-press arm —
+    // so the gesture enters BELOW apply_strip_drag_at and takes none of the
+    // mouse's segment machinery, which it has no use for.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture
@@ -692,8 +720,8 @@ struct GuiInputHandler {
     // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
     // or touch-capability loss; the platform fires this only if an update was
     // delivered): one predictor resync, the grab-pan release's own tail — each
-    // applied frame already rebuilt synchronously — plus the segment
-    // record's reset (app.touch_nav_seg dies with its gesture).
+    // applied frame already rebuilt synchronously, and the gesture keeps no
+    // GUI-side record to clear.
     void end_touch_nav();
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the

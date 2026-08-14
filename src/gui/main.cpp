@@ -1212,8 +1212,8 @@ int main(int argc, char** argv) {
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
     // platform's nav frames —
-    // two-finger centroid-pan + pinch-zoom (one mode per segment since
-    // 2026-08-14, the finger-agreement lock the nav body applies), and the
+    // the two-finger PINCH ZOOM (zoom only since 2026-08-14: two fingers
+    // never pan, the nav body discarding their centroid delta), and the
     // phone model's
     // single-finger pan frames born of a drag starting on the pan surface —
     // drive the input handler's ONE touch-nav body, which runs the

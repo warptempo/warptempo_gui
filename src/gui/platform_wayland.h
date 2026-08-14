@@ -327,19 +327,18 @@ public:
     // SINGLE-FINGER NAVIGATION — the finger drags the pan, the phone model —
     // delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
-    // pinned at 1.0 (one finger has no distance, so no zoom; the GUI body's
-    // one fork on the finger count is the segment lock's bypass — a single
-    // finger has nothing to classify), and a HOLD past the zone's stretched
+    // pinned at 1.0 (one finger has no distance, so no zoom), and a HOLD
+    // past the zone's stretched
     // window (kTouchRegionHoldMs) is THE REGION HOLD — the expiry drives the
     // GUI's region former through the region trio, so hold-then-drag sweeps
     // a region on glass (the eighth ruling: pan is the common act and takes
     // the primary drag, the region is the deliberate act and takes the
-    // hold). TWO fingers are the dual-axis gesture:
-    // per-frame centroid pan plus distance-ratio zoom about the centroid, the
-    // strip drag's own semantics — one mode at a time per segment since
-    // 2026-08-14, but that lock is the GUI's (TouchNavSegState, app_state.h);
-    // this layer only measures and delivers. None of the three delivers
-    // pointer events.
+    // hold). TWO fingers are the ZOOM gesture: this layer measures both the
+    // centroid delta and the distance ratio and delivers both, and the GUI
+    // discards the centroid delta on a two-finger frame — two fingers zoom
+    // and never pan since 2026-08-14 (touch.md's two-finger section), which
+    // is a GESTURE POLICY and therefore the GUI's, not this layer's. None of
+    // the three delivers pointer events.
     // All are handed to the GUI through these hooks (the
     // set_keyboard_intent_cancel_hook wiring precedent — main.cpp wires them
     // to the input handler's touch-nav body, which drives the strip-drag
@@ -349,17 +348,9 @@ public:
     //     navigation gesture is live and past its latch. The payload is a
     //     GuiTouchNavFrame (gui_input.h, the field contracts there): the
     //     CURRENT centroid, the centroid's horizontal delta and the
-    //     finger-distance ratio against the previous DELIVERED frame, the
-    //     finger count, and — for two-finger frames — each finger's
-    //     CUMULATIVE travel vector from the pair's formation (or an
-    //     upgrade's join), measured against the per-finger start positions
-    //     this class keeps beside the centroid/distance starts. The vectors
-    //     exist for the GUI's finger-agreement segment lock (2026-08-14):
-    //     the classification is between the fingers' own motion vectors,
-    //     which only this layer can measure, while the model and its
-    //     retunables are the GUI's (app_state.h) — so the platform hands
-    //     raw geometry across and applies no gesture policy of its own.
-    //     The latch is the platform's: nothing is
+    //     finger-distance ratio against the previous DELIVERED frame, and the
+    //     finger count — four measurements and the count the GUI forks on,
+    //     every field read. The latch is the platform's: nothing is
     //     delivered until the centroid has travelled kTouchSlopPx (Chebyshev)
     //     from the gesture's start OR the finger distance has changed by that
     //     same slop, and the crossing update folds the whole accumulated
@@ -1235,17 +1226,6 @@ private:
     double     touch_nav_start_cx_   = 0.0;
     double     touch_nav_start_cy_   = 0.0;
     double     touch_nav_start_dist_ = 0.0;
-    // Nav: each finger's position at the PAIR'S formation (the two-finger
-    // seed or an upgrade's join — rebased with the centroid/distance starts
-    // at every seed site), the reference the delivered per-finger travel
-    // vectors are measured against (GuiTouchNavFrame's v fields — the GUI's
-    // finger-agreement segment lock classifies on them, 2026-08-14).
-    // Meaningful only while !touch_nav_single_, like the second finger's
-    // positions above.
-    double     touch_nav_start_x1_   = 0.0;
-    double     touch_nav_start_y1_   = 0.0;
-    double     touch_nav_start_x2_   = 0.0;
-    double     touch_nav_start_y2_   = 0.0;
     double     touch_nav_last_cx_    = 0.0;
     double     touch_nav_last_dist_  = 0.0;
     bool       touch_nav_latched_    = false;

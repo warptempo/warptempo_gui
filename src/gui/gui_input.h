@@ -136,38 +136,25 @@ enum class GuiMouseButton {
 // platform's deliver_touch_nav_frame builds it, the GUI's
 // apply_touch_nav_update consumes it). The platform owns the per-frame delta
 // bookkeeping (dx / dist_ratio against the previous DELIVERED frame, the
-// latch, the frame coalescing); the GUI owns the gesture model on top —
-// since 2026-08-14 that includes the two-finger FINGER-AGREEMENT SEGMENT
-// LOCK, which is why the per-finger travel vectors ride along: the
-// classification is between the two fingers' own motion vectors, which only
-// the platform can measure, while the retunables it classifies against live
-// in the GUI model (app_state.h's segment-lock block), so the platform hands
-// the raw vectors across and the GUI applies the model.
+// latch, the frame coalescing) and applies NO gesture policy of its own; the
+// GUI owns the model on top, which since 2026-08-14 is ONE FINGER PANS, TWO
+// FINGERS ZOOM (touch.md's two-finger section) — hence the finger count
+// below, the one field the GUI forks on. Every field here is read.
 struct GuiTouchNavFrame {
-    // Current centroid, window px (single-finger: the finger itself).
+    // Current centroid, window px (single-finger: the finger itself). Also
+    // the two-finger gesture's zoom pivot.
     int    x = 0;
     int    y = 0;
     // Centroid horizontal delta since the previous delivered frame
     // (fractional — sub-pixel centroid motion accumulates rather than
-    // truncating away).
+    // truncating away). Read on SINGLE-finger frames only: two fingers never
+    // pan, so the centroid's travel is discarded there.
     double dx = 0.0;
     // Finger-distance ratio current/previous, > 0 always (a degenerate
     // distance under 1 px on either side delivers 1.0; single-finger frames
     // are degenerate by construction, so they always carry 1.0).
     double dist_ratio = 1.0;
-    // TWO fingers vs the phone model's one. The vectors below are meaningful
-    // only while true (single-finger frames carry them at 0.0, the dormant
-    // second-finger fields' own convention).
+    // TWO fingers vs the phone model's one — the GUI's fork between the
+    // zoom-only gesture and the pan-only one.
     bool   two_finger = false;
-    // Each finger's CUMULATIVE travel vector (window px, y down) from the
-    // two-finger gesture's start — the pair's formation, or an upgrade's
-    // join, whichever seeded the pair. Absolute-from-start rather than
-    // per-frame so the GUI's segment classification reads accumulated travel
-    // (a slow pinch's per-frame deltas are tiny; its vectors are not) and so
-    // the first delivered frame — which folds the whole latch crossing — can
-    // classify in the same breath it arrives.
-    double v1x = 0.0;
-    double v1y = 0.0;
-    double v2x = 0.0;
-    double v2y = 0.0;
 };

@@ -85,14 +85,19 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // movement, keep the [pause] refresh and 8px min drag"; the per-event model
 // lives in apply_strip_drag_at, input_pointer.cpp).
 //
-// THE LOCK HAS TWO SURFACES since 2026-08-14: this block describes the MOUSE
-// strip drag's version (a single pointer's stroke classified between the two
-// AXES); the TWO-FINGER TOUCH gesture runs its own version of the same model
-// — a segment classified ONCE between THE TWO FINGERS' motion vectors, pan
-// or zoom, the off mode a literal zero, the same pause re-aiming it —
-// sharing all three retunables below (the model and its own derivation live
-// at TouchNavSegState further down; the ruling superseded the 2026-08-12
-// "the pinch needs no lock" exclusion after the accordion field report).
+// THE LOCK IS THE MOUSE'S ALONE, AND THE ASYMMETRY IS ON PURPOSE (architect
+// 2026-08-14, from the rig): glass answers the same problem WITHOUT a
+// classifier — one finger pans, two fingers ZOOM ONLY, never panning at all,
+// so there is nothing to classify (touch.md's two-finger section). THE
+// REASON THE TWO SURFACES ARE ALLOWED TO DIFFER IS FRICTION, NOT SYMMETRY:
+// on glass the pan is already free — a bare finger, no modifier, no click —
+// so spending the two-finger gesture entirely on zoom costs the user
+// nothing; on the desk the pan axis lives INSIDE the ctrl drag, and dropping
+// it would make every pan-then-zoom mean releasing ctrl mid-gesture and
+// re-pressing, and "clicks are naturally more frictional than touching the
+// screen". So the mouse keeps BOTH axes behind the lock and glass keeps
+// none. All three retunables below have ONE reader each again — the mouse's
+// apply_strip_drag_at.
 //
 // WHY THE SEGMENTS: a hand pivots at the wrist, so it traces an ARC — his hand
 // "by default just does not sweep in a straight line" — and the first shape, a
@@ -174,23 +179,17 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // NO retunable here rides gui_scale: they model HAND travel, hand rhythm and
 // hand direction on a physical device, like the drag slop constants. All three
 // (the two named in this block's title plus kStripSegmentZoomAngleDeg, which
-// joined 2026-08-14) are ruled retunables, field-tuned on glass and desk —
-// and since 2026-08-14 each has TWO readers, the mouse's apply_strip_drag_at
-// and the touch gesture's finger-agreement lock (apply_touch_nav_update):
-// the architect's "we reuse the pause interval to ensure symmetry" makes the
-// sharing deliberate, so a retune of one surface retunes both.
+// joined 2026-08-14) are ruled retunables, field-tuned on the desk, each with
+// exactly ONE reader (apply_strip_drag_at, input_pointer.cpp). They were
+// briefly shared with a two-finger touch lock on 2026-08-14; that lock is
+// gone (the zoom-only ruling above), so a retune here moves the mouse drag
+// and nothing else.
 
 // Chebyshev travel (window px) from the segment origin at which a segment
 // classifies, once. 8.0 deliberately equals the generic press-becomes-drag
 // gate (kDragMovedThresholdPx), so the capture crossing's folded first event
 // typically classifies in the same breath it arrives. It is the architect's
-// "8px min drag", kept verbatim across the lock ruling. The touch lock reads
-// it PER FINGER (a finger is one contact, the same hand-travel measure this
-// models for the mouse pointer): a two-finger segment classifies when the
-// FARTHER finger's Chebyshev travel from the segment origin reaches it, and
-// the LESSER finger must reach HALF of it for the pair to count as
-// travelling together (the anchored-finger floor — the derivation at
-// TouchNavSegState below).
+// "8px min drag", kept verbatim across the lock ruling.
 constexpr double kStripSegmentClassifyPx = 8.0;
 
 // THE CLASSIFICATION ANGLE — the third retunable, and the one that says which
@@ -216,14 +215,6 @@ constexpr double kStripSegmentClassifyPx = 8.0;
 //
 // Like the other two retunables this rides no scale: it models the direction a
 // HAND opens a stroke in, on a physical device.
-//
-// THE TOUCH LOCK SHARES THIS ANGLE (2026-08-14, the architect naming the
-// same 60 in the two-finger ruling: "within 60 degrees of horizontal flat"):
-// there each FINGER's travel vector must lie within this cone off horizontal
-// for the pair to classify PAN — the same question, "is this stroke a
-// shallow hand sweep or a steep deliberate act", asked of each contact
-// instead of the one pointer, so one knob keeps the two surfaces leaning the
-// same way.
 constexpr double kStripSegmentZoomAngleDeg = 60.0;
 
 // tan(kStripSegmentZoomAngleDeg): the |Δy| : |Δx| ratio a segment must EXCEED
@@ -254,12 +245,6 @@ inline double strip_segment_zoom_slope() {
 // occasional misread, accepted by ruling rather than tuned around. The
 // ladder's remaining rungs above (the vertical-only ctrl drag, the pre-curve
 // plain fallback) are NOT NEEDED and stay recorded as history only.
-//
-// THE TOUCH LOCK SHARES THIS REST (2026-08-14, the architect's own words in
-// the two-finger ruling: "we reuse the pause interval to ensure symmetry"):
-// a motionless beat between delivered two-finger frames ends that segment
-// exactly as it ends a mouse one, observed just as lazily by the next frame,
-// in the same monotonic_ms() delivery-time domain.
 constexpr int64_t kStripSegmentPauseMs = 75;
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
@@ -912,122 +897,6 @@ struct StripDragState {
     // monotonic_ms() at the previous motion event, seeded at the arm — the
     // pause detector's whole state. Lazy by design: the next event observes
     // the gap; no timer ever fires.
-    int64_t last_motion_ms = 0;
-};
-
-// THE TWO-FINGER FINGER-AGREEMENT SEGMENT LOCK (architect 2026-08-14, from
-// the rig, superseding the 2026-08-12 "the pinch needs no lock" exclusion):
-// the two-finger touch gesture applied centroid pan and log2-distance zoom
-// SIMULTANEOUSLY every frame, and two fingers moving together never hold
-// their separation exactly, so the drift fed the zoom term and the view
-// breathed — THE ACCORDION ("if I move two fingers in the same direction on
-// the touchpad, I get the old unrestricted zoom motion... it squeezes in and
-// out"). His fix is the mouse lock's own model brought to glass: "implement
-// a similar binary — if both fingers are moving in the same direction
-// (within 60 degrees of horizontal flat), two fingers pan. We reuse the
-// pause interval to ensure symmetry. If the fingers are moving in different
-// directions, we zoom only."
-//
-// THE MODEL (applied in apply_touch_nav_update, input_pointer.cpp, on the
-// per-finger travel vectors the platform delivers — GuiTouchNavFrame): the
-// gesture is a sequence of MOTION SEGMENTS, each classified ONCE as PAN or
-// ZOOM, the off mode contributing A LITERAL ZERO (a pan segment's
-// dist_ratio is forced to 1.0, a zoom segment's dx to 0.0) for the
-// segment's whole life — the hard lock, not damping (the mouse ladder's
-// recorded succession, curve then flat factor then the lock, is the
-// evidence damping fails; it is not re-proposed here). A pause longer than
-// kStripSegmentPauseMs between delivered frames re-aims it (origin = the
-// previous frame's vectors, the resting point), exactly the mouse's rest.
-//
-// THE CLASSIFICATION IS BETWEEN THE TWO FINGERS, not between two axes.
-// With s1, s2 the fingers' travel vectors since the segment origin
-// (window px, y down), the segment classifies when the FARTHER finger's
-// Chebyshev travel reaches kStripSegmentClassifyPx, and the verdict is PAN
-// iff ALL THREE hold, else ZOOM:
-//   (a) SAME HORIZONTAL DIRECTION: s1x·s2x > 0. A pinch moves the fingers
-//       toward or away from EACH OTHER, so along a roughly-horizontal pinch
-//       axis their x components OPPOSE and (a) fails — a pinch cannot
-//       classify as a pan by this term or the next two.
-//   (b) BOTH WITHIN THE PAN CONE: |s1y| <= |s1x|·slope and likewise for s2,
-//       slope = strip_segment_zoom_slope() — each finger within
-//       kStripSegmentZoomAngleDeg of horizontal, the architect's "within 60
-//       degrees of horizontal flat", ties pan (the mouse's own
-//       ties-horizontal bias). A steep pinch fails here.
-//   (c) THE ANCHORED-FINGER FLOOR: the LESSER finger's Chebyshev travel
-//       >= kStripSegmentClassifyPx / 2. A planted-thumb pinch (one finger
-//       anchored, the other sweeping) has a near-motionless finger whose
-//       few px of jitter could satisfy (a) and (b) by accident; requiring
-//       real travel from both means "the fingers are travelling TOGETHER".
-//       Half the classify distance because a panning hand moves as one
-//       rigid unit — both fingers carry essentially the hand's own travel,
-//       so half tolerates landing and roll asynchrony — while an anchored
-//       finger's jitter stays well under it. Derived, not a fourth knob.
-// Two fingers sliding together shallower than the cone satisfy all three
-// and cannot classify as a zoom; classification is once per segment, so
-// nothing re-derives frame to frame and the verdict CANNOT FLAP, and the
-// vectors are CUMULATIVE from the segment origin, so a slow deliberate
-// pinch classifies exactly like a fast one — per-frame delta size (the
-// panel's cadence) never enters the test.
-//
-// A VERTICAL SAME-DIRECTION two-finger drag is neither a horizontal pan nor
-// a pinch: it fails (b) and classifies ZOOM, under which a rigid vertical
-// slide barely changes the finger gap, so the segment does approximately
-// nothing — the stable answer for a gesture this product has no meaning for
-// (there is no vertical pan), and the mouse lock's own steep-is-zoom side.
-//
-// THE UNCLASSIFIED WINDOW HOLDS AND FOLDS, deliberately unlike the mouse's
-// both-axes-plain opening: until the segment classifies, nothing applies —
-// the frames' dx sum and dist_ratio product accumulate here, and the
-// classifying frame applies the ON mode's accumulator whole (acc_dx for a
-// pan, acc_ratio for a zoom) while the off mode's accumulation is
-// discarded unapplied. "Both plain" is exactly the accordion in miniature,
-// re-opened at every pause reset, so the touch lock cannot take the mouse's
-// answer; the fold keeps the no-dead-travel property another way — the
-// motion arrives whole at classification, one small step later — at the
-// cost of up to the classify distance of latency per segment (the mouse's
-// own capture-crossing fold has the same character). A segment reset while
-// still unclassified discards the accumulators with the origin: sub-classify
-// travel abandoned at a rest is under the classify distance, negligible by
-// construction.
-//
-// THE WALL CONSEQUENCE CARRIES OVER from the mouse lock: a pan segment
-// saturating at a viewport wall keeps its zoom at exactly zero for any
-// length of drag — each frame refreshes the clock, classification is once
-// per segment, so the extra sweep cannot move the level by any amount.
-//
-// The state lives on AppState (app.touch_nav_seg) beside strip_drag, its
-// only writers apply_touch_nav_update and end_touch_nav (input_pointer.cpp);
-// single-finger frames reset it whole, so an upgrade's first two-finger
-// frame seeds a fresh segment at the join.
-enum class TouchNavSegMode { Unclassified, Pan, Zoom };
-
-struct TouchNavSegState {
-    // A two-finger segment stream is live (set by the first two-finger frame,
-    // cleared by the gesture's end and by any single-finger frame).
-    bool active = false;
-    TouchNavSegMode mode = TouchNavSegMode::Unclassified;
-    // The platform's cumulative per-finger vectors as read at the segment's
-    // origin — 0 at the pair's formation (the platform measures from there),
-    // the previous frame's readings after a pause reset. Segment travel is
-    // the delivered vector minus this.
-    double seg_v1x = 0.0;
-    double seg_v1y = 0.0;
-    double seg_v2x = 0.0;
-    double seg_v2y = 0.0;
-    // The previous delivered frame's vectors — the resting point a pause
-    // reset re-origins to (the mouse's "origin = the previous resting
-    // point", in the vector domain).
-    double prev_v1x = 0.0;
-    double prev_v1y = 0.0;
-    double prev_v2x = 0.0;
-    double prev_v2y = 0.0;
-    // The unclassified window's fold accumulators: dx sums, dist_ratio
-    // multiplies (the per-frame ratios telescope, so the product is the
-    // distance ratio across the whole window).
-    double acc_dx    = 0.0;
-    double acc_ratio = 1.0;
-    // monotonic_ms() at the previous delivered two-finger frame — the pause
-    // detector, the mouse record's own lazy shape.
     int64_t last_motion_ms = 0;
 };
 
@@ -2760,12 +2629,6 @@ struct AppState {
     // (the contract and the entries are at StripDragState). Cleared on button
     // release and file load.
     StripDragState strip_drag;
-
-    // The two-finger touch gesture's finger-agreement segment lock (the model
-    // and the classification derivation are at TouchNavSegState). Written
-    // only by apply_touch_nav_update; cleared by end_touch_nav and by any
-    // single-finger nav frame.
-    TouchNavSegState touch_nav_seg;
 
     // Double-click candidate, shared by the trim-bar, flag, empty-lane and
     // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
