@@ -1524,9 +1524,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional column projection
-// and the zoom pivot share (they are the same quantity one step apart), and
-// the same bounds render_strip_anchor_stem draws the stem inside.
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the pivot seat's projection and
+// the zoom pivot share (they are the same quantity one step apart), and the
+// same bounds render_strip_anchor_stem draws the stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
@@ -1535,20 +1535,29 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
-// THE POINTER'S NOTIONAL COLUMN — the zoom pivot's one source, and A PURE
-// PROJECTION of the platform's notional pointer position into the waveform's
-// own bounds. NO STATE, NO ACCUMULATION, NO FORK ON WHETHER A CAPTURE IS LIVE:
-// the platform's position already answers both cases (uncaptured nothing is
-// virtual, so it simply IS the delivered position; captured it is the raw
-// relative stream accumulated and clamped per event), so this only changes
-// space — window x to waveform column — and re-clamps in the bounds THIS layer
-// owns, the platform knowing nothing about the waveform.
+// THE ZOOM PIVOT'S SEAT COLUMN — a PURE PROJECTION of GuiPlatform's
+// notional_home_x(), WHERE THE CURSOR WILL COME BACK, into the waveform's own
+// bounds. NOT "where the pointer is": that was the raw notional position, and
+// the two differ exactly when the travel ran out — a runaway pan pins the
+// pointer at the wall while the release is already going to teleport the
+// cursor home to the capture's start column, so seating on the raw position
+// put the stem somewhere the cursor demonstrably was not going to appear. One
+// expression, shared with the release's own fork, is what makes the stem and
+// the cursor agree by construction (the full record is at the accessor).
+// NO STATE, NO ACCUMULATION, NO FORK ON WHETHER A CAPTURE IS LIVE: the
+// platform's answer already covers both cases (uncaptured nothing is virtual
+// and nothing has clamped, so it simply IS the delivered position; captured it
+// is the raw relative stream accumulated and clamped per event, or the start
+// column once that stream ran out of room), so this only changes space —
+// window x to waveform column — and re-clamps in the bounds THIS layer owns,
+// the platform knowing nothing about the waveform.
 // THAT THERE IS ONLY ONE POSITION IS THE POINT (codex round 17): a clamped
 // column accumulated HERE advanced once per DELIVERED motion, on the net
 // travel of a whole coalesced pointer frame, while the platform's advanced per
 // RAW event — and the two answers differ at a wall (raw +20 then -8 at the
 // right edge), permanently and silently, since interior motion preserves the
-// offset. The full record is at GuiPlatform::notional_pointer_x_.
+// offset. That is why this is a projection read on demand and not a column
+// kept here. The full record is at GuiPlatform::notional_pointer_x_.
 // Read on demand at each seat (the ctrl-armed press and every ctrl-down edge),
 // so it is current by construction: under a capture the raw events of the
 // frame being delivered have already been accumulated, and the settled-state
@@ -1560,10 +1569,10 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // parked out there honestly has no waveform column of its own. The column
 // therefore holds at the last one until the pointer comes back onto the
 // waveform, which is what a projection of a real position means.
-double GuiInputHandler::nav_notional_col() const {
+double GuiInputHandler::nav_pivot_seat_col() const {
     const GuiRect wf_area = waveform_area(app);
     return clamp_col_into_waveform(
-        wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
+        wf_area, gui.notional_home_x() - static_cast<double>(wf_area.x));
 }
 
 // THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
@@ -1575,12 +1584,14 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     if (!sd.active || mods.ctrl == sd.zooming) return;
     sd.zooming = mods.ctrl;
     if (sd.zooming) {
-        // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
-        // persist-across-toggles experiment and its reason are recorded at
-        // ScrollDragState::anchor_col). The notional column IS the pointer's
-        // clamped column, projected from the platform's one notional position
-        // at this instant, so the seat needs nothing kept current for it.
-        sd.anchor_col = nav_notional_col();
+        // THE PIVOT SEATS WHERE THE CURSOR WILL COME BACK, every ctrl-down
+        // (the withdrawn persist-across-toggles experiment and its reason are
+        // recorded at ScrollDragState::anchor_col). That is the pointer's own
+        // clamped column while the hand still has room and the capture's start
+        // column once the travel ran out, projected from the platform's one
+        // answer at this instant, so the seat needs nothing kept current for
+        // it — and the stem lands where the release will put the cursor.
+        sd.anchor_col = nav_pivot_seat_col();
         // The restore X is NOT stamped here: the stem override exists to land
         // the released cursor on a stem the edge-rebind has pinned, and the
         // zoom phase's own applies set it. Until one runs, the notional
@@ -1663,7 +1674,10 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
         static_cast<double>(app.viewport_start_sample) + anchor_col * spp;
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
-    // rule; a later pan phase clears it back to the notional x at its switch.
+    // rule; a later pan phase clears it at its switch, back to the fallback the
+    // pivot seat itself was projected from (GuiPlatform::notional_home_x) —
+    // which is why dropping the override cannot move the cursor off the stem
+    // unless the hand pans afterwards.
     if (set_strip_capture_restore_x)
         set_strip_capture_restore_x(
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
@@ -3898,10 +3912,12 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
                   /*scrub_release=*/false);
     app.scroll_drag.ctrl_entry = true;
     app.scroll_drag.zooming    = true;
-    // The seat is the pointer's notional column — the same projection every
-    // later ctrl-down edge makes, so the press is not a second recipe. No
-    // capture is live at a press, so that position is the press point.
-    app.scroll_drag.anchor_col = nav_notional_col();
+    // The seat is the same projection every later ctrl-down edge makes, so the
+    // press is not a second recipe. No capture is live at a press, so that
+    // position is the press point — and it still is under the restore-position
+    // reading: uncaptured nothing has clamped, so the accessor degrades to the
+    // pointer's own position and the press seats exactly where it always did.
+    app.scroll_drag.anchor_col = nav_pivot_seat_col();
     viewport.invalidate_waveform_area();
 }
 

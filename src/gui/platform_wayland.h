@@ -480,8 +480,9 @@ public:
     // the grab-pan. On release the restore x
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
-    // below), the grab-pan at the pointer's notional position
-    // (notional_pointer_x_); y is frozen at the press row for both. Both
+    // below), the grab-pan at notional_home_x() — the pointer's notional
+    // position, or the capture's start column once the travel ran out; y is
+    // frozen at the press row for both. Both
     // degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
@@ -607,15 +608,47 @@ public:
     // single frame's hand movement rather than by the whole phase's.
     void set_notional_x_frozen(bool frozen);
 
-    // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
-    // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
-    // just under a capture. The full contract, and why there is exactly one of
-    // these, are at notional_pointer_x_ below. The GUI reads it to place the
-    // nav drag's zoom pivot, PROJECTING it into waveform columns in the bounds
-    // it owns (nav_notional_col, input_pointer.cpp) — the projection is the
-    // GUI's because the platform knows nothing about the waveform; the
-    // POSITION is the platform's because that is where the raw events are.
-    double notional_pointer_x() const { return notional_pointer_x_; }
+    // WHERE THE CURSOR WILL COME BACK (surface x, px) — the release's own
+    // restore-x expression, hoisted out of the release so the GUI's zoom pivot
+    // can seat on the same answer. It is the POINTER'S NOTIONAL POSITION while
+    // the hand still has room, and THE CAPTURE'S OWN START COLUMN once
+    // notional_x_clamped_ says the travel ran out and stayed out. The ran-out
+    // rule itself — and why the question is asked of the last notional WRITE's
+    // clamp verdict rather than of the resting position — is at the fields
+    // below; this only names the answer.
+    //
+    // TWO CONSUMERS, ONE EXPRESSION, AND THAT IS THE WHOLE POINT: the capture's
+    // release restores here, and the nav drag's zoom pivot seats here
+    // (nav_pivot_seat_col, input_pointer.cpp, which projects it into waveform
+    // columns). The stem and the cursor therefore CANNOT DISAGREE, because
+    // there is one expression rather than two rules — which is exactly what
+    // went wrong while the seat read the raw notional position instead: a
+    // runaway pan pins that position at the wall, so the pivot seated at the
+    // wall while the cursor was already known to be coming back to the start
+    // column, the two answers differing precisely in the case the teleport
+    // exists for.
+    //
+    // MEANINGFUL UNCAPTURED, which is what a press before any capture needs:
+    // notional_x_clamped_ is false there (begin_pointer_capture clears it, and
+    // an absolute delivery carries an in-surface position and so never clamps),
+    // so this degrades to the notional position — the pointer's own place, and
+    // for a ctrl-armed press that is the press point.
+    //
+    // capture_press_x_ IS THE CAPTURE'S START COLUMN — the 8px threshold
+    // crossing for the nav drag, not the button press itself — and that is
+    // precisely why the pivot seat must read THIS accessor rather than
+    // re-derive a press column of its own: the two would differ by the slop
+    // distance, and the point of the hoist is that they cannot differ at all.
+    //
+    // THE STEM OVERRIDE STILL OUTRANKS THIS at the release
+    // (capture_restore_x_override_, which the zoom bodies set on every one of
+    // their events), and that is consistent rather than contradictory: the
+    // override names the stem's surface column, and the stem stands at the
+    // pivot this accessor seated — the same column up to the waveform-bounds
+    // clamp the GUI's projection owns. Nothing about the override changes.
+    double notional_home_x() const {
+        return notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_;
+    }
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
@@ -916,9 +949,11 @@ private:
     //     restore hint alongside pointer_x_/pointer_y_. Uncaptured there is
     //     nothing virtual, so it simply IS the delivered position; captured it
     //     is the ledger with the debt taken out, MINUS whatever a frozen phase
-    //     withheld (notional_x_frozen_ below). Its consumers are the release
-    //     restore below and, through notional_pointer_x(), the GUI's zoom
-    //     pivot.
+    //     withheld (notional_x_frozen_ below). ITS CONSUMERS BOTH READ IT
+    //     THROUGH notional_home_x() above — the release's restore and the GUI's
+    //     zoom pivot seat — so neither reads the position raw: what both of
+    //     them actually want is where the cursor will come back, which is this
+    //     position only while the travel has not run out.
     //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT (codex round
     //     17): the GUI briefly kept a second clamped position of its own,
     //     advanced once per DELIVERED (coalesced) motion by the net travel
@@ -930,9 +965,9 @@ private:
     //     for the rest of the gesture. The divergence is silent and permanent,
     //     so the two positions cannot be made to agree by matching clamps;
     //     there has to be one owner, and it is here, where the raw events are.
-    //     The GUI PROJECTS this into waveform columns and clamps in the bounds
-    //     it owns (nav_notional_col, input_pointer.cpp) — a projection, never
-    //     an accumulation.
+    //     The GUI PROJECTS notional_home_x() into waveform columns and clamps
+    //     in the bounds it owns (nav_pivot_seat_col, input_pointer.cpp) — a
+    //     projection, never an accumulation.
     //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
     //     omission: the restore's y is frozen at the press row and the zoom
     //     axis consumes dy as a per-event DELTA, so nothing would read a
@@ -952,8 +987,9 @@ private:
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
     // notional_pointer_x_ — EXCEPT WHEN THE TRAVEL RAN OUT, where it reappears
-    // at capture_press_x_ instead (the paragraph below); y is always frozen at
-    // the press row (capture_restore_y_).
+    // at capture_press_x_ instead (the paragraph below). That fork is
+    // notional_home_x() above, which the zoom pivot's seat shares; y is always
+    // frozen at the press row (capture_restore_y_).
     //
     // A PAN THAT RAN OUT OF ROOM PUTS THE CURSOR BACK WHERE IT VANISHED
     // (architect 2026-08-14, from the rig, having driven the lateral freeze:
@@ -1027,8 +1063,10 @@ private:
     bool   notional_x_frozen_  = false;
     // THE LAST NOTIONAL WRITE'S CLAMP VERDICT — true iff note_notional_pointer_x,
     // the ONE clamp body, actually clamped the value it was handed. Written
-    // there and nowhere else, read at exactly one place: the release's
-    // restore-x fallback (the ran-out rule in the block above).
+    // there and nowhere else, and READ AT EXACTLY ONE PLACE, notional_home_x()
+    // above (the ran-out rule in the block above) — which is what puts the
+    // release's restore and the zoom pivot's seat on one verdict instead of
+    // letting each ask its own question.
     // begin_pointer_capture clears it so a capture cannot inherit a verdict
     // from before it existed — an absolute delivery carries an in-surface
     // position and so never clamps, but the clear makes that structural rather
