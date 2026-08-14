@@ -1206,7 +1206,9 @@ int main(int argc, char** argv) {
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
     // platform's nav frames —
-    // two-finger centroid-pan + pinch-zoom, and the phone model's
+    // two-finger centroid-pan + pinch-zoom (one mode per segment since
+    // 2026-08-14, the finger-agreement lock the nav body applies), and the
+    // phone model's
     // single-finger pan frames born of a drag starting on the pan surface —
     // drive the input handler's ONE touch-nav body, which runs the
     // strip-drag family's own viewport chokepoint — the
@@ -1229,8 +1231,8 @@ int main(int argc, char** argv) {
     // apply_touch_nav_update's declaration (the GUI half, including why the
     // nav gesture stops short of the strip drag's pointer-press arm).
     gui.set_touch_nav_hooks(
-        [&](int x, int y, double dx, double dist_ratio) {
-            input_handler.apply_touch_nav_update(x, y, dx, dist_ratio);
+        [&](const GuiTouchNavFrame& frame) {
+            input_handler.apply_touch_nav_update(frame);
         },
         [&]() { input_handler.end_touch_nav(); },
         [&](int x, int y) {

@@ -3013,7 +3013,8 @@ void GuiPlatform::resolve_touch_window_to_single_nav() {
     // same Chebyshev metric — and FOLDS the whole accumulated delta, exactly
     // as the two-finger latch folds. The distance fields stay 0.0: the pinch
     // latch arm is structurally false and the ratio guard delivers 1.0 (no
-    // zoom from one finger), which is why the GUI nav body needs no fork.
+    // zoom from one finger); the GUI body's one fork on the finger count is
+    // the segment lock's bypass, a single finger having nothing to classify.
     touch_phase_      = TouchPhase::Nav;
     touch_nav_single_ = true;
     touch_nav_id2_    = 0;
@@ -3023,6 +3024,10 @@ void GuiPlatform::resolve_touch_window_to_single_nav() {
     touch_nav_start_cx_ = touch_nav_last_cx_ = touch_down_x_;
     touch_nav_start_cy_ = touch_down_y_;
     touch_nav_start_dist_ = touch_nav_last_dist_ = 0.0;
+    // Dormant while single (the second-finger fields' convention); a later
+    // upgrade's join rebases them to the pair's formation.
+    touch_nav_start_x1_ = touch_nav_start_y1_ = 0.0;
+    touch_nav_start_x2_ = touch_nav_start_y2_ = 0.0;
     touch_nav_latched_     = false;
     touch_nav_delivered_   = false;
     // The crossing motion is staged for the frame boundary, the Nav cadence.
@@ -3229,6 +3234,13 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
             touch_nav_start_cy_   = cy;
             touch_nav_start_dist_ = touch_nav_last_dist_ = d;
+            // The per-finger travel reference: the pair's formation (the
+            // delivered vectors feed the GUI's finger-agreement segment
+            // lock — GuiTouchNavFrame, gui_input.h).
+            touch_nav_start_x1_   = touch_nav_x1_;
+            touch_nav_start_y1_   = touch_nav_y1_;
+            touch_nav_start_x2_   = touch_nav_x2_;
+            touch_nav_start_y2_   = touch_nav_y2_;
             touch_nav_latched_     = false;
             touch_nav_delivered_   = false;
             touch_nav_frame_dirty_ = false;
@@ -3272,6 +3284,13 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
             touch_nav_start_cy_   = cy;
             touch_nav_start_dist_ = touch_nav_last_dist_ = d;
+            // The per-finger travel reference: the pair's formation (the
+            // delivered vectors feed the GUI's finger-agreement segment
+            // lock — GuiTouchNavFrame, gui_input.h).
+            touch_nav_start_x1_   = touch_nav_x1_;
+            touch_nav_start_y1_   = touch_nav_y1_;
+            touch_nav_start_x2_   = touch_nav_x2_;
+            touch_nav_start_y2_   = touch_nav_y2_;
             touch_nav_latched_     = false;
             touch_nav_delivered_   = false;
             touch_nav_frame_dirty_ = false;
@@ -3307,6 +3326,15 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                 touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
                 touch_nav_start_cy_   = cy;
                 touch_nav_start_dist_ = touch_nav_last_dist_ = d;
+                // The per-finger travel reference rebases to the join with
+                // the other start fields: the pan finger's pre-join travel
+                // belongs to the single-finger stream, not to the pair (the
+                // delivered vectors feed the GUI's finger-agreement segment
+                // lock — GuiTouchNavFrame, gui_input.h).
+                touch_nav_start_x1_   = touch_nav_x1_;
+                touch_nav_start_y1_   = touch_nav_y1_;
+                touch_nav_start_x2_   = touch_nav_x2_;
+                touch_nav_start_y2_   = touch_nav_y2_;
                 touch_nav_frame_dirty_ = false;
             }
             // Otherwise a third finger is ignored — recorded (the count
@@ -3535,10 +3563,26 @@ void GuiPlatform::deliver_touch_nav_frame() {
     touch_nav_last_dist_ = dist;
     if (dx == 0.0 && ratio == 1.0) return;  // a no-op frame delivers nothing
     touch_nav_delivered_ = true;
-    if (touch_nav_update_hook_)
-        touch_nav_update_hook_(static_cast<int>(std::nearbyint(cx)),
-                               static_cast<int>(std::nearbyint(cy)),
-                               dx, ratio);
+    if (touch_nav_update_hook_) {
+        GuiTouchNavFrame frame;
+        frame.x          = static_cast<int>(std::nearbyint(cx));
+        frame.y          = static_cast<int>(std::nearbyint(cy));
+        frame.dx         = dx;
+        frame.dist_ratio = ratio;
+        frame.two_finger = !touch_nav_single_;
+        // Per-finger cumulative travel from the pair's formation, the GUI
+        // segment lock's classification input (contract at GuiTouchNavFrame,
+        // gui_input.h). Single-finger frames leave the vectors at 0.0 — the
+        // dormant-fields convention; the GUI reads them only under
+        // two_finger.
+        if (frame.two_finger) {
+            frame.v1x = touch_nav_x1_ - touch_nav_start_x1_;
+            frame.v1y = touch_nav_y1_ - touch_nav_start_y1_;
+            frame.v2x = touch_nav_x2_ - touch_nav_start_x2_;
+            frame.v2y = touch_nav_y2_ - touch_nav_start_y2_;
+        }
+        touch_nav_update_hook_(frame);
+    }
 }
 
 void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
@@ -3559,8 +3603,11 @@ void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
     //     fires iff an update was delivered. The asymmetry with the POINTER
     //     translation's hard end is deliberate: that release MUST deliver (a
     //     vanished hold would latch the drag-modal gate with no event left to
-    //     lift it), while dropped nav motion wedges nothing — the gesture is
-    //     stateless per frame and holds nothing in the GUI open.
+    //     lift it), while dropped nav motion wedges nothing — the gesture
+    //     holds nothing in the GUI open, and its one GUI-side record (the
+    //     segment lock's, seeded only by delivered frames) is reset by the
+    //     end hook, which this owed-iff-delivered rule guarantees whenever
+    //     the record was seeded.
     if (deliver_final_frame && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
         deliver_touch_nav_frame();
@@ -4248,7 +4295,7 @@ void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason
 void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
 void GuiPlatform::set_keyboard_intent_cancel_hook(std::function<void()> cb) { keyboard_intent_cancel_hook_ = std::move(cb); }
 void GuiPlatform::set_touch_nav_hooks(
-    std::function<void(int x, int y, double dx, double dist_ratio)> update,
+    std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
     std::function<bool(int x, int y)> pan_zone,
     std::function<void(int x, int y)> region_begin,

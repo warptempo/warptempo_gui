@@ -1921,22 +1921,131 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
                                    final_event);
 }
 
-// THE TOUCH NAVIGATION BODY — two-finger pan+zoom frames and the phone
-// model's single-finger pan frames (dist_ratio 1.0, the zoom term inert)
-// land here alike; contract, delivery-shape
-// justification and refusal rationale at the declaration (input_handler.h).
-// One delivered frame = one placement through the strip-drag family's own
-// application chokepoint.
-void GuiInputHandler::apply_touch_nav_update(int x, int y, double dx,
-                                             double dist_ratio) {
+// THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
+// single-finger pan frames (dist_ratio 1.0, the zoom term inert) land here
+// alike; contract, delivery-shape justification and refusal rationale at the
+// declaration (input_handler.h). One delivered frame = at most one placement
+// through the strip-drag family's own application chokepoint — since
+// 2026-08-14 the two-finger frames pass THE FINGER-AGREEMENT SEGMENT LOCK
+// first (the model and the classification derivation are at TouchNavSegState,
+// app_state.h), so a frame can also be held (the unclassified fold) or apply
+// with its off mode zeroed.
+void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
     // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
-    // navigates exactly the wheel's two surfaces.
-    if (wheel_context(x, y) <= 0) return;
+    // navigates exactly the wheel's two surfaces. A refused frame touches no
+    // segment state either, so a long refusal reads as a rest and the next
+    // accepted frame re-aims through the pause check below.
+    if (wheel_context(f.x, f.y) <= 0) return;
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
+    double dist_ratio = f.dist_ratio;
     if (!(dist_ratio > 0.0)) dist_ratio = 1.0;
+
+    // THE FINGER-AGREEMENT SEGMENT LOCK (architect 2026-08-14; the model,
+    // the derivation and the hold-and-fold rationale at TouchNavSegState,
+    // app_state.h): the effective deltas this frame applies. Single-finger
+    // frames bypass it whole — one finger has nothing to classify, its
+    // ratio is already pinned at 1.0 — and reset the record so an upgrade's
+    // first two-finger frame seeds a fresh segment at the join.
+    double eff_dx    = f.dx;
+    double eff_ratio = dist_ratio;
+    TouchNavSegState& seg = app.touch_nav_seg;
+    if (!f.two_finger) {
+        seg = TouchNavSegState{};
+    } else {
+        const int64_t now_ms = monotonic_ms();
+        if (!seg.active) {
+            // First two-finger frame: fresh segment at the pair's formation.
+            // The origin vectors stay 0 — the platform measures the frame's
+            // vectors from the formation — so this frame's fold covers the
+            // whole latch crossing and the segment typically classifies in
+            // the same breath it arrives, the mouse crossing's own shape.
+            seg = TouchNavSegState{};
+            seg.active = true;
+        } else if (now_ms - seg.last_motion_ms > kStripSegmentPauseMs) {
+            // MOTION PAUSE = SEGMENT RESET, the mouse's own lazy rest
+            // (kStripSegmentPauseMs's shared-reader note): origin = the
+            // previous delivered frame's vectors (the resting point), mode
+            // back to Unclassified, the fold accumulators dropped (a
+            // still-unclassified segment's abandoned travel is under the
+            // classify distance by construction).
+            seg.mode      = TouchNavSegMode::Unclassified;
+            seg.seg_v1x   = seg.prev_v1x;
+            seg.seg_v1y   = seg.prev_v1y;
+            seg.seg_v2x   = seg.prev_v2x;
+            seg.seg_v2y   = seg.prev_v2y;
+            seg.acc_dx    = 0.0;
+            seg.acc_ratio = 1.0;
+        }
+        seg.last_motion_ms = now_ms;
+
+        if (seg.mode == TouchNavSegMode::Unclassified) {
+            // THE HOLD: nothing applies until the segment classifies; the
+            // frame's deltas fold into the accumulators instead (dx sums,
+            // the ratios telescope).
+            seg.acc_dx    += f.dx;
+            seg.acc_ratio *= dist_ratio;
+            // CLASSIFICATION, once per segment, on the fingers' cumulative
+            // travel vectors since the segment origin — per-finger Chebyshev
+            // against the mouse lock's own classify distance (a finger is
+            // one contact, the same hand-travel measure). The three-part pan
+            // test and why a pinch cannot pass it (opposed x signs, the
+            // steep cone, the anchored-finger floor) are derived at
+            // TouchNavSegState.
+            const double s1x = f.v1x - seg.seg_v1x;
+            const double s1y = f.v1y - seg.seg_v1y;
+            const double s2x = f.v2x - seg.seg_v2x;
+            const double s2y = f.v2y - seg.seg_v2y;
+            const double cheb1 = std::max(std::abs(s1x), std::abs(s1y));
+            const double cheb2 = std::max(std::abs(s2x), std::abs(s2y));
+            if (std::max(cheb1, cheb2) < kStripSegmentClassifyPx) {
+                seg.prev_v1x = f.v1x;
+                seg.prev_v1y = f.v1y;
+                seg.prev_v2x = f.v2x;
+                seg.prev_v2y = f.v2y;
+                return;                        // held — nothing applies yet
+            }
+            const double slope = strip_segment_zoom_slope();
+            const bool same_direction = s1x * s2x > 0.0;
+            const bool both_shallow =
+                std::abs(s1y) <= std::abs(s1x) * slope &&
+                std::abs(s2y) <= std::abs(s2x) * slope;
+            const bool both_travelled =
+                std::min(cheb1, cheb2) >= 0.5 * kStripSegmentClassifyPx;
+            seg.mode = (same_direction && both_shallow && both_travelled)
+                           ? TouchNavSegMode::Pan
+                           : TouchNavSegMode::Zoom;
+            // THE FOLD: the classifying frame applies the ON mode's whole
+            // accumulator (this frame's deltas included) and the off mode's
+            // accumulation is discarded unapplied — a pan's opening distance
+            // drift never zooms, which is the accordion's kill.
+            eff_dx    = seg.mode == TouchNavSegMode::Pan ? seg.acc_dx : 0.0;
+            eff_ratio = seg.mode == TouchNavSegMode::Zoom ? seg.acc_ratio
+                                                          : 1.0;
+            seg.acc_dx    = 0.0;
+            seg.acc_ratio = 1.0;
+        } else if (seg.mode == TouchNavSegMode::Pan) {
+            // PAN ONLY: the level cannot move for the segment's life — the
+            // wall consequence carries over (TouchNavSegState).
+            eff_ratio = 1.0;
+        } else {
+            // ZOOM ONLY: the viewport cannot pan, the ruled symmetry.
+            eff_dx = 0.0;
+        }
+        seg.prev_v1x = f.v1x;
+        seg.prev_v1y = f.v1y;
+        seg.prev_v2x = f.v2x;
+        seg.prev_v2y = f.v2y;
+    }
+
+    // A frame whose surviving deltas are exact no-ops applies nothing — a
+    // pan segment's fingers merely breathing, a zoom segment's centroid
+    // drifting. The platform only suppresses frames where BOTH raw deltas
+    // are no-ops, so the lock needs its own skip, and it sits above the
+    // double-click clear (the C8 rule covers APPLIED frames).
+    if (eff_dx == 0.0 && eff_ratio == 1.0) return;
 
     const GuiRect wf_area = waveform_area(app);
     const double  W       = static_cast<double>(wf_area.w);
@@ -1948,25 +2057,28 @@ void GuiInputHandler::apply_touch_nav_update(int x, int y, double dx,
     // wheel applies at on_wheel's top).
     app.double_click = DoubleClickCandidate{};
 
-    // The content under the PREVIOUS centroid column (x - dx) is what the
-    // fingers hold; the anchor column convention is arm_strip_drag_at's own
-    // (window x against the live viewport — the waveform starts at the window
-    // edge, and no clamp into [0, W-1] is needed: there is no persistent
-    // anchor for an off-area column to corrupt, and the placement below runs
-    // through the viewport chokepoint's own clamps either way).
+    // The content under the PREVIOUS centroid column (x - eff_dx) is what
+    // the fingers hold; the anchor column convention is arm_strip_drag_at's
+    // own (window x against the live viewport — the waveform starts at the
+    // window edge, and no clamp into [0, W-1] is needed: there is no
+    // persistent anchor for an off-area column to corrupt, and the placement
+    // below runs through the viewport chokepoint's own clamps either way).
+    // On a classifying pan frame eff_dx is the folded sum, so the anchor is
+    // the content under the SEGMENT-ORIGIN centroid — the fold's whole
+    // travel lands in one placement.
     const double spp_old = current_samples_per_pixel(app, audio);
     const double anchor_sample =
         static_cast<double>(app.viewport_start_sample) +
-        (static_cast<double>(x) - dx) * spp_old;
+        (static_cast<double>(f.x) - eff_dx) * spp_old;
 
     // The distance ratio maps to the level LOGARITHMICALLY — spreading the
     // fingers by 2x is one level in (spp halves, so the content between the
     // fingers scales with the finger gap; no feel constant). Pre-clamped into
     // the same [kMinZoom, effective ceiling] window clamp_viewport_start
     // re-applies, exactly as apply_strip_drag_at pre-clamps — the chokepoint's
-    // level_changed compare requires a real request (its contract names both
+    // level_changed compare requires a real request (its contract names the
     // callers).
-    double new_level = app.zoom_level - std::log2(dist_ratio);
+    double new_level = app.zoom_level - std::log2(eff_ratio);
     const double max_l =
         effective_max_zoom_level(W, total, audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
@@ -1974,11 +2086,13 @@ void GuiInputHandler::apply_touch_nav_update(int x, int y, double dx,
 
     // One placement does both axes: the anchor lands at the CURRENT centroid
     // column under the new level, so the centroid delta pans and the ratio
-    // zooms about the centroid. Everything downstream is the strip drag's own
-    // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
-    // either-axis follow suppression, and the mid-gesture true-no-op skip.
+    // zooms about the centroid — inside a classified segment one of the two
+    // is a literal no-op by the lock above. Everything downstream is the
+    // strip drag's own — level clamp, viewport clamp, the synchronous
+    // per-frame rebuild, the either-axis follow suppression, and the
+    // mid-gesture true-no-op skip.
     viewport.apply_strip_drag_zoom(new_level, anchor_sample,
-                                   static_cast<double>(x),
+                                   static_cast<double>(f.x),
                                    /*final=*/false);
 }
 
@@ -1986,7 +2100,10 @@ void GuiInputHandler::end_touch_nav() {
     // Any end commits, and every applied frame already rebuilt synchronously;
     // the one deferred piece is the playback predictor (mid-gesture frames
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
-    // own tail.
+    // own tail. The segment record dies with the gesture (a hard end that
+    // never delivered a frame never seeded it, so nothing survives either
+    // way).
+    app.touch_nav_seg = TouchNavSegState{};
     if (playback.is_playing()) playback.resync_predictor();
 }
 

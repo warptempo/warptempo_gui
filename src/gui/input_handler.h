@@ -630,15 +630,17 @@ struct GuiInputHandler {
     // platform's touch-nav update hook lands here — a PUBLIC entry point like
     // on_key and on_motion above, because main.cpp's hook wiring calls it (the
     // set_keyboard_intent_cancel_hook wiring precedent). TWO CALLERS' FRAMES,
-    // one body with NO fork: the two-finger gesture (centroid pan + pinch
-    // zoom), and the phone model's SINGLE-FINGER PAN — a one-finger drag whose
-    // down point lay on the waveform (touch_point_in_pan_zone below), whose
-    // frames carry the finger as the centroid and dist_ratio pinned at 1.0,
-    // so the zoom term is inert by construction. Per delivered frame:
-    // (x, y) is the CURRENT finger centroid, dx the centroid's horizontal
-    // travel since the previous delivered frame (fractional), dist_ratio the
-    // finger-distance ratio current/previous (> 0; 1.0 = no zoom). The
-    // semantics are the strip drag's own dual axes, PER-FRAME ANCHORED: the
+    // one body: the two-finger gesture, and the phone model's SINGLE-FINGER
+    // PAN — a one-finger drag whose down point lay on the waveform
+    // (touch_point_in_pan_zone below), whose frames carry the finger as the
+    // centroid and dist_ratio pinned at 1.0, so the zoom term is inert by
+    // construction and the single-finger frames bypass the segment lock
+    // below (one finger has nothing to classify). The payload is a
+    // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
+    // horizontal delta and the finger-distance ratio against the previous
+    // delivered frame, the finger count, and the per-finger cumulative
+    // travel vectors the classification reads. The application semantics are
+    // the strip drag's own dual axes, PER-FRAME ANCHORED: the
     // content under the PREVIOUS centroid column is placed at the CURRENT
     // centroid column under the new level, so the centroid delta pans and the
     // distance ratio zooms about the centroid in one placement. The level maps
@@ -646,17 +648,29 @@ struct GuiInputHandler {
     // feel constant: doubling the finger gap is exactly one zoom level in, so
     // the content between the fingers tracks the fingers.
     //
+    // BUT NEVER BOTH AXES AT ONCE INSIDE A CLASSIFIED SEGMENT (architect
+    // 2026-08-14, THE FINGER-AGREEMENT SEGMENT LOCK — the model, the
+    // classification derivation and the accordion field report it answers
+    // are at TouchNavSegState, app_state.h): each two-finger motion segment
+    // classifies ONCE as PAN (both fingers travelling the same direction
+    // within kStripSegmentZoomAngleDeg of horizontal) or ZOOM (anything
+    // else), the off mode's term is a literal zero for the segment's life,
+    // and a kStripSegmentPauseMs rest re-aims it — the mouse lock's own
+    // shape, sharing all three of its retunables. This SUPERSEDES the
+    // 2026-08-12 ruling that the pinch needed no lock ("the content tracks
+    // the fingers"): the field report proved the per-frame ratio DOES leak —
+    // two fingers moving together never hold their separation exactly, so
+    // the drift breathed the view in and out — and the binary is the fix,
+    // not damping (the mouse ladder's closed calibration history).
+    //
     // IT DRIVES THE STRIP-DRAG FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
     // synchronous per-frame rebuild, and the either-axis follow suppression
     // all come from it), and DELIBERATELY NOT the family's pointer-press arm.
-    // ONE CONSEQUENCE IS RULED RATHER THAN INCIDENTAL (2026-08-12): entering
-    // BELOW apply_strip_drag_at means the pinch does not take the DIRECTIONAL
-    // SEGMENT STABILIZATION (the HARD PER-SEGMENT AXIS LOCK since round four,
-    // 2026-08-12; kStripSegmentClassifyPx, app_state.h). That lock exists to
-    // stop a wrist arc's incidental off-axis travel moving the other axis, a
-    // problem a distance RATIO does not have — the content tracks the fingers,
-    // so the pinch stays exactly log2-linear and keeps both axes at once.
+    // The lock is applied HERE rather than in apply_strip_drag_at because
+    // the two surfaces classify DIFFERENT questions — the mouse a single
+    // pointer's stroke direction between two axes, the touch the agreement
+    // between two fingers' vectors — over the same shared knobs.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture
@@ -690,11 +704,12 @@ struct GuiInputHandler {
     // read-only, and a mid-audition frame suppresses follow through the
     // chokepoint's own either-axis line. Implemented beside the strip drag in
     // input_pointer.cpp.
-    void apply_touch_nav_update(int x, int y, double dx, double dist_ratio);
+    void apply_touch_nav_update(const GuiTouchNavFrame& frame);
     // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
     // or touch-capability loss; the platform fires this only if an update was
     // delivered): one predictor resync, the grab-pan release's own tail — each
-    // applied frame already rebuilt synchronously, so nothing else is owed.
+    // applied frame already rebuilt synchronously — plus the segment
+    // record's reset (app.touch_nav_seg dies with its gesture).
     void end_touch_nav();
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the
