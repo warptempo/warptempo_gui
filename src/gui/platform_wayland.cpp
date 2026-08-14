@@ -3364,20 +3364,55 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             if (id != touch_owner_id_ &&
                 (touch_nav_single_ || id != touch_nav_id2_))
                 break;
-            // A nav finger lifting ENDS the gesture (any end commits); a
-            // two-finger survivor is IGNORED until all fingers lift — the
-            // drain, never a downgrade to single-finger nav (the asymmetry:
-            // upgrade yes, downgrade no — a lift is an end).
-            // AND THE ASYMMETRY HAS A REASON, not just a rule (the architect's,
-            // recorded 2026-08-14): TWO FINGERS CANNOT LAND ON THE SAME FRAME,
-            // so EVERY two-finger gesture is reached THROUGH a one-finger one —
-            // the upgrade is not a convenience, it is the only way in, and
-            // refusing it would leave the pinch unreachable. A DOWNGRADE buys
-            // nothing of the kind: the gesture is already live and the user has
-            // already committed to it, so "the second finger came off" is a
-            // genuinely separate question rather than the upgrade's mirror, and
-            // it is answered "a lift is an end" on the same rule that ends a
-            // one-finger nav.
+            if (!touch_nav_single_) {
+                // THE DOWNGRADE (architect 2026-08-14, the one-model ruling:
+                // "add the zoom modifier at any time, drop it at any time" —
+                // the second finger IS the zoom modifier, so lifting it
+                // CONTINUES the gesture as the single-finger pan on the
+                // survivor instead of ending it; the "upgrade yes, downgrade
+                // no" asymmetry of 2026-08-11..14 is superseded, while the
+                // upgrade's own justification — two fingers cannot land on
+                // the same frame, so the upgrade is the pinch's only way in —
+                // stands untouched). The upgrade's rebase in reverse: the
+                // delta basis re-seats on the SURVIVOR'S current position, so
+                // the next frame's dx measures from the survivor itself
+                // rather than folding the centroid's half-gap jump off the
+                // pair midpoint; the distance basis drops to the
+                // single-finger degenerate 0.0 (the ratio guard then delivers
+                // 1.0 — no zoom from one finger). THE LATCH STATE CARRIES —
+                // the gesture is already live, and re-latching would freeze
+                // the pan for another slop's travel — while a still-unlatched
+                // pair (a sub-latch second lift) re-seats its latch reference
+                // at the survivor, the upgrade's own unlatched shape
+                // mirrored. An undelivered staged PAIR frame is DROPPED, the
+                // upgrade's sliver rule in reverse: the rebase supersedes it.
+                // Transitions repeat freely within one contact stream —
+                // 1→2→1→2 through the upgrade and this — and an ignored THIRD
+                // finger stays ignored across a downgrade (it can join only
+                // by lifting and pressing again, a fresh second-down).
+                // NO RE-JOIN WINDOW, considered and RULED OUT (architect
+                // 2026-08-14): a panel that momentarily drops a contact
+                // mid-pinch would silently become a pan for that gap, and a
+                // grace window re-admitting the returning finger was weighed
+                // — "I'd test on the ROADOM, and then if it does occasionally
+                // drop a finger, I'd still weigh how cumbersome that is
+                // against the mitigation for a potentially non-existent
+                // defect." Do not build one without field evidence.
+                if (id == touch_owner_id_) {
+                    touch_owner_id_ = touch_nav_id2_;
+                    touch_nav_x1_   = touch_nav_x2_;
+                    touch_nav_y1_   = touch_nav_y2_;
+                }
+                touch_nav_single_ = true;
+                touch_nav_id2_    = 0;
+                touch_nav_x2_ = touch_nav_y2_ = 0.0;
+                touch_nav_start_cx_   = touch_nav_last_cx_   = touch_nav_x1_;
+                touch_nav_start_cy_   = touch_nav_y1_;
+                touch_nav_start_dist_ = touch_nav_last_dist_ = 0.0;
+                touch_nav_frame_dirty_ = false;
+                break;
+            }
+            // The LAST nav finger lifting ENDS the gesture (any end commits).
             // The finger's own lift DELIVERS the staged dirty frame first (the
             // end split's finger-up clause, at end_touch_nav_gesture). No
             // release and no translation end: a nav gesture never held the
@@ -3796,11 +3831,31 @@ void GuiPlatform::end_pointer_capture() {
 }
 
 void GuiPlatform::set_capture_restore_x(double surface_x) {
-    // The active strip drag names the surface x its anchor stem paints at; the
-    // release restore uses it in place of the raw traveled virtual_pointer_x_.
-    // Ignored when no capture is live (nothing to restore).
+    // The active zoom gesture names the surface x its anchor stem paints at;
+    // the release restore uses it in place of the raw traveled
+    // virtual_pointer_x_. Ignored when no capture is live (nothing to
+    // restore).
     if (!pointer_captured_) return;
     capture_restore_x_override_ = surface_x;
+}
+
+void GuiPlatform::clear_capture_restore_x() {
+    // The nav drag's zoom→pan switch drops the stem override so the release
+    // goes back to the raw traveled x (contract at the declaration). Ignored
+    // when no capture is live.
+    if (!pointer_captured_) return;
+    capture_restore_x_override_.reset();
+}
+
+void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) {
+    // The mid-capture re-stamp of what the release restores (contract at the
+    // declaration): the same direct write begin_pointer_capture's stamp uses
+    // — "this is what comes back", not "show this now" (the cursor is hidden
+    // for the capture's whole life, and pointer_position_unknown_ keeps
+    // loop-tail kinds dropped) — guarded on a live capture so an uncaptured
+    // caller cannot clobber the loop-tail owner's remembered kind.
+    if (!pointer_captured_) return;
+    cursor_kind_ = kind;
 }
 
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {

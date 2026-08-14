@@ -77,175 +77,36 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
-// DIRECTIONAL SEGMENT STABILIZATION — THE HARD PER-SEGMENT AXIS LOCK, THE
-// THREE RETUNABLES (the classify distance and the pause below, plus the
-// CLASSIFICATION ANGLE that joined them 2026-08-14)
-// (architect-ruled 2026-08-12, round FOUR of the same day's field
-// calibration: "disable cross axis - force either horizontal or vertical
-// movement, keep the [pause] refresh and 8px min drag"; the per-event model
-// lives in apply_strip_drag_at, input_pointer.cpp).
+// (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
+// one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
+// IT AT ANY TIME — the zoom modifier being a SECOND FINGER on glass and CTRL
+// on the desk, live MID-GESTURE in both directions. The lock answered "which
+// axis did this drag mean?", and that question is no longer asked: the
+// modifier answers it directly and reversibly, so the ctrl phase of the one
+// navigation drag is ZOOM ONLY and the plain phase is PAN ONLY, each axis
+// exact by construction rather than by classification (the drag's contract is
+// at ScrollDragState below).
 //
-// THE LOCK IS THE MOUSE'S ALONE, AND THE ASYMMETRY IS ON PURPOSE (architect
-// 2026-08-14, from the rig): glass answers the same problem WITHOUT a
-// classifier — one finger pans, two fingers ZOOM ONLY, never panning at all,
-// so there is nothing to classify (touch.md's two-finger section). THE
-// REASON THE TWO SURFACES ARE ALLOWED TO DIFFER IS FRICTION, NOT SYMMETRY:
-// on glass the pan is already free — a bare finger, no modifier, no click —
-// so spending the two-finger gesture entirely on zoom costs the user
-// nothing; on the desk the pan axis lives INSIDE the ctrl drag, and dropping
-// it would make every pan-then-zoom mean releasing ctrl mid-gesture and
-// re-pressing, and "clicks are naturally more frictional than touching the
-// screen". So the mouse keeps BOTH axes behind the lock and glass keeps
-// none. All three retunables below have ONE reader each again — the mouse's
-// apply_strip_drag_at.
-//
-// WHY THE SEGMENTS: a hand pivots at the wrist, so it traces an ARC — his hand
-// "by default just does not sweep in a straight line" — and the first shape, a
-// global curve on the drag's cumulative dy, leaked that arc into zoom. HIS
-// ERGONOMICS, for the record: side-to-side hinges on the WRIST and arcs BIG
-// (hundreds of px across the 1080p monitor, or the whole width of the glass);
-// up-down hinges on the SHOULDER and was never the problem. So the drag is a
-// sequence of MOTION SEGMENTS — a segment starts at the arm and at every
-// MOTION PAUSE — each classified ONCE by its opening direction, and the
-// segment's OFF-AXIS then CONTRIBUTES EXACTLY NOTHING for the segment's whole
-// life. Within a segment:
-//   * UNCLASSIFIED (the first few px): both axes respond PLAIN — dx pans 1:1,
-//     dy zooms linear. Sub-slop travel is tiny, so there is no dead zone at
-//     the arm and a pan's first event stays responsive.
-//   * CLASSIFICATION, once per segment, when Chebyshev travel from the segment
-//     origin reaches kStripSegmentClassifyPx — on the
-//     kStripSegmentZoomAngleDeg diagonal, 60° off horizontal since 2026-08-14
-//     (the pan cone widened; the constant below owns the angle and its
-//     reason): |Δy| > |Δx|·tan(angle) = VERTICAL, else HORIZONTAL (ties
-//     horizontal — the pan-primary bias).
-//   * HORIZONTAL = PAN ONLY: dx pans plain 1:1, and effective_dy is 0.0 — the
-//     level cannot move at all until the segment ends.
-//   * VERTICAL = ZOOM ONLY: dy zooms plain linear (dy/kZoomStripPxPerLevel —
-//     the old response the architect had "gotten used to"), and effective_dx
-//     is 0.0 — the viewport cannot pan. Symmetric by ruling, as the damped
-//     model was ("for symmetry... so that panning also takes more work").
-//   * A MOTION PAUSE longer than kStripSegmentPauseMs resets the segment
-//     (origin = the previous resting point, mode unclassified), observed
-//     LAZILY by the next event that follows it — NO timer, no timerfd. THIS
-//     IS THE WHOLE ROUTE BETWEEN THE AXES mid-hold, and the quick toggle he
-//     described: pan, rest a beat, pull down = free zoom; his natural pan
-//     rhythm (lift hand, carry, re-press) starts fresh segments through the
-//     arm anyway, every re-press classifying fresh.
-// THIS IS NOT THE OLD WHOLE-DRAG FIRST-DIRECTION LOCK (2026-08-1x,
-// field-reversed because it latched the WHOLE GESTURE shut): the lock here is
-// PER SEGMENT, the pause reset re-aims it mid-hold, and the arm re-aims it on
-// every press. That is the difference the architect's own instruction rests
-// on, and it is why the earlier lock's do-not-re-propose record does not
-// govern this shape.
-// THE WALL CONSEQUENCE IS NOW ABSOLUTE (his standing complaint, reported
-// twice): a Horizontal segment's pan saturating at a viewport wall (0 / EOF)
-// keeps producing motion events — nothing pans, so the hand SWEEPS EXTRA —
-// and that extra sweep CANNOT MOVE THE LEVEL BY ANY AMOUNT, because the
-// segment's zoom contribution is a literal zero. The segment neither
-// reclassifies (classification is once per segment) nor resets (each event
-// refreshes last_motion_ms), so a wall drag of any length holds the zoom
-// exactly. No special wall arm exists anywhere; the property is structural.
-//
-// CALIBRATION SUCCESSION, every rung field-tested 2026-08-12: knee 48 → 200 →
-// 600 — ALL THREE the CUMULATIVE-TRAVEL CURVE f(D) = D·|D| / (|D| + knee),
-// whose response RATE grew with accumulated off-axis travel, and that
-// travel-waking shape WAS THE WALL BUG (a saturated wall drag is exactly where
-// the hand keeps sweeping, so D accumulated, f approached full response and the
-// arc dumped into zoom: "I lose the zoom level... the whole point is that I
-// should be able to maintain the zoom level roughly") → FLAT 0.08, the
-// stateless per-event multiply kOffAxisDampFactor, his pick from three offered
-// factors, which held the wall but still let a long incidental arc drift the
-// other axis → THE LOCK, this shape. The curve is deleted rather than retuned
-// and the factor is deleted rather than lowered: at 0.0 a multiply is not a
-// response.
-//
-// REACHABILITY: within a classified segment the off axis is DEAD, so the PAUSE
-// RESET (and the re-press) is the ONLY route to the other axis — rest
-// ~kStripSegmentPauseMs, start the stroke on the other axis, get a fresh plain
-// segment. There is no cross-swing escape hatch any more; that is the point.
-//
-// THE RULED LAST RESORT — NOT NEEDED, KEPT AS HISTORY: the architect's
-// field verdict later the same day RATIFIED the lock ("zoom now works as
-// expected"; the record sits at kStripSegmentPauseMs below, where the ladder
-// closed), so the rungs in this paragraph were never reached. If the lock
-// ever fails, his dictated final rung was:
-// THE CTRL-DRAG ZOOM LOSES ITS PAN AXIS ENTIRELY — a vertical-only gesture,
-// horizontal motion ignored outright, no segments and no classification —
-// and behind that the final fallback is the pre-curve PLAIN model whole plus
-// the overview lane's endcap/box vocabulary (BUILT 2026-08-12, the lane's own
-// rework — no longer a later phase; zoom-viewport-strip.md). The
-// touch pinch's zoom HYSTERESIS stays dead throughout (touch.md).
-//
-// NO retunable here rides gui_scale: they model HAND travel, hand rhythm and
-// hand direction on a physical device, like the drag slop constants. All three
-// (the two named in this block's title plus kStripSegmentZoomAngleDeg, which
-// joined 2026-08-14) are ruled retunables, field-tuned on the desk, each with
-// exactly ONE reader (apply_strip_drag_at, input_pointer.cpp). They were
-// briefly shared with a two-finger touch lock on 2026-08-14; that lock is
-// gone (the zoom-only ruling above), so a retune here moves the mouse drag
-// and nothing else.
-
-// Chebyshev travel (window px) from the segment origin at which a segment
-// classifies, once. 8.0 deliberately equals the generic press-becomes-drag
-// gate (kDragMovedThresholdPx), so the capture crossing's folded first event
-// typically classifies in the same breath it arrives. It is the architect's
-// "8px min drag", kept verbatim across the lock ruling.
-constexpr double kStripSegmentClassifyPx = 8.0;
-
-// THE CLASSIFICATION ANGLE — the third retunable, and the one that says which
-// way the segment lock LEANS. Measured OFF HORIZONTAL: a segment whose opening
-// direction is STEEPER than this counts as VERTICAL (zoom); anything shallower,
-// ties included, is HORIZONTAL (pan). 45° is the neutral diagonal, where the
-// lock shipped on 2026-08-12 — every angle above it widens the PAN cone at
-// zoom's expense.
-//
-// 60° SINCE 2026-08-14 (architect, favouring pan): a stroke now has to climb
-// past 60° off horizontal before it zooms, so pan owns two thirds of the
-// direction circle's quadrant and the wrist's shallow arc — the ergonomics the
-// whole lock exists for, side-to-side hinging on the WRIST and arcing big —
-// can no longer tip a pan into a zoom on its opening few px. Zoom is the
-// deliberate steep gesture, which is the shoulder movement that was never the
-// problem.
-//
-// THE ANGLE IS THE KNOB, in degrees, and the slope is DERIVED from it below
-// rather than written beside it, so a retune is one number and there is no
-// second value to keep in step. Ties stay horizontal (the comparison is
-// strict), which also keeps a PURE vertical stroke — |Δx| = 0 — classifying
-// Vertical at any angle.
-//
-// Like the other two retunables this rides no scale: it models the direction a
-// HAND opens a stroke in, on a physical device.
-constexpr double kStripSegmentZoomAngleDeg = 60.0;
-
-// tan(kStripSegmentZoomAngleDeg): the |Δy| : |Δx| ratio a segment must EXCEED
-// to classify Vertical. Not constexpr because std::tan is not a constant
-// expression before C++26; it is evaluated at most once per segment (the
-// classifying event, and only while the segment is still unclassified), which
-// is a handful of calls per gesture.
-inline double strip_segment_zoom_slope() {
-    constexpr double kPi = 3.14159265358979323846;
-    return std::tan(kStripSegmentZoomAngleDeg * kPi / 180.0);
-}
-
-// Motion pause (ms) that resets the segment — the architect's bound:
-// "certainly less than five hundred milliseconds". The time base is
-// monotonic_ms() sampled at delivery, the double-click windows' own domain
-// (kDoubleClickMs's readers); the motion path carries no protocol timestamp.
-// Lazy check only: a pause is observed by the next event that follows it. It is
-// also the ONLY route between the axes inside one hold (the lock's reachability
-// note above), which is what the architect's "keep the refresh" preserved.
-//
-// THE LOCK IS RATIFIED AND THE CALIBRATION LADDER IS CLOSED HERE (architect
-// field verdict 2026-08-12: "zoom now works as expected"). The lock shipped
-// with this rest at 150 and the same-day verdict ratified the MODEL; the rest
-// then tightened to 75 in the same breath, since the pause is the whole route
-// between the axes and a shorter one makes re-aiming mid-hold snappier. THE
-// COST IS RULED ACCEPTED: at 75ms an ordinary hesitation mid-stroke can be
-// read as a pause and hand the next few px a fresh unclassified segment — the
-// occasional misread, accepted by ruling rather than tuned around. The
-// ladder's remaining rungs above (the vertical-only ctrl drag, the pre-curve
-// plain fallback) are NOT NEEDED and stay recorded as history only.
-constexpr int64_t kStripSegmentPauseMs = 75;
+// THE CALIBRATION SUCCESSION, kept so the ladder is revivable and not re-run:
+// every rung field-tested on the desk, 2026-08-12..14 — the cumulative
+// off-axis curve f(D) = D*|D| / (|D| + knee) at knee 48, then 200, then 600
+// (the travel-waking shape WAS the wall bug: a saturated wall drag is exactly
+// where the hand keeps sweeping, so D accumulated and the arc dumped into
+// zoom) -> the flat 0.08 damping factor (held the wall, still let a long arc
+// drift the other axis) -> THE HARD PER-SEGMENT LOCK (a segment classified
+// once at 8 px Chebyshev on a 45-degree diagonal, then 60 degrees favouring
+// pan; the off axis a literal zero for the segment's life; a 75 ms motion
+// pause re-aiming it) -> DELETED, made unnecessary by the live modifier. THE
+// LOCK WAS NOT A FAILURE — the architect ratified it in the field ("zoom now
+// works as expected") — it answered a question that stopped existing when the
+// touch panel became the primary surface and the desk became its translation.
+// The two-finger finger-agreement variant of the same lock lived one day on
+// glass and is recorded in touch.md's two-finger succession. The retired
+// constants (kStripSegmentClassifyPx 8.0, kStripSegmentZoomAngleDeg 60.0,
+// kStripSegmentPauseMs 75) and the ruled last resort they carried are git
+// history; the generic 8 px press-becomes-drag gate below is a DIFFERENT job
+// (kDragMovedThresholdPx — press-becomes-drag, not classification) and
+// stands untouched.)
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
@@ -817,46 +678,35 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO entries
-// (arm_strip_drag_at, parameterized on the anchor — the succession record is
-// at that definition): the CTRL-exact left-drag on the navigation surface,
-// and — since the OVERVIEW STRIP's rework (2026-08-12, post-relayout) — that
-// lane's CTRL drag, whose anchor is the pressed overview column's whole-song
-// position (the lane's PLAIN drag carried this entry for the hours between
-// the lane's landing and the rework; plain is the lane's BOX PAN now —
-// OverviewDragState below — and ctrl is "require ctrl on zoom strip also",
-// the architect's own phrase). The RULER's own
-// entry is DELETED FOR GOOD (2026-08-12, the sixth glass ruling — the entry's
-// three changes of hands — born
-// with row 5 as "the zoom strip reborn", deleted by the 2026-08-11 merge,
-// restored by the revert, deleted again — are recorded at the arm). It once
-// had a dedicated zoom LANE too, deleted 2026-07-31; the overview strip is
-// the zoom-strip concept's THIRD HOME. The
-// gesture is DUAL-AXIS — vertical motion drives the zoom level and horizontal
-// motion pans the viewport, both applied per motion event — but NEVER BOTH AT
-// ONCE INSIDE A CLASSIFIED SEGMENT: THE OFF AXIS IS HARD-LOCKED OFF PER
-// DIRECTIONAL SEGMENT (the stabilization ruling's fourth round, 2026-08-12).
-// Each motion segment classifies once by its opening direction and its off
-// axis then contributes exactly nothing, so an intended pan's incidental wrist
-// arc cannot move the level at all and an intended zoom's arc cannot pan; a
-// motion pause (or the next press) starts a fresh, both-axes-plain segment
-// (kStripSegmentClassifyPx above owns the model and the two retunables). It is INCREMENTAL — each event reads the LIVE zoom level and
-// viewport (never a stored press baseline) and applies its own dx/dy on top, so
-// nothing goes stale across composed pan/zoom phases. One song anchor
-// (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
-// drifted column each event, and the Ableton edge trick REBINDS the anchor to
-// the nearest visible pixel when a pan pushes its column offscreen (the focus
-// pins to the edge it hits and becomes that edge's content). Navigation-class:
-// never touches the playhead or selection, allowed in read-only, does not toggle
-// or override follow. Cleared on button release / button-lost, by the force-end
-// finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
-// pan continuously, and pointer gestures have no cancel).
-
-// The directional segment's classification (the stabilization model at
-// kStripSegmentClassifyPx above): Unclassified = both axes plain, Horizontal =
-// pan plain / zoom LOCKED OFF, Vertical = zoom plain / pan LOCKED OFF.
-enum class StripSegmentMode { Unclassified, Horizontal, Vertical };
-
+// Dual-axis zoom/pan drag (Ableton-style navigation) — THE OVERVIEW LANE'S
+// CTRL DRAG, its ONE remaining entry since 2026-08-14 (arm_strip_drag_at, the
+// succession record at that definition): the navigation surface's ctrl press
+// left for the one nav drag's live zoom modifier that day (ScrollDragState
+// below), so this record serves the lane alone — anchor at the pressed
+// overview column's whole-song position, domain-corrected in target view (the
+// lane's PLAIN drag carried the entry for the hours between the lane's
+// landing and its rework; plain is the lane's BOX PAN now — OverviewDragState
+// below — and ctrl is "require ctrl on zoom strip also", the architect's own
+// phrase). The RULER's own entry is DELETED FOR GOOD (2026-08-12, the sixth
+// glass ruling; the entry's three changes of hands are recorded at the arm),
+// and there was once a dedicated zoom LANE too, deleted 2026-07-31 — the
+// overview strip is the zoom-strip concept's THIRD HOME. The gesture is
+// DUAL-AXIS AND BOTH AXES ARE PLAIN, simultaneously live per motion event —
+// the pre-lock model again, the segment axis lock having been deleted with
+// its whole calibration ladder (the record above kZoomStripPxPerLevel): the
+// lock existed for the navigation surface's wrist-arc pan, and this lane's
+// deliberate ctrl gesture never produced the complaint. It is INCREMENTAL —
+// each event reads the LIVE zoom level and viewport (never a stored press
+// baseline) and applies its own dx/dy on top, so nothing goes stale across
+// composed pan/zoom phases. One song anchor (anchor_sample) is the focus the
+// zoom pivots around; the pan re-derives its drifted column each event, and
+// the Ableton edge trick REBINDS the anchor to the nearest visible pixel when
+// a pan pushes its column offscreen (the focus pins to the edge it hits and
+// becomes that edge's content). Navigation-class: never touches the playhead
+// or selection, allowed in read-only, does not toggle or override follow.
+// Cleared on button release / button-lost, by the force-end finalizer, and on
+// file load; nothing to revert anywhere (it applies its zoom and pan
+// continuously, and pointer gestures have no cancel).
 struct StripDragState {
     bool   active    = false;
     // True once any motion event has applied a change. A motionless
@@ -869,9 +719,8 @@ struct StripDragState {
     int    press_x   = 0;
     int    press_y   = 0;
     // Pointer position at the previous motion event (window px), seeded at the
-    // press. Each event's dx/dy is the delta from here, fed to the segment's
-    // mode fork (apply_strip_drag_at) — the on-axis delta applies plain, the
-    // off-axis delta is dropped to zero.
+    // press. Each event's dx/dy is the delta from here; dx pans and dy zooms,
+    // both plain.
     int    last_x    = 0;
     int    last_y    = 0;
     // Song position (frames, double) the zoom pivots around — the frame under
@@ -879,25 +728,6 @@ struct StripDragState {
     // the effective waveform width, the edge trick pins it to the nearest
     // onscreen pixel and rewrites this to that pixel's frame.
     double anchor_sample = 0.0;
-    // THE DIRECTIONAL SEGMENT RECORD (the model, its rationale and the three
-    // retunables are at kStripSegmentClassifyPx above). A segment starts at
-    // the arm — the whole-struct reset covers the mode and the origin fields,
-    // the arm then seeding seg_x0/seg_y0 and last_motion_ms — and at every
-    // observed motion pause. seg_x0/seg_y0 are the segment's origin (window
-    // px): the press point at the arm, the previous resting point after a
-    // pause reset. THE MODE IS THE WHOLE LOCK STATE: a classified segment's
-    // off axis contributes a literal 0.0, so nothing accumulates and there is
-    // no off-axis origin or factor to carry (the deleted cumulative curve's
-    // field and the flat damping factor both died here — the curve's
-    // travel-waking shape was the wall bug, and the flat factor still let a
-    // long incidental arc drift the other axis).
-    StripSegmentMode seg_mode = StripSegmentMode::Unclassified;
-    int     seg_x0 = 0;
-    int     seg_y0 = 0;
-    // monotonic_ms() at the previous motion event, seeded at the arm — the
-    // pause detector's whole state. Lazy by design: the next event observes
-    // the gap; no timer ever fires.
-    int64_t last_motion_ms = 0;
 };
 
 // THE PLAIN PRESS ON THE NAVIGATION SURFACE — a PENDING CLICK that becomes the
@@ -944,22 +774,69 @@ struct StripDragState {
 //     what suppresses follow for the session (the pan producer class at
 //     follow_overridden_for_session). A PAN IS A PURE VIEWPORT MOVE: it moves
 //     NO playhead, clears NO region and NO selection, seeds nothing.
-// PAN-ONLY — no zoom axis and no anchor stem (the stem is the zoom pivot
-// affordance, gated on strip_drag.active); the zoom is the CTRL drag.
+// THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
+// one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
+// IT AT ANY TIME — the touch panel is the PRIMARY surface and the desk is its
+// translation, ctrl playing the second finger's part). This is ONE drag with
+// two phases, not two gestures: while ctrl is up each event's dx pans 1:1 and
+// dy is discarded; while ctrl is held each event's dy zooms
+// (dy/kZoomStripPxPerLevel, about the seated pivot) and dx is discarded —
+// each phase one exact axis, the deleted segment lock's answer reached by the
+// modifier instead of by classification (the ladder's record above
+// kZoomStripPxPerLevel). THE MODE IS READ PER MOTION EVENT (`zooming` below,
+// synced from mods.ctrl at the top of the motion arm), never re-derived at
+// the release: a modifier edge under a MOTIONLESS pointer changes nothing
+// until motion resumes, which is honest — with no deltas there is nothing
+// either phase could apply — and it is why the mode needs no modifier-edge
+// hook. THE RE-SEAT RULE, one per direction, is what makes every switch
+// jump-free:
+//   * ctrl DOWN (pan -> zoom): the pivot is SEATED at the pointer's current
+//     column — anchor_sample = the content under the pointer, column-clamped
+//     into the effective width — and the anchor stem paints there (the
+//     ctrl-armed press paints it from the PRESS, the stem-at-press ruling
+//     kept). Seating at the switch rather than reusing a press-time anchor is
+//     the rebase: after a long pan the press column names content that may be
+//     far offscreen, and pivoting there would jump the view. The level itself
+//     cannot jump — dy is a per-event delta off the LIVE level.
+//   * ctrl UP (zoom -> pan): NOTHING re-seats, structurally — the pan is
+//     incremental on dx from last_x, which BOTH phases keep current, so the
+//     first plain event pans from the pointer's own position; the stem
+//     erases and the capture's restore-x override clears (the release goes
+//     back to the raw traveled x unless a later zoom phase re-sets it).
+// Transitions repeat freely within one hold — pan/zoom/pan as often as ctrl
+// moves — over the ONE capture, begun at the 8px crossing whatever the mode
+// (a ctrl click never blinks the cursor either, superseding the old zoom
+// drag's capture-at-press) and untouched by every mode edge; only the
+// restore x and the restore KIND ride the switches
+// (set_strip_capture_restore_kind, so the cursor comes back as the phase the
+// gesture ENDED in). THE ACT STAYS PRESS-TIME: `ctrl_entry` records the
+// press's own modifier, and a ctrl-armed press runs NO deferred click act at
+// its motionless release (a ctrl click was never the placement) while a
+// plain-armed press runs it even if ctrl is down at the release — press-time
+// modifiers arm the ACT, live modifiers steer the CONTINUOUS gesture. THE
+// SCOPING ARGUMENT for reading ctrl live at all is recorded at
+// AppState::ChromePress::shift (the modifiers-at-press rule's own site):
+// that rule protects an ARMED ACT from changing under the user's finger, and
+// a viewport gesture arms no act — nothing commits, nothing can surprise,
+// and every part of it is undone by moving the other way — so a live
+// modifier here is OUTSIDE the rule's scope, not an exception to it.
 // Navigation-class: allowed in read-only. Ends: the clean release (the click
-// act or the pan's predictor-resync + capture end), a lost button (a MOVED pan
+// act, or the moved drag's phase-appropriate finalize — the pan's
+// predictor-resync, the zoom phase's final apply — plus the capture end), a
+// lost button (a MOVED drag
 // ends like release; an unmoved press is NOT a clean click — no act, no seed),
 // the force-end finalizer (same asymmetry: a pending commits nothing), and
 // file load. No cancel path exists.
 struct ScrollDragState {
     bool   active   = false;
-    bool   moved    = false;  // crossed the threshold into the pan
+    bool   moved    = false;  // crossed the threshold into the drag
     // Press position (window px): the Chebyshev gate's reference AND the
     // deferred click act's column (the point the user aimed at; sub-threshold
     // travel is jitter).
     int    press_x  = 0;
     int    press_y  = 0;
-    // Pointer x (px) at the previous applied pan event; stays at the press
+    // Pointer x (px) at the previous motion event, kept current in BOTH
+    // phases; stays at the press
     // until the crossing so the crossing folds the whole delta.
     int    last_x   = 0;
     // Armed inside the `h` history view: the click act is the MODE's land
@@ -977,6 +854,28 @@ struct ScrollDragState {
     // exclusive with the two flags above by geometry, and false in the `h`
     // view, which has no scrub half.
     bool   scrub_release = false;
+    // THE LIVE MODE (the one-model ruling above): true while the drag is in
+    // its ZOOM phase — seeded from the press's own ctrl at the arm, then
+    // synced from mods.ctrl at every motion event. While true the anchor stem
+    // paints at anchor_sample and each event's dy zooms; while false each
+    // event's dx pans. The RELEASE reads this rather than re-asking ctrl (no
+    // motion since the last sync means no deltas either way).
+    bool   zooming  = false;
+    // The press was the CTRL entry: the deferred click act is NOT armed (a
+    // ctrl click is not the placement — press-time modifiers arm the act) and
+    // the drag opens in the zoom phase with the pivot seated at the press.
+    // Never rewritten after the arm.
+    bool   ctrl_entry = false;
+    // Pointer y (px) at the previous motion event, last_x's twin — kept
+    // current in BOTH phases so a mode switch measures its first delta from
+    // the pointer's own position (the jump-free rule above).
+    int    last_y   = 0;
+    // The ZOOM phase's pivot (frames, double, active domain): the content
+    // under the pointer at the phase's own start — the press for a ctrl-armed
+    // drag, the ctrl-down switch for a mid-gesture one — column-clamped into
+    // the effective width at the seat. Meaningful only while `zooming`; each
+    // ctrl-down edge re-seats it.
+    double anchor_sample = 0.0;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —
@@ -1005,8 +904,8 @@ struct ScrollDragState {
 //     drag is THE BOX-FOLLOWS-POINTER PAN, PAN ONLY: per motion event the
 //     viewport centers on (pointer's whole-song position − grab_offset),
 //     X ONLY — the handler never reads dy, so vertical motion is ignored
-//     structurally ("no cross axis allowance for up/down"; this is not the
-//     segment lock, there is no zoom axis to lock).
+//     structurally ("no cross axis allowance for up/down": this pan has no
+//     zoom axis at all).
 // ABSOLUTE-POSITION DRAGS, the trim endcap model and not the strip-drag one:
 // NO pointer capture, NO anchor stem, per-event synchronous rebuild through
 // the family's clamp chokepoints. A MOTIONLESS release is just the teleport
@@ -2634,9 +2533,9 @@ struct AppState {
     // bounds), and on file load.
     TrimDragState trim_drag;
 
-    // The dual-axis zoom/pan navigation drag, from either of its two entries
-    // (the contract and the entries are at StripDragState). Cleared on button
-    // release and file load.
+    // The dual-axis zoom/pan navigation drag — the overview lane's ctrl drag,
+    // its one entry since 2026-08-14 (the contract is at StripDragState).
+    // Cleared on button release and file load.
     StripDragState strip_drag;
 
     // Double-click candidate, shared by the trim-bar, flag, empty-lane and
@@ -3182,6 +3081,18 @@ struct AppState {
     // rule): the shift-admitting buttons must see the shift that was held when
     // the user PRESSED, and a shift tapped or dropped mid-hold changes
     // nothing.
+    //
+    // THE RULE'S SCOPE (architect-accepted 2026-08-14, stated here at the
+    // rule's own site because the navigation drag now reads ctrl LIVE):
+    // modifiers-at-the-press governs ARMED ACTS — the chrome roster's and the
+    // modal buttons' press-to-commit spans — and exists so that an act the
+    // user has armed cannot change under their finger between press and
+    // commit. A CONTINUOUS VIEWPORT GESTURE arms no act: nothing commits,
+    // nothing can surprise, and every part of it is undone by moving the
+    // other way. So the one nav drag's live ctrl (pan while up, zoom while
+    // held — ScrollDragState) is OUTSIDE this rule's scope, not an exception
+    // to it: the chrome and modal rules stand exactly as written, and any
+    // future PRESS-ARMED act must keep reading its modifiers at the press.
     //
     // `press_ms` is THE PRESS'S OWN monotonic_ms() STAMP, and the whole of the
     // SHIFT LONG PRESS (architect 2026-08-13): held past kChromeShiftHoldMs on
@@ -4651,8 +4562,8 @@ GuiRect top_icon_row_area(const AppState& a);
 // the viewport box, the playhead tick, and — since the lane rework later that
 // day — the box-endcap edge drags, the click-teleport and the
 // box-follows-pointer pan on the PLAIN press (OverviewDragState) with the
-// dual-axis strip drag's second entry behind CTRL (the record at
-// arm_strip_drag_at). ONE fixed tiny height
+// dual-axis strip drag behind CTRL — its one entry since 2026-08-14 (the
+// record at arm_strip_drag_at). ONE fixed tiny height
 // on every host (the ruling, the deleted min/max clamp pair and the 1px
 // border-bottom are all at render.h's kOverviewHeightPx). It was a BOTTOM-strip
 // lane under the unified row for the afternoon it landed;

@@ -359,8 +359,9 @@ public:
     //     its latch: it exists only by crossing the disambiguation slop, the
     //     same distance in the same Chebyshev metric, measured from the same
     //     down point).
-    //   * end(): the gesture ended — a finger lifted (any end commits; a
-    //     two-finger survivor is ignored until all fingers lift),
+    //   * end(): the gesture ended — its LAST nav finger lifted (any end
+    //     commits; one finger of TWO lifting is the DOWNGRADE, a transform
+    //     the hook stream never sees — the edge inventory below),
     //     wl_touch.cancel, or touch-capability loss. Fired ONLY if at least
     //     one update was delivered, so a sub-latch two-finger touch costs the
     //     GUI nothing.
@@ -540,14 +541,31 @@ public:
     // live inside this class, gating the synthesized-enter motion — so this
     // deletes the door, not the state behind it.)
 
-    // Override the release-restore x for the active capture. The strip drags
+    // Override the release-restore x for the active capture. The zoom bodies
     // set this each event to the surface x of their anchor stem, so the cursor
     // reappears dead on the stem's column (the edge-trick rebind pins the stem
     // while the raw cursor travel keeps going, so the raw virtual_pointer_x_
     // would land past it). begin_pointer_capture clears it, so a capture with
-    // no override set (the grab-pan, which has no stem) restores at the raw
+    // no override set (the pan phase, which has no stem) restores at the raw
     // traveled virtual_pointer_x_.
     void set_capture_restore_x(double surface_x);
+
+    // Drop that override mid-capture (the nav drag's zoom→pan switch,
+    // 2026-08-14 — the live-ctrl model): a capture whose zoom phase set the
+    // stem override and whose pan phase then ends the gesture must restore at
+    // the raw traveled x, exactly as a never-zoomed pan does. No-op with no
+    // capture live.
+    void clear_capture_restore_x();
+
+    // Re-stamp the kind the active capture's release will restore (the nav
+    // drag's mode switches, 2026-08-14): begin_pointer_capture stamps the
+    // gesture's opening cue, and a mid-capture pan↔zoom switch moves what the
+    // gesture IS, so the switch re-stamps and the release hands back the
+    // phase the gesture ended in. Same semantics as the begin's stamp — "this
+    // is what comes back", written only while the lock proxy exists (the
+    // capture guard); no-op with no capture live, where the loop-tail owner
+    // governs the visible cursor.
+    void set_capture_restore_kind(GuiCursorKind kind);
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
@@ -991,11 +1009,17 @@ private:
     //     two-finger gesture IN PLACE — same hook stream, the delta bases
     //     REBASED to the join (folding the centroid's jump to the pair
     //     midpoint would pan by half the finger gap), so pan is continuous
-    //     and zoom is relative to the join. The reverse is DELIBERATELY
-    //     ASYMMETRIC: one finger lifting from TWO-finger nav ENDS the gesture
-    //     (a lift is an end — the any-end-commits family) and the survivor is
-    //     ignored until all fingers lift (Drain); no downgrade to
-    //     single-finger nav. A third finger is ignored.
+    //     and zoom is relative to the join. THE REVERSE IS THE DOWNGRADE
+    //     since 2026-08-14 (the one-model ruling — the second finger is the
+    //     zoom modifier, droppable at any time): one finger lifting from
+    //     TWO-finger nav CONTINUES the gesture as the single-finger pan on
+    //     the survivor, the delta bases rebased to the survivor's own
+    //     position (the upgrade's rebase in reverse — folding the centroid's
+    //     jump off the pair midpoint would pan by half the finger gap) and
+    //     the latch state carried, so 1↔2 transitions repeat freely within
+    //     one contact stream with no jump at any edge. The gesture ends when
+    //     its LAST nav finger lifts. A third finger is ignored, across
+    //     upgrades and downgrades alike.
     //   * Region  — THE REGION HOLD (the eighth glass ruling, 2026-08-12):
     //     the zone window EXPIRED with the down point on the pan zone, and
     //     the owning finger now drives the REGION former through the region
@@ -1090,7 +1114,17 @@ private:
     //     the finger last was — the accepted-glitch class, self-healing on
     //     the next pointer event;
     //     -> Drain if ignored fingers remain, else Idle.
-    //   * touch UP, any nav finger (single-finger nav: the owner) — the
+    //   * touch UP, one of TWO nav fingers — THE DOWNGRADE (2026-08-14, the
+    //     one-model ruling; the site's comment carries the full record and
+    //     the no-re-join-window ruling): a transform, not an end — the end
+    //     hook is not owed, exactly as at the upgrade. The survivor becomes
+    //     the owner, the delta bases REBASE to its current position, the
+    //     distance basis drops to the single-finger degenerate 0.0, the
+    //     latch state CARRIES (an unlatched pair re-seats its latch reference
+    //     at the survivor), and an undelivered staged PAIR frame is DROPPED —
+    //     the upgrade's sliver rule in reverse, the rebase superseding it.
+    //     An ignored third finger stays ignored.
+    //   * touch UP, the LAST nav finger (single-finger nav: the owner) — the
     //     staged dirty frame DELIVERS
     //     first (Wayland orders the up before the wl_touch.frame that closes
     //     its batch, and that motion is the user's own final leg — the
@@ -1099,7 +1133,10 @@ private:
     //     delivered). A nav gesture never held the logical button, so no
     //     release and no translation end fire — a nav born of the motionless
     //     hold's upgrade had its translation released at the join, and every
-    //     other nav entry never delivered a press at all; -> Drain / Idle.
+    //     other nav entry never delivered a press at all; -> Drain / Idle
+    //     (Drain iff IGNORED fingers remain — a third finger, or a moved
+    //     translation's ignored second; the two-finger survivor is the
+    //     DOWNGRADE above now, not a drain producer).
     //   * touch UP, owner, Region — the staged dirty frame DELIVERS first
     //     (the user's own final leg, the nav finger-up's model), then the
     //     region_end hook (any end commits — the former's release regime:

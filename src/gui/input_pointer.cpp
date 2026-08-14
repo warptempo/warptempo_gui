@@ -1243,16 +1243,23 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // Over the TRIM BAR ctrl sets the BEGIN bound and arms a single-bound drag
     // on it (set_trim_bound_at_click_then_arm_drag) — boundary extension by
     // another route, so it takes the BEGIN cap's own cue rather than the
-    // Arrow; over the OVERVIEW LANE it is the dual-axis strip drag's SECOND
-    // entry ("require ctrl on zoom strip also", the lane rework — the entry
-    // the lane's plain press carried for its landing hours), the magnifier
+    // Arrow; over the OVERVIEW LANE it is the dual-axis strip drag
+    // ("require ctrl on zoom strip also", the lane rework — the arm's one
+    // entry since 2026-08-14), the magnifier
     // over the whole lane; over the
-    // NAVIGATION SURFACE it is the same drag's first entry, whose surface GREW
-    // to the lanes with the eighth ruling and covers BOTH waveform halves as
-    // it always did. Ctrl's other top-strip claim is the marker membership
+    // NAVIGATION SURFACE it is THE ONE NAV DRAG'S ZOOM MODIFIER (the
+    // live-ctrl model, 2026-08-14 — ScrollDragState): the hover cue promises
+    // exactly what a ctrl press or a mid-drag ctrl press buys, the zoom, on
+    // the surface that covers BOTH waveform halves and the two lanes. Ctrl's
+    // other top-strip claim is the marker membership
     // toggle, which is not a drag and has no cue — the flag carve-out above.
     // The `h` view ADMITS the zoom (its navigation vocabulary), so the cue
     // stands in there over the view's own nav surface and the lane alike.
+    // (MID-GESTURE the map never runs — the capture hides the cursor for the
+    // drag's whole life, so a live ctrl edge shows nothing until the release,
+    // whose restored kind the mode switches re-stamp; the
+    // live-gesture-keeps-its-cue exception is for VISIBLE-cursor drags and
+    // needed no revision.)
     if (mods.ctrl && !mods.alt && !mods.shift) {
         if (trim_write_gestures_live)
             return trim_bound_click_frame(/*is_begin=*/true, x)
@@ -1406,99 +1413,28 @@ void GuiInputHandler::refresh_pointer_cursor(GuiInputState mods) {
 // private method on this struct.
 
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
-    // Dual-axis strip drag, INCREMENTAL (the v6 model) — dual-axis ACROSS the
-    // drag, ONE AXIS AT A TIME inside a classified segment (the hard lock at
-    // step (1)). Every event reads the LIVE zoom level and viewport and applies
-    // its own dx/dy on top — there is no press baseline to go stale across
-    // composed pan/zoom phases (the 2026-07 PRESS-BASELINE axis-lock model died
-    // of exactly that staleness; today's lock is a different mechanism — it
-    // zeroes one per-event delta and stores no baseline at all). The song anchor
-    // (anchor_sample) is the zoom focus; the pan re-derives its drifted column
-    // each event and the edge trick rebinds it when it leaves the screen.
+    // The OVERVIEW LANE's ctrl drag, dual-axis and INCREMENTAL (the v6 model),
+    // BOTH AXES PLAIN per event — the pre-lock model again since 2026-08-14:
+    // the directional segment lock was deleted with its whole calibration
+    // ladder when the navigation surface's ctrl drag became the one nav
+    // drag's live zoom modifier (the record above kZoomStripPxPerLevel,
+    // app_state.h), and this lane's deliberate ctrl gesture never produced
+    // the wrist-arc complaint the lock existed for. Every event reads the
+    // LIVE zoom level and viewport and applies its own dx/dy on top — there
+    // is no press baseline to go stale across composed pan/zoom phases (the
+    // 2026-07 PRESS-BASELINE axis-lock model died of exactly that staleness).
+    // The song anchor (anchor_sample) is the zoom focus; the pan re-derives
+    // its drifted column each event and the edge trick rebinds it when it
+    // leaves the screen.
     StripDragState& sd = app.strip_drag;
 
-    // (0) MOTION PAUSE = SEGMENT RESET (the directional segment stabilization —
-    // the model and its two retunables at kStripSegmentClassifyPx,
-    // app_state.h). If the time since the segment's previous motion event
-    // exceeds kStripSegmentPauseMs, FIRST reset the segment — origin = the
-    // previous resting point, mode back to Unclassified — THEN process this
-    // event under the fresh segment. Lazy check only, no timer: a pause is
-    // observed by the next event that follows it. Time base: monotonic_ms(),
-    // the double-click windows' own delivery-time domain (the motion path
-    // carries no protocol timestamp). This is the quick toggle the architect
-    // described — pan, rest a beat, pull down = free zoom — and his natural
-    // pan rhythm (lift hand, carry, re-press) starts fresh segments through
-    // the arm anyway.
-    const int64_t now_ms = monotonic_ms();
-    if (now_ms - sd.last_motion_ms > kStripSegmentPauseMs) {
-        sd.seg_x0 = sd.last_x;
-        sd.seg_y0 = sd.last_y;
-        sd.seg_mode = StripSegmentMode::Unclassified;
-    }
-    sd.last_motion_ms = now_ms;
-
-    // (1) Per-event deltas from the previous motion position. The crossing event
-    // folds the whole accumulated delta since the press (last_x/last_y were
-    // seeded there and no sub-threshold event advanced them). THE MODE FORK
-    // derives the EFFECTIVE deltas: in an Unclassified segment both axes are
-    // plain; in a classified segment the ON axis is plain 1:1 and THE OFF AXIS
-    // IS ZERO — the HARD PER-SEGMENT AXIS LOCK (architect 2026-08-12, round
-    // four: "disable cross axis - force either horizontal or vertical
-    // movement"). Stateless per event: the mode alone decides, nothing
-    // accumulates, and the dropped axis is a literal 0.0 rather than a small
-    // response (kStripSegmentPauseMs's pause reset and the next press are the
-    // whole route between the axes — the model and the succession that killed
-    // both the cumulative curve and the flat damping factor are at
-    // kStripSegmentClassifyPx, app_state.h).
-    //
-    // THE WALL CONSEQUENCE IS ABSOLUTE (the architect's standing complaint,
-    // stated per the ruling): a Horizontal segment whose pan saturates at a
-    // viewport wall keeps producing motion events — NOTHING PANS, SO THE HAND
-    // SWEEPS EXTRA — and that extra sweep cannot move the level BY ANY AMOUNT,
-    // the zoom contribution being zero for the segment's whole life. The
-    // segment neither reclassifies (classification is once per segment) nor
-    // resets (each event refreshes last_motion_ms), so a wall drag OF ANY
-    // LENGTH holds the zoom exactly. No special wall arm exists.
-    const double dx = static_cast<double>(x - sd.last_x);
-    const double dy = static_cast<double>(y - sd.last_y);
-    double effective_dx = dx;
-    double effective_dy = dy;
-    switch (sd.seg_mode) {
-    case StripSegmentMode::Unclassified:
-        break;  // both axes plain — no dead zone at the arm
-    case StripSegmentMode::Horizontal:
-        effective_dy = 0.0;  // PAN ONLY — the level cannot move
-        break;
-    case StripSegmentMode::Vertical:
-        effective_dx = 0.0;  // ZOOM ONLY — the viewport cannot pan (the ruled
-                             // symmetry: both axes lock the same way)
-        break;
-    }
+    // (1) Per-event deltas from the previous motion position. The crossing
+    // event folds the whole accumulated delta since the press (last_x/last_y
+    // were seeded there and no sub-threshold event advanced them).
+    const double effective_dx = static_cast<double>(x - sd.last_x);
+    const double effective_dy = static_cast<double>(y - sd.last_y);
     sd.last_x = x;
     sd.last_y = y;
-
-    // CLASSIFICATION, once per segment, AFTER this event's deltas (the
-    // classifying event itself still responds plain — its travel is the
-    // segment's sub-slop opening, tiny by construction): when Chebyshev travel
-    // from the segment origin reaches kStripSegmentClassifyPx, classify on the
-    // kStripSegmentZoomAngleDeg diagonal — the segment's opening direction must
-    // be STEEPER than that angle off horizontal to be Vertical, which is
-    // |Δy| > |Δx|·tan(angle); anything shallower, TIES INCLUDED, is Horizontal
-    // (the pan-primary bias, and at 60° since 2026-08-14 pan owns the wider
-    // cone by ruling — the angle and its reason live at the constant,
-    // app_state.h). The mode is the whole lock state — no origin and
-    // no accumulator — so the plain→locked transition costs no jump: the axis
-    // that survives keeps responding at exactly the rate it already had, and
-    // the other simply stops contributing from the next event on.
-    if (sd.seg_mode == StripSegmentMode::Unclassified) {
-        const double seg_dx = std::abs(static_cast<double>(x - sd.seg_x0));
-        const double seg_dy = std::abs(static_cast<double>(y - sd.seg_y0));
-        if (std::max(seg_dx, seg_dy) >= kStripSegmentClassifyPx) {
-            const bool steep = seg_dy > seg_dx * strip_segment_zoom_slope();
-            sd.seg_mode = steep ? StripSegmentMode::Vertical
-                                : StripSegmentMode::Horizontal;
-        }
-    }
 
     // (2) The old spp is read from the LIVE level (never stored).
     const double spp_old = current_samples_per_pixel(app, audio);
@@ -1507,9 +1443,7 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     const int64_t total = live_total_frames(app, audio);
 
     // (3) Pan at the old level, in the double domain: grab sign — drag right
-    // (dx>0) reveals earlier content, so the viewport moves left. The dx that
-    // pans is the mode fork's effective_dx — plain 1:1 in Unclassified and
-    // Horizontal segments, ZERO in a Vertical one. The result is
+    // (dx>0) reveals earlier content, so the viewport moves left. The result is
     // WALL-CLAMPED here, at the old level, to the SAME right wall the downstream
     // clamp_viewport_start rests at — the shared max_viewport_start_grid owner
     // (the level mid-gesture is the live level, so it reads exactly the state the
@@ -1531,15 +1465,12 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     if (vp < vp_lo) vp = vp_lo;
     if (vp > vp_hi) vp = vp_hi;
 
-    // (4) Zoom INCREMENTALLY off the live level: the mode fork's effective_dy
-    // applies to the current level (drag DOWN, dy>0, lowers the level → zooms
-    // in) — plain linear in Unclassified and Vertical segments, ZERO in a
-    // Horizontal one. No press baseline, so a level-clamp reversal responds
-    // immediately — the older absolute-dy formula had a dead zone after a
-    // clamp (dy had to unwind all the way back before the level moved); this
-    // incremental form has none, and the lock does not reintroduce one: inside
-    // a Vertical segment the raw per-event delta reverses sign with the hand,
-    // so the first reversed event already moves the level back.
+    // (4) Zoom INCREMENTALLY off the live level: dy applies to the current
+    // level (drag DOWN, dy>0, lowers the level → zooms in), plain linear. No
+    // press baseline, so a level-clamp reversal responds immediately — the
+    // older absolute-dy formula had a dead zone after a clamp (dy had to
+    // unwind all the way back before the level moved); this incremental form
+    // has none.
     double new_level = app.zoom_level - effective_dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
         W, total, audio.sample_rate());
@@ -1577,78 +1508,134 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
     // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
-    // clamp. IDENTITY PROOFS, argued across the mode fork: PURE PAN (dy=0)
-    // yields an EXACTLY-ZERO zoom delta in EVERY mode — the plain arms
-    // (Unclassified, Vertical) take the raw dy = 0 and the Horizontal arm
-    // substitutes a literal 0.0, so the two are the same value by two routes,
-    // with no arithmetic to argue about (the flat factor's finite-times-zero
-    // argument died with the multiply) — so new_level == old bit-exact, apply
-    // reproduces vp =
+    // clamp. IDENTITY PROOFS (the plain-model pair): PURE PAN (dy=0) leaves
+    // new_level == old bit-exact, apply reproduces vp =
     // anchor_sample - anchor_col·spp_old bit-for-bit (the column was derived
     // from that same vp), and the level-unchanged dispatch takes the same
     // synchronous full rebuild. Off the walls the pan arithmetic is unchanged,
     // so the identity holds as before; AT a wall the clamped vp equals the
     // viewport that will rest, the anchor column re-derives against it
     // consistently, and apply reproduces the wall value — a saturated pan is a
-    // true no-op. PURE ZOOM (dx=0) is symmetric: the plain arms take the raw
-    // dx = 0 and the Vertical arm substitutes 0.0, so effective_dx·spp_old
+    // true no-op. PURE ZOOM (dx=0) is symmetric: effective_dx·spp_old
     // subtracts nothing and vp is the resting viewport bit-exact — the anchor's
     // current (possibly edge-pinned) column stays fixed and the rescale pivots
-    // around it. AND THE LOCK STRENGTHENS BOTH PROOFS RATHER THAN COMPLICATING
-    // THEM: inside a classified segment the off-axis identity no longer depends
-    // on the raw delta being zero at all — a Horizontal segment's zoom delta is
-    // zero for EVERY dy, so its whole life is a sequence of exact pans, and a
-    // Vertical segment's is a sequence of exact zooms. The segment machinery
-    // beyond the deltas (the pause reset, the classification) reads and writes
-    // only its own record — the anchor arithmetic, the edge trick and the
-    // capture-restore drive never see it. A both-unchanged event (level and
-    // viewport identical after the clamp) is a true no-op the entry point
-    // skips.
+    // around it. A both-unchanged event (level and viewport identical after
+    // the clamp) is a true no-op the entry point skips.
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
 }
 
-// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries, BOTH
-// CTRL-EXACT since the overview lane's rework (2026-08-12, post-relayout —
-// "require ctrl on zoom strip also"): the ctrl press on the navigation
-// surface — the waveform (either half) plus the ruler and the marker lane's
-// empty stretches (the eighth glass ruling: the lanes are the upper half's
-// extension, so THE SURFACE GREW, NOT THE ENTRY COUNT; a ctrl press on a
-// FLAG stays the membership toggle, lane vocabulary) — AND the overview
-// strip's CTRL press (the Ableton zoom strip — the strip-drag concept's
-// THIRD HOME, after the dedicated zoom LANE deleted 2026-07-31 and the
-// RULER, whose own plain entry was born with row 5 as "the zoom strip
-// reborn", lost to the 2026-08-11 trim-surface merge, restored by the
-// 2026-08-12 revert, and deleted FOR GOOD the same day to the one-day ruler
-// region former; the ruler then rejoined as part of the CTRL surface with
-// pan-primary, later that same day. THE OVERVIEW ENTRY'S OWN SUCCESSION:
-// born on the lane's PLAIN press at the landing, moved behind CTRL hours
-// later by the rework, which gave the plain press to the box pan /
-// teleport / endcap vocabulary — OverviewDragState, app_state.h).
+// SEAT THE NAV DRAG'S ZOOM PIVOT (contract at the declaration): the content
+// under the pointer's current column, column-clamped into the effective width
+// — under a live capture x is the unbounded VIRTUAL position, so the clamp is
+// what guarantees an onscreen pivot (and an onscreen stem) wherever the
+// travel has wandered. Called by the ctrl arm (the press column) and by every
+// pan→zoom mode switch (the switch event's own column) — seating at the
+// switch rather than reusing a press-time anchor is the ctrl-down REBASE:
+// after a long pan the press column names content that may be far offscreen,
+// and pivoting there would jump the view (ScrollDragState, app_state.h).
+void GuiInputHandler::seat_nav_zoom_anchor(int x) {
+    const GuiRect wf_area = waveform_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    double col = static_cast<double>(x - wf_area.x);
+    const double col_max =
+        wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
+    if (col < 0.0)     col = 0.0;
+    if (col > col_max) col = col_max;
+    app.scroll_drag.anchor_sample =
+        static_cast<double>(app.viewport_start_sample) + col * spp;
+}
+
+// THE NAV DRAG'S ZOOM PHASE, one event (the live-ctrl model — contract at
+// ScrollDragState, app_state.h): dy zooms plain linear off the LIVE level
+// (drag DOWN zooms in, the strip drag's own response) about the seated pivot,
+// and dx is DISCARDED — the phase's one exact axis, the deleted segment
+// lock's vertical arm reached by the modifier instead of by classification.
+// The viewport itself never moves here (a pure zoom pivots about the anchor's
+// column), so no wall clamp is needed on it — the resting viewport is already
+// chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x /
+// last_y stay current in this phase exactly as in the pan phase, which is the
+// ctrl-up switch's whole rebase: the first plain event after a switch
+// measures its dx from the pointer's own position, so nothing can jump.
+void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
+    ScrollDragState& sd = app.scroll_drag;
+    const double dy = static_cast<double>(y - sd.last_y);
+    sd.last_x = x;
+    sd.last_y = y;
+
+    const double spp = current_samples_per_pixel(app, audio);
+    const GuiRect wf_area = waveform_area(app);
+    const double W = static_cast<double>(wf_area.w);
+    const int64_t total = live_total_frames(app, audio);
+    if (W <= 0.0 || spp <= 0.0) return;
+
+    // Incremental off the live level, pre-clamped into the chokepoint's own
+    // window exactly as apply_strip_drag_at pre-clamps.
+    double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
+    const double max_l = effective_max_zoom_level(W, total,
+                                                  audio.sample_rate());
+    if (new_level < kMinZoom) new_level = kMinZoom;
+    if (new_level > max_l)    new_level = max_l;
+
+    // The pivot's column under the RESTING viewport. The seat put it
+    // onscreen and a pure zoom keeps it there, so the clamp-and-rebind is the
+    // strip drag's own defensive edge arm for grid-snap residue at the
+    // extremes, not a live path.
+    double anchor_col =
+        (sd.anchor_sample -
+         static_cast<double>(app.viewport_start_sample)) / spp;
+    const double col_max = W - 1.0;
+    double clamped_col = anchor_col;
+    if (clamped_col < 0.0)     clamped_col = 0.0;
+    if (clamped_col > col_max) clamped_col = col_max;
+    if (clamped_col != anchor_col) {
+        sd.anchor_sample =
+            static_cast<double>(app.viewport_start_sample) +
+            clamped_col * spp;
+        anchor_col = clamped_col;
+    }
+
+    // Drive the capture's release-restore x to the stem, the strip drag's own
+    // rule; a later pan phase clears it back to the raw travel at its switch.
+    if (set_strip_capture_restore_x)
+        set_strip_capture_restore_x(
+            static_cast<double>(wf_area.x) + anchor_col + 0.5);
+
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
+                                   final_event);
+}
+
+// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, ONE entry since
+// 2026-08-14: the OVERVIEW STRIP's CTRL press (the Ableton zoom strip),
+// anchored at the pressed overview column's whole-song position,
+// domain-corrected in target view (overview_anchor_sample_at_x) — an
+// outside-the-box press TELEPORTS first, so that anchor is near the viewport
+// center by the time the drag arms; an inside-the-box anchor may still name
+// an OFFSCREEN position, and the first motion event's edge trick then rebinds
+// it to the nearest visible column exactly as a pan-pushed anchor rebinds.
 //
-// The anchor is the SONG position under the press — the one thing the two
-// entries derive differently, so it is THE PARAMETER of the one body below
-// rather than a sibling's excuse: the nav-surface entry reads the press
-// column against the live viewport (the two-parameter form's derivation —
-// what makes the zoom pivot on the pixel the user grabbed), the overview
-// entry the pressed OVERVIEW column's whole-song position, domain-corrected
-// in target view (overview_anchor_sample_at_x) — and an outside-the-box
-// overview press TELEPORTS first, so that anchor is near the viewport
-// center by the time the drag arms. Everything after the anchor is ONE
-// gesture: capture, stem-at-press, the incremental dual-axis apply, the
-// follow suppression through the viewport funnel. An overview anchor may
-// still name an OFFSCREEN position (an inside-the-box press teleports
-// nothing); the first motion event's edge trick then rebinds it to the
-// nearest visible column exactly as a pan-pushed anchor rebinds — the
-// inherited rule, not a new arm.
+// THE ENTRY SUCCESSION, each step a ruling: a dedicated zoom LANE (deleted
+// 2026-07-31); the ctrl-exact WAVEFORM press alone; the RULER's own plain
+// entry (born with row 5 as "the zoom strip reborn", lost to the 2026-08-11
+// trim-surface merge, restored by the revert, deleted FOR GOOD the same day
+// to the one-day ruler region former); the NAVIGATION SURFACE's ctrl press
+// (pan-primary, 2026-08-12 — the ruler rejoining as part of that surface);
+// and the OVERVIEW lane's press (PLAIN at its landing, behind CTRL since the
+// same day's rework — "require ctrl on zoom strip also", the plain press
+// going to the box pan / teleport / endcap vocabulary, OverviewDragState).
+// THE NAVIGATION-SURFACE ENTRY LEFT 2026-08-14, the one-model ruling: that
+// surface's ctrl is the ONE nav drag's LIVE ZOOM MODIFIER now
+// (ScrollDragState, app_state.h — pan by default, ctrl zooms, both edges
+// live mid-gesture), so this arm serves the overview lane alone and the
+// two-parameter press-column overload it once had is deleted with its caller.
 //
 // THE ANCHOR STEM PAINTS FROM THE PRESS (architect 2026-08-05, moving its start
 // off the slack crossing): the headless zoom stem stands at the press column for
 // the whole life of the gesture, so the press itself shows where the zoom will
 // pivot instead of the affordance appearing only once the drag is under way.
 // Same stem, same painter, no head — only its first frame moved, which is why
-// the arm now owes the damage (the paint gate is strip_drag.active alone;
-// paint_strip_drag_anchor, paint_handler.cpp).
+// the arm owes the damage (paint_strip_drag_anchor, paint_handler.cpp, whose
+// gate also covers the nav drag's zoom phase).
 //
 // THE PLAYHEAD IS NOT TOUCHED HERE, and the gesture is NAVIGATION-CLASS as it
 // always was (architect 2026-08-06, ROLLING BACK the strip-drag playhead feature
@@ -1657,14 +1644,6 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 // of that arc that survives; the press jump, the release-side click and the
 // anchor-follow re-seat are all gone, and SHIFT+CLICK is where "move the
 // playhead here" lives (the waveform placement press, region-scrub-esc.md).
-void GuiInputHandler::arm_strip_drag_at(int x, int y) {
-    // The ctrl entry's anchor: the press column against the live viewport.
-    const double spp = current_samples_per_pixel(app, audio);
-    arm_strip_drag_at(x, y,
-                      static_cast<double>(app.viewport_start_sample) +
-                          static_cast<double>(x) * spp);
-}
-
 void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     app.strip_drag = StripDragState{};
     app.strip_drag.active  = true;
@@ -1673,18 +1652,8 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     app.strip_drag.last_x  = x;
     app.strip_drag.last_y  = y;
     app.strip_drag.anchor_sample = anchor_sample;
-    // The first directional segment starts here: origin at the press (the
-    // whole-struct reset above already left the mode Unclassified, which is
-    // the segment's whole lock state), clock seeded so the first motion event
-    // measures its pause gap from the arm. EVERY PRESS THEREFORE RE-AIMS the
-    // axis lock — one half of why it is not the reversed whole-drag lock, the
-    // pause reset being the other (the model at kStripSegmentClassifyPx).
-    app.strip_drag.seg_x0 = x;
-    app.strip_drag.seg_y0 = y;
-    app.strip_drag.last_motion_ms = monotonic_ms();
-    // ZOOM IS THE GESTURE'S CUE — both entries (the ctrl navigation-surface
-    // press and the overview strip's ctrl press) are exactly the zone map's
-    // two ctrl Zoom surfaces — so this is
+    // ZOOM IS THE GESTURE'S CUE — the entry is exactly the zone map's overview
+    // ctrl Zoom surface — so this is
     // the kind the capture release restores. Passing it is what makes the restore
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
@@ -1734,8 +1703,8 @@ void GuiInputHandler::run_overview_teleport(int x) {
 
 // THE ONE MOTION APPLY, forking on the drag's kind. X ONLY, STRUCTURALLY:
 // mouse_y is not even a parameter — the pan has no zoom axis to leak into
-// ("no cross axis allowance for up/down", the architect's ruling; this is
-// not the segment lock, there is nothing to classify) and the edge drags'
+// ("no cross axis allowance for up/down", the architect's ruling: the pan
+// has no zoom axis at all) and the edge drags'
 // level is a pure function of the pointer COLUMN. The column clamps into the
 // lane first (the song walls by construction), then maps through
 // overview_anchor_sample_at_x per event, so every frame is domain-correct in
@@ -2918,11 +2887,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //     motionless release is then just the teleport (outside) or a
     //     consumed nothing (inside — the lane's v1 rule standing).
     //   * CTRL-EXACT left press = the DUAL-AXIS STRIP DRAG ("require ctrl
-    //     on zoom strip also" — the arm's second entry, moved off the plain
-    //     press by this rework): capture, stem-at-press, the segment lock,
-    //     the whole-song anchor. OUTSIDE the box the teleport still fires
-    //     first ("with either plain or ctrl click"), THEN the drag arms at
-    //     the teleported position; inside, no teleport.
+    //     on zoom strip also" — the arm's ONE entry since 2026-08-14, moved
+    //     off the plain press by this rework): capture, stem-at-press, both
+    //     axes plain, the whole-song anchor. OUTSIDE the box the teleport
+    //     still fires first ("with either plain or ctrl click"), THEN the
+    //     drag arms at the teleported position; inside, no teleport.
     //   * Every OTHER press — shift / alt / mixed, non-left — is a consumed
     //     nothing, the band-claim family's shape.
     //
@@ -3177,11 +3146,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // marker claim below). On the NAVIGATION SURFACE — the waveform, either
         // half, plus the RULER and the MARKER lane's empty stretches since
         // 2026-08-12 (the eighth glass ruling: the lanes are the upper half's
-        // extension, so the zoom's SURFACE GREW; the succession is at
-        // arm_strip_drag_at) — it arms the dual-axis strip drag
-        // (StripDragState / apply_strip_drag_at): the
-        // cursor capture ("swallow"), the anchor stem, the edge clamp, and
-        // dual-axis zoom+pan. The strip drag is
+        // extension) — it is THE ONE NAV DRAG'S CTRL ENTRY since 2026-08-14
+        // (arm_nav_zoom_press; the live-ctrl model at ScrollDragState): the
+        // same drag the plain press arms, opened in the ZOOM phase with the
+        // pivot seated and the anchor stem painted at the press — ctrl is the
+        // desk's second finger, live mid-gesture in both directions, so this
+        // entry differs from the plain one only in its opening mode and in
+        // arming NO click act. The gesture is
         // navigation-class: allowed in read-only, never touches the playhead or
         // selection — and a MOTIONLESS ctrl press-release commits
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
@@ -3283,9 +3254,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // covered) and the two navigation lanes. The flag hit was claimed
             // above, so the owner's own flag carve-out simply agrees here.
             // Anywhere else — the gap band, the inter-lane seams — the strict
-            // no-op below.
+            // no-op below. (The `h` view's ctrl press falls through to this
+            // same claim; the click act is not armed on this entry, so the
+            // mode needs no arm of its own here.)
             if (point_on_nav_surface(app, audio, x, y))
-                arm_strip_drag_at(x, y);
+                arm_nav_zoom_press(x, y);
             return;
         }
 
@@ -3837,9 +3810,29 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
     app.scroll_drag.press_x         = x;
     app.scroll_drag.press_y         = y;
     app.scroll_drag.last_x          = x;
+    app.scroll_drag.last_y          = y;
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
+}
+
+// THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
+// contract at ScrollDragState, app_state.h): the ordinary nav press, opened
+// in the ZOOM phase. `ctrl_entry` is the press-time record — the deferred
+// click act is NOT armed, a ctrl click never having been the placement — and
+// the pivot seats at the press column, where the anchor stem paints FROM THE
+// PRESS (the stem-at-press ruling kept across the unification; the arm owes
+// that first frame's full waveform-area damage, the discrete shape). The
+// CAPTURE does not begin here: it begins at the 8px crossing whatever the
+// mode, so a ctrl click never blinks the cursor — superseding the retired
+// dedicated zoom drag's capture-at-press, the unification's own rule.
+void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
+    arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
+                  /*scrub_release=*/false);
+    app.scroll_drag.ctrl_entry = true;
+    app.scroll_drag.zooming    = true;
+    seat_nav_zoom_anchor(x);
+    viewport.invalidate_waveform_area();
 }
 
 // THE DEFERRED CLICK ACT — what a motionless navigation-surface press does at
@@ -4157,16 +4150,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.scroll_drag.active) {
-        // The navigation surface's plain press resolves at its release
-        // (contract at ScrollDragState, app_state.h). A MOVED press is the
-        // grab-pan's end: the pan applied incrementally during motion, so
-        // there is nothing to finalize but the predictor (the continuous pan
-        // deferred per-event resyncs — one re-anchor here) and the capture,
-        // begun at the crossing (reappear the cursor at the raw traveled
-        // virtual_pointer_x_, y frozen at the press row — the pan sets no
-        // anchor-stem override; idempotent, so a degraded compositor that
-        // never captured is unharmed). No click act: a pan is a pure viewport
-        // move.
+        // The navigation surface's press resolves at its release (the one nav
+        // drag — contract at ScrollDragState, app_state.h). A MOVED drag ends
+        // in whichever PHASE it was in: the pan's end is one predictor
+        // re-anchor (the continuous pan deferred per-event resyncs), the zoom
+        // phase's end is the final apply (resync + the one synchronous
+        // rebuild inside apply_strip_drag_zoom's final path — which is also
+        // the stem's erase — plus the moved-drag double-click drop, since a
+        // zoom moves content between two clicks); either way the capture,
+        // begun at the crossing, ends here and the cursor reappears as the
+        // kind the LAST mode stamped — the stem column after a zoom-phase
+        // end, the raw traveled x after a pan-phase one. No click act on any
+        // moved end: the drag was navigation.
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
         // placement (deselect / mode-land, region dissolve, playhead, reseek,
@@ -4174,18 +4169,35 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // plus the EmptyLane double-click seed when the press was the marker
         // lane's empty stretch (release-side seeding, the TrimBar pattern: only
         // the release knows it stayed a click). No capture ever began, so
-        // nothing to end.
+        // nothing to end. THE ACT IS PRESS-TIME: a ctrl-armed press
+        // (ctrl_entry) runs NO act — a ctrl click was never the placement —
+        // and owes only its press-painted stem's erase; a plain-armed press
+        // runs its act even with ctrl down at the release (press-time
+        // modifiers arm the act, live modifiers steer the gesture — the
+        // scoping statement at AppState::ChromePress::shift).
         const bool moved     = app.scroll_drag.moved;
+        const bool zooming   = app.scroll_drag.zooming;
+        const bool ctrl_arm  = app.scroll_drag.ctrl_entry;
         const bool history   = app.scroll_drag.history;
         const bool seed_lane = app.scroll_drag.seed_empty_lane;
         const bool scrub     = app.scroll_drag.scrub_release;
         const int  press_x   = app.scroll_drag.press_x;
+        if (moved && zooming) {
+            apply_nav_zoom_at(x, y, /*final_event=*/true);
+            app.double_click = DoubleClickCandidate{};
+        }
         app.scroll_drag = ScrollDragState{};
         if (moved) {
-            if (playback.is_playing()) playback.resync_predictor();
+            if (!zooming && playback.is_playing())
+                playback.resync_predictor();
             end_strip_pointer_capture();
             return;
         }
+        // The motionless zoom-phase press painted a stem from the press (or
+        // from a sub-threshold ctrl edge) and owes its erase — full
+        // waveform-area damage, the discrete shape.
+        if (zooming) viewport.invalidate_waveform_area();
+        if (ctrl_arm) return;
         run_nav_click_act(press_x, history, scrub);
         if (seed_lane) {
             app.double_click = DoubleClickCandidate{
@@ -4342,17 +4354,25 @@ void GuiInputHandler::finalize_active_drags() {
         end_strip_pointer_capture();
     }
     if (app.scroll_drag.active) {
-        // The plain-drag grab-pan / pending click. A MOVED pan is incremental
-        // too, so re-anchor the predictor once and end the capture (begun at
-        // the crossing), its release's whole body. An UNMOVED press merely
+        // The one nav drag / pending click. A MOVED drag applied its motion
+        // continuously in either phase, so ending is just ending: one
+        // predictor re-anchor, one synchronous rebuild when the zoom phase
+        // was live (there are no release coordinates here, so no final
+        // apply — the strip arm's own force-end shape), and the capture end
+        // (begun at the crossing). An UNMOVED press merely
         // DISARMS — a force-end is not a click, so the deferred click act does
         // NOT run, the same commit-vs-disarm asymmetry the two pendings below
         // hold (a pending has committed nothing, and there is nothing owed).
+        // A zoom-phase stem — painted from a ctrl press or a ctrl edge —
+        // owes its erase on every one of these ends.
+        const bool zooming = app.scroll_drag.zooming;
         if (app.scroll_drag.moved) {
             if (playback.is_playing()) playback.resync_predictor();
+            if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
         }
         app.scroll_drag = ScrollDragState{};
+        if (zooming) viewport.invalidate_waveform_area();
     }
     if (app.overview_drag.active) {
         // The overview box drag applied its motion continuously (absolute
@@ -5301,9 +5321,12 @@ bool GuiInputHandler::handle_history_mode_press(
         }
     }
 
-    // CTRL-exact on the navigation surface leaves for the live strip drag —
-    // the mode's admitted zoom, on the gesture's full grown surface (the flag
-    // toggle was claimed above, so a lane arrival here is an empty stretch).
+    // CTRL-exact on the navigation surface leaves for the live router's ctrl
+    // claim — the one nav drag's ctrl entry (arm_nav_zoom_press), the mode's
+    // admitted zoom, on the gesture's full grown surface (the flag toggle was
+    // claimed above, so a lane arrival here is an empty stretch). The entry
+    // arms NO click act, so the mode needs no arm of its own; a mid-drag
+    // ctrl release pans, the pan being equally admitted (the wheel class).
     // Everywhere else — the trim bar's begin set above all — it is consumed.
     if (ctrl && !shift && !alt) return !on_nav_surface;
     // SHIFT-exact on the navigation surface is the VIEW-LOCAL REGION FORMER
@@ -6366,50 +6389,99 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
         return;
     }
-    // The navigation surface's plain press: the pending click, and past the
-    // threshold the grab-pan (continuous 1:1; contract at ScrollDragState,
-    // app_state.h). The viewport snaps to whole pixels in
+    // THE ONE NAV DRAG: the pending click, and past the threshold the
+    // grab-pan — or, while ctrl is held, the zoom (the live-ctrl model,
+    // contract at ScrollDragState, app_state.h). The viewport snaps to whole
+    // pixels in
     // clamp_viewport_start (reached through scroll_viewport), so a per-event pan
     // re-anchored by that snap tracks the cursor 1:1 without drift — no carried
     // sample remainder. scroll_viewport renders the plate synchronously, so
     // per-event work is one full-width render — the cost zoom already paid per
     // pointer frame, and the reason a panning plate looks identical to a resting
-    // one (architect 2026-07-26). A lost button: a MOVED pan ends like release
-    // (re-anchor the predictor once, end the capture); an UNMOVED press is NOT
+    // one (architect 2026-07-26). A lost button: a MOVED drag ends like release
+    // (the zoom phase's final apply, or the pan's one predictor re-anchor,
+    // then the capture end); an UNMOVED press is NOT
     // a clean click, so the deferred act does not run and no seed is left —
     // the standing abnormal-end rule. The
     // wheel keeps its quantized detent step; only the drag is continuous.
     if (app.scroll_drag.active) {
+        ScrollDragState& sd = app.scroll_drag;
         if (!mods.primary_button_held) {     // button lost
-            const bool moved = app.scroll_drag.moved;
+            const bool moved   = sd.moved;
+            const bool zooming = sd.zooming;
+            if (moved && zooming)
+                apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/true);
             app.scroll_drag = ScrollDragState{};
+            // The stem's erase, when the zoom phase painted one — the moved
+            // final apply's rebuild covers it, so this is the unmoved
+            // ctrl-armed press's owed frame (the strip arm's own shape).
+            if (zooming && !moved) viewport.invalidate_waveform_area();
             if (moved) {
-                if (playback.is_playing()) playback.resync_predictor();
+                if (!zooming && playback.is_playing())
+                    playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
             }
             return;
         }
+        // THE LIVE MODE SYNC, ahead of the threshold gate so a pending press
+        // tracks ctrl too (the ctrl edge is observed at the NEXT motion event
+        // — a modifier edge under a motionless pointer changes nothing until
+        // motion resumes, which is honest: with no deltas there is nothing
+        // either phase could apply. Within the live gesture CTRL ALONE is
+        // read — shift and alt bind nothing mid-drag and ride along inert).
+        // Each direction's re-seat is at ScrollDragState:
+        //   * ctrl DOWN: seat the pivot at the pointer's current column and
+        //     re-stamp the capture's restore kind — the stem's first frame is
+        //     this edge's owed damage;
+        //   * ctrl UP: nothing re-seats (last_x/last_y are current in both
+        //     phases); the stem erases, the restore x drops back to the raw
+        //     travel and the restore kind re-stamps to Pan.
+        // The capture itself is untouched by every switch.
+        if (mods.ctrl != sd.zooming) {
+            sd.zooming = mods.ctrl;
+            if (sd.zooming) {
+                seat_nav_zoom_anchor(mouse_x);
+                if (sd.moved)
+                    set_strip_capture_restore_kind(GuiCursorKind::Zoom);
+            } else if (sd.moved) {
+                clear_strip_capture_restore_x();
+                set_strip_capture_restore_kind(GuiCursorKind::Pan);
+            }
+            // The stem's paint or erase: a mode switch is a discrete edge, so
+            // full waveform-area damage (the arm's own shape).
+            viewport.invalidate_waveform_area();
+        }
         // Sub-threshold: still the pending click. The press did nothing, so
-        // nothing happens here either — the fork IS the threshold. last_x
-        // stays at the press until the crossing, which therefore folds the
-        // whole press→crossing travel into its first pan event.
-        if (!app.scroll_drag.moved) {
-            if (std::max(std::abs(mouse_x - app.scroll_drag.press_x),
-                         std::abs(mouse_y - app.scroll_drag.press_y)) <
+        // nothing happens here either — the fork IS the threshold. last_x /
+        // last_y stay at the press until the crossing, which therefore folds
+        // the whole press→crossing travel into its first applied event.
+        if (!sd.moved) {
+            if (std::max(std::abs(mouse_x - sd.press_x),
+                         std::abs(mouse_y - sd.press_y)) <
                     kDragMovedThresholdPx) {
                 return;
             }
-            app.scroll_drag.moved = true;
-            // THE PAN BEGINS AT THE CROSSING, and so does its CAPTURE — not at
-            // the press, or every motionless click would blink the cursor
-            // away and back. Pan is the gesture's cue, stamped for the
-            // capture's release restore (the contract at
-            // GuiPlatform::begin_pointer_capture).
-            begin_strip_pointer_capture(GuiCursorKind::Pan);
+            sd.moved = true;
+            // THE DRAG BEGINS AT THE CROSSING, and so does its CAPTURE — not
+            // at the press, or every motionless click would blink the cursor
+            // away and back, the ctrl click included (the unification's own
+            // rule). The MODE AT THE CROSSING is the gesture's cue, stamped
+            // for the capture's release restore (the contract at
+            // GuiPlatform::begin_pointer_capture); a later mode switch
+            // re-stamps it through set_strip_capture_restore_kind above.
+            begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
+                                                   : GuiCursorKind::Pan);
+        }
+        if (sd.zooming) {
+            // The ZOOM phase: dy off the live level about the seated pivot,
+            // dx discarded (apply_nav_zoom_at, the phase's one exact axis).
+            apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);
+            return;
         }
         const double spp = current_samples_per_pixel(app, audio);
-        const int    dx  = mouse_x - app.scroll_drag.last_x;
-        app.scroll_drag.last_x = mouse_x;
+        const int    dx  = mouse_x - sd.last_x;
+        sd.last_x = mouse_x;
+        sd.last_y = mouse_y;   // the ctrl-down switch measures dy from here
         const int64_t delta =
             static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
         if (delta != 0) {

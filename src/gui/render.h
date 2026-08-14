@@ -1231,8 +1231,9 @@ inline int waveform_max_h_px() {
 // his own reference, ableton.png in the redesign folder — "a Zoom strip right
 // underneath the transport buttons... it draws a box around the area that you
 // currently view"). The lane shows the WHOLE PIECE as min/max bars with the
-// viewport box and the playhead tick; its plain drag is the dual-axis strip
-// drag (arm_strip_drag_at carries the entry record).
+// viewport box and the playhead tick; its plain drag is the box pan and its
+// CTRL drag the dual-axis strip drag (arm_strip_drag_at carries the entry
+// record).
 //
 // ITS HOME IS THE CENTERED BLOCK, between the ICON ROW and the TRIM BAR (the
 // relayout's commit B, the same day: top lane 3). It landed under the unified

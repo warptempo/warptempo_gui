@@ -1195,19 +1195,27 @@ int main(int argc, char** argv) {
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
-    // cursor lock (pointer-constraints + relative-pointer). Shared by two
-    // waveform gestures — the ctrl-exact strip drag and the alt-exact pan — for
+    // cursor lock (pointer-constraints + relative-pointer). Shared by the two
+    // capturing waveform gestures — the one nav drag (pan by default, zoom
+    // while ctrl is held) and the overview lane's ctrl strip drag — for
     // infinite pan/zoom travel.
-    // Both platform methods self-guard (begin no-ops when a capture is live or
-    // the compositor lacks the managers; end is idempotent), so the input layer
+    // All the platform methods self-guard (begin no-ops when a capture is live
+    // or the compositor lacks the managers; end is idempotent; the restore
+    // riders no-op uncaptured), so the input layer
     // stays agnostic to whether capture is available. The begin hook forwards the
     // gesture's own cursor kind, which is what the release restores (contract at
-    // GuiPlatform::begin_pointer_capture).
+    // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
+    // switches ride the restore-x clear and the restore-kind re-stamp
+    // (2026-08-14, the live-ctrl model).
     input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
         gui.begin_pointer_capture(restore_kind);
     };
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
+    input_handler.clear_strip_capture_restore_x =
+        [&]() { gui.clear_capture_restore_x(); };
+    input_handler.set_strip_capture_restore_kind =
+        [&](GuiCursorKind kind) { gui.set_capture_restore_kind(kind); };
 
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the

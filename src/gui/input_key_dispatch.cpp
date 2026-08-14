@@ -1039,8 +1039,8 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // be the product's ONE ASYNCHRONOUS CLOSER. Every OTHER closer is a keyboard
 // route below on_key's DRAG-MODAL GATE, so none of them can run with a gesture
 // live — the whole reason close_history_mode ends none. This one arrives on a
-// poll and bypasses that gate, and the view has three gestures live in it (the
-// region drag, the ctrl strip drag and the grab pan): left held across the
+// poll and bypasses that gate, and the view has gestures live in it (the
+// region drag and the one nav drag, pan and ctrl-zoom phases alike): left held across the
 // reset, the next motion would grow a VIEW-LOCAL region in the EDITOR from an
 // anchor the view took, or pan over the band the close just restored.
 // finalize_active_drags is the existing force-end — the same release bodies the
@@ -2196,8 +2196,8 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
 // it (membership re-derived 2026-08-12 under pan-primary): zoom, the paged
 // scroll, the plain wheel's stepped pan, the overview command,
-// the pointer's plain-drag pan and ctrl strip drag on the mode's whole
-// navigation surface, and the mode's own cursor-moving acts
+// the one nav drag on the mode's whole navigation surface (its pan and its
+// ctrl zoom phase alike), and the mode's own cursor-moving acts
 // — the diff-flag click, the deferred click act and the keyboard's Tab cycle,
 // Home/End and `c`, which `0` reaches too from full zoom out. Committing the
 // frozen text

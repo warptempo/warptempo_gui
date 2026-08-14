@@ -361,8 +361,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: ALL THREE callers —
-    // apply_strip_drag_at, the two-finger touch-nav body
+    // `level_changed` reports a real move, not a request: ALL FOUR callers —
+    // apply_strip_drag_at, the nav drag's zoom phase (apply_nav_zoom_at,
+    // which joined 2026-08-14 with the live-ctrl model), the two-finger
+    // touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
     // chokepoint per touch frame) and the overview lane's edge drags
     // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —

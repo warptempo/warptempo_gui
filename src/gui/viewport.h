@@ -175,16 +175,18 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // THREE callers since the overview lane's rework (2026-08-12):
+    // FOUR callers since the nav drag's zoom phase joined (2026-08-14):
     // apply_strip_drag_at (which has already
     // panned the viewport for this event and hands the anchor's drifted,
-    // edge-rebindable column), the two-finger touch-nav body
+    // edge-rebindable column), the nav drag's zoom phase apply_nav_zoom_at
+    // (pure zoom about the seated pivot — the viewport arrives unpanned), the
+    // two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the content under the previous finger centroid, placed at
     // the current one), and the overview lane's EDGE drags
     // (apply_overview_drag_at's edge arm — the anchor is the FIXED opposite
     // viewport bound at its own window column, 0 or area.w, so a dragged box
-    // edge zooms about the far edge). All three pre-clamp the level; this
+    // edge zooms about the far edge). All four pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport

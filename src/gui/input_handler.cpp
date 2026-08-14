@@ -414,8 +414,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region drags, the plain-drag grab-pan and its pending
-    // click (scroll_drag — one state for both phases since 2026-08-12),
+    // trim / strip / region drags, the one nav drag and its pending
+    // click (scroll_drag — one state for the pending, the pan and the ctrl
+    // zoom phase since 2026-08-14),
     // the overview lane's box drag (overview_drag — the pan and the edge
     // drags, one state for the pending and moved phases since the lane
     // rework the same day),

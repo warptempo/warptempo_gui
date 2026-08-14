@@ -3858,25 +3858,32 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
 
-// Paints the strip-drag anchor stem (the Ableton pivot affordance) at the
-// drag's current anchor column, full waveform height. Live for the WHOLE
-// gesture: gated on the drag being active and nothing else since 2026-08-05
+// Paints the anchor stem (the Ableton pivot affordance) at the live zoom
+// gesture's current anchor column, full waveform height. TWO PRODUCERS, ONE
+// STEM since 2026-08-14: the overview lane's ctrl strip drag (strip_drag, the
+// gesture's whole life) and THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while
+// `zooming` — from a ctrl-armed press, or from a ctrl-down edge mid-drag, and
+// gone again at the ctrl-up edge; the mode's contract is at ScrollDragState).
+// The gate is the gesture record and nothing else since 2026-08-05
 // (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
-// rather than the stem appearing only once the drag crosses the slack. The arm
-// owes the first frame's damage (arm_strip_drag_at); it vanishes the moment the
-// drag ends (release / button loss / the force-end finalizer clear strip_drag
-// before the next paint; Esc no longer ends a gesture at all). The stem is the
-// ZOOM PIVOT and nothing more — the playhead jump that briefly rode this gesture
-// was rolled back 2026-08-06 and the stem is what survives it. The anchor column
-// is recomputed
-// each frame from the persisted anchor_sample against the DISPLAYED viewport
-// (wf_cache.fp_*), the same basis paint_region_ground and paint_playheads use,
-// so the stem stays locked to the blitted plate while the worker rebuilds. The
-// anchor lives in the active display domain (viewport_start + col*spp), so no
-// warp map is walked. render_strip_anchor_stem clamps the column to the visible
-// edges — an edge-pinned anchor draws the clamp itself.
+// rather than the stem appearing only once the drag crosses the slack. The
+// arms and the mode-switch edges owe the frame's damage (arm_strip_drag_at /
+// arm_nav_zoom_press / the mode sync in on_motion); it vanishes the moment
+// its gate drops (release / button loss / the force-end finalizer / the
+// ctrl-up switch, each spelling its own damage; Esc no longer ends a gesture
+// at all). The stem is the ZOOM PIVOT and nothing more — the playhead jump
+// that briefly rode the strip drag was rolled back 2026-08-06 and the stem is
+// what survives it. The anchor column is recomputed each frame from the
+// persisted anchor_sample against the DISPLAYED viewport (wf_cache.fp_*), the
+// same basis paint_region_ground and paint_playheads use, so the stem stays
+// locked to the blitted plate while the worker rebuilds. The anchor lives in
+// the active display domain (viewport_start + col*spp), so no warp map is
+// walked. render_strip_anchor_stem clamps the column to the visible edges —
+// an edge-pinned anchor draws the clamp itself.
 void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
-    if (!app.strip_drag.active) return;
+    const bool strip    = app.strip_drag.active;
+    const bool nav_zoom = app.scroll_drag.active && app.scroll_drag.zooming;
+    if (!strip && !nav_zoom) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
@@ -3885,8 +3892,9 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     const double vp_start = basis.vp_start;
     // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
     // the PLATE basis hoisted above.
-    const int col =
-        displayed_column_at(app.strip_drag.anchor_sample, vp_start, spp);
+    const int col = displayed_column_at(
+        strip ? app.strip_drag.anchor_sample : app.scroll_drag.anchor_sample,
+        vp_start, spp);
     render_strip_anchor_stem(cr, area, col);
 }
 

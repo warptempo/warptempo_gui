@@ -479,18 +479,21 @@ struct GuiInputHandler {
     // Strip-drag pointer-capture hooks, seeded no-op and installed in main.cpp
     // to GuiPlatform::begin_pointer_capture / end_pointer_capture (the same
     // reverse-the-platform-boundary pattern as Viewport::kick_waveform_*).
-    // ONLY the two strip-row drags fire them: begin after the press claim arms,
-    // end on every strip-drag exit path (release, lost button, and the force-end
+    // ONLY the two capturing drags fire them — the one nav drag and the
+    // overview lane's ctrl strip drag: begin at the arm (the strip drag) or
+    // the threshold crossing (the nav drag),
+    // end on every exit path (release, lost button, and the force-end
     // finalizer — there is no cancel path, 2026-07-29). Both
     // platform methods are self-guarding — begin no-ops when a capture is live
-    // or the compositor lacks the managers, end is idempotent — so a strip drag
+    // or the compositor lacks the managers, end is idempotent — so a drag
     // that never captured (degraded compositor) still calls end harmlessly.
     // BEGIN CARRIES THE GESTURE'S OWN CURSOR KIND, which is the kind the capture
-    // release hands back: Zoom for the strip drag (both its entries — the
-    // ctrl navigation-surface press and the overview strip's ctrl press —
-    // arm inside the map's two
-    // Zoom zones), Pan for the plain-drag grab-pan (stamped at its threshold
-    // crossing, where its capture begins). The overview lane's OWN drags (the
+    // release hands back: Zoom for the overview strip drag (its ctrl press
+    // arms inside the map's overview Zoom zone), and for the nav drag the
+    // MODE AT ITS CROSSING — Pan or Zoom — with every mid-gesture ctrl switch
+    // re-stamping it through set_strip_capture_restore_kind below, so the
+    // release restores the phase the gesture ended in. The overview lane's
+    // OWN drags (the
     // box pan and the edge drags) never capture at all — absolute-position
     // drags, the trim endcap model. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
@@ -502,10 +505,24 @@ struct GuiInputHandler {
         [](GuiCursorKind){};
     std::function<void()> end_strip_pointer_capture   = []{};
     // Set the active capture's release-restore x to the anchor stem's surface
-    // x. apply_strip_drag_at fires it each event (the last wins at release) so
-    // the cursor reappears dead on the stem; the grab-pan never calls it, so its
+    // x. The zoom bodies (apply_strip_drag_at and the nav drag's
+    // apply_nav_zoom_at) fire it each event (the last wins at release) so the
+    // cursor reappears dead on the stem; the pan phase never calls it, so its
     // release keeps the raw traveled-x restore.
     std::function<void(double)> set_strip_capture_restore_x = [](double){};
+    // The nav drag's TWO mode-switch riders (2026-08-14, the live-ctrl model —
+    // contract at ScrollDragState, app_state.h). The capture itself is
+    // untouched by a mode switch; only what the release restores moves:
+    //   * clear_strip_capture_restore_x — drop the stem override at a
+    //     zoom→pan switch, so the release goes back to the raw traveled x
+    //     (a later zoom phase re-sets it per event);
+    //   * set_strip_capture_restore_kind — re-stamp the cursor kind the
+    //     release restores (Pan or Zoom) so the cursor comes back as the
+    //     phase the gesture ENDED in, not the one its capture began in.
+    // Both are no-ops while no capture is live.
+    std::function<void()> clear_strip_capture_restore_x = []{};
+    std::function<void(GuiCursorKind)> set_strip_capture_restore_kind =
+        [](GuiCursorKind){};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -650,39 +667,41 @@ struct GuiInputHandler {
     // breathed in and out during a drag ("if I move two fingers in the same
     // direction I get the old unrestricted zoom motion... during the drag it
     // squeezes in and out"); (2) THE FINGER-AGREEMENT SEGMENT LOCK
-    // (2026-08-14, SUPERSEDED the same day) — the mouse lock's model brought
+    // (2026-08-14, SUPERSEDED the same day) — the then-live mouse lock's
+    // model brought
     // to glass: each motion segment classified ONCE on the two fingers'
     // cumulative travel vectors, PAN iff their horizontal components agreed
-    // in sign, each vector lay within kStripSegmentZoomAngleDeg of flat, and
-    // the LESSER finger had travelled at least half kStripSegmentClassifyPx
+    // in sign, each vector lay within 60 degrees of flat, and
+    // the LESSER finger had travelled at least half the 8 px classify distance
     // (the anchored-finger floor — a planted thumb's jitter could otherwise
     // pass the first two tests, while a panning hand moves as one rigid
     // unit), else ZOOM, with the off mode a literal zero, a
-    // kStripSegmentPauseMs rest re-aiming it, and the pre-classification
+    // 75 ms rest re-aiming it, and the pre-classification
     // window HOLDING AND FOLDING rather than running both axes plain
     // (both-plain being the accordion in miniature); it worked, and it was
     // dropped because zoom-only makes it unnecessary, not because it failed;
     // (3) ZOOM ONLY, this shape. Damping was tried and rejected on the mouse
-    // surface before either of them (the closed calibration ladder at
-    // kStripSegmentClassifyPx, app_state.h) and is not re-proposed here.
+    // surface before either of them (the mouse ladder's closed record, now
+    // above kZoomStripPxPerLevel, app_state.h) and is not re-proposed here.
     //
-    // THE MOUSE KEEPS ITS PAN AXIS, AND THE ASYMMETRY IS A FRICTION
-    // ARGUMENT: the ctrl drag still classifies between pan and zoom per
-    // segment (the hard axis lock at kStripSegmentClassifyPx, app_state.h).
-    // Glass can afford zoom-only on two fingers BECAUSE one finger already
-    // pans at no cost — a bare finger, no modifier, no click — while the
-    // laptop's pan lives inside the ctrl drag, so dropping its pan axis would
-    // cost a modifier release and a re-press mid-gesture, and "clicks are
-    // naturally more frictional than touching the screen". That is why the
-    // two surfaces are allowed to differ; it is not a symmetry argument and
-    // must not be re-argued as one.
+    // THE DESK MIRRORS THIS MODEL SINCE 2026-08-14 (the one-model ruling,
+    // superseding the friction asymmetry this block used to record): the
+    // navigation surface's drag PANS by default and CTRL is its live zoom
+    // modifier — pressed or released mid-gesture, the second finger's part
+    // played by a key — so "pan by default, add the zoom modifier at any
+    // time, drop it at any time" is one sentence for both surfaces
+    // (ScrollDragState, app_state.h). The friction argument that justified
+    // the mouse keeping a pan axis inside its ctrl drag — "dropping it would
+    // cost a modifier release mid-gesture and a re-press" — is ANSWERED
+    // rather than violated: the modifier release mid-gesture IS the pan now,
+    // costing no click, which is what dissolved the asymmetry and the mouse's
+    // segment lock with it.
     //
     // IT DRIVES THE STRIP-DRAG FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
     // synchronous per-frame rebuild, and the either-axis follow suppression
     // all come from it), and DELIBERATELY NOT the family's pointer-press arm —
-    // so the gesture enters BELOW apply_strip_drag_at and takes none of the
-    // mouse's segment machinery, which it has no use for.
+    // so the gesture enters BELOW apply_strip_drag_at.
     // The recorded justification for stopping short of arm_strip_drag_at /
     // StripDragState, per the fallback the phase-1 ruling names: (1) the arm
     // unconditionally CAPTURES THE REAL POINTER (begin_strip_pointer_capture
@@ -1046,24 +1065,18 @@ struct GuiInputHandler {
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
                                      int x, int y);
-    // Arm the dual-axis strip drag — ONE body, TWO entries, both CTRL-EXACT
-    // since the overview lane's rework (2026-08-12, "require ctrl on zoom
-    // strip also"): the ctrl press on the navigation surface, whose anchor is
-    // the song position under the press against the LIVE VIEWPORT (the
-    // two-parameter form derives it), and the OVERVIEW STRIP's ctrl press,
-    // whose anchor is the song position at the pressed OVERVIEW column — the
-    // whole-song mapping, domain-corrected in target view
-    // (overview_anchor_sample_at_x) — handed to the parameterized form (the
-    // lane's PLAIN press carried that entry for the landing's hours and is
-    // the box pan / teleport now, OverviewDragState).
-    // The anchor is the ONE thing the entries decide differently, so the body
-    // is parameterized on it rather than grown a sibling; the succession
-    // record (the ruler's dead entry included) is at the definition.
+    // Arm the dual-axis strip drag — ONE body, ONE entry since 2026-08-14:
+    // the OVERVIEW STRIP's CTRL-exact press ("require ctrl on zoom strip
+    // also"), whose anchor is the song position at the pressed OVERVIEW
+    // column — the whole-song mapping, domain-corrected in target view
+    // (overview_anchor_sample_at_x). The navigation surface's ctrl press
+    // became the one nav drag's live zoom modifier that day
+    // (arm_nav_zoom_press above; the entry succession is at the definition)
+    // and the press-column overload it consumed is deleted.
     // The arm PAINTS THE ANCHOR STEM from the press (2026-08-05, the one
     // surviving piece of the rolled-back strip-drag playhead arc) and owes that
     // first frame's damage; the gesture itself stays NAVIGATION-CLASS, touching
     // neither playhead nor selection.
-    void arm_strip_drag_at(int x, int y);
     void arm_strip_drag_at(int x, int y, double anchor_sample);
 
     // THE OVERVIEW LANE'S OWN GESTURES (the lane rework, 2026-08-12; the
@@ -1243,6 +1256,29 @@ struct GuiInputHandler {
     // instead of the placement, which is the halves' one remaining difference.
     void arm_nav_press(int x, int y, bool history, bool seed_empty_lane,
                        bool scrub_release);
+
+    // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
+    // contract at ScrollDragState, app_state.h): arms the ordinary nav press
+    // with no click act, opens it in the ZOOM phase with the pivot seated at
+    // the press column, and paints the anchor stem from the press (the
+    // stem-at-press ruling kept; the arm owes that first frame's damage).
+    // The capture still begins at the 8px crossing — a ctrl click never
+    // blinks the cursor, superseding the retired zoom drag's
+    // capture-at-press.
+    void arm_nav_zoom_press(int x, int y);
+
+    // SEAT THE NAV DRAG'S ZOOM PIVOT at the pointer's current column — the
+    // ctrl-down re-seat, called by the ctrl arm and by every pan→zoom mode
+    // switch: anchor_sample = the content under the pointer, column-clamped
+    // into the effective width so a captured virtual position off the window
+    // still seats an onscreen pivot.
+    void seat_nav_zoom_anchor(int x);
+
+    // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
+    // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded
+    // (the phase's exact axis), the capture's restore x driven to the stem
+    // each event. Defined beside apply_strip_drag_at (input_pointer.cpp).
+    void apply_nav_zoom_at(int x, int y, bool final_event);
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub
@@ -1875,13 +1911,16 @@ private:
     // and STOP a live audition at their first ACCEPTED bound change (the press
     // carries neither since 2026-07-30 — a trim-bar press that never becomes a
     // drag is a consumed nothing); the PLAYHEAD is what they never touch.
-    // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
+    // Dual-axis strip drag (the overview lane's ctrl drag, its one entry
+    // since 2026-08-14), INCREMENTAL: applies one motion event at (x, y).
     // Reads the LIVE zoom level and viewport (never a stored press baseline),
     // pans by the dx since the last event at the old level, zooms by the dy off
     // the live level (clamped into the numeric band and the shorter-file max),
     // and pivots the zoom around the song anchor — re-deriving the anchor's
     // drifted column each event and rebinding it to the nearest visible pixel
-    // when a pan carries it offscreen (the edge trick). `final_event` is true on
+    // when a pan carries it offscreen (the edge trick). Both axes are PLAIN
+    // and simultaneous — the segment axis lock is deleted (the record above
+    // kZoomStripPxPerLevel, app_state.h). `final_event` is true on
     // the terminating event (release / button-lost) for the one synchronous
     // rebuild plus predictor resync; motion events pass false and repaint
     // synchronously too — one full rebuild per pointer frame whether the level
@@ -2032,17 +2071,19 @@ private:
     //   with it — "we need to just get rid of the crosshairs but retain the
     //   scrub action". The lower half's audition is still there; it is a click
     //   act now, and the drag the cue must promise is the pan.)
-    // - Zoom: the NAVIGATION SURFACE, CTRL-exact — the
-    //   dual-axis strip drag's surface (which always covered both halves; the
-    //   lanes joined it with the eighth glass ruling, so plain and ctrl now
-    //   name the same rect; a ctrl press on a FLAG is the membership toggle,
-    //   no cue).
+    // - Zoom: the NAVIGATION SURFACE, CTRL-exact — since 2026-08-14 the ONE
+    //   NAV DRAG'S ZOOM MODIFIER (the same drag the Pan row promises, ctrl
+    //   live mid-gesture; the surface always covered both halves, the lanes
+    //   joined it with the eighth glass ruling, so plain and ctrl name the
+    //   same rect and the hover pair reads as the drag's two phases; a ctrl
+    //   press on a FLAG is the membership toggle, no cue).
     //   Live in the `h` view too — the zoom is its admitted navigation.
     //   AND THE OVERVIEW STRIP'S WHOLE LANE, CTRL-exact TOO since the lane
     //   rework (2026-08-12, "require ctrl on zoom strip also"): the lane's
-    //   ctrl drag is the same gesture's second entry, so it wears the same
-    //   magnifier — the plain form this row named for the lane's landing
-    //   hours moved with the entry.
+    //   ctrl drag is the strip-drag machinery's own (one entry since
+    //   2026-08-14) and the nav surface's ctrl is the one nav drag's zoom
+    //   phase — different gestures, one magnifier, since both promise the
+    //   zoom.
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag,
     //   which moves BOTH bounds together — AND THE OVERVIEW LANE off its box
     //   endcaps, plain (the lane rework): the plain drag there is the
