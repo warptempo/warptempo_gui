@@ -1432,7 +1432,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE BIT IS THE SESSION'S, NOT THE VIEW'S: it lives on AppState so the mode
     // edges cannot reset it (its contract is at AppState::history_cumulative), so
     // this toggle is remembered until the program closes. Its BUTTON is row 4's
-    // IconCumulative, which dispatches this same bare chord.
+    // HistoryCumulative, which dispatches this same bare chord.
     if (key == GuiKeys::U) {
         set_history_reading(app.history_mode.source,
                             app.history_cumulative
@@ -1453,7 +1453,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // ONLY THE BARE SHAPES REPEAT (repeat_eligible, below): a held absolute jump
     // could only flap against the wall it is already on.
     // THE ICON ROW'S TWO ARROW BUTTONS ARE THESE KEYS (2026-08-05,
-    // RedesignButton::IconHistoryOlder / IconHistoryNewer): they dispatch the
+    // RedesignButton::HistoryOlder / HistoryNewer): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is —
     // and since 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
@@ -2065,19 +2065,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_view_selector || is_esc ||
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q);
-}
-
-// THE GATE'S MOMENT-STATE SHAPES (contract at the declaration,
-// input_handler.h): the two conditional admissions above whose CONDITION
-// moves at interaction cadence — `is_save`'s Ctrl+S (head_delta_empty /
-// history_checkpoint_in_flight) and `is_revert_act`'s Ctrl+H (a diff-flag
-// subject standing). Spelled HERE, beside the terms they name, so the gate
-// and this classification are one file's facts; `is_load_in_place`'s
-// walk-member condition is deliberately excluded (the declaration says why).
-// Read by redesign_button_collapsed alone.
-bool history_mode_admission_is_momentary(GuiKey key, GuiInputState mods) {
-    const bool ctrl_exact = mods.ctrl && !mods.shift && !mods.alt;
-    return ctrl_exact && (key == GuiKeys::S || key == GuiKeys::H);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------

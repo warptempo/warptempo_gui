@@ -229,11 +229,11 @@ inline constexpr double kRedesignClickMix = 0.30;
 // hue (a mix toward the ground desaturates without rotating). Named a MIX
 // rather than an alpha on purpose: the palette is fully opaque and nothing here
 // composites — the factor resolves to a solid color before it reaches cairo.
-// A SECOND READER SHARES THE KNOB DELIBERATELY: the tab row's UNLOCKED padlock
-// dims by this same factor over the tab's current face (paint_handler.cpp's
-// tab-lock body) — the redesign's ONE dim family reused rather than a second
-// grey invented there — so retuning how dead a disabled button looks retunes
-// the quiet open lock with it.
+// (A SECOND READER SHARED THE KNOB from 2026-08-01 to 2026-08-14: the tab
+// row's UNLOCKED padlock dimmed by this same factor over the tab's current
+// face. The padlock is an icon-row button now and its open state is simply
+// UNLIT — in that row a dimmed glyph means disabled — so this factor is the
+// disabled face's alone again.)
 inline constexpr double kRedesignDisabledMix = 0.322;
 
 // -- Row 1's RIGHT-FLOATING VIEW BAR (HARD-CODED, kdenlive-sampled) ---------
@@ -711,7 +711,8 @@ inline constexpr int      kWaveformBorderPx = 2;
 // window's foot for the seam to sit on. The relayout's commit B put the row
 // back on the foot the same evening WITHOUT reinstating the seam — a second
 // line there would be a new design decision, not a consequence of the restack
-// (the reasoning is recorded at kBottomRowHeightPx). The crop measurement above
+// (the reasoning is recorded at the bottom row's own geometry block below).
+// The crop measurement above
 // stays as the provenance record; the value is git history's.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
@@ -835,7 +836,8 @@ inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 // THE BOX'S OWN CHROME IS RETIRED WITH THE BOX (2026-08-13): kModalGround
 // (#202326 off modal_popup.png's body), kModalBorder (#535659 off its 1px
 // frame), kModalBorderPx, kModalPadPx (the crop's 11px content margin — the
-// row's own bottom_row_pad_x is the margin now) and kModalWindowMarginPx (the
+// row's own pad is the margin now, icon_row_pad_x since 2026-08-14)
+// and kModalWindowMarginPx (the
 // narrow-window clamp — the row IS the clamp) are all deleted producer-less.
 // The crop's #292c30 titlebar band stays untranscribed (ours has no title
 // bar). ITS #4882a1 IS TRANSCRIBED SINCE 2026-08-13's SECOND MODAL RULING, as
@@ -1104,13 +1106,15 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
-// tabs (row 4 of the redesign: the TWENTY-NINE view/mode/action buttons since
-// the 2026-08-12 grand relayout took row 2's four and added the zoom and
-// marker-verb groups — the
-// kIconRowButtons table is the count's one authority, and the MODE-COLLAPSING
-// rule at redesign_button_collapsed means fewer paint on any given frame;
+// tabs (row 4 of the redesign: TWENTY-SIX view/mode/action buttons since
+// 2026-08-14, when the four history companions left for the bottom row and the
+// read-only toggle arrived from the tabs — the
+// kIconRowButtons table is the count's one authority, and ALL of them paint on
+// every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a
-// different number, the GLYPH set, which the row does not exhaust). Measured
+// different number, the GLYPH set, which the row does not exhaust). SINCE THAT
+// DAY THIS BLOCK IS ALSO THE BOTTOM ROW'S: that lane delegates its content
+// height and its border to the two accessors below. Measured
 // at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
@@ -1202,13 +1206,14 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 196
-// (menu 35 + tab 31 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
-// the overview lane grew a row 2026-08-13 with its top border)
-// and the bottom row 51: the 1920x1080 monitor's leftover is 833, so the
-// waveform CLAMPS at 500 and the two gaps take 94 (top) + 239 (bottom); the
-// Pi's 1024x600 leftover is 353, UNCLAMPED, and the centering is infeasible
-// there so both gaps floor at 0 and the waveform keeps the whole 353. The full
+// produces by construction. At 100% scale, with the top lanes summing 197
+// (menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
+// the overview lane and the tab row each grew a border row 2026-08-13)
+// and the bottom row 47 (the icon row's height since 2026-08-14): the
+// 1920x1080 monitor's leftover is 836, so the
+// waveform CLAMPS at 500 and the two gaps take 93 (top) + 243 (bottom); the
+// Pi's 1024x600 leftover is 356, UNCLAMPED, and the centering is infeasible
+// there so both gaps floor at 0 and the waveform keeps the whole 356. The full
 // stacks are recorded at main.cpp's vertical block.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
@@ -1304,20 +1309,30 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // strings moved beside them, every interactive surface one contiguous cluster
 // against the waveform.
 //
-// THE CONTENT HEIGHT IS DERIVED, NOT INVENTED: 50 = the icon row's 32px button
-// box (kIconBtnPx, paint_handler.cpp — the grown buttons' size, the
-// unification's point) + twice the 9px margin row 8's own ruled geometry
-// centered at ((44 - 26) / 2 = 9, the tune-up's arithmetic), so the lane
-// shrinks-to-fit its tallest tenant at row 8's own breathing room. Row 8's
-// sampled kdenlive transport metrics (26px boxes / 16px glyphs off
-// transport.png) and its ruled 44 content are SUPERSEDED by the icon-row
-// boxes; row 9's measured 31 dies with the lane.
+// THE ROW IS THE ICON ROW'S HEIGHT SINCE 2026-08-14 (architect, at his live
+// test: "make sure bottom row is same height and metrics (padding, etc.) as
+// main icon row"), and it READS that row's accessors rather than restating its
+// numbers — one source, so a retune of the icon row carries down here by
+// construction. Both accessors below are pure delegations and this row authors
+// no height constant at all any more.
 //
-// THE CSS BOX MODEL, ONE BORDER: 50 is CONTENT and the 1px border-top sits
-// OUTSIDE it (a 51px lane at 100%), on the WAVEFORM side — row 8's own
-// convention kept (the bottom strip's chrome grows toward the waveform, so
-// the border facing it is the one drawn), and commit B's stack names that same
-// line "the thin border" above the row. Row 9's second border — the near-black
+// WHAT THAT SUPERSEDES: kBottomRowHeightPx = 50, itself DERIVED at the
+// unification as the icon row's 32px button box (kIconBtnPx) plus twice the
+// 9px margin row 8's ruled geometry centred at ((44 - 26) / 2 = 9) — a lane
+// shrink-to-fit around the same box at row 8's own breathing room. The box is
+// unchanged; the MARGIN is the icon row's 7 now ((46 - 32) / 2), which is the
+// whole of the 51 -> 47 lane change. (Row 8's sampled kdenlive transport
+// metrics — 26px boxes / 16px glyphs off transport.png — and its ruled 44
+// content were superseded by the icon-row boxes at the unification; row 9's
+// measured 31 died with that lane.)
+//
+// THE CSS BOX MODEL, ONE BORDER: the content is the icon row's 46 and the 1px
+// border-top sits OUTSIDE it (a 47px lane at 100%), on the WAVEFORM side —
+// row 8's own convention kept (the bottom strip's chrome grows toward the
+// waveform, so the border facing it is the one drawn), and commit B's stack
+// names that same line "the thin border" above the row. IT IS THE ICON ROW'S
+// BORDER TOO, read from the same accessor and merely drawn on the opposite
+// edge: one chrome line, two lanes. Row 9's second border — the near-black
 // window-foot seam kRedesignBottomLine — was retired at the unification, when
 // the lane left the window's edge (the retirement note is at the row-7 palette
 // block above). THE ROW RESTS ON THE WINDOW'S FOOT AGAIN since commit B, so the
@@ -1328,14 +1343,13 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // deleted; a reinstatement is a ruling.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
-// gui_scale_factor() like every redesigned row.
-inline constexpr int kBottomRowHeightPx = 50;
-inline constexpr int kBottomRowBorderPx = 1;     // border-top, the waveform side
+// gui_scale_factor() like every redesigned row, through the icon row's own
+// scaled accessors.
 inline int bottom_row_border_h_px() {
-    return scaled_px(kBottomRowBorderPx, 1);
+    return icon_row_border_h_px();
 }
 inline int bottom_row_content_h_px() {
-    return scaled_px(kBottomRowHeightPx, 5);
+    return icon_row_content_h_px();
 }
 inline int bottom_row_h_px() {
     return bottom_row_content_h_px() + bottom_row_border_h_px();
@@ -1361,6 +1375,24 @@ inline int bottom_row_h_px() {
 inline constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
 inline double redesign_font_size_px() {
     return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+}
+
+// THE CLOCK'S SIZE — THE PRODUCT'S ONE EXCEPTION to the shared size above
+// (architect 2026-08-14, at his live test: the bottom row's timestamp drops to
+// 11pt). It stays MONOSPACE, which is the cell's own ruled face and unchanged
+// (kClockShape, paint_handler.cpp, carries that ruling); only the size moved,
+// and it rides gui_scale_factor() through the same points*4/3 convention as
+// every other string. A RETUNABLE like the 12 above — neither is sampled from
+// a crop.
+//
+// THE NO-WIGGLE CELL RE-MEASURES ITSELF: the cell is a shaped widest-digit
+// specimen and its memo keys on the SIZE it was measured at
+// (clock_cell_width_px), so this smaller size simply produces a smaller cell,
+// which the painter then re-centres in the lane. Nothing about the cell is
+// authored in pixels, which is why the change is one constant.
+inline constexpr double kClockFontSizePt = 11.0;   // -> ~14.67 px at 100%
+inline double clock_font_size_px() {
+    return kClockFontSizePt * 96.0 / 72.0 * gui_scale_factor();
 }
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png

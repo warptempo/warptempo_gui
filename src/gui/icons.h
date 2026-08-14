@@ -189,9 +189,10 @@ enum class Icon {
     DialogCancel,        // Render's mid-render Cancel face (row 2)
     GoDown,              // The down arrow (bare Down)
     GoUp,                // The up arrow (bare Up)
-    // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
-    // the closed padlock for a read-only tab and the OPEN one for a writable
-    // one (the slot's contract is at the tab painter).
+    // THE READ-ONLY TOGGLE'S TWO STATES — the icon row's last group since
+    // 2026-08-14 (row 3's tab lock slots from 2026-08-01 until then, the same
+    // two glyphs): the closed padlock while the ACTIVE tab is read-only and
+    // the OPEN one while it is writable, swapped by redesign_button_icon.
     Lock,                // Locked: closed padlock, full color
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
 };

@@ -64,13 +64,21 @@ inline int status_chain_pad_x() {
     return scaled_px(13.0);
 }
 
-// THE BOTTOM ROW'S PAD — the modal dialog's left and right margin, and since
-// 2026-08-13 that surface's alone: it is the pad the row's own tenants sit on,
-// which is why the modal that displaces them takes it. Same measured 13 as the
-// chain's above and deliberately a SEPARATE accessor — two surfaces on two
-// rows that happen to agree today, not one shared fact.
-inline int bottom_row_pad_x() {
-    return scaled_px(13.0);
+// THE ICON ROW'S LEFT PAD — the row's 8px lead-in, and since 2026-08-14 THE
+// BOTTOM ROW'S PAD TOO, at both ends and for the modal that displaces its
+// tenants (architect: "make sure bottom row is same height and metrics
+// (padding, etc.) as main icon row"). It lives in this header rather than in
+// the painter's file because that unification gave it a reader outside the
+// row — one source, so a retune of the icon row carries to the bottom one by
+// construction.
+//
+// (bottom_row_pad_x, the modal's own accessor, is deleted with the ruling: it
+// was a separately-measured 13 — the status chain's number, which the modal
+// inherited when it landed on this row — while the row's own eight buttons
+// already walked from this 8. Two pads on one lane was the drift; the chain's
+// 13 stays its own, on the TAB row, at status_chain_pad_x above.)
+inline int icon_row_pad_x() {
+    return scaled_px(8.0);
 }
 
 // Single source for the modal editor prefixes, read by the modal painter
@@ -682,11 +690,11 @@ private:
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
     // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
     // the
-    // ICON ROW (top lane 2, row 4: the twenty-nine view/mode/action buttons —
+    // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
     // — their
-    // separators and its border-bottom, fewer painting per frame under the
-    // mode-collapsing roster), and the UNIFIED BOTTOM ROW's button
+    // separators and its border-bottom, all of them painted on every frame
+    // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
     // cluster (bottom lane 0, the strip's one lane since the relayout's commit
     // B: the transport four left, the arrow four flush
     // right, declared

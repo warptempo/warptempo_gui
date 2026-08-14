@@ -286,8 +286,10 @@ struct Viewport {
     //   commit and its BPM commit, undo's restore tail, active_views' two
     //   switches, input_trim's four commit / drag sites, and
     //   input_key_dispatch's three load-in-place tails.
-    //   ONE PADLOCK ROUTE — bare `o` (input_handler.cpp), which is on this
-    //   lane because the padlock it toggles is drawn on the tab it belongs to.
+    //   ONE READ-ONLY ROUTE — bare `o` (input_handler.cpp), which is on this
+    //   lane because it moves the TAB's own face; its padlock BUTTON is the
+    //   icon row's since 2026-08-14, and the top-strip damage beside this one
+    //   is what repaints that.
     //
     // Routes that damage the WHOLE TOP STRIP or the whole window
     // (invalidate_top_strip, invalidate_waveform_area — whose rect runs from

@@ -309,8 +309,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // delegates to open() whole and takes its refusal (the reasoning lives
         // at that opener). So this arm is reached by typing
         // `tab_X_read_only=false` from an UNLOCKED active tab about the other
-        // one; a locked ACTIVE tab is unlocked by its own tab click, the padlock
-        // toggle.
+        // one; a locked ACTIVE tab is unlocked by bare `o` or the icon row's
+        // read-only toggle, which is that key's button.
         if (gv.b == band.read_only) { unchanged(); return true; }
         band.read_only = gv.b;
         applied(); return true;

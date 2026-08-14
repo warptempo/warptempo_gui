@@ -289,7 +289,8 @@ constexpr IconPath kLockPaths[] = {
      "11,4"},
 };
 
-// The OPEN padlock, the lock slot's unlocked state — actions/22/unlock.svg. Its
+// The OPEN padlock, the read-only toggle's unlocked state —
+// actions/22/unlock.svg. Its
 // shackle stands open to the left where lock.svg's closes over the body; the
 // two are the same body, which is what makes them read as one control in two
 // states rather than as two icons.

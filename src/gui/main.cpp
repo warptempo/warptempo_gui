@@ -61,7 +61,7 @@
 
 namespace {
 
-// redesign_font_size_px() (render.h) and bottom_row_pad_x() (paint_handler.h)
+// redesign_font_size_px() (render.h) and icon_row_pad_x() (paint_handler.h)
 // live where paint_handler.cpp can reach them; the constants
 // below are paint-handler-independent and stay file-local.
 
@@ -150,10 +150,12 @@ namespace {
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
 // font-scaled lanes in this strip. The BOTTOM strip is ONE lane again: THE
 // UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
-// 8 and 9 merged) — the transport four at the left
-// pad and the arrow four flush right (the roster commit's rearrangement), all
-// at the icon row's boxes, the clock centered, the status chain right-aligned
-// against the arrows — sitting AT THE WINDOW'S FOOT with the flexible gap 2
+// 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
+// transport four at the left
+// pad and a four-button cluster flush right (the roster commit's
+// rearrangement): the cardinal arrows, or the history companions while the `h`
+// view stands. All at the icon row's boxes, the clock centered in monospace —
+// sitting AT THE WINDOW'S FOOT with the flexible gap 2
 // between it and the waveform. (The strip was one lane from row 7's collapse,
 // 2026-08-01, two from row 8, 2026-08-11, one at the unification, two again
 // when the overview strip landed below the row that afternoon, and one from
@@ -197,19 +199,19 @@ namespace {
 //
 // THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 197 =
 // menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
-// which 162 is the block above the waveform, and the bottom row 51 — the
-// overview lane went 25 -> 26 on 2026-08-13 when it gained its top border and
-// the TAB ROW went 31 -> 32 the same day when it gained its own, and every
-// number below is re-derived from that table rather than adjusted):
-//   1920x1080: leftover 832 -> waveform CLAMPED at 500, gap 1 = 93, gap 2 = 239
-//     — 35 menu / 93 blank / 162 block / 500 waveform / 239 blank / 51 row,
+// which 162 is the block above the waveform, and the BOTTOM ROW 47 since
+// 2026-08-14, when it took the icon row's 46px content in place of its own 50
+// — every number below is re-derived from that table rather than adjusted):
+//   1920x1080: leftover 836 -> waveform CLAMPED at 500, gap 1 = 93, gap 2 = 243
+//     — 35 menu / 93 blank / 162 block / 500 waveform / 243 blank / 47 row,
 //     the waveform still spanning y 290..790 about the window's midline 540
-//     (the clamp fixes its height and the midpoint rule its centre, so each
-//     extra border row comes out of gap 1 and the waveform does not move).
-//   1024x600 (the Pi): leftover 352 -> waveform UNCLAMPED at 352, both gaps 0
-//     — 35 / 0 / 162 / 352 / 0 / 51. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -73), so the waveform keeps everything
-//     and pays the border rows itself, which is the rule's own floor rather
+//     (the clamp fixes its height and the midpoint rule its centre, so the
+//     four pixels the bottom row gave back come out of gap 2 and the waveform
+//     does not move).
+//   1024x600 (the Pi): leftover 356 -> waveform UNCLAMPED at 356, both gaps 0
+//     — 35 / 0 / 162 / 356 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -75), so the waveform keeps everything
+//     and takes the four pixels itself, which is the rule's own floor rather
 //     than a special case.
 //
 // THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
@@ -320,8 +322,8 @@ int top_lane_height(int lane) {
     }
 }
 // The bottom strip's ONE lane: THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and
-// 9 merged: buttons left, clock centered, status chain right; the succession
-// is at kBottomRowHeightPx, render.h), resting ON the window's foot since
+// 9 merged: buttons left, clock centered; the succession is at that row's
+// geometry block, render.h), resting ON the window's foot since
 // commit B — GAP 2 sits ABOVE it, in bottom_strip_h's total rather than in
 // this lane's inset, so lane 0 is flush with the window edge like the top
 // strip's own lane 0. (The OVERVIEW STRIP was bottom lane 0 for the afternoon
@@ -560,7 +562,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-nine view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these —
 // and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
@@ -609,14 +611,18 @@ GuiRect top_marker_row_area(const AppState& a) {
 
 // THE BOTTOM STRIP IS ONE LANE — THE UNIFIED BOTTOM ROW (bottom lane 0;
 // 2026-08-12, rows 8
-// and 9 merged; the succession is at kBottomRowHeightPx, render.h), resting on
+// and 9 merged; the succession is at the bottom row's geometry block,
+// render.h), resting on
 // the WINDOW'S FOOT since commit B, with GAP 2's blank window ground between it
 // and the waveform: the transport four on the left at the icon
-// row's boxes, the arrow four flush right, the monospace clock centered, and the
-// status chain — the critical chip + section C's status strings — right-aligned
-// against the arrows. (The OVERVIEW STRIP was bottom lane 0 under this row for
+// row's boxes, a RIGHT-ANCHORED CLUSTER of four — the cardinal arrows, or the
+// history companions while the `h` view stands (2026-08-14) — and the
+// monospace clock centered. (The status chain moved into the TAB ROW on
+// 2026-08-13; the OVERVIEW STRIP was bottom lane 0 under this row for
 // the afternoon of 2026-08-12 and is TOP lane 3 now.) The dirty flag is
-// the window title's dot, not a tenant here.
+// the window title's dot, not a tenant here. THE LANE IS THE ICON ROW'S
+// HEIGHT since 2026-08-14, its content and border both delegating to that
+// row's accessors.
 // bottom_row_area is the lane INCLUDING its 1px border-top (the waveform
 // side — commit B's "thin border" above the row), as the strip stack allocates
 // it; bottom_row_content_area is the
@@ -1836,8 +1842,10 @@ int main(int argc, char** argv) {
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, the transport /
-            // arrow eight (row 8, 2026-08-11) and the MODAL's own buttons
+            // second arm covers both of the row's surfaces, its twelve roster
+            // buttons (the transport four and whichever four the right cluster
+            // holds — the arrows, or the history companions in the `h` view
+            // since 2026-08-14) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.
             const AppState::RedesignTooltip::Owner tip_owner =
@@ -1864,7 +1872,7 @@ int main(int argc, char** argv) {
 
         {
             // The bottom row's damage fork, here too (2026-08-11, with the
-            // transport row): a drifting transport/arrow face damages its own
+            // transport row): a drifting bottom-row face damages its own
             // bottom-row lane, everything else the top
             // strip. Each strip pays only for its own drift — the walk keeps
             // going until both verdicts are known (or the roster ends). The

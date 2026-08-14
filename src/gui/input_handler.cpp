@@ -650,12 +650,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // The bottom row still repaints here: it is cheap, and the row-2/row-4
         // enabled faces below share this flag's fate frame for frame.
         viewport.invalidate_status_chain_area();
-        // AND THE TOP STRIP (2026-08-01): the active tab now WEARS its lock — a
-        // padlock in the tab's close-icon slot, drawn iff that tab is read-only.
-        // The tick comparator cannot cover it: it stashes
-        // the roster's own face bits (rect/hovered/enabled/selected) and
-        // read_only is none of them. One damage at the one writer is the
-        // cheaper and more honest answer than a fifth stashed bit.
+        // AND THE TOP STRIP: the read-only bit WEARS A FACE up there — the
+        // icon row's read-only toggle since 2026-08-14 (the active tab's own
+        // padlock slot, 2026-08-01..14, before that). The button's LAMP does
+        // ride the tick comparator's `selected` bit, but its GLYPH swaps
+        // closed-for-open on the same flag and no stashed bit carries that, so
+        // the one damage at the one writer stays the cheaper and more honest
+        // answer than a fifth stashed bit.
         // (The toolbar four's ENABLED faces — icon-row members since the
         // 2026-08-12 relayout — also move with this flag, and those
         // the comparator does catch — this damage merely arrives first.)
