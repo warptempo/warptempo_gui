@@ -1886,6 +1886,14 @@ void GuiPlatform::on_frame_done(struct wl_callback* cb) {
 // would only be an earlier answer to the same question, from a spot that would
 // then owe an ordering rule about the teardown below it.
 void GuiPlatform::forget_keyboard_state() {
+    // A MODIFIER EDGE IS A DELIVERY BOUNDARY FOR STAGED CAPTURED MOTION, and
+    // this is the SECOND route that moves the modeled bits — the argument is
+    // recorded once, at on_keyboard_modifiers' own flush. Losing the key
+    // stream drops ctrl, and ctrl selects what a live navigation drag MEANS,
+    // so motion staged while it was held must be delivered while it still
+    // reads held. A no-op with nothing staged, which is every case but a live
+    // capture.
+    if (mod_ctrl_ || mod_shift_ || mod_alt_) flush_deferred_motion();
     mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_   = 0;
     scroll_accum_ = 0.0;
@@ -1915,13 +1923,12 @@ void GuiPlatform::forget_keyboard_state() {
     // carry), which no motion writes. The two sets do not intersect, so this
     // edge needs no restoring second act. `pointer_in_window` going true here is
     // correct besides: a keyboard leave says nothing about where the pointer is.
-    // NOR DOES IT OWE THE STAGED-MOTION HANDLING THE POINTER EDGES DO (re-checked
-    // 2026-08-08): with no hold this returns at its `!held` guard and flushes
-    // nothing, and with one it DELIVERS — the flush and then the release — so no
-    // staged motion can outlive the call either way. Nothing needs dropping here
-    // in any case, because this edge destroys no pointer object: a flag left set
-    // is delivered by the next frame on the same live relative pointer, which is
-    // the correct owner and the ordinary path.
+    // IT DROPS NO STAGED MOTION EITHER (re-checked 2026-08-08): this edge
+    // destroys no pointer object, so a flag left set is delivered by the next
+    // frame on the same live relative pointer, which is the correct owner and
+    // the ordinary path. What the edge DOES owe is the ATTRIBUTION — motion
+    // staged under the modifiers it is about to forget — and that is paid at
+    // the top of this function, above the clear, rather than here.
     end_left_hold_source(/*physical=*/false);
 }
 
@@ -2290,18 +2297,50 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
                           depressed, latched, locked,
                           0, 0, group);
 
-    const bool prev_ctrl  = mod_ctrl_;
-    const bool prev_shift = mod_shift_;
-    const bool prev_alt   = mod_alt_;
-    mod_ctrl_  = xkb_state_mod_name_is_active(
+    // THE THREE MODELED MODIFIERS ARE READ FIRST AND ASSIGNED BELOW, because
+    // the gap between the two is a DELIVERY BOUNDARY.
+    const bool next_ctrl  = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_CTRL,
         XKB_STATE_MODS_EFFECTIVE);
-    mod_shift_ = xkb_state_mod_name_is_active(
+    const bool next_shift = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_SHIFT,
         XKB_STATE_MODS_EFFECTIVE);
-    mod_alt_   = xkb_state_mod_name_is_active(
+    const bool next_alt   = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_ALT,
         XKB_STATE_MODS_EFFECTIVE);
+    const bool modeled_edge = next_ctrl  != mod_ctrl_ ||
+                              next_shift != mod_shift_ ||
+                              next_alt   != mod_alt_;
+
+    if (modeled_edge) {
+        // STAGED CAPTURED MOTION IS DELIVERED UNDER THE MODIFIER STATE IT
+        // ARRIVED IN. A captured drag defers its relative motion to the
+        // wl_pointer.frame boundary (on_relative_pointer_motion) and the
+        // delivery reads current_mods(), so motion that arrived under one
+        // modifier state but was still staged when this event landed would be
+        // delivered under the NEW one: a pan delta staged with ctrl UP and
+        // flushed after a ctrl-down edge has its dy applied as zoom and its dx
+        // discarded, the reverse edge pans with a staged zoom delta, and two
+        // edges in one batch collapse every accumulated tick onto the final
+        // state. Since 2026-08-14 ctrl SELECTS WHAT THE GESTURE MEANS mid-drag
+        // (ScrollDragState, app_state.h), so this edge is exactly where the
+        // meaning changes and motion made under the old meaning must be
+        // delivered under it — the one-frame wrong-axis lurch the live-modifier
+        // model exists to eliminate.
+        // The POINTER FRAME'S OWN flush is reused rather than a second one
+        // written: it delivers at the accumulated virtual position and clears
+        // frame_have_relmotion_, so the frame's trailing delivery simply finds
+        // nothing left. Splitting one frame in two costs one extra on_motion_
+        // per human-rate modifier edge and batches nothing else — that flag
+        // stages the DELIVERY alone (pointer_x_/y_ are already written at
+        // arrival, so a button dispatched later in the frame is unaffected,
+        // and the wheel's per-frame accumulators are untouched here).
+        flush_deferred_motion();
+    }
+
+    mod_ctrl_  = next_ctrl;
+    mod_shift_ = next_shift;
+    mod_alt_   = next_alt;
     // SUPER, tracked for ONE purpose: gating key DELIVERY (deliver_key). It is
     // deliberately absent from current_mods() and from the scroll-chord reset
     // below — the wheel chords are plain and Ctrl only, so a Super press changes
@@ -2310,14 +2349,15 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         xkb_state_, XKB_MOD_NAME_LOGO,
         XKB_STATE_MODS_EFFECTIVE);
 
-    // THE MODIFIER EDGE, and its ONE remaining consumer. This event fires when
-    // the modifier state CHANGES and not on ordinary key presses, so the test
-    // below is only about the three modifiers the application models (a Super
-    // edge moves nothing here). The OTHER place the modeled state moves is
-    // forget_keyboard_state, where it vanishes with no event to announce it; it
-    // drops the wheel remainder outright, for the reason recorded there.
-    if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
-        mod_alt_ != prev_alt) {
+    // THE MODIFIER EDGE, and its ONE remaining consumer AFTER the assignment
+    // (the flush above is this same edge's consumer BEFORE it — that is the
+    // whole reason the two are separated). This event fires when the modifier
+    // state CHANGES and not on ordinary key presses, so the test is only about
+    // the three modifiers the application models (a Super edge moves nothing
+    // here). The OTHER place the modeled state moves is forget_keyboard_state,
+    // where it vanishes with no event to announce it; it drops the wheel
+    // remainder outright, for the reason recorded there.
+    if (modeled_edge) {
         // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
         // scroll frame that would re-probe. TWO live wheel chords since
@@ -2334,7 +2374,13 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         // business: this event is DISPATCHED inside a run-loop iteration, and
         // that iteration's tail re-derives the cursor from the settled state
         // (set_loop_settled_hook), which answers the modifier case and every
-        // other stale class with one owner instead of a hook per fact.
+        // other stale class with one owner instead of a hook per fact. THE
+        // LIVE NAV DRAG'S ZOOM/PAN MODE JOINED THAT TAIL 2026-08-14 for the
+        // same reason — a released Ctrl must drop the zoom stem with no motion
+        // under it — so do not add a gesture hook here either. The flush above
+        // is the one thing that CANNOT live at the tail: it is about motion
+        // already staged when this event arrived, and by the tail the bits
+        // have moved.
     }
 
     // No on_key synthesis on modifier change — the next non-modifier
@@ -3384,10 +3430,8 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
                 // the pan for another slop's travel — while a still-unlatched
                 // pair (a sub-latch second lift) re-seats its latch reference
                 // at the survivor, the upgrade's own unlatched shape
-                // mirrored. An undelivered staged PAIR frame is DROPPED, the
-                // upgrade's sliver rule in reverse: the rebase supersedes it.
-                // Transitions repeat freely within one contact stream —
-                // 1→2→1→2 through the upgrade and this — and an ignored THIRD
+                // mirrored. Transitions repeat freely within one contact
+                // stream — 1→2→1→2 through the upgrade and this — and a THIRD
                 // finger stays ignored across a downgrade (it can join only
                 // by lifting and pressing again, a fresh second-down).
                 // NO RE-JOIN WINDOW, considered and RULED OUT (architect
@@ -3398,6 +3442,36 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
                 // drop a finger, I'd still weigh how cumbersome that is
                 // against the mitigation for a potentially non-existent
                 // defect." Do not build one without field evidence.
+                //
+                // THE PAIR'S STAGED FRAME DELIVERS FIRST, and this is the ONE
+                // place the downgrade DIVERGES from the upgrade it otherwise
+                // mirrors. On the upgrade an undelivered single-finger sliver
+                // is dropped because the join's new basis SUPERSEDES it — a
+                // fragment of a mode that is over. Here the staged frame is
+                // the PAIR'S OWN COMPLETED MOTION, measured between two
+                // fingers that were both still down, and nothing supersedes
+                // it: Wayland orders motion and EVERY up before the
+                // wl_touch.frame that closes the batch, so when both fingers
+                // lift together this site takes the first up with the pinch's
+                // last — often only — motion still staged, and dropping it
+                // left the second up calling end_touch_nav_gesture with
+                // nothing to deliver (a short pinch then did nothing at all,
+                // a long one lost its final zoom step). THE ORDERING: deliver
+                // while the pair geometry is still intact — both positions
+                // live and touch_nav_single_ still false, so the frame
+                // carries the PAIR's centroid and distance ratio — and only
+                // then rebase. The rebase cannot double-apply any of it,
+                // because the delivery's own last_cx_/last_dist_ writes are
+                // OVERWRITTEN below by the survivor's position and the
+                // degenerate 0.0: the next single-finger frame measures dx
+                // from the survivor itself and its ratio guard delivers 1.0.
+                // A sub-latch pair delivers nothing here (the latch arm
+                // returns), which leaves the still-unlatched re-seat below
+                // exactly as it was.
+                if (touch_nav_frame_dirty_) {
+                    touch_nav_frame_dirty_ = false;
+                    deliver_touch_nav_frame();
+                }
                 if (id == touch_owner_id_) {
                     touch_owner_id_ = touch_nav_id2_;
                     touch_nav_x1_   = touch_nav_x2_;
@@ -3409,7 +3483,6 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
                 touch_nav_start_cx_   = touch_nav_last_cx_   = touch_nav_x1_;
                 touch_nav_start_cy_   = touch_nav_y1_;
                 touch_nav_start_dist_ = touch_nav_last_dist_ = 0.0;
-                touch_nav_frame_dirty_ = false;
                 break;
             }
             // The LAST nav finger lifting ENDS the gesture (any end commits).
@@ -3753,14 +3826,16 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
         !wl_surface_)
         return;
 
-    // Seed the virtual position from the current absolute position and remember
-    // the press row as the restore y (the cursor reappears at that row on
-    // release; its restore x rides the drag's traveled virtual_pointer_x_ unless
-    // a strip drag overrides it with its anchor-stem column). Each capture
-    // starts with no x override, so the grab-pan (no stem) falls back to the raw
-    // traveled x.
+    // Seed BOTH accumulations from the current absolute position — the travel
+    // ledger and the notional position start out equal and only diverge once
+    // the hand leaves the window (the pair's contract is at the declaration) —
+    // and remember the press row as the restore y (the cursor reappears at that
+    // row on release; its restore x rides capture_notional_x_ unless a strip
+    // drag overrides it with its anchor-stem column). Each capture starts with
+    // no x override, so the grab-pan (no stem) falls back to the notional x.
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
+    capture_notional_x_ = virtual_pointer_x_;
     capture_restore_y_ = virtual_pointer_y_;
     capture_restore_x_override_.reset();
 
@@ -3832,7 +3907,7 @@ void GuiPlatform::end_pointer_capture() {
 
 void GuiPlatform::set_capture_restore_x(double surface_x) {
     // The active zoom gesture names the surface x its anchor stem paints at;
-    // the release restore uses it in place of the raw traveled
+    // the release restore uses it in place of the notional
     // virtual_pointer_x_. Ignored when no capture is live (nothing to
     // restore).
     if (!pointer_captured_) return;
@@ -3841,7 +3916,7 @@ void GuiPlatform::set_capture_restore_x(double surface_x) {
 
 void GuiPlatform::clear_capture_restore_x() {
     // The nav drag's zoom→pan switch drops the stem override so the release
-    // goes back to the raw traveled x (contract at the declaration). Ignored
+    // goes back to the notional x (contract at the declaration). Ignored
     // when no capture is live.
     if (!pointer_captured_) return;
     capture_restore_x_override_.reset();
@@ -3869,15 +3944,22 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the edge-trick rebind pins the stem while the raw cursor travel
             // keeps going, so restoring at the stem lands the cursor dead on it
             // rather than past it. With no override (the grab-pan, which has no
-            // stem) the x is the raw drag-traveled virtual_pointer_x_, passed
-            // unclamped: the compositor clamps an off-window hint back on-screen
-            // at unlock (an explicit clamp to the window width would instead pin
-            // the cursor to the window edge). The hint is surface-local, the
-            // same space as virtual_pointer_x_ and the stem's surface x, and is
-            // double-buffered against the constrained surface, so commit it
-            // before destroying the lock.
+            // stem) the x is capture_notional_x_ — THE NOTIONAL POSITION, not
+            // the travel ledger (architect 2026-08-14; the pair's contract is
+            // at the declaration). The raw travel used to be handed over
+            // unclamped on the argument that the compositor clamps an
+            // off-window hint back on-screen anyway, and it does — but its
+            // clamp is applied ONCE, to a number carrying the whole
+            // off-window DEBT, so a drag that went 3000 px past the edge and
+            // came 750 px back still restored AT the edge. The notional
+            // position clamps at every step and has no debt, so the cursor
+            // comes back where the pointer notionally is: pinned at the edge
+            // only while the hand is still out there, and drifting back the
+            // moment it reverses. The hint is surface-local, the same space as
+            // the stem's surface x, and is double-buffered against the
+            // constrained surface, so commit it before destroying the lock.
             const double restore_x =
-                capture_restore_x_override_.value_or(virtual_pointer_x_);
+                capture_restore_x_override_.value_or(capture_notional_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),
@@ -3917,30 +3999,33 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // where the pointer came back, cursor kinds stay dropped until it
             // says so, and the next absolute event overwrites this with the
             // truth. The virtual pair moves with it so a second capture seeds
-            // from the drawn position rather than from the last travel.
+            // from the drawn position rather than from the last travel (the
+            // notional position needs no write-back of its own — every
+            // begin_pointer_capture re-seeds it from pointer_x_).
             // No motion is synthesized: this edge runs inside the GUI's own
             // release handler, and re-entering it is not worth the hover
             // refresh the next real motion delivers anyway.
             //
-            // THE WRITE-BACK IS CLAMPED THOUGH THE HINT IS NOT (2026-08-08), and
-            // the two are different questions rather than an inconsistency. The
-            // HINT is raw on purpose (the paragraph above): the compositor
-            // clamps an off-window hint back on-screen itself, and clamping it
-            // here would instead pin the cursor to the window edge. The RECORD
-            // models where a CLICK CAN BE ROUTED, which is surface-local by
-            // definition — every consumer of pointer_x_/pointer_y_ hit-tests
-            // against surface rects — so an off-window value stored here is a
-            // point no press can legitimately land on, and until the next
-            // physical motion a click would route at it. The grab-pan is the one
-            // producer: it sets no restore-x override, so its raw travel can end
-            // anywhere. AND THE CLAMP IS EXACT IN EVERY CASE THAT MATTERS: if
-            // the compositor's screen-clamp really did draw the cursor outside
-            // this window, a pointer-leave follows and the record stops being
-            // consulted at all; if it drew it inside, the drawn point IS the
-            // clamped one. (The separately accepted staleness — a compositor
-            // that revokes the lock without applying the hint — is untouched:
-            // that path passes apply_restore_hint = false and never reaches
-            // here.)
+            // THE WRITE-BACK'S CLAMP IS NOW A GUARD RATHER THAN A CORRECTION
+            // (2026-08-14). It was introduced 2026-08-08 because the HINT was
+            // the raw travel and could name a point outside the surface, while
+            // the RECORD models where a CLICK CAN BE ROUTED — surface-local by
+            // definition, every consumer of pointer_x_/pointer_y_ hit-testing
+            // against surface rects — so an off-window value stored here was a
+            // point no press could legitimately land on, and until the next
+            // physical motion a click would route at it. The grab-pan was the
+            // one producer, setting no restore-x override. Both hint sources
+            // are now in-surface by construction (the clamped notional
+            // position, or a stem column that lives inside the waveform), so
+            // this clamp changes nothing it is handed; it stays as the record's
+            // own guard, since the record's rule is about the record. It is
+            // exact in every case that matters besides: if the compositor's
+            // screen-clamp really did draw the cursor outside this window, a
+            // pointer-leave follows and the record stops being consulted at
+            // all; if it drew it inside, the drawn point IS the clamped one.
+            // (The separately accepted staleness — a compositor that revokes
+            // the lock without applying the hint — is untouched: that path
+            // passes apply_restore_hint = false and never reaches here.)
             const double max_x = width_  > 0 ? static_cast<double>(width_  - 1)
                                              : 0.0;
             const double max_y = height_ > 0 ? static_cast<double>(height_ - 1)
@@ -3968,7 +4053,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     // delivered the press can also have delivered the motion or the modifier
     // edge that chose the zone, leaving the remembered kind a cue from BEFORE
     // the gesture existed. The restore puts the pointer back inside the zone the
-    // stamped kind names (the anchor-stem column or the raw travel, y frozen at
+    // stamped kind names (the anchor-stem column or the notional x, y frozen at
     // the press row). What keeps the stamp standing through the drag is
     // set_cursor_kind's drop: no kind named during the capture — the live-gesture
     // Arrow the GUI re-derives at every loop iteration the lock's relative motion
@@ -4000,7 +4085,8 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     if (!pointer_captured_) return;
 
     // Advance the UNBOUNDED virtual position — no clamp to the window is what
-    // makes pan/zoom travel infinite — and write the nearbyint'd position into
+    // makes pan/zoom travel infinite, every captured gesture differencing these
+    // deliveries for its per-event delta — and write the nearbyint'd position into
     // pointer_x_/y_ so a button event dispatched later in the same frame already
     // sees the final coordinates. The on_motion_ DELIVERY is deferred to the
     // pointer-frame boundary (on_pointer_frame): a captured relative pointer
@@ -4018,6 +4104,18 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // gesture).
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;
+    // THE NOTIONAL POSITION ADVANCES BY THE SAME DELTA AND IS CLAMPED HERE,
+    // CONTINUOUSLY (the pair's contract at the declaration): clamping at the
+    // accumulation is what leaves it with no off-window DEBT to unwind, so the
+    // instant the hand reverses the position leaves the edge — clamping a
+    // consumer instead cannot do that, because the debt is in the number it
+    // reads. Same bounds as the restore record's own clamp below in
+    // release_pointer_lock, so the two cannot disagree. X only: the y axis has
+    // no position consumer (the declaration records why).
+    const double max_notional_x =
+        width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
+    capture_notional_x_ =
+        std::clamp(capture_notional_x_ + dx, 0.0, max_notional_x);
     // std::nearbyint, the project's one fractional->integer pixel conversion —
     // this is the platform boundary where a continuous pointer position becomes
     // the integer window pixel every gesture reads.

@@ -1664,15 +1664,30 @@ int main(int argc, char** argv) {
     // an in-batch paint. The two callers answer different questions; the reasoning
     // is at the definition.
     //
-    // THE TWO ARE INDEPENDENT, so the order here is free: the zone map refuses
-    // every cue while a popup is open and reads neither item face, and the
-    // recompute writes nothing the map reads.
-    // NEITHER RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED: each refuses on
-    // app.pointer_in_window inside its own body, so a per-iteration call cannot
-    // resurrect a face from coordinates the pointer has left behind.
+    // THE CONSUMERS ARE INDEPENDENT, so the order here is free: the zone map
+    // refuses every cue while a popup is open and reads neither item face, and
+    // the recompute writes nothing the map reads.
+    // NEITHER OF THOSE TWO RE-LIGHTS WHAT THE POINTER-LEAVE HOOK ABOVE DROPPED:
+    // each refuses on app.pointer_in_window inside its own body, so a
+    // per-iteration call cannot resurrect a face from coordinates the pointer
+    // has left behind.
+    //
+    // THE NAV DRAG'S ZOOM/PAN MODE IS THE THIRD CONSUMER (2026-08-14), and it
+    // is the same disease once more: ctrl SELECTS what a live navigation drag
+    // means, so releasing it under a MOTIONLESS pointer must drop the zoom stem
+    // and re-stamp the capture's restore there and then — the old model synced
+    // in on_motion alone, so the stem stood until the mouse moved again
+    // (architect, from the rig). It refuses immediately with no nav drag
+    // standing, and unlike the two above it is deliberately NOT gated on the
+    // pointer being in the window: a captured drag's pointer is virtual and
+    // may be anywhere, and the gesture is what owns the answer. It is
+    // independent of both — the map refuses every cue while a gesture is live,
+    // and the hover walk reads nothing it writes — so the order here stays
+    // free.
     gui.set_loop_settled_hook([&](GuiInputState mods) {
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
+        input_handler.sync_nav_drag_mode(mods);
     });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

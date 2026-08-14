@@ -767,7 +767,7 @@ struct StripDragState {
 //   * CROSSING the threshold is the GRAB-PAN, the alt+drag machinery whole:
 //     the pointer CAPTURE begins at the crossing (begin_strip_pointer_capture
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
-//     clamps at the song walls; the cursor reappears at the raw traveled
+//     clamps at the song walls; the cursor reappears at the notional
 //     virtual_pointer_x_, no anchor-stem override), the crossing event folds
 //     the whole press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
@@ -783,26 +783,32 @@ struct StripDragState {
 // (dy/kZoomStripPxPerLevel, about the seated pivot) and dx is discarded —
 // each phase one exact axis, the deleted segment lock's answer reached by the
 // modifier instead of by classification (the ladder's record above
-// kZoomStripPxPerLevel). THE MODE IS READ PER MOTION EVENT (`zooming` below,
-// synced from mods.ctrl at the top of the motion arm), never re-derived at
-// the release: a modifier edge under a MOTIONLESS pointer changes nothing
-// until motion resumes, which is honest — with no deltas there is nothing
-// either phase could apply — and it is why the mode needs no modifier-edge
-// hook. THE RE-SEAT RULE, one per direction, is what makes every switch
-// jump-free:
+// kZoomStripPxPerLevel). THE MODE FOLLOWS THE MODIFIER AT ITS OWN EDGE
+// (architect 2026-08-14, from the rig: "if I let go of control, the zoom stem
+// should disappear. It doesn't disappear until I start moving the mouse") —
+// ONE BODY, sync_nav_drag_mode, with TWO callers. The run loop's SETTLED-STATE
+// TAIL answers the motionless edge, the pointer cursor's own owner and its own
+// argument: a loop boundary is after every write, so one consumer there
+// answers every route that can move the modifier, the keyboard-focus loss that
+// moves it with no event to announce it included. The top of the MOTION ARM is
+// not redundant with it: a dispatch batch can carry the modifiers event and
+// then a motion with no loop tail in between, and that motion must apply in
+// the mode the user is already holding. The superseded model synced in
+// on_motion ALONE, which is why a released ctrl used to leave the stem
+// standing and the capture's restore stamped Zoom until motion resumed. THE
+// RE-SEAT RULE, one per direction, is what makes every switch jump-free:
 //   * ctrl DOWN (pan -> zoom): the pivot is SEATED at the pointer's current
-//     column — anchor_sample = the content under the pointer, column-clamped
-//     into the effective width — and the anchor stem paints there (the
-//     ctrl-armed press paints it from the PRESS, the stem-at-press ruling
-//     kept). Seating at the switch rather than reusing a press-time anchor is
-//     the rebase: after a long pan the press column names content that may be
-//     far offscreen, and pivoting there would jump the view. The level itself
-//     cannot jump — dy is a per-event delta off the LIVE level.
+//     notional column, EVERY time (the seat and the withdrawn persist-across-
+//     toggles experiment are recorded at anchor_col below), and the anchor stem
+//     paints there, at the edge itself (the ctrl-armed press paints it from the
+//     PRESS, the stem-at-press ruling kept). The level itself cannot jump — dy
+//     is a per-event delta off the LIVE level.
 //   * ctrl UP (zoom -> pan): NOTHING re-seats, structurally — the pan is
 //     incremental on dx from last_x, which BOTH phases keep current, so the
-//     first plain event pans from the pointer's own position; the stem
-//     erases and the capture's restore-x override clears (the release goes
-//     back to the raw traveled x unless a later zoom phase re-sets it).
+//     first plain event pans from the pointer's own position; the stem erases
+//     at the edge, the capture's restore-x override clears there and the
+//     restore kind re-stamps to Pan (the release goes back to the notional
+//     x unless a later zoom phase re-sets it).
 // Transitions repeat freely within one hold — pan/zoom/pan as often as ctrl
 // moves — over the ONE capture, begun at the 8px crossing whatever the mode
 // (a ctrl click never blinks the cursor either, superseding the old zoom
@@ -856,10 +862,13 @@ struct ScrollDragState {
     bool   scrub_release = false;
     // THE LIVE MODE (the one-model ruling above): true while the drag is in
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
-    // synced from mods.ctrl at every motion event. While true the anchor stem
-    // paints at anchor_sample and each event's dy zooms; while false each
-    // event's dx pans. The RELEASE reads this rather than re-asking ctrl (no
-    // motion since the last sync means no deltas either way).
+    // synced from mods.ctrl at every MODIFIER EDGE and every motion event
+    // (sync_nav_drag_mode, the one body). While true the anchor stem paints at
+    // anchor_col and each event's dy zooms; while false each event's dx pans.
+    // The RELEASE reads this bit and never re-asks ctrl: it cannot be stale
+    // now that the edge itself syncs it, which re-stamps the capture's restore
+    // KIND there too (and drops the stem's restore-x override on the way back
+    // to the pan).
     bool   zooming  = false;
     // The press was the CTRL entry: the deferred click act is NOT armed (a
     // ctrl click is not the placement — press-time modifiers arm the act) and
@@ -870,12 +879,51 @@ struct ScrollDragState {
     // current in BOTH phases so a mode switch measures its first delta from
     // the pointer's own position (the jump-free rule above).
     int    last_y   = 0;
-    // The ZOOM phase's pivot (frames, double, active domain): the content
-    // under the pointer at the phase's own start — the press for a ctrl-armed
-    // drag, the ctrl-down switch for a mid-gesture one — column-clamped into
-    // the effective width at the seat. Meaningful only while `zooming`; each
-    // ctrl-down edge re-seats it.
-    double anchor_sample = 0.0;
+    // THE ZOOM PHASE'S PIVOT, AND IT IS A SCREEN COLUMN — waveform-relative
+    // px, double, column-clamped into the effective width at the seat — NOT a
+    // song position (architect 2026-08-14, rejecting the Ableton model here by
+    // name: "the zoom stem should remain where it was on the screen relative
+    // to screen x/y, not where it was on the waveform. Because the next time I
+    // press control, if I have dragged the waveform, I would expect the zoom
+    // stem to be placed where I left it relative to the screen"; and from the
+    // primary surface — "on the touch panel, if I drag-pan, then pinch zoom,
+    // then drag-pan some more, then pinch zoom in the same place where I did
+    // last time, that pinch zoom is applied relative to the SCREEN position").
+    // The song frame under this column is derived FRESH each zoom event and
+    // held stationary while the level changes, which is what a screen pivot
+    // means; only the anchor's identity moved, not the zoom arithmetic. The
+    // overview lane's strip drag keeps its SONG anchor (StripDragState above)
+    // — that gesture names a position in the piece, this one names a place on
+    // the glass.
+    // RE-SEATED AT EVERY CTRL-DOWN, from notional_col below — the press for a
+    // ctrl-armed drag, each ctrl-down edge for a plain-armed one. Meaningful
+    // only while `zooming`. A PERSISTENT pivot (seated once per gesture and
+    // kept across every toggle) was built and WITHDRAWN the same day, and the
+    // reason is recorded so it is not re-derived: it was a workaround for the
+    // capture's UNBOUNDED position accumulator, which made "where the pointer
+    // is" unanswerable after a long drag — a pointer 3000 px past the edge
+    // re-seated at the edge and stayed there through a reversal. Clamping the
+    // notional position continuously fixed that at its source, so the pivot
+    // can honestly follow the pointer again, which is both the architect's
+    // first instinct and what the touch pinch already does (it zooms about the
+    // fingers, wherever they are).
+    double anchor_col = 0.0;
+    // THE POINTER'S NOTIONAL COLUMN — waveform-relative px, double — kept for
+    // the gesture's whole life and CLAMPED INTO THE WAVEFORM AT EVERY STEP
+    // (architect 2026-08-14, from the rig: "if I reverse direction and it's
+    // clamped, it should drift back into the middle no matter how far in the
+    // other direction we've travelled. And the same should be true of the zoom
+    // stem"). It advances by each event's own delta rather than being read off
+    // the delivered x, because under a capture that x is the UNBOUNDED TRAVEL
+    // LEDGER — which every gesture here differences for its deltas and must
+    // stay unbounded, or a pan would stall the moment the hand passed the
+    // window edge. Clamping at the accumulation is what leaves this with no
+    // off-window debt: the instant the hand reverses, the column moves. The
+    // platform keeps the identical rule over the window's own bounds for the
+    // capture's restore position (capture_notional_x_, platform_wayland.h);
+    // each layer clamps in the bounds it owns, and the ONE reader here is the
+    // pivot seat above.
+    double notional_col = 0.0;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —

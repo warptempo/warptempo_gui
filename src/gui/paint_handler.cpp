@@ -3873,28 +3873,38 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // ctrl-up switch, each spelling its own damage; Esc no longer ends a gesture
 // at all). The stem is the ZOOM PIVOT and nothing more — the playhead jump
 // that briefly rode the strip drag was rolled back 2026-08-06 and the stem is
-// what survives it. The anchor column is recomputed each frame from the
-// persisted anchor_sample against the DISPLAYED viewport (wf_cache.fp_*), the
-// same basis paint_region_ground and paint_playheads use, so the stem stays
-// locked to the blitted plate while the worker rebuilds. The anchor lives in
-// the active display domain (viewport_start + col*spp), so no warp map is
-// walked. render_strip_anchor_stem clamps the column to the visible edges —
-// an edge-pinned anchor draws the clamp itself.
+// what survives it.
+// THE TWO PRODUCERS ANCHOR DIFFERENTLY, which is the fork below. The overview
+// lane's strip drag is SONG-anchored: its column is recomputed each frame from
+// the persisted anchor_sample against the DISPLAYED viewport (wf_cache.fp_*),
+// the same basis paint_region_ground and paint_playheads use, so the stem
+// stays locked to the blitted plate while the worker rebuilds, and the anchor
+// lives in the active display domain (viewport_start + col*spp) so no warp map
+// is walked. The nav drag is SCREEN-anchored (architect 2026-08-14, the
+// contract at ScrollDragState): its pivot IS a column, so there is nothing to
+// re-project — the stem stands at the same place on the glass across every pan
+// and every ctrl toggle of the gesture, which is the ruling made visible.
+// render_strip_anchor_stem clamps the column to the visible edges — an
+// edge-pinned anchor draws the clamp itself.
 void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
     const bool strip    = app.strip_drag.active;
     const bool nav_zoom = app.scroll_drag.active && app.scroll_drag.zooming;
     if (!strip && !nav_zoom) return;
     if (area.w <= 0 || area.h <= 0) return;
 
-    const PlateViewportBasis basis = plate_viewport_basis();
-    const double spp = basis.spp;
-    if (spp <= 0.0) return;
-    const double vp_start = basis.vp_start;
-    // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
-    // the PLATE basis hoisted above.
-    const int col = displayed_column_at(
-        strip ? app.strip_drag.anchor_sample : app.scroll_drag.anchor_sample,
-        vp_start, spp);
+    int col = 0;
+    if (strip) {
+        const PlateViewportBasis basis = plate_viewport_basis();
+        if (basis.spp <= 0.0) return;
+        // The one column rounding (displayed_column_at,
+        // warp_frame_map_view.h), on the PLATE basis.
+        col = displayed_column_at(app.strip_drag.anchor_sample,
+                                  basis.vp_start, basis.spp);
+    } else {
+        // The screen anchor: the pivot is the column. std::nearbyint is the
+        // project's one fractional->integer rule.
+        col = static_cast<int>(std::nearbyint(app.scroll_drag.anchor_col));
+    }
     render_strip_anchor_stem(cr, area, col);
 }
 

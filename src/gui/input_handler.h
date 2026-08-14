@@ -508,13 +508,13 @@ struct GuiInputHandler {
     // x. The zoom bodies (apply_strip_drag_at and the nav drag's
     // apply_nav_zoom_at) fire it each event (the last wins at release) so the
     // cursor reappears dead on the stem; the pan phase never calls it, so its
-    // release keeps the raw traveled-x restore.
+    // release keeps the notional-position restore.
     std::function<void(double)> set_strip_capture_restore_x = [](double){};
     // The nav drag's TWO mode-switch riders (2026-08-14, the live-ctrl model —
     // contract at ScrollDragState, app_state.h). The capture itself is
     // untouched by a mode switch; only what the release restores moves:
     //   * clear_strip_capture_restore_x — drop the stem override at a
-    //     zoom→pan switch, so the release goes back to the raw traveled x
+    //     zoom→pan switch, so the release goes back to the notional x
     //     (a later zoom phase re-sets it per event);
     //   * set_strip_capture_restore_kind — re-stamp the cursor kind the
     //     release restores (Pan or Zoom) so the cursor comes back as the
@@ -860,6 +860,24 @@ struct GuiInputHandler {
     // span a capture opens — GuiPlatform::set_cursor_kind), so a call made from
     // the remembered virtual coordinates cannot put up a confidently wrong cue.
     void refresh_pointer_cursor(GuiInputState mods);
+
+    // THE NAV DRAG'S ZOOM/PAN MODE, synced from the live ctrl bit — the ONE
+    // body behind the live-ctrl model, whose full contract (both re-seat
+    // directions, the persistent screen pivot, what each edge damages and
+    // re-stamps) is at ScrollDragState, app_state.h. Refuses immediately with
+    // no nav drag standing or with the mode already agreeing, so both callers
+    // cost a compare at rest.
+    // TWO CALLERS, and neither is redundant. This one — main.cpp on the
+    // settled-state hook, beside the cursor's owner above — answers the
+    // MOTIONLESS edge: releasing ctrl must drop the zoom stem and re-stamp the
+    // capture's restore THERE AND THEN, with no motion required (architect
+    // 2026-08-14, from the rig). A loop boundary is after every write, so it
+    // also covers the routes that move the modifier with no modifiers event at
+    // all (a keyboard-focus loss forgetting the mask). The OTHER caller is the
+    // top of the motion arm, which a dispatch batch carrying the modifiers
+    // event and then a motion — with no loop tail in between — still needs, so
+    // that the motion applies in the mode the user is already holding.
+    void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's File / Navigation / Settings and
@@ -1267,12 +1285,12 @@ struct GuiInputHandler {
     // capture-at-press.
     void arm_nav_zoom_press(int x, int y);
 
-    // SEAT THE NAV DRAG'S ZOOM PIVOT at the pointer's current column — the
-    // ctrl-down re-seat, called by the ctrl arm and by every pan→zoom mode
-    // switch: anchor_sample = the content under the pointer, column-clamped
-    // into the effective width so a captured virtual position off the window
-    // still seats an onscreen pivot.
-    void seat_nav_zoom_anchor(int x);
+    // ADVANCE THE NAV DRAG'S NOTIONAL POINTER COLUMN — the pointer's clamped
+    // position in waveform columns, and the zoom pivot's one source (the
+    // contract, and why it cannot simply read the delivered x under a capture,
+    // are at ScrollDragState::notional_col, app_state.h). Called by the press
+    // arm and once per motion event, above the mode sync.
+    void update_nav_notional_col(int x);
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded

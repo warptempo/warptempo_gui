@@ -480,7 +480,7 @@ public:
     // the grab-pan. On release the restore x
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
-    // below), the grab-pan at the raw traveled virtual_pointer_x_; y is frozen at
+    // below), the grab-pan at the notional capture_notional_x_; y is frozen at
     // the press row for both. Both degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
@@ -553,7 +553,7 @@ public:
     // Drop that override mid-capture (the nav drag's zoom→pan switch,
     // 2026-08-14 — the live-ctrl model): a capture whose zoom phase set the
     // stem override and whose pan phase then ends the gesture must restore at
-    // the raw traveled x, exactly as a never-zoomed pan does. No-op with no
+    // the notional x, exactly as a never-zoomed pan does. No-op with no
     // capture live.
     void clear_capture_restore_x();
 
@@ -839,15 +839,38 @@ private:
     struct zwp_relative_pointer_v1*         relative_pointer_          = nullptr;
     struct zwp_locked_pointer_v1*           locked_pointer_            = nullptr;
 
-    // Virtual-pointer state, live only while pointer_captured_ is true. The
-    // virtual position is seeded from the absolute press position and then
-    // advances by each relative-motion delta WITHOUT clamping (unbounded
-    // travel); its rounded value is written into pointer_x_/pointer_y_ and
-    // delivered through on_motion_ exactly like an absolute motion. On release
-    // the cursor reappears at capture_restore_x_override_ when a strip drag set
-    // it (the anchor stem's surface x), else at the raw drag-traveled
-    // virtual_pointer_x_ (the compositor clamps an off-window hint on-screen at
-    // unlock); y is always frozen at the press row (capture_restore_y_).
+    // Virtual-pointer state, live only while pointer_captured_ is true. THE
+    // CAPTURE TRACKS TWO DIFFERENT THINGS AND THEY ARE NOT THE SAME QUANTITY
+    // (architect 2026-08-14, from the rig — the defect that forced the split:
+    // "if I reverse direction and it's clamped, it should drift back into the
+    // middle no matter how far in the other direction we've travelled"):
+    //   * virtual_pointer_x_/y_ — THE TRAVEL LEDGER. Seeded from the absolute
+    //     press position and advanced by each relative-motion delta WITHOUT
+    //     clamping, which is what buys UNLIMITED TRAVEL: its rounded value is
+    //     written into pointer_x_/pointer_y_ and delivered through on_motion_
+    //     exactly like an absolute motion, and every captured gesture derives
+    //     its per-event delta by DIFFERENCING those deliveries, so a clamp here
+    //     would stall the pan the moment the hand passed the window edge. It
+    //     must stay unbounded.
+    //   * capture_notional_x_ — THE POINTER'S NOTIONAL POSITION: the same
+    //     accumulation CLAMPED TO THE SURFACE at every step, so it carries no
+    //     off-window debt and leaves an edge the instant the hand reverses,
+    //     which is how a real pointer behaves (it pins at the edge, and it is
+    //     always a position inside the viewport while the drag is live). Its
+    //     ONE consumer is the release restore below. The GUI's own position
+    //     consumer — the zoom pivot — keeps the identical rule over the
+    //     waveform's columns (ScrollDragState::notional_col, app_state.h),
+    //     each layer clamping in the bounds it owns.
+    //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
+    //     omission: the restore's y is frozen at the press row and the zoom
+    //     axis consumes dy as a per-event DELTA with no position consumer
+    //     anywhere, so a clamped y would have no reader and would cost the
+    //     zoom its own unlimited travel (a full zoom sweep is more vertical
+    //     pixels than the window is tall).
+    // On release the cursor reappears at capture_restore_x_override_ when a
+    // strip drag set it (the anchor stem's surface x), else at
+    // capture_notional_x_; y is always frozen at the press row
+    // (capture_restore_y_).
     // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
     // this pair and pointer_x_/pointer_y_ alike — so the travel does NOT outlive
     // the lock in the coordinates. It has to: button events carry no
@@ -861,6 +884,7 @@ private:
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;
+    double capture_notional_x_ = 0.0;
     double capture_restore_y_  = 0.0;
     std::optional<double> capture_restore_x_override_;
 
@@ -1117,12 +1141,17 @@ private:
     //   * touch UP, one of TWO nav fingers — THE DOWNGRADE (2026-08-14, the
     //     one-model ruling; the site's comment carries the full record and
     //     the no-re-join-window ruling): a transform, not an end — the end
-    //     hook is not owed, exactly as at the upgrade. The survivor becomes
-    //     the owner, the delta bases REBASE to its current position, the
-    //     distance basis drops to the single-finger degenerate 0.0, the
-    //     latch state CARRIES (an unlatched pair re-seats its latch reference
-    //     at the survivor), and an undelivered staged PAIR frame is DROPPED —
-    //     the upgrade's sliver rule in reverse, the rebase superseding it.
+    //     hook is not owed, exactly as at the upgrade. A staged PAIR frame
+    //     DELIVERS FIRST — the two directions' ONE deliberate difference,
+    //     since that frame is the pair's own completed motion and nothing
+    //     supersedes it (the upgrade's single-finger sliver IS superseded by
+    //     the join, and both fingers lifting in one wl_touch.frame batch is
+    //     what makes the difference load-bearing; the argument is at the
+    //     site). THEN the survivor becomes the owner, the delta bases REBASE
+    //     to its current position — which is also why the delivered frame
+    //     cannot be applied twice — the distance basis drops to the
+    //     single-finger degenerate 0.0, and the latch state CARRIES (an
+    //     unlatched pair re-seats its latch reference at the survivor).
     //     An ignored third finger stays ignored.
     //   * touch UP, the LAST nav finger (single-finger nav: the owner) — the
     //     staged dirty frame DELIVERS

@@ -1499,8 +1499,7 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // Drive the capture's release-restore x to the anchor stem's surface x — the
     // identical column->x math render_strip_anchor_stem paints at (area.x +
     // col + 0.5), so on release the cursor lands dead on the stem rather than at
-    // its raw traveled position (which the edge rebind leaves past a pinned
-    // stem). Fired every event; the last before release wins. A motionless
+    // the notional position (which the edge rebind leaves past a pinned stem). Fired every event; the last before release wins. A motionless
     // strip press-release never reaches here, so its override stays unset and it
     // restores at the press point.
     if (set_strip_capture_restore_x)
@@ -1525,25 +1524,68 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// SEAT THE NAV DRAG'S ZOOM PIVOT (contract at the declaration): the content
-// under the pointer's current column, column-clamped into the effective width
-// — under a live capture x is the unbounded VIRTUAL position, so the clamp is
-// what guarantees an onscreen pivot (and an onscreen stem) wherever the
-// travel has wandered. Called by the ctrl arm (the press column) and by every
-// pan→zoom mode switch (the switch event's own column) — seating at the
-// switch rather than reusing a press-time anchor is the ctrl-down REBASE:
-// after a long pan the press column names content that may be far offscreen,
-// and pivoting there would jump the view (ScrollDragState, app_state.h).
-void GuiInputHandler::seat_nav_zoom_anchor(int x) {
-    const GuiRect wf_area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
-    double col = static_cast<double>(x - wf_area.x);
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional pointer column and
+// the zoom pivot share (they are the same quantity one step apart), and the
+// same bounds render_strip_anchor_stem draws the stem inside.
+static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
     if (col < 0.0)     col = 0.0;
     if (col > col_max) col = col_max;
-    app.scroll_drag.anchor_sample =
-        static_cast<double>(app.viewport_start_sample) + col * spp;
+    return col;
+}
+
+// ADVANCE THE NAV DRAG'S NOTIONAL POINTER COLUMN (contract at
+// ScrollDragState::notional_col, app_state.h). TWO ARMS, and the fork is
+// whether a capture is live — `moved`, which is exactly when the drag captured:
+//   * NOT captured: the delivered x IS the pointer, so the column is read
+//     straight off it.
+//   * CAPTURED: the delivered x is the UNBOUNDED TRAVEL LEDGER, so the column
+//     advances by this event's own delta (the same delta the pan applies, from
+//     the same last_x, read here BEFORE either phase moves it) and clamps.
+//     Clamping the accumulation is the whole point — it leaves no off-window
+//     debt, so a reversal moves the column immediately.
+// Called at the arm (the press column) and once per motion event, above the
+// mode sync so a ctrl-down edge in the same batch seats at this event's
+// position rather than the previous one's.
+void GuiInputHandler::update_nav_notional_col(int x) {
+    ScrollDragState& sd = app.scroll_drag;
+    const GuiRect wf_area = waveform_area(app);
+    const double col = sd.moved
+                           ? sd.notional_col +
+                                 static_cast<double>(x - sd.last_x)
+                           : static_cast<double>(x - wf_area.x);
+    sd.notional_col = clamp_col_into_waveform(wf_area, col);
+}
+
+// THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
+// the reason there are two are at the declaration; both re-seat directions are
+// at ScrollDragState, app_state.h). Within the live gesture CTRL ALONE is read
+// — shift and alt bind nothing mid-drag and ride along inert.
+void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
+    ScrollDragState& sd = app.scroll_drag;
+    if (!sd.active || mods.ctrl == sd.zooming) return;
+    sd.zooming = mods.ctrl;
+    if (sd.zooming) {
+        // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
+        // persist-across-toggles experiment and its reason are recorded at
+        // ScrollDragState::anchor_col). The notional column IS the pointer's
+        // clamped column, kept current by the caller above and by the arm, so
+        // the seat is a copy rather than a second derivation.
+        sd.anchor_col = sd.notional_col;
+        // The restore X is NOT stamped here: the stem override exists to land
+        // the released cursor on a stem the edge-rebind has pinned, and the
+        // zoom phase's own applies set it. Until one runs, the notional
+        // position is still the honest restore.
+        if (sd.moved) set_strip_capture_restore_kind(GuiCursorKind::Zoom);
+    } else if (sd.moved) {
+        clear_strip_capture_restore_x();
+        set_strip_capture_restore_kind(GuiCursorKind::Pan);
+    }
+    // The stem's paint or erase: a mode switch is a discrete edge, so full
+    // waveform-area damage (the arm's own shape). This is what makes the stem
+    // vanish AT the ctrl-up rather than at the next motion.
+    viewport.invalidate_waveform_area();
 }
 
 // THE NAV DRAG'S ZOOM PHASE, one event (the live-ctrl model — contract at
@@ -1577,31 +1619,30 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // The pivot's column under the RESTING viewport. The seat put it
-    // onscreen and a pure zoom keeps it there, so the clamp-and-rebind is the
-    // strip drag's own defensive edge arm for grid-snap residue at the
-    // extremes, not a live path.
-    double anchor_col =
-        (sd.anchor_sample -
-         static_cast<double>(app.viewport_start_sample)) / spp;
-    const double col_max = W - 1.0;
-    double clamped_col = anchor_col;
-    if (clamped_col < 0.0)     clamped_col = 0.0;
-    if (clamped_col > col_max) clamped_col = col_max;
-    if (clamped_col != anchor_col) {
-        sd.anchor_sample =
-            static_cast<double>(app.viewport_start_sample) +
-            clamped_col * spp;
-        anchor_col = clamped_col;
-    }
+    // THE PIVOT IS THE SEATED COLUMN ITSELF (the screen anchor at
+    // ScrollDragState) — it does not move when the view pans, and it is never
+    // re-derived from a stored song position. The clamp is a WINDOW-RESIZE arm
+    // only (the seat's own source is clamped already, in the same bounds
+    // through the same owner): a narrowed waveform could leave the seated
+    // column past the new edge, and the write-back keeps it legal.
+    const double anchor_col = clamp_col_into_waveform(wf_area, sd.anchor_col);
+    if (anchor_col != sd.anchor_col) sd.anchor_col = anchor_col;
+
+    // The song frame the pivot stands on RIGHT NOW, derived fresh from the
+    // resting viewport: apply_strip_drag_zoom holds it at anchor_col under the
+    // new level, so the content under that screen column does not move while
+    // the level changes. That is the whole of the screen anchor — the zoom
+    // arithmetic below is the song-anchored gesture's, unchanged.
+    const double anchor_sample =
+        static_cast<double>(app.viewport_start_sample) + anchor_col * spp;
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
-    // rule; a later pan phase clears it back to the raw travel at its switch.
+    // rule; a later pan phase clears it back to the notional x at its switch.
     if (set_strip_capture_restore_x)
         set_strip_capture_restore_x(
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
-    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
+    viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    final_event);
 }
 
@@ -3814,6 +3855,10 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
+    // The notional pointer column starts at the press (the un-captured arm
+    // reads it straight off x — nothing is virtual yet), so a ctrl-down before
+    // the drag has moved seats on the press column.
+    update_nav_notional_col(x);
 }
 
 // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
@@ -3831,7 +3876,9 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
                   /*scrub_release=*/false);
     app.scroll_drag.ctrl_entry = true;
     app.scroll_drag.zooming    = true;
-    seat_nav_zoom_anchor(x);
+    // The seat is the notional column the arm just set — the same copy every
+    // later ctrl-down edge makes, so the press is not a second recipe.
+    app.scroll_drag.anchor_col = app.scroll_drag.notional_col;
     viewport.invalidate_waveform_area();
 }
 
@@ -4160,8 +4207,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // zoom moves content between two clicks); either way the capture,
         // begun at the crossing, ends here and the cursor reappears as the
         // kind the LAST mode stamped — the stem column after a zoom-phase
-        // end, the raw traveled x after a pan-phase one. No click act on any
+        // end, the notional x after a pan-phase one. No click act on any
         // moved end: the drag was navigation.
+        // THE MODE IS NOT RE-ASKED HERE, and does not need to be: every ctrl
+        // edge — the motionless one included — has already run the switch
+        // through sync_nav_drag_mode, so the cached bit and the stamped
+        // restore both name the phase the gesture is really in. What is left
+        // is ONE DISPATCH BATCH wide (a ctrl edge and this release arriving
+        // with no loop tail between them) and falls in the accepted
+        // post-unlock stale-cursor class: the platform drops every cursor
+        // answer while it has no real pointer position, and the compositor's
+        // next absolute event resolves it.
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
         // placement (deselect / mode-land, region dissolve, playhead, reseek,
@@ -6423,34 +6479,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             }
             return;
         }
+        // THE NOTIONAL POINTER COLUMN FIRST, above the mode sync: a ctrl-down
+        // delivered in the same batch as this motion must seat on where the
+        // pointer is NOW, not where the previous event left it. It reads
+        // sd.last_x, which neither phase has moved yet.
+        update_nav_notional_col(mouse_x);
         // THE LIVE MODE SYNC, ahead of the threshold gate so a pending press
-        // tracks ctrl too (the ctrl edge is observed at the NEXT motion event
-        // — a modifier edge under a motionless pointer changes nothing until
-        // motion resumes, which is honest: with no deltas there is nothing
-        // either phase could apply. Within the live gesture CTRL ALONE is
-        // read — shift and alt bind nothing mid-drag and ride along inert).
-        // Each direction's re-seat is at ScrollDragState:
-        //   * ctrl DOWN: seat the pivot at the pointer's current column and
-        //     re-stamp the capture's restore kind — the stem's first frame is
-        //     this edge's owed damage;
-        //   * ctrl UP: nothing re-seats (last_x/last_y are current in both
-        //     phases); the stem erases, the restore x drops back to the raw
-        //     travel and the restore kind re-stamps to Pan.
-        // The capture itself is untouched by every switch.
-        if (mods.ctrl != sd.zooming) {
-            sd.zooming = mods.ctrl;
-            if (sd.zooming) {
-                seat_nav_zoom_anchor(mouse_x);
-                if (sd.moved)
-                    set_strip_capture_restore_kind(GuiCursorKind::Zoom);
-            } else if (sd.moved) {
-                clear_strip_capture_restore_x();
-                set_strip_capture_restore_kind(GuiCursorKind::Pan);
-            }
-            // The stem's paint or erase: a mode switch is a discrete edge, so
-            // full waveform-area damage (the arm's own shape).
-            viewport.invalidate_waveform_area();
-        }
+        // tracks ctrl too. THIS CALLER IS THE PER-DELIVERED-MOTION ONE: the
+        // settled-state tail already answers the motionless edge, but a
+        // dispatch batch can carry the modifiers event and then a motion with
+        // no loop tail between them, and the mode must be right BEFORE this
+        // event's delta is applied — the same two-caller shape, and the same
+        // argument, as the dropdown hover walk. Both reach the one body.
+        sync_nav_drag_mode(mods);
         // Sub-threshold: still the pending click. The press did nothing, so
         // nothing happens here either — the fork IS the threshold. last_x /
         // last_y stay at the press until the crossing, which therefore folds
