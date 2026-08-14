@@ -549,15 +549,17 @@ public:
     // virtual_pointer_x_ would land past it). begin_pointer_capture clears it,
     // so a capture with no override set (the pan phase, which has no stem)
     // restores at the pointer's NOTIONAL POSITION, notional_pointer_x_ — the
-    // continuously clamped position, never the travel ledger (the pair's
-    // contract is at the fields).
+    // continuously clamped position, never the travel ledger — or, when that
+    // position ended AT A WALL, at the capture's own start column instead (the
+    // travel-ran-out rule; both contracts are at the fields).
     void set_capture_restore_x(double surface_x);
 
     // Drop that override mid-capture (the nav drag's zoom→pan switch,
     // 2026-08-14 — the live-ctrl model): a capture whose zoom phase set the
-    // stem override and whose pan phase then ends the gesture must restore at
-    // the notional x, exactly as a never-zoomed pan does. No-op with no
-    // capture live.
+    // stem override and whose pan phase then ends the gesture must restore
+    // exactly where a never-zoomed pan does — the notional x, or the capture's
+    // start column when the travel ran out (the fields carry that rule). No-op
+    // with no capture live.
     void clear_capture_restore_x();
 
     // Re-stamp the kind the active capture's release will restore (the nav
@@ -569,6 +571,41 @@ public:
     // capture guard); no-op with no capture live, where the loop-tail owner
     // governs the visible cursor.
     void set_capture_restore_kind(GuiCursorKind kind);
+
+    // FREEZE THE POINTER'S NOTIONAL X FOR THE REST OF THIS CAPTURE PHASE
+    // (architect 2026-08-14, from the rig: "I've been operating under the
+    // assumption that the zoom control would lock the x position... We need to
+    // clamp to zero horizontal movement on zoom"). While true, the captured
+    // relative stream's dx does not advance notional_pointer_x_ — THE TRAVEL
+    // LEDGER IS UNTOUCHED, so the gesture's own unlimited travel in both axes
+    // is exactly as it was, and no delta expression anywhere changes.
+    //
+    // WHY THE PLATFORM HOLDS THE BIT AND THE GUI DECIDES ITS VALUE. The
+    // position is ACCUMULATED here, per RAW event, and there is exactly one of
+    // it (the contract at notional_pointer_x_ records why a second one cannot
+    // be made to agree with this one at a wall). Suppression therefore has to
+    // happen at the accumulation: a GUI-side correction would have to subtract
+    // the discarded travel on the DELIVERY cadence, which is precisely the
+    // second-position shape codex round 17 deleted. But the platform applies NO
+    // GESTURE POLICY — it never works out that a zoom phase is running. It is
+    // TOLD, exactly as it is told the restore x and the restore kind, by the
+    // gesture that is the only thing that knows: this is the fourth member of
+    // that same told-not-inferred family.
+    //
+    // SCOPED TO THE CAPTURE, which is what keeps it from leaking: no-op while
+    // no capture is live (the siblings' own guard), cleared by
+    // begin_pointer_capture so every capture opens unfrozen, and cleared again
+    // at release_pointer_lock. The nav drag re-asserts it at its threshold
+    // crossing and at every ctrl edge; the overview lane's dual-axis strip drag
+    // never asserts it and so runs unfrozen by construction.
+    //
+    // ACCEPTED PRECISION, one pointer frame wide: the raw relative events are
+    // accumulated as they arrive while the value is set at DELIVERY time, so
+    // the frame carrying a ctrl-down edge advances the notional x by that
+    // frame's own lateral travel before the freeze takes hold. That is the same
+    // one-frame grain the pivot seat already reads at, and it is bounded by a
+    // single frame's hand movement rather than by the whole phase's.
+    void set_notional_x_frozen(bool frozen);
 
     // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
     // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
@@ -878,7 +915,8 @@ private:
     //     per RAW event, and the capture release, which moves it to the
     //     restore hint alongside pointer_x_/pointer_y_. Uncaptured there is
     //     nothing virtual, so it simply IS the delivered position; captured it
-    //     is the ledger with the debt taken out. Its consumers are the release
+    //     is the ledger with the debt taken out, MINUS whatever a frozen phase
+    //     withheld (notional_x_frozen_ below). Its consumers are the release
     //     restore below and, through notional_pointer_x(), the GUI's zoom
     //     pivot.
     //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT (codex round
@@ -897,14 +935,67 @@ private:
     //     an accumulation.
     //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
     //     omission: the restore's y is frozen at the press row and the zoom
-    //     axis consumes dy as a per-event DELTA with no position consumer
-    //     anywhere, so a clamped y would have no reader and would cost the
-    //     zoom its own unlimited travel (a full zoom sweep is more vertical
-    //     pixels than the window is tall).
+    //     axis consumes dy as a per-event DELTA, so nothing would read a
+    //     notional y. (It would cost the zoom no travel — a notional position
+    //     is a SECOND quantity beside the ledger, exactly as the x one is — so
+    //     the reason is the missing reader and nothing else.) THE FROZEN
+    //     RESTORE Y IS NOT THE X DEFECT'S OTHER HALF, which is why the
+    //     2026-08-14 lateral freeze below did not grow a y twin: the x defect
+    //     was an ACCUMULATOR silently diverging from the pointer and feeding
+    //     TWO consumers, and there is no y accumulator to diverge and no
+    //     second y consumer. What is left is a restore-position preference —
+    //     a zoom that swept 300 px down returns the cursor 300 px up — and the
+    //     press row is the ergonomic answer there: the zoom's vertical travel
+    //     is unbounded and would restore into another lane or off the surface
+    //     entirely, whereas the pan's notional x always lands back on the
+    //     waveform, which spans the full width. Architect's ruling, unchanged.
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
-    // notional_pointer_x_; y is always frozen at the press row
-    // (capture_restore_y_).
+    // notional_pointer_x_ — EXCEPT WHEN THE TRAVEL RAN OUT, where it reappears
+    // at capture_press_x_ instead (the paragraph below); y is always frozen at
+    // the press row (capture_restore_y_).
+    //
+    // A PAN THAT RAN OUT OF ROOM PUTS THE CURSOR BACK WHERE IT VANISHED
+    // (architect 2026-08-14, from the rig, having driven the lateral freeze:
+    // "works well, but I miss the teleport-on-clamp" — and, asked which
+    // teleport he meant, "the release should restore the cursor at the press
+    // point, but only when the pointer ended up clamped. The old behavior in
+    // other words"). THE RULE IS A SPLIT, and the split is the whole point —
+    // his own earlier statement of it: "a small pan should move the pointer
+    // exactly where I expect it — if I just move a little bit, I'd expect the
+    // pointer to move just a little bit. However, if I move a whole bunch,
+    // like several screens worth, I'd expect the mouse cursor to show back up
+    // where I left it." So a drag ending IN BOUNDS restores exactly where the
+    // hand left it, and a drag ending AT A WALL restores at the capture's own
+    // start column, because a wall is where TRAVEL RAN OUT rather than where
+    // the hand meant to be. Neither answer surprises: a small drag moves the
+    // cursor a little, a runaway drag brings it home.
+    // "ENDED UP CLAMPED" IS THE LAST NOTIONAL WRITE'S OWN VERDICT
+    // (notional_x_clamped_) AND NOT A TEST OF THE RESTING POSITION AGAINST THE
+    // BOUNDS, because the position is a proxy and it is wrong in both
+    // directions: a hand can come honestly to rest ON the last pixel (nothing
+    // clamped — follow the hand), and a hand that ran out of room and then
+    // travelled BACK is in bounds again from its first inward event, the clamp
+    // ceasing to bite the instant there is no debt to unwind, which is exactly
+    // what clamping at the accumulation buys. So the bit answers "ran out of
+    // room AND STAYED THERE", the only case that should snap home — sticky
+    // while the hand is still out there, since every event out there re-clamps,
+    // and self-clearing on the first event back in, with no separate clear to
+    // get right. A FROZEN phase writes nothing, so the verdict simply HOLDS
+    // across it, which is the right answer for the same reason the freeze
+    // exists: a zoom moved the pointer's x not at all, so it can neither run
+    // the travel out nor bring it back in.
+    // IT IS THE PAN'S ANSWER IN PRACTICE, and no gesture test is needed to
+    // make it so: the zoom phase drives the stem override on every one of its
+    // events, so a zoom that ran even one event reaches the override and never
+    // this fork, and the overview lane's strip drag is the same shape (a moved
+    // one always overrides; a motionless one accumulates nothing and so clamps
+    // nothing). The one zoom that does arrive here is a ctrl edge with no
+    // motion behind it, hard-ended before its first event — it has no stem
+    // column to offer, so the fork answers with the PAN phase's own verdict,
+    // which is the honest one. THE Y HAS NO HALF OF THIS EITHER — the
+    // restore's y is the press row unconditionally, which already IS "where it
+    // vanished".
     // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
     // the ledger pair, the notional position and pointer_x_/pointer_y_ alike
     // — so the travel does NOT outlive the lock in the coordinates. It has to:
@@ -921,6 +1012,30 @@ private:
     double virtual_pointer_y_  = 0.0;
     double notional_pointer_x_ = 0.0;
     double capture_restore_y_  = 0.0;
+    // THE COLUMN THE CURSOR VANISHED AT — capture_restore_y_'s x twin, seated
+    // at the same moment from the same position, and read only when the travel
+    // ran out (the rule is in the block above). "The press point" in the same
+    // loose sense the restore row is already "the press row": this is where the
+    // CAPTURE opened — the 8px threshold crossing for the nav drag, the press
+    // itself for the overview lane — which is the pixel the user watched the
+    // cursor disappear from, and so the honest reading of "where I left it".
+    double capture_press_x_    = 0.0;
+    // THE ACTIVE CAPTURE'S LATERAL FREEZE (contract at set_notional_x_frozen,
+    // the only writer besides the two capture edges that clear it). Read at
+    // exactly one place — the notional half of on_relative_pointer_motion —
+    // and never by the ledger.
+    bool   notional_x_frozen_  = false;
+    // THE LAST NOTIONAL WRITE'S CLAMP VERDICT — true iff note_notional_pointer_x,
+    // the ONE clamp body, actually clamped the value it was handed. Written
+    // there and nowhere else, read at exactly one place: the release's
+    // restore-x fallback (the ran-out rule in the block above).
+    // begin_pointer_capture clears it so a capture cannot inherit a verdict
+    // from before it existed — an absolute delivery carries an in-surface
+    // position and so never clamps, but the clear makes that structural rather
+    // than incidental. The RELEASE deliberately does not clear it: it names a
+    // write, not a capture lifetime, and the release's own write-back answers
+    // it honestly on the way out.
+    bool   notional_x_clamped_ = false;
     std::optional<double> capture_restore_x_override_;
 
     // "THE POSITION WE HAVE IS NOT THE POINTER'S." ONE FACT, ONE OWNER, and the

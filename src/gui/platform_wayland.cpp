@@ -2659,7 +2659,17 @@ void GuiPlatform::note_notional_pointer_x(double x) {
     // ONE clamp body for every writer of the pointer's notional position (the
     // contract, and why there is exactly one such position, are at the field).
     const double max_x = width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
-    notional_pointer_x_ = std::clamp(x, 0.0, max_x);
+    const double clamped = std::clamp(x, 0.0, max_x);
+    // AND IT RECORDS WHETHER THE CLAMP ACTUALLY BIT, which is a different fact
+    // from "the position is at a bound" and is the one the capture release
+    // asks for: a hand can come honestly to rest on the last pixel, and only a
+    // write that had to be pulled back says TRAVEL RAN OUT. It belongs here
+    // because this is the one place that sees both the value handed in and the
+    // value stored — deriving it anywhere else would be a duplicate predicate
+    // over a number that no longer carries the answer (the ran-out restore
+    // rule is at the fields).
+    notional_x_clamped_ = clamped != x;
+    notional_pointer_x_ = clamped;
 }
 
 void GuiPlatform::deliver_motion(int x, int y) {
@@ -3843,10 +3853,13 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
         return;
 
     // Seed the TRAVEL LEDGER from the current absolute position and remember
-    // the press row as the restore y (the cursor reappears at that row on
-    // release; its restore x rides the notional position unless a strip drag
-    // overrides it with its anchor-stem column). Each capture starts with no x
-    // override, so the grab-pan (no stem) falls back to the notional x.
+    // THE PIXEL THE CURSOR IS ABOUT TO VANISH FROM in both axes: the restore y
+    // (the row the cursor reappears at on release, always) and capture_press_x_
+    // (the column it reappears at when the travel RAN OUT — the ran-out rule is
+    // stated with the fields). Its restore x otherwise rides the notional
+    // position, unless a strip drag overrides it with its anchor-stem column.
+    // Each capture starts with no x override, so the grab-pan (no stem) falls
+    // back to the notional x.
     // THE NOTIONAL POSITION IS NOT SEEDED HERE, and that is the shape rather
     // than an omission: it is live for the whole process and already holds the
     // pointer's position (the contract at notional_pointer_x_), so a capture
@@ -3855,7 +3868,16 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
     capture_restore_y_ = virtual_pointer_y_;
+    capture_press_x_   = virtual_pointer_x_;
     capture_restore_x_override_.reset();
+    // Every capture opens with the notional x LIVE. The nav drag asserts the
+    // freeze immediately after this call when it crosses into a zoom phase, and
+    // at every ctrl edge after that (contract at set_notional_x_frozen); the
+    // overview lane's dual-axis strip drag never asserts it at all.
+    notional_x_frozen_ = false;
+    // And with no clamp behind it, so the release's ran-out question is asked
+    // of THIS capture's own travel and can inherit nothing from before it.
+    notional_x_clamped_ = false;
 
     // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"
     // request; the tracked enter serial authorizes it. THE ONE set_cursor CALL
@@ -3950,6 +3972,16 @@ void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) {
     cursor_kind_ = kind;
 }
 
+void GuiPlatform::set_notional_x_frozen(bool frozen) {
+    // The gesture states its phase; this holds it (contract at the
+    // declaration). Guarded on a live capture like its three siblings, which
+    // is why the nav drag re-asserts at its threshold crossing: the ctrl edges
+    // it took while the press was still sub-threshold had no capture to speak
+    // to.
+    if (!pointer_captured_) return;
+    notional_x_frozen_ = frozen;
+}
+
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     if (!pointer_captured_ && !locked_pointer_) return;  // idempotent
 
@@ -3969,14 +4001,35 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // clamp is applied ONCE, to a number carrying the whole
             // off-window DEBT, so a drag that went 3000 px past the edge and
             // came 750 px back still restored AT the edge. The notional
-            // position clamps at every step and has no debt, so the cursor
-            // comes back where the pointer notionally is: pinned at the edge
-            // only while the hand is still out there, and drifting back the
-            // moment it reverses. The hint is surface-local, the same space as
-            // the stem's surface x, and is double-buffered against the
-            // constrained surface, so commit it before destroying the lock.
-            const double restore_x =
-                capture_restore_x_override_.value_or(notional_pointer_x_);
+            // position clamps at every step and has no debt, so it leaves the
+            // edge the moment the hand reverses and the cursor comes back
+            // where the pointer notionally is (the out-there case is the fork
+            // below, which sends it home instead). The hint is surface-local,
+            // the same space as the stem's surface x, and is double-buffered
+            // against the constrained surface, so commit it before destroying
+            // the lock.
+            // AND WHEN THE TRAVEL RAN OUT, THE CURSOR GOES HOME INSTEAD —
+            // back to the column the capture opened at, the pixel it vanished
+            // from (architect 2026-08-14, from the rig, having driven the
+            // lateral freeze: "works well, but I miss the teleport-on-clamp...
+            // the release should restore the cursor at the press point, but
+            // only when the pointer ended up clamped"). THE SPLIT IS THE
+            // RULE, not the teleport: a drag that ends IN BOUNDS restores
+            // where the hand left it — "if I just move a little bit, I'd
+            // expect the pointer to move just a little bit" — and a drag that
+            // ends AT A WALL restores at the start column, because a wall is
+            // where travel ran out rather than where the hand meant to be:
+            // "if I move a whole bunch, like several screens worth, I'd expect
+            // the mouse cursor to show back up where I left it". The question
+            // is asked of the last notional WRITE's clamp verdict rather than
+            // of the resting position, which is only a proxy for it and wrong
+            // both ways (the full rule, and why the bit self-clears the moment
+            // the hand comes back off the wall, are at the fields). An
+            // override outranks it: a stem column is a place the gesture
+            // NAMED, not a place travel ran to, which is what keeps the fork
+            // the PAN's answer without a gesture test anywhere in it.
+            const double restore_x = capture_restore_x_override_.value_or(
+                notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),
@@ -4035,11 +4088,16 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // against surface rects — so an off-window value stored here was a
             // point no press could legitimately land on, and until the next
             // physical motion a click would route at it. The grab-pan was the
-            // one producer, setting no restore-x override. Both hint sources
-            // are now in-surface by construction (the clamped notional
-            // position, or a stem column that lives inside the waveform), so
-            // this clamp changes nothing it is handed; it stays as the record's
-            // own guard, since the record's rule is about the record. It is
+            // one producer, setting no restore-x override. All THREE hint
+            // sources are in-surface as they are written (the notional position
+            // clamped at every step, a stem column that lives inside the
+            // waveform, and the capture's start column, which was a delivered
+            // position when it was seeded), so this clamp changes nothing it is
+            // handed — with one narrow arm left to earn it, a window NARROWED
+            // mid-capture, which leaves the two STORED columns measured against
+            // a width that is gone. It stays as the record's own guard either
+            // way, since the record's rule is about the record and not about
+            // who supplied the value. It is
             // exact in every case that matters besides: if the compositor's
             // screen-clamp really did draw the cursor outside this window, a
             // pointer-leave follows and the record stops being consulted at
@@ -4064,6 +4122,13 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
         locked_pointer_ = nullptr;
     }
     pointer_captured_ = false;
+    // The lateral freeze dies with the capture it belongs to, on BOTH exits
+    // (the hint arm above and the revoked-lock path that skips it), so nothing
+    // a zoom phase asserted can survive into the next gesture. Deliberately
+    // below the write-back above: that write states where the cursor was
+    // DRAWN, a real position rather than an accumulation, so the freeze never
+    // gated it and the order carries no meaning either way.
+    notional_x_frozen_ = false;
 
     // Restore the REMEMBERED KIND at the tracked enter serial — not the arrow.
     // For a capture that stamped (the lock-proxy path) that kind is the one the
@@ -4138,7 +4203,17 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // keep a clamped position of its own to advance on the delivery cadence.
     // X only: the y axis has no position consumer (the declaration records
     // why).
-    note_notional_pointer_x(notional_pointer_x_ + dx);
+    // AND IT DOES NOT ADVANCE AT ALL WHILE THE ACTIVE PHASE HAS FROZEN IT
+    // (architect 2026-08-14: "we need to clamp to zero horizontal movement on
+    // zoom") — the zoom phase's lateral hand travel moves nothing on screen,
+    // so letting it move the pointer made the position a record of travel
+    // nobody could see: the next ctrl-down seated the pivot far from where the
+    // user believed the pointer was, and a zoom→pan switch's release restored
+    // the cursor there too. The freeze is a POSITION rule and touches no delta
+    // — the ledger above is unconditional, so the gesture's own travel, its
+    // per-event dx/dy and every clamp are exactly as they were. The bit is the
+    // GUI's to set; the contract is at set_notional_x_frozen.
+    if (!notional_x_frozen_) note_notional_pointer_x(notional_pointer_x_ + dx);
     // std::nearbyint, the project's one fractional->integer pixel conversion —
     // this is the platform boundary where a continuous pointer position becomes
     // the integer window pixel every gesture reads.

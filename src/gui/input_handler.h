@@ -523,6 +523,18 @@ struct GuiInputHandler {
     std::function<void()> clear_strip_capture_restore_x = []{};
     std::function<void(GuiCursorKind)> set_strip_capture_restore_kind =
         [](GuiCursorKind){};
+    // THE NAV DRAG'S LATERAL FREEZE (architect 2026-08-14, from the rig: the
+    // zoom phase locks the pointer's x). True while the drag is zooming, false
+    // while it pans: the platform then stops advancing the pointer's NOTIONAL
+    // position with the zoom phase's discarded lateral travel, leaving the
+    // travel ledger and every delta untouched (contract at
+    // GuiPlatform::set_notional_x_frozen). Fired at the threshold crossing —
+    // the ctrl edges a sub-threshold press took reached no capture — and at
+    // every ctrl edge after it, from the one mode-sync body. The overview
+    // lane's strip drag never fires it: that gesture is dual-axis, and its
+    // capture opens unfrozen. A no-op while no capture is live.
+    std::function<void(bool)> set_strip_capture_notional_x_frozen =
+        [](bool){};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -1295,8 +1307,11 @@ struct GuiInputHandler {
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded
-    // (the phase's exact axis), the capture's restore x driven to the stem
-    // each event. Defined beside apply_strip_drag_at (input_pointer.cpp).
+    // (the phase's exact axis) while the POINTER'S OWN x is frozen for the
+    // phase's whole life by set_strip_capture_notional_x_frozen above — two
+    // statements, not one, and the second is the 2026-08-14 fix. The
+    // capture's restore x is driven to the stem each event. Defined beside
+    // apply_strip_drag_at (input_pointer.cpp).
     void apply_nav_zoom_at(int x, int y, bool final_event);
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's

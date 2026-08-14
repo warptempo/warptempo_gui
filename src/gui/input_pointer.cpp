@@ -1590,6 +1590,14 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);
     }
+    // THE POINTER'S X FREEZES FOR THE ZOOM PHASE AND RESUMES FOR THE PAN
+    // (architect 2026-08-14: the zoom locks the x position). Unconditional
+    // here — the platform's own capture guard answers a sub-threshold edge,
+    // and the crossing re-asserts what those edges could not reach. The
+    // gesture's arithmetic is untouched either way: the zoom phase already
+    // discards dx, and the pan phase already differences last_x, which BOTH
+    // phases keep current off the unfrozen travel ledger.
+    set_strip_capture_notional_x_frozen(sd.zooming);
     // The stem's paint or erase: a mode switch is a discrete edge, so full
     // waveform-area damage (the arm's own shape). This is what makes the stem
     // vanish AT the ctrl-up rather than at the next motion.
@@ -1601,6 +1609,16 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
 // (drag DOWN zooms in, the strip drag's own response) about the seated pivot,
 // and dx is DISCARDED — the phase's one exact axis, the deleted segment
 // lock's vertical arm reached by the modifier instead of by classification.
+// AND THE POINTER'S OWN X IS FROZEN WITH IT, which is a SEPARATE STATEMENT
+// and the one that was missing (architect 2026-08-14, from the rig: "I've
+// been operating under the assumption that the zoom control would lock the x
+// position"). Discarding the phase's dx says only that the VIEW does not
+// respond to sideways travel; the pointer's notional position kept advancing
+// through every pixel of it, invisibly, because nothing on screen moved — so
+// a later ctrl-down seated the pivot far from where the user believed the
+// pointer was, and a zoom→pan switch's release restored the cursor there.
+// The freeze is asserted at the mode edges (sync_nav_drag_mode) and lives in
+// the platform, which owns the position; the ledger is untouched.
 // The viewport itself never moves here (a pure zoom pivots about the anchor's
 // column), so no wall clamp is needed on it — the resting viewport is already
 // chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x /
@@ -6512,10 +6530,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // re-stamps it through set_strip_capture_restore_kind above.
             begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
                                                    : GuiCursorKind::Pan);
+            // AND THE MODE AT THE CROSSING ALSO SETS THE LATERAL FREEZE. The
+            // capture opens unfrozen, and the ctrl edges a sub-threshold press
+            // took spoke to no capture at all (the setters are capture-
+            // guarded), so a ctrl-armed drag would otherwise reach its zoom
+            // phase with the pointer's x still advancing. This is the only
+            // other site: from here every switch rides sync_nav_drag_mode.
+            set_strip_capture_notional_x_frozen(sd.zooming);
         }
         if (sd.zooming) {
             // The ZOOM phase: dy off the live level about the seated pivot,
-            // dx discarded (apply_nav_zoom_at, the phase's one exact axis).
+            // dx discarded by the gesture AND withheld from the pointer's own
+            // notional x by the freeze asserted above (apply_nav_zoom_at, the
+            // phase's one exact axis — the two are different statements).
             apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);
             return;
         }

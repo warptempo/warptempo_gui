@@ -784,7 +784,23 @@ struct StripDragState {
 // (dy/kZoomStripPxPerLevel, about the seated pivot) and dx is discarded —
 // each phase one exact axis, the deleted segment lock's answer reached by the
 // modifier instead of by classification (the ladder's record above
-// kZoomStripPxPerLevel). THE MODE FOLLOWS THE MODIFIER AT ITS OWN EDGE
+// kZoomStripPxPerLevel). THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
+// THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE DISCARD
+// (architect 2026-08-14, from the rig: "I've been operating under the
+// assumption that the zoom control would lock the x position... we need to
+// clamp to zero horizontal movement on zoom"). Discarding dx says the VIEW
+// ignores sideways travel; the pointer's notional position went on
+// accumulating every pixel of it, and because nothing on screen answered that
+// travel it was invisible — so a later ctrl-down seated the pivot far from
+// where the pointer was believed to be, and a zoom→pan switch's release
+// restored the cursor out there too. The freeze is asserted at the crossing
+// and at every ctrl edge and lives where the position is accumulated
+// (GuiPlatform::set_notional_x_frozen); the TRAVEL LEDGER is untouched, so
+// this changes no delta anywhere, including this drag's own. THE Y HAS NO
+// TWIN, deliberately — there is no notional y to freeze, and the restore's
+// press-row y is an unchanged ruling (the reasoning is recorded at
+// GuiPlatform::notional_pointer_x_).
+// THE MODE FOLLOWS THE MODIFIER AT ITS OWN EDGE
 // (architect 2026-08-14, from the rig: "if I let go of control, the zoom stem
 // should disappear. It doesn't disappear until I start moving the mouse") —
 // ONE BODY, sync_nav_drag_mode, with TWO callers. The run loop's SETTLED-STATE
@@ -914,6 +930,11 @@ struct ScrollDragState {
     // source, so the pivot can honestly follow the pointer again, which is
     // both the architect's first instinct and what the touch pinch already
     // does (it zooms about the fingers, wherever they are).
+    // A SECOND SEAT OF THE SAME GESTURE LANDS WHERE THE FIRST DID unless the
+    // hand panned in between, and that is the lateral freeze's doing (the
+    // paragraph above the struct): without it the zoom phase's own sideways
+    // travel — travel nothing on screen answered — walked the notional column
+    // along, and the stem jumped at the next ctrl-down.
     double anchor_col = 0.0;
 };
 
