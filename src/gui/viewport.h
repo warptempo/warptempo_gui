@@ -178,8 +178,9 @@ struct Viewport {
     // FOUR callers since the nav drag's zoom phase joined (2026-08-14):
     // apply_strip_drag_at (which has already
     // panned the viewport for this event and hands the anchor's drifted,
-    // edge-rebindable column), the nav drag's zoom phase apply_nav_zoom_at
-    // (pure zoom about the seated pivot — the viewport arrives unpanned), the
+    // edge-rebindable column), the nav drag's ctrl phase
+    // apply_nav_dual_axis_at (which has likewise already panned for this
+    // event and hands the seated screen pivot's column), the
     // two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the content under the previous finger centroid, placed at

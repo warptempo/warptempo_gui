@@ -505,34 +505,51 @@ struct GuiInputHandler {
         [](GuiCursorKind){};
     std::function<void()> end_strip_pointer_capture   = []{};
     // Set the active capture's release-restore x to the anchor stem's surface
-    // x. The zoom bodies (apply_strip_drag_at and the nav drag's
-    // apply_nav_zoom_at) fire it each event (the last wins at release) so the
-    // cursor reappears dead on the stem; the pan phase never calls it, so its
-    // release keeps the notional-position restore.
+    // x, so the cursor reappears dead on the stem instead of at the notional
+    // position (which the edge rebind leaves past a pinned stem). ITS ONE
+    // FIRER IS THE OVERVIEW LANE'S apply_strip_drag_at, which fires it each
+    // event (the last wins at release). The nav drag's ctrl phase fired it
+    // too while that phase discarded dx; it PANS with dx now, so the hand has
+    // really travelled and the honest restore is the pointer's own notional
+    // position — the stem override is SUSPENDED there for the dy-reservoir
+    // test, not retired (the record is at ScrollDragState, app_state.h).
     std::function<void(double)> set_strip_capture_restore_x = [](double){};
-    // The nav drag's TWO mode-switch riders (2026-08-14, the live-ctrl model —
+    // The nav drag's mode-switch riders (2026-08-14, the live-ctrl model —
     // contract at ScrollDragState, app_state.h). The capture itself is
     // untouched by a mode switch; only what the release restores moves:
-    //   * clear_strip_capture_restore_x — drop the stem override at a
-    //     zoom→pan switch, so the release goes back to the notional x
-    //     (a later zoom phase re-sets it per event);
     //   * set_strip_capture_restore_kind — re-stamp the cursor kind the
     //     release restores (Pan or Zoom) so the cursor comes back as the
-    //     phase the gesture ENDED in, not the one its capture began in.
+    //     phase the gesture ENDED in, not the one its capture began in;
+    //   * clear_strip_capture_restore_x — drop the stem override at a
+    //     zoom→pan switch. IT HAS NO FIRER WHILE THE DY-RESERVOIR TEST
+    //     STANDS: the nav drag's ctrl phase stamps no override any more, so
+    //     there is nothing to clear. The hook and its platform owner are kept
+    //     wired ON PURPOSE — a deliberate, recorded exception to the
+    //     producer-less-mechanism rule, scoped to this experiment and
+    //     extended to nothing else, because the mechanism is SUSPENDED rather
+    //     than retired: a rejection of the test restores it by reverting that
+    //     commit, a ratification deletes it and gui.clear_capture_restore_x
+    //     then.
     // Both are no-ops while no capture is live.
     std::function<void()> clear_strip_capture_restore_x = []{};
     std::function<void(GuiCursorKind)> set_strip_capture_restore_kind =
         [](GuiCursorKind){};
     // THE NAV DRAG'S LATERAL FREEZE (architect 2026-08-14, from the rig: the
-    // zoom phase locks the pointer's x). True while the drag is zooming, false
-    // while it pans: the platform then stops advancing the pointer's NOTIONAL
-    // position with the zoom phase's discarded lateral travel, leaving the
-    // travel ledger and every delta untouched (contract at
-    // GuiPlatform::set_notional_x_frozen). Fired at the threshold crossing —
-    // the ctrl edges a sub-threshold press took reached no capture — and at
-    // every ctrl edge after it, from the one mode-sync body. The overview
-    // lane's strip drag never fires it: that gesture is dual-axis, and its
-    // capture opens unfrozen. A no-op while no capture is live.
+    // zoom phase locks the pointer's x) — SUSPENDED FOR THE DY-RESERVOIR
+    // TEST, NOT RETIRED. While true the platform stops advancing the
+    // pointer's NOTIONAL position with the zoom phase's discarded lateral
+    // travel, leaving the travel ledger and every delta untouched (contract
+    // at GuiPlatform::set_notional_x_frozen). It exists because the ctrl
+    // phase DISCARDED dx, and that phase PANS with dx now, so both call
+    // sites — the threshold crossing and the one mode-sync body — pass FALSE
+    // and the pointer tracks its own lateral travel again. Kept wired ON
+    // PURPOSE: a deliberate, recorded exception to the producer-less-mechanism
+    // rule, scoped to this experiment and extended to nothing else, because a
+    // rejection of the test restores the mechanism by reverting that commit
+    // while a ratification deletes it and GuiPlatform::set_notional_x_frozen
+    // then. The overview lane's strip drag never fires it at all: that gesture
+    // is dual-axis, and its capture opens unfrozen. A no-op while no capture
+    // is live.
     std::function<void(bool)> set_strip_capture_notional_x_frozen =
         [](bool){};
 
@@ -707,7 +724,14 @@ struct GuiInputHandler {
     // cost a modifier release mid-gesture and a re-press" — is ANSWERED
     // rather than violated: the modifier release mid-gesture IS the pan now,
     // costing no click, which is what dissolved the asymmetry and the mouse's
-    // segment lock with it.
+    // segment lock with it. THE MIRROR IS NOT EXACT WHILE THE DESK'S
+    // DY-RESERVOIR TEST STANDS — its ctrl phase pans on dx as well as zooming
+    // (apply_nav_dual_axis_at) while two fingers here zoom and only zoom —
+    // and that is an ACCEPTED asymmetry rather than a divergence to repair:
+    // the two surfaces are co-equal, not translations of each other, and the
+    // architect expects this very gesture to carry the largest difference
+    // between them. Nothing here changes either way; the desk's verdict does
+    // not reach this body.
     //
     // IT DRIVES THE STRIP-DRAG FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
@@ -1305,14 +1329,14 @@ struct GuiInputHandler {
     // GuiPlatform::notional_pointer_x_.
     double nav_notional_col() const;
 
-    // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
-    // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded
-    // (the phase's exact axis) while the POINTER'S OWN x is frozen for the
-    // phase's whole life by set_strip_capture_notional_x_frozen above — two
-    // statements, not one, and the second is the 2026-08-14 fix. The
-    // capture's restore x is driven to the stem each event. Defined beside
-    // apply_strip_drag_at (input_pointer.cpp).
-    void apply_nav_zoom_at(int x, int y, bool final_event);
+    // THE NAV DRAG'S CTRL PHASE, one event — DUAL-AXIS BEHIND THE DY
+    // RESERVOIR (the architect-endorsed field test; contract at
+    // ScrollDragState, app_state.h): dx pans 1:1 at the old level and dy
+    // zooms through Viewport::apply_strip_drag_zoom about the seated screen
+    // pivot, but only the overflow past +/-kNavZoomReservoirPx is ever spent,
+    // so a wrist arc's oscillating dy cancels inside the band. Defined beside
+    // apply_strip_drag_at (input_pointer.cpp), whose shape it takes.
+    void apply_nav_dual_axis_at(int x, int y, bool final_event);
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub
