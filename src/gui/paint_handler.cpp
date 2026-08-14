@@ -1327,8 +1327,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
     // THE BORDER-TOP, full window width at the lane's FIRST row and UNBROKEN —
     // over the trough and over every tab alike (2026-08-13). WHAT THE CROPS
-    // SHOW is exactly that: row_3_tab_example's y=0 is one #535659 run across
-    // all 281 px with two unselected tabs beginning at y=1 beneath it, and
+    // SHOW is exactly that: row_3_tab_example's y=0 is one flat run across all
+    // 281 px with two unselected tabs beginning at y=1 beneath it, and
     // row_3_tab_trough agrees on the empty bar. WHAT THEY DO NOT SHOW is a
     // SELECTED tab under this line — row_3_tab_selected starts AT the tab's
     // own top row, so whether a selected tab breaks the top line the way it
@@ -1336,11 +1336,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // here. The line is drawn straight across and the selected tab's rounded
     // accent begins on the first content row below it, which is the reading
     // the crops do support: a tab top that starts below the line, not through
-    // it. Its grey is the row's own sample and deliberately NOT the bottom
-    // border's — two Breeze roles, two constants, the reasoning at
-    // kRedesignTabTopLine.
-    cairo_set_source_rgb(cr, kRedesignTabTopLine.r, kRedesignTabTopLine.g,
-                         kRedesignTabTopLine.b);
+    // it. Its grey is the BOTTOM border's since 2026-08-14 — the crop's own
+    // #535659 is overridden for product-internal consistency, the ruling and
+    // the measurement both at kRedesignTabLine, render.h.
+    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                         kRedesignTabLine.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, border_h);
     cairo_fill(cr);
 
@@ -1606,8 +1606,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // of the tab, right of it),
     // either of which is empty when the selected tab sits at an edge; crisp on
     // integer bounds like every other axis-aligned 1px fill in these rows. ITS
-    // GREY IS NOT THE BORDER-TOP'S, by measurement rather than by oversight
-    // (kRedesignTabTopLine's record, render.h).
+    // GREY IS THE BORDER-TOP'S TOO since 2026-08-14 — one line value on the
+    // lane, the ruling and the overridden crop at kRedesignTabLine, render.h.
     cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
                          kRedesignTabLine.b);
     const int border_y = content_y + content_h;

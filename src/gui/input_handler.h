@@ -2100,8 +2100,11 @@ private:
     //   the one rect inside that veil which takes an act, and so the one thing
     //   the veil's blanket names rather than blanks.
     //
-    // THE CUES ARE HOVER-ONLY WITH ONE NAMED EXCEPTION (architect 2026-08-03):
-    // a LIVE TRIM GESTURE — pending or past the threshold; an endcap drag, the
+    // THE CUES ARE HOVER-ONLY WITH NAMED EXCEPTIONS, all of them the same
+    // exception (architect 2026-08-03, grown twice since): a LIVE GESTURE WHOSE
+    // DRAGGED THING IS THE THING THE CURSOR NAMES owns the cursor for as long
+    // as it lasts. THE FIRST AND THE MODEL FOR THE OTHERS IS TRIM —
+    // pending or past the threshold; an endcap drag, the
     // bridge drag, or a ctrl bound-set's armed drag — OWNS the cursor for as
     // long as it lasts, wherever the pointer is: a begin-bound drag keeps
     // TrimBoundBegin, an end-bound drag TrimBoundEnd, the bridge TrimResize.
@@ -2116,9 +2119,16 @@ private:
     // record names — TrimBoundBegin / TrimBoundEnd / TrimResize — for the
     // gesture's life. They can, for the same reason trim can: the box is the
     // thing being dragged and the cue names it.
+    // THE MARKER REPOSITION DRAG JOINED THEM 2026-08-14 (architect: "it should
+    // remain left/right arrows during the drag, like trim and overview drag
+    // currently do"), same shape, same reasoning — the flag box wears
+    // TrimResize at rest because a marker slides side to side, and the drag is
+    // that slide, so the cue stays true from the press to the release. It has
+    // exactly ONE shape, so the record is that it is live (drag or pending
+    // marker drag) and there is no kind to read.
     // EVERY OTHER gesture keeps the uniform refusal — no cursor changes during
-    // the marker, region, strip or grab-pan drags (the captured two hide the
-    // cursor anyway).
+    // the region, strip or grab-pan drags (the captured two hide the cursor
+    // anyway).
     //
     // THE ACCEPTED STALENESS IS ONE POLL WAKEUP WIDE, and that is the whole of
     // it since the cursor became a per-iteration answer (2026-08-03). Every

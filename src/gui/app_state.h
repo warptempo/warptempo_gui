@@ -77,8 +77,10 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
-// DIRECTIONAL SEGMENT STABILIZATION — THE HARD PER-SEGMENT AXIS LOCK, THE TWO
-// RETUNABLES (architect-ruled 2026-08-12, round FOUR of the same day's field
+// DIRECTIONAL SEGMENT STABILIZATION — THE HARD PER-SEGMENT AXIS LOCK, THE
+// THREE RETUNABLES (the classify distance and the pause below, plus the
+// CLASSIFICATION ANGLE that joined them 2026-08-14)
+// (architect-ruled 2026-08-12, round FOUR of the same day's field
 // calibration: "disable cross axis - force either horizontal or vertical
 // movement, keep the [pause] refresh and 8px min drag"; the per-event model
 // lives in apply_strip_drag_at, input_pointer.cpp).
@@ -97,9 +99,11 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 //     dy zooms linear. Sub-slop travel is tiny, so there is no dead zone at
 //     the arm and a pan's first event stays responsive.
 //   * CLASSIFICATION, once per segment, when Chebyshev travel from the segment
-//     origin reaches kStripSegmentClassifyPx — on the 45° diagonal: |Δy| >
-//     |Δx| = VERTICAL, else HORIZONTAL (ties horizontal — the pan-primary
-//     bias).
+//     origin reaches kStripSegmentClassifyPx — on the
+//     kStripSegmentZoomAngleDeg diagonal, 60° off horizontal since 2026-08-14
+//     (the pan cone widened; the constant below owns the angle and its
+//     reason): |Δy| > |Δx|·tan(angle) = VERTICAL, else HORIZONTAL (ties
+//     horizontal — the pan-primary bias).
 //   * HORIZONTAL = PAN ONLY: dx pans plain 1:1, and effective_dy is 0.0 — the
 //     level cannot move at all until the segment ends.
 //   * VERTICAL = ZOOM ONLY: dy zooms plain linear (dy/kZoomStripPxPerLevel —
@@ -158,9 +162,10 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // rework — no longer a later phase; zoom-viewport-strip.md). The
 // touch pinch's zoom HYSTERESIS stays dead throughout (touch.md).
 //
-// NEITHER retunable rides gui_scale: both model HAND travel and hand rhythm on
-// a physical device, like the drag slop constants. Both are ruled retunables,
-// field-tuned on glass and desk.
+// NO retunable here rides gui_scale: they model HAND travel, hand rhythm and
+// hand direction on a physical device, like the drag slop constants. All three
+// (the two named in this block's title plus kStripSegmentZoomAngleDeg, which
+// joined 2026-08-14) are ruled retunables, field-tuned on glass and desk.
 
 // Chebyshev travel (window px) from the segment origin at which a segment
 // classifies, once. 8.0 deliberately equals the generic press-becomes-drag
@@ -168,6 +173,41 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // typically classifies in the same breath it arrives. It is the architect's
 // "8px min drag", kept verbatim across the lock ruling.
 constexpr double kStripSegmentClassifyPx = 8.0;
+
+// THE CLASSIFICATION ANGLE — the third retunable, and the one that says which
+// way the segment lock LEANS. Measured OFF HORIZONTAL: a segment whose opening
+// direction is STEEPER than this counts as VERTICAL (zoom); anything shallower,
+// ties included, is HORIZONTAL (pan). 45° is the neutral diagonal, where the
+// lock shipped on 2026-08-12 — every angle above it widens the PAN cone at
+// zoom's expense.
+//
+// 60° SINCE 2026-08-14 (architect, favouring pan): a stroke now has to climb
+// past 60° off horizontal before it zooms, so pan owns two thirds of the
+// direction circle's quadrant and the wrist's shallow arc — the ergonomics the
+// whole lock exists for, side-to-side hinging on the WRIST and arcing big —
+// can no longer tip a pan into a zoom on its opening few px. Zoom is the
+// deliberate steep gesture, which is the shoulder movement that was never the
+// problem.
+//
+// THE ANGLE IS THE KNOB, in degrees, and the slope is DERIVED from it below
+// rather than written beside it, so a retune is one number and there is no
+// second value to keep in step. Ties stay horizontal (the comparison is
+// strict), which also keeps a PURE vertical stroke — |Δx| = 0 — classifying
+// Vertical at any angle.
+//
+// Like the other two retunables this rides no scale: it models the direction a
+// HAND opens a stroke in, on a physical device.
+constexpr double kStripSegmentZoomAngleDeg = 60.0;
+
+// tan(kStripSegmentZoomAngleDeg): the |Δy| : |Δx| ratio a segment must EXCEED
+// to classify Vertical. Not constexpr because std::tan is not a constant
+// expression before C++26; it is evaluated at most once per segment (the
+// classifying event, and only while the segment is still unclassified), which
+// is a handful of calls per gesture.
+inline double strip_segment_zoom_slope() {
+    constexpr double kPi = 3.14159265358979323846;
+    return std::tan(kStripSegmentZoomAngleDeg * kPi / 180.0);
+}
 
 // Motion pause (ms) that resets the segment — the architect's bound:
 // "certainly less than five hundred milliseconds". The time base is

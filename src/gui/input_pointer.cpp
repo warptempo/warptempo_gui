@@ -1276,6 +1276,23 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 return GuiCursorKind::TrimBoundEnd;
         }
     }
+    // THE MARKER REPOSITION DRAG KEEPS ITS CUE TOO (architect 2026-08-14: "it
+    // should remain left/right arrows during the drag, like trim and overview
+    // drag currently do"), on the same rule and in the same member shape as the
+    // two above: the thing being dragged IS the thing the cursor names, so the
+    // ew-resize the flag box wears at rest stays TRUE for the whole gesture,
+    // and falling to the uniform Arrow the moment the marker started moving was
+    // the odd one out. The drag has exactly ONE shape — a marker slides side to
+    // side and nothing else — so the record is simply that it is live; there is
+    // no kind to read and no position to re-derive from (a marker drag takes
+    // the pointer off the flag box by definition, exactly as a bound drag takes
+    // it off the band). THE PENDING ARM IS THE SAME ARM, the trim pair's own
+    // arrangement: sub-threshold the pointer still rests on the flag box it
+    // pressed, where the hover map answers this same kind, so reading the
+    // pending here just keeps one owner across the whole press-to-release span.
+    // The gesture is capture-free, so there is a visible cursor to keep.
+    if (app.drag.active || app.pending_marker_drag.active)
+        return GuiCursorKind::TrimResize;
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
 
     // THE OPEN FLAG EDITOR'S BOX IS EDITABLE TEXT, so it wears the I-beam
@@ -1582,8 +1599,12 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // classifying event itself still responds plain — its travel is the
     // segment's sub-slop opening, tiny by construction): when Chebyshev travel
     // from the segment origin reaches kStripSegmentClassifyPx, classify on the
-    // 45° diagonal — |Δy| > |Δx| = Vertical, else Horizontal (TIES HORIZONTAL,
-    // the pan-primary bias). The mode is the whole lock state — no origin and
+    // kStripSegmentZoomAngleDeg diagonal — the segment's opening direction must
+    // be STEEPER than that angle off horizontal to be Vertical, which is
+    // |Δy| > |Δx|·tan(angle); anything shallower, TIES INCLUDED, is Horizontal
+    // (the pan-primary bias, and at 60° since 2026-08-14 pan owns the wider
+    // cone by ruling — the angle and its reason live at the constant,
+    // app_state.h). The mode is the whole lock state — no origin and
     // no accumulator — so the plain→locked transition costs no jump: the axis
     // that survives keeps responding at exactly the rate it already had, and
     // the other simply stops contributing from the next event on.
@@ -1591,8 +1612,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
         const double seg_dx = std::abs(static_cast<double>(x - sd.seg_x0));
         const double seg_dy = std::abs(static_cast<double>(y - sd.seg_y0));
         if (std::max(seg_dx, seg_dy) >= kStripSegmentClassifyPx) {
-            sd.seg_mode = seg_dy > seg_dx ? StripSegmentMode::Vertical
-                                          : StripSegmentMode::Horizontal;
+            const bool steep = seg_dy > seg_dx * strip_segment_zoom_slope();
+            sd.seg_mode = steep ? StripSegmentMode::Vertical
+                                : StripSegmentMode::Horizontal;
         }
     }
 

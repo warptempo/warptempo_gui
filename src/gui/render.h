@@ -360,32 +360,31 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // hard-coded rule, never a reference to the palette, and a retune of one must
 // not follow the other.
 //
-// THE ROW'S TWO BORDER ROWS ARE DIFFERENT GREYS AND BOTH ARE CORRECT — do not
-// "fix" either to match the other:
-//   TOP    #535659 (kRedesignTabTopLine), y=0 of both new crops, full width
-//          over tabs and trough alike.
-//   BOTTOM #4c4e51 (kRedesignTabLine), row_3_bottom_border.png, the same grey
-//          the tab frame measures.
-// They are two Breeze roles seen on one lane — the bar's outer edge against
-// the chrome above it, and the tab frame's own line — each sampled on its own
-// and neither derived from the other.
+// THE ROW'S TWO BORDER ROWS ARE ONE GREY, kRedesignTabLine #4c4e51, AND THAT
+// DELIBERATELY OVERRIDES A CROP (architect 2026-08-14: "make tab row top border
+// #4c4e51 to match other lines"). THE MEASUREMENT STANDS AND IS KEPT HERE so
+// nobody "restores" it: the SOURCE's top line IS #535659 — y=0 of both
+// row_3_tab_example.png and row_3_tab_trough.png, full width over tabs and
+// trough alike, the KWave/pcmanfm-qt pair agreeing — and the bottom border and
+// the tab frame measure #4c4e51 (row_3_bottom_border.png). Breeze does draw two
+// roles on this lane. The architect chose PRODUCT-INTERNAL CONSISTENCY over the
+// sample: #4c4e51 is the line grey the rest of the product's chrome takes, and
+// one line value across the window reads better here than the source's two.
+// kRedesignTabTopLine, the top row's own constant for the one day it existed
+// (2026-08-13..14), is RETIRED with it — the top border now reads the same
+// constant the bottom one does, and there is no second line constant on this
+// row to keep in step.
 //
-// kRedesignTabTopLine is NUMERICALLY EQUAL to row 2's kRedesignLine #535659
-// and is NOT it, the standing rule for two facts that agree (kBackground and
-// kRedesignContentGround are the same arrangement): that constant is row 2's
-// separator and border-bottom, sampled from a kdenlive crop; this one is row
-// 3's top edge, sampled from the KWave/pcmanfm-qt pair above. A retune of one
-// must not follow the other.
-//
-// kRedesignTabLine is likewise a SECOND structural line grey, distinct from
-// kRedesignLine: the tab frame and the row's bottom border measure #4c4e51 in
-// every crop. Both sampled, neither derived from the other.
+// kRedesignTabLine is a SECOND structural line grey, distinct from
+// kRedesignLine #535659 (row 2's separator and border-bottom, sampled from a
+// kdenlive crop): the tab frame, this row's two borders and row 4's separators
+// measure #4c4e51 in every crop. Both sampled, neither derived from the other,
+// and a retune of one must not follow the other.
 inline constexpr GuiColor kRedesignContentGround = hex(0x202326);
 inline constexpr GuiColor kRedesignTabRest       = hex(0x1B1D20);
 inline constexpr GuiColor kRedesignTabHover      = hex(0x263F4D);
 inline constexpr GuiColor kRedesignTabHoverEdge  = hex(0x496170);
 inline constexpr GuiColor kRedesignTabLine       = hex(0x4C4E51);
-inline constexpr GuiColor kRedesignTabTopLine    = hex(0x535659);
 
 // -- Row 4, the ICON ROW's one new color -----------------------------------
 //
@@ -1084,13 +1083,14 @@ inline int menu_row_h_px() {
 //
 // THE LANE CARRIES TWO BORDER ROWS, ONE AT EACH EDGE, so it is 32 at 100%
 // (30 + 1 + 1). THE TOP LINE JOINED 2026-08-13, from the two crops named above:
-// both show a single #535659 row at y=0 running the FULL WIDTH, over the
-// unselected tabs and over the trough alike. It is what was actually missing
-// from the row — without it the row bled into the menu row above — and the
-// lane GREW by that row rather than eating one of its own 30, the overview
-// lane's own answer the same day and for the same reason (a border is chrome,
-// not content). The two rows are DIFFERENT GREYS and both are right: the
-// palette block's row-3 section carries the values and the reason.
+// both show a single row at y=0 running the FULL WIDTH, over the unselected
+// tabs and over the trough alike. It is what was actually missing from the row
+// — without it the row bled into the menu row above — and the lane GREW by that
+// row rather than eating one of its own 30, the overview lane's own answer the
+// same day and for the same reason (a border is chrome, not content). Both rows
+// take ONE grey since 2026-08-14, kRedesignTabLine, the architect overriding
+// the crop's #535659 top line for product-internal consistency: the palette
+// block's row-3 section carries the measurement and the ruling.
 inline constexpr int kTabRowHeightPx = 30;
 inline constexpr int kTabRowBorderPx = 1;   // per edge: top and bottom
 inline int tab_row_border_h_px() {
@@ -2078,17 +2078,55 @@ double displayed_trim_ms(int64_t frame,
 // lane `row`. Deliberate asymmetry vs centered marker flags: a bound at frame 0
 // / EOF shows its cap fully onscreen.
 //
-// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side. A 2px target is
-// under any reasonable pointing tolerance, so the drawn cap and the grabbable
-// cap are deliberately NOT the same rect — the one place in this lane where
-// they differ, stated here because everywhere else in the redesign they are
-// identical by construction.
+// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (10 since
+// 2026-08-14, for the touch panel — what the wider grab costs the bridge is
+// recorded at the constant). A 2px target is under any reasonable pointing
+// tolerance, so the drawn cap and the grabbable cap are deliberately NOT the
+// same rect — the one place in this lane where they differ, stated here
+// because everywhere else in the redesign they are identical by construction.
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
-// caps are 2px; this makes the target 2 + 2*4 = 10px, close to the square chip's
-// old width, so the bound drags feel as they always did.
-inline constexpr int kTrimEndcapGrabPx = 4;
+// caps are 2px, so this makes the target 2 + 2*10 = 22px. TWO CONSUMERS read it
+// (grepped 2026-08-14): the TRIM BAR's endcaps (hit_test_trim_endcap) and the
+// OVERVIEW BOX's edge handles (hit_test_overview_endcap, the trim model reused
+// verbatim on the box outline), so a retune moves both surfaces together — by
+// design, the two being the same handle in two lanes.
+//
+// 10 SINCE 2026-08-14 (architect: "endcaps are very useful and currently too
+// small", leaning 6 to 10 and ruling 10 — THE TOUCH PANEL IS THE REASON, a
+// fingertip being nothing like a 10px target). It was 4 from row 5's landing,
+// chosen to reproduce the retired square chip's width.
+//
+// WHAT THE WIDER GRAB TAKES, checked against every neighbour it can now
+// overlap, because the endcap claim OUTRANKS everything else in both lanes:
+//   * THE TRIM BRIDGE gives up 6px at each end. The bridge is reachable only
+//     where the gap survives both inflated caps, which is a window wider than
+//     3 + 2*grab columns on screen: 12 columns before, 24 now. A trim window
+//     drawn 12..23 px wide therefore has NO bridge drag where it used to have
+//     one — RECORDED AS THE COST OF THE RULING, and it is zoom-recoverable
+//     rather than a lost capability (the window's drawn width is a zoom state,
+//     both bounds stay independently draggable at every zoom, and the band's
+//     framing double-click is tested ABOVE the router so it is untouched).
+//   * THE TWO TRIM CAPS AGAINST EACH OTHER are unaffected in KIND: the sort's
+//     leftmost-wins/Begin-first arbitration makes End's exclusive reach
+//     (end_col − begin_col − 1 columns to the right of Begin's band, or one
+//     column to its left when the bounds coincide) a function of the BOUNDS
+//     alone — the grab cancels out of both sides — so every verdict a
+//     coincident or near-coincident pair gave at 4 it still gives at 10, just
+//     further from the column. A pair exactly one column apart is the one
+//     unreachable End, and it was unreachable at 4 too.
+//   * THE OVERVIEW BOX'S TWO EDGES against each other are likewise unaffected:
+//     that test arbitrates NEAREST EDGE (Begin on the tie), which is
+//     grab-independent, so both edges stay reachable at any box width and the
+//     grab only extends their outer reach. What DOES shrink is the box's
+//     INTERIOR: the box-follows-pointer pan needs a column more than grab from
+//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (23 now, 11
+//     before) is all edge handle, and a press that used to pan it now drags an
+//     edge — one navigation act for another, on a box that narrow. The
+//     click-teleport outside the box loses the same 10px ring to the edge
+//     claim.
+inline constexpr int kTrimEndcapGrabPx = 10;
 inline int trim_endcap_grab_px() {
     return scaled_px(kTrimEndcapGrabPx, 0);
 }
