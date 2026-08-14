@@ -480,8 +480,9 @@ public:
     // the grab-pan. On release the restore x
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
-    // below), the grab-pan at the notional capture_notional_x_; y is frozen at
-    // the press row for both. Both degrade to a silent no-op when the
+    // below), the grab-pan at the pointer's notional position
+    // (notional_pointer_x_); y is frozen at the press row for both. Both
+    // degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
     // begin is a guarded no-op when a capture is already active; end is
@@ -544,10 +545,12 @@ public:
     // Override the release-restore x for the active capture. The zoom bodies
     // set this each event to the surface x of their anchor stem, so the cursor
     // reappears dead on the stem's column (the edge-trick rebind pins the stem
-    // while the raw cursor travel keeps going, so the raw virtual_pointer_x_
-    // would land past it). begin_pointer_capture clears it, so a capture with
-    // no override set (the pan phase, which has no stem) restores at the raw
-    // traveled virtual_pointer_x_.
+    // while the raw cursor travel keeps going, so the raw travel ledger
+    // virtual_pointer_x_ would land past it). begin_pointer_capture clears it,
+    // so a capture with no override set (the pan phase, which has no stem)
+    // restores at the pointer's NOTIONAL POSITION, notional_pointer_x_ — the
+    // continuously clamped position, never the travel ledger (the pair's
+    // contract is at the fields).
     void set_capture_restore_x(double surface_x);
 
     // Drop that override mid-capture (the nav drag's zoom→pan switch,
@@ -566,6 +569,16 @@ public:
     // capture guard); no-op with no capture live, where the loop-tail owner
     // governs the visible cursor.
     void set_capture_restore_kind(GuiCursorKind kind);
+
+    // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
+    // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
+    // just under a capture. The full contract, and why there is exactly one of
+    // these, are at notional_pointer_x_ below. The GUI reads it to place the
+    // nav drag's zoom pivot, PROJECTING it into waveform columns in the bounds
+    // it owns (nav_notional_col, input_pointer.cpp) — the projection is the
+    // GUI's because the platform knows nothing about the waveform; the
+    // POSITION is the platform's because that is where the raw events are.
+    double notional_pointer_x() const { return notional_pointer_x_; }
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
@@ -839,12 +852,13 @@ private:
     struct zwp_relative_pointer_v1*         relative_pointer_          = nullptr;
     struct zwp_locked_pointer_v1*           locked_pointer_            = nullptr;
 
-    // Virtual-pointer state, live only while pointer_captured_ is true. THE
-    // CAPTURE TRACKS TWO DIFFERENT THINGS AND THEY ARE NOT THE SAME QUANTITY
-    // (architect 2026-08-14, from the rig — the defect that forced the split:
-    // "if I reverse direction and it's clamped, it should drift back into the
-    // middle no matter how far in the other direction we've travelled"):
-    //   * virtual_pointer_x_/y_ — THE TRAVEL LEDGER. Seeded from the absolute
+    // Virtual-pointer state. THE PRODUCT TRACKS TWO DIFFERENT POINTER
+    // QUANTITIES AND THEY ARE NOT THE SAME THING (architect 2026-08-14, from
+    // the rig — the defect that forced the split: "if I reverse direction and
+    // it's clamped, it should drift back into the middle no matter how far in
+    // the other direction we've travelled"):
+    //   * virtual_pointer_x_/y_ — THE TRAVEL LEDGER, live only while
+    //     pointer_captured_ is true. Seeded from the absolute
     //     press position and advanced by each relative-motion delta WITHOUT
     //     clamping, which is what buys UNLIMITED TRAVEL: its rounded value is
     //     written into pointer_x_/pointer_y_ and delivered through on_motion_
@@ -852,15 +866,35 @@ private:
     //     its per-event delta by DIFFERENCING those deliveries, so a clamp here
     //     would stall the pan the moment the hand passed the window edge. It
     //     must stay unbounded.
-    //   * capture_notional_x_ — THE POINTER'S NOTIONAL POSITION: the same
-    //     accumulation CLAMPED TO THE SURFACE at every step, so it carries no
-    //     off-window debt and leaves an edge the instant the hand reverses,
-    //     which is how a real pointer behaves (it pins at the edge, and it is
-    //     always a position inside the viewport while the drag is live). Its
-    //     ONE consumer is the release restore below. The GUI's own position
-    //     consumer — the zoom pivot — keeps the identical rule over the
-    //     waveform's columns (ScrollDragState::notional_col, app_state.h),
-    //     each layer clamping in the bounds it owns.
+    //   * notional_pointer_x_ — THE POINTER'S NOTIONAL POSITION, live for the
+    //     whole process: surface-local x, CLAMPED INTO THE SURFACE AT EVERY
+    //     WRITE, so it carries no off-window debt and leaves an edge the
+    //     instant the hand reverses, which is how a real pointer behaves (it
+    //     pins at the edge, and it is always a position inside the window).
+    //     ITS WRITERS ARE EVERY DELIVERY THAT CARRIES A REAL POSITION —
+    //     deliver_motion is the one funnel (wl_pointer.enter, absolute
+    //     wl_pointer.motion, and all four touch-translation deliveries) —
+    //     PLUS the captured relative stream, which accumulates and clamps it
+    //     per RAW event, and the capture release, which moves it to the
+    //     restore hint alongside pointer_x_/pointer_y_. Uncaptured there is
+    //     nothing virtual, so it simply IS the delivered position; captured it
+    //     is the ledger with the debt taken out. Its consumers are the release
+    //     restore below and, through notional_pointer_x(), the GUI's zoom
+    //     pivot.
+    //     THERE IS EXACTLY ONE OF THESE, AND THAT IS THE POINT (codex round
+    //     17): the GUI briefly kept a second clamped position of its own,
+    //     advanced once per DELIVERED (coalesced) motion by the net travel
+    //     delta of the whole pointer frame while this one advanced per RAW
+    //     event, and CLAMP-PER-STEP AND CLAMP-ONCE-ON-THE-NET-DELTA ARE NOT
+    //     EQUIVALENT AT A WALL — an edge reversal coalesced into one frame
+    //     (raw +20 then -8 at the right edge) leaves this one at max-8 and the
+    //     other pinned at max, and interior motion then preserves that offset
+    //     for the rest of the gesture. The divergence is silent and permanent,
+    //     so the two positions cannot be made to agree by matching clamps;
+    //     there has to be one owner, and it is here, where the raw events are.
+    //     The GUI PROJECTS this into waveform columns and clamps in the bounds
+    //     it owns (nav_notional_col, input_pointer.cpp) — a projection, never
+    //     an accumulation.
     //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
     //     omission: the restore's y is frozen at the press row and the zoom
     //     axis consumes dy as a per-event DELTA with no position consumer
@@ -869,11 +903,12 @@ private:
     //     pixels than the window is tall).
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
-    // capture_notional_x_; y is always frozen at the press row
+    // notional_pointer_x_; y is always frozen at the press row
     // (capture_restore_y_).
     // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
-    // this pair and pointer_x_/pointer_y_ alike — so the travel does NOT outlive
-    // the lock in the coordinates. It has to: button events carry no
+    // the ledger pair, the notional position and pointer_x_/pointer_y_ alike
+    // — so the travel does NOT outlive the lock in the coordinates. It has to:
+    // button events carry no
     // coordinates in the protocol and are delivered at pointer_x_/pointer_y_,
     // and the unlock warp comes back as no wl_pointer.motion, so a click made
     // before the user next moved was routed at the travel's end. The full
@@ -884,7 +919,7 @@ private:
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;
-    double capture_notional_x_ = 0.0;
+    double notional_pointer_x_ = 0.0;
     double capture_restore_y_  = 0.0;
     std::optional<double> capture_restore_x_override_;
 
@@ -1579,6 +1614,25 @@ private:
     // end_touch_left_hold), which also flush their own staged touch motion
     // first.
     void flush_deferred_motion();
+
+    // DELIVER A MOTION THAT CARRIES A REAL POINTER POSITION — the one funnel
+    // for every such delivery, and therefore the one place the pointer's
+    // notional position is kept current outside the captured relative stream
+    // (contract at notional_pointer_x_). Its callers are wl_pointer.enter,
+    // absolute wl_pointer.motion, and the FOUR touch-translation deliveries
+    // (the resolution's entry motion and its queued motion, the touch frame
+    // flush, and the translation end's re-delivery at the mouse's resting
+    // spot) — touch is the pointer by ruling, and its deliveries move the
+    // notional position for the same reason a mouse motion does.
+    // THE TWO CAPTURED DELIVERIES DELIBERATELY DO NOT COME THROUGH HERE
+    // (flush_deferred_motion and on_pointer_frame's trailing call): what they
+    // hand over is the TRAVEL LEDGER, not a position, and the notional one has
+    // already been advanced per RAW event by on_relative_pointer_motion.
+    void deliver_motion(int x, int y);
+
+    // Clamp x into the surface and store it as the pointer's notional
+    // position. One writer body so every source clamps identically.
+    void note_notional_pointer_x(double x);
 
     // Ends one of the two KEYBOARD-ADJACENT sources' contribution to the
     // logical left hold. The logical left is a THREE-source OR —

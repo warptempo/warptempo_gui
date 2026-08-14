@@ -2542,7 +2542,7 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
     // Synthesize a motion delivery so consumers register the pointer
     // as present at the entry coordinates. Matches how most clients
     // treat enter — the first "the pointer is here" notification.
-    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+    deliver_motion(pointer_x_, pointer_y_);
 }
 
 void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
@@ -2652,7 +2652,24 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
     // iteration's tail re-derives the cursor for it once the delivery below has
     // recorded it — which is why the clear owes no cursor call of its own.
     if (!pointer_captured_) pointer_position_unknown_ = false;
-    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+    deliver_motion(pointer_x_, pointer_y_);
+}
+
+void GuiPlatform::note_notional_pointer_x(double x) {
+    // ONE clamp body for every writer of the pointer's notional position (the
+    // contract, and why there is exactly one such position, are at the field).
+    const double max_x = width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
+    notional_pointer_x_ = std::clamp(x, 0.0, max_x);
+}
+
+void GuiPlatform::deliver_motion(int x, int y) {
+    // The funnel for every motion that carries a REAL position (the caller
+    // classes are at the declaration): the notional position follows it, then
+    // the GUI sees the ordinary delivery. Under a capture the notional one is
+    // owned by the raw relative stream instead, and those deliveries carry the
+    // travel ledger — which is why they do not come through here.
+    note_notional_pointer_x(static_cast<double>(x));
+    if (on_motion_) on_motion_(x, y, current_mods());
 }
 
 void GuiPlatform::flush_deferred_motion() {
@@ -3020,7 +3037,7 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // panels, and this is the project's one fractional->integer conversion.
     const int down_x = static_cast<int>(std::nearbyint(touch_down_x_));
     const int down_y = static_cast<int>(std::nearbyint(touch_down_y_));
-    if (on_motion_) on_motion_(down_x, down_y, current_mods());
+    deliver_motion(down_x, down_y);
     // A pointer-button press is a context event that kills an armed key repeat
     // (layer 1 of the repeat contract), exactly as the physical BTN_LEFT and
     // the synthesized-`e` presses do at their own delivery sites.
@@ -3038,11 +3055,9 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // finger's latest position, delivered after the press so a drag armed by
     // the press sees its first motion in the same burst.
     if (touch_window_moved_ &&
-        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_) &&
-        on_motion_) {
-        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
-                   static_cast<int>(std::nearbyint(touch_last_y_)),
-                   current_mods());
+        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_)) {
+        deliver_motion(static_cast<int>(std::nearbyint(touch_last_x_)),
+                       static_cast<int>(std::nearbyint(touch_last_y_)));
     }
     touch_window_moved_         = false;
     touch_frame_motion_pending_ = false;
@@ -3115,10 +3130,9 @@ void GuiPlatform::flush_touch_frame_motion() {
     // flushed or never deliverable: the resolution's replay tail (Pending
     // never stages this flag) and forget_touch_state (which runs after the
     // hard-end contract has already ended the hold through the flush here).
-    if (touch_frame_motion_pending_ && on_motion_) {
-        on_motion_(static_cast<int>(std::nearbyint(touch_last_x_)),
-                   static_cast<int>(std::nearbyint(touch_last_y_)),
-                   current_mods());
+    if (touch_frame_motion_pending_) {
+        deliver_motion(static_cast<int>(std::nearbyint(touch_last_x_)),
+                       static_cast<int>(std::nearbyint(touch_last_y_)));
     }
     touch_frame_motion_pending_ = false;
 }
@@ -3200,7 +3214,9 @@ void GuiPlatform::deliver_touch_translation_end() {
     // state block's recorded split): it asks a MOUSE question — "is the mouse
     // resting in the window" — and gates no touch delivery.
     if (pointer_focused_) {
-        if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+        // The mouse's own resting position again, which is also what takes the
+        // notional position back off the finger (deliver_motion's contract).
+        deliver_motion(pointer_x_, pointer_y_);
         return;
     }
     if (pointer_left_hook_)
@@ -3826,16 +3842,18 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
         !wl_surface_)
         return;
 
-    // Seed BOTH accumulations from the current absolute position — the travel
-    // ledger and the notional position start out equal and only diverge once
-    // the hand leaves the window (the pair's contract is at the declaration) —
-    // and remember the press row as the restore y (the cursor reappears at that
-    // row on release; its restore x rides capture_notional_x_ unless a strip
-    // drag overrides it with its anchor-stem column). Each capture starts with
-    // no x override, so the grab-pan (no stem) falls back to the notional x.
+    // Seed the TRAVEL LEDGER from the current absolute position and remember
+    // the press row as the restore y (the cursor reappears at that row on
+    // release; its restore x rides the notional position unless a strip drag
+    // overrides it with its anchor-stem column). Each capture starts with no x
+    // override, so the grab-pan (no stem) falls back to the notional x.
+    // THE NOTIONAL POSITION IS NOT SEEDED HERE, and that is the shape rather
+    // than an omission: it is live for the whole process and already holds the
+    // pointer's position (the contract at notional_pointer_x_), so a capture
+    // simply changes who advances it — the raw relative stream instead of the
+    // deliveries. Seeding would be a second owner of the same fact.
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
-    capture_notional_x_ = virtual_pointer_x_;
     capture_restore_y_ = virtual_pointer_y_;
     capture_restore_x_override_.reset();
 
@@ -3907,9 +3925,8 @@ void GuiPlatform::end_pointer_capture() {
 
 void GuiPlatform::set_capture_restore_x(double surface_x) {
     // The active zoom gesture names the surface x its anchor stem paints at;
-    // the release restore uses it in place of the notional
-    // virtual_pointer_x_. Ignored when no capture is live (nothing to
-    // restore).
+    // the release restore uses it in place of the pointer's notional position.
+    // Ignored when no capture is live (nothing to restore).
     if (!pointer_captured_) return;
     capture_restore_x_override_ = surface_x;
 }
@@ -3944,7 +3961,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the edge-trick rebind pins the stem while the raw cursor travel
             // keeps going, so restoring at the stem lands the cursor dead on it
             // rather than past it. With no override (the grab-pan, which has no
-            // stem) the x is capture_notional_x_ — THE NOTIONAL POSITION, not
+            // stem) the x is notional_pointer_x_ — THE NOTIONAL POSITION, not
             // the travel ledger (architect 2026-08-14; the pair's contract is
             // at the declaration). The raw travel used to be handed over
             // unclamped on the argument that the compositor clamps an
@@ -3959,7 +3976,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the stem's surface x, and is double-buffered against the
             // constrained surface, so commit it before destroying the lock.
             const double restore_x =
-                capture_restore_x_override_.value_or(capture_notional_x_);
+                capture_restore_x_override_.value_or(notional_pointer_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),
@@ -3999,9 +4016,13 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // where the pointer came back, cursor kinds stay dropped until it
             // says so, and the next absolute event overwrites this with the
             // truth. The virtual pair moves with it so a second capture seeds
-            // from the drawn position rather than from the last travel (the
-            // notional position needs no write-back of its own — every
-            // begin_pointer_capture re-seeds it from pointer_x_).
+            // from the drawn position rather than from the last travel, AND SO
+            // DOES THE NOTIONAL POSITION: it outlives the capture (it is the
+            // process-wide answer to "where is the pointer?"), and past the
+            // unlock the pixels the cursor is drawn on are the best answer
+            // there is — a stem-override restore MOVED the cursor, so leaving
+            // the notional position at the capture's last travel column would
+            // leave it naming a place the cursor is not.
             // No motion is synthesized: this edge runs inside the GUI's own
             // release handler, and re-entering it is not worth the hover
             // refresh the next real motion delivers anyway.
@@ -4035,6 +4056,7 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
                 std::clamp(capture_restore_y_, 0.0, max_y);
             virtual_pointer_x_ = tracked_x;
             virtual_pointer_y_ = tracked_y;
+            note_notional_pointer_x(tracked_x);
             pointer_x_ = static_cast<int>(std::nearbyint(tracked_x));
             pointer_y_ = static_cast<int>(std::nearbyint(tracked_y));
         }
@@ -4105,17 +4127,18 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;
     // THE NOTIONAL POSITION ADVANCES BY THE SAME DELTA AND IS CLAMPED HERE,
-    // CONTINUOUSLY (the pair's contract at the declaration): clamping at the
+    // PER RAW EVENT (the field's contract at the declaration): clamping at the
     // accumulation is what leaves it with no off-window DEBT to unwind, so the
     // instant the hand reverses the position leaves the edge — clamping a
     // consumer instead cannot do that, because the debt is in the number it
-    // reads. Same bounds as the restore record's own clamp below in
-    // release_pointer_lock, so the two cannot disagree. X only: the y axis has
-    // no position consumer (the declaration records why).
-    const double max_notional_x =
-        width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
-    capture_notional_x_ =
-        std::clamp(capture_notional_x_ + dx, 0.0, max_notional_x);
+    // reads. AND PER RAW EVENT IS LOAD-BEARING, not incidental: the deliveries
+    // are COALESCED to one per pointer frame, and clamping once on a frame's
+    // NET delta is a different answer at a wall (raw +20 then -8 at the right
+    // edge is max-8 here and max there) — which is why nothing downstream may
+    // keep a clamped position of its own to advance on the delivery cadence.
+    // X only: the y axis has no position consumer (the declaration records
+    // why).
+    note_notional_pointer_x(notional_pointer_x_ + dx);
     // std::nearbyint, the project's one fractional->integer pixel conversion —
     // this is the platform boundary where a continuous pointer position becomes
     // the integer window pixel every gesture reads.

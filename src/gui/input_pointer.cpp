@@ -1524,9 +1524,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional pointer column and
-// the zoom pivot share (they are the same quantity one step apart), and the
-// same bounds render_strip_anchor_stem draws the stem inside.
+// THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional column projection
+// and the zoom pivot share (they are the same quantity one step apart), and
+// the same bounds render_strip_anchor_stem draws the stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
@@ -1535,27 +1535,35 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
-// ADVANCE THE NAV DRAG'S NOTIONAL POINTER COLUMN (contract at
-// ScrollDragState::notional_col, app_state.h). TWO ARMS, and the fork is
-// whether a capture is live — `moved`, which is exactly when the drag captured:
-//   * NOT captured: the delivered x IS the pointer, so the column is read
-//     straight off it.
-//   * CAPTURED: the delivered x is the UNBOUNDED TRAVEL LEDGER, so the column
-//     advances by this event's own delta (the same delta the pan applies, from
-//     the same last_x, read here BEFORE either phase moves it) and clamps.
-//     Clamping the accumulation is the whole point — it leaves no off-window
-//     debt, so a reversal moves the column immediately.
-// Called at the arm (the press column) and once per motion event, above the
-// mode sync so a ctrl-down edge in the same batch seats at this event's
-// position rather than the previous one's.
-void GuiInputHandler::update_nav_notional_col(int x) {
-    ScrollDragState& sd = app.scroll_drag;
+// THE POINTER'S NOTIONAL COLUMN — the zoom pivot's one source, and A PURE
+// PROJECTION of the platform's notional pointer position into the waveform's
+// own bounds. NO STATE, NO ACCUMULATION, NO FORK ON WHETHER A CAPTURE IS LIVE:
+// the platform's position already answers both cases (uncaptured nothing is
+// virtual, so it simply IS the delivered position; captured it is the raw
+// relative stream accumulated and clamped per event), so this only changes
+// space — window x to waveform column — and re-clamps in the bounds THIS layer
+// owns, the platform knowing nothing about the waveform.
+// THAT THERE IS ONLY ONE POSITION IS THE POINT (codex round 17): a clamped
+// column accumulated HERE advanced once per DELIVERED motion, on the net
+// travel of a whole coalesced pointer frame, while the platform's advanced per
+// RAW event — and the two answers differ at a wall (raw +20 then -8 at the
+// right edge), permanently and silently, since interior motion preserves the
+// offset. The full record is at GuiPlatform::notional_pointer_x_.
+// Read on demand at each seat (the ctrl-armed press and every ctrl-down edge),
+// so it is current by construction: under a capture the raw events of the
+// frame being delivered have already been accumulated, and the settled-state
+// tail sees everything.
+// THE TWO CLAMPS COMPOSE, and the cost is bounded and correct: the platform
+// pins into the WINDOW and this pins into the WAVEFORM, whose rect starts at
+// x 0 and is the window width floored to a multiple of 16 — so the only span
+// where they disagree is the inert right gutter, at most 15 px, and a pointer
+// parked out there honestly has no waveform column of its own. The column
+// therefore holds at the last one until the pointer comes back onto the
+// waveform, which is what a projection of a real position means.
+double GuiInputHandler::nav_notional_col() const {
     const GuiRect wf_area = waveform_area(app);
-    const double col = sd.moved
-                           ? sd.notional_col +
-                                 static_cast<double>(x - sd.last_x)
-                           : static_cast<double>(x - wf_area.x);
-    sd.notional_col = clamp_col_into_waveform(wf_area, col);
+    return clamp_col_into_waveform(
+        wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
 // THE NAV DRAG'S ZOOM/PAN MODE SYNC — one body, two callers (the contract and
@@ -1570,9 +1578,9 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at
         // ScrollDragState::anchor_col). The notional column IS the pointer's
-        // clamped column, kept current by the caller above and by the arm, so
-        // the seat is a copy rather than a second derivation.
-        sd.anchor_col = sd.notional_col;
+        // clamped column, projected from the platform's one notional position
+        // at this instant, so the seat needs nothing kept current for it.
+        sd.anchor_col = nav_notional_col();
         // The restore X is NOT stamped here: the stem override exists to land
         // the released cursor on a stem the edge-rebind has pinned, and the
         // zoom phase's own applies set it. Until one runs, the notional
@@ -3855,10 +3863,6 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
-    // The notional pointer column starts at the press (the un-captured arm
-    // reads it straight off x — nothing is virtual yet), so a ctrl-down before
-    // the drag has moved seats on the press column.
-    update_nav_notional_col(x);
 }
 
 // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
@@ -3876,9 +3880,10 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
                   /*scrub_release=*/false);
     app.scroll_drag.ctrl_entry = true;
     app.scroll_drag.zooming    = true;
-    // The seat is the notional column the arm just set — the same copy every
-    // later ctrl-down edge makes, so the press is not a second recipe.
-    app.scroll_drag.anchor_col = app.scroll_drag.notional_col;
+    // The seat is the pointer's notional column — the same projection every
+    // later ctrl-down edge makes, so the press is not a second recipe. No
+    // capture is live at a press, so that position is the press point.
+    app.scroll_drag.anchor_col = nav_notional_col();
     viewport.invalidate_waveform_area();
 }
 
@@ -6479,11 +6484,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             }
             return;
         }
-        // THE NOTIONAL POINTER COLUMN FIRST, above the mode sync: a ctrl-down
-        // delivered in the same batch as this motion must seat on where the
-        // pointer is NOW, not where the previous event left it. It reads
-        // sd.last_x, which neither phase has moved yet.
-        update_nav_notional_col(mouse_x);
         // THE LIVE MODE SYNC, ahead of the threshold gate so a pending press
         // tracks ctrl too. THIS CALLER IS THE PER-DELIVERED-MOTION ONE: the
         // settled-state tail already answers the motionless edge, but a

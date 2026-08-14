@@ -1285,12 +1285,13 @@ struct GuiInputHandler {
     // capture-at-press.
     void arm_nav_zoom_press(int x, int y);
 
-    // ADVANCE THE NAV DRAG'S NOTIONAL POINTER COLUMN — the pointer's clamped
-    // position in waveform columns, and the zoom pivot's one source (the
-    // contract, and why it cannot simply read the delivered x under a capture,
-    // are at ScrollDragState::notional_col, app_state.h). Called by the press
-    // arm and once per motion event, above the mode sync.
-    void update_nav_notional_col(int x);
+    // THE POINTER'S NOTIONAL COLUMN — its clamped position in waveform
+    // columns, and the zoom pivot's one source. A PURE PROJECTION of the
+    // platform's notional pointer position, held nowhere and computed at each
+    // seat; the contract, and why exactly one position exists and it is not
+    // this layer's, are at the definition (input_pointer.cpp) and at
+    // GuiPlatform::notional_pointer_x_.
+    double nav_notional_col() const;
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded

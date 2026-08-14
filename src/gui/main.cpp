@@ -1605,8 +1605,9 @@ int main(int argc, char** argv) {
         input_handler.clear_modal_dialog_key_press();
     });
 
-    // THE SETTLED BOUNDARY AND ITS TWO CONSUMERS (architect 2026-08-03,
-    // replacing the per-site model). The run loop fires this at the TAIL of every
+    // THE SETTLED BOUNDARY AND ITS THREE CONSUMERS (architect 2026-08-03,
+    // replacing the per-site model; the third joined 2026-08-14 with the nav
+    // drag's live ctrl). The run loop fires this at the TAIL of every
     // iteration it is not leaving, so whatever is derived here is derived once per
     // poll wakeup from a state that has fully settled — after the display's
     // events, the tick and both worker completions.

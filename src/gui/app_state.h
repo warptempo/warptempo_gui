@@ -767,9 +767,10 @@ struct StripDragState {
 //   * CROSSING the threshold is the GRAB-PAN, the alt+drag machinery whole:
 //     the pointer CAPTURE begins at the crossing (begin_strip_pointer_capture
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
-//     clamps at the song walls; the cursor reappears at the notional
-//     virtual_pointer_x_, no anchor-stem override), the crossing event folds
-//     the whole press→crossing delta (last_x stays at the press until then),
+//     clamps at the song walls; the cursor reappears at the pointer's
+//     NOTIONAL position — never the travel ledger, a pan having no
+//     anchor-stem override), the crossing event folds the whole
+//     press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
 //     what suppresses follow for the session (the pan producer class at
 //     follow_overridden_for_session). A PAN IS A PURE VIEWPORT MOVE: it moves
@@ -895,35 +896,25 @@ struct ScrollDragState {
     // overview lane's strip drag keeps its SONG anchor (StripDragState above)
     // — that gesture names a position in the piece, this one names a place on
     // the glass.
-    // RE-SEATED AT EVERY CTRL-DOWN, from notional_col below — the press for a
-    // ctrl-armed drag, each ctrl-down edge for a plain-armed one. Meaningful
-    // only while `zooming`. A PERSISTENT pivot (seated once per gesture and
-    // kept across every toggle) was built and WITHDRAWN the same day, and the
-    // reason is recorded so it is not re-derived: it was a workaround for the
-    // capture's UNBOUNDED position accumulator, which made "where the pointer
-    // is" unanswerable after a long drag — a pointer 3000 px past the edge
-    // re-seated at the edge and stayed there through a reversal. Clamping the
-    // notional position continuously fixed that at its source, so the pivot
-    // can honestly follow the pointer again, which is both the architect's
-    // first instinct and what the touch pinch already does (it zooms about the
-    // fingers, wherever they are).
+    // RE-SEATED AT EVERY CTRL-DOWN, at the pointer's NOTIONAL COLUMN — the
+    // press for a ctrl-armed drag, each ctrl-down edge for a plain-armed one.
+    // That column is a PROJECTION of the platform's one notional pointer
+    // position, computed on demand at the seat (nav_notional_col,
+    // input_pointer.cpp) and never accumulated here: the position is owned
+    // where the raw events are, because a second clamped accumulation
+    // advanced on the DELIVERY cadence cannot agree with it at a wall
+    // (GuiPlatform::notional_pointer_x_ carries that record, codex round 17).
+    // Meaningful only while `zooming`. A PERSISTENT pivot (seated once per
+    // gesture and kept across every toggle) was built and WITHDRAWN the same
+    // day, and the reason is recorded so it is not re-derived: it was a
+    // workaround for the capture's UNBOUNDED position accumulator, which made
+    // "where the pointer is" unanswerable after a long drag — a pointer 3000
+    // px past the edge re-seated at the edge and stayed there through a
+    // reversal. Clamping the notional position continuously fixed that at its
+    // source, so the pivot can honestly follow the pointer again, which is
+    // both the architect's first instinct and what the touch pinch already
+    // does (it zooms about the fingers, wherever they are).
     double anchor_col = 0.0;
-    // THE POINTER'S NOTIONAL COLUMN — waveform-relative px, double — kept for
-    // the gesture's whole life and CLAMPED INTO THE WAVEFORM AT EVERY STEP
-    // (architect 2026-08-14, from the rig: "if I reverse direction and it's
-    // clamped, it should drift back into the middle no matter how far in the
-    // other direction we've travelled. And the same should be true of the zoom
-    // stem"). It advances by each event's own delta rather than being read off
-    // the delivered x, because under a capture that x is the UNBOUNDED TRAVEL
-    // LEDGER — which every gesture here differences for its deltas and must
-    // stay unbounded, or a pan would stall the moment the hand passed the
-    // window edge. Clamping at the accumulation is what leaves this with no
-    // off-window debt: the instant the hand reverses, the column moves. The
-    // platform keeps the identical rule over the window's own bounds for the
-    // capture's restore position (capture_notional_x_, platform_wayland.h);
-    // each layer clamps in the bounds it owns, and the ONE reader here is the
-    // pivot seat above.
-    double notional_col = 0.0;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —
