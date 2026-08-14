@@ -1525,8 +1525,8 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 }
 
 // THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the notional column projection
-// and the zoom pivot share (they are the same quantity one step apart), and
-// the same bounds render_strip_anchor_stem draws the stem inside.
+// and the zoom pivot's re-derived column share, and the same bounds
+// render_strip_anchor_stem draws the stem inside.
 static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     const double col_max =
         wf_area.w > 0 ? static_cast<double>(wf_area.w) - 1.0 : 0.0;
@@ -1535,12 +1535,13 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
-// THE POINTER'S NOTIONAL COLUMN — the zoom pivot's one source, and A PURE
-// PROJECTION of the platform's notional pointer position into the waveform's
-// own bounds. The pivot seats WHEREVER THE CURSOR IS at the ctrl-down, visible
-// or invisible, and asks nothing about where the release will put it (the
-// ruling, and the superseded seat that did ask, are at
-// ScrollDragState::anchor_col).
+// THE POINTER'S NOTIONAL COLUMN — the zoom pivot SEAT's one source, and A
+// PURE PROJECTION of the platform's notional pointer position into the
+// waveform's own bounds. The pivot seats WHEREVER THE CURSOR IS at the
+// ctrl-down, visible or invisible, and asks nothing about where the release
+// will put it; what the seat then STORES is the song frame under this column
+// (the ruling, the superseded seat that did ask, and why the held quantity is
+// a frame rather than this column are at ScrollDragState::anchor_sample).
 // NO STATE, NO ACCUMULATION, NO FORK ON WHETHER A CAPTURE IS LIVE:
 // the platform's position already answers both cases (uncaptured nothing is
 // virtual, so it simply IS the delivered position; captured it is the raw
@@ -1592,10 +1593,15 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     if (sd.zooming) {
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at
-        // ScrollDragState::anchor_col). The notional column IS the pointer's
-        // clamped column, projected from the platform's one notional position
-        // at this instant, so the seat needs nothing kept current for it.
-        sd.anchor_col = nav_notional_col();
+        // ScrollDragState::anchor_sample). The notional column IS the
+        // pointer's clamped column, projected from the platform's one notional
+        // position at this instant, so the seat needs nothing kept current for
+        // it — and what is STORED is the song frame under that column, through
+        // the apply's own conversion so the seat and this phase's first event
+        // cannot disagree.
+        sd.anchor_sample = static_cast<double>(app.viewport_start_sample) +
+                           nav_notional_col() *
+                               current_samples_per_pixel(app, audio);
         // The restore X is NOT stamped here: the stem override exists to land
         // the released cursor on a stem the edge-rebind has pinned, and the
         // zoom phase's own applies set it. Until one runs, the notional
@@ -1660,22 +1666,39 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // THE PIVOT IS THE SEATED COLUMN ITSELF (the screen anchor at
-    // ScrollDragState) — it does not move when the view pans, and it is never
-    // re-derived from a stored song position. The clamp is a WINDOW-RESIZE arm
-    // only (the seat's own source is clamped already, in the same bounds
-    // through the same owner): a narrowed waveform could leave the seated
-    // column past the new edge, and the write-back keeps it legal.
-    const double anchor_col = clamp_col_into_waveform(wf_area, sd.anchor_col);
-    if (anchor_col != sd.anchor_col) sd.anchor_col = anchor_col;
-
-    // The song frame the pivot stands on RIGHT NOW, derived fresh from the
-    // resting viewport: apply_strip_drag_zoom holds it at anchor_col under the
-    // new level, so the content under that screen column does not move while
-    // the level changes. That is the whole of the screen anchor — the zoom
-    // arithmetic below is the song-anchored gesture's, unchanged.
-    const double anchor_sample =
-        static_cast<double>(app.viewport_start_sample) + anchor_col * spp;
+    // THE PIVOT'S COLUMN UNDER THE LIVE VIEWPORT, with the Ableton EDGE TRICK
+    // — apply_strip_drag_at's step (5) verbatim, minus its pan term: this
+    // phase never moves the viewport, so the resting `viewport_start_sample`
+    // IS the viewport the zoom will pivot against and there is no local `vp`
+    // to clamp first. The pivot is a SONG FRAME (ScrollDragState), so its
+    // column is derived fresh every event; clamping it into [0, W-1] and
+    // REBINDING the anchor to that edge pixel's frame is what keeps the focus
+    // on screen once a wall has pushed it past an edge.
+    // WHAT THE REVERSIBILITY PROPERTY IS, stated exactly: THE ANCHORED FRAME
+    // IS INVARIANT FOR THE PHASE, so zooming out and back in by the same dy
+    // pivots about the SAME song position both ways and the drag reverses into
+    // the section it came from. AWAY FROM THE WALLS that is the strict
+    // identity — the column re-derives to the value it was placed at, so the
+    // return event reproduces the earlier viewport. AT A SATURATED WALL the
+    // viewport cannot come back the same way (while `vp` is pinned the view is
+    // determined by the level alone), and what survives is the FOCUS: the
+    // stem's column slides left/right with the content and the frame under it
+    // never changes. That is the case the screen column got wrong — it held
+    // the COLUMN and let the song walk out from under it, so the way back
+    // zoomed into a later section entirely (the architect's own scenario,
+    // worked at ScrollDragState). WHERE THE PROPERTY STOPS: the edge REBIND,
+    // the one lasting mutation here — once the anchored frame has been pushed
+    // off the visible span the anchor becomes the edge pixel's content, and
+    // the return trip pivots about that instead.
+    double anchor_col =
+        (sd.anchor_sample - static_cast<double>(app.viewport_start_sample)) /
+        spp;
+    const double clamped_col = clamp_col_into_waveform(wf_area, anchor_col);
+    if (clamped_col != anchor_col) {
+        sd.anchor_sample =
+            static_cast<double>(app.viewport_start_sample) + clamped_col * spp;
+        anchor_col = clamped_col;
+    }
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
     // rule; a later pan phase clears it back to the notional x at its switch.
@@ -1683,7 +1706,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
         set_strip_capture_restore_x(
             static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
-    viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
 }
 
@@ -3913,10 +3936,13 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
                   /*scrub_release=*/false);
     app.scroll_drag.ctrl_entry = true;
     app.scroll_drag.zooming    = true;
-    // The seat is the pointer's notional column — the same projection every
-    // later ctrl-down edge makes, so the press is not a second recipe. No
-    // capture is live at a press, so that position is the press point.
-    app.scroll_drag.anchor_col = nav_notional_col();
+    // The seat is the SONG FRAME under the pointer's notional column — the
+    // same projection and the same conversion every later ctrl-down edge
+    // makes, so the press is not a second recipe. No capture is live at a
+    // press, so that position is the press point.
+    app.scroll_drag.anchor_sample =
+        static_cast<double>(app.viewport_start_sample) +
+        nav_notional_col() * current_samples_per_pixel(app, audio);
     viewport.invalidate_waveform_area();
 }
 

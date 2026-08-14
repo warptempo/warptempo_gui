@@ -822,11 +822,12 @@ struct StripDragState {
 // standing and the capture's restore stamped Zoom until motion resumed. THE
 // RE-SEAT RULE, one per direction, is what makes every switch jump-free:
 //   * ctrl DOWN (pan -> zoom): the pivot is SEATED at the pointer's current
-//     notional column, EVERY time (the seat and the withdrawn persist-across-
-//     toggles experiment are recorded at anchor_col below), and the anchor stem
-//     paints there, at the edge itself (the ctrl-armed press paints it from the
-//     PRESS, the stem-at-press ruling kept). The level itself cannot jump — dy
-//     is a per-event delta off the LIVE level.
+//     notional column, EVERY time — the SONG FRAME under that column (the seat
+//     and the withdrawn persist-across-toggles experiment are recorded at
+//     anchor_sample below) — and the anchor stem paints there, at the edge
+//     itself (the ctrl-armed press paints it from the PRESS, the stem-at-press
+//     ruling kept). The level itself cannot jump — dy is a per-event delta off
+//     the LIVE level.
 //   * ctrl UP (zoom -> pan): NOTHING re-seats, structurally — the pan is
 //     incremental on dx from last_x, which BOTH phases keep current, so the
 //     first plain event pans from the pointer's own position; the stem erases
@@ -888,7 +889,8 @@ struct ScrollDragState {
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
     // synced from mods.ctrl at every MODIFIER EDGE and every motion event
     // (sync_nav_drag_mode, the one body). While true the anchor stem paints at
-    // anchor_col and each event's dy zooms; while false each event's dx pans.
+    // anchor_sample's live column and each event's dy zooms; while false each
+    // event's dx pans.
     // The RELEASE reads this bit and never re-asks ctrl: it cannot be stale
     // now that the edge itself syncs it, which re-stamps the capture's restore
     // KIND there too (and drops the stem's restore-x override on the way back
@@ -903,37 +905,82 @@ struct ScrollDragState {
     // current in BOTH phases so a mode switch measures its first delta from
     // the pointer's own position (the jump-free rule above).
     int    last_y   = 0;
-    // THE ZOOM PHASE'S PIVOT, AND IT IS A SCREEN COLUMN — waveform-relative
-    // px, double, column-clamped into the effective width at the seat — NOT a
-    // song position (architect 2026-08-14, rejecting the Ableton model here by
-    // name: "the zoom stem should remain where it was on the screen relative
-    // to screen x/y, not where it was on the waveform. Because the next time I
-    // press control, if I have dragged the waveform, I would expect the zoom
-    // stem to be placed where I left it relative to the screen"; and the same
-    // expectation on glass — "on the touch panel, if I drag-pan, then pinch zoom,
-    // then drag-pan some more, then pinch zoom in the same place where I did
-    // last time, that pinch zoom is applied relative to the SCREEN position").
-    // The song frame under this column is derived FRESH each zoom event and
-    // held stationary while the level changes, which is what a screen pivot
-    // means; only the anchor's identity moved, not the zoom arithmetic. The
-    // overview lane's strip drag keeps its SONG anchor (StripDragState above)
-    // — that gesture names a position in the piece, this one names a place on
-    // the glass.
-    // RE-SEATED AT EVERY CTRL-DOWN, at the pointer's NOTIONAL COLUMN — the
-    // press for a ctrl-armed drag, each ctrl-down edge for a plain-armed one.
-    // THE STEM IS PLACED WHEREVER THE CURSOR IS WHEN CONTROL GOES DOWN, VISIBLE
-    // OR INVISIBLE, AND THAT IS THE WHOLE RULE (architect 2026-08-14, from the
+    // THE ZOOM PHASE'S PIVOT, AND IT IS A SONG POSITION — frames, double, in
+    // the ACTIVE display domain — whose COLUMN is re-derived from the live
+    // viewport at every zoom event, the frame held stationary under it while
+    // the level changes. The overview lane's strip drag has anchored this way
+    // throughout, edge trick and all (StripDragState above); this gesture
+    // anchors the same way again since 2026-08-14.
+    //
+    // THE SEAT IS SCREEN-BASED AND IS NOT WHAT CHANGED. THE ZOOM STEM IS
+    // PLACED WHEREVER THE CURSOR IS WHEN CONTROL GOES DOWN, VISIBLE OR
+    // INVISIBLE, AND THAT IS THE WHOLE RULE (architect 2026-08-14, from the
     // rig: "how about if we say that the zoom stem is placed wherever the
     // cursor happens to be when the user presses control? Simpler rule... as
     // far as the drag, pan, same rules as current — those are pretty intuitive
-    // and work well"). The seat asks nothing about where the release will put
-    // the cursor.
+    // and work well"). RE-SEATED AT EVERY CTRL-DOWN at the pointer's NOTIONAL
+    // COLUMN — the press for a ctrl-armed drag, each ctrl-down edge for a
+    // plain-armed one — asking nothing about where the release will put the
+    // cursor. What is WRITTEN here is the SONG FRAME under that column at that
+    // instant (viewport_start + col·spp, the apply's own conversion, so the
+    // seat and the phase's first event cannot disagree).
     // That column is a PROJECTION of the platform's one notional pointer
     // position, computed on demand at the seat (nav_notional_col,
     // input_pointer.cpp) and never accumulated here: the position is owned
     // where the raw events are, because a second clamped accumulation
     // advanced on the DELIVERY cadence cannot agree with it at a wall
     // (GuiPlatform::notional_pointer_x_ carries that record, codex round 17).
+    //
+    // WHAT THE PHASE HOLDS IS THE FRAME, AND THAT IS THE PART THAT CHANGED
+    // (architect 2026-08-14, from the rig, reversing the pivot half of the
+    // screen-column model he had ratified hours earlier — on his own evidence,
+    // having found the one case it gets wrong: "pin the cursor to the song
+    // position when zoom is happening, such that if the viewport clamps
+    // because we've reached end of file or zero, the cursor stays in the song
+    // position that it is doing the zooming from, so that any zoom is fully
+    // reversible"). THIS IS NOT A REVERSAL OF THE SCREEN SEAT: the two models
+    // name the same point for as long as nothing clamps — a zoom phase has no
+    // pan term at all, so the frame under a fixed column cannot move on its
+    // own — and they can therefore diverge ONLY where the viewport SATURATES
+    // at frame 0 or at the right wall, which is why the difference took this
+    // long to surface.
+    // THE CASE HE FOUND, worked: zoom in near the left edge so frame 0 goes far
+    // offscreen; release ctrl and pan until the pivot's content sits mid-screen;
+    // hold ctrl again and drag UP (zoom out). The viewport walks left until
+    // frame 0 comes back and CLAMPS — "which is good" — and from that instant a
+    // SCREEN pivot is a lie: the song keeps sliding out from under a stem that
+    // does not move, so reversing the drag zooms back in about a different part
+    // of the piece ("the second drag motion is basically irreversible... if I
+    // were to continue holding control and drag downward, I would be zooming
+    // into a section much later than where I did the second zoom"). Holding the
+    // FRAME instead slides the stem with the content it is anchored to, so the
+    // reversed drag zooms back into the section it came from. STATED EXACTLY
+    // (the arithmetic is at apply_nav_zoom_at): what is invariant for the phase
+    // is the anchored FRAME, which off the walls makes an out-and-back drag
+    // reproduce the earlier viewport outright, and AT a saturated wall — where
+    // the viewport is determined by the level alone and cannot come back the
+    // same way — preserves the FOCUS, which is the half the screen column lost.
+    // THE EDGE TRICK COMES BACK WITH IT (the behaviour the architect named
+    // admiringly: "as the part of the waveform that the stem is on moves off
+    // screen, the stem would clamp — that was a very intuitive design"): a
+    // pivot column outside [0, W-1] pins at the edge pixel and REBINDS this
+    // field to that pixel's frame, so the zoom focus never leaves the screen.
+    // Stated honestly, the rebind is the ONE thing that breaks exact
+    // reversibility — it is a lasting mutation of the anchor — and it is
+    // deliberate: it engages only once the anchored content has been pushed
+    // OFF the visible span, where there is nothing left on screen to be
+    // reversible about.
+    // NO LIVE RE-SEAT INSIDE A ZOOM PHASE, and none is to be added — the
+    // sentence still stands and now means something narrower. THE SEAT (this
+    // field's frame) is written once per ctrl-down and never re-read from the
+    // pointer during the phase, which is safe because the phase FREEZES the
+    // pointer's x: it writes no notional position at all, so the clamp verdict
+    // cannot change under it. THE COLUMN, by contrast, is re-derived every
+    // event BY DESIGN — that is the whole model — and the EDGE REBIND is the
+    // single route that rewrites the anchor mid-phase. A future dual-axis ctrl
+    // phase, which would pan while zooming, breaks the freeze's premise, and
+    // this is the sentence that has to be revisited if one is ever built.
+    //
     // THE SUPERSEDED SEAT AND ITS FALSE PREMISE, recorded because a reader will
     // otherwise re-derive it: the seat briefly read the position the RELEASE
     // would restore the cursor to instead — the notional position while the
@@ -953,12 +1000,6 @@ struct ScrollDragState {
     // there), while a runaway pan that never zooms still comes home exactly as
     // before. The pan half is deliberately untouched — "same rules as current,
     // those are pretty intuitive and work well".
-    // NO LIVE RE-SEAT INSIDE A ZOOM PHASE, and none is to be added: the phase
-    // FREEZES the pointer's x, so it writes no notional position at all and the
-    // clamp verdict cannot change under it — the seat is stable for the phase
-    // by construction, not by a rule. A future dual-axis ctrl phase, which
-    // would pan while zooming, breaks that premise, and this is the sentence
-    // that has to be revisited if one is ever built.
     // Meaningful only while `zooming`. A PERSISTENT pivot (seated once per
     // gesture and kept across every toggle) was built and WITHDRAWN the same
     // day, and the reason is recorded so it is not re-derived: it was a
@@ -974,7 +1015,7 @@ struct ScrollDragState {
     // paragraph above the struct): without it the zoom phase's own sideways
     // travel — travel nothing on screen answered — walked the notional column
     // along, and the stem jumped at the next ctrl-down.
-    double anchor_col = 0.0;
+    double anchor_sample = 0.0;
 };
 
 // THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —

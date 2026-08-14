@@ -620,7 +620,7 @@ public:
     // THE SEAT DELIBERATELY READS THIS AND NOT THE RELEASE'S OWN RESTORE FORK
     // (architect 2026-08-14: the stem goes wherever the cursor is at the
     // ctrl-down, visible or invisible). It briefly read that fork instead, on a
-    // premise recorded as FALSE at ScrollDragState::anchor_col so it is not
+    // premise recorded as FALSE at ScrollDragState::anchor_sample so it is not
     // re-derived here.
     double notional_pointer_x() const { return notional_pointer_x_; }
 

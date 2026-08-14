@@ -1298,11 +1298,12 @@ struct GuiInputHandler {
     void arm_nav_zoom_press(int x, int y);
 
     // THE POINTER'S NOTIONAL COLUMN — its clamped position in waveform
-    // columns, and the zoom pivot's one source. A PURE PROJECTION of the
-    // platform's notional pointer position, held nowhere and computed at each
-    // seat; the contract, and why exactly one position exists and it is not
-    // this layer's, are at the definition (input_pointer.cpp) and at
-    // GuiPlatform::notional_pointer_x_.
+    // columns, and the zoom pivot SEAT's one source (the seat converts it to
+    // the song frame under it; the pivot itself is that frame). A PURE
+    // PROJECTION of the platform's notional pointer position, held nowhere and
+    // computed at each seat; the contract, and why exactly one position exists
+    // and it is not this layer's, are at the definition (input_pointer.cpp)
+    // and at GuiPlatform::notional_pointer_x_.
     double nav_notional_col() const;
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
