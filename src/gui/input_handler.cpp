@@ -1985,6 +1985,26 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // new domain, so clear it; the full-window invalidate at the tail repaints
     // the waveform on its plain canvas ground.
     app.region = RegionState{};
+    // AND THE SEATED PINCH'S ANCHOR GOES WITH IT, for the identical reason
+    // (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
+    // song frame, and nothing about two fingers resting on the glass stops a
+    // keyboard `t` or a mouse click on the S/T radio from reaching here — so a
+    // pinch held across this flip would go on zooming about a SOURCE frame read
+    // as a TARGET one, seating the view on an unrelated song point. The clear
+    // costs a live pinch nothing: its next two-finger frame seats afresh at the
+    // centroid, exactly as an upgrade does. THE AUTHORITATIVE STATEMENT of this
+    // clear and its three sites is at the free function's declaration
+    // (input_handler.h); the other two view switches carry the same line beside
+    // their own region clears. The pre-arc STATELESS pinch could not have this
+    // defect — it kept nothing between frames — which is why the seat is what
+    // brought it.
+    //
+    // AND THE TEMPTING FIX IS THE WRONG ONE, recorded so it is not tried: DO
+    // NOT add touch navigation to any_pointer_gesture_active to make this
+    // "impossible". apply_touch_nav_update asks wheel_context per frame, and
+    // wheel_context READS that predicate — a live pinch would refuse itself
+    // into a dead gesture.
+    clear_touch_zoom_seat(app, viewport);
 
     // THE GROUP CARRIES ACROSS THE FLIP (architect 2026-07-30, resolving the
     // deferral this block used to record): `t` translates the same markers into

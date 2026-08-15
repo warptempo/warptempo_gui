@@ -171,10 +171,19 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
-    // Full dispatch freeze during TWO gestures — the two displayed-basis
-    // drags, marker drag and trim drag (a THIRD, the target-view tempo drag, was
-    // on this gate for its own opposite reason until its 2026-07-29 deletion; see
-    // marker_drag.h). Both
+    // Full dispatch freeze during the DISPLAYED-BASIS DRAGS — THREE since
+    // 2026-08-15, membership re-derived rather than appended to (codex round
+    // 20): a gesture belongs here iff it is an ABSOLUTE drag on a PAINTED
+    // subject, reading the displayed basis per motion event, so that publishing
+    // a new one mid-gesture would move that subject out from under a stationary
+    // hand. The marker drag (the flag it grabbed), the trim drag (the endcaps
+    // and the bar), and THE STANDING REGION'S OWN EDITOR (`region_edit_drag` —
+    // it hits the span on the plate basis through the painter's own
+    // region_columns and, since codex round 20, converts every motion column
+    // back on that same basis, which is exactly the marker and trim drags'
+    // shape). A THIRD gesture was on this gate for its own opposite reason —
+    // the target-view tempo drag — until its 2026-07-29 deletion; see
+    // marker_drag.h. All three
     // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
     // DISPATCHED or PUBLISHED mid-gesture: on_waveform_render_done's
@@ -186,17 +195,22 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // grab used to be dropped, rewound, then re-dispatched every tick because
     // the vp/area fields still differed — wasted full renders all gesture long.
     // Nothing that legitimately re-renders can occur mid-drag anyway: keys and
-    // wheels are gesture-gated, playback was stopped by the arming top-strip
-    // press so no follow scroll fires, and a compositor resize simply catches
+    // wheels are gesture-gated, the follow chase is paused for any live pointer
+    // gesture (any_pointer_gesture_active, whose members include all three of
+    // these), and a compositor resize simply catches
     // up at the first post-gesture tick. With no mid-drag dispatch the
     // completion drop fires AT MOST ONCE (the one job in flight at the grab).
-    // The strip drag, grab-pan, and region drag are deliberately NOT here. The
-    // first two drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
+    // THE DELIBERATE NON-MEMBERS, by the same derivation: the strip drag and the
+    // grab-pan drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
     // which drains this worker rather than queuing behind it) and must keep
-    // rendering; the region drag moves no viewport, so it never reaches the
-    // plate at all. (The tempo drag was a third frozen gesture until 2026-07-29,
-    // when it was deleted — see marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active)
+    // rendering; the OVERVIEW lane's drags act on the whole-song lane rather
+    // than on the plate; and the region FORMER (region_drag) is not the editor
+    // above — it sweeps a NEW span from a fixed anchor to the live pointer,
+    // so there is no grabbed subject for a basis swap to slide, only the
+    // ordinary one-epoch lag every painted overlay carries. (The tempo drag was
+    // a frozen gesture until 2026-07-29, when it was deleted — see
+    // marker_drag.h.)
+    if (app.drag.active || app.trim_drag.active || app.region_edit_drag.active)
         return;
 
     WaveformRenderInputs in = compute_waveform_render_inputs();
@@ -299,14 +313,20 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 }
 
 void GuiPaintHandler::on_waveform_render_done(bool ok) {
-    // Gesture-discard gate: a marker or trim drag freezes the displayed paint
+    // Gesture-discard gate, the PUBLICATION half of the dispatch freeze above
+    // and over the SAME three displayed-basis drags — marker, trim, and the
+    // standing region's editor (the membership and its derivation are stated
+    // once at maybe_enqueue_waveform_render; do not re-list them here). Each
+    // freezes the displayed paint
     // basis for the whole gesture (the DragState "no per-drag map copy"
     // contract). maybe_enqueue_waveform_render's full dispatch freeze keeps a
     // NEW map edit from being DISPATCHED mid-gesture, but a job dispatched (or
     // parked in the supersede slot) BEFORE the drag began would still publish
     // its map HERE — the displayed basis would jump under a stationary pointer,
     // and every motion event re-reads it (apply_drag_motion, the trim drags, the
-    // nudges). So drop the completed job WHOLESALE: no surface swap, no fp_*
+    // nudges, and apply_region_edit_drag_at's own column conversion, which is
+    // the plainest case: nothing moves, and the span slides). So drop the
+    // completed job WHOLESALE: no surface swap, no fp_*
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
     // fp_* so the pending fingerprint again describes what is on screen; once the
@@ -319,14 +339,13 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // genuinely up-to-date plate stays put. Because the dispatch freeze enqueues
     // NOTHING mid-gesture, this drop fires AT MOST ONCE — for the single job in
     // flight at the grab; there is no drop-rewind-redispatch loop to sustain.
-    // Gated on the marker/trim
-    // drags ALONE — the strip drag and grab-pan render synchronously per frame
-    // (draining this worker) and must keep rendering, and the region drag never
-    // touches the plate. (The TEMPO drag was on this gate too, joining the drop
+    // The non-members are the dispatch gate's own, for the dispatch gate's own
+    // reasons. (The TEMPO drag was on this gate too, joining the drop
     // for its own reason — it re-warped synchronously per cent step, so a pre-grab
     // async job publishing here would have painted a stale plate over the
     // step-fresh one — until its 2026-07-29 deletion; see marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active) {
+    if (app.drag.active || app.trim_drag.active ||
+        app.region_edit_drag.active) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
         wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;

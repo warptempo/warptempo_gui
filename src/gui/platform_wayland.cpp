@@ -3172,12 +3172,20 @@ bool GuiPlatform::end_touch_left_hold(bool clean_release) {
     //     a MOVED drag finalizes like a release, an UNMOVED press commits
     //     NOTHING — no click act, no double-click seed, and no chrome dispatch,
     //     since dispatching an armed chrome/modal/menu press is the RELEASE's
-    //     job and no release is delivered. The arms those surfaces keep are
-    //     dropped a moment later by the caller's tail (the pointer-leave hook,
-    //     whose authoritative effect list is in main.cpp) on the no-mouse arm,
-    //     and on the focused-mouse arm they survive exactly as a lost physical
-    //     button's arm survives until the pointer leaves — the standing
-    //     lost-button shape, deliberately not a second mechanism.
+    //     job and no release is delivered. AND THE ARMS THOSE SURFACES HOLD ARE
+    //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below
+    //     (codex round 20): the GUI ends its release-time claims — the chrome
+    //     press, the modal's armed button, the popup's item claim — at exactly
+    //     this edge, an unheld motion while one stands
+    //     (clear_release_time_press_arms, at on_motion's top). That is a
+    //     correction of what this comment used to say: those claims are NOT
+    //     button-lost consumers of their own, so calling the end "the standing
+    //     lost-button shape" was true of the motion-driven drag states and false
+    //     of them, and with a mouse focused in the window — where the fork takes
+    //     the restore motion instead of the leave hook — a stale arm survived
+    //     the whole pinch and swallowed the next tap. The promise now is flat:
+    //     an upgrade ends every arm the vanished press could have committed,
+    //     because the finger that armed them is not going to lift.
     const bool edge = !pointer_left_held_ && !synth_left_held_;
     const bool deliver =
         edge && (clean_release ? on_button_release_ != nullptr

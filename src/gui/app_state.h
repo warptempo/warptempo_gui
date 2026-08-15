@@ -379,6 +379,21 @@ enum class RegionHit { None, Move, BoundLo, BoundHi };
 // there with the span INTACT — the overview box pan's own behaviour, which is
 // also what makes a full-window region's Move a silent no-op.
 //
+// IT IS A DISPLAYED-BASIS GESTURE, the marker and trim drags' third sibling
+// (codex round 20): the press's grab offset and every motion column convert on
+// the PLATE basis the hit test and the painter share
+// (GuiInputHandler::region_edit_frame_at_column), and the waveform worker's
+// dispatch freeze and completion-drop gate name this drag with those two, so no
+// job may publish a new basis mid-hold. It landed reading the LIVE viewport and
+// spp instead — hit one span, moved another — which is what those two halves
+// close.
+//
+// THE KIND FOLLOWS THE CROSSING. The motion normalizes min/max, so pushing one
+// bound past its partner makes the grabbed point the OTHER bound; `kind` is
+// rewritten from that same compare on every bound event, because it is the one
+// owner of "which edge is this" and the live cursor reads it — a stale kind
+// would leave the resize arrow naming the edge the hand used to be on.
+//
 // A MOTIONLESS PRESS-RELEASE ON THE REGION IS NOT A MANIPULATION: it falls to
 // the waveform's ordinary click act, each half's own and unchanged — the UPPER
 // half's playhead placement, which dissolves the span like every other point
@@ -1280,11 +1295,17 @@ struct ScrollDragState {
 // a THIRD finger does on the waveform). The platform's own rule delivers it:
 // a second finger arriving during a MOVED translation is ignored whole, the
 // mid-gesture-finger-counts-do-not-mutate-a-committed-gesture family, so a live
-// box or bound drag simply carries on. (A MOTIONLESS hold takes the generic
-// motionless-hold UPGRADE instead — its ordinary release IS this lane's
-// motionless release, so an outside hold teleports on the way — and the
-// two-finger gesture that follows is then REFUSED on the lane,
-// apply_touch_nav_update's own down-point test.)
+// box or bound drag simply carries on. A MOTIONLESS hold is ignored on the same
+// line and by the same door: the second-finger fork tests the THIN-LANE bit
+// beside the moved latch, so nothing on this lane upgrades whatever the finger
+// has done — the first finger's translation simply runs to its own lift, where
+// a motionless one still teleports. (The generic motionless-hold UPGRADE that
+// this paragraph used to hand the lane is unreachable here twice over now: the
+// thin-lane door refuses it, and the upgrade's end is the ABNORMAL one since
+// codex round 19, which commits nothing rather than delivering the lane's
+// motionless release. The lane's own two-finger refusal in
+// apply_touch_nav_update is the SECOND door, for the pair that lands inside the
+// disambiguation window and never reaches the pointer phase at all.)
 // THE SIMULTANEOUS TWO-BOUND STRETCH — one finger per bound, both moving at
 // once — WAS BUILT AND IS DELETED (2026-08-15, both on the architect's word:
 // "a two-finger gesture would basically mean draw the bounds at each of the two
@@ -1381,6 +1402,17 @@ struct OverviewDragState {
 //     of it (the reasoning is at the site) — and at end_touch_nav, every end
 //     included, so a later upgrade re-seats rather than inheriting a stale
 //     anchor.
+//   * AND AT EVERY VIEW SWITCH since codex round 20 — `t`, Ctrl+Tab and `p`,
+//     each beside its own region clear, with the 1/2/3 selectors, the view bar
+//     and the S/T + W/P radios inheriting it by composition. THE FIELD IS A
+//     SONG FRAME IN THE ACTIVE DOMAIN, and nothing stops a keyboard or a mouse
+//     command from switching that domain with two fingers still down: the S/T
+//     flip is the sharp case (a source frame read as a target one), Ctrl+Tab
+//     restores another band, and `p` is in the rule because a view switch
+//     replaces the view the pinch grabbed. The clear is free to a live pinch —
+//     its next frame seats afresh. The membership and the do-not-add-touch-to-
+//     any_pointer_gesture_active note live at clear_touch_zoom_seat's
+//     declaration (input_handler.h).
 // THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
 // viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
 // and REBINDS this field to that pixel's content — apply_nav_zoom_at's pivot
@@ -4768,7 +4800,8 @@ struct AppState {
     // Trim is a region authored purely by the plain trim-bar pointer drags
     // (single-bound endcap, inter-endcap bridge/pair), the ctrl /
     // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
-    // trim to it and consumes the span; no region is a silent no-op), the
+    // trim to it and consumes the span; with NO region `x` SHOWS one at the
+    // current window and writes nothing — the seed, 2026-08-15), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's
     // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full

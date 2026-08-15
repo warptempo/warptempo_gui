@@ -85,6 +85,13 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // domain), so a resting region cannot carry across. The kick_waveform_sync
     // below repaints the whole waveform area, restoring the plain canvas ground.
     app.region = RegionState{};
+    // The SEATED PINCH's anchor goes with it, this switch's member of the
+    // view-switch rule (codex round 20; the argument, the three sites and the
+    // do-not-do-this note are at clear_touch_zoom_seat's declaration,
+    // input_handler.h): the entering tab restores another band entirely, so a
+    // pinch held across the switch would resume about a point the fingers never
+    // grabbed. Its next two-finger frame seats afresh.
+    clear_touch_zoom_seat(app, viewport);
     // A TAB SWITCH CLEARS THE SELECTION (the scope rule, architect 2026-07-29 —
     // a column or tab switch clears; only the `t` audio-view switch carries).
     // Nothing is stashed and nothing is restored: the tab's remembered spot is
@@ -185,6 +192,15 @@ void GuiActiveViews::toggle_active_markers_view() {
     // propagate paste's target-view tail — writes its own selection one line later
     // and an auto-select there would be overwritten for nothing.
     clear_region_highlight(app, viewport);
+    // The SEATED PINCH's anchor clears here too, the third of the view
+    // switches' sites (codex round 20; the argument and the whole membership
+    // are at clear_touch_zoom_seat's declaration, input_handler.h). This flip
+    // moves NO domain and NO viewport, so the held frame stays arithmetically
+    // valid — it is in the rule because a view switch replaces the view the
+    // pinch grabbed, and one rule at all three switches is worth more than a
+    // per-switch judgment; the cost is a re-seat at the centroid on the next
+    // two-finger frame.
+    clear_touch_zoom_seat(app, viewport);
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH — the W/P half of the
     // rule the S/T toggle carries at its own chokepoint

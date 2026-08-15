@@ -1591,6 +1591,17 @@ int main(int argc, char** argv) {
             input_handler.clear_redesign_button_hover();
             input_handler.disarm_menu_row();
         }
+        // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end
+        // (codex round 20): they also die at the BUTTON-LOST edge, an unheld
+        // motion while one of them stands — which is what the touch upgrade's
+        // abnormal end delivers, and what a lost physical button delivers too
+        // (clear_release_time_press_arms). The calls stay spelled out here
+        // rather than routed through that owner because THIS edge asks a
+        // different question and clears more with it: a pointer that has left
+        // is on no button AND at no position, so the hover faces, the menu
+        // row's mode and the tooltip go too, and the popup's HOVERED item goes
+        // whether or not anything was armed. The narrower owner is a subset of
+        // this body, deliberately.
         input_handler.clear_redesign_button_press();
         // The MODAL's armed dialog button goes on the same edge and for a
         // sharper reason than the roster's face: that arm is an act that has

@@ -284,6 +284,35 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // shape; so does the kick validator's live-domain reclamp.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
+// THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the bare
+// assignments it replaces (2026-08-14, when the pinch became the anchor stem's
+// producer — its third when it joined, one of two since the overview strip
+// drag's deletion; the stem's contract is at paint_strip_drag_anchor,
+// paint_handler.cpp). It is a BODY for two reasons: (1) the EARLY RETURN makes
+// the damage fire exactly ONCE per phase however often the clear is reached,
+// and it is reached on every one-finger frame of the survivor's pan; (2) the
+// damage is owed at all because a clear can land on a frame that APPLIES
+// NOTHING and therefore rebuilds nothing — a survivor pan refused off the
+// wheel's surfaces is exactly that frame, and it is the case the clear's own
+// ordering rule already names (the clear leads apply_touch_nav_update's body,
+// above the refusal). Full waveform-area damage, the discrete shape the mouse's
+// own mode edges spell.
+//
+// FREE, AND BESIDE clear_region_highlight, SINCE codex round 20: the seat is an
+// ACTIVE-DOMAIN song frame taken against a particular view, so THE VIEW SWITCHES
+// CLEAR IT — and they are GuiActiveViews' and GuiInputHandler's alike, so the
+// one body cannot be a member of either. Its callers, re-derived: the touch nav
+// body's top (any frame that is not two-finger), end_touch_nav (every end of the
+// gesture), and the THREE view switches, each beside its own region clear —
+// `t` (handle_active_audio_view_toggle, where the domain flips outright and a
+// SOURCE frame would otherwise be read as a TARGET one), Ctrl+Tab
+// (switch_active_tab_view_to, which restores another band entirely) and `p`
+// (toggle_active_markers_view). The bare 1/2/3 selectors, the view bar's buttons
+// and the S/T + W/P radios compose those handlers and inherit it. A live pinch
+// simply re-seats on its next frame, which is the same fresh grip an upgrade
+// takes.
+void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
+
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
 // clamp_playhead_to_live_domain, a direct cursor write). A PURE PLAYHEAD WRITE:
@@ -852,22 +881,11 @@ struct GuiInputHandler {
     // a later pair seats afresh instead of inheriting a dead pinch's anchor —
     // and so the anchor stem it gates is rubbed out at every end.
     void end_touch_nav();
-    // THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the two
-    // bare assignments it replaces (2026-08-14, when the pinch became the
-    // anchor stem's producer (its third when it joined, one of two since the
-    // overview strip drag's deletion); the stem's contract is at
-    // paint_strip_drag_anchor, paint_handler.cpp). It is a BODY for two
-    // reasons: (1) the EARLY RETURN makes the damage fire exactly ONCE per
-    // phase however often the clear is reached, and it is reached on every
-    // one-finger frame of the survivor's pan; (2) the damage is owed at all
-    // because a clear can land on a frame that APPLIES NOTHING and therefore
-    // rebuilds nothing — a survivor pan refused off the wheel's surfaces is
-    // exactly that frame, and it is the case the clear's own ordering rule
-    // already names (the clear leads the body, above the refusal). Full
-    // waveform-area damage, the discrete shape the mouse's own mode edges
-    // spell. Its two callers are apply_touch_nav_update's top and
-    // end_touch_nav.
-    void clear_touch_zoom_seat();
+    // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
+    // view switches clear the seat too and they are not this class's:
+    // clear_touch_zoom_seat(app, viewport), declared with clear_region_highlight
+    // near the top of this header, which is the spelling it now sits beside at
+    // those sites.)
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the
     // eighth glass ruling 2026-08-12, and to the WHOLE WAVEFORM by the
@@ -1277,7 +1295,16 @@ struct GuiInputHandler {
     // apply_region_edit_drag_at: the one motion body for all three kinds,
     // X ONLY by construction (it takes no y) and ABSOLUTE per event, the
     // overview box drag's own shape.
+    //
+    // region_edit_frame_at_column: the gesture's own column->frame conversion,
+    // read by the press arm and by every motion event, ON THE DISPLAYED (PLATE)
+    // BASIS — the basis the hit test and the painter share, so the span the hand
+    // grabbed is the span it moves even while an async rebuild is in flight
+    // (codex round 20; the full argument is at the definition, and the standing
+    // rule it applies is at playhead_pixel_x, app_state.h). The caller passes
+    // its own already-validated waveform rect.
     RegionHit region_manipulation_hit(int x, int y) const;
+    int64_t region_edit_frame_at_column(const GuiRect& area, int mouse_x) const;
     void apply_region_edit_drag_at(int x);
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
@@ -1321,6 +1348,38 @@ struct GuiInputHandler {
     // are private, beside the modal's other pointer readers; the contract is at
     // the definition and the full edge list at AppState::modal_dialog_pressed.
     void clear_modal_dialog_press();
+
+    // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
+    // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
+    // before the mechanism: the touch upgrade's ABNORMAL END (round 19) ends
+    // every MOTION-DRIVEN gesture correctly, because those have a button-lost
+    // end — on_motion's `!primary_button_held` arms, one per drag state. THESE
+    // THREE HAVE NONE. The armed chrome press, the modal dialog's armed button
+    // and the dropdown's item claim are not button-lost consumers at all: they
+    // are claims on a FUTURE RELEASE, and until now the only thing that dropped
+    // them was the pointer-LEAVE hook. Calling the upgrade's end "the standing
+    // lost-button shape" was therefore true of one family and FALSE of this
+    // one — a concept reused across two families that do not share it, which is
+    // exactly how a stale ChromePress came to survive a whole pinch (with a
+    // mouse resting in the window the end takes its restore-motion branch, so
+    // no leave hook ran) and swallow the next tap or dispatch its old command on
+    // a later release over the original target.
+    //
+    // THE FIX GIVES THEM ONE, at the one place the edge is observable: a MOTION
+    // that reports the primary button UNHELD while one of these stands. That
+    // motion is the abnormal end's own delivery, so an upgrade now ends every
+    // arm the vanished press could have committed — motion-driven and
+    // release-time alike, because the finger that armed them is not going to
+    // lift — and the mouse-focused case is no longer a different path for them.
+    // A lost PHYSICAL button reaches it by the same sentence, which is the
+    // point: the edge is the invariant, not the device.
+    //
+    // WHAT IT IS NOT: an end for anything the pointer's POSITION owns. The
+    // roster's hover faces, the menu row's armed mode and the tooltip stay with
+    // the leave hook, which is a different question ("where is the pointer") —
+    // so that hook still calls its own three clears plus those, and this is a
+    // strict subset of it rather than a replacement.
+    void clear_release_time_press_arms();
 
     // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
     // the platform's keyboard-intent cancellation hook (keyboard leave,

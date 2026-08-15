@@ -1386,7 +1386,11 @@ private:
     //         surface — every chrome button, a menu item, a modal's OK, and
     //         the standing region's click act — so landing a second finger
     //         fired whatever the first was resting on. The argument, the
-    //         class and the moved/unmoved split are at the site.
+    //         class and the moved/unmoved split are at the site. THE ARMS
+    //         THOSE SURFACES HOLD DIE WITH IT ON EITHER ARM OF THE FOCUS FORK
+    //         (codex round 20): the unheld motion IS their button-lost edge
+    //         now, so a focused mouse no longer leaves a chrome press armed
+    //         through the whole pinch.
     //   * second DOWN during SINGLE-finger Nav — the UPGRADE (a transform,
     //     not an end; the end hook is not owed): touch_nav_single_ drops,
     //     the second finger is recorded, and the delta bases REBASE to the

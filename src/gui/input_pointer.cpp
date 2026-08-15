@@ -1189,6 +1189,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // exactly what the resting cue over that spot already named. Read from the
     // record's own `kind` like the overview drag's arm, so a bound drag keeps
     // its edge arrow for the whole slide and a move keeps the ew-resize.
+    // A CROSSED BOUND SHOWS THE EDGE IT NOW IS (codex round 20): the motion
+    // body rewrites `kind` when the grabbed point passes its partner, so this
+    // arm needs no derivation of its own — one owner of "which edge is this",
+    // read here and written there.
     if (app.region_edit_drag.active) {
         switch (app.region_edit_drag.kind) {
             case RegionEditKind::Move:     return GuiCursorKind::TrimResize;
@@ -1994,6 +1998,40 @@ RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
     return RegionHit::None;
 }
 
+// THE REGION EDITOR'S OWN COLUMN->FRAME CONVERSION, AND IT IS THE PLATE'S
+// (codex round 20). The hit test resolves the span's bounds on the DISPLAYED
+// (plate) basis through the painter's own owner, so the drag has to READ that
+// same basis or the gesture hits one span and moves another: while the async
+// worker rebuilds, the live viewport/spp already describe a plate that is not
+// on screen yet, and a bound grabbed where it is PAINTED would jump to the live
+// frame under that column on its first applied event. This is the project's
+// standing rule applied to a gesture that was written against the live basis by
+// omission — hit geometry and painted-pixel deciders ride the DISPLAYED basis,
+// and damage follows the basis of the pixels it erases (playhead_pixel_x,
+// app_state.h). Its TWO callers are the press arm (the Move's grab offset) and
+// the motion body, so press and motion cannot disagree either.
+//
+// IT IS displayed_column_at RUN BACKWARDS on that basis — vp_start + col * spp,
+// nearbyint once — which is exactly the inverse of what region_columns did to
+// place the bound, so a grabbed bound converts back to the frame it was painted
+// from. Deliberately NOT playhead_frame_at_click_column: that owner reads the
+// LIVE viewport and, in source view, the source GRID, both of which are the
+// live epoch's answers. The caller supplies its own validated area (w > 0); a
+// non-positive spp cannot arm this gesture at all — region_manipulation_hit
+// refuses one — and if it somehow arrived the multiply would simply return the
+// viewport start, there being no division here to make it worse.
+int64_t GuiInputHandler::region_edit_frame_at_column(const GuiRect& area,
+                                                     int mouse_x) const {
+    int rel = mouse_x - area.x;
+    if (rel < 0) rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const GuiPaintHandler::PlateViewportBasis basis =
+        paint_handler.plate_viewport_basis();
+    const double at = basis.vp_start + static_cast<double>(rel) * basis.spp;
+    return clamp_playhead_to_live_domain(
+        static_cast<int64_t>(std::nearbyint(at)), app, audio);
+}
+
 // THE REGION EDIT DRAG'S ONE MOTION BODY, forking on the kind. X ONLY,
 // STRUCTURALLY: mouse_y is not even a parameter — every kind is a horizontal
 // slide and there is no second axis to leak into (the overview box drag's own
@@ -2011,14 +2049,9 @@ void GuiInputHandler::apply_region_edit_drag_at(int mouse_x) {
     const int64_t total = live_total_frames(app, audio);
     if (total <= 0) return;
     const int64_t wall = total - 1;
-    // The pointer's active-domain frame through the SAME click->frame basis
-    // every other span gesture uses (the region former's own conversion), the
-    // column clamped into the visible strip first.
-    int rel = mouse_x - area.x;
-    if (rel < 0) rel = 0;
-    if (rel >= area.w) rel = area.w - 1;
-    const int64_t at = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, rel), app, audio);
+    // The pointer's active-domain frame on the PAINTED basis (the owner above),
+    // the column clamped into the visible strip first.
+    const int64_t at = region_edit_frame_at_column(area, mouse_x);
 
     int64_t lo = 0;
     int64_t hi = 0;
@@ -2045,6 +2078,22 @@ void GuiInputHandler::apply_region_edit_drag_at(int mouse_x) {
         const int64_t fixed = app.region_edit_drag.fixed_frame;
         lo = std::min(at, fixed);
         hi = std::max(at, fixed);
+        // AND THE CROSSING RE-NAMES THE GRABBED EDGE (codex round 20). The
+        // normalization above means the bound under the hand IS the other one
+        // the moment it passes its partner, and `kind` is the ONE owner of
+        // "which edge is this" — the live cursor reads it and nothing
+        // re-derives it — so it flips here rather than growing a second
+        // answer. Written from the same compare that just normalized: the
+        // grabbed point is the LO bound while it sits at or below the fixed
+        // partner and the HI bound above it, so a zero-width rest keeps the
+        // LO reading, which is region_manipulation_hit's own tie-break and
+        // therefore the arrow the next press would honour. Above the
+        // column-change gate deliberately: the cue is about the record, not
+        // about the paint, and the cursor is resolved from this field once per
+        // run-loop iteration, so a frame that repaints nothing must still
+        // leave the naming true.
+        app.region_edit_drag.kind = at <= fixed
+            ? RegionEditKind::BoundLo : RegionEditKind::BoundHi;
     }
     if (lo == std::min(app.region.a_frame, app.region.b_frame) &&
         hi == std::max(app.region.a_frame, app.region.b_frame)) {
@@ -2080,7 +2129,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // early return rather than an assignment here: this line runs on EVERY
     // one-finger frame, while the stem must be rubbed out once, on the frame
     // the seat actually dies (contract at clear_touch_zoom_seat).
-    if (!f.two_finger) clear_touch_zoom_seat();
+    if (!f.two_finger) clear_touch_zoom_seat(app, viewport);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -2302,7 +2351,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
 // input_handler.h): the early return is what makes the damage fire exactly
 // once per phase, and the damage is owed because a clear can land on a frame
 // that applies nothing and so rebuilds nothing.
-void GuiInputHandler::clear_touch_zoom_seat() {
+void clear_touch_zoom_seat(AppState& app, Viewport& viewport) {
     if (!app.touch_nav_zoom.seated) return;
     app.touch_nav_zoom = TouchNavZoomState{};
     viewport.invalidate_waveform_area();
@@ -2322,7 +2371,7 @@ void GuiInputHandler::end_touch_nav() {
     // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
     // rebuilds nothing of its own, so without the damage a hard end would
     // leave the pivot mark painted over a settled view.
-    clear_touch_zoom_seat();
+    clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
 }
 
@@ -4276,14 +4325,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     app.region_edit_drag.kind = RegionEditKind::Move;
                     // The grab offset: the pressed column's own frame back to
                     // the span's LO bound, so the grabbed spot stays under the
-                    // pointer (the overview box pan's offset, in frames).
-                    int rel = x - area.x;
-                    if (rel < 0) rel = 0;
-                    if (rel >= area.w) rel = area.w - 1;
-                    const int64_t at = clamp_playhead_to_live_domain(
-                        playhead_frame_at_click_column(app, audio, rel),
-                        app, audio);
-                    app.region_edit_drag.grab_offset = at - lo;
+                    // pointer (the overview box pan's offset, in frames). ON
+                    // THE PAINTED BASIS, through the drag's own conversion
+                    // owner — the same one every motion event takes, so the
+                    // offset and the tracking are measured in one epoch
+                    // (region_edit_frame_at_column; its comment carries the
+                    // rule). The geometry it needs is already established:
+                    // region_manipulation_hit answered non-None just above,
+                    // which requires a positive area width and a positive
+                    // plate spp.
+                    app.region_edit_drag.grab_offset =
+                        region_edit_frame_at_column(area, x) - lo;
                     app.region_edit_drag.span_frames = hi - lo;
                 } else {
                     // A bound drag holds its PARTNER for the gesture's life —
@@ -6523,6 +6575,28 @@ void GuiInputHandler::clear_redesign_button_press() {
     (void)take_chrome_press();
 }
 
+// THE RELEASE-TIME ARMS' BUTTON-LOST END — the family's one owner (codex round
+// 20; the contract, and why the family needed one, are at the declaration).
+// It calls the three arms' OWN clears rather than touching their fields, so
+// each keeps its damage, its transition gate and its own reasoning; what this
+// body adds is the QUESTION — is any of them standing — because two of those
+// clears are unconditional in the leave hook's sense and one of them
+// (clear_dropdown_pointer_state) also drops a HOVER face, which an ordinary
+// unheld motion must not disturb. With an arm standing, dropping that face
+// with it is right and not collateral: the pointer that lit it is the one whose
+// press has just vanished, and any pointer still in the window re-derives the
+// face on its very next motion.
+void GuiInputHandler::clear_release_time_press_arms() {
+    if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
+        app.modal_dialog_pressed < 0 &&
+        app.dropdown.pressed_item < 0 &&
+        !app.dropdown.press_began_on_item)
+        return;
+    clear_redesign_button_press();
+    clear_modal_dialog_press();
+    clear_dropdown_pointer_state();
+}
+
 // THE REGION DRAG'S ONE MOTION PATH, hoisted 2026-08-12 (the touch half) for
 // its TWO DRIVERS: on_motion's region branch below (mouse motion under the
 // held button, past its own button-lost arm) and update_touch_region (the
@@ -6643,6 +6717,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
+    // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE (codex round 20),
+    // and it sits at the very TOP because every branch below returns: an open
+    // dropdown takes the motion whole, a modal branch returns, each live gesture
+    // returns. The arms this drops belong to none of those branches — they are
+    // claims on a release that the unheld button says can no longer come — so
+    // the only placement that sees them all is above the lot. The FAMILY'S
+    // ARGUMENT and the defect it answers are at clear_release_time_press_arms's
+    // declaration (input_handler.h); what belongs HERE is the ordering: the
+    // motion-driven gestures keep their OWN per-branch button-lost arms below,
+    // where each ends the way its release would (a moved drag finalizes), while
+    // these commit NOTHING — the two families share this one edge and nothing
+    // else, which is the distinction whose absence was the round-19 miss.
+    if (!mods.primary_button_held) clear_release_time_press_arms();
     // THE MENU ROW'S MODE ENDS WHEN THE POINTER LEAVES ROW 1, and that half is
     // resolved HERE, above every branch, because it is the only placement that
     // sees every motion: the modal branches and every live gesture return before
