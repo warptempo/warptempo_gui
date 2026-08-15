@@ -422,6 +422,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the pan and the edge
     // drags, one state for the pending and moved phases since the lane
     // rework the same day),
+    // THE STANDING REGION'S OWN EDITOR (region_edit_drag — the move and the two
+    // bound drags, 2026-08-15: it must swallow chords for the same reason the
+    // region former does, its span being live under the pointer, and because an
+    // unmoved press there still owes the deferred click act at its release),
     // and the
     // pending marker / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
@@ -435,7 +439,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
-        app.region_drag.active ||
+        app.region_drag.active || app.region_edit_drag.active ||
         app.scroll_drag.active || app.overview_drag.active ||
         app.pending_marker_drag.active ||
         app.pending_trim_drag.active) {

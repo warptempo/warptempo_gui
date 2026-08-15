@@ -594,6 +594,23 @@ struct GuiPaintHandler {
     };
     PlateViewportBasis plate_viewport_basis() const;
 
+    // The region-select span's on-screen column pair under a given displayed
+    // basis. Endpoints are active-domain frames stored in drag order; normalize
+    // to [lo, hi] then map to columns via the plain viewport transform (the
+    // endpoints already live in the displayed domain, so no warp map is walked).
+    // TWO consumers since 2026-08-15, and the second is why this is PUBLIC:
+    // paint_region_ground draws the highlight from it, and
+    // GuiInputHandler::region_manipulation_hit (input_pointer.cpp) HIT-TESTS the
+    // standing span's move zone and its two grab bands from the same call on the
+    // same PLATE basis — so a grabbed bound is exactly a painted one, by
+    // construction rather than by two derivations agreeing. It stays a named
+    // helper because the column pair is a rule, not an inline expression.
+    struct RegionColumns {
+        int lo_col = 0;
+        int hi_col = 0;
+    };
+    RegionColumns region_columns(const PlateViewportBasis& basis) const;
+
 private:
     // Waveform fingerprint inputs derived from current app state. This is
     // the single source of truth for the desired waveform fingerprint —
@@ -646,18 +663,10 @@ private:
     // inside-the-window signal.
     // Neither helper had any other consumer, so both went with the pass.)
 
-    // The region-select span's on-screen column pair under a given displayed
-    // basis. Endpoints are active-domain frames stored in drag order; normalize
-    // to [lo, hi] then map to columns via the plain viewport transform (the
-    // endpoints already live in the displayed domain, so no warp map is walked).
-    // Its sole consumer since 2026-07-30 is paint_region_ground (the
-    // split-playhead branch that shared it died with the SPAN FORM); it stays a
-    // named helper because the column pair is a rule, not an inline expression.
-    struct RegionColumns {
-        int lo_col = 0;
-        int hi_col = 0;
-    };
-    RegionColumns region_columns(const PlateViewportBasis& basis) const;
+    // (The region-select span's column pair, RegionColumns / region_columns,
+    // moved up into the PUBLIC block beside plate_viewport_basis on 2026-08-15,
+    // when the region gained its own edit drag and the hit test needed the
+    // painter's own answer rather than a second derivation of it.)
 
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,

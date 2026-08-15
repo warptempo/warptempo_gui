@@ -295,11 +295,13 @@ struct UndoEntry {
 // carried. A region has ONE origin now — the user drew it.
 //
 // Bare `x` is SET-ONLY and consumes THIS highlight: a live region trims to it,
-// DESELECTS (the setter rule) and then CLEARS the region — its job is done and
-// nothing re-publishes one. No region means `x` is a silent no-op, and so does a
-// DEGENERATE result — an inverse-mapped span coming out end <= begin refuses
+// DESELECTS (the setter rule) and then CLEARS the region — its job is done. A
+// DEGENERATE result — an inverse-mapped span coming out end <= begin — refuses
 // rather than writing a pair the crossed-commit auto-clear would destroy (at
-// handle_trim_x).
+// handle_trim_x). WITH NO REGION `x` SEEDS ONE at the current trim window
+// since 2026-08-15 (the same site), which is the second half of the model
+// below; the old silent no-op is superseded, and the seed is ONE-TIME rather
+// than the retired continuous sync.
 //
 // CLEARED wholesale on: file load, the A/B tab switch, the S/T audio-view switch
 // and the W/P marker-column switch (each flips the domain or the owning column out
@@ -318,6 +320,105 @@ struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
+};
+
+// THE REGION IS A MANIPULABLE SPAN, NOT SWEEP-ONCE SCRATCH (architect
+// 2026-08-15, uniting two loose ends — what the region is FOR, and how trim is
+// manipulated on a 9 px lane a fingertip covers whole): a STANDING region
+// carries the OVERVIEW BOX'S OWN THREE MOTIONS on the waveform — drag inside
+// it to MOVE it, drag within a bound's grab band to move THAT bound, drag
+// anywhere else to PAN as ever — and `x` still commits it to trim. The other
+// half closes the loop: `x` with NO region SHOWS one at the current trim
+// window (handle_trim_x, input_trim.cpp), so the same three motions edit the
+// trim itself on a surface hundreds of pixels tall instead of nine.
+//
+// WHY IT MATTERS BEYOND CONVENIENCE, and this is the argument to keep if
+// anyone later proposes collapsing it: TRIM HAS NO UNDO, excluded from the
+// stacks by ruling, so a mis-dragged endcap is unrecoverable except by
+// re-dragging it. Under this model the region is free scratch that may be
+// nudged as much as one likes and only `x` commits — which gives the one
+// feature that cannot be taken back a PREVIEW STAGE.
+//
+// THE SEED CARRIES NO CONTRACT, and that distinction is the architect's own:
+// the retired trim-window highlight sync was a CONTINUOUS INVARIANT binding
+// the two together, while this is a ONE-TIME SEED — once shown, the region and
+// the trim move independently and neither chases the other. This is not that
+// ruling coming back.
+//
+// THE REGION'S LIFECYCLE IS DELIBERATELY UNCHANGED: it still dies to any
+// playhead move or selection change (the inventory at clear_region_highlight,
+// input_handler.h), the architect ruling that acceptable outright ("the region
+// collapsing on an accidental tap is not a big deal") — and a CLICK inside the
+// region is exactly that, which is also what rescues the degenerate case: a
+// full-window region leaves nothing to pan and nothing to move until a single
+// click destroys it.
+//
+// ONLY THE WAVEFORM ANSWERS, by his ruling: the RULER and the MARKER LANE stay
+// plain navigation surface throughout, which is what keeps a pan and a zoom
+// reachable while a region covers the waveform entirely.
+//
+// The hit verdict. Its owner is GuiInputHandler::region_manipulation_hit
+// (input_pointer.cpp), which is meaningful only while app.region.active; the
+// two bounds are the region's endpoints projected to columns on the DISPLAYED
+// (plate) basis — the same basis the highlight paints on, through the
+// painter's own region_columns owner, so a grabbed bound is exactly a painted
+// one. BoundLo / BoundHi are the NORMALIZED (painted) endpoints rather than
+// the stored a/b pair, which rests in DRAG order: what the user grabs is the
+// left or the right edge of what is drawn.
+enum class RegionHit { None, Move, BoundLo, BoundHi };
+
+// THE REGION EDIT DRAG — the overview box's drag borrowed whole rather than
+// reinvented (contract above; the shape is OverviewDragState's). ABSOLUTE and
+// X-ONLY: per event the moved endpoint (or the whole span, its grab offset
+// preserved) follows the pointer's column and dy is never read. NO CAPTURE, no
+// stem, no playhead movement, no selection change, and IT DOES NOT CLEAR THE
+// REGION — it is the region's own editor. IT COMMITS NOTHING TO TRIM; only `x`
+// does.
+//
+// Clamped at the SONG WALLS. A Move that would run a bound past a wall stops
+// there with the span INTACT — the overview box pan's own behaviour, which is
+// also what makes a full-window region's Move a silent no-op.
+//
+// A MOTIONLESS PRESS-RELEASE ON THE REGION IS NOT A MANIPULATION: it falls to
+// the waveform's ordinary click act, each half's own and unchanged — the UPPER
+// half's playhead placement, which dissolves the span like every other point
+// command, and the LOWER half's scrub, which deliberately does not (that is the
+// region's PREVIEW gesture: click inside a span to audition it and the span
+// rests). SO THE DEGENERATE CASE'S ESCAPE HATCH IS THE UPPER HALF'S CLICK, and
+// it is a real one — a full-window region covers both halves. The architect
+// ruled the fall-through deliberately, so the release arm runs the deferred act
+// rather than nothing.
+//
+// AN ACCEPTED DEGENERATE REST: dragging one bound exactly onto the other leaves
+// a span whose two endpoints share a painted column, which the highlight
+// declines to draw (paint_region_ground's zero-width return) while the region
+// stays ACTIVE. It is not engineered around: both grab bands still cover the
+// spot and still wear their edge cursors, so the span can be pulled back open,
+// and one upper-half click clears it. The region former's release-time sliver
+// dissolve is deliberately NOT borrowed here — this gesture must never clear
+// the span it edits.
+//
+// Cleared on button release / lost button, by the force-end finalizer, and on
+// file load; pointer gestures have no cancel, so any end simply rests what the
+// last applied event left.
+enum class RegionEditKind { Move, BoundLo, BoundHi };
+
+struct RegionEditDragState {
+    bool           active = false;
+    bool           moved  = false;   // crossed the threshold into a real drag
+    RegionEditKind kind   = RegionEditKind::Move;
+    int            press_x = 0;      // press position (window px): the gate,
+    int            press_y = 0;      // and the motionless release's click column
+    // Move only, both in ACTIVE-domain frames and captured at the press: the
+    // offset from the press column's frame back to the span's LO bound (so the
+    // grabbed spot stays under the pointer) and the span's WIDTH (hi - lo),
+    // held for the drag's life so the wall clamp can slide the pair rigidly.
+    int64_t        grab_offset = 0;
+    int64_t        span_frames = 0;
+    // Bound drags only: the FIXED partner bound's active-domain frame, captured
+    // at the press — the edge drag's own shape, so the un-dragged end holds
+    // bit-exactly whatever the moving one does.
+    int64_t        fixed_frame = 0;
 };
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
@@ -2892,6 +2993,13 @@ struct AppState {
     // flip or a full repaint rather than that exact damage shape.
     RegionState region;
 
+    // THE STANDING REGION'S OWN EDITOR — the move / bound drags a plain
+    // waveform press arms inside a live span (contract at RegionEditDragState).
+    // Cleared on button release / lost button, by the force-end finalizer, and
+    // on file load. It writes only app.region; it never touches trim, the
+    // playhead or the selection.
+    RegionEditDragState region_edit_drag;
+
     // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button
     // release / lost button, by the force-end finalizer (both COMMIT its live
     // bounds), and on file load.
@@ -5052,7 +5160,8 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a marker
 // reposition drag, a trim drag, a strip-row
-// zoom/pan drag, a region-select drag, an editor
+// zoom/pan drag, a region-select drag, a REGION EDIT drag (the standing span's
+// own move / bound gestures, 2026-08-15), an editor
 // text drag, or a pending marker / trim drag
 // armed by a press (button held, watching for the threshold). (The scrub still
 // has no entry of its own — it is a one-shot ACT, not a gesture — but since
@@ -5104,7 +5213,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.trim_drag.active ||
            app.scroll_drag.active ||
            app.overview_drag.active ||
-           app.region_drag.active || app.editor_text_drag.active ||
+           app.region_drag.active || app.region_edit_drag.active ||
+           app.editor_text_drag.active ||
            app.pending_marker_drag.active ||
            app.pending_trim_drag.active;
 }
@@ -6035,14 +6145,21 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
+// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
 // source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Paste
-// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state) and — since
-// 2026-08-07 — THE WALK'S TWO ARROWS, whose shifted twins are the walk's WALL
+// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state), THE
+// WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
 // bare `.` steps one newer and Shift+`.` goes to the newest
 // (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
-// dispatch them through the one press body like every other button).
+// dispatch them through the one press body like every other button) — and,
+// since 2026-08-15, THE TRIM SCISSORS, whose twin is Shift+X the MAXIMIZER
+// (reset the trim to the whole song). Its 2026-08-11 "Shift+X stays
+// keyboard-only" clause is SUPERSEDED and the reason is the glass rig: the
+// maximizer had no pointer route at all, so a keyboardless panel could set a
+// trim window and never get back out of it. The admission grants the 500 ms
+// long press → shift act (kChromeShiftHoldMs) and the two-line hint with no new
+// machinery.
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -6064,7 +6181,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render || b == RedesignButton::IconPaste ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer;
+           b == RedesignButton::HistoryNewer ||
+           b == RedesignButton::IconTrim;
 }
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
@@ -6145,12 +6263,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (t)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
-        // THE TRIM BUTTON, one line: bare `x` has no shifted twin ON THE
-        // BUTTON — Shift+X the maximizer stays keyboard-only, so a shift press
-        // here is the ordinary consumed nothing and no shift line may promise
-        // one.
+        // THE TRIM BUTTON, in the TWO-LINE form since 2026-08-15: its shifted
+        // twin is Shift+X the MAXIMIZER, admitted so the glass rig has a route
+        // to it at all (the reason is at redesign_button_shift_admits). The
+        // 2026-08-11 record that "bare `x` has no shifted twin ON THE BUTTON"
+        // is superseded.
         case RedesignButton::IconTrim:
-            return {"Set trim from region (x)", nullptr};
+            return {"Set trim from region (x)",
+                    "Press Shift for the whole song."};
         // THE ZOOM GROUP (2026-08-12), all one-line: names aligned with the
         // Navigation dropdown's rows for the two they share ("Zoom in" /
         // "Zoom out"); the accelerators are the table's own convention —
@@ -6444,6 +6564,8 @@ static_assert(
     (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
      nullptr) ==
         redesign_button_shift_admits(RedesignButton::HistoryNewer) &&
+    (redesign_button_tooltip(RedesignButton::IconTrim).line2 != nullptr) ==
+        redesign_button_shift_admits(RedesignButton::IconTrim) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     (redesign_button_tooltip(RedesignButton::IconCopy).line2 == nullptr),
     "the shift hint and the shift binding must name the same buttons");

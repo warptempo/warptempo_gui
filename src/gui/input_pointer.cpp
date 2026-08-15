@@ -58,7 +58,7 @@ namespace {
 // keyboard chord opens or closes a dropdown. Both are spelled at their own claim.
 //
 // The `shift` column is each button's OWN chord (only Redo's is set). It is not
-// the whole shift story: the two SHIFT-ADMITTING buttons OR a shift-exact press
+// the whole shift story: the SHIFT-ADMITTING buttons OR a shift-exact press
 // into this field to reach their twins, and which buttons those are lives at
 // redesign_button_shift_admits (app_state.h), which the tooltip's own table is
     // static_asserted against.
@@ -153,11 +153,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
     // from region — momentary, click face, not a radio. Every rule the key has
-    // the button has: no region / degenerate result = the arm's own consumed
-    // refusals, read-only-legal (trim is band), consumed in the `h` view (the
-    // derived partition greys it there). Shift is NOT admitted — Shift+X the
-    // maximizer stays keyboard-only — so a shift press is the standing
-    // consumed nothing.
+    // the button has: the degenerate-result refusal and the NO-REGION arm (a
+    // SEED at the current trim window since 2026-08-15, not a no-op) are the
+    // key's own, read-only-legal (trim is band), consumed in the `h` view (the
+    // derived partition greys it there). SHIFT IS ADMITTED since 2026-08-15 —
+    // the twin is Shift+X the maximizer, and the reason the keyboard-only
+    // clause was dropped is at redesign_button_shift_admits (app_state.h).
     {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
     // THE ZOOM GROUP (2026-08-12, the grand relayout — SUPERSEDING the
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair for
@@ -1180,6 +1181,19 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // The gesture is capture-free, so there is a visible cursor to keep.
     if (app.drag.active || app.pending_marker_drag.active)
         return GuiCursorKind::TrimResize;
+    // THE REGION'S OWN EDITOR KEEPS ITS CUE TOO (2026-08-15), on that same
+    // rule and in that same member shape: it is a capture-free, visible-cursor
+    // drag, and what it drags is the span (or one of its bounds), which is
+    // exactly what the resting cue over that spot already named. Read from the
+    // record's own `kind` like the overview drag's arm, so a bound drag keeps
+    // its edge arrow for the whole slide and a move keeps the ew-resize.
+    if (app.region_edit_drag.active) {
+        switch (app.region_edit_drag.kind) {
+            case RegionEditKind::Move:     return GuiCursorKind::TrimResize;
+            case RegionEditKind::BoundLo:  return GuiCursorKind::TrimBoundBegin;
+            case RegionEditKind::BoundHi:  return GuiCursorKind::TrimBoundEnd;
+        }
+    }
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
 
     // THE OPEN FLAG EDITOR'S BOX IS EDITABLE TEXT, so it wears the I-beam
@@ -1319,6 +1333,22 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             case TrimHit::None:  break;
         }
         return GuiCursorKind::TrimResize;
+    }
+    // A STANDING REGION'S OWN ZONES OUTRANK THE PAN, because inside them the
+    // plain drag IS the region's editor rather than the pan (2026-08-15; the
+    // press claim asks the same owner in the same order, so cue and gesture
+    // agree by construction). INSIDE the span the drag is a horizontal slide of
+    // the whole span, so the TRIM BRIDGE's cue is the honest one — the same
+    // shape the overview box's interior takes for the same reason; ON A BOUND
+    // it is the matching edge arrow, as the trim endcaps and the box edges
+    // already do. It sits UNDER the modifier arms by their own rank (ctrl there
+    // is the zoom drag and shift the region former, both of which bypass this
+    // entirely) and ABOVE the Pan below.
+    switch (region_manipulation_hit(x, y)) {
+        case RegionHit::Move:    return GuiCursorKind::TrimResize;
+        case RegionHit::BoundLo: return GuiCursorKind::TrimBoundBegin;
+        case RegionHit::BoundHi: return GuiCursorKind::TrimBoundEnd;
+        case RegionHit::None:    break;
     }
     // THE NAVIGATION SURFACE WEARS THE PAN — the cue promises the drag, which
     // is what the plain drag does there now; the motionless click needs no cue,
@@ -1875,6 +1905,137 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
                                    final_event);
 }
 
+// THE STANDING REGION'S HIT TEST — the ONE spelling of "inside a live region",
+// read by the plain waveform press claim, the cursor map and the touch pan zone
+// (the three-consumer contract is at the declaration, input_handler.h; the
+// model is at RegionState, app_state.h).
+//
+// THE BOUNDS COME FROM THE PAINTER'S OWN OWNER — region_columns on the PLATE
+// basis, the very call paint_region_ground makes — so a grabbed bound is
+// exactly a painted one, by construction rather than by two derivations
+// agreeing. Nothing is re-derived here.
+//
+// THE GRAB BAND IS trim_endcap_grab_px() PER SIDE, THE SAME 15 px ON PURPOSE:
+// the trim endcaps and the overview box edges already take it, and this is the
+// SAME GESTURE ON THE SAME SHAPE — a third member of that family, so it takes
+// the family's constant rather than a number of its own.
+//
+// OVERLAP RESOLVES NEARER-BOUND-WINS WITH TIES TO THE LO BOUND — the shape of
+// hit_test_overview_endcap, which is itself the trim sort's tie-break over two
+// fixed candidates. It is what keeps BOTH bounds reachable down to a 1 px span,
+// and there is deliberately no second rule for it.
+//
+// An OFFSCREEN bound is simply not grabbable: its column falls outside the
+// waveform and no band answers there. Clamping it to the edge would manufacture
+// a handle where nothing is painted, which is the one thing the shared-owner
+// rule above exists to prevent — the Move zone still covers the visible
+// stretch, exactly as the highlight does.
+RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
+    if (!app.region.active) return RegionHit::None;
+    if (audio.total_frames() <= 0) return RegionHit::None;
+    // THE `h` VIEW ANSWERS NONE. Its spans are VIEW-LOCAL reading marks — `x`
+    // is consumed in there, so a region can commit nothing — and its press
+    // router forks far above this arm, so a verdict here could only make the
+    // cursor and the touch zone promise a gesture that does not run.
+    if (app.history_mode.active) return RegionHit::None;
+    // Y-GATED TO THE WAVEFORM RECT ALONE (the architect's ruling): the RULER
+    // and the MARKER LANE stay plain navigation surface even where the span
+    // covers their columns, which is what keeps a pan and a zoom reachable
+    // while a region covers the waveform entirely.
+    const GuiRect area = waveform_area(app);
+    const GuiRect top  = top_strip_area(app);
+    if (area.w <= 0) return RegionHit::None;   // degenerate geometry: no zones
+    if (y < area.y || y >= area.y + area.h) return RegionHit::None;
+    // The x band is the waveform's own, the navigation surface's spelling
+    // included (the <=15 px inert right gutter counts as waveform).
+    if (x < area.x || x >= top.x + top.w) return RegionHit::None;
+
+    const GuiPaintHandler::PlateViewportBasis basis =
+        paint_handler.plate_viewport_basis();
+    if (basis.spp <= 0.0) return RegionHit::None;
+    const GuiPaintHandler::RegionColumns cols =
+        paint_handler.region_columns(basis);
+    const int lo_x = area.x + cols.lo_col;
+    const int hi_x = area.x + cols.hi_col;
+    const int grab = trim_endcap_grab_px();
+    const int dl = std::abs(x - lo_x);
+    const int dh = std::abs(x - hi_x);
+    const bool on_lo = dl <= grab;
+    const bool on_hi = dh <= grab;
+    if (on_lo && on_hi)
+        return dl <= dh ? RegionHit::BoundLo : RegionHit::BoundHi;
+    if (on_lo) return RegionHit::BoundLo;
+    if (on_hi) return RegionHit::BoundHi;
+    // Inside the span but outside both bands: the MOVE zone. The half-open
+    // [lo, hi) interval is paint_region_ground's own fill span.
+    if (x >= lo_x && x < hi_x) return RegionHit::Move;
+    return RegionHit::None;
+}
+
+// THE REGION EDIT DRAG'S ONE MOTION BODY, forking on the kind. X ONLY,
+// STRUCTURALLY: mouse_y is not even a parameter — every kind is a horizontal
+// slide and there is no second axis to leak into (the overview box drag's own
+// shape, borrowed rather than reinvented). ABSOLUTE per event, so the placement
+// folds the whole press->crossing travel by construction and a wall-saturated
+// event is a plain no-op.
+//
+// IT WRITES app.region AND NOTHING ELSE: no trim, no playhead, no selection, no
+// viewport, and it never clears the span it is editing (contract at
+// RegionEditDragState, app_state.h).
+void GuiInputHandler::apply_region_edit_drag_at(int mouse_x) {
+    if (!app.region.active) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    const int64_t total = live_total_frames(app, audio);
+    if (total <= 0) return;
+    const int64_t wall = total - 1;
+    // The pointer's active-domain frame through the SAME click->frame basis
+    // every other span gesture uses (the region former's own conversion), the
+    // column clamped into the visible strip first.
+    int rel = mouse_x - area.x;
+    if (rel < 0) rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const int64_t at = clamp_playhead_to_live_domain(
+        playhead_frame_at_click_column(app, audio, rel), app, audio);
+
+    int64_t lo = 0;
+    int64_t hi = 0;
+    if (app.region_edit_drag.kind == RegionEditKind::Move) {
+        // THE SPAN FOLLOWS THE POINTER, its grab offset preserved and its width
+        // invariant — the trim bridge's and the overview box pan's rigid move.
+        // THE WALL CLAMP SLIDES THE PAIR rather than squashing it: a bound that
+        // would run past a wall stops there WITH THE SPAN INTACT, which is also
+        // what makes a full-window region's Move a silent no-op.
+        lo = at - app.region_edit_drag.grab_offset;
+        const int64_t span = app.region_edit_drag.span_frames;
+        if (lo < 0) lo = 0;
+        if (lo + span > wall) lo = wall - span;
+        if (lo < 0) lo = 0;   // a span wider than the song: rest at 0
+        hi = lo + span;
+        if (hi > wall) hi = wall;
+    } else {
+        // A BOUND FOLLOWS THE POINTER WHILE ITS PARTNER HOLDS — the trim endcap
+        // drag's shape. The pair is normalized after the write, so pushing one
+        // bound past the other simply swaps which side of the span it is: the
+        // region is free scratch with no partner wall, unlike trim, because
+        // nothing here commits and `x`'s own degenerate refusal is the wall
+        // that matters.
+        const int64_t fixed = app.region_edit_drag.fixed_frame;
+        lo = std::min(at, fixed);
+        hi = std::max(at, fixed);
+    }
+    if (lo == std::min(app.region.a_frame, app.region.b_frame) &&
+        hi == std::max(app.region.a_frame, app.region.b_frame)) {
+        // Column-change gate: a same-span motion event (sub-pixel jitter inside
+        // one column, or a saturated wall) repaints nothing — the region
+        // former's own short-circuit.
+        return;
+    }
+    app.region.a_frame = lo;
+    app.region.b_frame = hi;
+    viewport.invalidate_waveform_area();
+}
+
 // THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
 // single-finger pan frames land here alike; contract, the ONE FINGER PANS,
 // TWO FINGERS ZOOM ruling, delivery-shape justification and refusal rationale
@@ -2163,6 +2324,22 @@ void GuiInputHandler::end_touch_nav() {
 // lower half is the tap-at-lift burst whose motionless press-release IS the
 // deferred scrub act — the mouse's own machinery, inherited with no touch code.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    // AND THE ZONE YIELDS INSIDE A LIVE REGION (2026-08-15). Without this the
+    // feature would be unreachable on the exact surface it exists for: the
+    // whole waveform is the pan zone, so a finger landing inside a region would
+    // become the phone-model pan and NEVER DELIVER A PRESS, and the region's
+    // move / bound drags live on the pointer. Answering false here lets the
+    // finger resolve to the pointer translation and reach them — the flag box
+    // carve-out's exact shape, one level up.
+    // ONE SPELLING OF "INSIDE A LIVE REGION": this asks the same owner the
+    // mouse press claim and the cursor map ask, so the three cannot disagree
+    // (that owner is also what keeps the RULER and the MARKER LANE out of it —
+    // they answer None there, so a region covering their columns still pans).
+    // THE REGION HOLD'S ANSWER IS RECORDED AT THE DECLARATION and is accepted:
+    // the ~500 ms hold is a pan-zone gesture, so a hold INSIDE an existing
+    // region no longer begins a new one — a hold started outside it, or a tap
+    // to clear it first, both still do.
+    if (region_manipulation_hit(x, y) != RegionHit::None) return false;
     return point_on_nav_surface(app, audio, x, y);
 }
 
@@ -4039,6 +4216,64 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // and every chord are swallowed, the follow chase is paused, and the
         // cursor holds the uniform Arrow — which is exactly the symmetry the
         // ruling asked for and not a new rule of its own.
+        //
+        // BUT A STANDING REGION IS ASKED FIRST (2026-08-15 — the region becomes
+        // the trim editor; the model is at RegionState, app_state.h). A hit
+        // arms the region's own move / bound drag INSTEAD of the nav drag;
+        // None falls straight through and nothing about the pan changed. THE
+        // WAVEFORM ALONE ASKS — the ruler and the marker lane never reach this
+        // arm and stay plain navigation surface, which is what keeps a pan
+        // reachable while a region covers the waveform entirely.
+        //
+        // SHIFT AND CTRL BYPASSED IT ENTIRELY (both were claimed far above) and
+        // keep their meanings: ctrl always zooms, and SHIFT ALWAYS DRAWS A NEW
+        // REGION even inside one — the architect's reason being that a shift
+        // press is still a press, which destroys the region anyway, so "shift
+        // always draws" costs nothing and gives a way to redraw without
+        // clearing first.
+        //
+        // NOTHING IS COMMITTED AT THE PRESS, exactly as the nav press commits
+        // nothing: a MOTIONLESS press-release on the region is NOT a
+        // manipulation but the waveform's ORDINARY CLICK ACT, run by the
+        // release arm (which states which half clears and which does not). That
+        // is the degenerate case's escape hatch — a full-window region has
+        // nothing to pan and nothing to move until one click destroys it — and
+        // the architect ruled it deliberately.
+        {
+            const RegionHit rh = region_manipulation_hit(x, y);
+            if (rh != RegionHit::None) {
+                app.region_edit_drag = RegionEditDragState{};
+                app.region_edit_drag.active  = true;
+                app.region_edit_drag.press_x = x;
+                app.region_edit_drag.press_y = y;
+                const int64_t lo =
+                    std::min(app.region.a_frame, app.region.b_frame);
+                const int64_t hi =
+                    std::max(app.region.a_frame, app.region.b_frame);
+                if (rh == RegionHit::Move) {
+                    app.region_edit_drag.kind = RegionEditKind::Move;
+                    // The grab offset: the pressed column's own frame back to
+                    // the span's LO bound, so the grabbed spot stays under the
+                    // pointer (the overview box pan's offset, in frames).
+                    int rel = x - area.x;
+                    if (rel < 0) rel = 0;
+                    if (rel >= area.w) rel = area.w - 1;
+                    const int64_t at = clamp_playhead_to_live_domain(
+                        playhead_frame_at_click_column(app, audio, rel),
+                        app, audio);
+                    app.region_edit_drag.grab_offset = at - lo;
+                    app.region_edit_drag.span_frames = hi - lo;
+                } else {
+                    // A bound drag holds its PARTNER for the gesture's life —
+                    // the trim endcap drag's fixed-opposite shape.
+                    const bool lo_bound = rh == RegionHit::BoundLo;
+                    app.region_edit_drag.kind = lo_bound
+                        ? RegionEditKind::BoundLo : RegionEditKind::BoundHi;
+                    app.region_edit_drag.fixed_frame = lo_bound ? hi : lo;
+                }
+                return;
+            }
+        }
         arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
                       /*scrub_release=*/waveform_lower_half(area, y));
     }
@@ -4483,6 +4718,36 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
+    if (app.region_edit_drag.active) {
+        // THE STANDING REGION'S OWN EDITOR (contract at RegionEditDragState,
+        // app_state.h). A MOVED drag applied its span absolutely per event, so
+        // ending is just ending: the last applied event stands, nothing is
+        // committed to trim, no playhead moved and no capture is owed. It drops
+        // any double-click candidate, the standing moved-drag rule.
+        //
+        // A MOTIONLESS PRESS-RELEASE IS NOT A MANIPULATION — it runs THE
+        // WAVEFORM'S ORDINARY CLICK ACT at the press column, exactly what a
+        // press one pixel outside the region would have done, each half's own
+        // and unchanged: the UPPER half's playhead placement, which DISSOLVES
+        // the span like every other point command, and the LOWER half's scrub,
+        // which deliberately does not (the region's PREVIEW gesture). So the
+        // architect's escape hatch for the degenerate case is the UPPER half's
+        // click — a full-window region covers both halves, so it is always
+        // reachable. The half is read from the PRESS point, the pending click's
+        // own rule.
+        const bool    moved   = app.region_edit_drag.moved;
+        const int     press_x = app.region_edit_drag.press_x;
+        const bool    scrub   =
+            waveform_lower_half(waveform_area(app),
+                                app.region_edit_drag.press_y);
+        app.region_edit_drag = RegionEditDragState{};
+        if (moved) {
+            app.double_click = DoubleClickCandidate{};
+            return;
+        }
+        run_nav_click_act(press_x, /*history=*/false, /*scrub_release=*/scrub);
+        return;
+    }
     if (app.overview_drag.active) {
         // The overview lane's box drag (contract at OverviewDragState). A
         // MOVED drag runs its final apply — the edge drag's terminating
@@ -4662,6 +4927,12 @@ void GuiInputHandler::finalize_active_drags() {
             playback.resync_predictor();
         app.overview_drag = OverviewDragState{};
     }
+    // The region's own editor applied its span continuously and owes NOTHING at
+    // an end — no capture, no stem, no predictor (it moves no viewport and no
+    // playhead), and nothing committed to trim in any case. An UNMOVED press
+    // merely DISARMS: a force-end is not a click, so its motionless-release
+    // click act does not run, exactly the pendings' shape below.
+    app.region_edit_drag = RegionEditDragState{};
     // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
     // NOTHING of its own — the marker pending's click committed at the
     // PRESS, and the bound-set trim pending's bound was written at the press and
@@ -6629,6 +6900,32 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // does. The apply below is the Pending arm's own no-op.
         app.overview_drag.moved = true;
         apply_overview_drag_at(mouse_x, /*final_event=*/false);
+        return;
+    }
+    // THE STANDING REGION'S OWN EDITOR — the move and the two bound drags, one
+    // motion body for all three (apply_region_edit_drag_at, X ONLY; contract at
+    // RegionEditDragState, app_state.h). Absolute per-event placement, no
+    // capture and no stem, and it writes app.region and nothing else. A lost
+    // button ends like release EXCEPT that an UNMOVED press commits nothing: a
+    // force-end is not a click, so the motionless release's click act does not
+    // run here — the standing abnormal-end rule.
+    if (app.region_edit_drag.active) {
+        if (!mods.primary_button_held) {     // button lost -> end like release
+            app.region_edit_drag = RegionEditDragState{};
+            return;
+        }
+        // Sub-threshold: still a click (the generic press-becomes-drag gate).
+        // Nothing has been applied, so nothing happens here either; the
+        // crossing's first apply is absolute, so it folds the whole
+        // press->crossing travel by construction.
+        if (!app.region_edit_drag.moved &&
+            std::max(std::abs(mouse_x - app.region_edit_drag.press_x),
+                     std::abs(mouse_y - app.region_edit_drag.press_y)) <
+                kDragMovedThresholdPx) {
+            return;
+        }
+        app.region_edit_drag.moved = true;
+        apply_region_edit_drag_at(mouse_x);
         return;
     }
     // THE ONE NAV DRAG: the pending click, and past the threshold the

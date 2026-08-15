@@ -287,8 +287,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // A zero-length window is not authorable, so
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
-// NO region → x is a SILENT NO-OP (the maximize
-// arm moved to Shift+X; x never widens). NO read-only check here, and there is
+// NO region → x SHOWS ONE AT THE CURRENT TRIM WINDOW since 2026-08-15 (the
+// ruling and its reasoning are at the arm below; the maximize is still
+// Shift+X's and x never widens the trim). NO read-only check here, and there is
 // nothing left for one to do: since 2026-08-07 the keyboard gate ADMITS bare `x`
 // and Shift+X, trim being band rather than authored content (this file's header
 // block), so a locked tab runs both exactly as a writable one does. The absence
@@ -314,9 +315,44 @@ void GuiInputHandler::handle_trim_clear_both() {
 // 2026-07-30 land is now the rule every trim write takes.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // No live region → silent no-op: x is set-only, and the maximize is Shift+X's
-    // (handle_trim_shift_x). A resting trim is left exactly as it is.
-    if (!app.region.active) return;
+    // NO LIVE REGION → SHOW ONE AT THE CURRENT TRIM WINDOW (architect
+    // 2026-08-15, giving the old silent no-op a job and closing the loop the
+    // region-as-trim-editor model opens: the same three motions that edit a
+    // region now edit THE TRIM, on a surface hundreds of pixels tall instead of
+    // the trim bar's nine). Nothing else happens: NO trim write, NO deselect,
+    // NO playhead move, NO clear — it only paints. `x` is still set-only, and
+    // the maximize is still Shift+X's (handle_trim_shift_x).
+    //
+    // IT IS A ONE-TIME SEED, NOT A SYNC, and the distinction is the
+    // architect's: the retired TRIM-WINDOW HIGHLIGHT SYNC was a CONTINUOUS
+    // INVARIANT binding the two together, republishing the window as a
+    // highlight whenever it moved. This is a single copy — once shown, the
+    // region and the trim have NO CONTRACT and either moves freely, neither
+    // chasing the other. So this is not that ruling coming back, and nothing
+    // here re-publishes anything.
+    //
+    // THE FULL-WINDOW CASE NEEDS NO REFUSAL AND THAT IS DELIBERATE (the
+    // architect walked it and ruled it self-resolving; do not add a guard):
+    // seeding there gives a region covering everything, whose Move is clamped
+    // to a no-op and whose two bounds sit at the screen edges where they are
+    // still grabbable — and a single click destroys it, which is the region's
+    // ordinary lifecycle doing the work.
+    //
+    // The bounds are SOURCE frames and a region's endpoints are ACTIVE-domain
+    // frames, so each crosses through source_frame_to_active_domain (the
+    // identity in source view, the display map's forward hop in target) —
+    // the same one-way conversion every other source->display read takes.
+    if (!app.region.active) {
+        app.region.active  = true;
+        app.region.a_frame = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+            app, audio);
+        app.region.b_frame = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.end_frame),
+            app, audio);
+        viewport.invalidate_waveform_area();
+        return;
+    }
 
     // Live region → trim to it, overwriting any existing bounds.
     const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);

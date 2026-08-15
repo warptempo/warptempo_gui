@@ -265,7 +265,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // plain press's motionless-release CLICK ACT, its one entry since the press-
 // time dispatch moved to the lift — the region's
 // PREVIEW gesture (click inside a span to audition it, the span resting
-// untouched), SPACE (which touches no region at all and always toggles
+// untouched), THE REGION'S OWN EDITOR (2026-08-15 — the move and the two bound
+// drags a plain press arms INSIDE a live span, apply_region_edit_drag_at: it
+// EDITS the span, so clearing it would be the one thing it must never do; its
+// UNMOVED release runs the deferred click act instead and clears through that,
+// which is the degenerate full-window case's escape hatch), and THE `x` SEED
+// (the no-region arm, which CREATES a span rather than clearing one), SPACE
+// (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
 // pans — the plain-drag grab-pan and the plain wheel's stepped pan included,
 // a crossed pan being a pure viewport move that pops nothing — and bare `0`'s
@@ -880,7 +886,21 @@ struct GuiInputHandler {
     // motionless tap's press-release burst runs the deferred scrub — the
     // asymmetry the architect named ("finger down works in the upper half by
     // waiting for the finger up, but on the lower half it immediately
-    // dispatches the scanner") is gone. SURFACE GEOMETRY ONLY:
+    // dispatches the scanner") is gone.
+    // THE ZONE YIELDS INSIDE A LIVE REGION (2026-08-15): where
+    // region_manipulation_hit answers non-None the zone answers FALSE, so the
+    // finger resolves to the POINTER translation and reaches the region's own
+    // move / bound drags — the flag box carve-out's exact shape, and it MUST be
+    // here rather than beside it, because the surface this feature exists for is
+    // the glass. It is the same one predicate the mouse press claim and the
+    // cursor map read, so the two can never disagree about where a region
+    // begins. THE CONSEQUENCE FOR THE REGION HOLD IS RECORDED AND ACCEPTED: the
+    // ~500 ms hold is a PAN-ZONE gesture, so a hold INSIDE an existing region no
+    // longer reaches it — it is a pointer press on the region's editor instead,
+    // and a motionless one lifts into the ordinary click act, which destroys the
+    // region. Drawing a fresh region over a standing one therefore needs one tap
+    // to clear it first, or a hold started OUTSIDE it (the sweep may then run
+    // through it freely — only the DOWN point is asked). SURFACE GEOMETRY ONLY:
     // every refusal (modal, prompt, dropdown, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
@@ -1235,6 +1255,30 @@ struct GuiInputHandler {
     void run_overview_teleport(int x);
     void apply_overview_drag_at(int x, bool final_event);
     bool seat_overview_edge_drag(bool grabbed_begin);
+
+    // THE STANDING REGION'S OWN GESTURES (2026-08-15 — the whole model, and why
+    // it exists, are at RegionState / RegionEditDragState, app_state.h). Both
+    // bodies live together in input_pointer.cpp.
+    //
+    // region_manipulation_hit: the ONE hit owner, and the ONE spelling of
+    // "inside a live region" the whole product reads — THREE consumers, so it
+    // cannot drift: the plain waveform press claim (which asks it BEFORE arming
+    // the nav drag), the pointer cursor map's region arm, and THE TOUCH PAN
+    // ZONE, which must answer false wherever this answers non-None or the
+    // finger would become the phone-model pan and never reach the drag at all.
+    // It is Y-GATED TO THE WAVEFORM RECT ALONE — the ruler and the marker lane
+    // answer None even where the span covers their columns, the architect's
+    // ruling and the reason a pan stays reachable while a full-width region
+    // stands — and it answers None while the `h` history view stands, where the
+    // press claim never reaches this arm and the view's spans are reading marks
+    // rather than trim scratch (one gate, so the cue and the touch zone cannot
+    // promise a gesture the router does not run).
+    //
+    // apply_region_edit_drag_at: the one motion body for all three kinds,
+    // X ONLY by construction (it takes no y) and ABSOLUTE per event, the
+    // overview box drag's own shape.
+    RegionHit region_manipulation_hit(int x, int y) const;
+    void apply_region_edit_drag_at(int x);
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
     // is a consumed nothing everywhere since the button's unbinding,
