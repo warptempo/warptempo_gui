@@ -481,7 +481,7 @@ public:
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
     // below), the grab-pan at the pointer's notional position
-    // (notional_pointer_x_, or the capture's own start column once the travel
+    // (notional_pointer_x_, or the capture's HOME once the travel
     // ran out — the fork's record is at that field); y is frozen at the press
     // row for both. Both
     // degrade to a silent no-op when the
@@ -675,16 +675,19 @@ public:
     double notional_pointer_x() const { return notional_pointer_x_; }
 
     // WHERE THE CURSOR COMES HOME TO (surface x, px): the POINTER'S NOTIONAL
-    // POSITION while the hand still has room, and THE CAPTURE'S OWN START
-    // COLUMN once notional_x_clamped_ says the travel ran out and stayed out.
+    // POSITION while the hand still has room, and THE CAPTURE'S HOME COLUMN
+    // once notional_x_clamped_ says the travel ran out and stayed out.
     // The ran-out rule itself — and why the question is asked of the last
     // notional WRITE's clamp verdict rather than of the resting position — is
     // at the fields below; this only names the answer.
     //
-    // TWO CONSUMERS: the capture release's own restore fork
-    // (release_pointer_lock), and THE NAV DRAG'S CTRL-DOWN POP, which sends the
-    // pointer here before the zoom pivot seats (sync_nav_drag_mode,
-    // input_pointer.cpp) so a zoom never begins from a pinned edge.
+    // TWO CONSUMERS, both of them inside this class since the re-home landed:
+    // the capture release's own restore fork (release_pointer_lock), and
+    // rehome_capture_x() below — the nav drag's CTRL-DOWN POP, which sends the
+    // pointer here before the zoom pivot seats (fired from sync_nav_drag_mode,
+    // input_pointer.cpp) so a zoom never begins from a pinned edge. The GUI
+    // reaches the home only through that action, never by reading it: the pop
+    // and the ADOPT that follows it must not be separable.
     //
     // IT HAS MOVED TWICE AND A READER WHO FINDS IT IN HISTORY SHOULD SEE WHY.
     // It was hoisted out of the release for a FIRST version of the ctrl-down
@@ -695,14 +698,52 @@ public:
     // round — the POINTER moves and the seat is untouched — and that shape has
     // a second caller, which is what a hoist is for.
     //
-    // capture_press_x_ IS THE CAPTURE'S START COLUMN — the 8 px threshold
-    // crossing for the nav drag, not the button press — and reading it through
-    // ONE expression is deliberate: the pop and the release must send the
-    // pointer to the same place, and two spellings of "home" could differ by
-    // the slop distance or drift apart later.
+    // capture_home_x_ IS THE CAPTURE'S HOME — seeded at the capture's start
+    // column (the 8 px threshold crossing for the nav drag, not the button
+    // press) and RE-SEATED at every ctrl-down by rehome_capture_x() below.
+    // Reading it through ONE expression is deliberate: the pop and the release
+    // must send the pointer to the same place, and two spellings of "home"
+    // could differ by the slop distance or drift apart later. That single
+    // reading is also what makes the re-home cheap — one write moves both
+    // answers together.
     double notional_home_x() const {
-        return notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_;
+        return notional_x_clamped_ ? capture_home_x_ : notional_pointer_x_;
     }
+
+    // THE CTRL-DOWN EDGE'S WHOLE POSITION STATEMENT (architect 2026-08-14, from
+    // the rig): the pointer comes HOME if it ran out of room, and wherever it
+    // then stands BECOMES the home. His own use case is what the second half
+    // buys — "I can click, scroll several pages and then zoom while I'm pinned,
+    // and the zoom will jump to the original location of the drag begin; but if
+    // I don't pin the mouse and I just stay in that one viewport, then I move
+    // the drag around and zoom somewhere else, that somewhere else should become
+    // the place where the cursor jumps to, both in the case of a release of a
+    // pinned drag and the start of a pinned zoom".
+    //
+    // WHY THE TWO HALVES ARE ONE CALL: they must not be separable. The pop READS
+    // the home and the adopt WRITES it, so a caller that ran one without the
+    // other would leave the two readers of notional_home_x() — the release's
+    // restore fork and the next ctrl-down's pop — disagreeing about what "home"
+    // means inside a single gesture.
+    //
+    // WHY IT IS UNCONDITIONAL, with no "did we clamp" predicate anywhere in it:
+    //   * PINNED, notional_home_x() is the standing home, so the pop moves the
+    //     pointer there and the adopt writes the home onto itself — a no-op on
+    //     the field, which is the "a runaway pan returns to where the work was"
+    //     case.
+    //   * FREE, notional_home_x() is the pointer's own position, so the pop
+    //     writes back the value already there and the adopt claims that
+    //     position — the "a zoom taken somewhere else claims that somewhere
+    //     else" case.
+    // Neither case needs asking.
+    //
+    // THE ADOPT READS THE FIELD BACK rather than reusing the local, and that is
+    // deliberate: note_notional_pointer_x CLAMPS, so the home adopts the CLAMPED
+    // value and can never be seeded outside the window.
+    //
+    // Capture-guarded like its siblings — a ctrl-down on a still-sub-threshold
+    // press has no capture and no clamp behind it, so there is nothing to pop.
+    void rehome_capture_x();
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
@@ -1049,7 +1090,7 @@ private:
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
     // notional_pointer_x_ — EXCEPT WHEN THE TRAVEL RAN OUT, where it reappears
-    // at capture_press_x_ instead (the paragraph below). That fork is
+    // at capture_home_x_ instead (the paragraph below). That fork is
     // notional_home_x() above, which the nav drag's ctrl-down pop shares; y is
     // always frozen at the press row (capture_restore_y_).
     //
@@ -1085,10 +1126,12 @@ private:
     // the travel out nor bring it back in.
     // BOTH OF THE PHASE'S EDGES ARE WRITES, THOUGH, and each clears the verdict
     // honestly. THE OPENING one is the ctrl-down POP: it states
-    // notional_home_x() itself, so a pinned pointer is put back at the start
+    // notional_home_x() itself, so a pinned pointer is put back at the home
     // column and is no longer out of room — the debt is not forgiven, it is
     // PAID, the pointer having been moved to the place the verdict was going to
-    // send it (the rule is at sync_nav_drag_mode, input_pointer.cpp). THE
+    // send it (the rule is at sync_nav_drag_mode, input_pointer.cpp). That edge
+    // also ADOPTS the popped position as the new home, which is the whole of
+    // rehome_capture_x() above; the verdict half is unchanged either way. THE
     // CLOSING one is the ctrl-up handover, which STATES the stem's column
     // (set_notional_pointer_x), a position that is interior by construction,
     // so a pan-phase release after a zoom follows the stem rather than going
@@ -1126,14 +1169,23 @@ private:
     double virtual_pointer_y_  = 0.0;
     double notional_pointer_x_ = 0.0;
     double capture_restore_y_  = 0.0;
-    // THE COLUMN THE CURSOR VANISHED AT — capture_restore_y_'s x twin, seated
-    // at the same moment from the same position, and read only when the travel
-    // ran out (the rule is in the block above). "The press point" in the same
-    // loose sense the restore row is already "the press row": this is where the
-    // CAPTURE opened — the 8px threshold crossing for the nav drag, the press
-    // itself for the overview lane — which is the pixel the user watched the
-    // cursor disappear from, and so the honest reading of "where I left it".
-    double capture_press_x_    = 0.0;
+    // THE CAPTURE'S HOME — where the release's teleport and the ctrl-down pop
+    // both send the pointer when the travel has run out (both read it through
+    // the one expression notional_home_x(); the ran-out rule is in the block
+    // above). TWO WRITERS AND NO OTHERS: begin_pointer_capture seeds it, and
+    // rehome_capture_x() re-seats it at every ctrl-down.
+    //
+    // THE SEED IS THE CAPTURE'S START COLUMN — capture_restore_y_'s x twin,
+    // seated at the same moment from the same position: where the CAPTURE opened
+    // (the 8px threshold crossing for the nav drag, the press itself for the
+    // overview lane) and NOT the button press, which is deliberate — that is the
+    // pixel the user watched the cursor disappear from, and so the honest
+    // reading of "where I left it".
+    //
+    // IT IS NO LONGER A PRESS COLUMN, which is why the name moved (architect
+    // 2026-08-14): the home is the MOST RECENT DELIBERATE ANCHOR, the seed only
+    // standing until the first ctrl-down replaces it.
+    double capture_home_x_     = 0.0;
     // THE ACTIVE CAPTURE'S LATERAL FREEZE (contract at set_notional_x_frozen,
     // the only writer besides the two capture edges that clear it). Read at
     // exactly one place — the notional half of on_relative_pointer_motion —

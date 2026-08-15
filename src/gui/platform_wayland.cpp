@@ -3859,9 +3859,11 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
 
     // Seed the TRAVEL LEDGER from the current absolute position and remember
     // THE PIXEL THE CURSOR IS ABOUT TO VANISH FROM in both axes: the restore y
-    // (the row the cursor reappears at on release, always) and capture_press_x_
+    // (the row the cursor reappears at on release, always) and capture_home_x_
     // (the column it reappears at when the travel RAN OUT — the ran-out rule is
-    // stated with the fields). Its restore x otherwise rides the notional
+    // stated with the fields; the home is re-seated at every ctrl-down after
+    // this, so what is seeded here is only the home until the first one).
+    // Its restore x otherwise rides the notional
     // position, unless a strip drag overrides it with its anchor-stem column.
     // Each capture starts with no x override, so the grab-pan (no stem) falls
     // back to the notional x.
@@ -3873,7 +3875,7 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
     capture_restore_y_ = virtual_pointer_y_;
-    capture_press_x_   = virtual_pointer_x_;
+    capture_home_x_    = virtual_pointer_x_;
     capture_restore_x_override_.reset();
     // Every capture opens with the notional x LIVE. The nav drag asserts the
     // freeze immediately after this call when it crosses into a zoom phase, and
@@ -4004,6 +4006,22 @@ void GuiPlatform::set_notional_pointer_x(double surface_x) {
     note_notional_pointer_x(surface_x);
 }
 
+void GuiPlatform::rehome_capture_x() {
+    // The ctrl-down edge's whole position statement, in two halves that are ONE
+    // call because they must not be separable — the full contract, and why
+    // neither half needs a predicate, are at the declaration.
+    // Capture-guarded like its siblings: with no capture there is no home and
+    // nothing has clamped.
+    if (!pointer_captured_) return;
+    // THE POP: home if the travel ran out, a write-back of the value already
+    // there if it did not.
+    note_notional_pointer_x(notional_home_x());
+    // THE ADOPT: wherever the pointer now stands becomes the home. Read back
+    // out of the field rather than off the local, so the home takes the CLAMPED
+    // value and can never be seeded outside the window.
+    capture_home_x_ = notional_pointer_x_;
+}
+
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     if (!pointer_captured_ && !locked_pointer_) return;  // idempotent
 
@@ -4031,15 +4049,17 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // against the constrained surface, so commit it before destroying
             // the lock.
             // AND WHEN THE TRAVEL RAN OUT, THE CURSOR GOES HOME INSTEAD —
-            // back to the column the capture opened at, the pixel it vanished
-            // from (architect 2026-08-14, from the rig, having driven the
+            // back to the capture's HOME: the column it opened at, or, once a
+            // ctrl-down has re-seated it, wherever that edge last sent the
+            // pointer (capture_home_x_, rehome_capture_x)
+            // (architect 2026-08-14, from the rig, having driven the
             // lateral freeze: "works well, but I miss the teleport-on-clamp...
             // the release should restore the cursor at the press point, but
             // only when the pointer ended up clamped"). THE SPLIT IS THE
             // RULE, not the teleport: a drag that ends IN BOUNDS restores
             // where the hand left it — "if I just move a little bit, I'd
             // expect the pointer to move just a little bit" — and a drag that
-            // ends AT A WALL restores at the start column, because a wall is
+            // ends AT A WALL restores at the home column, because a wall is
             // where travel ran out rather than where the hand meant to be:
             // "if I move a whole bunch, like several screens worth, I'd expect
             // the mouse cursor to show back up where I left it". The question

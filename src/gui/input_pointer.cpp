@@ -1629,7 +1629,8 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     if (!sd.active || mods.ctrl == sd.zooming) return;
     sd.zooming = mods.ctrl;
     if (sd.zooming) {
-        // THE POINTER COMES HOME FIRST, IF ITS TRAVEL HAD RUN OUT (architect
+        // THE POINTER COMES HOME FIRST, IF ITS TRAVEL HAD RUN OUT, AND THIS
+        // SPOT THEN BECOMES HOME (architect
         // 2026-08-14, from the rig: "the same rule that we have for left click
         // mouse up on drag should now be applied to control down"). A pan that
         // ran several screens forward leaves the pointer PINNED at the window
@@ -1664,10 +1665,23 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // the popped position plus whatever the hand travelled after it. The
         // pointer is not in debt any more because it has been TOLD where it is.
         //
-        // NO CAPTURE, NO POP: set_notional_pointer_x is capture-guarded like its
+        // AND THE HOME MOVES WITH IT — the second half of the same call
+        // (GuiPlatform::rehome_capture_x), which is the architect's own refinement
+        // hours later: the place the cursor jumps to is THE PLACE HE LAST CHOSE
+        // TO ZOOM FROM, not the column the drag happened to begin at. "If I
+        // don't pin the mouse and I just stay in that one viewport, then I move
+        // the drag around and zoom somewhere else, that somewhere else should
+        // become the place where the cursor jumps to, both in the case of a
+        // release of a pinned drag and the start of a pinned zoom." Moving one
+        // field moves both readers, because both go through notional_home_x().
+        //
+        // NO CAPTURE, NO POP: the platform action is capture-guarded like its
         // siblings, so a ctrl-down on a still-sub-threshold press does nothing
         // here — which is right, nothing has clamped yet.
-        set_strip_capture_notional_x(gui.notional_home_x());
+        //
+        // THE TWO LINES READ IN ORDER: the pointer comes home and claims this
+        // spot as home, and THEN the pivot seats at the pointer.
+        set_strip_capture_rehome();
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at
         // ScrollDragState::anchor_sample). The notional column IS the
@@ -1712,6 +1726,17 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // nav_notional_col(), and the handover is idempotent under repeated
         // ctrl cycles inside one capture — that is why no ratchet exists,
         // rather than why one is tolerated.
+        //
+        // THIS EDGE IS DELIBERATELY NOT A RE-HOME, and the ruling is as given:
+        // the home is re-seated "every time control is pressed". So the stem's
+        // column becomes the pointer's POSITION here but not the capture's
+        // HOME. AN OPEN QUESTION RATHER THAN A DECISION, stated with the one
+        // case where the two differ: ctrl-up leaves the pointer at the stem,
+        // and if the very next thing is a pan straight into a wall, the
+        // FOLLOWING ctrl-down pops to the home the PREVIOUS ctrl-down left
+        // rather than to the stem the zoom ended on. Every other path
+        // self-corrects, the next ctrl-down re-homing to wherever the pointer
+        // then stands.
         set_strip_capture_notional_x(nav_stem_column_x());
         clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);

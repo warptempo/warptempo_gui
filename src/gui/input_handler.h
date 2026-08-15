@@ -553,6 +553,17 @@ struct GuiInputHandler {
     // the zoom->pan edge, from the one mode-sync body; a no-op while no
     // capture is live.
     std::function<void(double)> set_strip_capture_notional_x = [](double){};
+    // THE CTRL-DOWN RE-HOME (2026-08-14): the pointer comes HOME if its travel
+    // had run out, and wherever it then stands becomes the capture's home — one
+    // platform action doing both halves, because the pop reads the home and the
+    // adopt writes it, and a caller that could run one without the other would
+    // leave the release's teleport and the next ctrl-down's pop naming
+    // different columns inside one gesture (contract at
+    // GuiPlatform::rehome_capture_x). Fired once, at the pan->zoom edge, from
+    // the one mode-sync body; a no-op while no capture is live. The ctrl-UP
+    // edge deliberately does not re-home — the reason, and the one case where
+    // that shows, are recorded at that arm in sync_nav_drag_mode.
+    std::function<void()> set_strip_capture_rehome = []{};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,

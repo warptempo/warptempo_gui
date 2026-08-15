@@ -1207,7 +1207,9 @@ int main(int argc, char** argv) {
     // GuiPlatform::begin_pointer_capture); the nav drag's mid-gesture mode
     // switches ride the restore-x clear, the restore-kind re-stamp, the
     // lateral freeze that stops the zoom phase's discarded sideways travel
-    // moving the pointer's notional position, and the ctrl-up handover that
+    // moving the pointer's notional position, the ctrl-DOWN re-home that pops
+    // the pointer to the capture's home and adopts where it lands as the new
+    // one, and the ctrl-up handover that
     // gives that position the stem's own column before the override is
     // dropped (2026-08-14, the live-ctrl model).
     input_handler.begin_strip_pointer_capture = [&](GuiCursorKind restore_kind) {
@@ -1223,6 +1225,8 @@ int main(int argc, char** argv) {
         [&](bool frozen) { gui.set_notional_x_frozen(frozen); };
     input_handler.set_strip_capture_notional_x =
         [&](double sx) { gui.set_notional_pointer_x(sx); };
+    input_handler.set_strip_capture_rehome =
+        [&]() { gui.rehome_capture_x(); };
 
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
