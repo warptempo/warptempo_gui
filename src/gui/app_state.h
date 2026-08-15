@@ -821,11 +821,24 @@ struct StripDragState {
 // (the co-equality paragraph above), and what happened here is that the
 // difference stopped being real: the same hand motion means the same thing on
 // both, so there is nothing left to except.
-// THE SIGN: LEFT ZOOMS IN, RIGHT ZOOMS OUT (`new_level = zoom_level +
-// dx/kNavZoomPxPerLevel`, and a smaller level is deeper in). The derivation is
-// the plain drag's own sense — dragging LEFT advances the view forward through
-// the piece — plus the fact that a piece OPENS at full zoom out, so forward
-// motion means in.
+// THE SIGN: RIGHT ZOOMS IN, LEFT ZOOMS OUT (`new_level = zoom_level -
+// dx/kNavZoomPxPerLevel`, and a smaller level is deeper in). THE DERIVATION IS
+// THE PINCH THIS DRAG STANDS IN FOR (architect 2026-08-14, from the rig, on
+// the dominant hand's own evidence: "what it should really do is imitate what
+// the right hand does, because I'm right handed — on the touch screen, for
+// zoom, if I move my fingers apart, the right finger is moving to the right,
+// and that zooms in"): take the DOMINANT HAND'S FINGER as the one the mouse
+// imitates, and spreading the fingers apart moves it RIGHT and zooms IN while
+// bringing them together moves it left and zooms OUT.
+// THE SUPERSEDED DERIVATION IS KEPT VISIBLE because it is the
+// plausible-sounding wrong answer someone will re-derive: it reasoned from the
+// PAN — dragging LEFT advances the view forward through the piece, and a piece
+// OPENS at full zoom out, so forward motion ought to mean in. IT IS OUTRANKED
+// BY THE PINCH ARGUMENT BECAUSE THE ROTATION ITSELF CAME FROM THE PINCH: the
+// axis moved onto the horizontal to speak the sentence the glass already
+// speaks, so a sign taken from the pan would have had the two surfaces
+// disagree on the one thing the rotation existed to make agree. The touch
+// pinch needed no sign of its own either way, being a distance ratio.
 // THE RATE IS ITS OWN CONSTANT since the rotation (kNavZoomPxPerLevel, above):
 // the overview lane's still-vertical zoom keeps kZoomStripPxPerLevel, the two
 // axes having different room to work in.

@@ -1699,12 +1699,17 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
 // about the seated pivot, and dy is DISCARDED — the same axis the pan phase
 // reads, with the modifier deciding what horizontal travel MEANS rather than
 // which axis is live (architect 2026-08-14, THE ROTATION).
-// THE SIGN — LEFT ZOOMS IN, RIGHT ZOOMS OUT — is `zoom_level + dx/rate`, dx
-// being negative to the left and a SMALLER level being deeper in. Its
-// derivation is the plain drag's own sense: dragging LEFT is what advances the
-// view forward through the piece, and a piece OPENS at full zoom out, so
-// forward motion means in. (The cross-surface argument for rotating at all is
-// at the contract, not restated here.)
+// THE SIGN — RIGHT ZOOMS IN, LEFT ZOOMS OUT — is `zoom_level - dx/rate`, dx
+// being positive to the right and a SMALLER level being deeper in. Its
+// derivation is the PINCH this drag stands in for: take the dominant hand's
+// finger as the one the mouse imitates, and spreading the fingers apart moves
+// that finger RIGHT and zooms in. The pan-derived argument (dragging LEFT
+// advances the view forward, a piece opens at full zoom out, so forward means
+// in) is SUPERSEDED — it is outranked because the rotation itself came from
+// the pinch, so a sign taken from the pan would have made the two surfaces
+// disagree about the very thing the rotation existed to make agree. (Both
+// arguments in full, and the cross-surface case for rotating at all, are at
+// the contract; not restated here.)
 // AND THE POINTER'S OWN X IS FROZEN WITH IT, which is a SEPARATE STATEMENT
 // (architect 2026-08-14, from the rig: "I've been operating under the
 // assumption that the zoom control would lock the x position"). The rotation
@@ -1737,7 +1742,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 
     // Incremental off the live level, pre-clamped into the chokepoint's own
     // window exactly as apply_strip_drag_at pre-clamps.
-    double new_level = app.zoom_level + dx / kNavZoomPxPerLevel;
+    double new_level = app.zoom_level - dx / kNavZoomPxPerLevel;
     const double max_l = effective_max_zoom_level(W, total,
                                                   audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
@@ -6664,7 +6669,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (sd.zooming) {
             // The ZOOM phase: dx off the live level about the seated pivot
-            // (left zooms in), dy discarded, and the pointer's own notional x
+            // (right zooms in), dy discarded, and the pointer's own notional x
             // held still by the freeze asserted above — the level spends the
             // lateral travel and the position must not spend it twice
             // (apply_nav_zoom_at; the two are different statements).
