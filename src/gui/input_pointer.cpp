@@ -1582,6 +1582,31 @@ double GuiInputHandler::nav_notional_col() const {
         wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
+// TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's bounds and the
+// column the hidden cursor recentres on when its travel would carry it past
+// one. ONE OWNER for both capture sites (the nav drag's threshold crossing and
+// arm_strip_drag_at), fired immediately after each begin, so the two cannot
+// hand the platform different spans; the platform holds them for the capture's
+// life and knows nothing about a waveform (contract at
+// GuiPlatform::set_capture_wrap_span).
+// THE BOUNDS ARE THE WAVEFORM'S RATHER THAN THE WINDOW'S on the architect's own
+// reasoning — that this makes the behaviour identical at every resolution — and
+// they are the same INCLUSIVE pair the column clamp above uses: the first and
+// last painted columns, so a pointer resting exactly on either is inside and
+// stays there.
+// THE CENTRE IS DECIDED HERE AND PASSED because there is no exact centre column
+// to derive: the waveform's width is the window width floored to a multiple of
+// 16 and so always even, which puts the true midpoint between two columns (959
+// and 960 at the 1920 px deployment width). `wf.x + w/2` is the convention —
+// 960 there, one pixel RIGHT of the midpoint — and the choice is deliberate:
+// the alternative is one pixel left, and either is arbitrary at the same cost.
+void GuiInputHandler::tell_capture_wrap_span() const {
+    const GuiRect wf = waveform_area(app);
+    const double  lo = static_cast<double>(wf.x);
+    const double  hi = lo + (wf.w > 0 ? static_cast<double>(wf.w) - 1.0 : 0.0);
+    set_strip_capture_wrap_span(lo, hi, lo + static_cast<double>(wf.w / 2));
+}
+
 // THE ZOOM STEM'S COLUMN X — its column's ORIGIN in surface coordinates, not
 // a pixel centre, and the name says so because that distinction is the whole
 // reason this owner is shaped the way it is. One owner, two callers: the zoom
@@ -1629,59 +1654,16 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     if (!sd.active || mods.ctrl == sd.zooming) return;
     sd.zooming = mods.ctrl;
     if (sd.zooming) {
-        // THE POINTER COMES HOME FIRST, IF ITS TRAVEL HAD RUN OUT, AND THIS
-        // SPOT THEN BECOMES HOME (architect
-        // 2026-08-14, from the rig: "the same rule that we have for left click
-        // mouse up on drag should now be applied to control down"). A pan that
-        // ran several screens forward leaves the pointer PINNED at the window
-        // wall, and a pivot seated out there can only show half of what a zoom
-        // is for — his reason, stated whole: "zooming from a pinned stem
-        // position is essentially useless, because the whole point of zoom is
-        // to see what's going on on both sides, before and after your current
-        // viewport, and zooming while pinned only shows you half of that
-        // equation"; the clamp "is simply a measure to keep the cursor from
-        // going off screen and keep coherence there", never a place to pivot
-        // from. So the release's own teleport-on-clamp rule is applied one edge
-        // earlier, through the SAME expression (GuiPlatform::notional_home_x).
+        // CTRL MEANS ONE THING: IT SEATS THE STEM WHERE THE CURSOR IS, FULL
+        // STOP (architect 2026-08-14, from the rig, undoing his own ctrl-down
+        // pop of hours earlier along with the whole teleport-on-clamp family:
+        // "I want to undo that idea"). The pop existed because a runaway pan
+        // used to leave the pointer PINNED at a wall, where a pivot can show
+        // only half of what a zoom is for; the hidden cursor now WRAPS to the
+        // waveform's centre instead of pinning, so it is never out there to be
+        // brought back and the edge has nothing left to do but seat
+        // (GuiPlatform::notional_pointer_x_ carries the wrap's record).
         //
-        // THE SEAT RULE IS UNTOUCHED — the pivot still seats wherever the
-        // cursor is. What changed is where the cursor IS by the time it reads.
-        // THAT IS THE DIFFERENCE FROM THE SUPERSEDED SEAT (recorded at
-        // ScrollDragState::anchor_sample): that one moved the PIVOT to the home
-        // column and left the POINTER pinned, so the two disagreed and the
-        // cursor's homecoming had to be manufactured by the stem override; this
-        // moves the POINTER, and the seat, the stem, the ctrl-up handover and
-        // the release all follow from one honest position.
-        //
-        // UNCONDITIONAL BY CONSTRUCTION, so no "did we clamp" predicate is
-        // needed: notional_home_x() IS the notional position while the hand
-        // still has room, so an unclamped ctrl-down writes back the value
-        // already there and nothing moves. Same argument the ctrl-up handover
-        // already carries.
-        //
-        // IT CLEARS THE CLAMP VERDICT, which is correct and load-bearing: the
-        // write goes through note_notional_pointer_x with an interior value, so
-        // notional_x_clamped_ comes back false and a later release restores at
-        // the popped position plus whatever the hand travelled after it. The
-        // pointer is not in debt any more because it has been TOLD where it is.
-        //
-        // AND THE HOME MOVES WITH IT — the second half of the same call
-        // (GuiPlatform::rehome_capture_x), which is the architect's own refinement
-        // hours later: the place the cursor jumps to is THE PLACE HE LAST CHOSE
-        // TO ZOOM FROM, not the column the drag happened to begin at. "If I
-        // don't pin the mouse and I just stay in that one viewport, then I move
-        // the drag around and zoom somewhere else, that somewhere else should
-        // become the place where the cursor jumps to, both in the case of a
-        // release of a pinned drag and the start of a pinned zoom." Moving one
-        // field moves both readers, because both go through notional_home_x().
-        //
-        // NO CAPTURE, NO POP: the platform action is capture-guarded like its
-        // siblings, so a ctrl-down on a still-sub-threshold press does nothing
-        // here — which is right, nothing has clamped yet.
-        //
-        // THE TWO LINES READ IN ORDER: the pointer comes home and claims this
-        // spot as home, and THEN the pivot seats at the pointer.
-        set_strip_capture_rehome();
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at
         // ScrollDragState::anchor_sample). The notional column IS the
@@ -1726,17 +1708,6 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // nav_notional_col(), and the handover is idempotent under repeated
         // ctrl cycles inside one capture — that is why no ratchet exists,
         // rather than why one is tolerated.
-        //
-        // THIS EDGE IS DELIBERATELY NOT A RE-HOME, and the ruling is as given:
-        // the home is re-seated "every time control is pressed". So the stem's
-        // column becomes the pointer's POSITION here but not the capture's
-        // HOME. AN OPEN QUESTION RATHER THAN A DECISION, stated with the one
-        // case where the two differ: ctrl-up leaves the pointer at the stem,
-        // and if the very next thing is a pan straight into a wall, the
-        // FOLLOWING ctrl-down pops to the home the PREVIOUS ctrl-down left
-        // rather than to the stem the zoom ended on. Every other path
-        // self-corrects, the next ctrl-down re-homing to wherever the pointer
-        // then stands.
         set_strip_capture_notional_x(nav_stem_column_x());
         clear_strip_capture_restore_x();
         set_strip_capture_restore_kind(GuiCursorKind::Pan);
@@ -1915,6 +1886,12 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     // independent of what was on screen when the press landed (contract at
     // GuiPlatform::begin_pointer_capture).
     begin_strip_pointer_capture(GuiCursorKind::Zoom);
+    // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately after the
+    // begin and identically at both capture sites: the hidden cursor recentres
+    // on the waveform rather than pinning at its edge, and that is a property
+    // of THE CAPTURED POINTER rather than of a gesture (the contract is at
+    // set_strip_capture_wrap_span, input_handler.h).
+    tell_capture_wrap_span();
     // THE PRESS OWES THE STEM'S FIRST FRAME. A press is a DISCRETE command, so
     // the shape is full waveform-area damage rather than a narrow column (the
     // rule and the per-site table are at playhead_pixel_x, app_state.h); every
@@ -6844,6 +6821,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // re-stamps it through set_strip_capture_restore_kind above.
             begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
                                                    : GuiCursorKind::Pan);
+            // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately
+            // after the begin exactly as the overview lane's arm does it: the
+            // hidden cursor recentres on the waveform instead of pinning at
+            // its edge, uniformly for every capture whatever the gesture or
+            // the mode (contract at set_strip_capture_wrap_span,
+            // input_handler.h).
+            tell_capture_wrap_span();
             // AND THE MODE AT THE CROSSING ALSO SETS THE LATERAL FREEZE. The
             // capture opens unfrozen, and the ctrl edges a sub-threshold press
             // took spoke to no capture at all (the setters are capture-

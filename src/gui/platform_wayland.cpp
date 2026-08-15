@@ -2659,17 +2659,14 @@ void GuiPlatform::note_notional_pointer_x(double x) {
     // ONE clamp body for every writer of the pointer's notional position (the
     // contract, and why there is exactly one such position, are at the field).
     const double max_x = width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
-    const double clamped = std::clamp(x, 0.0, max_x);
-    // AND IT RECORDS WHETHER THE CLAMP ACTUALLY BIT, which is a different fact
-    // from "the position is at a bound" and is the one the capture release
-    // asks for: a hand can come honestly to rest on the last pixel, and only a
-    // write that had to be pulled back says TRAVEL RAN OUT. It belongs here
-    // because this is the one place that sees both the value handed in and the
-    // value stored — deriving it anywhere else would be a duplicate predicate
-    // over a number that no longer carries the answer (the ran-out restore
-    // rule is at the fields).
-    notional_x_clamped_ = clamped != x;
-    notional_pointer_x_ = clamped;
+    // AND IT IS THE BACKSTOP RATHER THAN THE RULE for a captured pointer: the
+    // capture's WRAP (on_relative_pointer_motion) folds an overshoot back to
+    // the waveform's centre before the value ever gets here, so this clamp
+    // bites only on a pathological delta larger than the whole span. This body
+    // is deliberately NOT the wrap's owner: it serves every writer, and an
+    // absolute delivery from the compositor is a real position that must be
+    // stored as given rather than folded.
+    notional_pointer_x_ = std::clamp(x, 0.0, max_x);
 }
 
 void GuiPlatform::deliver_motion(int x, int y) {
@@ -3858,12 +3855,8 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
         return;
 
     // Seed the TRAVEL LEDGER from the current absolute position and remember
-    // THE PIXEL THE CURSOR IS ABOUT TO VANISH FROM in both axes: the restore y
-    // (the row the cursor reappears at on release, always) and capture_home_x_
-    // (the column it reappears at when the travel RAN OUT — the ran-out rule is
-    // stated with the fields; the home is re-seated at every ctrl-down after
-    // this, so what is seeded here is only the home until the first one).
-    // Its restore x otherwise rides the notional
+    // THE ROW THE CURSOR IS ABOUT TO VANISH FROM (capture_restore_y_ — where it
+    // reappears on release, always). Its restore x rides the notional
     // position, unless a strip drag overrides it with its anchor-stem column.
     // Each capture starts with no x override, so the grab-pan (no stem) falls
     // back to the notional x.
@@ -3875,16 +3868,19 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
     capture_restore_y_ = virtual_pointer_y_;
-    capture_home_x_    = virtual_pointer_x_;
     capture_restore_x_override_.reset();
+    // And with a DEGENERATE wrap span until the GUI supplies this capture's
+    // own (set_capture_wrap_span, fired immediately after this call at both
+    // capture sites): a capture that was never told a span must not wrap on
+    // the previous one's numbers, and the degenerate span is simply skipped.
+    capture_wrap_lo_     = 0.0;
+    capture_wrap_hi_     = 0.0;
+    capture_wrap_centre_ = 0.0;
     // Every capture opens with the notional x LIVE. The nav drag asserts the
     // freeze immediately after this call when it crosses into a zoom phase, and
     // at every ctrl edge after that (contract at set_notional_x_frozen); the
     // overview lane's dual-axis strip drag never asserts it at all.
     notional_x_frozen_ = false;
-    // And with no clamp behind it, so the release's ran-out question is asked
-    // of THIS capture's own travel and can inherit nothing from before it.
-    notional_x_clamped_ = false;
 
     // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"
     // request; the tracked enter serial authorizes it. THE ONE set_cursor CALL
@@ -4006,20 +4002,15 @@ void GuiPlatform::set_notional_pointer_x(double surface_x) {
     note_notional_pointer_x(surface_x);
 }
 
-void GuiPlatform::rehome_capture_x() {
-    // The ctrl-down edge's whole position statement, in two halves that are ONE
-    // call because they must not be separable — the full contract, and why
-    // neither half needs a predicate, are at the declaration.
-    // Capture-guarded like its siblings: with no capture there is no home and
-    // nothing has clamped.
+void GuiPlatform::set_capture_wrap_span(double lo, double hi, double centre) {
+    // The GUI states the waveform's span and the column the pointer recentres
+    // on (contract at the declaration). Capture-guarded like its siblings —
+    // with no capture there is no wrap, the notional position then simply
+    // being the delivery funnel's.
     if (!pointer_captured_) return;
-    // THE POP: home if the travel ran out, a write-back of the value already
-    // there if it did not.
-    note_notional_pointer_x(notional_home_x());
-    // THE ADOPT: wherever the pointer now stands becomes the home. Read back
-    // out of the field rather than off the local, so the home takes the CLAMPED
-    // value and can never be seeded outside the window.
-    capture_home_x_ = notional_pointer_x_;
+    capture_wrap_lo_     = lo;
+    capture_wrap_hi_     = hi;
+    capture_wrap_centre_ = centre;
 }
 
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
@@ -4035,48 +4026,32 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // rather than past it. With no override (the grab-pan, which has no
             // stem) the x is notional_pointer_x_ — THE NOTIONAL POSITION, not
             // the travel ledger (architect 2026-08-14; the pair's contract is
-            // at the declaration). The raw travel used to be handed over
+            // at the declaration), and that is the WHOLE fork now: the position
+            // wraps to the waveform's centre under a capture instead of pinning
+            // at a bound, so it is always somewhere ordinary and there is no
+            // runaway case left to detect. The raw travel used to be handed over
             // unclamped on the argument that the compositor clamps an
             // off-window hint back on-screen anyway, and it does — but its
             // clamp is applied ONCE, to a number carrying the whole
             // off-window DEBT, so a drag that went 3000 px past the edge and
             // came 750 px back still restored AT the edge. The notional
-            // position clamps at every step and has no debt, so it leaves the
-            // edge the moment the hand reverses and the cursor comes back
-            // where the pointer notionally is (the out-there case is the fork
-            // below, which sends it home instead). The hint is surface-local,
-            // the same space as the stem's surface x, and is double-buffered
-            // against the constrained surface, so commit it before destroying
-            // the lock.
-            // AND WHEN THE TRAVEL RAN OUT, THE CURSOR GOES HOME INSTEAD —
-            // back to the capture's HOME: the column it opened at, or, once a
-            // ctrl-down has re-seated it, wherever that edge last sent the
-            // pointer (capture_home_x_, rehome_capture_x)
-            // (architect 2026-08-14, from the rig, having driven the
-            // lateral freeze: "works well, but I miss the teleport-on-clamp...
-            // the release should restore the cursor at the press point, but
-            // only when the pointer ended up clamped"). THE SPLIT IS THE
-            // RULE, not the teleport: a drag that ends IN BOUNDS restores
-            // where the hand left it — "if I just move a little bit, I'd
-            // expect the pointer to move just a little bit" — and a drag that
-            // ends AT A WALL restores at the home column, because a wall is
-            // where travel ran out rather than where the hand meant to be:
-            // "if I move a whole bunch, like several screens worth, I'd expect
-            // the mouse cursor to show back up where I left it". The question
-            // is asked of the last notional WRITE's clamp verdict rather than
-            // of the resting position, which is only a proxy for it and wrong
-            // both ways (the full rule, and why the bit self-clears the moment
-            // the hand comes back off the wall, are at the fields). An
-            // override outranks it: a stem column is a place the gesture
-            // NAMED, not a place travel ran to, which is what keeps the fork
-            // the PAN's answer without a gesture test anywhere in it.
-            // THE FORK'S EXPRESSION LIVES IN notional_home_x() rather than
-            // here, because the nav drag's CTRL-DOWN POP sends the pointer to
-            // that same place one edge earlier: "where the cursor comes home
-            // to" has to be one expression, or the pop and the release could
-            // name different columns.
+            // position clamps at every step and has no debt — and, under a
+            // capture, WRAPS to the waveform's centre rather than pinning at a
+            // bound, so however far the hand ran it is somewhere ordinary and
+            // the cursor comes back where the pointer notionally is. The hint
+            // is surface-local, the same space as the stem's surface x, and is
+            // double-buffered against the constrained surface, so commit it
+            // before destroying the lock.
+            // THERE IS NO SECOND ARM (architect 2026-08-14, from the rig:
+            // "whatever the virtual point is is where the cursor shows back
+            // up"). The teleport-on-clamp that used to send a pinned pointer
+            // back to the capture's home is gone with the pinning itself — the
+            // wrap removes the runaway case rather than answering it, so the
+            // release has one rule and needs no verdict to read (the full
+            // record is at notional_pointer_x_). An override still outranks
+            // this: a stem column is a place the gesture NAMED.
             const double restore_x =
-                capture_restore_x_override_.value_or(notional_home_x());
+                capture_restore_x_override_.value_or(notional_pointer_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),
@@ -4135,14 +4110,14 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // against surface rects — so an off-window value stored here was a
             // point no press could legitimately land on, and until the next
             // physical motion a click would route at it. The grab-pan was the
-            // one producer, setting no restore-x override. All THREE hint
-            // sources are in-surface as they are written (the notional position
-            // clamped at every step, a stem column that lives inside the
-            // waveform, and the capture's start column, which was a delivered
-            // position when it was seeded), so this clamp changes nothing it is
-            // handed — with one narrow arm left to earn it, a window NARROWED
-            // mid-capture, which leaves the two STORED columns measured against
-            // a width that is gone. It stays as the record's own guard either
+            // one producer, setting no restore-x override. BOTH hint sources
+            // are in-surface as they are written (the notional position wrapped
+            // into the waveform's span and clamped at every step, and a stem
+            // column that lives inside the waveform), so this clamp changes
+            // nothing it is handed — with one narrow arm left to earn it, a
+            // window NARROWED mid-capture, which leaves the stem column and the
+            // wrap span measured against a width that is gone. It stays as the
+            // record's own guard either
             // way, since the record's rule is about the record and not about
             // who supplied the value. It is
             // exact in every case that matters besides: if the compositor's
@@ -4259,8 +4234,60 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // the cursor there too. The freeze is a POSITION rule and touches no delta
     // — the ledger above is unconditional, so the gesture's own travel, its
     // per-event dx/dy and every clamp are exactly as they were. The bit is the
-    // GUI's to set; the contract is at set_notional_x_frozen.
-    if (!notional_x_frozen_) note_notional_pointer_x(notional_pointer_x_ + dx);
+    // GUI's to set; the contract is at set_notional_x_frozen. A frozen phase
+    // therefore never wraps either: it writes no position at all.
+    //
+    // AND IT WRAPS TO THE WAVEFORM'S CENTRE RATHER THAN PINNING AT A BOUND
+    // (architect 2026-08-14, from the rig: "what if instead we had the cursor,
+    // every time that it touches the bounds, teleport back to the centre of the
+    // waveform? So much of this workflow is centred and centre-oriented"). THE
+    // BOUNDS ARE THE WAVEFORM'S, not the window's, on his own reasoning that
+    // this makes the behaviour identical at every resolution; they and the
+    // centre are TOLD by the GUI (set_capture_wrap_span), this class knowing
+    // nothing about a waveform.
+    //   * CROSSING WRAPS, LANDING DOES NOT: a value exactly on lo or hi is
+    //     inside and stays, so a hand that comes honestly to rest on the last
+    //     pixel rests there. Only an event that would push the pointer PAST a
+    //     bound recentres it.
+    //   * THE OVERSHOOT IS CARRIED, so no travel is lost — the pointer moves
+    //     continuously through a folded space rather than being reset.
+    //   * ONE APPLICATION SUFFICES and there is deliberately no loop: a single
+    //     event's overshoot cannot realistically exceed the span, and
+    //     note_notional_pointer_x's clamp is the backstop for a pathological
+    //     delta that somehow did.
+    //   * A DEGENERATE SPAN IS SKIPPED (hi <= lo — an unset span before any
+    //     capture has supplied one, or a zero-width waveform); the clamp still
+    //     answers.
+    //   * A POSITION THAT IS ALREADY OUTSIDE THE SPAN when the capture opens
+    //     folds in on its very first event, in either direction. The one way
+    //     that happens is a pointer parked in the <=15px inert right gutter,
+    //     which exists only at a window width that is not a multiple of 16 —
+    //     neither host's. Recorded, not guarded: it is one event wide and it
+    //     lands the pointer somewhere legitimate.
+    // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: Wayland gives a client no
+    // pointer-warp request at all, so a VISIBLE cursor could never be moved by
+    // us — the only position we may ever state is the locked pointer's release
+    // hint — but while captured this position is our own bookkeeping entirely,
+    // so folding it costs nothing, needs no protocol, and cannot be seen.
+    // AND IT TOUCHES NOTHING ELSE, which is the property that makes it cheap:
+    // every gesture's dx comes from the TRAVEL LEDGER above, which is unbounded
+    // and untouched, so the wrap changes no view, no delta and no gesture
+    // arithmetic anywhere. It moves only where the cursor is understood to be,
+    // and therefore only where it reappears.
+    // THE TRANSFORM IS THE CALLER'S AND THE STORE IS THE OWNER'S: this is the
+    // one site that accumulates, so it is the one site where an overshoot
+    // exists; note_notional_pointer_x stays the ONE clamp body for every
+    // writer and never wraps a value it is handed.
+    if (!notional_x_frozen_) {
+        double nx = notional_pointer_x_ + dx;
+        if (capture_wrap_hi_ > capture_wrap_lo_) {
+            if (nx > capture_wrap_hi_)
+                nx = capture_wrap_centre_ + (nx - capture_wrap_hi_);
+            else if (nx < capture_wrap_lo_)
+                nx = capture_wrap_centre_ + (nx - capture_wrap_lo_);
+        }
+        note_notional_pointer_x(nx);
+    }
     // std::nearbyint, the project's one fractional->integer pixel conversion —
     // this is the platform boundary where a continuous pointer position becomes
     // the integer window pixel every gesture reads.

@@ -816,7 +816,9 @@ struct StripDragState {
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
 //     clamps at the song walls; the cursor reappears at the pointer's
 //     NOTIONAL position — never the travel ledger, a pan having no
-//     anchor-stem override), the crossing event folds the whole
+//     anchor-stem override, and that position WRAPS to the waveform's centre
+//     rather than pinning at its edge, so a pan of several screens still
+//     leaves the cursor somewhere ordinary), the crossing event folds the whole
 //     press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
 //     what suppresses follow for the session (the pan producer class at
@@ -907,21 +909,18 @@ struct StripDragState {
 // on_motion ALONE, which is why a released ctrl used to leave the stem
 // standing and the capture's restore stamped Zoom until motion resumed. THE
 // RE-SEAT RULE, one per direction, is what makes every switch jump-free:
-//   * ctrl DOWN (pan -> zoom): TWO STEPS, in this order. FIRST THE POINTER
-//     COMES HOME IF ITS TRAVEL RAN OUT — a pan that went several screens
-//     forward leaves it pinned at the window wall, and the release's own
-//     teleport-on-clamp rule is applied here too, through the one expression
-//     (GuiPlatform::notional_home_x), because a zoom seated at a wall can show
-//     only half of what a zoom is for (architect 2026-08-14; the reasoning is
-//     at the pop, sync_nav_drag_mode). It is unconditional: where nothing
-//     clamped, that expression is the notional position itself and the write
-//     moves nothing. THEN the pivot is SEATED at the pointer's current notional
-//     column, EVERY time — the SONG FRAME under that column (the seat and the
-//     withdrawn persist-across-toggles experiment are recorded at anchor_sample
-//     below) — and the anchor stem paints there, at the edge itself (the
-//     ctrl-armed press paints it from the PRESS, the stem-at-press ruling
-//     kept). The level itself cannot jump — dx is a per-event delta off the
-//     LIVE level.
+//   * ctrl DOWN (pan -> zoom): ONE STEP, and CTRL MEANS ONE THING — the pivot
+//     is SEATED at the pointer's current notional column, EVERY time, and
+//     nothing else happens at the edge (architect 2026-08-14, undoing his own
+//     ctrl-down pop of hours earlier: the hidden cursor WRAPS to the
+//     waveform's centre rather than pinning at a bound, so it is never
+//     stranded out there for a pop to bring home —
+//     GuiPlatform::notional_pointer_x_ carries that record). What is stored is
+//     the SONG FRAME under that column (the seat and the withdrawn
+//     persist-across-toggles experiment are recorded at anchor_sample below),
+//     and the anchor stem paints there, at the edge itself (the ctrl-armed
+//     press paints it from the PRESS, the stem-at-press ruling kept). The
+//     level itself cannot jump — dx is a per-event delta off the LIVE level.
 //   * ctrl UP (zoom -> pan): THE GESTURE'S ARITHMETIC re-seats nothing,
 //     structurally — the pan is incremental on dx from last_x, which BOTH
 //     phases keep current (the rotation put both phases on that one field, so
@@ -1098,26 +1097,20 @@ struct ScrollDragState {
     // hand had room, the capture's start column once the travel ran out — on
     // the reasoning that a runaway drag's cursor "is going to end up
     // teleporting there anyways", so the pivot should meet it at the grab
-    // column. THE PREMISE IS FALSE. The teleport-on-clamp is THE PAN'S ANSWER
-    // ONLY: the zoom phase drives the stem override on every one of its events
-    // and the override OUTRANKS the clamp fork, so a drag that zoomed at all
-    // restores the cursor ON THE STEM and never reaches the fork. Seating the
-    // pivot at the grab column therefore did not agree with a teleport that was
-    // going to happen — it MANUFACTURED one, by putting the stem there for the
-    // cursor to follow.
-    // THE CTRL-DOWN POP IS NOT THAT RULING COMING BACK, and the difference is
-    // the whole of why it works: THAT one moved the PIVOT and left the POINTER
-    // pinned at the wall, so the two disagreed and the cursor's homecoming was
-    // manufactured by the stem override; THIS one moves the POINTER — the
-    // release's teleport-on-clamp rule applied one edge earlier, through the
-    // same expression — and leaves the seat rule ("wherever the cursor is")
-    // untouched, so the seat, the stem, the ctrl-up handover and the release
-    // all follow from one honest position. It also settles the consequence the
-    // superseded ruling had accepted, from the other side: a runaway pan
-    // FOLLOWED BY A ZOOM now brings the cursor home at the ctrl-down and pivots
-    // there, rather than leaving it at the wall the hand ran it into. The PAN
-    // half is untouched throughout — "same rules as current, those are pretty
-    // intuitive and work well".
+    // column. THE PREMISE WAS FALSE EVEN THEN. That teleport was THE PAN'S
+    // ANSWER ONLY: the zoom phase drives the stem override on every one of its
+    // events and the override OUTRANKED the clamp fork, so a drag that zoomed
+    // at all restored the cursor ON THE STEM and never reached the fork.
+    // Seating the pivot at the grab column therefore did not agree with a
+    // teleport that was going to happen — it MANUFACTURED one, by putting the
+    // stem there for the cursor to follow.
+    // THE QUESTION IS MOOT NOW EITHER WAY: the release has no fork left to
+    // read. The hidden pointer WRAPS to the waveform's centre instead of
+    // pinning at a bound, so it is never stranded and the cursor simply comes
+    // back where the virtual pointer is (GuiPlatform::notional_pointer_x_).
+    // Both the ctrl-down pop that briefly answered the same worry and the
+    // teleport it was derived from are deleted, and the seat is the whole of
+    // what ctrl does.
     // Meaningful only while `zooming`. A PERSISTENT pivot (seated once per
     // gesture and kept across every toggle) was built and WITHDRAWN the same
     // day, and the reason is recorded so it is not re-derived: it was a
