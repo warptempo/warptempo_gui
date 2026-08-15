@@ -3713,8 +3713,12 @@ void GuiPlatform::end_touch_nav_gesture(bool deliver_final_frame) {
     //     fires iff an update was delivered. The asymmetry with the POINTER
     //     translation's hard end is deliberate: that release MUST deliver (a
     //     vanished hold would latch the drag-modal gate with no event left to
-    //     lift it), while dropped nav motion wedges nothing — the gesture is
-    //     stateless per frame and holds nothing in the GUI open.
+    //     lift it), while dropped nav motion wedges nothing — nothing the
+    //     gesture leaves in the GUI is held OPEN. Its one GUI-side record
+    //     since 2026-08-14 is the pinch's seated pivot (TouchNavZoomState),
+    //     and it cannot survive a hard end: the seat exists only where a frame
+    //     was applied, which is exactly when this end hook is owed, and the
+    //     hook clears it.
     if (deliver_final_frame && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
         deliver_touch_nav_frame();

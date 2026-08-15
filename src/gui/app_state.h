@@ -90,11 +90,17 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // overview lane's ~500 px of vertical, and one constant would have made a
 // retune of either gesture silently move the other.
 //
-// 60 IS THE VERTICAL VALUE CARRIED OVER UNCHANGED as a starting point — a first
-// guess, not a measurement. At this rate the horizontal gesture crosses the
-// whole [kMinZoom, effective ceiling] span in roughly 960 px of travel.
-// Architect-tunable on the rig, exactly as the vertical one always was.
-constexpr double kNavZoomPxPerLevel = 60.0;
+// 90 IS A MEASURED RETUNE, not a carried-over guess (architect 2026-08-14,
+// having driven the rotation on the rig: "the zoom is a little too fast now...
+// it's not horribly too fast, it's just slightly too fast"). It supersedes the
+// 60 the rotation shipped with, which was the VERTICAL constant's value taken
+// over unchanged as a first guess — and the reason a first guess ran fast is
+// the room: the horizontal axis has roughly four times the overview lane's
+// vertical travel available on a 1920x1080 panel, so the same px-per-level
+// spends the whole span far sooner in the hand. At 90 the gesture crosses the
+// whole [kMinZoom, effective ceiling] span in roughly 1440 px of travel rather
+// than 960. Architect-tunable on the rig, exactly as the vertical one is.
+constexpr double kNavZoomPxPerLevel = 90.0;
 
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -1162,6 +1168,53 @@ struct OverviewDragState {
     // per-event zoom's anchor (anchor_x = that bound's own window column,
     // 0 for the start, area.w for the end).
     double fixed_edge_sample = 0.0;
+};
+
+// THE TWO-FINGER PINCH'S SEATED PIVOT — the touch nav gesture's FIRST and only
+// GUI-side record (architect 2026-08-14, from the rig, carrying the mouse's own
+// song-anchored pivot onto glass: "when the two-finger touch is first
+// registered, it picks the point on the waveform, and the zoom pivot stays
+// there no matter where the two fingers move on the screen"). Until this the
+// gesture kept nothing between frames — every frame was applied whole and
+// forgotten, the pivot re-derived from the LIVE centroid each time — and that
+// sentence is retired here rather than left standing.
+//
+// WHY IT COMES NOW, and it is exactly the case the mouse's own fix answered
+// (ScrollDragState below): away from the walls a live centroid and a held frame
+// name the same point, because a zoom has no pan term and the content under a
+// fixed column cannot move on its own. AT A WALL — the viewport saturated at
+// frame 0 or at the right edge — the view is determined by the level alone, so
+// the song slides out from under a pivot pinned to the glass and pinching back
+// out never returns what it came from. A HELD FRAME keeps its grip and lets its
+// COLUMN slide across the glass instead, which is what makes the pinch
+// reversible. THE PARITY ARGUMENT IS THE ARCHITECT'S OWN: "I imagine my right
+// hand as being the same right hand on the touchpad, and then the left hand
+// reaches for the control key and implicitly does the opposite... I'm keeping
+// the same mental model on the laptop as I would like to have on the touchpad."
+//
+// LIFECYCLE (the body is apply_touch_nav_update, input_pointer.cpp):
+//   * MEANINGFUL ONLY while a two-finger phase is live.
+//   * SEATED at the first APPLIED two-finger frame — after the wheel_context
+//     refusal and the exact-no-op return, so a frame the gesture refuses seats
+//     nothing — at the song frame under THAT frame's centroid column.
+//   * CLEARED by any frame that ARRIVES not-two-finger (the downgrade to the
+//     survivor's pan), refused or not — the clear leads the body while the
+//     seat follows the refusal, the two halves deliberately on opposite sides
+//     of it (the reasoning is at the site) — and at end_touch_nav, every end
+//     included, so a later upgrade re-seats rather than inheriting a stale
+//     anchor.
+// THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
+// viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
+// and REBINDS this field to that pixel's content — apply_nav_zoom_at's pivot
+// block exactly, edge trick included, which the stateless model did without
+// because it had no persistent anchor for an off-screen column to corrupt.
+// NO RE-JOIN WINDOW is built for a panel that drops a contact mid-pinch: the
+// downgrade clears the seat and the next upgrade takes a fresh one, which is
+// the architect's explicit ruling for the second time (touch.md's two-finger
+// section carries the first and his reason).
+struct TouchNavZoomState {
+    bool   seated        = false;
+    double anchor_sample = 0.0;   // the held SONG frame (active domain)
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
@@ -2779,6 +2832,13 @@ struct AppState {
     // drags (contract at OverviewDragState). Cleared on button release / lost
     // button, by the force-end finalizer, and on file load.
     OverviewDragState overview_drag;
+
+    // The touch two-finger pinch's HELD PIVOT (contract at TouchNavZoomState).
+    // Not a pointer gesture and so deliberately not in the pointer-gesture
+    // clear lists: it is seated and cleared by the touch nav body itself and by
+    // end_touch_nav, which the platform fires on every end — a finger lift,
+    // wl_touch.cancel and touch-capability loss alike.
+    TouchNavZoomState touch_nav_zoom;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.

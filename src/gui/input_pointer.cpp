@@ -1971,11 +1971,24 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
 // at the declaration (input_handler.h). One delivered frame = at most one
 // placement through the strip-drag family's own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
+    // THE PINCH'S SEATED PIVOT IS CLEARED BY ANY FRAME THAT IS NOT TWO-FINGER,
+    // and that clear LEADS THE BODY — it is the one thing here that happens
+    // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
+    // HALVES SIT ON OPPOSITE SIDES OF THE REFUSAL DELIBERATELY: SEATING is a
+    // navigation act and takes the refusal with everything else (the ordering
+    // rule at the fork below), while CLEARING is bookkeeping — a one-finger
+    // frame means the two-finger phase is OVER whether or not this frame gets
+    // to navigate, and holding the anchor through a refused stretch of the
+    // survivor's pan would let a later upgrade zoom about a song frame the
+    // fingers had long since left behind. Refusing to navigate is not refusing
+    // to notice that the pinch ended.
+    if (!f.two_finger) app.touch_nav_zoom = TouchNavZoomState{};
+
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
     // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
-    // navigates exactly the wheel's two surfaces. The gesture keeps no state
-    // between frames, so a refused frame simply does nothing.
+    // navigates exactly the wheel's two surfaces. A refused frame navigates
+    // nothing AND SEATS NOTHING.
     if (wheel_context(f.x, f.y) <= 0) return;
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
@@ -2009,18 +2022,60 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // wheel applies at on_wheel's top).
     app.double_click = DoubleClickCandidate{};
 
-    // The content under the PREVIOUS centroid column (x - eff_dx) is what
-    // the finger holds; the anchor column convention is arm_strip_drag_at's
-    // own (window x against the live viewport — the waveform starts at the
-    // window edge, and no clamp into [0, W-1] is needed: there is no
-    // persistent anchor for an off-area column to corrupt, and the placement
-    // below runs through the viewport chokepoint's own clamps either way).
-    // On a TWO-finger frame eff_dx is 0, so the anchor is the content under
-    // the CURRENT centroid — the pinch's pivot, and no pan.
     const double spp_old = current_samples_per_pixel(app, audio);
-    const double anchor_sample =
-        static_cast<double>(app.viewport_start_sample) +
-        (static_cast<double>(f.x) - eff_dx) * spp_old;
+
+    // THE PIVOT, and the two finger counts answer it DIFFERENTLY since
+    // 2026-08-14 (the seated pinch; contract at TouchNavZoomState,
+    // app_state.h). THE SEAT'S ORDERING RULE: everything above this point is
+    // the frame's admission — the wheel refusal, the exact-no-op return and the
+    // geometry guard — so the seat is taken by the FIRST FRAME THAT ACTUALLY
+    // NAVIGATES, which keeps the gesture's "it navigates exactly the wheel's
+    // two surfaces" property intact.
+    double anchor_sample = 0.0;   // active-domain song frame the pivot holds
+    double anchor_col    = 0.0;   // its column under the LIVE viewport
+    const double vp = static_cast<double>(app.viewport_start_sample);
+    if (!f.two_finger) {
+        // ONE FINGER — the phone model's pan, unchanged and stateless: the
+        // content under the PREVIOUS centroid column (x - eff_dx) is what the
+        // finger holds, placed at the CURRENT centroid. The anchor column
+        // convention is arm_strip_drag_at's own (window x against the live
+        // viewport — the waveform starts at the window edge), and no clamp is
+        // needed on a pan: nothing persists between frames for an off-area
+        // column to corrupt, and the placement runs through the viewport
+        // chokepoint's own clamps either way. The seat is already cleared at
+        // the top of the body — which is what makes the DOWNGRADE clean: a
+        // finger lifting from the pair continues as this pan, and the next
+        // upgrade takes a FRESH pivot rather than inheriting the dead pinch's.
+        anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
+        anchor_col    = static_cast<double>(f.x);
+    } else {
+        // TWO FINGERS — THE PINCH'S PIVOT IS THE POINT ON THE WAVEFORM THE
+        // GESTURE GRABBED, held for the phase's life: seated once at the song
+        // frame under this frame's centroid, then re-derived as a COLUMN
+        // against the live viewport every frame afterwards. The centroid's own
+        // travel is discarded by the fork above (eff_dx is 0), so moving both
+        // fingers together still applies nothing.
+        TouchNavZoomState& z = app.touch_nav_zoom;
+        if (!z.seated) {
+            z.anchor_sample = vp + static_cast<double>(f.x) * spp_old;
+            z.seated        = true;
+        }
+        // THE EDGE TRICK, apply_nav_zoom_at's pivot block mirrored — and it
+        // arrives WITH the seat rather than before it. The stateless model
+        // deliberately did without a clamp because there was no persistent
+        // anchor for an off-area column to corrupt; there is one now, so that
+        // sentence is superseded: a pivot column pushed outside [0, W-1] pins
+        // at the edge pixel and REBINDS the held frame to that pixel's
+        // content, which is what keeps the zoom's focus on screen exactly as it
+        // does for the mouse.
+        anchor_col = (z.anchor_sample - vp) / spp_old;
+        const double clamped = clamp_col_into_waveform(wf_area, anchor_col);
+        if (clamped != anchor_col) {
+            z.anchor_sample = vp + clamped * spp_old;
+            anchor_col      = clamped;
+        }
+        anchor_sample = z.anchor_sample;
+    }
 
     // The distance ratio maps to the level LOGARITHMICALLY — spreading the
     // fingers by 2x is one level in (spp halves, so the content between the
@@ -2035,15 +2090,16 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // ONE placement carries whichever axis is live: the anchor lands at the
-    // CURRENT centroid column under the new level, so a one-finger frame's
-    // centroid delta pans and a two-finger frame's ratio zooms about the
-    // centroid — the other term is a literal no-op by the fork above.
-    // Everything downstream is the strip drag's own — level clamp, viewport
-    // clamp, the synchronous per-frame rebuild, the either-axis follow
-    // suppression, and the mid-gesture true-no-op skip.
-    viewport.apply_strip_drag_zoom(new_level, anchor_sample,
-                                   static_cast<double>(f.x),
+    // ONE placement carries whichever axis is live, and the fork above decided
+    // both of its anchor terms: a ONE-FINGER frame places the content under the
+    // previous centroid at the CURRENT centroid column, which is the pan, while
+    // a TWO-FINGER frame places the HELD frame back at its own re-derived
+    // column, which is a pure zoom about the grabbed point (the ratio is 1.0 on
+    // the first and the centroid delta is 0 on the second, so the off term is a
+    // literal no-op either way). Everything downstream is the strip drag's own
+    // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
+    // either-axis follow suppression, and the mid-gesture true-no-op skip.
+    viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false);
 }
 
@@ -2051,8 +2107,14 @@ void GuiInputHandler::end_touch_nav() {
     // Any end commits, and every applied frame already rebuilt synchronously;
     // the one deferred piece is the playback predictor (mid-gesture frames
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
-    // own tail. The gesture carries no GUI-side record to clear: every frame
-    // is applied whole and forgotten.
+    // own tail.
+    // AND THE PINCH'S SEATED PIVOT IS CLEARED HERE, the gesture's one GUI-side
+    // record since 2026-08-14 (TouchNavZoomState, app_state.h — the old "every
+    // frame is applied whole and forgotten" is retired with it). Every end
+    // reaches this one body — a finger lift, wl_touch.cancel and
+    // touch-capability loss alike — so no later gesture can inherit a dead
+    // pinch's anchor; a fresh pair seats its own.
+    app.touch_nav_zoom = TouchNavZoomState{};
     if (playback.is_playing()) playback.resync_predictor();
 }
 

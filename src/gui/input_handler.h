@@ -681,12 +681,39 @@ struct GuiInputHandler {
     // barely changes the finger gap and therefore does approximately nothing,
     // which is the intended answer rather than a classified outcome.
     //
-    // THE APPLICATION IS PER-FRAME ANCHORED, the strip drag's own: the
-    // content under the PREVIOUS centroid column is placed at the CURRENT
-    // centroid column under the new level — so a one-finger frame's centroid
-    // delta pans, and a two-finger frame (delta discarded, previous column =
-    // current column) zooms about the centroid, in one placement either way.
-    // The level maps a distance ratio LOGARITHMICALLY (new_level = level -
+    // THE APPLICATION IS ONE ANCHORED PLACEMENT PER FRAME, the strip drag's
+    // own, and the two finger counts supply its anchor differently.
+    // ONE FINGER — PER-FRAME ANCHORED AND STATELESS: the content under the
+    // PREVIOUS centroid column is placed at the CURRENT centroid column under
+    // the new level, which is the pan, and nothing survives the frame.
+    // TWO FINGERS — A SEATED PIVOT, HELD FOR THE PHASE (architect 2026-08-14,
+    // from the rig, carrying the mouse's own song-anchored pivot onto glass:
+    // "when the two-finger touch is first registered, it picks the point on the
+    // waveform, and the zoom pivot stays there no matter where the two fingers
+    // move on the screen"). THE MODEL, stated here once (the state's lifecycle
+    // is at TouchNavZoomState, app_state.h; the arithmetic in the body):
+    //   * THE PIVOT IS THE POINT ON THE WAVEFORM THE PINCH GRABBED — a song
+    //     frame seated at the first applied two-finger frame's centroid and
+    //     held for the phase, its COLUMN re-derived against the live viewport
+    //     every frame.
+    //   * MOVING BOTH FINGERS TOGETHER STILL APPLIES NOTHING: the ratio is 1
+    //     and the centroid's travel is discarded, the standing zoom-only
+    //     ruling — the seat changes what the zoom pivots ABOUT, not what the
+    //     gesture responds TO.
+    //   * MOVING ONE FINGER zooms about the GRABBED point rather than about
+    //     the moving midpoint between the fingers.
+    //   * AT A WALL — the viewport saturated at frame 0 or the right edge — the
+    //     held frame KEEPS ITS GRIP and its column slides across the glass,
+    //     which is what makes the pinch reversible; a live centroid let the
+    //     audio drift out from under the fingers, so pinching back out never
+    //     returned what it came from. The mouse's own fix, and the parity is
+    //     the point: the right hand plays the same part on both surfaces and
+    //     ctrl is the left hand doing implicitly what the second finger does.
+    //   * A column pushed off the waveform CLAMPS to the edge pixel and REBINDS
+    //     the held frame to that pixel's content (apply_nav_zoom_at's edge
+    //     trick), the one lasting mutation of the anchor.
+    // WHAT THIS DOES NOT CHANGE: the fingers still zoom by their DISTANCE RATIO
+    // ALONE. The level maps that ratio LOGARITHMICALLY (new_level = level -
     // log2(ratio)) — no feel constant: doubling the finger gap is exactly one
     // zoom level in, so the content between the fingers tracks the fingers.
     //
@@ -769,8 +796,10 @@ struct GuiInputHandler {
     // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
     // or touch-capability loss; the platform fires this only if an update was
     // delivered): one predictor resync, the grab-pan release's own tail — each
-    // applied frame already rebuilt synchronously, and the gesture keeps no
-    // GUI-side record to clear.
+    // applied frame already rebuilt synchronously — PLUS the pinch's seated
+    // pivot cleared, the gesture's one GUI-side record since 2026-08-14
+    // (TouchNavZoomState, app_state.h), so a later pair seats afresh instead of
+    // inheriting a dead pinch's anchor.
     void end_touch_nav();
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the
