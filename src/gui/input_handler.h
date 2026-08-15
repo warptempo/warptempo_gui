@@ -798,9 +798,25 @@ struct GuiInputHandler {
     // delivered): one predictor resync, the grab-pan release's own tail — each
     // applied frame already rebuilt synchronously — PLUS the pinch's seated
     // pivot cleared, the gesture's one GUI-side record since 2026-08-14
-    // (TouchNavZoomState, app_state.h), so a later pair seats afresh instead of
-    // inheriting a dead pinch's anchor.
+    // (TouchNavZoomState, app_state.h) through clear_touch_zoom_seat below, so
+    // a later pair seats afresh instead of inheriting a dead pinch's anchor —
+    // and so the anchor stem it gates is rubbed out at every end.
     void end_touch_nav();
+    // THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the two
+    // bare assignments it replaces (2026-08-14, when the pinch became the
+    // anchor stem's third producer; the stem's contract is at
+    // paint_strip_drag_anchor, paint_handler.cpp). It is a BODY for two
+    // reasons: (1) the EARLY RETURN makes the damage fire exactly ONCE per
+    // phase however often the clear is reached, and it is reached on every
+    // one-finger frame of the survivor's pan; (2) the damage is owed at all
+    // because a clear can land on a frame that APPLIES NOTHING and therefore
+    // rebuilds nothing — a survivor pan refused off the wheel's surfaces is
+    // exactly that frame, and it is the case the clear's own ordering rule
+    // already names (the clear leads the body, above the refusal). Full
+    // waveform-area damage, the discrete shape the mouse's own mode edges
+    // spell. Its two callers are apply_touch_nav_update's top and
+    // end_touch_nav.
+    void clear_touch_zoom_seat();
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the
     // eighth glass ruling 2026-08-12, and to the WHOLE WAVEFORM by the

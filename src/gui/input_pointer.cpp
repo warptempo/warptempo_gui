@@ -1982,7 +1982,12 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // survivor's pan would let a later upgrade zoom about a song frame the
     // fingers had long since left behind. Refusing to navigate is not refusing
     // to notice that the pinch ended.
-    if (!f.two_finger) app.touch_nav_zoom = TouchNavZoomState{};
+    // THE CLEAR OWES THE ERASE since the pinch became the anchor stem's third
+    // producer (2026-08-14) — and that is exactly why it is a body with an
+    // early return rather than an assignment here: this line runs on EVERY
+    // one-finger frame, while the stem must be rubbed out once, on the frame
+    // the seat actually dies (contract at clear_touch_zoom_seat).
+    if (!f.two_finger) clear_touch_zoom_seat();
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -2059,6 +2064,22 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         if (!z.seated) {
             z.anchor_sample = vp + static_cast<double>(f.x) * spp_old;
             z.seated        = true;
+            // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse arms'
+            // own rule (arm_strip_drag_at / arm_nav_zoom_press) reaching the
+            // pinch — the seat is the anchor stem's gate since 2026-08-14
+            // (paint_strip_drag_anchor, paint_handler.cpp) and it is NOT free.
+            // The tempting claim is that a seating frame is by construction an
+            // APPLIED frame whose synchronous rebuild paints the stem, and it is
+            // FALSE AT EXACTLY THE PLACE THE STEM WAS ASKED FOR — the edges: the
+            // guards above only prove the frame carries a real ratio, while
+            // apply_strip_drag_zoom's own MID-GESTURE TRUE-NO-OP return drops any
+            // frame whose post-clamp level AND viewport both stand, which is
+            // every frame of a pinch that begins saturated at a wall (pinching
+            // further out at full zoom-out, or further in at kMinZoom). Without
+            // this line such a pinch would show no stem at all until it turned
+            // around. Once per phase, and it merges with the apply's own damage
+            // on every frame that does move.
+            viewport.invalidate_waveform_area();
         }
         // THE EDGE TRICK, apply_nav_zoom_at's pivot block mirrored — and it
         // arrives WITH the seat rather than before it. The stateless model
@@ -2103,6 +2124,16 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
                                    /*final=*/false);
 }
 
+// THE SEATED PINCH'S CLEAR AND ITS ERASE (contract at the declaration,
+// input_handler.h): the early return is what makes the damage fire exactly
+// once per phase, and the damage is owed because a clear can land on a frame
+// that applies nothing and so rebuilds nothing.
+void GuiInputHandler::clear_touch_zoom_seat() {
+    if (!app.touch_nav_zoom.seated) return;
+    app.touch_nav_zoom = TouchNavZoomState{};
+    viewport.invalidate_waveform_area();
+}
+
 void GuiInputHandler::end_touch_nav() {
     // Any end commits, and every applied frame already rebuilt synchronously;
     // the one deferred piece is the playback predictor (mid-gesture frames
@@ -2113,8 +2144,11 @@ void GuiInputHandler::end_touch_nav() {
     // frame is applied whole and forgotten" is retired with it). Every end
     // reaches this one body — a finger lift, wl_touch.cancel and
     // touch-capability loss alike — so no later gesture can inherit a dead
-    // pinch's anchor; a fresh pair seats its own.
-    app.touch_nav_zoom = TouchNavZoomState{};
+    // pinch's anchor; a fresh pair seats its own. It goes through
+    // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
+    // rebuilds nothing of its own, so without the damage a hard end would
+    // leave the pivot mark painted over a settled view.
+    clear_touch_zoom_seat();
     if (playback.is_playing()) playback.resync_predictor();
 }
 

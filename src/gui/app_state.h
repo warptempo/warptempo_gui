@@ -90,17 +90,32 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // overview lane's ~500 px of vertical, and one constant would have made a
 // retune of either gesture silently move the other.
 //
-// 90 IS A MEASURED RETUNE, not a carried-over guess (architect 2026-08-14,
-// having driven the rotation on the rig: "the zoom is a little too fast now...
-// it's not horribly too fast, it's just slightly too fast"). It supersedes the
-// 60 the rotation shipped with, which was the VERTICAL constant's value taken
-// over unchanged as a first guess — and the reason a first guess ran fast is
-// the room: the horizontal axis has roughly four times the overview lane's
-// vertical travel available on a 1920x1080 panel, so the same px-per-level
-// spends the whole span far sooner in the hand. At 90 the gesture crosses the
-// whole [kMinZoom, effective ceiling] span in roughly 1440 px of travel rather
-// than 960. Architect-tunable on the rig, exactly as the vertical one is.
-constexpr double kNavZoomPxPerLevel = 90.0;
+// 240 IS SET TO MATCH THE PINCH, which is the derivation that matters and not
+// the ladder of numbers behind it (architect 2026-08-14, from the rig, having
+// driven both surfaces one after the other: "ninety pixels is still a little
+// too fast compared to the touch screen; the touch screen rate of motion is
+// very natural and the mouse is too fast... the waveform is clamped at five
+// hundred, so let's try two hundred and forty, for a multiple of the sixty").
+// THE GLASS IS THE REFERENCE and the desk is tuned to it: a pinch's level is
+// log2 of the FINGER-GAP RATIO, so its px-per-level is not a constant at all —
+// it depends where the gap starts — but at a comfortable gap one level costs
+// roughly 150-250 px of single-finger travel, and 240 places the mouse hand
+// inside that band. That band is what "the touch screen rate is very natural"
+// was measuring, so the two surfaces now move the view at about the same rate
+// for the same hand motion, which is the whole point of the rotation that put
+// the desk's zoom on the horizontal in the first place.
+//
+// WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [kMinZoom, effective
+// ceiling] span is now roughly 3840 px of travel — two screen widths at the
+// deployment size — and that is fine BECAUSE OF THE CAPTURE. The notional-x
+// freeze (its record is at GuiPlatform::set_notional_x_frozen) is what makes
+// the zoom phase's sideways travel unlimited: the pointer's notional position
+// stops accumulating while the ctrl phase spends that travel on the level, so
+// the hand never runs into a window wall and the span is reachable inside one
+// gesture whatever the screen is.
+//
+// Architect-tunable on the rig, exactly as the vertical one is.
+constexpr double kNavZoomPxPerLevel = 240.0;
 
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -1212,6 +1227,14 @@ struct OverviewDragState {
 // downgrade clears the seat and the next upgrade takes a fresh one, which is
 // the architect's explicit ruling for the second time (touch.md's two-finger
 // section carries the first and his reason).
+// THE SEAT IS ALSO THE ANCHOR STEM'S GATE since 2026-08-14, the pinch being
+// the stem's THIRD producer (paint_strip_drag_anchor, paint_handler.cpp): the
+// gesture record and nothing else, exactly the other two producers' shape. BOTH
+// EDGES OWE DAMAGE and neither is free: the SEAT damages at its own site (a
+// pinch beginning saturated at a wall is dropped by apply_strip_drag_zoom's
+// true-no-op return, so its stem would otherwise never appear), and the CLEAR
+// through clear_touch_zoom_seat (a clear can land on a frame that applies
+// nothing at all).
 struct TouchNavZoomState {
     bool   seated        = false;
     double anchor_sample = 0.0;   // the held SONG frame (active domain)

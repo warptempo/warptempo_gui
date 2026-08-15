@@ -3859,46 +3859,77 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
 
 // Paints the anchor stem (the Ableton pivot affordance) at the live zoom
-// gesture's current anchor column, full waveform height. TWO PRODUCERS, ONE
-// STEM since 2026-08-14: the overview lane's ctrl strip drag (strip_drag, the
-// gesture's whole life) and THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while
-// `zooming` — from a ctrl-armed press, or from a ctrl-down edge mid-drag, and
-// gone again at the ctrl-up edge; the mode's contract is at ScrollDragState).
+// gesture's current anchor column, full waveform height. THREE PRODUCERS, ONE
+// STEM since 2026-08-14 (two until the pinch joined them later the same day):
+//   * the OVERVIEW LANE'S ctrl strip drag (strip_drag, the gesture's whole
+//     life);
+//   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
+//     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
+//     the ctrl-up edge; the mode's contract is at ScrollDragState);
+//   * THE TOUCH TWO-FINGER PINCH (touch_nav_zoom.seated — the contract is at
+//     TouchNavZoomState, app_state.h), added so THE TWO SURFACES SHOW THE SAME
+//     AFFORDANCE (architect 2026-08-14, from the rig, asking to SEE the glass
+//     gesture: "add a zoom stem to the zoom on the touchpad just so I can see
+//     exactly what's going on, because at the edges there are some
+//     strangeness, it seems like").
 // The gate is the gesture record and nothing else since 2026-08-05
 // (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
 // rather than the stem appearing only once the drag crosses the slack. The
-// arms and the mode-switch edges owe the frame's damage (arm_strip_drag_at /
-// arm_nav_zoom_press / the mode sync in on_motion); it vanishes the moment
-// its gate drops (release / button loss / the force-end finalizer / the
-// ctrl-up switch, each spelling its own damage; Esc no longer ends a gesture
-// at all). The stem is the ZOOM PIVOT and nothing more — the playhead jump
-// that briefly rode the strip drag was rolled back 2026-08-06 and the stem is
-// what survives it.
-// BOTH PRODUCERS ANCHOR THE SAME WAY, which is why there is ONE expression
-// again (the nav drag's pivot went back to a SONG position 2026-08-14 — the
-// clamped-zoom reversibility ruling, contract at ScrollDragState): the anchor
-// column is recomputed each frame from the persisted anchor_sample against the
-// DISPLAYED viewport (wf_cache.fp_*), the same basis paint_region_ground and
-// paint_playheads use, so the stem stays locked to the blitted plate while the
-// worker rebuilds, and the anchor lives in the active display domain
-// (viewport_start + col*spp) so no warp map is walked. Re-projecting is what
-// makes the stem SLIDE WITH ITS CONTENT when a clamped zoom keeps moving the
-// song under it, which is the ruling made visible.
+// mouse arms and the mode-switch edges owe the frame's damage
+// (arm_strip_drag_at / arm_nav_zoom_press / the mode sync in on_motion); it
+// vanishes the moment its gate drops (release / button loss / the force-end
+// finalizer / the ctrl-up switch, each spelling its own damage; Esc no longer
+// ends a gesture at all). The stem is the ZOOM PIVOT and nothing more — the
+// playhead jump that briefly rode the strip drag was rolled back 2026-08-06
+// and the stem is what survives it.
+// THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other two producers
+// do, and NEITHER END IS FREE — the tempting claim that a seating frame is by
+// construction an applied frame whose synchronous rebuild paints the stem is
+// FALSE AT THE WALLS, apply_strip_drag_zoom's mid-gesture true-no-op return
+// dropping any frame whose post-clamp level and viewport both stand (a pinch
+// that begins saturated is exactly that frame). So the SEAT damages at its own
+// site, the mouse arms' rule, and the CLEAR damages through
+// clear_touch_zoom_seat, because a clear can land on a frame that applies
+// nothing at all (a survivor's pan refused off the wheel's surfaces).
+// ALL THREE PRODUCERS ANCHOR THE SAME WAY AND ALWAYS DID, which is why there
+// is ONE expression (the nav drag's pivot went back to a SONG position
+// 2026-08-14 — the clamped-zoom reversibility ruling, contract at
+// ScrollDragState — and the pinch seats a song frame for the same reason): the
+// anchor column is recomputed each frame from the persisted anchor_sample
+// against the DISPLAYED viewport (wf_cache.fp_*), the same basis
+// paint_region_ground and paint_playheads use, so the stem stays locked to the
+// blitted plate while the worker rebuilds, and the anchor lives in the active
+// display domain (viewport_start + col*spp) so no warp map is walked.
+// Re-projecting is what makes the stem SLIDE WITH ITS CONTENT when a clamped
+// zoom keeps moving the song under it — which is now visible ON GLASS exactly
+// as it is under the mouse, the ruling made watchable and the reason the
+// architect asked for the stem there.
 // render_strip_anchor_stem clamps the column to the visible edges — an
 // edge-pinned anchor draws the clamp itself.
+// PRECEDENCE IS DECLARED RATHER THAN LEFT TO THE EXPRESSION'S SHAPE: a held
+// mouse capture and a glass contact are not structurally impossible together,
+// so the order is strip drag, then the nav drag's zoom phase, then the pinch —
+// the two CAPTURING gestures first, since a capture owns the pointer for its
+// whole life and is the more committed act. One stem is painted either way.
 void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
-    const bool strip    = app.strip_drag.active;
-    const bool nav_zoom = app.scroll_drag.active && app.scroll_drag.zooming;
-    if (!strip && !nav_zoom) return;
+    const bool strip       = app.strip_drag.active;
+    const bool nav_zoom    = app.scroll_drag.active && app.scroll_drag.zooming;
+    const bool touch_pinch = app.touch_nav_zoom.seated;
+    if (!strip && !nav_zoom && !touch_pinch) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
+
+    double anchor_sample = 0.0;
+    if (strip)         anchor_sample = app.strip_drag.anchor_sample;
+    else if (nav_zoom) anchor_sample = app.scroll_drag.anchor_sample;
+    else               anchor_sample = app.touch_nav_zoom.anchor_sample;
+
     // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
     // the PLATE basis.
-    const int col = displayed_column_at(
-        strip ? app.strip_drag.anchor_sample : app.scroll_drag.anchor_sample,
-        basis.vp_start, basis.spp);
+    const int col = displayed_column_at(anchor_sample, basis.vp_start,
+                                        basis.spp);
     render_strip_anchor_stem(cr, area, col);
 }
 
