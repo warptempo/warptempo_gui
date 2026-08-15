@@ -1059,7 +1059,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the resting window; the span is then CONSUMED and the selection cleared —
     // architect 2026-07-30 / 2026-07-29; a DEGENERATE inverse-mapped span refuses
     // instead of writing a pair the crossed-commit reset would throw away), and
-    // with no region it is a silent no-op. Shift+X writes [0, total-1]
+    // with NO region it SHOWS one at the current trim window and writes nothing
+    // — the seed, whose whole contract (a one-time copy, not the retired sync)
+    // is at handle_trim_x, input_trim.cpp. Shift+X writes [0, total-1]
     // (handle_trim_shift_x). The playhead is an OUTPUT of both, never an input:
     // every trim WRITE parks it at the new trim start (architect 2026-08-05 —
     // the rule and its membership at the head of input_trim.cpp), and a refused

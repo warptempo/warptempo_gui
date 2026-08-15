@@ -2280,20 +2280,26 @@ private:
     //   same rect and the hover pair reads as the drag's two phases; a ctrl
     //   press on a FLAG is the membership toggle, no cue).
     //   Live in the `h` view too — the zoom is its admitted navigation.
-    //   AND THE OVERVIEW STRIP'S WHOLE LANE, CTRL-exact TOO since the lane
-    //   rework (2026-08-12, "require ctrl on zoom strip also"): the lane's
-    //   ctrl drag is the strip-drag machinery's own (one entry since
-    //   2026-08-14) and the nav surface's ctrl is the one nav drag's zoom
-    //   phase — different gestures, one magnifier, since both promise the
-    //   zoom.
+    //   IT IS THE KIND'S ONE SURFACE: the OVERVIEW STRIP carried a second
+    //   ctrl-exact Zoom arm from the lane rework (2026-08-12, "require ctrl on
+    //   zoom strip also") until the redesign of 2026-08-15 DELETED the lane's
+    //   dual-axis strip drag whole, so ctrl there binds nothing and answers the
+    //   Arrow with every other modifier (the ctrl+WHEEL zoom step is still
+    //   live on the lane and is deliberately uncued — this map answers what a
+    //   PRESS would do, and no wheel is cued anywhere).
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag,
-    //   which moves BOTH bounds together — AND THE OVERVIEW LANE off its box
-    //   endcaps, plain (the lane rework): the plain drag there is the
+    //   which moves BOTH bounds together — AND THE OVERVIEW BOX'S INTERIOR,
+    //   plain (the lane rework): the drag there is the
     //   box-follows-pointer PAN, a move-the-whole-span gesture, "left/right
-    //   arrows like on plain trim hover" (the architect's words); the
-    //   teleport under the same press is a click act and needs no cue. A LIVE
+    //   arrows like on plain trim hover" (the architect's words). OUTSIDE the
+    //   box the lane answers the ARROW (codex round 19): the press there arms
+    //   a Pending whose crossing commits nothing, and its one act is the
+    //   teleport at the motionless lift, a click act needing no cue — the
+    //   band-wide resize promise outlived the outside-drag extension deleted
+    //   on 2026-08-15. A LIVE
     //   box pan KEEPS the cue since 2026-08-13, the edge drags' own rule
-    //   (below) grown by one member.
+    //   (below) grown by one member; a live PENDING keeps the Arrow, the same
+    //   one kind for its whole span.
     //   AND EVERY MARKER FLAG BOX, plain (architect 2026-08-13): markers move
     //   SIDE TO SIDE, the bridge's own promise, and the flag box is the
     //   marker's one pointer surface in every view since stems went

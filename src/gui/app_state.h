@@ -2209,13 +2209,39 @@ constexpr int     kDoubleClickSlackPx = 8;
 constexpr int64_t kChromeShiftHoldMs  = 500;
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
-// DRAG (architect-tunable), shared by EVERY press-becomes-drag surface — strip,
-// region, trim, and the marker flag (the tempo flag was a fifth until the tempo
-// drag's deletion, 2026-07-29). UNIFIED to 8px (architect
+// DRAG (architect-tunable), shared by EVERY press-becomes-drag surface. THE
+// LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex round 19 — it named
+// "strip, region, trim, and the marker flag" long after the strip drag's
+// deletion and the two 2026-08-15 additions), and it is SIX states, each
+// latching its own `moved` in on_motion:
+//   * ScrollDragState — THE ONE NAV DRAG, the pending click whose crossing
+//     becomes the grab-pan or, with ctrl, the zoom (the capture begins at that
+//     crossing);
+//   * RegionDragState — the region FORMER, the shift drag and the touch
+//     region hold, through apply_region_drag_motion's own gate;
+//   * RegionEditDragState — the STANDING region's EDITOR (2026-08-15), the
+//     move and the two bound drags. It shares a word with the former above
+//     and is a different gesture: one DRAWS a span, the other MANIPULATES the
+//     one already resting;
+//   * OverviewDragState — the overview lane's box gestures (2026-08-12; the
+//     lane's DELETED ctrl strip drag is what "strip" used to name here, and
+//     this state is not it): the box pan, the two edge drags, and the Pending
+//     outside press whose crossing commits nothing but still latches;
+//   * PendingTrimDrag — the trim bar's endcap / bridge drag;
+//   * PendingMarkerDrag — the marker flag drag (the tempo flag was a seventh
+//     until the tempo drag's deletion, 2026-07-29).
+// One derived reader sits outside that list: the region former's SLIVER FLOOR
+// (end_region_drag_min_size_check) measures a rested span against this same
+// constant, so "never became a drag" and "never left the slack" are one
+// number. The TOUCH slop is a separate constant deliberately equal to it
+// (kTouchSlopPx, platform_wayland.cpp — the platform sits below this header),
+// which is what makes a quick finger drag cross both gates at once.
+// UNIFIED to 8px (architect
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
 // kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
 // rationales, now one story:
-//  - CAPTURE-JITTER / DOUBLE-CLICK STARVATION (strip, waveform region): under
+//  - CAPTURE-JITTER / DOUBLE-CLICK STARVATION (the captured nav drag, the
+//    waveform region): under
 //    pointer capture the relative-pointer stream delivers every sub-pixel sensor
 //    tick as a motion event, so a physical click almost always rocks the sensor a
 //    count or two; without this gate that jitter would mark every click as moved
@@ -2224,13 +2250,15 @@ constexpr int64_t kChromeShiftHoldMs  = 500;
 //  - MARKER GRAB SLOP (the marker flag): a flag must be easy to click
 //    (select, or double-click to edit) without nudging it, and pixel-exact
 //    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
-//    Ableton convention. 8px gives that slop; the strip/trim/region surfaces
-//    inherit it.
+//    Ableton convention. 8px gives that slop; the other five surfaces inherit
+//    it.
 // One latch shape everywhere — a motion event below the threshold is ignored
 // outright (moved stays false, no apply, the drag stays armed); once a drag,
-// always a drag, so dragging back near the press has no dead zone. The strip
+// always a drag, so dragging back near the press has no dead zone. The NAV
 // drag leaves last_x/last_y at the press until the crossing, so the crossing
-// event folds the whole accumulated delta and no travel is lost.
+// event folds the whole accumulated delta and no travel is lost (the two
+// absolute-placement drags — overview and region edit — fold it by
+// construction, placing per event rather than accumulating).
 // RECORDED FALLBACK: if the strip/trim feel degrades at 8, re-split into a
 // per-surface pair (the pre-2026-07-24 form: strip/region/trim at 3, markers
 // at 8).

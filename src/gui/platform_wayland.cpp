@@ -3144,7 +3144,7 @@ void GuiPlatform::flush_touch_frame_motion() {
     touch_frame_motion_pending_ = false;
 }
 
-bool GuiPlatform::end_touch_left_hold() {
+bool GuiPlatform::end_touch_left_hold(bool clean_release) {
     if (!touch_left_held_) return false;
     // The staged TOUCH motion flushes UNCONDITIONALLY, before the release
     // decision and while this bit still reads held: the finger's final
@@ -3159,40 +3159,69 @@ bool GuiPlatform::end_touch_left_hold() {
     // the logical 1->0 edge (neither sibling source held); the deferred
     // POINTER motion flushes ahead of the delivery it exists for; then clear;
     // then deliver at the owner's last position.
-    const bool deliver_release =
-        !pointer_left_held_ && !synth_left_held_ && on_button_release_;
-    if (deliver_release) flush_deferred_motion();
+    // WHAT is delivered on that edge FORKS ON clean_release (codex round 19),
+    // and the fork is one line at the bottom of this body:
+    //   * CLEAN (the finger's own lift, the hard end) — the left RELEASE, as
+    //     ever: the press was a click, and every act-at-lift surface runs.
+    //   * ABNORMAL (the second-finger upgrade) — the product's own LOST-BUTTON
+    //     edge instead: the hold bit drops here exactly as it does on a clean
+    //     end, so nothing sticks, and the GUI is told through a MOTION at the
+    //     finger's last position carrying `primary_button_held` false. That is
+    //     the spelling every gesture already answers (the button-lost arms in
+    //     GuiInputHandler::on_motion, and the force-end finalizer's own rule):
+    //     a MOVED drag finalizes like a release, an UNMOVED press commits
+    //     NOTHING — no click act, no double-click seed, and no chrome dispatch,
+    //     since dispatching an armed chrome/modal/menu press is the RELEASE's
+    //     job and no release is delivered. The arms those surfaces keep are
+    //     dropped a moment later by the caller's tail (the pointer-leave hook,
+    //     whose authoritative effect list is in main.cpp) on the no-mouse arm,
+    //     and on the focused-mouse arm they survive exactly as a lost physical
+    //     button's arm survives until the pointer leaves — the standing
+    //     lost-button shape, deliberately not a second mechanism.
+    const bool edge = !pointer_left_held_ && !synth_left_held_;
+    const bool deliver =
+        edge && (clean_release ? on_button_release_ != nullptr
+                               : on_motion_ != nullptr);
+    if (deliver) flush_deferred_motion();
     touch_left_held_ = false;
-    if (deliver_release) {
-        on_button_release_(GuiMouseButton::Left,
-                           static_cast<int>(std::nearbyint(touch_last_x_)),
-                           static_cast<int>(std::nearbyint(touch_last_y_)),
-                           current_mods());
+    if (deliver) {
+        const int x = static_cast<int>(std::nearbyint(touch_last_x_));
+        const int y = static_cast<int>(std::nearbyint(touch_last_y_));
+        if (clean_release)
+            on_button_release_(GuiMouseButton::Left, x, y, current_mods());
+        else
+            deliver_motion(x, y);   // the button-lost edge (the fork above)
     }
-    // The return is the END'S OWN EDGE (codex round 2): both callers end the
+    // The return is the END'S OWN EDGE (codex round 2): every caller ends the
     // translation through deliver_touch_translation_end, which acts iff the
-    // release was delivered — a sibling-suppressed release means the unified
+    // end was delivered — a sibling-suppressed end means the unified
     // pointer has NOT left (the mouse is still there, mid-press), and the
-    // leave hook's clears belong to that still-held press (the row-8
-    // held-arrow repeat, the popup's press claim), not to the finger that
-    // lifted.
-    return deliver_release;
+    // leave hook's clears belong to that still-held press (the armed chrome
+    // press, the modal's armed button, the popup's press claim — the body's
+    // own list, main.cpp), not to the finger that lifted.
+    return deliver;
 }
 
-void GuiPlatform::deliver_touch_translation_end() {
-    // The release's own edge first (codex round 2): a sibling-held logical
+void GuiPlatform::deliver_touch_translation_end(bool clean_release) {
+    // The end's own edge first (codex round 2): a sibling-held logical
     // left suppressed the release, and then NOTHING below fires either — the
     // mouse is mid-press, and neither a leave nor a restore motion is this
     // stream's to deliver. A suppressed end can strand a hover face where the
     // finger last was — the accepted-glitch class, self-healing on the next
     // pointer event.
-    if (!end_touch_left_hold()) return;
+    // clean_release is passed straight through and decides only WHAT that edge
+    // delivers — the left release, or the lost-button motion the upgrade needs
+    // (the fork and its whole rationale are at end_touch_left_hold). Everything
+    // below is shared verbatim: whichever end it was, the finger is no longer
+    // the pointer, and the fork below answers where the pointer now IS.
+    if (!end_touch_left_hold(clean_release)) return;
     // THE END FORKS ON PHYSICAL POINTER FOCUS (codex round 3, the
     // cursor-residue fix): a resolved touch drives the GUI's remembered
     // position to the finger, and the loop-settled cursor owner applies the
     // finger zone's kind to the REAL wl_pointer — so before this fork a mouse
     // resting in the window kept the finger's cue (Arrow/resize over a
-    // Pan zone, say) until its own next motion. The finger lifting means
+    // Pan zone, say) until its own next motion. The finger ceasing to BE the
+    // pointer — its lift, or the upgrade's handover to the nav gesture — means
     // the unified pointer is now wherever the MOUSE is:
     //   * physical pointer FOCUSED (wl_pointer enter/leave, which touch never
     //     writes) — synthesize an ordinary MOTION at its last
@@ -3350,11 +3379,11 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             //     through the other door, and a reader should not have to
             //     discover that.
             //   * MOTIONLESS (a hold, off these lanes): THE UPGRADE — the
-            //     translation ends by
-            //     ORDINARY RELEASE, the finger-up path's own shape through
-            //     the one owner (staged motion flushed, release on the
-            //     logical left's 1->0 edge, the focus-forked translation
-            //     end; the sibling-suppression rule applies identically),
+            //     translation ends by the ABNORMAL end, the finger-up path's
+            //     own shape through the one owner MINUS its click (staged
+            //     motion flushed, the hold bit dropped on the logical left's
+            //     1->0 edge, the focus-forked translation end; the
+            //     sibling-suppression rule applies identically),
             //     and the two-finger gesture SEEDS AT THE JOIN: both
             //     fingers' current positions are the gesture start, the
             //     latch measured from there. The hold's press already landed
@@ -3362,8 +3391,34 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             //     jump — it only keeps a slow pinch (fingers landing further
             //     apart than the window) alive instead of dead; a sub-latch
             //     release of that pair delivers nothing more.
+            //     AN UPGRADE IS A CHANGE OF GESTURE, NOT A LIFT (codex round
+            //     19), and that is why the end is the ABNORMAL one: the user
+            //     did not raise a finger, they added one, and speaking for the
+            //     finger they did NOT lift is what produced the defect. The
+            //     clean release this used to deliver was read as a completed
+            //     CLICK by every act-at-lift surface the hold could be sitting
+            //     on — off the pan zone, which is where a Pointer-phase hold
+            //     lives by construction:
+            //       - THE CLASS, not the case. Every CHROME BUTTON has acted at
+            //         the lift since 2026-08-13, so a finger held on Render,
+            //         Save, a transport button, a menu ITEM or a modal's OK
+            //         fired it the moment the second finger touched down — a
+            //         pinch that ran a command. This is the worse half.
+            //       - The one codex found: a finger held inside a STANDING
+            //         REGION (the region editor's carve-out puts it off the
+            //         zone) ran the motionless release's click act — the upper
+            //         half placing the playhead and dissolving the span, the
+            //         lower half firing the scrub and its playback edge.
+            //     The abnormal end is the RIGHT spelling rather than a new
+            //     suppression because it is the product's existing ruled answer
+            //     to "this press ended without being a click", and it already
+            //     carries the split this needs: a MOVED drag finalizes exactly
+            //     as a lost button does (unreachable from here today — the
+            //     latch above refuses a moved translation — and correct by
+            //     construction if it ever is), an UNMOVED press commits
+            //     nothing.
             if (touch_translation_moved_ || touch_down_on_thin_lane_) break;
-            deliver_touch_translation_end();
+            deliver_touch_translation_end(/*clean_release=*/false);
             touch_phase_      = TouchPhase::Nav;
             touch_nav_single_ = false;
             touch_nav_id2_    = id;
@@ -3457,9 +3512,13 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             // lifted, so the unified pointer is where the mouse is). The
             // fork, the sibling-suppression rule (a still-held mouse press
             // suppresses release, leave and restore alike) and the rationale
-            // live at deliver_touch_translation_end, the one owner both this
-            // site and the hard end call.
-            deliver_touch_translation_end();
+            // live at deliver_touch_translation_end, the one owner this site,
+            // the hard end and the second-finger upgrade all call. THE LIFT IS
+            // A CLEAN END — the finger really did leave, so its press was a
+            // click and every act-at-lift surface is owed its act (the upgrade
+            // is the one caller that passes false; the fork is at
+            // end_touch_left_hold).
+            deliver_touch_translation_end(/*clean_release=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
             break;
@@ -3549,7 +3608,8 @@ void GuiPlatform::on_touch_up(uint32_t /*serial*/, uint32_t /*time*/,
             // end split's finger-up clause, at end_touch_nav_gesture). No
             // release and no translation end: a nav gesture never held the
             // logical button (a nav born of the motionless-hold upgrade had
-            // its translation released at the join).
+            // its translation ENDED at the join — the hold bit dropped there,
+            // by the abnormal end).
             end_touch_nav_gesture(/*deliver_final_frame=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
@@ -3814,7 +3874,11 @@ void GuiPlatform::hard_end_touch_stream() {
             // too, and the end with it — whatever happened to the glass, the
             // mouse is still there, mid-press, and its live press claim is
             // not this stream's to destroy.
-            deliver_touch_translation_end();
+            // A CLEAN END: the hard end COMMITS (the no-cancel family), so the
+            // press ends as the click it was, exactly as the lift's does. Only
+            // the second-finger upgrade — where no finger left — takes the
+            // abnormal end (the fork is at end_touch_left_hold).
+            deliver_touch_translation_end(/*clean_release=*/true);
             break;
         case TouchPhase::Nav:
             // A live nav gesture — single- or two-finger, one arm — ends
@@ -3922,8 +3986,10 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     capture_wrap_hi_ = 0.0;
     // Every capture opens with the notional x LIVE. The nav drag asserts the
     // freeze immediately after this call when it crosses into a zoom phase, and
-    // at every ctrl edge after that (contract at set_notional_x_frozen); the
-    // overview lane's dual-axis strip drag never asserts it at all.
+    // at every ctrl edge after that (contract at set_notional_x_frozen) — and
+    // it is the freeze's ONE client, that drag being the process's one
+    // capturing gesture since the overview lane's dual-axis strip drag was
+    // deleted (2026-08-15).
     notional_x_frozen_ = false;
 
     // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"

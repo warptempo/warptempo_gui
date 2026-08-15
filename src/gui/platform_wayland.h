@@ -629,8 +629,9 @@ public:
     // no capture is live (the siblings' own guard), cleared by
     // begin_pointer_capture so every capture opens unfrozen, and cleared again
     // at release_pointer_lock. The nav drag re-asserts it at its threshold
-    // crossing and at every ctrl edge; the overview lane's dual-axis strip drag
-    // never asserts it and so runs unfrozen by construction.
+    // crossing and at every ctrl edge, and it is the only gesture that ever
+    // does — the overview lane's dual-axis strip drag was the other capturing
+    // gesture and was deleted whole on 2026-08-15.
     //
     // A FROZEN PHASE CAN NEVER WRAP, which is the freeze's own consequence
     // rather than a second rule: the wrap (set_capture_wrap_span below) rides
@@ -1358,14 +1359,19 @@ private:
     //   * second DOWN during Pointer — FORK ON THE MOVED LATCH (the sixth
     //     glass ruling, 2026-08-12 — the one piece of the timer-free model
     //     kept):
-    //       - MOVED (a live drag — marker, region, trim, strip): IGNORED
+    //       - MOVED (a live drag — a marker drag, a trim endcap or bridge
+    //         drag, the standing region's editor, the overview box and its
+    //         bound drags): IGNORED
     //         whole — recorded (the point count), not routed: mid-gesture
     //         finger-count changes do not mutate a committed gesture (the
     //         any-end-commits family; the architect's explicit mid-drag
-    //         ruling).
-    //       - MOTIONLESS (a hold): THE UPGRADE — the translation ends by
-    //         ORDINARY RELEASE, the finger-up path's own shape through the
-    //         one owner (staged motion flushed, release on the logical 1->0
+    //         ruling). A THIN LANE (the overview strip or the trim bar) is
+    //         ignored on the same line whether moved or not — the first door
+    //         of the two-fingers-do-nothing-there ruling, at the site.
+    //       - MOTIONLESS (a hold, off those lanes): THE UPGRADE — the
+    //         translation ends by THE ABNORMAL END, the finger-up path's own
+    //         shape through the one owner MINUS its click (staged motion
+    //         flushed, the hold bit dropped on the logical 1->0
     //         edge, the focus-forked translation end; the sibling-suppression
     //         rule applies identically), and the TWO-FINGER gesture seeds at
     //         the JOIN: both fingers' current positions are the gesture
@@ -1374,6 +1380,13 @@ private:
     //         jump — it only keeps a slow pinch (fingers landing further
     //         apart than the window) alive instead of dead; a sub-latch
     //         release of that pair delivers nothing more.
+    //         THE END IS ABNORMAL BECAUSE AN UPGRADE IS A CHANGE OF GESTURE,
+    //         NOT A LIFT (codex round 19): the clean release this delivered
+    //         until then was read as a completed CLICK by every act-at-lift
+    //         surface — every chrome button, a menu item, a modal's OK, and
+    //         the standing region's click act — so landing a second finger
+    //         fired whatever the first was resting on. The argument, the
+    //         class and the moved/unmoved split are at the site.
     //   * second DOWN during SINGLE-finger Nav — the UPGRADE (a transform,
     //     not an end; the end hook is not owed): touch_nav_single_ drops,
     //     the second finger is recorded, and the delta bases REBASE to the
@@ -1397,8 +1410,8 @@ private:
     //     (physical BTN_LEFT / bare-`e`) still holding suppresses the
     //     release, the leave AND the restore — the unified pointer has not
     //     left, the mouse is mid-press, and the leave hook's clears (the
-    //     row-8 held-arrow repeat, the popup's press claim) belong to that
-    //     still-held press. A suppressed end can strand a hover face where
+    //     armed chrome press, the modal's armed button, the popup's press
+    //     claim) belong to that still-held press. A suppressed end can strand a hover face where
     //     the finger last was — the accepted-glitch class, self-healing on
     //     the next pointer event;
     //     -> Drain if ignored fingers remain, else Idle.
@@ -1425,7 +1438,8 @@ private:
     //     then the nav end (commits through the end hook iff an update was
     //     delivered). A nav gesture never held the logical button, so no
     //     release and no translation end fire — a nav born of the motionless
-    //     hold's upgrade had its translation released at the join, and every
+    //     hold's upgrade had its translation ENDED at the join — the hold bit
+    //     dropped there, by the abnormal end — and every
     //     other nav entry never delivered a press at all; -> Drain / Idle
     //     (Drain iff IGNORED fingers remain — a third finger, or a moved
     //     translation's ignored second; the two-finger survivor is the
@@ -1955,22 +1969,32 @@ private:
     // staged TOUCH motion unconditionally while the bit still reads held (it
     // is independent of the logical-left OR — the flush owner's invariant),
     // flush the deferred POINTER motion on the delivering edge, clear the
-    // bit, then deliver the release at the owner's last position only on the
-    // logical 1->0 edge (the end_left_hold_source ordering, third source).
-    // RETURNS whether the release was delivered — the translation end's own
-    // edge: both end sites go through deliver_touch_translation_end below,
-    // which acts iff the release fired (a sibling-suppressed release means
+    // bit, then deliver at the owner's last position only on the logical
+    // 1->0 edge (the end_left_hold_source ordering, third source).
+    // clean_release picks WHAT that edge delivers (codex round 19): true =
+    // the left RELEASE, the press ending as the click it was; false = THE
+    // ABNORMAL END, a lost-button MOTION instead (the hold bit still drops,
+    // so nothing sticks) — the product's own button-lost spelling, under
+    // which a moved drag finalizes and an unmoved press commits nothing.
+    // RETURNS whether the end was delivered — the translation end's own
+    // edge: every end site goes through deliver_touch_translation_end below,
+    // which acts iff the end fired (a sibling-suppressed end means
     // the unified pointer has not left; the rationale is at the definition).
-    bool end_touch_left_hold();
-    // The one owner of the translation's END, called by the touch-up site
-    // and the hard-end contract: end the touch hold, and on the delivering
+    bool end_touch_left_hold(bool clean_release);
+    // The one owner of the translation's END, called by the touch-up site,
+    // the hard-end contract and the second-finger upgrade: end the touch
+    // hold, and on the delivering
     // edge FORK ON PHYSICAL POINTER FOCUS (codex round 3) — a mouse resting
     // in the window gets an ordinary restore MOTION at its last
-    // platform-tracked position instead of the leave (the finger lifted, so
-    // the unified pointer is where the mouse is; the cursor-residue fix), no
-    // mouse focus gets the ordinary leave as before. Rationale, edges and
+    // platform-tracked position instead of the leave (the finger is no longer
+    // the pointer, so the unified pointer is where the mouse is; the
+    // cursor-residue fix), no
+    // mouse focus gets the ordinary leave as before. clean_release is passed
+    // through to end_touch_left_hold and chooses nothing else: the two
+    // LIFT-shaped callers pass true, the UPGRADE — where no finger left —
+    // passes false. Rationale, edges and
     // the armed-anchor judgment at the definition.
-    void deliver_touch_translation_end();
+    void deliver_touch_translation_end(bool clean_release);
     // Compute + deliver the Nav frame's centroid/distance update through the
     // update hook (latch, fold-at-crossing, per-frame deltas — the contract
     // is at set_touch_nav_hooks). Single-finger nav forks only the three

@@ -1146,16 +1146,18 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // so its TrimResize stays true for the whole gesture and dropping to the
     // Arrow mid-slide was the odd one out. The gesture keeps no cursor of any
     // other kind — the pan is capture-free, so there is a visible cursor to
-    // keep. THE PENDING (the outside press, 2026-08-15) shares the pan's
-    // TrimResize, which is the same answer the hover map gives at the point it
-    // is resting on, so the whole press-to-release span reads one kind either
-    // way — and it never changes kind now that the crossing resolves into
+    // keep. THE PENDING (the outside press, 2026-08-15) takes THE ARROW since
+    // codex round 19, which is again the same answer the hover map gives at the
+    // point it is resting on — outside the box arms nothing to name — so the
+    // whole press-to-release span still reads ONE kind, and it cannot change
+    // kind mid-gesture either, the crossing resolving into
     // nothing (the outside-drag extension is deleted). That is why there is no
     // separate pending struct here as the trim and marker drags have — the
     // pending is a KIND of this record, so one arm covers the whole span.
     if (app.overview_drag.active) {
         switch (app.overview_drag.kind) {
             case OverviewDragKind::Pending:
+                return GuiCursorKind::Arrow;
             case OverviewDragKind::Pan:
                 return GuiCursorKind::TrimResize;
             case OverviewDragKind::EdgeBegin:
@@ -1313,26 +1315,46 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // endcaps' own pair — TrimBoundBegin on the outline's left edge,
     // TrimBoundEnd on its right, through the shared hit test, since a plain
     // press there extends ONE viewport bound exactly as a trim cap extends
-    // one trim bound — and the REST of the lane wears TrimResize ("left/right
-    // arrows like on plain trim hover", the architect's words), which covers
-    // both remaining answers honestly: INSIDE the box the drag is the
-    // box-follows-pointer pan, an x-only move-the-whole-span gesture (the
-    // bridge drag's own shape), and OUTSIDE it a drag pulls the nearer BOUND,
-    // which is a resize by another route. The teleport the same outside press
-    // runs at its motionless lift needs no cue of its own — no click anywhere
-    // carries one. Ctrl/shift/alt/mixed presses on the lane bind nothing,
+    // one trim bound — INSIDE THE BOX it is TrimResize ("left/right arrows
+    // like on plain trim hover", the architect's words), which is honest
+    // there: the drag is the box-follows-pointer pan, an x-only
+    // move-the-whole-span gesture, the trim bridge's own shape — and OUTSIDE
+    // THE BOX IT IS THE ARROW (codex round 19), which is the map's own
+    // standing rule reasserted rather than a new exception: a point arming
+    // nothing shows the Arrow. The band-wide TrimResize was true only while an
+    // outside press extended the nearer BOUND, and that extension was deleted
+    // on 2026-08-15 ("the threshold for the bounds is fine, the ten pixels on
+    // either side works") — since then an outside press is a Pending whose
+    // crossing commits nothing, so an ew-resize there promised a drag the lane
+    // no longer has. What the outside press still does is TELEPORT at its
+    // motionless lift, and a click carries no cue anywhere in the product.
+    // The inside/outside question is asked through the painter's own span
+    // owner (overview_box_span), in the press router's own order and off the
+    // press router's own predicates, so cue and gesture agree by construction;
+    // degenerate geometry publishes no box, which makes every press an outside
+    // press and every point the Arrow — the right degenerate arm on both
+    // sides. Ctrl/shift/alt/mixed presses on the lane bind nothing,
     // so they fell to the Arrow above; the `h` view keeps these cues — every
     // lane gesture is the mode's admitted navigation class. IT MUST STAY
     // ABOVE THE `inside_top` FALL-THROUGH below: the lane is a TOP-STRIP lane
     // since the relayout's commit B, so the strip's own Arrow would otherwise
     // take it.
-    if (rect_contains(top_overview_row_area(app), x, y)) {
-        switch (hit_test_overview_endcap(app, audio, x, y)) {
-            case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
-            case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
-            case TrimHit::None:  break;
+    {
+        const GuiRect ov = top_overview_row_area(app);
+        if (rect_contains(ov, x, y)) {
+            switch (hit_test_overview_endcap(app, audio, x, y)) {
+                case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
+                case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
+                case TrimHit::None:  break;
+            }
+            int bx0 = 0;
+            int bx1 = 0;
+            const bool have_box = overview_box_span(app, audio, &bx0, &bx1);
+            const bool inside_box =
+                have_box && x >= ov.x + bx0 && x < ov.x + bx1;
+            return inside_box ? GuiCursorKind::TrimResize
+                              : GuiCursorKind::Arrow;
         }
-        return GuiCursorKind::TrimResize;
     }
     // A STANDING REGION'S OWN ZONES OUTRANK THE PAN, because inside them the
     // plain drag IS the region's editor rather than the pan (2026-08-15; the

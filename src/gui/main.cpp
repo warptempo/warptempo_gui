@@ -1195,10 +1195,11 @@ int main(int argc, char** argv) {
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
-    // cursor lock (pointer-constraints + relative-pointer). Shared by the two
-    // capturing waveform gestures — the one nav drag (pan by default, zoom
-    // while ctrl is held) and the overview lane's ctrl strip drag — for
-    // infinite pan/zoom travel.
+    // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the
+    // one nav drag (pan by default, zoom while ctrl is held), for infinite
+    // pan/zoom travel: the overview lane's ctrl strip drag was the second and
+    // was deleted whole on 2026-08-15, and the lane's surviving three gestures
+    // are absolute and capture-free.
     // All the platform methods self-guard (begin no-ops when a capture is live
     // or the compositor lacks the managers; end is idempotent; the restore
     // riders no-op uncaptured), so the input layer
@@ -1475,7 +1476,12 @@ int main(int argc, char** argv) {
     // clearing hover faces where a finger last was is precisely what the
     // no-hover-under-touch consequence asks for, and the row-1 keep below
     // reads the remembered position exactly as it does for a mouse. The fire
-    // sites are the touch edge inventory's, platform_wayland.h.)
+    // sites are the touch edge inventory's, platform_wayland.h.
+    // ONE OF THOSE FIRINGS IS THE SECOND-FINGER UPGRADE, whose end is the
+    // ABNORMAL one (codex round 19) — no release is delivered, so the three
+    // press ARMS this body drops are what stops a pinch dispatching whatever
+    // the held finger was resting on. The clears were already exactly right
+    // for it; only their load-bearingness grew.)
     // The difference itself is the reason none of the clears may lean on "no
     // later event". Only
     // CAPABILITY LOSS ends that pointer stream outright — no motion and no
