@@ -3883,11 +3883,14 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // playhead jump that briefly rode the strip drag was rolled back 2026-08-06
 // and the stem is what survives it.
 // THE PINCH OWES ITS DAMAGE AT BOTH ENDS, exactly as the other two producers
-// do, and NEITHER END IS FREE — the tempting claim that a seating frame is by
-// construction an applied frame whose synchronous rebuild paints the stem is
-// FALSE AT THE WALLS, apply_strip_drag_zoom's mid-gesture true-no-op return
-// dropping any frame whose post-clamp level and viewport both stand (a pinch
-// that begins saturated is exactly that frame). So the SEAT damages at its own
+// do, and NEITHER END IS FREE — a seating frame is not an applied frame at all
+// in the general case (the seat is taken above the gesture's exact-no-op
+// return, so two fingers landing and sliding together seat and apply nothing;
+// the ordering rule is at apply_touch_nav_update's seat), and even a seating
+// frame that DOES apply can be dropped at the walls by
+// apply_strip_drag_zoom's mid-gesture true-no-op return, which discards any
+// frame whose post-clamp level and viewport both stand (a pinch that begins
+// saturated is exactly that frame). So the SEAT damages at its own
 // site, the mouse arms' rule, and the CLEAR damages through
 // clear_touch_zoom_seat, because a clear can land on a frame that applies
 // nothing at all (a survivor's pan refused off the wheel's surfaces).

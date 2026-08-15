@@ -1229,9 +1229,17 @@ struct OverviewDragState {
 //
 // LIFECYCLE (the body is apply_touch_nav_update, input_pointer.cpp):
 //   * MEANINGFUL ONLY while a two-finger phase is live.
-//   * SEATED at the first APPLIED two-finger frame — after the wheel_context
-//     refusal and the exact-no-op return, so a frame the gesture refuses seats
-//     nothing — at the song frame under THAT frame's centroid column.
+//   * SEATED AT THE FIRST TWO-FINGER FRAME THAT SURVIVES THE wheel_context
+//     REFUSAL — so a frame the gesture refuses seats nothing, seating being a
+//     navigation act — at the song frame under THAT frame's centroid column.
+//     It is deliberately NOT gated on the frame APPLYING anything (2026-08-14,
+//     correcting the shape this shipped with): the zoom-only ruling forces the
+//     centroid delta to a literal zero, so two fingers landing and sliding
+//     together produce nothing but exact-no-op frames, and gating on the apply
+//     meant such a pinch seated nowhere and painted no stem until the finger
+//     GAP first changed — by which time the centroid had drifted off the point
+//     the fingers grabbed. The seat therefore sits ABOVE the exact-no-op return
+//     and BELOW the refusal; the seat's VALUE is unchanged.
 //   * CLEARED by any frame that ARRIVES not-two-finger (the downgrade to the
 //     survivor's pan), refused or not — the clear leads the body while the
 //     seat follows the refusal, the two halves deliberately on opposite sides
@@ -1251,8 +1259,10 @@ struct OverviewDragState {
 // the stem's THIRD producer (paint_strip_drag_anchor, paint_handler.cpp): the
 // gesture record and nothing else, exactly the other two producers' shape. BOTH
 // EDGES OWE DAMAGE and neither is free: the SEAT damages at its own site (a
-// pinch beginning saturated at a wall is dropped by apply_strip_drag_zoom's
-// true-no-op return, so its stem would otherwise never appear), and the CLEAR
+// seating frame need not apply anything at all under the ordering above, and
+// even one that does can be dropped by apply_strip_drag_zoom's true-no-op
+// return when the pinch begins saturated at a wall, so its stem would
+// otherwise never appear), and the CLEAR
 // through clear_touch_zoom_seat (a clear can land on a frame that applies
 // nothing at all).
 struct TouchNavZoomState {

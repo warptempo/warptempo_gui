@@ -693,13 +693,16 @@ struct GuiInputHandler {
     // move on the screen"). THE MODEL, stated here once (the state's lifecycle
     // is at TouchNavZoomState, app_state.h; the arithmetic in the body):
     //   * THE PIVOT IS THE POINT ON THE WAVEFORM THE PINCH GRABBED — a song
-    //     frame seated at the first applied two-finger frame's centroid and
-    //     held for the phase, its COLUMN re-derived against the live viewport
-    //     every frame.
+    //     frame seated at the centroid of the first two-finger frame that
+    //     SURVIVES THE REFUSAL (not the first APPLIED one: seating is above the
+    //     exact-no-op return, the ordering rule at the site) and held for the
+    //     phase, its COLUMN re-derived against the live viewport every frame.
     //   * MOVING BOTH FINGERS TOGETHER STILL APPLIES NOTHING: the ratio is 1
     //     and the centroid's travel is discarded, the standing zoom-only
     //     ruling — the seat changes what the zoom pivots ABOUT, not what the
-    //     gesture responds TO.
+    //     gesture responds TO. Such a frame does SEAT, which is what makes the
+    //     stem appear the instant the pinch registers and the grabbed point the
+    //     pivot even when the fingers slid before the gap ever changed.
     //   * MOVING ONE FINGER zooms about the GRABBED point rather than about
     //     the moving midpoint between the fingers.
     //   * AT A WALL — the viewport saturated at frame 0 or the right edge — the

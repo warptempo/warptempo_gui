@@ -2015,7 +2015,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
     // HALVES SIT ON OPPOSITE SIDES OF THE REFUSAL DELIBERATELY: SEATING is a
     // navigation act and takes the refusal with everything else (the ordering
-    // rule at the fork below), while CLEARING is bookkeeping — a one-finger
+    // rule at the seat below), while CLEARING is bookkeeping — a one-finger
     // frame means the two-finger phase is OVER whether or not this frame gets
     // to navigate, and holding the anchor through a refused stretch of the
     // survivor's pan would let a later upgrade zoom about a song frame the
@@ -2050,34 +2050,78 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     const double eff_dx    = f.two_finger ? 0.0 : f.dx;
     const double eff_ratio = f.two_finger ? dist_ratio : 1.0;
 
-    // A frame whose surviving delta is an exact no-op applies nothing: the
-    // platform suppresses only frames where BOTH raw deltas are no-ops, so a
-    // two-finger frame carrying pure centroid travel arrives here and dies
-    // here. Above the double-click clear (the C8 rule covers APPLIED frames).
-    if (eff_dx == 0.0 && eff_ratio == 1.0) return;
-
+    // The geometry the pivot is measured in, HOISTED ABOVE THE NO-OP RETURN
+    // for the seat below: cheap reads, and the guard is a validity gate (there
+    // is no waveform to anchor a pivot in) rather than a policy about this
+    // frame's deltas.
     const GuiRect wf_area = waveform_area(app);
     const double  W       = static_cast<double>(wf_area.w);
     const int64_t total   = live_total_frames(app, audio);
     if (W <= 0.0 || total <= 0) return;
 
+    const double spp_old = current_samples_per_pixel(app, audio);
+    const double vp      = static_cast<double>(app.viewport_start_sample);
+
+    // THE SEAT — TAKEN THE MOMENT THE PINCH REGISTERS, NOT WHEN THE FINGER GAP
+    // FIRST CHANGES (architect 2026-08-14, from the rig: "when the two-finger
+    // touch is first registered, it picks the point on the waveform"). ITS
+    // ORDERING RULE, the matched half of the clear's at the top of the body:
+    // the seat sits ABOVE the exact-no-op return and BELOW the wheel refusal.
+    // Seating is a NAVIGATION act, so it takes the refusal with everything else
+    // — a pinch beginning off the wheel's surfaces anchors nothing, and the
+    // gesture keeps its "it navigates exactly the wheel's two surfaces"
+    // property. But "this frame's deltas apply nothing" is a statement about
+    // the FRAME and says nothing about where the GESTURE is anchored, and
+    // letting it decide was a real defect: the zoom-only ruling forces eff_dx to
+    // a literal zero on every two-finger frame, so a pair landing and sliding
+    // TOGETHER — pure centroid travel, gap unchanged — met the no-op return and
+    // died above the seat. The pivot was then in truth taken at the first frame
+    // whose finger DISTANCE changed, at whatever column the centroid had
+    // drifted to by then rather than at the point the fingers grabbed, and no
+    // stem appeared until then either. Nothing about the seat's VALUE changed
+    // here — only when it is taken.
+    if (f.two_finger && !app.touch_nav_zoom.seated) {
+        TouchNavZoomState& z = app.touch_nav_zoom;
+        z.anchor_sample = vp + static_cast<double>(f.x) * spp_old;
+        z.seated        = true;
+        // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse arms' own
+        // rule (arm_strip_drag_at / arm_nav_zoom_press) reaching the pinch —
+        // the seat is the anchor stem's gate since 2026-08-14
+        // (paint_strip_drag_anchor, paint_handler.cpp) and it is NOT free. A
+        // seating frame is not even an APPLIED frame any more (it is exactly
+        // the centroid-only frame above that this ordering rescued), and even
+        // where it is, apply_strip_drag_zoom's own MID-GESTURE TRUE-NO-OP
+        // return drops any frame whose post-clamp level AND viewport both
+        // stand — every frame of a pinch that begins saturated at a wall
+        // (pinching further out at full zoom-out, or further in at kMinZoom),
+        // which is precisely the edge the stem was asked for. Without this line
+        // such a pinch would show no stem until it turned around. Once per
+        // phase, and it merges with the apply's own damage on every frame that
+        // does move.
+        viewport.invalidate_waveform_area();
+    }
+
+    // A frame whose surviving delta is an exact no-op applies nothing: the
+    // platform suppresses only frames where BOTH raw deltas are no-ops, so a
+    // two-finger frame carrying pure centroid travel arrives here and dies
+    // here — having seated the pivot on its way past, which is the whole of
+    // the ordering above. Below the seat, above the double-click clear (the C8
+    // rule covers APPLIED frames).
+    if (eff_dx == 0.0 && eff_ratio == 1.0) return;
+
     // An applied navigation frame moves content between two taps, so a
     // pending double-click candidate must not survive it (the C8 rule the
-    // wheel applies at on_wheel's top).
+    // wheel applies at on_wheel's top). It stays BELOW the no-op return
+    // deliberately — a frame that applies nothing must not consume a pending
+    // candidate — which is why the seat was hoisted around it rather than the
+    // return moved.
     app.double_click = DoubleClickCandidate{};
-
-    const double spp_old = current_samples_per_pixel(app, audio);
 
     // THE PIVOT, and the two finger counts answer it DIFFERENTLY since
     // 2026-08-14 (the seated pinch; contract at TouchNavZoomState,
-    // app_state.h). THE SEAT'S ORDERING RULE: everything above this point is
-    // the frame's admission — the wheel refusal, the exact-no-op return and the
-    // geometry guard — so the seat is taken by the FIRST FRAME THAT ACTUALLY
-    // NAVIGATES, which keeps the gesture's "it navigates exactly the wheel's
-    // two surfaces" property intact.
+    // app_state.h).
     double anchor_sample = 0.0;   // active-domain song frame the pivot holds
     double anchor_col    = 0.0;   // its column under the LIVE viewport
-    const double vp = static_cast<double>(app.viewport_start_sample);
     if (!f.two_finger) {
         // ONE FINGER — the phone model's pan, unchanged and stateless: the
         // content under the PREVIOUS centroid column (x - eff_dx) is what the
@@ -2094,37 +2138,18 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         anchor_col    = static_cast<double>(f.x);
     } else {
         // TWO FINGERS — THE PINCH'S PIVOT IS THE POINT ON THE WAVEFORM THE
-        // GESTURE GRABBED, held for the phase's life: seated once at the song
-        // frame under this frame's centroid, then re-derived as a COLUMN
-        // against the live viewport every frame afterwards. The centroid's own
-        // travel is discarded by the fork above (eff_dx is 0), so moving both
-        // fingers together still applies nothing.
+        // GESTURE GRABBED, held for the phase's life: seated above (on the
+        // phase's FIRST unrefused frame, whether or not that frame applies
+        // anything), then re-derived as a COLUMN against the live viewport
+        // every frame here. The centroid's own travel is discarded by the fork
+        // above (eff_dx is 0), so moving both fingers together still applies
+        // nothing — it only seats.
         TouchNavZoomState& z = app.touch_nav_zoom;
-        if (!z.seated) {
-            z.anchor_sample = vp + static_cast<double>(f.x) * spp_old;
-            z.seated        = true;
-            // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse arms'
-            // own rule (arm_strip_drag_at / arm_nav_zoom_press) reaching the
-            // pinch — the seat is the anchor stem's gate since 2026-08-14
-            // (paint_strip_drag_anchor, paint_handler.cpp) and it is NOT free.
-            // The tempting claim is that a seating frame is by construction an
-            // APPLIED frame whose synchronous rebuild paints the stem, and it is
-            // FALSE AT EXACTLY THE PLACE THE STEM WAS ASKED FOR — the edges: the
-            // guards above only prove the frame carries a real ratio, while
-            // apply_strip_drag_zoom's own MID-GESTURE TRUE-NO-OP return drops any
-            // frame whose post-clamp level AND viewport both stand, which is
-            // every frame of a pinch that begins saturated at a wall (pinching
-            // further out at full zoom-out, or further in at kMinZoom). Without
-            // this line such a pinch would show no stem at all until it turned
-            // around. Once per phase, and it merges with the apply's own damage
-            // on every frame that does move.
-            viewport.invalidate_waveform_area();
-        }
-        // THE EDGE TRICK, apply_nav_zoom_at's pivot block mirrored — and it
-        // arrives WITH the seat rather than before it. The stateless model
-        // deliberately did without a clamp because there was no persistent
-        // anchor for an off-area column to corrupt; there is one now, so that
-        // sentence is superseded: a pivot column pushed outside [0, W-1] pins
+        // THE EDGE TRICK, apply_nav_zoom_at's pivot block mirrored. The
+        // stateless model deliberately did without a clamp because there was no
+        // persistent anchor for an off-area column to corrupt; there is one
+        // now, so that sentence is superseded: a column pushed outside [0, W-1]
+        // pins
         // at the edge pixel and REBINDS the held frame to that pixel's
         // content, which is what keeps the zoom's focus on screen exactly as it
         // does for the mouse.
