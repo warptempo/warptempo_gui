@@ -367,8 +367,9 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // drag's own body was the fourth until 2026-08-15), the two-finger
     // touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
-    // chokepoint per touch frame) and the overview lane's edge drags
-    // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —
+    // chokepoint per touch frame) and the overview lane's span application
+    // (apply_overview_span_zoom, serving the edge drags since the lane rework
+    // 2026-08-12 and the two-finger stretch since 2026-08-15) —
     // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
     // below, so the pre-assignment compare cannot read a wall-saturated no-op as

@@ -1178,11 +1178,20 @@ struct ScrollDragState {
 // box or bound drag simply carries on. (A MOTIONLESS hold takes the generic
 // motionless-hold UPGRADE instead — its ordinary release IS this lane's
 // motionless release, so an outside hold teleports on the way — and the
-// two-finger gesture that follows is then REFUSED on the lane,
-// apply_touch_nav_update's own lane test.) THE SIMULTANEOUS TWO-BOUND STRETCH
-// — one finger per bound, both moving at once — is DEFERRED and not dropped:
-// it needs a genuine second contact, and the touch layer translates exactly one
-// finger and spends the second on the nav gesture, so it is its own arc.
+// two-finger gesture that follows is then the LANE'S OWN, below.)
+// THE SIMULTANEOUS TWO-BOUND STRETCH — one finger per bound, both moving at
+// once — IS BUILT since 2026-08-15 (architect: "a two-finger gesture would
+// basically mean draw the bounds at each of the two fingers"), and it lives
+// OUTSIDE this record because it holds no state at all: each frame places the
+// BEGIN bound at the leftmost contact's whole-song position and the END bound
+// at the rightmost, absolutely, so there is nothing to arm, seat or clear
+// (apply_overview_two_finger_bounds, input_pointer.cpp, reached from
+// apply_touch_nav_update's lane fork). Its one-day deferral reasoned that it
+// "needs a genuine second contact, and the touch layer spends the second finger
+// on the nav gesture" — SUPERSEDED: the nav layer held both contacts' positions
+// all along and merely collapsed them into a centroid and a distance, so
+// handing the raw pair over was the whole of it (GuiTouchNavFrame,
+// gui_input.h).
 // Navigation-class: touches no playhead, no region, no selection, allowed in
 // read-only and live in the `h` view (the lane's claim sits above the mode's
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's

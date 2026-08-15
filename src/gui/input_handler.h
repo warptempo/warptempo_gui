@@ -685,7 +685,19 @@ struct GuiInputHandler {
     // centroid and dist_ratio pinned at 1.0. The payload is a
     // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
     // horizontal delta and the finger-distance ratio against the previous
-    // delivered frame, and the finger count.
+    // delivered frame, the finger count, and — since 2026-08-15 — the two
+    // contacts' RAW x positions, which only the overview lane's fork below
+    // reads.
+    //
+    // THE OVERVIEW LANE FORKS OUT OF THIS BODY ENTIRELY on a two-finger frame
+    // centred there (apply_overview_two_finger_bounds — the bounds are drawn at
+    // the two contacts, absolute, with the lane's own column mapping; the lane
+    // never SEATS, never reads an anchor and never touches the pivot, and the
+    // one thing it does to the pinch is END it, because a seated pair whose
+    // centroid crosses onto the lane is a pinch that is over and its anchor
+    // stem must not stay painted over the waveform the lane is moving — the
+    // reasoning is at the fork). Everything below describes the WAVEFORM's
+    // gesture.
     //
     // ONE FINGER PANS, TWO FINGERS ZOOM — AND THE TWO-FINGER GESTURE NEVER
     // PANS (architect 2026-08-14, from the rig: "on the touch panel, two
@@ -1200,10 +1212,23 @@ struct GuiInputHandler {
     // resolve_overview_pending_to_edge: the Pending outside press's crossing —
     // the bound NEARER THE PRESS COLUMN, decided once and never re-derived (the
     // reasoning is at both definitions).
+    // apply_overview_span_zoom: the ONE expression turning a pair of whole-song
+    // bounds into a level and a placement — the min-span cannot-cross clamp,
+    // the fit formula and the level pre-clamp, applied through
+    // Viewport::apply_strip_drag_zoom. Its two callers are the edge arm above
+    // and the two-finger gesture below, the lane's only two routes to a zoom.
+    // apply_overview_two_finger_bounds: TWO FINGERS DRAW THE BOX'S BOUNDS WHERE
+    // THEY LAND (architect 2026-08-15) — begin at the leftmost contact's
+    // whole-song position, end at the rightmost, per frame and ABSOLUTE, so
+    // spreading zooms out and pinching zooms in. Its one caller is
+    // apply_touch_nav_update's lane fork; the full ruling is at the definition.
     void run_overview_teleport(int x);
     void apply_overview_drag_at(int x, bool final_event);
     bool seat_overview_edge_drag(bool grabbed_begin);
     bool resolve_overview_pending_to_edge();
+    void apply_overview_span_zoom(double span, double anchor_sample,
+                                  bool anchor_at_end, bool final_event);
+    void apply_overview_two_finger_bounds(const GuiTouchNavFrame& frame);
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
     // is a consumed nothing everywhere since the button's unbinding,

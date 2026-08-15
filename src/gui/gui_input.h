@@ -140,6 +140,17 @@ enum class GuiMouseButton {
 // GUI owns the model on top, which since 2026-08-14 is ONE FINGER PANS, TWO
 // FINGERS ZOOM (touch.md's two-finger section) — hence the finger count
 // below, the one field the GUI forks on. Every field here is read.
+//
+// THE CONTACT PAIR IS DELIVERED RAW ALONGSIDE ITS COLLAPSED FORM since
+// 2026-08-15, and the two forms serve two different gestures: the CENTROID and
+// the DISTANCE RATIO serve the waveform's pinch, which is relative (it zooms by
+// how the gap CHANGED, about a pivot it seated), while the OVERVIEW LANE's
+// two-finger gesture is ABSOLUTE — it draws the viewport box's two bounds at
+// the two contacts' own whole-song positions — so it needs the positions
+// themselves and nothing derived from them. The positions were always here;
+// they were merely collapsed and discarded, which is why the lane's gesture
+// needed no new contact mode. The platform still applies NO policy: it
+// measures and delivers both forms, exactly as the record above says.
 struct GuiTouchNavFrame {
     // Current centroid, window px (single-finger: the finger itself). Also
     // the two-finger gesture's zoom pivot.
@@ -154,6 +165,13 @@ struct GuiTouchNavFrame {
     // distance under 1 px on either side delivers 1.0; single-finger frames
     // are degenerate by construction, so they always carry 1.0).
     double dist_ratio = 1.0;
+    // The TWO CONTACT X POSITIONS, window px, in the order the platform holds
+    // them (NOT sorted — the one reader assigns by POSITION per frame, which is
+    // its own rule and not the platform's). MEANINGFUL ONLY ON A TWO-FINGER
+    // FRAME: a single-finger frame carries the one contact's x in BOTH, so no
+    // reader can pick up a stale coordinate from a previous pair.
+    double x1 = 0.0;
+    double x2 = 0.0;
     // TWO fingers vs the phone model's one — the GUI's fork between the
     // zoom-only gesture and the pan-only one.
     bool   two_finger = false;

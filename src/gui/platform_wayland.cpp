@@ -3683,6 +3683,15 @@ void GuiPlatform::deliver_touch_nav_frame() {
         frame.y          = static_cast<int>(std::nearbyint(cy));
         frame.dx         = dx;
         frame.dist_ratio = ratio;
+        // THE RAW PAIR, handed over alongside the collapsed form above (the
+        // field contract at GuiTouchNavFrame, gui_input.h): the overview lane's
+        // two-finger gesture is ABSOLUTE and draws a bound at each contact, so
+        // a centroid and a ratio cannot express it. Unsorted — the ordering
+        // policy belongs to the reader. A single-finger frame's second contact
+        // does not exist, so both fields carry the one finger rather than the
+        // stale touch_nav_x2_ of whatever pair came before.
+        frame.x1 = touch_nav_x1_;
+        frame.x2 = touch_nav_single_ ? touch_nav_x1_ : touch_nav_x2_;
         // The finger count is the GUI's one fork (contract at
         // GuiTouchNavFrame, gui_input.h): it discards dx on a two-finger
         // frame — two fingers zoom and never pan — so this layer still
