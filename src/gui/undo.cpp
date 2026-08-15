@@ -2,6 +2,7 @@
 
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // clear_region_highlight,
+                                  // clear_touch_zoom_seat — the W/P write's own,
                                   // frame_span_into_view — the restore visual tail
 #include "platform_wayland.h"     // viewport.gui.set_title_dirty — the window
                                   // title's dirty half, pushed from
@@ -565,8 +566,20 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // hold that cluster; the two now agree on the whole selection story (clear,
     // then flip); the helper's one extra act was a hover-popup clear, and the
     // hover popup no longer exists (row 5).
+    // AND THE SEATED PINCH'S ANCHOR GOES WITH THE COLUMN, the same rule this
+    // block already carries by hand for the selection (codex round 21: the clear
+    // rides every WRITE of the active view state, and this is the second W/P
+    // write in the product — the tab restore above inherits its own through
+    // switch_active_tab_view_to). Ctrl+Z is an ordinary key, so nothing stops it
+    // arriving with two fingers resting on the glass. FRESH-GRIP half: the held
+    // frame stays arithmetically valid across a column flip. The membership and
+    // the derivation are at clear_touch_zoom_seat's declaration
+    // (input_handler.h). Its damage rides this function's own unconditional
+    // full-waveform invalidate in the tail, exactly as the selection clear's
+    // does.
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         selection.clear_selection();
+        clear_touch_zoom_seat(app, viewport);
         app.active_markers_view = entry.op_mode;
     }
 

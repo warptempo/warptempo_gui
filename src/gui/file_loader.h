@@ -59,4 +59,11 @@ struct GuiFileLoader {
 // fields
 // identically while owning their own side-effect timing. SettingsFile is
 // visible here via app_state.h -> settings_file.h.
-void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf);
+// THE VIEWPORT IS FOR ONE THING AND NOTHING ELSE (codex round 21): this routine
+// is the product's ONLY wholesale write of the three active-view fields, so it
+// carries the seated pinch's clear (clear_touch_zoom_seat, input_handler.h,
+// whose declaration owns the membership) with its own damage. That is a
+// lifecycle end rather than a side effect a caller could time differently, so
+// the values-only contract above stands.
+void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
+                                     const SettingsFile& sf);

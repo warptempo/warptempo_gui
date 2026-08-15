@@ -1854,7 +1854,9 @@ bool GuiInputHandler::seat_overview_edge_drag(bool grabbed_begin) {
 // level is a pure function of the pointer COLUMN. The column clamps into the
 // lane first (the song walls by construction), then maps through
 // overview_anchor_sample_at_x per event, so every frame is domain-correct in
-// target view.
+// target view — the END edge reading the column's FAR boundary, which is what
+// makes the inverse agree with the box painter at BOTH walls (the invariant and
+// its derivation are at the mapping call below).
 void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     // A PENDING APPLIES NOTHING, EVER (2026-08-15, the outside-drag extension's
     // deletion): a press outside the box commits at its motionless LIFT or not
@@ -1867,7 +1869,32 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     const GuiRect lane = top_overview_row_area(app);
     if (lane.w <= 0) return;
     const int cx = std::clamp(x, lane.x, lane.x + lane.w - 1);
-    const double pos = overview_anchor_sample_at_x(app, audio, cx);
+    // THE RIGHT EDGE READS THE COLUMN'S FAR BOUNDARY, AND THAT IS WHAT MAKES
+    // THE INVERSE AGREE WITH THE PAINTER AT BOTH WALLS (codex round 21). The
+    // invariant: overview_box_span's span is HALF-OPEN [x0, x1), so a viewport
+    // BEGIN at song position p paints at column round(p/spp) and a viewport END
+    // at p paints its visible edge at round(p/spp) − 1. The inverse of the first
+    // is column·spp — exact, which is why the left edge has never been wrong and
+    // why its exactness is the proof rather than the convention. The inverse of
+    // the second is (column + 1)·spp, and asking the ONE mapping at cx + 1 IS
+    // that inverse: the far boundary of column cx is the near boundary of
+    // cx + 1. Reading it at cx instead treated the last pixel as the ORIGIN of
+    // the final bin while the painter treats it as the END wall, so a right edge
+    // dragged fully right topped out at total − spp — one overview column short
+    // of the song end — and pulling an already-full edge outward asked for that
+    // shorter span and zoomed IN by a bin. The one-bin bias was there at every
+    // column, not only at the wall; the wall is just where it could not be
+    // absorbed. cx + 1 leaves the lane by design at the right wall, which is the
+    // point — the function is a pure scale, not a hit test, and lane.w·spp is
+    // exactly the song end. THE OTHER TWO CONSUMERS DELIBERATELY DO NOT MOVE:
+    // the box PAN and the click-TELEPORT ask "what song position is under this
+    // pixel", whose answer is the bin's origin (the pan's grab offset is taken
+    // from the same reading, so it is exact by cancellation, and the teleport
+    // must not be made to overshoot the end).
+    const bool far_boundary =
+        app.overview_drag.kind == OverviewDragKind::EdgeEnd;
+    const double pos =
+        overview_anchor_sample_at_x(app, audio, far_boundary ? cx + 1 : cx);
 
     if (app.overview_drag.kind == OverviewDragKind::Pan) {
         // THE BOX-FOLLOWS-POINTER PAN: center the viewport on (pointer's

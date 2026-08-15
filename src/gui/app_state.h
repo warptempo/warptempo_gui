@@ -1324,15 +1324,24 @@ struct ScrollDragState {
 // read-only and live in the `h` view (the lane's claim sits above the mode's
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's
 // funnel, the edge drags apply_strip_drag_zoom's either-axis term — the
-// producer inventory at follow_overridden_for_session. Cursors: the edges
-// wear the trim endcaps' own pair and the rest of the lane TrimResize, hover
-// and drag alike, and EVERY LIVE DRAG KEEPS ITS CUE for the gesture's life,
-// read from this record's own `kind` (the trim exception's rule — the edges
-// took it at the lane rework and the PAN joined 2026-08-13, the architect
-// closing the one live lane drag that fell back to the Arrow mid-slide;
-// a Pending wears the resting TrimResize its press point already showed, and
-// the crossing re-reads the kind, so the cue changes to the grabbed bound's
-// arrow exactly when the bound is grabbed; pointer_cursor_kind). CTRL BINDS
+// producer inventory at follow_overridden_for_session. Cursors: the box EDGES
+// wear the trim endcaps' own pair, the box's INTERIOR wears TrimResize (the
+// bridge's own shape — the pan is an x-only slide of the whole span), and
+// EVERYWHERE ELSE ON THE LANE IS THE ARROW since codex round 19, which is the
+// map's own standing rule rather than an exception (a point arming nothing
+// shows the Arrow: outside the box the press is a Pending, whose crossing
+// commits nothing and whose only act is the teleport at a motionless lift, and
+// a click carries no cue anywhere in the product). Hover and drag alike, and
+// EVERY LIVE DRAG KEEPS ITS CUE for the gesture's life, read from this record's
+// own `kind` (the trim exception's rule — the edges took it at the lane rework
+// and the PAN joined 2026-08-13, the architect closing the one live lane drag
+// that fell back to the Arrow mid-slide; a Pending wears that same Arrow for
+// its whole span, and the crossing cannot change the kind, so the press-to-
+// release span reads ONE cue; pointer_cursor_kind). (The band-wide TrimResize
+// and the crossing's change to a grabbed-bound arrow that this paragraph
+// described were true only while an outside press extended the NEARER bound,
+// and that extension was deleted 2026-08-15 with the rest of the outside
+// drag.) CTRL BINDS
 // NOTHING ON THE LANE any more — it went with the strip drag — so a ctrl press
 // is a consumed nothing and ctrl's hover answer is the Arrow, the map's own
 // rule for a modifier that arms nothing.
@@ -1402,17 +1411,20 @@ struct OverviewDragState {
 //     of it (the reasoning is at the site) — and at end_touch_nav, every end
 //     included, so a later upgrade re-seats rather than inheriting a stale
 //     anchor.
-//   * AND AT EVERY VIEW SWITCH since codex round 20 — `t`, Ctrl+Tab and `p`,
-//     each beside its own region clear, with the 1/2/3 selectors, the view bar
-//     and the S/T + W/P radios inheriting it by composition. THE FIELD IS A
-//     SONG FRAME IN THE ACTIVE DOMAIN, and nothing stops a keyboard or a mouse
-//     command from switching that domain with two fingers still down: the S/T
-//     flip is the sharp case (a source frame read as a target one), Ctrl+Tab
-//     restores another band, and `p` is in the rule because a view switch
-//     replaces the view the pinch grabbed. The clear is free to a live pinch —
-//     its next frame seats afresh. The membership and the do-not-add-touch-to-
-//     any_pointer_gesture_active note live at clear_touch_zoom_seat's
-//     declaration (input_handler.h).
+//   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
+//     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
+//     with every command that reaches one (the `t`/`p`/Ctrl+Tab keys, the 1/2/3
+//     selectors, the view bar, the S/T + W/P radios, the settings keys, the
+//     propagate paste, undo/redo and both load-in-places) inheriting it by
+//     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
+//     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
+//     modal load from moving that domain with two fingers still down: the S/T
+//     write is the sharp case (a source frame read as a target one), while a
+//     W/P or A/B write leaves the number valid and clears on the fresh-grip
+//     rule. The clear is free to a live pinch — its next frame seats afresh.
+//     The membership, its derivation, the correctness / fresh-grip split and
+//     the do-not-add-touch-to-any_pointer_gesture_active note all live at
+//     clear_touch_zoom_seat's declaration (input_handler.h).
 // THE COLUMN IS RE-DERIVED EVERY FRAME from the held frame against the live
 // viewport, and a column pushed outside the waveform CLAMPS to the edge pixel
 // and REBINDS this field to that pixel's content — apply_nav_zoom_at's pivot
@@ -5169,6 +5181,14 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // the lane rework until then): the click-teleport's centering position and the
 // box pan / edge drags' per-event pointer position (both of which column-clamp
 // x into the lane first — the song walls by construction).
+// IT IS A PURE SCALE, NOT A HIT TEST, AND x MAY LEGITIMATELY BE lane.x + lane.w
+// (codex round 21): what it returns is the NEAR boundary of column x, so a
+// caller wanting a column's FAR boundary — which is what an END bound is, the
+// box span being half-open [x0, x1) — asks at x + 1, and at the right wall that
+// is lane.w, the song end exactly. The edge-END drag is the one caller that
+// does; the pan and the teleport want the bin's origin and ask at the column
+// itself. The full invariant (the map and overview_box_span must agree at BOTH
+// walls) is recorded at apply_overview_drag_at's mapping call, input_pointer.cpp.
 double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
                                    int x);
 // THE VIEWPORT BOX'S LANE COLUMNS — the ONE owner of the box arithmetic,

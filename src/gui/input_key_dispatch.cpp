@@ -3771,7 +3771,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     // every other key. The one selection was cleared above, so landing on the
     // file's marker mode carries an empty selection, exactly as a fresh load's
     // empty-selection state.
-    apply_settings_engine_and_prefs(app, *settings);
+    apply_settings_engine_and_prefs(app, viewport, *settings);
 
     // Clamp both loaded-in-place tab bands' playheads into the live domain (the
     // shared chokepoint, clamp_playhead_to_live_domain), mirroring the source
@@ -4056,7 +4056,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // place 1:1 with a load of the same three files.
     app.tab_a = view_state_from_settings_tab(settings.tab_a);
     app.tab_b = view_state_from_settings_tab(settings.tab_b);
-    apply_settings_engine_and_prefs(app, settings);
+    apply_settings_engine_and_prefs(app, viewport, settings);
 
     // Clamp both loaded-in-place bands' playheads into the live domain (the shared
     // chokepoint), mirroring the source load's tab-snapshot clamp at the same

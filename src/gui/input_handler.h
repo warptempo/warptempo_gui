@@ -298,19 +298,76 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
 // own mode edges spell.
 //
-// FREE, AND BESIDE clear_region_highlight, SINCE codex round 20: the seat is an
-// ACTIVE-DOMAIN song frame taken against a particular view, so THE VIEW SWITCHES
-// CLEAR IT — and they are GuiActiveViews' and GuiInputHandler's alike, so the
-// one body cannot be a member of either. Its callers, re-derived: the touch nav
-// body's top (any frame that is not two-finger), end_touch_nav (every end of the
-// gesture), and the THREE view switches, each beside its own region clear —
-// `t` (handle_active_audio_view_toggle, where the domain flips outright and a
-// SOURCE frame would otherwise be read as a TARGET one), Ctrl+Tab
-// (switch_active_tab_view_to, which restores another band entirely) and `p`
-// (toggle_active_markers_view). The bare 1/2/3 selectors, the view bar's buttons
-// and the S/T + W/P radios compose those handlers and inherit it. A live pinch
-// simply re-seats on its next frame, which is the same fresh grip an upgrade
-// takes.
+// FREE, AND BESIDE clear_region_highlight, SINCE codex round 20 — AND ON THE
+// VIEW-STATE WRITERS RATHER THAN THE COMMANDS SINCE ROUND 21: the seat is an
+// ACTIVE-DOMAIN song frame taken against a particular view, so A WRITE OF THE
+// ACTIVE VIEW STATE KILLS IT. The one body cannot be a member of GuiActiveViews
+// or GuiInputHandler because writers live in both, and in Undo and the file
+// loader besides.
+//
+// THE MEMBERSHIP IS DERIVED FROM THE WRITES, NOT FROM THE COMMANDS, and this is
+// the one place it is enumerated. Round 20 installed the clear at the three USER
+// COMMANDS (`t`, Ctrl+Tab, `p`) and three routes still reached a switch without
+// it: the propagate paste, which calls switch_active_markers_view_to directly;
+// Undo's own inline W/P swap; and apply_settings_engine_and_prefs, which
+// replaces S/T, W/P and A/B wholesale for BOTH load-in-places. So the rule now
+// sits at every site that assigns app.active_audio_view / active_markers_view /
+// active_tab_view — grep those three names and this list is what comes back:
+//   * GuiInputHandler::handle_active_audio_view_toggle — the S/T writer (bare
+//     `t`, the settings `active_audio_view=` key, the propagate paste's audio
+//     half), below its own refusals.
+//   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below its
+//     same-mode early return (`p` through toggle_active_markers_view, the
+//     settings key, and the propagate paste, which reaches this helper direct).
+//   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab, the
+//     settings `active_tab_view=` key, Undo's cross-tab restore).
+//   * Undo's inline W/P swap in Undo::restore_history_entry — a deliberate copy
+//     of switch_active_markers_view_to (Undo does not hold that cluster), so it
+//     carries this rule by hand exactly as it already carries the column
+//     switch's selection clear.
+//   * apply_settings_engine_and_prefs (file_loader.cpp) — all three fields at
+//     once, shared by the source load and by both load-in-places. It takes a
+//     Viewport for this and for nothing else; its VALUES-ONLY contract is
+//     otherwise intact, the clear being a lifecycle end rather than a side
+//     effect the caller could time differently.
+// load_file's own two direct writes (the pre-parse 'W' reset and the forced 'S'
+// of a failed target-view restore) need no call of their own: it runs the
+// routine above in the same body, and it is invoked once from the startup tick,
+// before any input exists.
+// THE COMMAND WRAPPERS DO NOT SPELL IT — `t` and Ctrl+Tab keep their calls
+// because they ARE the writers, and toggle_active_markers_view lost its call to
+// the helper it delegates to, so there is ONE spelling of the rule per write.
+// The bare 1/2/3 selectors, the view bar's buttons, the S/T + W/P radios and the
+// settings keys all compose those writers and inherit it.
+//
+// WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
+// because the two read alike at the call site: an S/T write CHANGES WHAT THE
+// NUMBER MEANS — the anchor is a song frame in the ACTIVE domain, so a SOURCE
+// frame would go on being zoomed about as a TARGET one — and there the clear is
+// a CORRECTNESS need. A W/P or A/B write leaves the stored number
+// arithmetically valid (A/B restores another band, which moves the view under
+// the anchor; W/P moves neither domain nor viewport), so there the clear is the
+// FRESH-GRIP rule: a view switch replaces the view the fingers grabbed. Both are
+// wanted, and one rule at every writer is worth more than a per-site judgment —
+// but a reader should know which is which.
+//
+// REACHABILITY, so none of this reads as theoretical: a two-finger frame under a
+// MODAL returns at apply_touch_nav_update's wheel_context refusal WITHOUT
+// clearing anything (the only per-frame clear is the one-finger arm), so a
+// seated pinch survives a whole load-editor session and resumes when the modal
+// closes — which is exactly how a load-in-place selecting TARGET reaches a seat
+// taken in SOURCE.
+//
+// AND THE TEMPTING FIX IS THE WRONG ONE, recorded here so it is not tried: DO
+// NOT add touch navigation to any_pointer_gesture_active to make the above
+// "impossible". apply_touch_nav_update asks wheel_context per frame, and
+// wheel_context READS that predicate — a live pinch would refuse itself into a
+// dead gesture.
+//
+// A live pinch simply re-seats on its next frame, which is the same fresh grip
+// an upgrade takes.
+// Its two non-writer callers are unchanged: the touch nav body's top (any frame
+// that is not two-finger) and end_touch_nav (every end of the gesture).
 void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO

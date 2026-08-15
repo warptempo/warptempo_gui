@@ -20,7 +20,8 @@
 #include <system_error>
 #include <utility>
 
-void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
+void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
+                                     const SettingsFile& sf) {
     app.engine_settings = sf.engine;
     app.follow_mode         = sf.follow;
     // Event-synchronized hit geometry: this routine (re)establishes the live
@@ -52,6 +53,25 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // source-view region survived into the forced target view and a later `x`
     // overwrote the freshly loaded-in-place recipe trim with the stale span.
     app.region = RegionState{};
+    // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
+    // same line of argument the region clear above makes (codex round 21): the
+    // three assignments below REPLACE the active view state wholesale, and this
+    // routine is where that write lives — so the clear lives here too and both
+    // load-in-places inherit it instead of remembering it. THE SHARP CASE IS THE
+    // LOAD-IN-PLACE: it runs from a modal load editor, and a two-finger frame
+    // under a modal returns at the wheel refusal WITHOUT clearing, so a pinch
+    // seated in SOURCE view survives the whole editor session and would resume
+    // reading its source frame as a target one after a file selecting TARGET
+    // loaded. That makes the S/T assignment the CORRECTNESS member; the W/P and
+    // A/B assignments beside it are the fresh-grip half. THE VALUES-ONLY
+    // CONTRACT STILL HOLDS otherwise: this is a lifecycle END, not a side effect
+    // a caller could time differently, which is why the Viewport parameter buys
+    // nothing else here. Membership and derivation at clear_touch_zoom_seat's
+    // declaration (input_handler.h). A no-op at the source load, which runs once
+    // from the startup tick before any input exists — and which is also what
+    // covers load_file's own two direct writes to these fields (the pre-parse
+    // 'W' reset and the forced 'S' of a failed target-view restore).
+    clear_touch_zoom_seat(app, viewport);
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
@@ -432,7 +452,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // on_resize) stay below where they always ran. The render-entry
         // load-in-place
         // shares this exact routine so its in-memory result is 1:1 with a load.
-        apply_settings_engine_and_prefs(app, sf);
+        apply_settings_engine_and_prefs(app, viewport, sf);
         // Per-tab trim: both bounds are always meaningful in the schema (the
         // `-1` unset spelling died 2026-07-30 and is now a load-fatal malformed
         // value), so the pair applies verbatim, overwriting the full-window

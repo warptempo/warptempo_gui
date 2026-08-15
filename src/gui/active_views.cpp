@@ -46,10 +46,23 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
 // basis of the pixels it erases. Caller decides what further invalidations to
-// run.
+// run; the only damage this helper owns is the one a SEATED PINCH's clear owes
+// (below), which is why it holds the viewport reference at all.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     selection.clear_selection();
+    // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
+    // at the writer — rather than in the `p` toggle below, which is where codex
+    // round 20 put it and where round 21 found the hole: this helper's OTHER
+    // caller is the propagate paste's target-view tail, which reaches it direct
+    // and inherited nothing. Below the same-mode early return, so a switch that
+    // never happened clears nothing. This is the FRESH-GRIP half of the rule —
+    // the flip moves neither domain nor viewport, so the held frame stays
+    // arithmetically valid and the cost is a re-seat at the centroid on the next
+    // two-finger frame. The membership, the derivation and the correctness /
+    // fresh-grip split are at clear_touch_zoom_seat's declaration
+    // (input_handler.h).
+    clear_touch_zoom_seat(app, viewport);
     app.active_markers_view = target_mode;
 }
 
@@ -85,12 +98,14 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // domain), so a resting region cannot carry across. The kick_waveform_sync
     // below repaints the whole waveform area, restoring the plain canvas ground.
     app.region = RegionState{};
-    // The SEATED PINCH's anchor goes with it, this switch's member of the
-    // view-switch rule (codex round 20; the argument, the three sites and the
+    // The SEATED PINCH's anchor goes with it, this function being the A/B
+    // WRITER and so a member of the rule in its own right (codex round 20, moved
+    // onto the writers at round 21; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
     // input_handler.h): the entering tab restores another band entirely, so a
     // pinch held across the switch would resume about a point the fingers never
-    // grabbed. Its next two-finger frame seats afresh.
+    // grabbed — the FRESH-GRIP half of the rule, the held frame staying
+    // arithmetically valid. Its next two-finger frame seats afresh.
     clear_touch_zoom_seat(app, viewport);
     // A TAB SWITCH CLEARS THE SELECTION (the scope rule, architect 2026-07-29 —
     // a column or tab switch clears; only the `t` audio-view switch carries).
@@ -192,15 +207,12 @@ void GuiActiveViews::toggle_active_markers_view() {
     // propagate paste's target-view tail — writes its own selection one line later
     // and an auto-select there would be overwritten for nothing.
     clear_region_highlight(app, viewport);
-    // The SEATED PINCH's anchor clears here too, the third of the view
-    // switches' sites (codex round 20; the argument and the whole membership
-    // are at clear_touch_zoom_seat's declaration, input_handler.h). This flip
-    // moves NO domain and NO viewport, so the held frame stays arithmetically
-    // valid — it is in the rule because a view switch replaces the view the
-    // pinch grabbed, and one rule at all three switches is worth more than a
-    // per-switch judgment; the cost is a re-seat at the centroid on the next
-    // two-finger frame.
-    clear_touch_zoom_seat(app, viewport);
+    // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
+    // switch_active_markers_view_to above, at codex round 21 — this toggle's own
+    // call was one of the three command-wrapper spellings that let the propagate
+    // paste reach a column switch with a seated pinch intact. The flip this
+    // function performs still clears the seat; it inherits it from the helper,
+    // which is the point.)
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH — the W/P half of the
     // rule the S/T toggle carries at its own chokepoint
