@@ -175,4 +175,19 @@ struct GuiTouchNavFrame {
     // TWO fingers vs the phone model's one — the GUI's fork between the
     // zoom-only gesture and the pan-only one.
     bool   two_finger = false;
+    // THE FIRST FINGER'S DOWN POINT LAY ON THE OVERVIEW LANE (2026-08-15) —
+    // captured ONCE, at the `Idle` down that opened this contact stream (the
+    // platform's touch_down_on_overview_, the same bit the second-down
+    // admission reads), and CONSTANT for the stream's whole life: it is a fact
+    // about where the gesture STARTED, never about where the fingers are now.
+    // It exists so THE GESTURE'S SURFACE CANNOT CHANGE UNDER THE FINGERS. Its
+    // one reader is apply_touch_nav_update's lane fork, which used to ask the
+    // live centroid instead — and the overview lane is 26 px tall while its
+    // drags are x-only, so a finger that grabbed a bound can wander far off the
+    // strip and a second finger landing low drops the centroid outside the
+    // band, routing the frames to the waveform's pinch mid-gesture. A gesture's
+    // surface is decided where it began (the seat, the press-time act and the
+    // crossing's mode all follow that rule), so the answer travels on the frame
+    // rather than being re-derived from a moving point.
+    bool   down_on_overview = false;
 };

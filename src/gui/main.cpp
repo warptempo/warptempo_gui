@@ -1243,6 +1243,10 @@ int main(int argc, char** argv) {
     // the NAVIGATION SURFACE — upper waveform half (whole in the `h` view) +
     // ruler + the marker lane minus its flag boxes — surface geometry only
     // (refusals stay per-frame in the update body and in the region begin).
+    // THE OVERVIEW-LANE QUERY is its twin, asked at the same down: the GUI
+    // answers the lane's own rect and the platform's only use of it is the
+    // second-down admission, the lane being the moved latch's one exception so
+    // its two-finger bounds gesture can be entered mid-drag (2026-08-15).
     // The REGION TRIO is the eighth ruling's half: the zone's stretched
     // window (the ~500 ms region-hold beat) expires into the region former —
     // begin at the down point, one update per frame, an end that always
@@ -1262,6 +1266,9 @@ int main(int argc, char** argv) {
         [&]() { input_handler.end_touch_nav(); },
         [&](int x, int y) {
             return input_handler.touch_point_in_pan_zone(x, y);
+        },
+        [&](int x, int y) {
+            return input_handler.touch_point_on_overview(x, y);
         },
         [&](int x, int y) { input_handler.begin_touch_region(x, y); },
         [&](int x, int y) { input_handler.update_touch_region(x, y); },

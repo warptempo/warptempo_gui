@@ -690,14 +690,16 @@ struct GuiInputHandler {
     // reads.
     //
     // THE OVERVIEW LANE FORKS OUT OF THIS BODY ENTIRELY on a two-finger frame
-    // centred there (apply_overview_two_finger_bounds — the bounds are drawn at
-    // the two contacts, absolute, with the lane's own column mapping; the lane
-    // never SEATS, never reads an anchor and never touches the pivot, and the
-    // one thing it does to the pinch is END it, because a seated pair whose
-    // centroid crosses onto the lane is a pinch that is over and its anchor
-    // stem must not stay painted over the waveform the lane is moving — the
-    // reasoning is at the fork). Everything below describes the WAVEFORM's
-    // gesture.
+    // whose gesture BEGAN on the lane — the frame's own down_on_overview bit,
+    // the first finger's down point, not the live centroid, because a 26 px
+    // lane whose drags are x-only cannot hold a centroid (the reasoning is at
+    // the fork). apply_overview_two_finger_bounds draws the bounds at the two
+    // contacts, absolute, with the lane's own column mapping; it never SEATS,
+    // never reads an anchor and never touches the pivot, and its
+    // clear_touch_zoom_seat is belt and braces now that routing cannot change
+    // mid-stream. Everything below describes the WAVEFORM's gesture — which
+    // keeps its pinch for the gesture's whole life even if the fingers carry
+    // the centroid onto the strip, the down-point rule's own mirror.
     //
     // ONE FINGER PANS, TWO FINGERS ZOOM — AND THE TWO-FINGER GESTURE NEVER
     // PANS (architect 2026-08-14, from the rig: "on the touch panel, two
@@ -883,6 +885,16 @@ struct GuiInputHandler {
     // EXPIRY (the region hold vs the pointer unlock) — the platform state
     // block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
+
+    // THE OVERVIEW-LANE QUERY (2026-08-15) — the pan-zone query's twin, asked
+    // at the same down and answered with one rectangle: is this point on the
+    // overview strip? It names NO gesture and forks no resolution here; its one
+    // consumer is the platform's SECOND-DOWN admission, where the lane is the
+    // moved latch's one exception so its two-finger bounds gesture is reachable
+    // at all (the argument at that guard, platform_wayland.cpp). Surface
+    // geometry only, like its twin. Wired at main.cpp's set_touch_nav_hooks
+    // call.
+    bool touch_point_on_overview(int x, int y) const;
 
     // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
     // ruling 2026-08-12 — "region select to be hold and then drag because

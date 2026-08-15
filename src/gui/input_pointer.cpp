@@ -1917,12 +1917,14 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
 // NONE OF THE PINCH'S MACHINERY IS INVOLVED and none should be reached for: no
 // seated pivot, no anchor stem, no distance ratio and no centroid travel —
 // TouchNavZoomState belongs to the waveform's pinch alone, and THE LANE NEVER
-// SEATS, NEVER READS AN ANCHOR AND NEVER TOUCHES THE PIVOT. It does END the
-// pinch when it takes over, at the fork rather than in here: a seated pair whose
-// centroid crosses onto the lane is a pinch that is over, and leaving its anchor
-// stem painted over a waveform this gesture is moving was a real defect (the
-// reasoning is at the fork, in apply_touch_nav_update). Ending what the waveform
-// started is not writing pinch state. NO STEM ON THIS LANE by ruling either:
+// SEATS, NEVER READS AN ANCHOR AND NEVER TOUCHES THE PIVOT. The fork above it
+// still clears a standing seat before calling in here, but that call is belt
+// and braces since routing moved to the first finger's DOWN POINT: a pair
+// routed to this body began on the lane and therefore never seated, and a pinch
+// that began on the waveform keeps the pinch wherever its centroid wanders, so
+// the crossing case the clear was written for is unreachable rather than merely
+// handled (the reasoning is at the fork, in apply_touch_nav_update).
+// NO STEM ON THIS LANE by ruling either:
 // both bounds are under the fingers and already drawn as the box's own edges,
 // so a mark would name what the user can see. (The TRIM analog is where a mark
 // earns itself, its anchor being the CENTROID; it waits until this lane is
@@ -2005,42 +2007,60 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // lane lost the pinch outright earlier the same day, the lane redesign
     // having made the BOX the subject and the zoom a consequence of its span;
     // this is the shape that ruling left room for, and it is the same fork —
-    // a two-finger frame centred on the lane is not the waveform's gesture.
+    // a two-finger gesture BEGUN on the lane is not the waveform's gesture.
     // THE FORK IS HERE AND NOT IN wheel_context BECAUSE THAT PREDICATE IS THE
     // WHEEL'S ROUTING OWNER and the wheel stays LIVE on the lane: the stepped
     // pan and the ctrl+wheel zoom step both work there and are no part of this,
     // so forking in the shared predicate would have taken them with it. The
     // lane's positive context (3) is what admits the gesture at all; what the
     // lane must not inherit is the pinch's ARITHMETIC — that was a defect
-    // nobody reported: a pinch centred here computed its anchor with the
-    // WAVEFORM's mapping (viewport_start + centroid·spp) where a lane column
-    // means a WHOLE-SONG position, so it anchored somewhere meaningless. The
-    // body below maps through overview_anchor_sample_at_x, the lane's own.
+    // nobody reported: a pinch whose frames landed here computed its anchor
+    // with the WAVEFORM's mapping (viewport_start + centroid·spp) where a lane
+    // column means a WHOLE-SONG position, so it anchored somewhere meaningless.
+    // The body below maps through overview_anchor_sample_at_x, the lane's own.
     // THE ONE-FINGER CASE NEEDS NOTHING AND IS DELIBERATELY NOT FORKED: the
     // touch pan zone is the navigation surface and the lane is NOT in it, so a
-    // single finger on the lane has always gone through the pointer translation
-    // to the lane's own drags and no one-finger nav gesture can begin there.
-    // The only frames such a term could take are a live phone-model PAN whose
-    // finger has drifted up onto the lane, and freezing that pan would be a
-    // regression neither ruling asked for. Hence the two-finger term rather
-    // than a blanket position test, which is where this differs in shape from
-    // wheel_context's own.
-    // AND TAKING OVER ENDS THE WAVEFORM'S PINCH — which is the PINCH'S OWN
-    // CLEAR, not the lane reaching into pinch state (2026-08-15, the planner's
-    // own defect, caught the moment the lane's gesture existed): a pair seated
-    // mid-waveform paints its anchor stem, and a centroid that then slides up
-    // onto the lane leaves that pinch OVER while the lane busily moves the very
-    // waveform the dead stem is painted on. A seated pinch whose centroid
-    // leaves the waveform has ended; the seat and its stem go with it, on the
-    // frame the lane takes over, because clear_touch_zoom_seat OWES THE ERASE.
-    // IT IS UNCONDITIONAL because the body early-returns when no seat stands,
-    // so a pair that began on the lane pays nothing and damages nothing.
-    // THE INVARIANT THAT SURVIVES is the useful half of the one this replaces:
-    // the lane never SEATS, never reads an anchor and never touches the pivot —
-    // it only ends what the waveform started, the same act the one-finger arm
-    // at the top of this body performs and for the same reason.
-    if (f.two_finger &&
-        rect_contains(top_overview_row_area(app), f.x, f.y)) {
+    // single finger on the lane goes through the pointer translation to the
+    // lane's own drags and no one-finger nav gesture can begin there. With the
+    // down-point routing the two frames such a term could take are both already
+    // answered — a live phone-model PAN whose finger has drifted up onto the
+    // lane carries the bit FALSE (it began in the pan zone), so it pans as it
+    // must without any term at all; and the DOWNGRADE's survivor of a lane pair
+    // carries it TRUE and pans, which is what a nav gesture's survivor does on
+    // every surface (the lane's one-finger vocabulary is the pointer
+    // translation, and this contact stream is long past that fork). Hence the
+    // two-finger term rather than a blanket down-point test.
+    // THE FORK ROUTES ON THE FIRST FINGER'S DOWN POINT, NOT ON THE LIVE
+    // CENTROID (2026-08-15, correcting the shape this fork shipped with hours
+    // earlier — the planner's own defect, and the second form of the erratic
+    // feel the architect reported): the lane is TWENTY-SIX PIXELS TALL and its
+    // drags are X-ONLY, so a finger that grabbed a bound may wander vertically
+    // well off the strip while still legitimately dragging it, and the moment a
+    // second finger lands low the pair's centroid falls outside that band and
+    // the frames route to the WAVEFORM'S PINCH mid-gesture. A live geometric
+    // test asks a question this gesture's own geometry cannot keep answering.
+    // A GESTURE'S SURFACE IS DECIDED WHERE IT STARTED, which is the rule the
+    // rest of the product already follows — the pinch's seat, the press-time
+    // act, the mode read at the 8 px crossing — so the answer travels ON THE
+    // FRAME, captured once at the `Idle` down and constant for the contact
+    // stream (field contract at GuiTouchNavFrame, gui_input.h; it is the same
+    // bit the second-down admission reads, so the surface that admitted the
+    // finger is the surface that gets it).
+    // THE MIRROR IS A CONSEQUENCE, NOT A CAVEAT: a pinch that begins on the
+    // waveform KEEPS the pinch even if its centroid crosses onto the strip,
+    // exactly as a pair that begins on the lane keeps the lane wherever the
+    // fingers wander. Both halves are wanted.
+    // clear_touch_zoom_seat() HERE IS NOW BELT AND BRACES rather than the live
+    // defence it was one commit ago: a pair routed to this arm was never
+    // seated, because seating happens BELOW this return and the routing can no
+    // longer change mid-stream — the crossing-centroid case it was written for
+    // (a seated pinch sliding onto the lane, leaving its anchor stem painted
+    // over a waveform this gesture was moving) is unreachable by construction
+    // now, not merely handled. The call stays: it early-returns when no seat
+    // stands, costs a branch, keeps the "the lane never leaves the pinch
+    // running" statement true by inspection, and survives any future re-entry
+    // into this arm from a seated state.
+    if (f.two_finger && f.down_on_overview) {
         clear_touch_zoom_seat();
         apply_overview_two_finger_bounds(f);
         return;
@@ -2256,6 +2276,18 @@ void GuiInputHandler::end_touch_nav() {
 // deferred scrub act — the mouse's own machinery, inherited with no touch code.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     return point_on_nav_surface(app, audio, x, y);
+}
+
+// The overview-lane query's body (contract at the declaration): the lane's own
+// rect and nothing else — the same rectangle the lane's press router, its
+// cursor arm, its wheel context and the two-finger fork all read, so there is
+// one answer to "is this the overview strip" and this query is not a second
+// spelling of it. Surface geometry only; every refusal stays downstream, the
+// pan-zone query's rule (the two-finger frames meet wheel_context inside
+// apply_touch_nav_update, and a one-finger translation meets the press path's
+// own gates).
+bool GuiInputHandler::touch_point_on_overview(int x, int y) const {
+    return rect_contains(top_overview_row_area(app), x, y);
 }
 
 // --- The touch region former (the hold on the pan zone) --------------------

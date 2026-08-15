@@ -381,6 +381,17 @@ public:
     //     and a refused hold is a dead stream rather than a fallback pointer
     //     drag. Null — or answering false — means no pan surface: the plain
     //     phase-1 translation everywhere.
+    //   * overview(x, y): THE OVERVIEW-LANE QUERY — does this point lie on the
+    //     overview strip? The pan_zone query's exact shape (asked ONCE, at the
+    //     FIRST finger's down, captured beside the down point, surface geometry
+    //     only, null or false meaning "not there") and its one consumer is the
+    //     SECOND-DOWN admission below: on that lane alone a second finger is
+    //     admitted even after the first has MOVED, which is what makes the
+    //     lane's two-finger bounds gesture reachable at all (the full argument
+    //     at the Pointer arm's guard in on_touch_down). The platform learns no
+    //     more about the lane than this bit: it does not route to it, does not
+    //     measure it and does not know what the gesture there means — the GUI
+    //     answers one rectangle, exactly as it answers the pan surface.
     //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
     //     the GUI arms its region former at the DOWN point (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
@@ -409,6 +420,7 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
+        std::function<bool(int x, int y)> overview,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end);
@@ -1503,6 +1515,14 @@ private:
     // the slop crossing (the phone model's pan vs the pointer) and the
     // expiry (the region hold vs the pointer unlock).
     bool       touch_down_in_pan_zone_   = false;
+    // The down point's OVERVIEW-LANE answer, captured ONCE beside the pan-zone
+    // one at the first finger's down (the overview query at
+    // set_touch_nav_hooks) and cleared with it in forget_touch_state — the two
+    // bits have one lifecycle, and a stale one here would admit a second-finger
+    // hijack on a surface that must refuse it. Its ONE reader is the
+    // second-down admission in on_touch_down's Pointer arm, where it is the
+    // exception to the moved latch below (the argument at that guard).
+    bool       touch_down_on_overview_   = false;
     // Region: a finger position staged for the wl_touch.frame boundary
     // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
     bool       touch_region_frame_dirty_ = false;
@@ -1511,7 +1531,9 @@ private:
     // by the resolver from the window's own travel (a slop-crossing
     // resolution enters already moved, expiry enters motionless), latched by
     // the Pointer motion arm afterward; the second-down fork reads it —
-    // moved = ignore, motionless = the upgrade.
+    // moved = ignore, motionless = the upgrade — WITH THE OVERVIEW LANE'S ONE
+    // EXCEPTION, where a moved translation admits the second finger too
+    // (touch_down_on_overview_ above; the argument at the guard).
     bool       touch_translation_moved_  = false;
     // The logical left's third source (see the OR-edge model above).
     bool       touch_left_held_          = false;
@@ -1685,6 +1707,10 @@ private:
     // The pan-zone query (asked once, at the first finger's down; surface
     // geometry only — the contract at set_touch_nav_hooks).
     std::function<bool(int, int)>                 touch_pan_zone_hook_;
+    // The overview-lane query (asked once, at the first finger's down, beside
+    // the pan-zone one; surface geometry only — the contract at
+    // set_touch_nav_hooks).
+    std::function<bool(int, int)>                 touch_overview_hook_;
     // The region trio the Region phase drives (contracts at
     // set_touch_nav_hooks). Null-safe at each fire site.
     std::function<void(int, int)>                 touch_region_begin_hook_;

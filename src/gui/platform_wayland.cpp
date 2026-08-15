@@ -3257,6 +3257,16 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                 touch_pan_zone_hook_ &&
                 touch_pan_zone_hook_(static_cast<int>(std::nearbyint(x)),
                                      static_cast<int>(std::nearbyint(y)));
+            // THE OVERVIEW-LANE ANSWER rides beside it, same query shape, same
+            // one asking, same lifecycle (both cleared in forget_touch_state).
+            // Its one reader is the second-down admission in the Pointer arm
+            // below; it forks no deadline and no resolution, so a finger landing
+            // on the lane resolves exactly as it did before — the lane is not
+            // pan surface, so that is the plain pointer translation.
+            touch_down_on_overview_ =
+                touch_overview_hook_ &&
+                touch_overview_hook_(static_cast<int>(std::nearbyint(x)),
+                                     static_cast<int>(std::nearbyint(y)));
             // THE TWO-DEADLINE FORK (the eighth glass ruling, 2026-08-12 —
             // the dead trim-band beat's pattern reborn): ON the zone the
             // window runs to the REGION-HOLD beat, 500 ms; OFF it the 60 ms
@@ -3309,11 +3319,12 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             // A SECOND finger during a live translation FORKS ON THE MOVED
             // LATCH (the sixth glass ruling, 2026-08-12 — the one piece of
             // the timer-free model kept when the window returned):
-            //   * MOVED (a live drag — marker, region, trim, strip): IGNORED
+            //   * MOVED (a live drag — marker, region, trim): IGNORED
             //     whole — recorded (the count above), not routed: mid-gesture
             //     finger-count changes do not mutate a committed gesture (the
             //     any-end-commits family; the architect's explicit mid-drag
-            //     ruling).
+            //     ruling). WITH ONE EXCEPTION, THE OVERVIEW LANE (2026-08-15) —
+            //     see the guard's own paragraph below.
             //   * MOTIONLESS (a hold): THE UPGRADE — the translation ends by
             //     ORDINARY RELEASE, the finger-up path's own shape through
             //     the one owner (staged motion flushed, release on the
@@ -3326,7 +3337,42 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             //     jump — it only keeps a slow pinch (fingers landing further
             //     apart than the window) alive instead of dead; a sub-latch
             //     release of that pair delivers nothing more.
-            if (touch_translation_moved_) break;
+            // THE OVERVIEW LANE ADMITS THE SECOND FINGER AFTER THE FIRST HAS
+            // MOVED (architect 2026-08-15, from the rig — the lane's two-finger
+            // bounds gesture "is very erratic now"), and the exception is one of
+            // KIND rather than fiat:
+            //   * WHY THE LATCH RULE EXISTS AND STANDS: a moved one-finger
+            //     translation is a COMMITTED gesture — a marker drag, a trim
+            //     drag, a region sweep — and a stray second contact must not
+            //     mutate it mid-flight. That is the architect's own ruling and
+            //     nothing here weakens it; every surface it protects is a
+            //     surface this bit is false on.
+            //   * WHY THE LANE IS DIFFERENT: there the one- and two-finger
+            //     gestures are THE SAME ACT ON THE SAME SUBJECT — the box. One
+            //     finger drags a bound or the box, two fingers draw both bounds
+            //     where they land. So a second finger ADDS a bound rather than
+            //     hijacking anything: nothing it interrupts means something
+            //     different from what it continues.
+            //   * WHY THE GESTURE WAS UNREACHABLE WITHOUT THIS: two fingers
+            //     essentially never land within the 60 ms disambiguation window,
+            //     so in practice the first crossed the 8 px slop first and this
+            //     guard discarded the second — what actually ran was a
+            //     ONE-finger bound drag or box pan, which is the erratic feel
+            //     reported (and, a press begun inside the box being a box pan,
+            //     also why spreading two fingers read as the gesture running
+            //     backwards: the box slid sideways instead of widening).
+            //   * THE COST, stated plainly: a live bound drag on the lane can
+            //     now become the two-bound gesture mid-drag. That is the intent.
+            //     A second finger that lands and LIFTS without moving still does
+            //     nothing, because the pair delivers no frame until the nav
+            //     latch crosses — which revises, deliberately, the tentative
+            //     clause that a second finger during a bound drag "should be a
+            //     no-op": landing is still a no-op, DRAGGING now claims a bound.
+            // The translation END is delivered below before the phase switches,
+            // exactly as in the motionless upgrade, so the GUI's ordinary
+            // release runs the lane's own drag end and no OverviewDragState is
+            // left behind.
+            if (touch_translation_moved_ && !touch_down_on_overview_) break;
             deliver_touch_translation_end();
             touch_phase_      = TouchPhase::Nav;
             touch_nav_single_ = false;
@@ -3697,6 +3743,14 @@ void GuiPlatform::deliver_touch_nav_frame() {
         // frame — two fingers zoom and never pan — so this layer still
         // measures and delivers both deltas and applies no policy of its own.
         frame.two_finger = !touch_nav_single_;
+        // THE DOWN POINT'S SURFACE ANSWER, carried on every frame of the
+        // stream (field contract at GuiTouchNavFrame, gui_input.h): the FIRST
+        // finger's overview-lane bit, captured once at the `Idle` down and
+        // never re-measured, so the GUI's lane fork routes on where the
+        // gesture BEGAN instead of on a centroid that moves. Delivering it is
+        // not policy — it is the same surface geometry the pan-zone answer
+        // already is, asked once and handed over.
+        frame.down_on_overview = touch_down_on_overview_;
         touch_nav_update_hook_(frame);
     }
 }
@@ -3823,6 +3877,7 @@ void GuiPlatform::forget_touch_state() {
     // still reach here with it clear.
     touch_frame_motion_pending_ = false;
     touch_down_in_pan_zone_     = false;
+    touch_down_on_overview_     = false;
     touch_region_frame_dirty_   = false;
     touch_translation_moved_    = false;
     touch_nav_single_ = false;
@@ -4617,12 +4672,14 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
     std::function<bool(int x, int y)> pan_zone,
+    std::function<bool(int x, int y)> overview,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end) {
     touch_nav_update_hook_    = std::move(update);
     touch_nav_end_hook_       = std::move(end);
     touch_pan_zone_hook_      = std::move(pan_zone);
+    touch_overview_hook_      = std::move(overview);
     touch_region_begin_hook_  = std::move(region_begin);
     touch_region_update_hook_ = std::move(region_update);
     touch_region_end_hook_    = std::move(region_end);
