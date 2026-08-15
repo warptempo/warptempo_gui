@@ -685,21 +685,28 @@ struct GuiInputHandler {
     // centroid and dist_ratio pinned at 1.0. The payload is a
     // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
     // horizontal delta and the finger-distance ratio against the previous
-    // delivered frame, the finger count, and — since 2026-08-15 — the two
-    // contacts' RAW x positions, which only the overview lane's fork below
-    // reads.
+    // delivered frame, the finger count, and the first finger's
+    // thin-lane answer.
     //
-    // THE OVERVIEW LANE FORKS OUT OF THIS BODY ENTIRELY on a two-finger frame
-    // whose gesture BEGAN on the lane — the frame's own down_on_overview bit,
-    // the first finger's down point, not the live centroid, because a 26 px
-    // lane whose drags are x-only cannot hold a centroid (the reasoning is at
-    // the fork). apply_overview_two_finger_bounds draws the bounds at the two
-    // contacts, absolute, with the lane's own column mapping; it never SEATS,
-    // never reads an anchor and never touches the pivot, and its
-    // clear_touch_zoom_seat is belt and braces now that routing cannot change
-    // mid-stream. Everything below describes the WAVEFORM's gesture — which
-    // keeps its pinch for the gesture's whole life even if the fingers carry
-    // the centroid onto the strip, the down-point rule's own mirror.
+    // THE THIN LANES TAKE NO NAV GESTURE AT ALL — the overview strip and the
+    // trim bar — and the refusal is the frame's own down_on_thin_lane bit READ
+    // ALONE, with no finger-count term (architect 2026-08-15: "once one finger
+    // is down, the second finger is completely ignored, which is what we do with
+    // three-finger gestures on the waveform"): a gesture BEGUN on such a lane
+    // does nothing at all rather than falling through to the pinch below and
+    // zooming the view from a strip the user was touching for another reason.
+    // The one-finger case is no over-reach — a plain finger on these lanes never
+    // reaches this body at all, so the only one-finger frames carrying the bit
+    // are downgrade survivors, which are exactly what must not pan (the argument
+    // is at the refusal). It reads the DOWN POINT and not the live centroid
+    // because a 26 px lane whose drags are x-only cannot hold one, and the bit
+    // is stream-constant, so the refusal cannot change under a live gesture.
+    // THIS IS THE SECOND DOOR: the platform's own second-finger fork is the
+    // first, ignoring a second contact on such a lane rather than upgrading a
+    // live translation into a gesture this body would then refuse frame by
+    // frame. Everything below describes the WAVEFORM's gesture — which keeps
+    // its pinch for its whole life even if the fingers carry the centroid onto
+    // a strip, the same down-point rule read the other way.
     //
     // ONE FINGER PANS, TWO FINGERS ZOOM — AND THE TWO-FINGER GESTURE NEVER
     // PANS (architect 2026-08-14, from the rig: "on the touch panel, two
@@ -886,15 +893,18 @@ struct GuiInputHandler {
     // block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
 
-    // THE OVERVIEW-LANE QUERY (2026-08-15) — the pan-zone query's twin, asked
-    // at the same down and answered with one rectangle: is this point on the
-    // overview strip? It names NO gesture and forks no resolution here; its one
-    // consumer is the platform's SECOND-DOWN admission, where the lane is the
-    // moved latch's one exception so its two-finger bounds gesture is reachable
-    // at all (the argument at that guard, platform_wayland.cpp). Surface
-    // geometry only, like its twin. Wired at main.cpp's set_touch_nav_hooks
-    // call.
-    bool touch_point_on_overview(int x, int y) const;
+    // THE THIN-LANE QUERY (2026-08-15) — the pan-zone query's twin, asked at
+    // the same down: does this point lie on a THIN LANE? A CLASS, not a lane —
+    // the body states what makes a lane a member and names the two (the OVERVIEW
+    // STRIP and the TRIM BAR), so the next one joins on a rule. It names NO
+    // gesture and forks no resolution here; the platform captures its answer and
+    // carries it onto every nav frame (GuiTouchNavFrame::down_on_thin_lane),
+    // where TWO readers refuse with it — apply_touch_nav_update drops every nav
+    // frame carrying it, and the platform's own second-finger fork ignores a
+    // second contact on such a lane outright, so once one finger is down the
+    // second is completely ignored. Surface geometry only, like its twin. Wired
+    // at main.cpp's set_touch_nav_hooks call.
+    bool touch_point_on_thin_lane(int x, int y) const;
 
     // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
     // ruling 2026-08-12 — "region select to be hold and then drag because
@@ -1218,29 +1228,13 @@ struct GuiInputHandler {
     // definition). apply_overview_drag_at: the one motion body for the box
     // pan and the two edge drags, X ONLY by construction (it takes no y).
     // seat_overview_edge_drag: the ONE writer of an edge drag's kind and its
-    // FIXED partner bound, shared by the press claim's endcap hit and the
-    // Pending crossing so the two cannot disagree about which bound stays put;
-    // false on degenerate geometry, where the caller drops the arm.
-    // resolve_overview_pending_to_edge: the Pending outside press's crossing —
-    // the bound NEARER THE PRESS COLUMN, decided once and never re-derived (the
-    // reasoning is at both definitions).
-    // apply_overview_span_zoom: the ONE expression turning a pair of whole-song
-    // bounds into a level and a placement — the min-span cannot-cross clamp,
-    // the fit formula and the level pre-clamp, applied through
-    // Viewport::apply_strip_drag_zoom. Its two callers are the edge arm above
-    // and the two-finger gesture below, the lane's only two routes to a zoom.
-    // apply_overview_two_finger_bounds: TWO FINGERS DRAW THE BOX'S BOUNDS WHERE
-    // THEY LAND (architect 2026-08-15) — begin at the leftmost contact's
-    // whole-song position, end at the rightmost, per frame and ABSOLUTE, so
-    // spreading zooms out and pinching zooms in. Its one caller is
-    // apply_touch_nav_update's lane fork; the full ruling is at the definition.
+    // FIXED partner bound, called by the press claim's ENDCAP hit — a bound is
+    // reached through its own grab band and nowhere else since the outside-drag
+    // extension's deletion (2026-08-15); false on degenerate geometry, where the
+    // caller drops the arm.
     void run_overview_teleport(int x);
     void apply_overview_drag_at(int x, bool final_event);
     bool seat_overview_edge_drag(bool grabbed_begin);
-    bool resolve_overview_pending_to_edge();
-    void apply_overview_span_zoom(double span, double anchor_sample,
-                                  bool anchor_at_end, bool final_event);
-    void apply_overview_two_finger_bounds(const GuiTouchNavFrame& frame);
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
     // is a consumed nothing everywhere since the button's unbinding,

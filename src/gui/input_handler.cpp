@@ -1700,9 +1700,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // so the top-strip test below would otherwise answer 2 over it first. Both
     // ids take the same one route, so the ordering costs nothing but the id's
     // honesty — and the id is what the platform attributes sub-detent remainder
-    // to. A positive context here also admits the two-finger touch nav's
-    // per-frame refusal check over the lane, which is the same
-    // navigation-class answer.
+    // to. A positive context here also admits the touch nav's per-frame frames
+    // over the lane, which is the same navigation-class answer — and is exactly
+    // why apply_touch_nav_update carries its OWN thin-lane refusal: this
+    // predicate is the WHEEL's routing owner and the wheel stays live here, so
+    // the nav gesture's refusal could not be folded into it.
     if (rect_contains(top_overview_row_area(app), x, y)) return 3;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);

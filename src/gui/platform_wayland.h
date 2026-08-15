@@ -314,10 +314,12 @@ public:
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members
-    // since PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
+    // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
     // update, end, the pan-zone query, and the REGION trio
     // begin/update/end, the dead trim-move members' exact pattern reborn for
-    // the region former; touch.md carries the arc). ONE finger on
+    // the region former — and SEVEN since 2026-08-15, when the OVERVIEW-LANE
+    // query joined beside the pan-zone one; touch.md carries the arc). ONE
+    // finger on
     // the glass IS the pointer — translated whole inside this class, so the
     // GUI sees ordinary pointer deliveries and cannot tell which device
     // produced them (the bare-`e` precedent applied to glass; the translation
@@ -381,17 +383,24 @@ public:
     //     and a refused hold is a dead stream rather than a fallback pointer
     //     drag. Null — or answering false — means no pan surface: the plain
     //     phase-1 translation everywhere.
-    //   * overview(x, y): THE OVERVIEW-LANE QUERY — does this point lie on the
-    //     overview strip? The pan_zone query's exact shape (asked ONCE, at the
-    //     FIRST finger's down, captured beside the down point, surface geometry
-    //     only, null or false meaning "not there") and its one consumer is the
-    //     SECOND-DOWN admission below: on that lane alone a second finger is
-    //     admitted even after the first has MOVED, which is what makes the
-    //     lane's two-finger bounds gesture reachable at all (the full argument
-    //     at the Pointer arm's guard in on_touch_down). The platform learns no
-    //     more about the lane than this bit: it does not route to it, does not
-    //     measure it and does not know what the gesture there means — the GUI
-    //     answers one rectangle, exactly as it answers the pan surface.
+    //   * thin_lane(x, y): THE THIN-LANE QUERY — does this point lie on a lane
+    //     too small and too precise to hold a nav gesture (the overview strip or
+    //     the trim bar; the class's membership rule is the GUI's, at
+    //     touch_point_on_thin_lane)? The pan_zone query's exact shape (asked
+    //     ONCE, at the FIRST finger's down, captured beside the down point,
+    //     surface geometry only, null or false meaning "not there"), and THE
+    //     PLATFORM FORKS NO DEADLINE AND NO RESOLUTION WITH IT. It has TWO
+    //     consumers, one per door: it rides every delivered nav frame
+    //     (GuiTouchNavFrame::down_on_thin_lane) to the GUI's REFUSAL, which
+    //     drops every such frame; and the SECOND-FINGER FORK here reads the
+    //     captured copy, ignoring a second contact on such a lane instead of
+    //     upgrading a live translation into a gesture the GUI would then refuse
+    //     (architect 2026-08-15: once one finger is down the second is
+    //     completely ignored, the waveform's third-finger rule applied where the
+    //     surface is small). The platform learns no more about these lanes than
+    //     this one bit: it does not route to them, does not measure them and
+    //     does not know what the gestures there mean — the GUI answers a
+    //     rectangle pair, exactly as it answers the pan surface.
     //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
     //     the GUI arms its region former at the DOWN point (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
@@ -420,7 +429,7 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
-        std::function<bool(int x, int y)> overview,
+        std::function<bool(int x, int y)> thin_lane,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end);
@@ -1515,14 +1524,18 @@ private:
     // the slop crossing (the phone model's pan vs the pointer) and the
     // expiry (the region hold vs the pointer unlock).
     bool       touch_down_in_pan_zone_   = false;
-    // The down point's OVERVIEW-LANE answer, captured ONCE beside the pan-zone
-    // one at the first finger's down (the overview query at
+    // The down point's THIN-LANE answer — the overview strip or the trim bar,
+    // the class the GUI's touch_point_on_thin_lane owns — captured ONCE beside
+    // the pan-zone one at the first finger's down (the thin_lane query at
     // set_touch_nav_hooks) and cleared with it in forget_touch_state — the two
-    // bits have one lifecycle, and a stale one here would admit a second-finger
-    // hijack on a surface that must refuse it. Its ONE reader is the
-    // second-down admission in on_touch_down's Pointer arm, where it is the
-    // exception to the moved latch below (the argument at that guard).
-    bool       touch_down_on_overview_   = false;
+    // bits have one lifecycle, and a stale one here would refuse a pinch that
+    // began on the waveform. TWO CONSUMERS, one per door: it is copied onto
+    // every delivered nav frame for the GUI's refusal (GuiTouchNavFrame,
+    // gui_input.h), and the Pointer arm of on_touch_down reads it directly to
+    // ignore a second finger on such a lane. It forks NO deadline and NO
+    // resolution — a first finger landing on a thin lane resolves exactly as it
+    // would anywhere off the pan zone.
+    bool       touch_down_on_thin_lane_  = false;
     // Region: a finger position staged for the wl_touch.frame boundary
     // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
     bool       touch_region_frame_dirty_ = false;
@@ -1531,9 +1544,12 @@ private:
     // by the resolver from the window's own travel (a slop-crossing
     // resolution enters already moved, expiry enters motionless), latched by
     // the Pointer motion arm afterward; the second-down fork reads it —
-    // moved = ignore, motionless = the upgrade — WITH THE OVERVIEW LANE'S ONE
-    // EXCEPTION, where a moved translation admits the second finger too
-    // (touch_down_on_overview_ above; the argument at the guard).
+    // moved = ignore, motionless = the upgrade — EXCEPT ON A THIN LANE, where
+    // touch_down_on_thin_lane_ ignores the second finger either way (architect
+    // 2026-08-15, the argument at the guard). That is not this latch losing its
+    // meaning: the latch still answers "has this drag committed", and the lane
+    // bit answers a different question — whether the surface has anything for a
+    // second contact to mean at all.
     bool       touch_translation_moved_  = false;
     // The logical left's third source (see the OR-edge model above).
     bool       touch_left_held_          = false;
@@ -1707,10 +1723,10 @@ private:
     // The pan-zone query (asked once, at the first finger's down; surface
     // geometry only — the contract at set_touch_nav_hooks).
     std::function<bool(int, int)>                 touch_pan_zone_hook_;
-    // The overview-lane query (asked once, at the first finger's down, beside
-    // the pan-zone one; surface geometry only — the contract at
+    // The thin-lane query (asked once, at the first finger's down, beside the
+    // pan-zone one; surface geometry only — the contract at
     // set_touch_nav_hooks).
-    std::function<bool(int, int)>                 touch_overview_hook_;
+    std::function<bool(int, int)>                 touch_thin_lane_hook_;
     // The region trio the Region phase drives (contracts at
     // set_touch_nav_hooks). Null-safe at each fire site.
     std::function<void(int, int)>                 touch_region_begin_hook_;

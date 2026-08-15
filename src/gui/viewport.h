@@ -183,14 +183,11 @@ struct Viewport {
     // two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the content under the previous finger centroid, placed at
-    // the current one), and the overview lane's SPAN APPLICATION
-    // (apply_overview_span_zoom — the anchor is one of the box's two bounds at
-    // its own window column, 0 or area.w, and the level comes from the span
-    // between them; it is how the lane reaches a zoom AT ALL, the box's span
-    // being the lane's whole zoom vocabulary now, and it serves both of the
-    // lane's zooming gestures — the EDGE drags, whose anchor is the fixed
-    // opposite bound, and the TWO-FINGER STRETCH, whose anchor is the begin
-    // bound under the leftmost contact). All
+    // the current one), and the overview lane's EDGE drags
+    // (apply_overview_drag_at's edge arm — the anchor is the FIXED opposite
+    // viewport bound at its own window column, 0 or area.w, so a dragged box
+    // edge zooms about the far edge; that arm is how the lane reaches a zoom AT
+    // ALL, the box's span being the lane's whole zoom vocabulary now). All
     // three pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan

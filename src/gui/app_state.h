@@ -1161,12 +1161,16 @@ struct ScrollDragState {
 //         press-time teleport necessarily fires on the FIRST finger, before any
 //         second-finger gesture can exist. The press column is the point the
 //         user aimed at, the deferred click act's own rule.
-//       - CROSSING the drag threshold is A BOUND DRAG ON WHICHEVER BOUND IS
-//         NEARER THE PRESS COLUMN, running the Edge kinds' own machinery: the
-//         kind and its fixed partner are decided ONCE, AT THE CROSSING, from
-//         the press column against the box's two bounds, and never re-derived
-//         per event — a bound dragged past the pointer would otherwise hand the
-//         gesture to its partner mid-drag.
+//       - CROSSING the drag threshold COMMITS NOTHING and the gesture simply
+//         runs to its release, exactly as a force-ended pending commits
+//         nothing. It resolved into a bound drag on the bound nearer the press
+//         column for one commit, and THE ARCHITECT DELETED THAT EXTENSION
+//         2026-08-15 — "we can remove that, because the threshold for the
+//         bounds is fine, the ten pixels on either side works, it's a large
+//         enough threshold" — so A BOUND IS DRAGGED BY ITS OWN GRAB BAND AND
+//         NOWHERE ELSE. The crossing's one remaining effect is that it marks
+//         the press MOVED, which takes the teleport off the release: the act
+//         belongs to a motionless lift.
 // ABSOLUTE-POSITION DRAGS, the trim endcap model and not the deleted strip
 // drag's: NO pointer capture, NO anchor stem, per-event synchronous rebuild
 // through the family's clamp chokepoints.
@@ -1178,20 +1182,22 @@ struct ScrollDragState {
 // box or bound drag simply carries on. (A MOTIONLESS hold takes the generic
 // motionless-hold UPGRADE instead — its ordinary release IS this lane's
 // motionless release, so an outside hold teleports on the way — and the
-// two-finger gesture that follows is then the LANE'S OWN, below.)
+// two-finger gesture that follows is then REFUSED on the lane,
+// apply_touch_nav_update's own down-point test.)
 // THE SIMULTANEOUS TWO-BOUND STRETCH — one finger per bound, both moving at
-// once — IS BUILT since 2026-08-15 (architect: "a two-finger gesture would
-// basically mean draw the bounds at each of the two fingers"), and it lives
-// OUTSIDE this record because it holds no state at all: each frame places the
-// BEGIN bound at the leftmost contact's whole-song position and the END bound
-// at the rightmost, absolutely, so there is nothing to arm, seat or clear
-// (apply_overview_two_finger_bounds, input_pointer.cpp, reached from
-// apply_touch_nav_update's lane fork). Its one-day deferral reasoned that it
-// "needs a genuine second contact, and the touch layer spends the second finger
-// on the nav gesture" — SUPERSEDED: the nav layer held both contacts' positions
-// all along and merely collapsed them into a centroid and a distance, so
-// handing the raw pair over was the whole of it (GuiTouchNavFrame,
-// gui_input.h).
+// once — WAS BUILT AND IS DELETED (2026-08-15, both on the architect's word:
+// "a two-finger gesture would basically mean draw the bounds at each of the two
+// fingers", then, after driving it through two rounds of fixes on the rig,
+// "sometimes it works the way you describe it, and sometimes it flips and
+// reverses the direction, it's very buggy; let's just make two-finger gestures
+// no-op on the overview strip, it's tiny anyways"). TWO FINGERS ARE A NO-OP
+// HERE now, and the refusal — not a fall-through — is what keeps a pair begun
+// on the lane out of the waveform's pinch. THE LESSON IS RECORDED SO THE
+// GESTURE IS NOT RE-PROPOSED ON A HUNCH: it was reachable only through the
+// touch layer's one-finger translation, its surface had to be decided at the
+// down point because a 26 px lane cannot hold a centroid, and even then the
+// refusal remained centroid-based — three couplings for a gesture whose whole
+// job the box's own three motions already do.
 // Navigation-class: touches no playhead, no region, no selection, allowed in
 // read-only and live in the `h` view (the lane's claim sits above the mode's
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's
@@ -1226,10 +1232,10 @@ struct OverviewDragState {
     // inside the box. Each motion event centers on (pointer position − this).
     double grab_offset = 0.0;
     // Edge drags only: the FIXED (opposite) viewport bound's active-domain
-    // position, captured when the drag is decided — at the press for an endcap
-    // grab, at the CROSSING for a Pending that resolves into one — and held for
-    // the drag's life: the per-event zoom's anchor (anchor_x = that bound's own
-    // window column, 0 for the start, area.w for the end).
+    // position, captured at the press that grabbed an endcap — the one site
+    // that decides an edge drag — and held for the drag's life: the per-event
+    // zoom's anchor (anchor_x = that bound's own window column, 0 for the
+    // start, area.w for the end).
     double fixed_edge_sample = 0.0;
 };
 

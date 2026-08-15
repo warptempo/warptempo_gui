@@ -2112,8 +2112,8 @@ double displayed_trim_ms(int64_t frame,
 // lane `row`. Deliberate asymmetry vs centered marker flags: a bound at frame 0
 // / EOF shows its cap fully onscreen.
 //
-// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (10 since
-// 2026-08-14, for the touch panel — what the wider grab costs the bridge is
+// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (15 since
+// 2026-08-15, for the touch panel — what the wider grab costs the bridge is
 // recorded at the constant). A 2px target is under any reasonable pointing
 // tolerance, so the drawn cap and the grabbable cap are deliberately NOT the
 // same rect — the one place in this lane where they differ, stated here
@@ -2121,23 +2121,30 @@ double displayed_trim_ms(int64_t frame,
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
-// caps are 2px, so this makes the target 2 + 2*10 = 22px. TWO CONSUMERS read it
-// (grepped 2026-08-14): the TRIM BAR's endcaps (hit_test_trim_endcap) and the
+// caps are 2px, so this makes the target 2 + 2*15 = 32px. TWO CONSUMERS read it
+// (grepped 2026-08-15): the TRIM BAR's endcaps (hit_test_trim_endcap) and the
 // OVERVIEW BOX's edge handles (hit_test_overview_endcap, the trim model reused
-// verbatim on the box outline), so a retune moves both surfaces together — by
-// design, the two being the same handle in two lanes.
+// verbatim on the box outline), so a retune moves both surfaces together. THAT
+// IS BY CONSTRUCTION AND NOT COINCIDENCE: the two are THE SAME GESTURE ON THE
+// SAME SHAPE — a 1-2px vertical edge, on a thin lane, dragged absolutely along
+// x to move one bound while the other holds — so whatever tolerance a fingertip
+// needs on one of them it needs on the other, and a second constant here would
+// only be a way for the two to drift apart.
 //
-// 10 SINCE 2026-08-14 (architect: "endcaps are very useful and currently too
-// small", leaning 6 to 10 and ruling 10 — THE TOUCH PANEL IS THE REASON, a
-// fingertip being nothing like a 10px target). It was 4 from row 5's landing,
-// chosen to reproduce the retired square chip's width.
+// 15 SINCE 2026-08-15 (architect, from the rig, widening his own 2026-08-14
+// ruling once both lanes had been driven on glass). It was 10 that day
+// (architect: "endcaps are very useful and currently too small", leaning 6 to
+// 10 and ruling 10 — THE TOUCH PANEL IS THE REASON, a fingertip being nothing
+// like a 10px target), and 4 from row 5's landing, chosen to reproduce the
+// retired square chip's width.
 //
 // WHAT THE WIDER GRAB TAKES, checked against every neighbour it can now
 // overlap, because the endcap claim OUTRANKS everything else in both lanes:
-//   * THE TRIM BRIDGE gives up 6px at each end. The bridge is reachable only
-//     where the gap survives both inflated caps, which is a window wider than
-//     3 + 2*grab columns on screen: 12 columns before, 24 now. A trim window
-//     drawn 12..23 px wide therefore has NO bridge drag where it used to have
+//   * THE TRIM BRIDGE gives up 11px at each end against the original 4. The
+//     bridge is reachable only where the gap survives both inflated caps, which
+//     is a window wider than 3 + 2*grab columns on screen: 12 columns at 4, 24
+//     at 10, 33 now. A trim window drawn 12..32 px wide therefore has NO bridge
+//     drag where it used to have
 //     one — RECORDED AS THE COST OF THE RULING, and it is zoom-recoverable
 //     rather than a lost capability (the window's drawn width is a zoom state,
 //     both bounds stay independently draggable at every zoom, and the band's
@@ -2147,7 +2154,7 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 //     (end_col − begin_col − 1 columns to the right of Begin's band, or one
 //     column to its left when the bounds coincide) a function of the BOUNDS
 //     alone — the grab cancels out of both sides — so every verdict a
-//     coincident or near-coincident pair gave at 4 it still gives at 10, just
+//     coincident or near-coincident pair gave at 4 it still gives at 15, just
 //     further from the column. A pair exactly one column apart is the one
 //     unreachable End, and it was unreachable at 4 too.
 //   * THE OVERVIEW BOX'S TWO EDGES against each other are likewise unaffected:
@@ -2155,12 +2162,12 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 //     grab-independent, so both edges stay reachable at any box width and the
 //     grab only extends their outer reach. What DOES shrink is the box's
 //     INTERIOR: the box-follows-pointer pan needs a column more than grab from
-//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (23 now, 11
-//     before) is all edge handle, and a press that used to pan it now drags an
-//     edge — one navigation act for another, on a box that narrow. The
-//     click-teleport outside the box loses the same 10px ring to the edge
+//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (33 now, 23 at
+//     10, 11 at 4) is all edge handle, and a press that used to pan it now drags
+//     an edge — one navigation act for another, on a box that narrow. The
+//     click-teleport outside the box loses the same 15px ring to the edge
 //     claim.
-inline constexpr int kTrimEndcapGrabPx = 10;
+inline constexpr int kTrimEndcapGrabPx = 15;
 inline int trim_endcap_grab_px() {
     return scaled_px(kTrimEndcapGrabPx, 0);
 }

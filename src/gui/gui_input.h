@@ -140,17 +140,6 @@ enum class GuiMouseButton {
 // GUI owns the model on top, which since 2026-08-14 is ONE FINGER PANS, TWO
 // FINGERS ZOOM (touch.md's two-finger section) — hence the finger count
 // below, the one field the GUI forks on. Every field here is read.
-//
-// THE CONTACT PAIR IS DELIVERED RAW ALONGSIDE ITS COLLAPSED FORM since
-// 2026-08-15, and the two forms serve two different gestures: the CENTROID and
-// the DISTANCE RATIO serve the waveform's pinch, which is relative (it zooms by
-// how the gap CHANGED, about a pivot it seated), while the OVERVIEW LANE's
-// two-finger gesture is ABSOLUTE — it draws the viewport box's two bounds at
-// the two contacts' own whole-song positions — so it needs the positions
-// themselves and nothing derived from them. The positions were always here;
-// they were merely collapsed and discarded, which is why the lane's gesture
-// needed no new contact mode. The platform still applies NO policy: it
-// measures and delivers both forms, exactly as the record above says.
 struct GuiTouchNavFrame {
     // Current centroid, window px (single-finger: the finger itself). Also
     // the two-finger gesture's zoom pivot.
@@ -165,29 +154,29 @@ struct GuiTouchNavFrame {
     // distance under 1 px on either side delivers 1.0; single-finger frames
     // are degenerate by construction, so they always carry 1.0).
     double dist_ratio = 1.0;
-    // The TWO CONTACT X POSITIONS, window px, in the order the platform holds
-    // them (NOT sorted — the one reader assigns by POSITION per frame, which is
-    // its own rule and not the platform's). MEANINGFUL ONLY ON A TWO-FINGER
-    // FRAME: a single-finger frame carries the one contact's x in BOTH, so no
-    // reader can pick up a stale coordinate from a previous pair.
-    double x1 = 0.0;
-    double x2 = 0.0;
     // TWO fingers vs the phone model's one — the GUI's fork between the
     // zoom-only gesture and the pan-only one.
     bool   two_finger = false;
-    // THE FIRST FINGER'S DOWN POINT LAY ON THE OVERVIEW LANE (2026-08-15) —
-    // captured ONCE, at the `Idle` down that opened this contact stream (the
-    // platform's touch_down_on_overview_, the same bit the second-down
-    // admission reads), and CONSTANT for the stream's whole life: it is a fact
-    // about where the gesture STARTED, never about where the fingers are now.
-    // It exists so THE GESTURE'S SURFACE CANNOT CHANGE UNDER THE FINGERS. Its
-    // one reader is apply_touch_nav_update's lane fork, which used to ask the
-    // live centroid instead — and the overview lane is 26 px tall while its
-    // drags are x-only, so a finger that grabbed a bound can wander far off the
-    // strip and a second finger landing low drops the centroid outside the
-    // band, routing the frames to the waveform's pinch mid-gesture. A gesture's
-    // surface is decided where it began (the seat, the press-time act and the
-    // crossing's mode all follow that rule), so the answer travels on the frame
-    // rather than being re-derived from a moving point.
-    bool   down_on_overview = false;
+    // THE FIRST FINGER'S DOWN POINT LAY ON A THIN LANE (2026-08-15) — the
+    // OVERVIEW STRIP or the TRIM BAR, the class the GUI's
+    // touch_point_on_thin_lane answers (its declaration owns what makes a lane a
+    // member). Captured ONCE, at the `Idle` down that opened this contact stream
+    // (the platform's touch_down_on_thin_lane_), and CONSTANT for the stream's
+    // whole life: it is a fact about where the gesture STARTED, never about
+    // where the fingers are now. IT HAS TWO READERS, one per door.
+    //   * apply_touch_nav_update drops EVERY nav frame carrying it — two
+    //     fingers and one alike — because a gesture begun on a thin lane must do
+    //     nothing at all rather than fall through to the waveform's pinch and
+    //     zoom the view from a strip the user was touching for another reason.
+    //   * the PLATFORM's own second-finger fork reads its copy: a second finger
+    //     landing during a live translation on such a lane is ignored outright,
+    //     so the first finger's drag continues instead of being torn down for a
+    //     gesture that would then be refused frame by frame.
+    // It answers the DOWN POINT and not the live centroid because these lanes
+    // are ~26 px tall while their drags are x-only, so a finger that grabbed a
+    // bound wanders far off the strip and a centroid test would change the
+    // answer under the fingers; a gesture's surface is decided where it began
+    // (the seat, the press-time act and the crossing's mode all follow that
+    // rule), so the answer travels on the frame.
+    bool   down_on_thin_lane = false;
 };
