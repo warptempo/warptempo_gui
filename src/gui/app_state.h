@@ -503,7 +503,9 @@ struct DragState {
     // completing mid-drag touches only the audio buffer, playback rebind, dirty
     // bit, and status text, never the store or scale. So the cache is stable
     // for the drag's lifetime and equals what a begin_drag copy would hold.
-    // Full pre-drag marker state. Captured at button-press so commit_drag
+    // Full pre-drag marker state. Captured in begin_drag, which runs at the
+    // THRESHOLD CROSSING rather than at the press (PendingMarkerPress above owns
+    // that deferral and why it is exact), so commit_drag
     // can push it onto the undo stack when motion landed; discarded on
     // commit when no motion occurred (DragState is reset wholesale there).
     std::vector<GuiWarpMarker>      pre_drag_snapshot;
@@ -515,7 +517,8 @@ struct DragState {
     // What survives above is the pre-drag STORE, which is the undo payload, not a
     // restore origin.
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
-    // 2026-07-20 decoupling): the arming click LANDS the playhead on
+    // 2026-07-20 decoupling): the CLICK ACT the THRESHOLD CROSSING runs
+    // immediately before begin_drag LANDS the playhead on
     // the pressed marker (source_frame_to_active_domain then
     // clamp_playhead_to_live_domain), so it is coincident by construction, and the
     // mid-motion follow plus commit_drag's unconditional land keep it there —

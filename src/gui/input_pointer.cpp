@@ -3115,11 +3115,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
-    // its own fresh candidate (TrimBar / EditorText / EmptyLane at a motionless
-    // RELEASE — the empty lane joined that class 2026-08-12, its press being the
-    // navigation surface's pending click now, so only the release knows it
-    // stayed a click and a pan that crossed the threshold seeds nothing;
-    // Marker at the press). One closed instrumentation point — the clear covers
+    // its own fresh candidate — ALL FOUR at a motionless RELEASE now (TrimBar /
+    // EditorText / EmptyLane, the empty lane joining that class 2026-08-12 with
+    // its press becoming the navigation surface's pending click, so only the
+    // release knows it stayed a click and a pan that crossed the threshold seeds
+    // nothing; MARKER joined 2026-08-15 when the flag click moved to the lift).
+    // THE MARKER SEED IS DELIBERATELY SPLIT ACROSS THE TWO EDGES, which is
+    // unusual enough to state here: the press computes only the consume VERDICT
+    // (this snapshot is gone by the time the lift runs), while the seed written
+    // at the lift carries the PRESS coordinates with the RELEASE timestamp — the
+    // position looking back so the spatial pairing stays press-to-press, the
+    // stamp being the seed's own so the window is measured release-to-press as it
+    // is for the other three. The full reasoning is at the seed itself
+    // (run_marker_click_act). One closed instrumentation point — the clear covers
     // every non-consuming press (a strip/region/trim arm, a modal swallow)
     // without a clear scattered on each path. It sits ABOVE the prompt swallow
     // (2026-08-11), which is what makes the "a modal swallow" clause fully
@@ -6833,12 +6841,14 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
 // Motion handler. Drives the active pointer gesture: editor-text drag,
 // strip-row zoom/pan drag, trim drag (or
 // a pending trim drag arming past the threshold), region-select drag, or
-// marker reposition drag (or a pending
-// marker drag); with no gesture it recomputes hover at the cursor. The
+// marker reposition drag (or a PendingMarkerPress crossing the threshold —
+// the flag PRESS commits nothing since 2026-08-15, it only arms, so the
+// crossing is where the click act runs and the drag begins); with no gesture it
+// recomputes hover at the cursor. The
 // marker drag applies the pointer delta to the grabbed marker; the playhead
 // follows the grabbed marker unconditionally (apply_drag_motion owns that —
-// the arming plain click already landed the playhead on the marker, so the
-// drag tows it by construction).
+// the CROSSING'S OWN click act lands the playhead on the marker a few lines
+// before begin_drag, so the drag tows it by construction).
 void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Record latest cursor coords so viewport mutators can re-evaluate hover
     // at the cursor's last position.
@@ -7424,10 +7434,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         //     scanner with follow_overridden_for_session unset.
         //   * THE SELECT, for the PAINT and not for the arithmetic. begin_drag /
         //     apply_drag_motion / commit_drag never read app.selected_markers —
-        //     but the dragged flag's BRIGHTENED face comes from the selection
-        //     (the class ladder's brighter pair, damaged by
-        //     set_single_selection's invalidate_top_strip), so without it the
-        //     user drags an unmarked flag.
+        //     and since 2026-08-15 never write it either, this act being its ONE
+        //     owner at both act sites (begin_drag's duplicate re-assert was
+        //     deleted there, with its reasoning) — but the dragged flag's
+        //     BRIGHTENED face comes from the selection (the class ladder's
+        //     brighter pair, damaged by set_single_selection's
+        //     invalidate_top_strip), so without it the user drags an unmarked
+        //     flag.
         // The land and the region clear ride along for parity: the press did
         // both before any drag under the old model, and commit_drag lands the
         // playhead again at the committed position, so keeping them here
@@ -7538,8 +7551,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Playhead rule: the playhead follows the dragged marker through the drag
     // inside apply_drag_motion (the crossing's click act landed it on the
     // marker, so the drag tows it by construction — the DragState ruling). The
-    // selection re-assert already ran at the THRESHOLD CROSSING in begin_drag — a
-    // no-op, that same act having single-selected the marker, and unconditional so a
+    // selection was named at the THRESHOLD CROSSING by that same CLICK ACT, which
+    // is its ONE owner — begin_drag's duplicate re-assert was deleted 2026-08-15
+    // (the reasoning is at the deletion) — and the act is unconditional there, so a
     // wall-saturated drag still names what it grabbed. apply_drag_motion here only
     // writes the proposal and slides the playhead. Nothing further tracks here.
 }

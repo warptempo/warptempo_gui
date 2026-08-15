@@ -1105,8 +1105,7 @@ int main(int argc, char** argv) {
                                          playback_lifecycle, target_render);
     GuiWarpMarkersOps warpops(app, audio, viewport, selection, undo,
                               playback_lifecycle, target_render);
-    MarkerDragOps marker_drag(app, audio, viewport, selection, undo,
-                              target_render);
+    MarkerDragOps marker_drag(app, audio, viewport, undo, target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRendersDir renders_dir(app);

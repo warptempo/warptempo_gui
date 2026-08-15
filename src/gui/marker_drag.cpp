@@ -142,21 +142,27 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // back. Playhead-follows-marker is unchanged as a live mechanic
     // (apply_drag_motion's follow and commit_drag's land, the ruling at DragState).
     app.drag = std::move(d);
-    // Selection re-assert at the THRESHOLD CROSSING, unconditionally (was: the
-    // first MOVED motion in apply_drag_motion). It must run after
-    // app.drag = std::move(d) so it mutates the
-    // live selection, not the moved-from local — the pre-capture ordering rule it
-    // also used to carry died with the captures. A NO-OP today by construction: the
-    // CROSSING'S OWN CLICK ACT, run a few lines earlier in on_motion, already
-    // single-selected `hit` and landed the playhead on it (2026-08-15: the flag
-    // click acts at the lift, and the crossing runs that act before calling
-    // this; groups are never moved either way, 2026-07-29). It stays as
-    // the one site that states "a real drag's subject is what it grabbed", and
-    // staying at the crossing rather than behind any_changed is what keeps a
-    // WALL-SATURATED drag (the clamped delta pins the proposal — the marker at the
-    // EOF wall, or the viewport clamp saturated) honest, since commit_drag lands the
-    // playhead on the dragged marker regardless of net change.
-    selection.set_single_selection(hit);
+    // NO SELECTION WRITE HERE, and the deletion of the one that stood here
+    // (2026-08-15) is the point rather than a tidy-up: the THRESHOLD CROSSING runs
+    // run_marker_click_act a few lines before calling this, and that act's plain
+    // arm single-selects the grabbed marker — so the re-assert was the SECOND
+    // mutation of one invariant. set_single_selection is not an assertion: it
+    // clears and rebuilds the selection and schedules top-strip and status-chain
+    // damage, so every successful drag start issued that damage twice, and two
+    // owners for one invariant is exactly the shape that diverges when one of them
+    // is later changed. THE CLICK ACT IS THE OWNER AT BOTH ACT SITES (the
+    // motionless lift and the crossing), so the drag machinery writes no selection
+    // at all — which is also the honest arrangement, begin_drag,
+    // apply_drag_motion and commit_drag READing no selection either.
+    // THE ARGUMENT THE OLD ASSERT CARRIED IS KEPT, because it is why the write was
+    // not merely unnecessary: the subject must be named at the CROSSING rather
+    // than behind an any_changed test, since a WALL-SATURATED drag (the clamped
+    // delta pins the proposal — the marker at the EOF wall, or the viewport clamp
+    // saturated) never changes a position, yet it is a real drag whose grabbed
+    // marker must be selected and whose playhead commit_drag lands regardless of
+    // net change. The crossing's click act satisfies that identically: it is
+    // unconditional and runs ahead of the first apply. (Groups are never moved
+    // either way, 2026-07-29.)
     return true;
 }
 
@@ -260,8 +266,10 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (new_t > eof_wall) new_t = eof_wall;
     if (app.drag.moveable_times[0] == new_t) return;
     app.drag.moveable_times[0] = new_t;
-    // The selection re-assert does not live here: it runs at the THRESHOLD
-    // CROSSING in begin_drag, unconditionally. A wall-saturated drag (the clamped
+    // NO SELECTION WORK HERE, and none anywhere in this file since 2026-08-15:
+    // the subject is named at the THRESHOLD CROSSING, by the CLICK ACT the
+    // crossing runs before begin_drag, unconditionally. That placement is
+    // load-bearing rather than convenient — a wall-saturated drag (the clamped
     // delta pins the proposal — the marker at the EOF wall) never reaches this
     // point, yet it is a real drag that commit lands the playhead for.
     // Playhead follows the marker, mid-motion: slide the resting cursor
@@ -282,7 +290,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // one expression; it also matches the COMMIT below, which maps an integer
     // frame by construction, so the ride and its landing now agree too.
     // Reachable through the PHASE-RESET column, whose home view is the target one
-    // (a warp drag is source-home by the arming press's authoring gate).
+    // (a warp drag is source-home because the THRESHOLD CROSSING applies
+    // active_column_authoring_allowed before it begins the drag — the gate lives
+    // there, not at the arming press, which is unconditional).
     // A marker drag can never run under live playback — the THRESHOLD
     // CROSSING stops playback (the click act's own stop, run there since
     // 2026-08-15) — so the scanner is always
@@ -493,9 +503,11 @@ void MarkerDragOps::commit_drag() {
     // are never moved; the doctrine is at the head of position_nudge.h).
     // No synchronous re-warp at commit: a marker drag can no longer change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
-    // view only (the home-view binding, architect 2026-07-22 — the arming flag
-    // press gates on active_column_authoring_allowed, and the view cannot toggle
-    // mid-gesture since every key but the Ctrl+Q hatch is swallowed while a drag
+    // view only (the home-view binding, architect 2026-07-22 — the THRESHOLD
+    // CROSSING gates on active_column_authoring_allowed before beginning the
+    // drag, the arming press itself being unconditional so an off-home flag click
+    // still selects and lands, and the view cannot toggle mid-gesture since every
+    // key but the Ctrl+Q hatch is swallowed while a drag
     // is active), where the source waveform has no map-dependent plate; and a phase
     // reset drag never touches the warp map. So the only surviving effect is the
     // view-independent target preview trigger below.

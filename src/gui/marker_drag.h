@@ -1,7 +1,6 @@
 #pragma once
 
 #include "app_state.h"
-#include "selection.h"
 #include "undo.h"
 #include "viewport.h"
 
@@ -33,24 +32,28 @@ struct GuiTargetRender;
 // TempoGroupSeed with the deduped participant set and its walled pin, the group
 // label wall, and the exact monotone bisection over hypothetical map builds. Do
 // not re-propose a pointer tempo gesture: this is a ruling, not a gap.
+// NO Selection DEPENDENCY, deleted with the last write on 2026-08-15: the three
+// bodies below neither read nor write app.selected_markers. Naming the drag's
+// subject is the CLICK ACT's, at both of its sites (the motionless lift and the
+// threshold crossing, which runs it immediately before begin_drag) — the
+// reasoning is at the deletion in begin_drag. Restoring the edge means restoring
+// a second owner for one invariant, so do not re-wire it to "assert" a selection
+// this gesture does not own.
 struct MarkerDragOps {
     AppState&           app;
     const GuiAudio&     audio;
     Viewport&           viewport;
-    Selection&          selection;
     Undo&               undo;
     GuiTargetRender&    target_render;
 
     MarkerDragOps(AppState&        app_,
                   const GuiAudio&  audio_,
                   Viewport&        viewport_,
-                  Selection&       selection_,
                   Undo&            undo_,
                   GuiTargetRender& target_render_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
-          selection(selection_),
           undo(undo_),
           target_render(target_render_) {}
 
