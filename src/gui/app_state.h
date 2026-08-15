@@ -805,7 +805,12 @@ struct PendingMarkerPress {
 // Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span)
 // and by the ctrl / ctrl+shift bound-set clicks, which arm the single-bound
-// drag on the bound they just set. (The trim surface arc scattered these arms
+// drag on the bound they just set — AT THEIR THRESHOLD CROSSING since 2026-08-15
+// rather than at their press, the bound set having moved to the lift with the
+// act-at-lift sweep's last four acts (PendingClickAct below owns that hand-over,
+// and the drag it hands to is byte-for-byte the one it always was: the set runs
+// first, at the press column, and this pending is armed on the bound it wrote).
+// (The trim surface arc scattered these arms
 // across the merged band's modifiers for one day, 2026-08-11..12 — the alt
 // bridge press and the ctrl deferred-set pending died with the arc's revert.)
 // The trim sibling of PendingMarkerPress: the press CLAIMS the cap/bridge geometry
@@ -840,6 +845,99 @@ struct PendingTrimDrag {
     bool both     = false;  // the inter-endcap bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
+};
+
+// Which act a PendingClickAct is holding. None = nothing armed.
+enum class PendingClickKind {
+    None,
+    TrimBoundSet,     // the trim bar's ctrl (begin) / ctrl+shift (end) bound set
+    TrimBarFraming,   // the trim bar's span-framing double-click, second press
+    EmptyLaneCreate,  // the empty marker lane's create double-click, second press
+    HistoryDiffFlag,  // the `h` view's three diff-flag clicks
+};
+
+// THE ACT-AT-LIFT SWEEP'S LAST FOUR ACTS, IN ONE RECORD (architect 2026-08-15,
+// finishing "all actions should be on mouse-up / finger-up" past the marker flag
+// that moved earlier the same day): the trim bar's two bound-set clicks, the
+// trim bar's span-framing double-click, the empty marker lane's create
+// double-click and the `h` view's three diff-flag clicks. NONE of them was ever
+// RULED a press-time exception — they were simply never in the sweep's scope,
+// which is what the marker flag's own conversion record says about itself.
+//
+// THE SHAPE IS THE PRODUCT'S, not a new one: the press ARMS a record carrying
+// what the act will need (its press POINT, and the press-time MODIFIERS where an
+// act forks on them — modifiers are read at the press and never re-read, the
+// modal release's own rule at ChromePress::shift); a MOTIONLESS release runs the
+// act, RE-ASKING every live gate; a CROSSING of kDragMovedThresholdPx either
+// hands the arm to the gesture it can become or, where there is none, commits
+// NOTHING and disarms (the overview Pending's rule); and a lost button, the
+// force-end finalizer and the touch layer's ABNORMAL end all commit nothing.
+// Read PendingMarkerPress above for the same contract in the flag's vocabulary.
+//
+// ONE RECORD FOR FOUR ACTS, and that is the round-21 lesson applied rather than
+// a shortcut: four parallel structs would be four entries in EVERY list that
+// must see an armed press — any_pointer_gesture_active, the drag-modal key gate,
+// the wheel gate, the cursor map, the force-end finalizer, the file load — and
+// "three spellings of one rule is exactly where a fourth gets forgotten" is a
+// failure this project has already had. The four share one lifecycle exactly, so
+// they share one field and one set of ends, and the KIND is read only where the
+// act itself is run. It is NOT a reuse of PendingMarkerPress, which is a
+// different subject with a different resolution: that record's plain arm becomes
+// the reposition drag and carries a double-click VERDICT of its own, and a diff
+// flag is not a store marker.
+//
+// THE ACTS ACT ON THE ARMED SUBJECT — the press column, and the armed flag index
+// — and NEVER on a re-hit at the release's coordinates, for the three reasons
+// recorded at run_marker_click_act (touch delivers the press at the finger's
+// DOWN point and the release at its last position; the flag hit stash is not
+// frozen under a pending; the navigation surface and the overview lane both act
+// at their PRESS point, sub-threshold travel being jitter).
+//
+// THE TWO DOUBLE-CLICK KINDS CARRY A VERDICT-BEFORE-ARM RULE, which is the whole
+// difficulty of the conversion and is stated here because it is a PROPERTY, not
+// an implementation detail. Both consumes used to run at the press DELIBERATELY
+// BEFORE the press's other arm ("consume-before-arm, so the second press never
+// becomes a drag" / "...never becomes a pan"). The verdict is still taken AT THE
+// PRESS — a verdict is not an act: it commits nothing and changes no state, it
+// records what the user's second press MEANT at the moment the timing test is
+// about, which the lift can no longer ask because on_button_press's top-of-frame
+// clear has emptied the candidate field by then — and a TRUE verdict arms THIS
+// record ALONE, arming neither the trim drag nor the nav pan. So the second
+// press of a double-click still physically cannot become a drag.
+// ON THE TRIM BAR THAT PROPERTY IS LOAD-BEARING AND NOT MERELY TIDY: TRIM HAS NO
+// UNDO — it is excluded from the stacks by ruling — so if a true verdict also
+// armed the endcap / bridge drag, a double-click whose second press drifted 8 px
+// would silently move a trim bound with nothing to take it back. On the empty
+// lane the stakes are lower (the create IS undoable) and the rule is kept anyway,
+// so the two consumes read as ONE rule rather than two.
+//
+// THE ONE KIND THAT BECOMES A GESTURE IS TrimBoundSet, and its crossing is the
+// marker flag's crossing exactly: it RUNS THE SET at the press column and then
+// hands over to the endcap drag on the bound it just set, so a ctrl-press-and-drag
+// is byte-for-byte the gesture it has always been (set at the click, then drag
+// that bound live) and only the timing of a motionless click moved. The set's
+// whole tail travels with it as one unit — the strictly-inside refusal, the
+// playback stop, the commit tail's playhead park and region clear, the setter's
+// deselect — because they are one act (set_trim_bound_at_click).
+//
+// Session-only, never serialized. Cleared on the crossing (either the trim drag
+// takes over or the arm is spent), on release / lost button, by the force-end
+// finalizer, and on file load. Esc does nothing (pointer gestures have no cancel
+// — the rule at the drag-modal gate in input_handler.cpp).
+struct PendingClickAct {
+    PendingClickKind kind = PendingClickKind::None;
+    int  press_x  = 0;   // press position (window px): the gate + the act's column
+    int  press_y  = 0;
+    // TrimBoundSet: which bound the click writes (ctrl = begin, ctrl+shift = end).
+    bool is_begin = false;
+    // HistoryDiffFlag: the index into app.history_mode.flags the press resolved.
+    int  flag     = -1;
+    // HistoryDiffFlag: the press-time modifier shape, reproducing that surface's
+    // three-way fork at the lift (both false = the plain focus click).
+    bool shift    = false;
+    bool ctrl     = false;
+
+    bool active() const { return kind != PendingClickKind::None; }
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
@@ -1309,13 +1407,17 @@ struct ScrollDragState {
 //         2026-08-15 with this redesign, which closes the last press-time act
 //         ON THE NAVIGATION SURFACES — the act-at-lift sweep had excluded it BY
 //         OMISSION, and the sweep reached the MARKER FLAG the same day
-//         (PendingMarkerPress above), leaving press-time acts only in the
-//         families that are ruled press-time or are pending a ruling of their
-//         own: every DISMISSAL (the standing rule), the two dropdown ANCHORS
-//         (the recorded exception), the trim bar's two bound-set clicks and its
-//         framing double-click, the empty lane's create double-click, the shift
-//         REGION FORMER's own placement press, the editor-text caret press, and
-//         the `h` view's diff-flag clicks. Do not re-derive that list from here
+//         (PendingMarkerPress above) and then its LAST FOUR ACTS (PendingClickAct
+//         above — the trim bar's two bound-set clicks and its framing
+//         double-click, the empty lane's create double-click and the `h` view's
+//         diff-flag clicks, all of which had been press-time by omission too).
+//         WHAT IS STILL PRESS-TIME IS NOW EXACTLY WHAT IS RULED SO OR AWAITS A
+//         RULING OF ITS OWN: every DISMISSAL (the standing rule — only the ACT
+//         moved), the two dropdown ANCHORS (the recorded exception), and the two
+//         DRAG STARTS that are not armed acts at all — the shift REGION FORMER's
+//         placement press, whose playhead rides the sweep's moving end, and the
+//         editor-text CARET press, a caret-at-press being what makes a text drag
+//         a text drag. Do not re-derive that list from here
 //         — grep the claims at their own sites —
 //         and THE TOUCH CONSEQUENCE IS WHY IT IS WRONG rather than merely
 //         inconsistent: two fingers can never land on the same frame, so a
@@ -1546,11 +1648,18 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 sub-window, else the whole song) — and, while the `h` HISTORY
 //                 VIEW stands, the VIEWED CHECKPOINT'S DIFF SPAN instead
 //                 (frame_viewed_commit_diff_span, 2026-08-05: one gesture on one
-//                 band, two commands, the mode picking between them at the
-//                 press). Target unused; both axes'
+//                 band, two commands, the mode picking between them — at the
+//                 LIFT since 2026-08-15, where every gate is re-asked live).
+//                 Target unused; both axes'
 //                 slack compared. It REHOMED here from the deleted zoom lane
-//                 (architect 2026-07-31) and consumes AHEAD of the cap/bridge
-//                 drag arm, so the second click frames rather than grabs. The
+//                 (architect 2026-07-31). THE VERDICT IS TAKEN AT THE PRESS AND
+//                 SPENT AT THE LIFT (2026-08-15, the act-at-lift sweep's last
+//                 four acts — PendingClickAct above): consume-before-arm became
+//                 VERDICT-before-arm, which keeps the property it was written
+//                 for — a true verdict arms the framing pending ALONE and never
+//                 the cap/bridge drag, so the second click frames rather than
+//                 grabs and, TRIM HAVING NO UNDO, an 8 px drift on it moves no
+//                 bound. The
 //                 seed is that lane's own press record (TrimBarPressSeed),
 //                 not a strip-drag field: the lane arms a pending trim drag
 //                 rather than a live one, so there is no drag state to hang it
@@ -1579,7 +1688,12 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 what bare `s` performs (warp copy-previous / phase reset N/2
 //                 lead-in — the drop itself single-selects and re-seats the
 //                 playhead, so one body serves key and click), home-view and
-//                 read-only gated silently. PLAIN presses only — a modified
+//                 read-only gated silently — AT THE LIFT since 2026-08-15, on
+//                 the TrimBar entry's own verdict-before-arm rule and for the
+//                 same reason at lower stakes (the create IS undoable): a true
+//                 verdict arms the create pending ALONE, so the second press
+//                 still never becomes a pan, and the two consumes read as one
+//                 rule rather than two. PLAIN presses only — a modified
 //                 press on the lane is the shift former / the ctrl zoom or a
 //                 consumed nothing, and seeds nothing. Seeded at the
 //                 MOTIONLESS RELEASE of the lane's plain press (position-keyed,
@@ -1612,7 +1726,12 @@ struct DoubleClickCandidate {
 // candidate when the pointer is still within kDoubleClickSlackPx of the recorded
 // point and no trim drag went live. That slack IS the motionless test: it equals
 // kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
-// the same condition by construction. Cleared at every left release (the release
+// the same condition by construction — STILL TRUE after the framing consume
+// moved to the lift (2026-08-15), and re-checked then: the press that CONSUMES
+// records no seed at all (it arms the framing pending and returns, exactly where
+// the press-time consume returned), so this record is only ever written by a
+// press that armed the cap/bridge drag or claimed bare band, which are precisely
+// the two the "no trim drag went live" clause was written for. Cleared at every left release (the release
 // consumes it) and by the force-end finalizer, beside the candidate's own clear.
 // (A THIRD CLEARER lived here for one day of 2026-08-09 — the checkpoint's
 // acknowledge modal, which could be raised from a worker's clock between this
@@ -2313,8 +2432,9 @@ constexpr int64_t kChromeShiftHoldMs  = 500;
 // DRAG (architect-tunable), shared by EVERY press-becomes-drag surface. THE
 // LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex round 19 — it named
 // "strip, region, trim, and the marker flag" long after the strip drag's
-// deletion and the two 2026-08-15 additions), and it is SIX states, each
-// latching its own `moved` in on_motion:
+// deletion and the two 2026-08-15 additions), and it is SEVEN states — six that
+// latch their own `moved` in on_motion, plus one that resolves at the crossing
+// without latching anything:
 //   * ScrollDragState — THE ONE NAV DRAG, the pending click whose crossing
 //     becomes the grab-pan or, with ctrl, the zoom (the capture begins at that
 //     crossing);
@@ -2331,8 +2451,13 @@ constexpr int64_t kChromeShiftHoldMs  = 500;
 //   * PendingTrimDrag — the trim bar's endcap / bridge drag;
 //   * PendingMarkerPress — the marker flag's pending CLICK, whose crossing
 //     becomes the reposition drag on a plain arm and commits nothing on a
-//     shift or ctrl one (the tempo flag was a seventh until the tempo drag's
-//     deletion, 2026-07-29).
+//     shift or ctrl one (the tempo flag was one more until the tempo drag's
+//     deletion, 2026-07-29);
+//   * PendingClickAct — the act-at-lift sweep's last four pending acts
+//     (2026-08-15), which is the one member that latches NO `moved` of its own:
+//     its crossing RESOLVES the arm outright, handing the TrimBoundSet kind to
+//     the endcap drag above and spending the other three for nothing, so there
+//     is no moved phase for it to be in.
 // One derived reader sits outside that list: the region former's SLIVER FLOOR
 // (end_region_drag_min_size_check) measures a rested span against this same
 // constant, so "never became a drag" and "never left the slack" are one
@@ -3111,6 +3236,16 @@ struct AppState {
     // threshold crossing, on button release / lost button, by the force-end
     // finalizer, and on file load.
     PendingTrimDrag pending_trim_drag;
+
+    // THE ACT-AT-LIFT SWEEP'S LAST FOUR PENDING ACTS, in one record (2026-08-15;
+    // the contract, including why they share one field, is at the type's
+    // declaration): the two trim bound sets, the trim bar's framing
+    // double-click, the empty lane's create double-click and the `h` view's
+    // diff-flag clicks. The TrimBoundSet kind becomes the endcap drag past the
+    // threshold; the other three commit nothing there. Cleared on the threshold
+    // crossing, on button release / lost button, by the force-end finalizer, and
+    // on file load.
+    PendingClickAct pending_click;
 
     // The resting region-select span (session-only). BARE ESC CLEARS IT — the
     // one route that clears a span and nothing else, and one of the six bare-Esc
@@ -4402,6 +4537,10 @@ struct AppState {
         // boxes alone); and the mode's own
         // bare Tab / Shift+Tab / IsoLeftTab cycle. Each sets it and lands the
         // playhead on that flag's frame, and nothing else writes it true.
+        // ALL THREE CLICKS RUN AT THE MOTIONLESS LIFT since 2026-08-15 (the
+        // act-at-lift sweep's last four acts, PendingClickAct above), on the
+        // index the PRESS resolved: the setters are the same three bodies and
+        // only their timing moved.
         //
         // EVERY CLEARER, the whole list, and all but the last clear for ONE
         // reason: the value is an ordinal into the PAINTED list, so anything
@@ -4495,8 +4634,11 @@ struct AppState {
         // why every reader below still
         // reads an empty list as "nothing there". Its READERS, re-derived by grep 2026-08-05: the producer
         // itself and the lane painter it feeds (waveform_cache.cpp), the mode's
-        // Tab cycle and its bare `c` (handle_history_mode_key), and the focus
-        // click's shared body (focus_history_diff_flag). Every one of them reads
+        // Tab cycle and its bare `c` (handle_history_mode_key), and BOTH CLICK
+        // BODIES — the plain focus click (focus_history_diff_flag) and the
+        // modified pair (select_history_diff_flags_modified), which reads it for
+        // the frame it lands on; the second was missing from this list before
+        // 2026-08-15 and is a re-grep, not a new reader. Every one of them reads
         // an EMPTY list as "nothing there" — the cold answer the drop relies on.
         std::vector<HistoryDiffFlag> flags;
 
@@ -5322,9 +5464,14 @@ inline int64_t snap_authored_frame(double frame) {
 // reposition drag, a trim drag, a strip-row
 // zoom/pan drag, a region-select drag, a REGION EDIT drag (the standing span's
 // own move / bound gestures, 2026-08-15), an editor
-// text drag, the MARKER FLAG'S PENDING CLICK, or the pending trim drag
+// text drag, the MARKER FLAG'S PENDING CLICK, THE FOUR REMAINING PENDING CLICK
+// ACTS (PendingClickAct — the trim bar's two bound sets and its framing
+// double-click, the empty lane's create double-click, the `h` view's diff-flag
+// clicks; 2026-08-15, when the act-at-lift sweep finished), or the pending trim
+// drag
 // (button held, watching for the threshold; the flag's pending holds a whole
-// unrun click since 2026-08-15, which is why it must be in flight here). (The scrub still
+// unrun click since 2026-08-15, which is why it must be in flight here, and the
+// four above hold one for the same reason). (The scrub still
 // has no entry of its own — it is a one-shot ACT, not a gesture — but since
 // 2026-08-13 its press arms the navigation surface's PENDING CLICK like every
 // other press on that surface, so a held lower-half press IS in flight here
@@ -5377,6 +5524,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.region_drag.active || app.region_edit_drag.active ||
            app.editor_text_drag.active ||
            app.pending_marker_press.active ||
+           app.pending_click.active() ||
            app.pending_trim_drag.active;
 }
 

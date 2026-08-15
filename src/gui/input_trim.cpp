@@ -40,7 +40,11 @@
 //     this ruling: a click that would rest ON or past its partner is a consumed
 //     no-op that writes nothing (the strictly-inside guard at
 //     handle_trim_set_bound). A clamp would move the bound somewhere the user
-//     did not click; a refusal is the ruled answer there.
+//     did not click; a refusal is the ruled answer there. THEY ACT AT THE LIFT
+//     since 2026-08-15 (the act-at-lift sweep's last four acts — the press arms
+//     PendingClickAct, app_state.h, and a CROSSING runs the set at the press
+//     column and then hands over to that bound's endcap drag): the guard is
+//     unchanged and is simply re-asked live where the act now runs.
 //   THE TYPED AND LOADED ROUTES (the settings editor's `:trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
@@ -56,7 +60,9 @@
 // land_playhead_on_marker's placement basis with NO viewport move. THE
 // MEMBERSHIP, re-derived by grepping the routes that write a trim bound:
 //   * `x` (handle_trim_x) — the PRECEDENT, unchanged in effect;
-//   * the CTRL / CTRL+SHIFT bound-set clicks (set_trim_bound_at_click);
+//   * the CTRL / CTRL+SHIFT bound-set clicks (set_trim_bound_at_click), AT THEIR
+//     MOTIONLESS LIFT or at their threshold crossing since 2026-08-15 — the act
+//     is unchanged and only its timing moved;
 //   * the ENDCAP / BRIDGE drag, AT ITS RELEASE ONLY (commit_trim_drag): the
 //     motion arm deliberately parks nothing, a per-frame playhead chase being
 //     a cursor fighting the gesture that is moving it;
@@ -879,11 +885,23 @@ void GuiInputHandler::commit_trim_drag() {
 // only bit — was deleted with the reclassification and a locked tab sets a bound
 // exactly as a writable one does. History-less like every trim
 // mutation; the repaint + target_render.trigger() tail mirrors the drag release.
-// This function OWNS the press's playback stop — placed past every refusal above
+// This function OWNS the click's playback stop — placed past every refusal above
 // and immediately ahead of the bound write, so the ctrl / ctrl+shift press carries
 // none of its own and a refused click leaves a live audition playing (the
 // claim-keyed stop rule at on_button_press's top-strip paragraph, taken inside the
-// gate). It DESELECTS at its tail, being a trim SETTER (architect 2026-07-29); it
+// gate).
+//
+// IT RUNS AT THE LIFT, NOT AT THE PRESS (architect 2026-08-15, the act-at-lift
+// sweep finishing: "all actions should be on mouse-up / finger-up"). The ctrl /
+// ctrl+shift press ARMS PendingClickAct (app_state.h) and commits nothing; the
+// MOTIONLESS LIFT calls this at the PRESS COLUMN, and a THRESHOLD CROSSING calls
+// it and then hands over to the endcap drag through
+// set_trim_bound_at_click_then_arm_drag below. NOTHING IN THIS BODY CHANGED and
+// nothing in it needed to: every gate it carries is decided when it runs, so
+// moving the call moved the whole decision with it — which is the point, TRIM
+// HAVING NO UNDO. A lost button, the force-end finalizer and the touch layer's
+// abnormal end now leave the bound WHERE IT WAS, where the press-time set had
+// already written it with nothing to take it back. It DESELECTS at its tail, being a trim SETTER (architect 2026-07-29); it
 // publishes no region, the trim-window highlight having retired 2026-07-30.
 // Both bound-set clicks are this ONE function, so both deselect, and both deselect
 // only PAST THE REFUSALS: a degenerate audio/geometry state and a
@@ -965,12 +983,20 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     return true;
 }
 
-// The ctrl / ctrl+shift trim-bar bound-set press: set the bound at the click
-// (set_trim_bound_at_click above) AND arm the single-bound trim drag on the bound
-// just set, so motion past the threshold drags it live exactly like an ENDCAP
-// press does, while a motionless release rests the click-set. NOTHING is stashed:
-// the click-set is committed when made (trim is history-less) and pointer gestures
-// have no cancel.
+// The ctrl / ctrl+shift trim-bar bound set's THRESHOLD CROSSING: set the bound at
+// the press column (set_trim_bound_at_click above) AND arm the single-bound trim
+// drag on the bound just set, so the gesture continues exactly like an ENDCAP
+// press's does. NOTHING is stashed: the click-set is committed when made (trim is
+// history-less) and pointer gestures have no cancel.
+//
+// ITS ONE CALLER IS THE CROSSING since 2026-08-15 (on_motion's pending-click
+// branch), where it used to be the PRESS: the act-at-lift sweep moved the set to
+// the lift, so this pair is now what a ctrl press becomes only once the pointer
+// has actually travelled. THE MARKER FLAG'S CROSSING IS THE MODEL — run the
+// click act, then begin the drag — and the outcome is byte-for-byte the
+// press-time model's, the set landing at the same column and the drag anchoring
+// there. A motionless lift runs the set ALONE, through the act owner, and arms
+// no drag at all.
 //
 // IT ARMS THE EXISTING DRAG AND BUILDS NO SECOND ONE — arm_pending_trim_drag, the
 // same pending an endcap press arms, so the threshold crossing, begin_trim_drag's
@@ -995,9 +1021,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // and one of TWO arm_pending_trim_drag callers (re-derived 2026-08-12, the
 // trim surface arc's revert — the arc's extra arms, the alt bridge press and
 // the ctrl deferred-set pending, lived one day, 2026-08-11..12, and are
-// deleted whole): this router, and the ctrl / ctrl+shift BOUND-SET press
-// above, which arms the same single-bound pending on the bound it has just
-// written.
+// deleted whole): this router, and the ctrl / ctrl+shift BOUND SET's THRESHOLD
+// CROSSING above (a PRESS until 2026-08-15, when the set moved to the lift),
+// which arms the same single-bound pending on the bound it has just written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
 // a bound is grabbed ONLY by its top-strip ENDCAP or by the bar's inter-cap
 // bridge span (the bound's own mark was already the unambiguous handle),

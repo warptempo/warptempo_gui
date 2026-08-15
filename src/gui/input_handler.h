@@ -203,7 +203,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //   * the POSITION NUDGES, both columns (finish_position_nudge);
 //   * the MARKER DROPS: one clear per column, at the drop chokepoints
 //     drop_marker (warp) and drop_phase_reset_at_position (phase reset), which
-//     both entry routes (bare `s`, the empty-lane double-click) converge on,
+//     both entry routes (bare `s`, and the empty-lane double-click — at its
+//     second press's LIFT since 2026-08-15) converge on,
 //     placed past every refusal;
 //   * the THREE MEMBERSHIP-WHOLESALE routes: the UNDO/REDO restore's visual tail,
 //     the `p` W/P swap (toggle_active_markers_view) and the propagate paste's
@@ -237,7 +238,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     BOTH BODIES: the plain focus click on the flag box
 //     (focus_history_diff_flag — its stem surface died with the stems-inert
 //     ruling, 2026-08-12), and the lane's shift/ctrl selection
-//     pair (select_history_diff_flags_modified). All of them are the live arms'
+//     pair (select_history_diff_flags_modified) — BOTH RUN AT THE MOTIONLESS
+//     LIFT since 2026-08-15, which changed when they clear and nothing about
+//     what: they are reached from the one act owner (run_pending_click_act),
+//     exactly as the live marker clicks are reached from theirs. All of them are the live arms'
 //     region regime read against the mode's data, and the flag clicks are the
 //     live MARKER CLICKS' class above, at the same UNCONDITIONAL strength — the
 //     empty-lane click, which lands nothing, clears too. Their day-old exemption
@@ -495,7 +499,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
-//     ahead of the same deselect;
+//     ahead of the same deselect, and run AT THE LIFT since 2026-08-15 (the act
+//     moved whole, this deselect with it);
 //   * the trim endcap/bridge DRAG — update_trim_drag's two motion arms and
 //     commit_trim_drag — which also carries the drag's PLAYBACK STOP, relocated
 //     there 2026-07-30 from the press when the press's highlight-only publish
@@ -1440,6 +1445,13 @@ struct GuiInputHandler {
     // the leave hook, which is a different question ("where is the pointer") —
     // so that hook still calls its own three clears plus those, and this is a
     // strict subset of it rather than a replacement.
+    // NOR IS IT AN END FOR THE PENDINGS, and the sweep's four new acts
+    // (PendingClickAct, 2026-08-15) did NOT join it though they too act at a
+    // lift: a pending is a MOTION-DRIVEN member — it has a threshold crossing to
+    // resolve and therefore an on_motion branch of its own, which carries its
+    // button-lost arm exactly as every drag state's does. Adding them here would
+    // be a second owner for an edge that already has one, which is the failure
+    // this family's own finding was about.
     void clear_release_time_press_arms();
 
     // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
@@ -1459,8 +1471,11 @@ struct GuiInputHandler {
     // at the drag-modal gate in on_key). The marker drag commits its proposed
     // position with its undo entry, the trim drag keeps its live bounds and runs its
     // commit tail, the region drag rests its region, the strip / grab-pan drags
-    // just end (they applied continuously), and the TWO PENDINGS disarm having
-    // committed nothing. (The tempo drag was a fifth body here until 2026-07-29 —
+    // just end (they applied continuously), and the THREE PENDINGS disarm having
+    // committed nothing (the third is PendingClickAct, the act-at-lift sweep's
+    // last four acts, 2026-08-15 — and for the trim bound sets in it that is a
+    // real change of outcome, their bound having been WRITTEN at the press until
+    // that day). (The tempo drag was one more body here until 2026-07-29 —
     // the whole gesture is deleted, see marker_drag.h.)
     // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
@@ -1645,7 +1660,21 @@ struct GuiInputHandler {
     // definition (input_pointer.cpp).
     void run_marker_click_act(PendingMarkerPress press, bool at_lift);
 
-    // The empty marker-lane double-click marker CREATE: the bare-`s`
+    // THE ACT-AT-LIFT SWEEP'S LAST FOUR ACTS — one arm and one act owner for the
+    // trim bar's two bound sets, its framing double-click, the empty lane's
+    // create double-click and the `h` view's three diff-flag clicks (2026-08-15).
+    // The arm writes PendingClickAct and NOTHING ELSE; the act is taken BY VALUE
+    // so the caller can disarm before running it, the release bodies' standing
+    // shape. Every gate the acts meet is re-asked inside them, live at the lift.
+    // Contract at PendingClickAct (app_state.h), per-kind reasoning at the
+    // definitions (input_pointer.cpp).
+    void arm_pending_click_act(PendingClickKind kind, int x, int y,
+                               bool is_begin = false, int flag = -1,
+                               bool shift = false, bool ctrl = false);
+    void run_pending_click_act(PendingClickAct press);
+
+    // The empty marker-lane double-click marker CREATE, run at the second
+    // press's MOTIONLESS LIFT (2026-08-15) from run_pending_click_act: the bare-`s`
     // drop equivalent at the clicked column — the AUGMENTED drop in both
     // columns, exactly as bare `s` performs it, the drop's own single-select
     // and playhead land included (create + select + land, the eighth glass
@@ -2249,7 +2278,8 @@ private:
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim
     // drag, and ONE OF TWO since the bound-set clicks came back 2026-08-01 (the
-    // other is set_trim_bound_at_click_then_arm_drag, which arms the same
+    // other is set_trim_bound_at_click_then_arm_drag, run at the bound set's
+    // threshold CROSSING since 2026-08-15, which arms the same
     // single-bound pending on the bound it has just written; the Alt pointer
     // gesture retired wholesale, and the waveform stem
     // grab with it; bounds are grabbed by their top-strip ENDCAPS / the bar's
@@ -2308,11 +2338,17 @@ private:
     // deselect, no stop, no drag — so this route never produces a crossed pair
     // and never hands one to auto_clear_crossed_trim. History-less like every
     // trim mutation; repaint + target_render.trigger() like the drag release.
-    // Read-only refuses silently (trim authoring). OWNS the press's playback
+    // READ-ONLY DOES NOT REFUSE (architect 2026-08-07 — trim is band, not
+    // authored content; the gate this line used to name was deleted with that
+    // reclassification, and the stale claim is corrected here 2026-08-15). OWNS
+    // the click's playback
     // stop, placed past those refusals and just ahead of the bound write, so the
     // ctrl / ctrl+shift press carries none of its own and a refused click leaves
     // a live audition playing. RETURNS whether a bound was written (the wrapper's
     // arm gate). is_begin picks the bound: ctrl sets begin, ctrl+shift sets end.
+    // IT RUNS AT THE LIFT (2026-08-15, the act-at-lift sweep): the press arms
+    // PendingClickAct, the motionless lift calls this at the PRESS column, and a
+    // crossing calls it and hands over to the drag. The body is unchanged.
     // The full derivation lives at the definition, input_trim.cpp.
     bool set_trim_bound_at_click(bool is_begin, int mouse_x);
 
@@ -2330,12 +2366,13 @@ private:
     std::optional<int64_t> trim_bound_click_frame(bool is_begin,
                                                   int mouse_x) const;
 
-    // The ctrl / ctrl+shift trim-bar bound-set press: sets the bound at the
-    // clicked column (set_trim_bound_at_click, above) AND arms the EXISTING
+    // The ctrl / ctrl+shift trim-bar bound set's THRESHOLD CROSSING (a PRESS
+    // until 2026-08-15, when the set moved to the lift): sets the bound at the
+    // PRESS column (set_trim_bound_at_click, above) AND arms the EXISTING
     // single-bound trim drag on it through arm_pending_trim_drag — the same
-    // pending an ENDCAP press arms, so motion past the threshold drags the bound
-    // live under the drag's own unchanged rules, while a motionless release rests
-    // the click-set. NOTHING is stashed: the click-set is committed when made
+    // pending an ENDCAP press arms, so the gesture continues under the drag's own
+    // unchanged rules and its outcome is byte-for-byte the press-time model's.
+    // NOTHING is stashed: the click-set is committed when made
     // (trim is history-less) and pointer gestures have no cancel. A REFUSED set
     // arms nothing at all, the arm riding the setter's return value rather than a
     // second copy of its guard ladder.
@@ -2477,6 +2514,12 @@ private:
     // NOTHING — the bar's outside on a trimmed-in window, or a ctrl click the
     // STRICTLY-INSIDE guard would consume — shows the Arrow, and the cue cannot
     // drift from the gesture because there is no second copy to drift.
+    // THE TWO CTRL CLICKS ASK THAT SAME DECIDER UNDER A HELD PRESS TOO
+    // (2026-08-15, when the bound set moved to the lift): the press arms
+    // PendingClickAct unconditionally, so the live-gesture arm reads the decider
+    // at the pending's PRESS column before keeping the bound's cue — the same
+    // question, asked once more where the arm can no longer answer it, so a
+    // press the guard will refuse keeps the Arrow for its whole hold.
     // ALL THREE ARE MODE-SCOPED, and per zone rather than per band (2026-08-05):
     // the `h` history view consumes the endcap/bridge drags and both ctrl clicks,
     // so those three cues go while it stands and the whole band answers Arrow
@@ -2815,7 +2858,11 @@ private:
     //     through untouched. Its own comment carries the admitted list and the
     //     four acts. It takes the press's DOUBLE-CLICK SNAPSHOT because one of
     //     those acts is a double-click (the trim bar's framing) and on_button_-
-    //     press clears the shared field before this is reached.
+    //     press clears the shared field before this is reached. IT ARMS RATHER
+    //     THAN ACTS for the framing and for all three diff-flag clicks since
+    //     2026-08-15 (the act-at-lift sweep's last four acts): the two bodies
+    //     below are reached from run_pending_click_act at the motionless lift,
+    //     never from this router.
     //   * focus_history_diff_flag is the PLAIN focus click's body — the flag
     //     box in the lane, the flag's one pointer surface (its waveform STEM
     //     surface died with the stems-inert ruling, 2026-08-12). It

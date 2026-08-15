@@ -1126,21 +1126,46 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // edge shape — never re-derived from the pointer's position: dragging a
     // bound is exactly the act of taking the pointer off the band, and the cue
     // must not flicker through the band map's answers on the way.
-    // THE PENDING ARM IS THE SAME ARM, not a second one deciding differently:
+    // THE PENDING ARMS ARE THE SAME ARM, not a second one deciding differently:
     // sub-threshold the pointer still rests on the geometry it pressed (the
-    // endcap, the bridge, or the ctrl click's set bound), so the pending's
+    // endcap, the bridge, or the ctrl click's bound), so the pending's
     // record and the hover map name the same cue — reading the record here
     // just keeps one owner across the whole press-to-release span. (The modal
     // gates above are structurally inert mid-drag — no press or key opens a
     // prompt, editor or dropdown while the button is held — so their rank
     // costs nothing.)
-    if (app.trim_drag.active || app.pending_trim_drag.active) {
+    // TWO PENDINGS SINCE 2026-08-15: the ctrl / ctrl+shift BOUND SET no longer
+    // writes its bound at the press and arms the endcap pending there — it arms
+    // PendingClickAct and writes at the LIFT — so the cue that used to come from
+    // the endcap pending for the whole hold now comes from this one, on exactly
+    // the same rule and naming exactly the same bound. Its OTHER three kinds
+    // are not trim gestures at all and fall to the live-gesture Arrow below,
+    // which is what they should show: a framing or create double-click's second
+    // press and an `h`-view flag press arm no drag, and no click carries a cue
+    // anywhere in the product.
+    // AND THE BOUND-SET PENDING ASKS THE ACT'S OWN DECIDER, at its PRESS column:
+    // the arm is unconditional now (every refusal moved into the act, to be
+    // re-asked at the lift), so without this a press the STRICTLY-INSIDE guard
+    // will refuse would wear a bound cue for its whole hold — promising a set
+    // that cannot happen, which is exactly what the hover map's own ctrl arm
+    // refuses to do below. Read from the PRESS column, never the live pointer,
+    // so the answer is fixed for the pending's life and the cue cannot flicker
+    // as the hand moves — the live-trim-gesture rule's own requirement.
+    const bool trim_bound_set_pending =
+        app.pending_click.kind == PendingClickKind::TrimBoundSet &&
+        trim_bound_click_frame(app.pending_click.is_begin,
+                               app.pending_click.press_x).has_value();
+    if (app.trim_drag.active || app.pending_trim_drag.active ||
+        trim_bound_set_pending) {
         const bool both     = app.trim_drag.active
                                   ? app.trim_drag.both
-                                  : app.pending_trim_drag.both;
+                                  : (app.pending_trim_drag.active &&
+                                     app.pending_trim_drag.both);
         const bool is_begin = app.trim_drag.active
                                   ? app.trim_drag.is_begin
-                                  : app.pending_trim_drag.is_begin;
+                                  : (app.pending_trim_drag.active
+                                         ? app.pending_trim_drag.is_begin
+                                         : app.pending_click.is_begin);
         if (both) return GuiCursorKind::TrimResize;
         return is_begin ? GuiCursorKind::TrimBoundBegin
                         : GuiCursorKind::TrimBoundEnd;
@@ -1280,8 +1305,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // grab-pan it carried moved onto the plain drag and the alt press claims
     // nothing anywhere, so alt falls to the modified-combination Arrow below.)
     // CTRL-EXACT: three claims, and the press path's own order between them.
-    // Over the TRIM BAR ctrl sets the BEGIN bound and arms a single-bound drag
-    // on it (set_trim_bound_at_click_then_arm_drag) — boundary extension by
+    // Over the TRIM BAR ctrl sets the BEGIN bound — at the LIFT since
+    // 2026-08-15, its crossing then handing over to a single-bound drag on that
+    // bound (set_trim_bound_at_click_then_arm_drag) — boundary extension by
     // another route, so it takes the BEGIN cap's own cue rather than the
     // Arrow; over the OVERVIEW LANE it names NOTHING since 2026-08-15 — the
     // lane's Zoom magnifier went with the dual-axis strip drag the redesign
@@ -3094,6 +3120,102 @@ void GuiInputHandler::run_marker_click_act(PendingMarkerPress press,
     }
 }
 
+// ARM ONE OF THE ACT-AT-LIFT SWEEP'S LAST FOUR ACTS — the ONE arm for all four,
+// so no future shape can arm a fifth way (2026-08-15; the contract, and why the
+// four share one record rather than four, is at PendingClickAct, app_state.h).
+// It writes the pending and does NOTHING ELSE: the act is the lift's.
+//
+// THE ARM IS UNCONDITIONAL BY SHAPE. Every gate any of the four acts meets —
+// the trim set's strictly-inside refusal and its degenerate-geometry returns,
+// the create's read-only and home-view refusals, the framing's audio test, the
+// diff-flag bodies' range guards — lives INSIDE the act and is therefore re-asked
+// LIVE at the lift, which is the chrome lift's own rule: a gate may change under
+// a held button and the LIFT decides. Nothing is carried but the press POINT,
+// the modifier SHAPE and the resolved flag INDEX.
+void GuiInputHandler::arm_pending_click_act(PendingClickKind kind, int x, int y,
+                                            bool is_begin, int flag,
+                                            bool shift, bool ctrl) {
+    app.pending_click = PendingClickAct{};
+    app.pending_click.kind     = kind;
+    app.pending_click.press_x  = x;
+    app.pending_click.press_y  = y;
+    app.pending_click.is_begin = is_begin;
+    app.pending_click.flag     = flag;
+    app.pending_click.shift    = shift;
+    app.pending_click.ctrl     = ctrl;
+}
+
+// RUN THE ARMED ACT — the motionless lift's whole body, one owner over the four
+// kinds. Its ONE caller is on_button_release (the TrimBoundSet kind's THRESHOLD
+// CROSSING runs its act inline instead, because there it is the drag's own
+// prologue rather than a click — the fork is stated at that site).
+//
+// EVERY ACT RUNS ON THE ARMED SUBJECT — the PRESS COLUMN, and the armed flag
+// index — and never on a re-hit at the release's coordinates, for the three
+// reasons recorded at run_marker_click_act above (touch's down-point press, the
+// unfrozen hit stash, and the navigation surfaces' own press-point rule).
+//
+// THE PENDING IS TAKEN BY VALUE so the caller can follow the release bodies'
+// STANDING SHAPE — read the fields, DISARM, then act, so the act runs with no
+// gesture live. Several of these acts write viewport, trim and playhead state
+// that other code reads through the live-gesture predicates, which is exactly
+// what that shape exists for.
+void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
+    switch (press.kind) {
+        case PendingClickKind::None:
+            return;
+        case PendingClickKind::TrimBoundSet:
+            // The ctrl (BEGIN) / ctrl+shift (END) bound set, WHOLE AND
+            // UNSPLIT: set_trim_bound_at_click owns every refusal (a degenerate
+            // audio/geometry state, and above all the STRICTLY-INSIDE guard —
+            // a click landing a bound on or past its partner writes nothing,
+            // deselects nothing and stops nothing), the playback stop that sits
+            // past those refusals, the write, the commit tail (the crossed
+            // reset, the playhead park at the new trim start, the region clear,
+            // the repaint and the target trigger) and the setter's deselect.
+            // Moving the act meant moving that unit, never a piece of it.
+            set_trim_bound_at_click(press.is_begin, press.press_x);
+            return;
+        case PendingClickKind::TrimBarFraming:
+            // ONE GESTURE ON ONE BAND, TWO COMMANDS, and the mode picks between
+            // them HERE rather than at the press (2026-08-15): the `h` view
+            // frames the VIEWED CHECKPOINT'S DIFF SPAN — the span the bar is
+            // already showing — and every other state frames the live ladder
+            // (region, else a proper trim sub-window, else the whole song).
+            // Asking at the lift is the gates-are-re-asked-live rule; the answer
+            // cannot actually have changed under the held button (the drag-modal
+            // gate swallows every chord while this pending stands, and no
+            // pointer route runs with the button down), so this is honesty about
+            // WHERE the decision belongs rather than a behaviour change.
+            if (app.history_mode.active) frame_viewed_commit_diff_span();
+            else                         run_span_framing_command();
+            return;
+        case PendingClickKind::EmptyLaneCreate:
+            // The empty marker lane's CREATE, at the PRESS column. Its body is
+            // unchanged — the bare-`s` drop's own chokepoint, which single-selects
+            // what it creates and re-seats the playhead — and its two silent
+            // refusals (read-only, the home view) are inside it, so they are
+            // re-asked here at the lift.
+            create_marker_at_empty_lane(press.press_x - waveform_area(app).x);
+            return;
+        case PendingClickKind::HistoryDiffFlag:
+            // The `h` view's three diff-flag clicks, forked on the CARRIED
+            // modifiers: shift is the contiguous ordinal range from the mode's
+            // focus, ctrl the membership toggle, and plain the focus click that
+            // replaces the set. All three land the playhead on the clicked
+            // flag's authored frame and take a resting region with them; none
+            // touches the store selection. The two bodies carry their own range
+            // guards, which is what makes a flag list that changed under the
+            // hold harmless — and nothing can change it, the mode's own walk
+            // being keyboard- and chrome-driven.
+            if (press.shift != press.ctrl)
+                select_history_diff_flags_modified(press.flag, press.shift);
+            else
+                focus_history_diff_flag(press.flag);
+            return;
+    }
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
@@ -3919,22 +4041,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
-        // SHIFT-exact trim-bar press (trim is transparent to shift), a
-        // SHIFT-exact empty flag/triangle-lane press (shift binds nothing on
-        // that lane — the waveform's shift region former does not extend to
-        // it), every empty marker-text-lane spot, and the inter-lane gaps — all
+        // SHIFT-exact trim-bar press (trim is transparent to shift),
+        // every empty marker-text-lane spot, and the inter-lane gaps — all
         // of which end at the inert top-strip return far below.
-        // The EMPTY FLAG/TRIANGLE lane's PLAIN press is the one ACTING press
+        // The EMPTY MARKER LANE's PLAIN press is the one ACTING press
         // that still does not stop: it is the waveform-upper-half's twin (the
-        // empty flag/triangle-lane parity press, architect 2026-07-23), and a
-        // live session RESEEKS there
-        // rather than dying, through place_playhead_and_arm_region. That
-        // exemption is stated at the branch itself and is PLAIN-ONLY by
-        // construction — the branch matches no modified press at all, so shift
-        // sits with ctrl and alt in the inert list above and stops nothing
-        // there either.
+        // empty-lane parity press, architect 2026-07-23), and a
+        // live session RESEEKS there rather than dying — through arm_nav_press's
+        // own DEFERRED CLICK ACT since the pan-primary ruling made that lane the
+        // navigation surface's member (2026-08-12; the claim that this branch
+        // acts "through place_playhead_and_arm_region" outlived that change and
+        // is corrected here 2026-08-15 — that body is the SHIFT former's, and
+        // the former's own y-gate does reach this lane, which is why shift is
+        // NOT in the inert list above: it acts here, and it too only reseeks).
         // Waveform clicks keep playback alive as ever — the per-press reseek to
-        // the click sample happens at the playhead-drag press site below, gated
+        // the click sample happens inside the deferred click act's placement
+        // body (run_nav_click_act -> place_playhead_at_click_column; it was the
+        // playhead-drag PRESS site until the eighth glass ruling deferred it),
+        // gated
         // on was_playing && sample != playhead_at_entry. Capture the entry
         // state up front, AHEAD OF EVERY STOP below, so all the downstream
         // branches see the same snapshot.
@@ -4039,16 +4163,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (inside_top) {
                 const GuiRect trim_band = top_trim_row_area(app);
                 if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
-                    // NO stop here: the bound set has its own refusals
-                    // (a degenerate audio/geometry state, a value not
-                    // strictly inside its partner), and a refused press changes
-                    // nothing, so there is nothing for a stop to protect. The
-                    // stop lives INSIDE set_trim_bound_at_click, past every
-                    // refusal and immediately ahead of the bound write.
-                    // Set the BEGIN bound AND arm the single-bound drag on it, so
-                    // motion drags it live (a motionless release rests the set;
-                    // a refused set arms nothing).
-                    set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
+                    // THE PRESS ONLY ARMS (2026-08-15, the act-at-lift sweep's
+                    // last four acts — contract at PendingClickAct,
+                    // app_state.h): the BEGIN bound set, its refusals, its stop,
+                    // its commit tail and its deselect are the CLICK, and the
+                    // click runs at the MOTIONLESS LIFT through the one act
+                    // owner (run_pending_click_act), at the PRESS column. A
+                    // CROSSING runs that same set and then hands the gesture to
+                    // the single-bound endcap drag on the bound it just wrote,
+                    // so ctrl-press-and-drag is byte-for-byte the gesture it has
+                    // always been.
+                    // NO stop here, for the reason it was never here: the bound
+                    // set has its own refusals (a degenerate audio/geometry
+                    // state, a value not strictly inside its partner), and a
+                    // refused click changes nothing, so there is nothing for a
+                    // stop to protect. The stop lives INSIDE
+                    // set_trim_bound_at_click, past every refusal and
+                    // immediately ahead of the bound write.
+                    arm_pending_click_act(PendingClickKind::TrimBoundSet, x, y,
+                                          /*is_begin=*/true);
                     return;
                 }
             }
@@ -4077,11 +4210,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect trim_band = top_trim_row_area(app);
             if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
-                // NO stop here either: like the BEGIN set above, the stop sits
+                // THE PRESS ONLY ARMS, the BEGIN set's own shape above: the END
+                // set runs at the motionless lift and a crossing runs it and
+                // then hands over to that bound's endcap drag (2026-08-15).
+                // NO stop here either: like the BEGIN set, the stop sits
                 // inside set_trim_bound_at_click past that act's refusals, so a
                 // refused END set leaves a live audition alone.
-                // Set the END bound AND arm the single-bound drag on it.
-                set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
+                arm_pending_click_act(PendingClickKind::TrimBoundSet, x, y,
+                                      /*is_begin=*/false);
                 return;
             }
         }
@@ -4236,15 +4372,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // THE SPAN-FRAMING DOUBLE-CLICK, rehomed onto this band from the
                 // deleted zoom lane (architect 2026-07-31): the whole band —
                 // endcaps, bridge and empty space alike — carries it, since it
-                // frames rather than grabs. The CONSUME runs FIRST, ahead of
-                // every arm: a candidate from the previous motionless press-
-                // release on this band, inside kDoubleClickMs and the slack on
-                // both axes, spends this press on the framing command and returns
-                // — no drag armed, no bound touched, playhead and selection
-                // untouched, and allowed in read-only for its own reason — it is
-                // pure navigation, which it was before the whole band became
-                // read-only-legal and still is (all modal gates sit far above).
-                // The surface tag is what keeps
+                // frames rather than grabs. It is pure navigation and allowed in
+                // read-only for that reason, which it was before the whole band
+                // became read-only-legal and still is (all modal gates sit far
+                // above); no bound is touched, and playhead and selection are
+                // untouched. The surface tag is what keeps
                 // a marker or editor candidate from consuming here, and the TEST
                 // is shared with the history mode's own trim-bar double-click
                 // (trim_bar_double_click_at) so the two cannot drift on the
@@ -4252,8 +4384,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // from the bare `0` key, which only ever reaches the whole song
                 // (and, from there, `c`); this frames the region, else a proper
                 // trim sub-window, else the whole song.
+                //
+                // CONSUME-BEFORE-ARM BECAME VERDICT-BEFORE-ARM (2026-08-15, the
+                // act-at-lift sweep's last four acts): the framing ACT moved to
+                // the motionless LIFT, but the VERDICT is still taken HERE,
+                // FIRST, ahead of every arm — and that ordering is the whole
+                // point rather than a leftover. A verdict is not an act: it
+                // commits nothing and changes no state, it records what the
+                // user's second press MEANT at the moment the timing test is
+                // about (the candidate snapshot is gone by the lift, cleared at
+                // the top of this frame). A TRUE verdict arms the FRAMING
+                // PENDING ALONE and returns — no trim drag armed, no seed
+                // recorded, exactly where the press-time consume returned.
+                //
+                // WHY THAT MATTERS MORE HERE THAN ANYWHERE ELSE: TRIM HAS NO
+                // UNDO — it is excluded from the stacks by ruling. Today the
+                // second press of a double-click physically cannot become a trim
+                // drag, and if a true verdict also armed the endcap / bridge
+                // drag, a double-click whose second press drifted 8 px would
+                // silently move a bound with no way back. Preserving the
+                // ordering preserves that guarantee exactly; a crossing on the
+                // framing pending commits nothing.
                 if (trim_bar_double_click_at(dc_at_press, x, y)) {
-                    run_span_framing_command();
+                    arm_pending_click_act(PendingClickKind::TrimBarFraming,
+                                          x, y);
                     return;
                 }
                 // SEEDING is a RELEASE act (only the release knows the press
@@ -4329,10 +4483,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // (architect 2026-07-28: the lane double-click reuses the
                     // keyboard's machinery, so it follows it — the drop itself
                     // single-selects and re-seats the playhead, so one body
-                    // serves both routes). Consume-before-arm, the trim bar's
-                    // own double-click precedent: the second press spends
-                    // itself on the create and arms no pending, so it can
-                    // never become a pan.
+                    // serves both routes). THE CREATE RUNS AT THE MOTIONLESS
+                    // LIFT since 2026-08-15 (the act-at-lift sweep's last four
+                    // acts — PendingClickAct, app_state.h), and its VERDICT is
+                    // still taken HERE, ahead of the nav arm: verdict-before-arm,
+                    // the trim bar's own double-click precedent read at the same
+                    // strength, so the second press arms the CREATE PENDING
+                    // ALONE and can still never become a pan. Letting a true
+                    // verdict fall through to the nav arm would have been a
+                    // second spelling of the one rule, and the pan is not worth
+                    // one. A crossing on the create pending commits nothing.
                     // Otherwise the press is the PENDING CLICK / GRAB-PAN,
                     // exactly the upper half's: nothing at press, the deferred
                     // click act at a motionless release — WHICH ALSO SEEDS the
@@ -4346,13 +4506,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // lands over a live session without cutting it off. Do not
                     // add a stop to make this branch look like its siblings —
                     // the omission IS the ruling.
-                    const int click_rel_x = x - area.x;
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                         std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        create_marker_at_empty_lane(click_rel_x);
+                        arm_pending_click_act(PendingClickKind::EmptyLaneCreate,
+                                              x, y);
                         return;
                     }
                     arm_nav_press(x, y, /*history=*/false,
@@ -4671,7 +4831,12 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
-    // The empty marker-lane double-click: CREATE the marker, SELECT it, LAND
+    // The empty marker-lane double-click, AT THE SECOND PRESS'S MOTIONLESS LIFT
+    // since 2026-08-15 (the act-at-lift sweep's last four acts; its one caller is
+    // run_pending_click_act, which passes the PRESS column). The body is
+    // unchanged, and its two silent refusals below are therefore re-asked live
+    // at the lift, which is the sweep's own rule.
+    // CREATE the marker, SELECT it, LAND
     // the playhead on it (the architect's words, eighth glass ruling) — the
     // bare-`s` drop equivalent, and like bare `s` it is the AUGMENTED drop in
     // both columns — the copy-previous owner in W, the lead-in reset in P.
@@ -5015,6 +5180,23 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.pending_trim_drag = PendingTrimDrag{};
         return;
     }
+    if (app.pending_click.active()) {
+        // THE MOTIONLESS LIFT OF THE SWEEP'S LAST FOUR ACTS — the two trim bound
+        // sets, the trim bar's framing double-click, the empty lane's create
+        // double-click and the `h` view's three diff-flag clicks (2026-08-15;
+        // the contract is at PendingClickAct, app_state.h). One act owner, which
+        // forks on the armed KIND and runs each act on the PRESS column / the
+        // ARMED flag index, re-asking every gate live.
+        // THE RELEASE BODIES' STANDING SHAPE: read the pending, DISARM, then
+        // act, so the act runs with no gesture live.
+        // (A crossed pending is spent at the crossing — a TrimBoundSet one
+        // having run its set and become app.trim_drag, which commits through the
+        // branch above; the other three having committed nothing at all.)
+        const PendingClickAct press = app.pending_click;
+        app.pending_click = PendingClickAct{};
+        run_pending_click_act(press);
+        return;
+    }
     if (app.pending_marker_press.active) {
         // THE FLAG'S MOTIONLESS LIFT — the click act, whole (2026-08-15, when
         // the marker click moved off the press; the contract is at
@@ -5152,10 +5334,24 @@ void GuiInputHandler::finalize_active_drags() {
     // the user finish the gesture", and a force-end is precisely the answer no.
     // The marker pending therefore ends exactly as every other pending does —
     // the asymmetry the old rule protected has no subject left, rather than
-    // having been overruled. (The bound-set trim pending is unchanged: its
-    // bound was written at the press and stands, trim being history-less.)
+    // having been overruled. (The parenthetical that stood here — "the
+    // bound-set trim pending is unchanged: its bound was written at the press
+    // and stands, trim being history-less" — was true of the press-time bound
+    // set and went stale on 2026-08-15, when that set moved to the lift too; the
+    // sweep's own pending is handled a few lines below.)
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_trim_drag    = PendingTrimDrag{};
+    // THREE pendings since 2026-08-15, when the act-at-lift sweep's last four
+    // acts joined this shape in ONE record (PendingClickAct): the trim bar's two
+    // bound sets and its framing double-click, the empty lane's create
+    // double-click and the `h` view's diff-flag clicks. Every one of them
+    // commits NOTHING here for the reason stated above — a force-end is not a
+    // click — and that is a real change of outcome for the bound sets, whose
+    // press used to have WRITTEN the bound already (the sentence in parentheses
+    // below was true of that model and is why it was there). Trim is still
+    // history-less; what changed is that there is now nothing to be history-less
+    // about on this path.
+    app.pending_click        = PendingClickAct{};
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
     // end) — and neither may the trim bar's press record, which would otherwise
@@ -5988,12 +6184,14 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses —
-//     AT PRESS TIME, which since 2026-08-15 makes it the ONE flag family still
-//     acting at the press: the LIVE views' three flag clicks moved to the lift
-//     that day and this one deliberately did not follow, being a separate
-//     press-time family over a mode-local selection with no drag to become —
-//     it is pending an architect ruling of its own, and its divergence is
-//     recorded rather than assumed. It touches NOTHING else: no store selection,
+//     AT THE MOTIONLESS LIFT, on the ARMED flag index, since 2026-08-15 (the
+//     act-at-lift sweep's last four acts — PendingClickAct, app_state.h). It
+//     lagged the LIVE views' three flag clicks by hours, having been called out
+//     the same day as a separate press-time family "pending an architect ruling
+//     of its own"; the ruling came, and it is the sweep's own: none of these was
+//     ever RULED a press-time exception, they were simply never in scope. The
+//     mode has NO drag for the press to become, so a crossing commits nothing.
+//     It touches NOTHING else: no store selection,
 //     no live focus, no auto-select, no playback stop. It DOES take a resting
 //     region with it (2026-08-06): a click that lands the playhead is a POINT
 //     command, the live clear-site rule's own shape.
@@ -6075,7 +6273,16 @@ bool GuiInputHandler::handle_history_mode_press(
         if (y >= lane.y && y < lane.y + lane.h) {
             const int hit = hit_test_flag(app, audio, x, y);
             if (hit >= 0) {
-                select_history_diff_flags_modified(hit, shift);
+                // THE PRESS ONLY ARMS (2026-08-15, the act-at-lift sweep's last
+                // four acts): the range / toggle, the focus move, the land and
+                // the region clear run at the MOTIONLESS LIFT on the ARMED
+                // index, through the one act owner (run_pending_click_act). The
+                // press-time MODIFIER SHAPE is carried, never re-read — the
+                // modal release's own rule — and the mode has no drag for any of
+                // the three to become, so a crossing commits nothing.
+                arm_pending_click_act(PendingClickKind::HistoryDiffFlag, x, y,
+                                      /*is_begin=*/false, /*flag=*/hit,
+                                      shift, ctrl);
                 return true;
             }
         }
@@ -6150,7 +6357,7 @@ bool GuiInputHandler::handle_history_mode_press(
         const GuiRect trim_bar = top_trim_row_area(app);
         if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
             if (trim_bar_double_click_at(dc_at_press, x, y)) {
-                frame_viewed_commit_diff_span();
+                arm_pending_click_act(PendingClickKind::TrimBarFraming, x, y);
                 return true;
             }
             app.trim_bar_press = TrimBarPressSeed{
@@ -6166,7 +6373,8 @@ bool GuiInputHandler::handle_history_mode_press(
         // index into that list — a double-width changed pair claiming as the one
         // rect it is painted as. A cold stash answers -1, which is the
         // empty-stretch answer and is correct: nothing is clickable that is not
-        // drawn. A FLAG takes the press-time focus click; an EMPTY STRETCH is
+        // drawn. A FLAG arms the focus click (run at the lift, 2026-08-15, like
+        // the two modified clicks above); an EMPTY STRETCH is
         // the navigation surface — the pending click / pan, whose motionless
         // release lands the playhead at the column through the mode's land
         // (the extension rule: this used to clear the focus and land nothing,
@@ -6174,7 +6382,12 @@ bool GuiInputHandler::handle_history_mode_press(
         // seed — the marker create is authoring, consumed in here.
         const int hit = hit_test_flag(app, audio, x, y);
         if (hit >= 0) {
-            focus_history_diff_flag(hit);
+            // ARM ONLY (2026-08-15, with the two modified clicks above): the
+            // focus move, the land and the region clear are the CLICK and run at
+            // the motionless lift on this armed index.
+            arm_pending_click_act(PendingClickKind::HistoryDiffFlag, x, y,
+                                  /*is_begin=*/false, /*flag=*/hit,
+                                  /*shift=*/false, /*ctrl=*/false);
         } else {
             arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
                           /*scrub_release=*/false);
@@ -6202,12 +6415,17 @@ bool GuiInputHandler::handle_history_mode_press(
 // THE MODE'S PLAIN FOCUS CLICK — the diff flag's box in the marker lane, the
 // flag's ONE pointer surface (its waveform STEM surface, this body's second
 // caller from 2026-08-05, died with the stems-inert ruling of 2026-08-12).
-// `hit` is an index into app.history_mode.flags. The press router calls this
-// only on a resolved flag since 2026-08-12 (an empty lane stretch is the
+// `hit` is an index into app.history_mode.flags, ARMED AT THE PRESS AND ACTED ON
+// AT THE MOTIONLESS LIFT since 2026-08-15 (the act-at-lift sweep's last four
+// acts): its ONE caller is run_pending_click_act, which passes the index the
+// press resolved and never a re-hit at the release's coordinates — the three
+// reasons are at run_marker_click_act. The router resolves a flag only since
+// 2026-08-12 (an empty lane stretch is the
 // navigation surface's pending click now — the eighth glass ruling — whose
 // deferred land clears the focus through the same pair clearer and then
 // PLACES the playhead, where this body's out-of-range arm lands nothing);
-// out-of-range tolerance kept, answering clear-and-land-nothing.
+// out-of-range tolerance kept, answering clear-and-land-nothing — and it is what
+// makes an armed index that the walk somehow outran harmless.
 //
 // IT CLEARS THE MULTI-SELECTION (architect 2026-08-05), which is the live
 // model's own shape rather than a rule of the mode's: a plain click REPLACES the
@@ -6255,10 +6473,14 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 }
 
 // THE MODE'S TWO MODIFIED CLICKS, one body — `extend` true for SHIFT, false for
-// CTRL — and `hit` is an ordinal into app.history_mode.flags that the caller has
+// CTRL — and `hit` is an ordinal into app.history_mode.flags that the PRESS
 // resolved from the flag's LANE BOX, the only surface these two clicks have
 // (architect 2026-08-06, the symmetry ruling: selection is lane vocabulary in
-// both views, and the stem-based pair this body briefly also served is gone). It
+// both views, and the stem-based pair this body briefly also served is gone).
+// BOTH RUN AT THE MOTIONLESS LIFT since 2026-08-15, on that ARMED ordinal and
+// under the PRESS-TIME modifier shape, which is carried and never re-read — the
+// act-at-lift sweep's last four acts, contract at PendingClickAct
+// (app_state.h). It
 // is the LIVE selection model re-expressed over the mode's own list
 // (selection-model.md):
 //
@@ -7300,7 +7522,63 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_trim_drag(mouse_x);
         return;
     }
-    // Pending trim drag (armed by a plain trim-bar press): the trim reposition
+    // THE SWEEP'S LAST FOUR PENDING ACTS (PendingClickAct, app_state.h): the two
+    // trim bound sets, the trim bar's framing double-click, the empty lane's
+    // create double-click and the `h` view's diff-flag clicks. Nothing has been
+    // committed yet — all four act at the LIFT since 2026-08-15 — so this branch
+    // owns both ways they can end early. Placed ABOVE the pending trim drag
+    // below because the TrimBoundSet crossing HANDS OVER to it and falls
+    // through, so the same motion event begins and applies the drag.
+    if (app.pending_click.active()) {
+        if (!mods.primary_button_held) {
+            // A LOST BUTTON COMMITS NOTHING and simply disarms — the standing
+            // rule for every lift-act surface, the same answer the force-end
+            // finalizer gives, and the way the TOUCH layer's ABNORMAL end (the
+            // motionless-hold upgrade) reaches these four for free: it delivers
+            // a motion with the button unheld precisely so an unmoved press
+            // commits nothing.
+            app.pending_click = PendingClickAct{};
+            return;
+        }
+        if (std::max(std::abs(mouse_x - app.pending_click.press_x),
+                     std::abs(mouse_y - app.pending_click.press_y)) <
+                kDragMovedThresholdPx) {
+            return;   // still a click; leave the pending armed, do nothing
+        }
+        // THE CROSSING SPENDS THE ARM, whatever its kind. Read, disarm, then
+        // act — the release bodies' standing shape.
+        const PendingClickAct press = app.pending_click;
+        app.pending_click = PendingClickAct{};
+        if (press.kind != PendingClickKind::TrimBoundSet) {
+            // THE OTHER THREE COMMIT NOTHING: none has a gesture to become —
+            // the two double-click acts are the SECOND press of a pair and
+            // deliberately arm nothing else (verdict-before-arm, whose whole
+            // purpose is that they cannot become a drag or a pan), and the `h`
+            // view has no marker drag at all. That is the overview Pending's own
+            // rule, and on the trim bar it is the no-undo guarantee itself: an
+            // 8 px drift on a framing second press moves no bound because there
+            // is no bound gesture armed to move one.
+            return;
+        }
+        // THE BOUND SET RUNS HERE AND THEN BECOMES THE DRAG, which is the marker
+        // flag's crossing exactly: the act first, at the PRESS column, then the
+        // gesture it was always the prologue to. set_trim_bound_at_click_then_
+        // arm_drag is the one owner of that pair — its arm RIDES the set's
+        // verdict, so a refused set (a degenerate audio/geometry state, a value
+        // not strictly inside its partner) arms nothing and the crossing is a
+        // consumed nothing, exactly as the motionless lift would have been.
+        // A drag's outcome is therefore byte-for-byte what it was under the
+        // press-time set: the bound is written at the press column, the drag
+        // anchors there, and begin_trim_drag's orig_* capture is the click-set
+        // value it always was.
+        // FALL THROUGH (no return) so the pending trim drag armed just now
+        // crosses on this same event and applies its first delta, folding the
+        // whole press->crossing travel.
+        set_trim_bound_at_click_then_arm_drag(press.is_begin, press.press_x,
+                                              press.press_y);
+    }
+    // Pending trim drag (armed by a plain trim-bar press, or by the crossing of
+    // a ctrl / ctrl+shift bound set just above): the trim reposition
     // begins only once the pointer travels past the shared Chebyshev threshold.
     // A lost button before the crossing ends it as a motionless click (nothing
     // committed). Placed after the trim_drag branch above: on the crossing this

@@ -1074,8 +1074,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // frame_history_view_whole_song below); this is what the user asks for when he
 // wants the differences filling the window, and its ONE caller is THE TRIM BAR'S
 // PLAIN DOUBLE-CLICK — the regular views' span-framing gesture exactly, on the
-// same band and through the same consume-before-arm machinery, with this act as
-// its command (architect 2026-08-05, superseding the single click this shipped
+// same band and through the same machinery, with this act as
+// its command; since 2026-08-15 that means the one ACT OWNER's TrimBarFraming
+// arm (run_pending_click_act), which picks between this command and the live
+// ladder on the mode bit AT THE LIFT, the verdict having been taken at the press
+// under the unchanged verdict-before-arm rule (architect 2026-08-05, superseding the single click this shipped
 // with earlier that day: the band behaves like a read-only tab's, where the trim
 // drags refuse and the framing double-click still navigates). The bar is showing
 // the diff span while the view stands (paint_trim's display-only substitution),
