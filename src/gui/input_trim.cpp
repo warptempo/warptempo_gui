@@ -1083,7 +1083,7 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
 }
 
 // Arm the pending trim endcap/bridge drag from a plain trim-bar press. Mirrors
-// PendingMarkerDrag: nothing mutates the trim store yet — begin_trim_drag runs
+// PendingMarkerPress: nothing mutates the trim store yet — begin_trim_drag runs
 // only when on_motion sees the pointer cross kDragMovedThresholdPx from the
 // press. is_begin names the single bound (Begin for a bridge/pair drag); both
 // distinguishes the single vs the pair.

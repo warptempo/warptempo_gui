@@ -718,37 +718,78 @@ struct EditorTextDragState {
     bool active = false;
 };
 
-// Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
-// The press single-selects its marker immediately (the click — with no exception
-// for a member of a 2+ selection since 2026-07-29, groups being never moved; the
-// doctrine is at the head of position_nudge.h), then
-// arms this pending state instead of the drag itself: only once the pointer
-// travels past kDragMovedThresholdPx (Chebyshev from the press; the one generic
-// 8px gate shared by every press-becomes-drag surface) does begin_drag run and
-// the marker-drag machinery take over. Deferring
-// begin_drag to the crossing keeps its pre-drag snapshot (the undo payload) and
-// its wall math exact — nothing mutates the store between press and crossing; the
-// selection capture that used to be on that list was deleted with the cancels
-// (2026-07-29) — and lets a sub-threshold press-release stay a pure click. Session-only,
-// never serialized. Cleared on the crossing (begin_drag takes over), on
-// release / lost button before the crossing, by the force-end finalizer, and on
-// file load.
-// Shift never arms it, and a read-only tab never arms it (marker mutation is
-// refused there — the select still lands).
+// THE MARKER FLAG'S PENDING CLICK — armed by ANY of the flag box's three
+// presses (plain, shift, ctrl), and it holds the WHOLE click back until the
+// gesture resolves (architect 2026-08-15: "all actions should be on mouse-up /
+// finger-up", the act-at-lift sweep reaching the flag; the whole model is at
+// on_button_press's marker branch, input_pointer.cpp).
 //
-// NOTHING IS HELD BACK HERE. The GROUP-drag deferral (deferred_click, architect
-// 2026-07-23 — a press on a member of a 2+ selection withheld its single-select +
-// land so begin_drag could seed the whole group, the file-manager convention) died
-// 2026-07-29 with the group drag itself: every marker press commits its whole
-// click at press time, so a release / lost button / force-end has nothing to
-// complete and simply DISARMS. Esc does nothing either (pointer gestures have no
-// cancel — the rule at the drag-modal gate in input_handler.cpp): the arm survives
-// the press and resolves by the threshold crossing or a real release / button loss.
-struct PendingMarkerDrag {
+// THE PRESS ARMS AND COMMITS NOTHING. A MOTIONLESS RELEASE runs the click act
+// (stop, the three-way selection fork, the land, the region clear, and the
+// plain arm's double-click half). A CROSSING of kDragMovedThresholdPx
+// (Chebyshev from the press; the one generic 8px gate shared by every
+// press-becomes-drag surface) converts a PLAIN arm into the reposition drag —
+// running the click act MINUS its double-click half first, so a drag's
+// user-visible outcome is byte-identical to the press-time model's — while a
+// SHIFT or CTRL arm that crosses commits NOTHING, there being no gesture for it
+// to become. A lost button, the force-end finalizer and the touch layer's
+// ABNORMAL end (the motionless-hold upgrade) all commit nothing. This is
+// ScrollDragState's own shape and the overview lane's Pending, in the flag's
+// vocabulary.
+//
+// THE PRESS-TIME MODIFIERS ARE CARRIED, not re-read at the lift: MODIFIERS ARE
+// READ AT THE PRESS AND NEVER RE-READ (the modal release's own rule, spelled at
+// ChromePress::shift), and it applies here without exception because a flag
+// click IS an armed act — unlike a continuous viewport gesture, which arms no
+// act, which is why the nav drag's LIVE ctrl is not a counter-example. The
+// double-click VERDICT is carried for the same reason: it is a fact about the
+// user's second press, decided at the moment its timing test is about (the
+// snapshot at on_button_press's top has already been cleared by then). The
+// GATES the verdict then meets are NOT carried and are re-asked live at the
+// lift — the chrome lift's own rule: a tab lock or a view switch may change
+// under a held button, and the LIFT decides.
+//
+// SUPERSEDED, AND CORRECT FOR ITS OWN MODEL: until 2026-08-15 the press
+// committed the whole click (single-select, land, span collapse, double-click
+// seed/consume) and armed this state for the DRAG alone, so "a release / lost
+// button / force-end has nothing to complete and simply DISARMS" was true, and
+// "shift never arms it" with it. The architect's counter-argument of the same
+// sweep — "marker work keeps its immediacy: flag clicks act at press time,
+// unlike the navigation surface's deferred click" — is superseded by his own
+// later ruling, not deleted. (Older still: the GROUP-drag deferral of
+// 2026-07-23, which withheld a click so begin_drag could seed the intact group,
+// died 2026-07-29 with the group drag itself — groups are never moved, the
+// doctrine at the head of position_nudge.h.)
+//
+// Deferring begin_drag to the crossing also keeps its pre-drag snapshot (the
+// undo payload) and its wall math exact — nothing mutates the store between
+// press and crossing; the selection capture that used to be on that list was
+// deleted with the cancels (2026-07-29).
+//
+// THE TWO AUTHORING GATES GUARD THE DRAG, NOT THE CLICK, and they live at the
+// CROSSING: a read-only tab and an off-home column still select, still land the
+// playhead and still open no editor (read-only protects the AUTHORED MUSICAL
+// CONTENT — the marker stores and the engine settings — and a selection is
+// navigation), so the arm itself is unconditional for all three shapes.
+//
+// Session-only, never serialized. Cleared on the crossing (either the drag
+// takes over or the arm is spent), on release / lost button, by the force-end
+// finalizer, and on file load. Esc does nothing (pointer gestures have no
+// cancel — the rule at the drag-modal gate in input_handler.cpp).
+struct PendingMarkerPress {
     bool active         = false;
-    int  marker         = -1; // marker index to reposition (active view's list)
+    int  marker         = -1; // marker index the press hit (active view's list)
     int  press_x        = 0;  // press position (window px): the gate + drag anchor
     int  press_y        = 0;
+    // The press-time modifier shape, reproducing the three-way click fork at
+    // the lift. Both false = the plain arm, the only one that becomes a drag.
+    bool shift          = false;
+    bool ctrl           = false;
+    // The plain arm's double-click verdict, evaluated at the press against the
+    // candidate snapshot and spent at the lift (consume = open the editor if
+    // the three live gates pass; else seed a fresh candidate at the PRESS
+    // point, which keeps the pairing press-to-press).
+    bool double_click_consume = false;
 };
 
 // (No pending TEMPO drag, and no TempoDragState: the whole target-view tempo drag
@@ -763,7 +804,7 @@ struct PendingMarkerDrag {
 // drag on the bound they just set. (The trim surface arc scattered these arms
 // across the merged band's modifiers for one day, 2026-08-11..12 — the alt
 // bridge press and the ctrl deferred-set pending died with the arc's revert.)
-// The trim sibling of PendingMarkerDrag: the press CLAIMS the cap/bridge geometry
+// The trim sibling of PendingMarkerPress: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
 // machinery takes over) only once the pointer crosses kDragMovedThresholdPx
 // (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS A CONSUMED
@@ -1262,7 +1303,16 @@ struct ScrollDragState {
 //         whole-song position through the scroll_viewport funnel, a pure
 //         viewport move, zoom level unchanged). THE ACT MOVED TO THE LIFT on
 //         2026-08-15 with this redesign, which closes the last press-time act
-//         in the product — the act-at-lift sweep had excluded it BY OMISSION —
+//         ON THE NAVIGATION SURFACES — the act-at-lift sweep had excluded it BY
+//         OMISSION, and the sweep reached the MARKER FLAG the same day
+//         (PendingMarkerPress above), leaving press-time acts only in the
+//         families that are ruled press-time or are pending a ruling of their
+//         own: every DISMISSAL (the standing rule), the two dropdown ANCHORS
+//         (the recorded exception), the trim bar's two bound-set clicks and its
+//         framing double-click, the empty lane's create double-click, the shift
+//         REGION FORMER's own placement press, the editor-text caret press, and
+//         the `h` view's diff-flag clicks. Do not re-derive that list from here
+//         — grep the claims at their own sites —
 //         and THE TOUCH CONSEQUENCE IS WHY IT IS WRONG rather than merely
 //         inconsistent: two fingers can never land on the same frame, so a
 //         press-time teleport necessarily fires on the FIRST finger, before any
@@ -1479,8 +1529,9 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
-// records this candidate (at a motionless release for TrimBar / EditorText /
-// EmptyLane; at the PRESS for Marker — see below); the NEXT plain press on the
+// records this candidate AT A MOTIONLESS RELEASE — one seed timing for all
+// four surfaces since 2026-08-15, when the marker click moved to the lift and
+// its press-time seed (the last of them) went with it; the NEXT press on the
 // SAME surface,
 // if it lands within kDoubleClickMs and kDoubleClickSlackPx of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
@@ -1504,11 +1555,16 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 axes' slack compared). The marker's ONE pointer surface is
 //                 its FLAG BOX (the painter's published rect — the stem
 //                 surface died 2026-08-12 with the stems-inert ruling, and the
-//                 marker-text lane's run in row 5). One seed
-//                 timing for the whole surface — the PRESS; a press that then
-//                 becomes a real marker drag (the reposition drag, the only one
-//                 left since the tempo drag's deletion) drops the candidate at the
-//                 threshold crossing, so a moved drag never carries one.
+//                 marker-text lane's run in row 5). THE VERDICT IS TAKEN AT THE
+//                 PRESS AND SPENT AT THE LIFT (2026-08-15): the press compares
+//                 against the snapshot — the moment the timing test is about —
+//                 and carries the boolean in PendingMarkerPress, while the
+//                 motionless lift either opens the editor or SEEDS the next
+//                 candidate, at the PRESS coordinates so the pairing stays
+//                 press-to-press. A press that becomes a real marker drag seeds
+//                 nothing, the moved-drag rule, and needs no clear of its own:
+//                 the press's own top-of-frame clear already emptied the field
+//                 and nothing has re-seeded it under the held button.
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
@@ -1539,8 +1595,8 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x (Marker seeds at the press; TrimBar /
-    int     press_y   = 0;      //   EditorText / EmptyLane at a motionless release)
+    int     press_x   = 0;      // seed x: all four surfaces seed at a motionless
+    int     press_y   = 0;      //   release, Marker with its PRESS coordinates
     int     target    = -1;     // marker index for Marker; unused otherwise
 };
 
@@ -2265,8 +2321,10 @@ constexpr int64_t kChromeShiftHoldMs  = 500;
 //     this state is not it): the box pan, the two edge drags, and the Pending
 //     outside press whose crossing commits nothing but still latches;
 //   * PendingTrimDrag — the trim bar's endcap / bridge drag;
-//   * PendingMarkerDrag — the marker flag drag (the tempo flag was a seventh
-//     until the tempo drag's deletion, 2026-07-29).
+//   * PendingMarkerPress — the marker flag's pending CLICK, whose crossing
+//     becomes the reposition drag on a plain arm and commits nothing on a
+//     shift or ctrl one (the tempo flag was a seventh until the tempo drag's
+//     deletion, 2026-07-29).
 // One derived reader sits outside that list: the region former's SLIVER FLOOR
 // (end_region_drag_min_size_check) measures a rested span against this same
 // constant, so "never became a drag" and "never left the slack" are one
@@ -3033,13 +3091,12 @@ struct AppState {
     // button, by the force-end finalizer, and on file load.
     RegionDragState region_drag;
 
-    // Pending marker-reposition drag, armed by a plain flag press. The press
-    // single-selects the marker immediately, whatever was selected before — groups
-    // are never moved, so there is no deferral (the field's declaration carries the
-    // story). The drag begins
-    // only past the threshold. Cleared on the threshold crossing, on button
-    // release / lost button, by the force-end finalizer, and on file load.
-    PendingMarkerDrag pending_marker_drag;
+    // The marker flag's PENDING CLICK, armed by any of its three presses and
+    // holding the whole click back to the lift (2026-08-15; the contract is at
+    // the type's declaration). A plain arm becomes the reposition drag past the
+    // threshold. Cleared on the threshold crossing, on button release / lost
+    // button, by the force-end finalizer, and on file load.
+    PendingMarkerPress pending_marker_press;
 
     // Pending trim endcap/bridge drag, armed by a plain trim-bar press (the
     // trim-drag machinery begins only past the threshold). Cleared on the
@@ -3072,8 +3129,9 @@ struct AppState {
 
     // Double-click candidate, shared by the trim-bar, flag, empty-lane and
     // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
-    // motionless press-release (or, for Marker alone, at the press — the
-    // per-surface rule is at DoubleClickSurface); cleared on file load and when
+    // motionless press-release on all four since 2026-08-15 (Marker seeded at
+    // the PRESS until the marker click moved to the lift; the per-surface rule
+    // is at DoubleClickSurface); cleared on file load and when
     // the double-click action fires.
     DoubleClickCandidate double_click;
 
@@ -3633,6 +3691,10 @@ struct AppState {
     // held — ScrollDragState) is OUTSIDE this rule's scope, not an exception
     // to it: the chrome and modal rules stand exactly as written, and any
     // future PRESS-ARMED act must keep reading its modifiers at the press.
+    // THE MARKER FLAG'S PENDING CLICK IS THAT FUTURE ACT, arrived 2026-08-15
+    // (PendingMarkerPress above): it carries its own `shift` and `ctrl` for
+    // exactly this reason, and it is an armed act rather than a continuous
+    // gesture, so it takes the rule rather than the nav drag's exemption.
     //
     // `press_ms` is THE PRESS'S OWN monotonic_ms() STAMP, and the whole of the
     // SHIFT LONG PRESS (architect 2026-08-13): held past kChromeShiftHoldMs on
@@ -5248,8 +5310,9 @@ inline int64_t snap_authored_frame(double frame) {
 // reposition drag, a trim drag, a strip-row
 // zoom/pan drag, a region-select drag, a REGION EDIT drag (the standing span's
 // own move / bound gestures, 2026-08-15), an editor
-// text drag, or a pending marker / trim drag
-// armed by a press (button held, watching for the threshold). (The scrub still
+// text drag, the MARKER FLAG'S PENDING CLICK, or the pending trim drag
+// (button held, watching for the threshold; the flag's pending holds a whole
+// unrun click since 2026-08-15, which is why it must be in flight here). (The scrub still
 // has no entry of its own — it is a one-shot ACT, not a gesture — but since
 // 2026-08-13 its press arms the navigation surface's PENDING CLICK like every
 // other press on that surface, so a held lower-half press IS in flight here
@@ -5301,7 +5364,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.overview_drag.active ||
            app.region_drag.active || app.region_edit_drag.active ||
            app.editor_text_drag.active ||
-           app.pending_marker_drag.active ||
+           app.pending_marker_press.active ||
            app.pending_trim_drag.active;
 }
 

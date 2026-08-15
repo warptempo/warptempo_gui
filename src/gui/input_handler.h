@@ -191,9 +191,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     a crossed plain drag is a pure viewport move — and NEITHER DOES THE
 //     SCRUB ARM, which returns above the dissolve: those two are membership's
 //     only deliberate non-members on this surface;
-//   * MARKER CLICKS, all three (the plain single-select and both multi-select
-//     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
-//     carried died with the extent owner, so every marker click clears;
+//   * THE MARKER CLICK ACT (run_marker_click_act, input_pointer.cpp), all
+//     three arms (the plain single-select and both multi-select clicks) at ONE
+//     site since 2026-08-15, UNCONDITIONALLY — the result-size split the
+//     multi-select pair carried died with the extent owner, so every marker
+//     click clears. It runs at the LIFT, or at the threshold crossing when a
+//     plain arm becomes the reposition drag, so a marker DRAG dissolves the
+//     span too — which it always did, the press having cleared before;
 //   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
 //     retarget;
 //   * the POSITION NUDGES, both columns (finish_position_nudge);
@@ -1622,6 +1626,25 @@ struct GuiInputHandler {
     // (input_pointer.cpp).
     void run_nav_click_act(int press_x, bool history, bool scrub_release);
 
+    // THE MARKER FLAG'S ARM — the one arm for all three of the flag box's
+    // presses, writing PendingMarkerPress and nothing else (the whole click is
+    // the lift's). Unconditional by shape: the two authoring gates guard the
+    // DRAG and live at the crossing. It also decides the PLAIN arm's
+    // double-click verdict against the press-time snapshot. Contract at
+    // PendingMarkerPress (app_state.h), reasoning at the definition
+    // (input_pointer.cpp).
+    void arm_marker_press(int hit, int x, int y, bool shift, bool ctrl,
+                          const DoubleClickCandidate& dc_at_press);
+
+    // THE MARKER CLICK ACT — stop, the three-way selection fork, the land, the
+    // region clear, and (at the lift, plain arm only) the double-click
+    // consume-or-seed. TWO call sites: the motionless release with `at_lift`
+    // true, and the plain arm's threshold crossing with it false, which drops
+    // the double-click half alone. Taken BY VALUE so the caller can disarm
+    // before acting, the release bodies' standing shape. Full contract at the
+    // definition (input_pointer.cpp).
+    void run_marker_click_act(PendingMarkerPress press, bool at_lift);
+
     // The empty marker-lane double-click marker CREATE: the bare-`s`
     // drop equivalent at the clicked column — the AUGMENTED drop in both
     // columns, exactly as bare `s` performs it, the drop's own single-select
@@ -1915,8 +1938,8 @@ private:
     // there is none. This is the shared jump tail of cycle_marker_focus (the
     // Tab family) and the `c` gesture, both of which recenter the viewport; a
     // plain marker click is the other land-onto-marker route (its own direct
-    // write in on_button_press — same two-step placement basis, but NO viewport
-    // move). Both leave the playhead coincident with the focus, and a later
+    // write in run_marker_click_act — same two-step placement basis, but NO
+    // viewport move). Both leave the playhead coincident with the focus, and a later
     // nudge/drag re-lands it on the focused marker as that marker moves.
     bool jump_playhead_to_focused_marker();
 

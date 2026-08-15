@@ -821,14 +821,19 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // playhead seats. THE CALLER INVENTORY, THE ONE AUTHORITATIVE ENUMERATION,
 // re-derived by grep 2026-07-29 (other sites state their own class and point
 // here; do not copy this list, re-derive it):
-//   * THE POINTER CLICKS — the plain marker click (input_pointer.cpp), the
-//     shift RANGE click, and the ctrl TOGGLE click. Each lands on the FOCUS its
-//     own path just set: the clicked marker, the clicked range end, the
-//     toggled-in marker, or the focus repaired after a toggle-out (an empty
-//     post-toggle selection lands nothing). The plain click's FOUR deferred
-//     completions left this list 2026-07-29 with the group drag: every marker
-//     press single-selects and lands at PRESS time now (horizontal movement is a
-//     focus act — the doctrine at the head of position_nudge.h);
+//   * THE POINTER CLICKS — the plain marker click, the shift RANGE click and
+//     the ctrl TOGGLE click, ALL THREE THROUGH ONE SITE since 2026-08-15
+//     (run_marker_click_act, this file: the click acts at the LIFT, or at the
+//     threshold crossing when a plain arm becomes the drag, so the three arms
+//     that used to land from on_button_press are one body now). Each lands on
+//     the FOCUS its own arm just set: the clicked marker, the clicked range
+//     end, the toggled-in marker, or the focus repaired after a toggle-out (an
+//     empty post-toggle selection lands nothing). The plain click's FOUR
+//     deferred completions left this list 2026-07-29 with the group drag —
+//     horizontal movement is a focus act, the doctrine at the head of
+//     position_nudge.h — and the DEFERRAL that stands here now is a different
+//     thing entirely: not a click held back for a group, but the whole click
+//     waiting for the lift;
 //   * THE KEYBOARD FOCUS-COLLAPSE COMMANDS, which collapse a 2+ selection to its
 //     focus and land there — the Ctrl+N inherit toggle (warpmarkers_ops.cpp) and,
 //     since 2026-07-29, BOTH POSITION NUDGES through their shared prologue
@@ -884,8 +889,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // half-offscreen flag, and the ruling is NO viewport write of any kind (the
 // playhead may rest at a slightly offscreen column when the clicked flag hung
 // half off the edge — accepted). Read-only allowed (selection + playhead are
-// navigation). Some callers stop playback first (each marker click owns that
-// stop at its own site, Tab-family symmetry; the restores and the bpm-editor
+// navigation). Some callers stop playback first (the marker click owns that
+// stop at its one act site, Tab-family symmetry; the restores and the bpm-editor
 // open stop too); the others — the bare-Return flag-editor open,
 // the `p` swap, the Ctrl+N collapse — may land DURING playback, safe because the
 // land is a direct RESTING-cursor write and a live scanner is untouched by
@@ -1181,7 +1186,16 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // pressed, where the hover map answers this same kind, so reading the
     // pending here just keeps one owner across the whole press-to-release span.
     // The gesture is capture-free, so there is a visible cursor to keep.
-    if (app.drag.active || app.pending_marker_drag.active)
+    // THE PLAIN ARM ONLY, since the flag's shift and ctrl presses started
+    // arming the same pending (2026-08-15, the click moving to the lift): those
+    // two can never become a drag, so promising a side-to-side slide for the
+    // whole hold would be exactly the false promise the map's own rule forbids.
+    // They fall to the live-gesture Arrow just below, which is what the hover
+    // map already answers over a flag box under either modifier — cue and
+    // gesture still agreeing by construction.
+    if (app.drag.active ||
+        (app.pending_marker_press.active &&
+         !app.pending_marker_press.shift && !app.pending_marker_press.ctrl))
         return GuiCursorKind::TrimResize;
     // THE REGION'S OWN EDITOR KEEPS ITS CUE TOO (2026-08-15), on that same
     // rule and in that same member shape: it is a capture-free, visible-cursor
@@ -2882,6 +2896,203 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
            std::abs(y - dc.press_y) <= kDoubleClickSlackPx;
 }
 
+// ARM THE MARKER FLAG'S PENDING CLICK — the ONE arm for all three of the flag
+// box's presses (the ctrl-exact toggle, the shift range, the plain
+// single-select), so no future shape can arm a fourth way. It writes the
+// pending and does NOTHING ELSE: the whole click is the lift's
+// (run_marker_click_act below; the contract is at PendingMarkerPress,
+// app_state.h).
+//
+// UNCONDITIONAL BY SHAPE. The two authoring gates the plain press used to arm
+// behind — read-only and active_column_authoring_allowed — guard the DRAG, not
+// the click, and live at the crossing (on_motion): a locked tab and an off-home
+// column still select, still land the playhead and still open no editor, which
+// is read_only_key_blocked's own ruling (read-only protects the AUTHORED
+// MUSICAL CONTENT — the marker stores and the engine settings — and a selection
+// is navigation).
+//
+// THE DOUBLE-CLICK VERDICT IS DECIDED HERE, at the press, and only for the
+// PLAIN shape (the two modified clicks have never had a double-click meaning).
+// Deciding it at the press is not a press-time ACT — it commits nothing and
+// changes no state; it records what the user's second press MEANT, at the
+// moment the timing test is about, which the lift can no longer ask because
+// on_button_press's own top-of-frame clear has already emptied the field. What
+// the verdict then meets — the P view, read-only and the home column — is
+// re-asked LIVE at the lift, the chrome lift's rule: a gate may change under a
+// held button and the LIFT decides.
+void GuiInputHandler::arm_marker_press(int hit, int x, int y, bool shift,
+                                       bool ctrl,
+                                       const DoubleClickCandidate& dc_at_press) {
+    const bool plain = !shift && !ctrl;
+    app.pending_marker_press = PendingMarkerPress{};
+    app.pending_marker_press.active  = true;
+    app.pending_marker_press.marker  = hit;
+    app.pending_marker_press.press_x = x;
+    app.pending_marker_press.press_y = y;
+    app.pending_marker_press.shift   = shift;
+    app.pending_marker_press.ctrl    = ctrl;
+    app.pending_marker_press.double_click_consume =
+        plain &&
+        dc_at_press.surface == DoubleClickSurface::Marker &&
+        dc_at_press.target == hit &&
+        monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
+        std::abs(x - dc_at_press.press_x) <= kDoubleClickSlackPx &&
+        std::abs(y - dc_at_press.press_y) <= kDoubleClickSlackPx;
+}
+
+// THE MARKER CLICK ACT — the whole of what a flag press used to commit at press
+// time, in one owner with TWO call sites: the MOTIONLESS RELEASE runs it with
+// `at_lift` true, and the plain arm's THRESHOLD CROSSING runs it with `at_lift`
+// false, which drops only the double-click half (a drag is not a click of a
+// double-click). Everything else — the stop, the three-way fork, the land and
+// the region clear — is identical on both, which is what makes a drag's
+// user-visible outcome byte-identical to the press-time model's.
+//
+// THE PENDING IS TAKEN BY VALUE so the callers can follow the release bodies'
+// STANDING SHAPE — read the fields, DISARM the state, and only then act, so the
+// act runs with no gesture live (ScrollDragState's and the overview lane's
+// releases both say so at their sites). A reference into a field the caller is
+// about to zero would make that shape unwritable.
+//
+// THE ARMED MARKER INDEX IS THE SUBJECT AND NOTHING IS RE-HIT-TESTED HERE. This
+// is where the flag deliberately differs from the chrome roster, whose lift
+// re-hits its target's published rect, and there are three independent reasons:
+//   * THE TOUCH LAYER delivers the synthesized PRESS at the finger's DOWN point
+//     and the release at its last position, so a re-hit would resolve a
+//     different flag — or none — for a finger that drifted inside the 8px slop;
+//   * THE FLAG HIT STASH (AppState::flag_hit_rects) may legitimately be
+//     REPUBLISHED between press and release: the async worker's freeze list is
+//     `app.drag.active || app.trim_drag.active || app.region_edit_drag.active`
+//     and does not name this pending, so the basis under a held flag press is
+//     not frozen;
+//   * THE PRESS POINT IS WHAT THE USER AIMED AT — the navigation surface's
+//     deferred click and the overview lane's teleport both act at the PRESS
+//     COLUMN for exactly this reason, sub-threshold travel being jitter.
+// A chrome button's rect is static, published by the roster, and its arm has no
+// travel threshold at all; a flag's is neither.
+//
+// THE INDEX CANNOT GO STALE UNDER THE HELD BUTTON. The drag-modal gate
+// (input_handler.cpp) swallows every key while this pending stands — Ctrl+Q
+// hatched, and that route force-ends the pending before it does anything else —
+// no pointer route can run with the button down, and no worker mutates a marker
+// store. The mutators' own index guards (land_playhead_on_marker's store range
+// test, the selection ops' idx < 0 returns, begin_drag's count test) are the
+// backstop; nothing here re-derives.
+void GuiInputHandler::run_marker_click_act(PendingMarkerPress press,
+                                           bool at_lift) {
+    if (press.marker < 0) return;
+    // The stop leads on every shape, as it did at the press: selecting or
+    // editing under a live audition is the case the top-strip stop exists for,
+    // and no arm below refuses (read-only still selects and lands, and the
+    // index came from a live hit test).
+    playback_lifecycle.stop_playback_if_playing();
+    if (press.ctrl) {
+        // The individual membership TOGGLE. Whether it ADDED or REMOVED, the
+        // playhead lands on the FOCUS the toggle leaves behind (architect
+        // 2026-07-28, replacing the earliest-selected land): an ADD focuses the
+        // clicked marker, a REMOVE of the focused member repairs the focus to
+        // the largest remaining index, and a REMOVE of any other member leaves
+        // the focus alone — so app.last_selected_marker is the one expression
+        // for all three, and it is always a live member on a non-empty
+        // selection.
+        selection.toggle_selection_membership(press.marker);
+        if (!app.selected_markers.empty())
+            land_playhead_on_marker(app, audio, viewport,
+                                    app.last_selected_marker);
+    } else if (press.shift) {
+        // Shift is a file-manager INCLUSIVE RANGE select (architect
+        // 2026-07-23): the click ranges from the interaction's anchor — a LIVE
+        // anchor, else the ADOPTED FOCUS (plain-click A then shift-click B
+        // selects A..B; with nothing focused the click anchors on its own
+        // marker, selection {hit}). THE ANCHOR IS NOT KEYED TO THE PHYSICAL
+        // SHIFT HOLD (architect 2026-07-29): it SURVIVES a shift release and
+        // dies at the next membership replace, so a shift interaction
+        // re-started after a release ranges from the SURVIVING anchor rather
+        // than from the focus — A..B, release, re-press, shift-click C gives
+        // A..C, the accepted delta of the falling-edge hook's deletion. The
+        // full contract and clear list are at app.shift_range_anchor
+        // (app_state.h). The clicked marker becomes the range end = FOCUS
+        // (last_selected) and the playhead LANDS THERE (architect 2026-07-28,
+        // replacing the earliest-member land), so focus and land never diverge
+        // and nothing is towed by a later nudge. On an anchoring focus-less
+        // first click the selection is {hit} and hit is the focus, so the land
+        // is unchanged. A range leaving exactly one selected shows its always-on
+        // stem; select_range_from_anchor owns the subject-change damage.
+        selection.select_range_from_anchor(press.marker);
+        if (!app.selected_markers.empty())
+            land_playhead_on_marker(app, audio, viewport,
+                                    app.last_selected_marker);
+    } else {
+        // ONE PLAIN MARKER CLICK, NO SPECIAL CASE FOR A SELECTED MEMBER
+        // (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS ACT — the
+        // doctrine is at the head of position_nudge.h): a click on a member of
+        // a 2+ selection single-selects and lands like a click on any other
+        // marker, and the drag it may become is an ordinary singleton drag. The
+        // two file-manager DEFERRALS that used to sit on this path — one per
+        // drag surface, each holding the click's act back so the drag could
+        // seed the intact group — died with the group drag itself; groups are
+        // never moved by any route. (The second of those surfaces, the tempo
+        // drag, is gone outright — see marker_drag.h.)
+        // The clicked marker's flag BRIGHTENS here — set_single_selection
+        // damages the top strip, where the flags live. No stem work is owed on
+        // any arm: stems are class-colored and always on, so a membership
+        // change never creates, moves or recolors one.
+        selection.set_single_selection(press.marker);
+        land_playhead_on_marker(app, audio, viewport, press.marker);
+    }
+    // THE CLICK OWNS ITS CLEAR (architect 2026-07-29): a marker click is a
+    // POINT command — it says "the playhead is HERE, at this point" — so any
+    // resting scratch span ends here, unconditionally, on all three arms and
+    // whether or not the land moved anything (the clear-site list is at
+    // clear_region_highlight, input_handler.h). A re-click of the
+    // already-selected marker therefore clears a resting highlight too; that is
+    // the ruling and not an accident.
+    clear_region_highlight(app, viewport);
+    // THE DOUBLE-CLICK HALF IS THE LIFT'S ALONE and the PLAIN arm's alone. The
+    // crossing skips it by construction: a press that became a drag is not a
+    // click of a double-click, so it neither opens nor seeds — and it needs no
+    // clear of its own either, on_button_press's top-of-frame clear having
+    // already emptied the field with nothing able to re-seed it under the held
+    // button.
+    if (!at_lift || press.shift || press.ctrl) return;
+    // A carried verdict for the SAME index within the window opens the flag
+    // editor, exactly like Enter on the focused marker (the fork above already
+    // single-selected it). THE THREE GATES ARE RE-ASKED LIVE, never carried:
+    // read-only, the P view (phase resets have no per-flag editor) and the
+    // off-home column (active_column_authoring_allowed — the warp editor is
+    // source-view-only) refuse SILENTLY, matching Enter's allowlist / view
+    // refusal, and the press stays a plain second select that seeds afresh.
+    bool opened_editor = false;
+    if (press.double_click_consume &&
+        app.active_markers_view != 'P' &&
+        !active_view_state(app).read_only &&
+        active_column_authoring_allowed(app)) {
+        // Every open route opens fully SELECTED (open-selected), so there is no
+        // clicked-glyph caret to seat. A specific caret spot is a click inside
+        // the already-open editor (the F2.1 path).
+        flag_editor.enter_top_flag_edit(press.marker);
+        opened_editor = true;
+    }
+    if (!opened_editor) {
+        // SEED the next Marker candidate. THE POSITION IS THE PRESS'S, not
+        // this release's: it keeps the SPATIAL pairing press-to-press, exactly
+        // the comparison the press-time seed made, and it is the honest one for
+        // the touch layer, whose synthesized release carries the finger's LAST
+        // position while the press carries its down point. THE TIMESTAMP IS THE
+        // SEED'S OWN, which is the release — the family's rule (TrimBar,
+        // EditorText and EmptyLane all stamp their motionless release), so the
+        // window is measured release-to-press here as it is everywhere else.
+        // The split is deliberate: only the position has a reason to look back
+        // at the press. On a consumed open nothing seeds: the editor now owns
+        // input.
+        app.double_click = DoubleClickCandidate{
+            .surface = DoubleClickSurface::Marker,
+            .time_ms = monotonic_ms(),
+            .press_x = press.press_x, .press_y = press.press_y,
+            .target  = press.marker};
+    }
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
@@ -3592,13 +3803,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the right button meaningless again, a right press closes nothing) — the
     // guard-free close is the LEFT press's, below.
 
-    // Mouse authoring is home-view gated like the keyboard: placement arming is
+    // Mouse authoring is home-view gated like the keyboard: the marker DRAG is
     // gated by active_column_authoring_allowed, off-home selecting and landing but
-    // arming NOTHING — with no exception anywhere, since 2026-07-29. W+target used
+    // MOVING NOTHING — with no exception anywhere, since 2026-07-29. W+target used
     // to arm the TEMPO drag on an eligible marker instead of the reposition drag
     // (the pointer half of the home-view binding's tempo exception); that whole
-    // gesture is deleted (see marker_drag.h), so a W+target flag press now selects
-    // and lands like any other off-home press and arms nothing at all. The
+    // gesture is deleted (see marker_drag.h), so a W+target flag click now selects
+    // and lands like any other off-home click and can move nothing at all. THE
+    // GATE LIVES AT THE THRESHOLD CROSSING since 2026-08-15, not at the press:
+    // the press arms unconditionally and the click is the lift's, so the gate
+    // sits where the drag actually begins (on_motion). The
     // click-playhead / region-drag family below is
     // navigation, not authoring, and stays view-independent.
 
@@ -3608,14 +3822,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // already repositioned the caret / armed the text drag above (the F2.1
         // block) and returned; ANY other left press with the top flag editor
         // open CLOSES it without committing, and then FALLS THROUGH so the press
-        // acts normally (arm a strip drag, select a marker, arm a marker drag,
-        // land, place the playhead, ...). Placed ahead of every claim below so
-        // the close really is unconditional. Consequence: a double-click on the
-        // open editor's own marker is close-then-reopen — the first click
-        // closes + selects + seeds a Marker candidate (+ arms the pending drag
-        // on the flag part, writable), and the second consumes into a fresh
-        // open. That IS the documented "double-click opens the editor"; there
-        // is no own-marker special case.
+        // acts normally (arm a nav press, arm a marker press, place the
+        // playhead, ...). Placed ahead of every claim below so the close really
+        // is unconditional. IT STAYS AT THE PRESS while the marker click moved
+        // to the lift (2026-08-15): a DISMISSAL is press-time by standing rule
+        // product-wide — the menu row's any-press end, press-anywhere-closes,
+        // this close, the veil — and the act-at-lift sweep moved only the ACT.
+        // Consequence: a double-click on the open editor's own marker is
+        // close-then-reopen — the first press closes and arms, its LIFT selects
+        // and seeds a Marker candidate, and the second press's lift consumes
+        // into a fresh open. That IS the documented "double-click opens the
+        // editor"; there is no own-marker special case.
         close_top_flag_editor_for_outside_press(x, y);
 
         // The marker hit, computed ONLY on the path that consumes it. The
@@ -3623,14 +3840,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // (hit_test_flag against the painter's stash — the rendered lane run
         // that used to be its second half died with the marker-text lane, and
         // with it the MarkerHit pair and its shared resolver marker_hit_at).
-        // The TOP-STRIP hit feeds the plain/Shift/Ctrl
-        // marker-click branches (plain = single-select + land the playhead on
-        // the marker + double-click seed / consume + arm the pending marker
-        // drag on the flag part, Shift = file-manager inclusive RANGE select
-        // from the interaction's anchor (shift-held, else the adopted focus)
-        // to the clicked marker + land on that range END, Ctrl = the individual
-        // membership toggle + land on the resulting focus), so it is resolved
-        // once here — every one of the three lands on its own focus.
+        // The TOP-STRIP hit feeds the plain/Shift/Ctrl marker-press branches,
+        // all three of which now merely ARM the pending click (2026-08-15 — the
+        // click acts at the LIFT; the acts themselves are at
+        // run_marker_click_act: plain = single-select + land + the double-click
+        // consume-or-seed, Shift = the file-manager inclusive RANGE select from
+        // the interaction's anchor to the clicked marker + land on that range
+        // END, Ctrl = the individual membership toggle + land on the resulting
+        // focus), so it is resolved once here — every one of the three lands on
+        // its own focus. THE ARMED INDEX IS WHAT THE LIFT ACTS ON: nothing is
+        // re-hit-tested at the release (the three reasons are at
+        // run_marker_click_act).
         // The WAVEFORM never SELECTS a marker by HIT — a plain press splits by half
         // (upper: deselect-all + playhead placement + region-drag arm; lower:
         // the scanner scrub, which touches no selection at all), and a Shift
@@ -3663,19 +3883,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
         // waveform at all. Resolved ONCE here, ahead of every branch that
-        // consumes it: the ctrl-exact membership toggle, the plain / Shift
-        // marker click, and the empty-top-strip fallthrough (mh_index < 0 is
-        // what makes a spot EMPTY) all read this one hit.
+        // consumes it: the ctrl-exact arm, the plain / Shift arm, and the
+        // empty-top-strip fallthrough (mh_index < 0 is what makes a spot EMPTY)
+        // all read this one hit.
         int mh_index = -1;
         if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
 
-        // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
+        // A top-strip gesture stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
         // stop is the price of an authoring or a navigation act — a marker
         // select, a trim bound set, a trim-bar consume — and continuing audio
         // during authoring / text editing is the wrong default, so each of
-        // those acts calls stop_playback_if_playing ITSELF at its own site
-        // below. THE STOP IS INTENTIONAL, NOT POSITIONAL: a press that claims
+        // those acts calls stop_playback_if_playing ITSELF at its own site.
+        // THE MARKER'S SITE IS NO LONGER A PRESS SITE (2026-08-15): its stop
+        // leads the click act, which runs at the LIFT or at the drag's
+        // threshold crossing, so a marker press stops nothing on the way down —
+        // the rule is unchanged, its subject simply moved with the act it
+        // priced. THE STOP IS INTENTIONAL, NOT POSITIONAL: a press that claims
         // NOTHING changes no state at all, so there is nothing for a stop to
         // protect and a live audition survives it. A claim that can still
         // REFUSE goes one step further (architect 2026-07-27): its stop sits
@@ -3746,8 +3970,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Ctrl-exact on a top-strip MARKER is the individual membership
             // toggle (the former shift behavior) — this AMENDS the "Ctrl keeps
             // only the letter chords" rule for the one marker surface (architect
-            // 2026-07-23). It arms no drag, seeds/consumes no double-click, opens
-            // no editor. Whether the toggle ADDED or REMOVED, the playhead lands
+            // 2026-07-23). It becomes no drag, seeds/consumes no double-click,
+            // opens no editor. Whether the toggle ADDED or REMOVED, the playhead lands
             // on the FOCUS the toggle leaves behind (architect 2026-07-28,
             // replacing the earliest-selected land): an ADD focuses the clicked
             // marker, a REMOVE of the focused member repairs the focus to the
@@ -3771,23 +3995,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // next block) and is a strict no-op on every other lane — no-op in
             // the playback sense too, since only a CLAIM stops playback.
             if (inside_top && mh_index >= 0) {
-                // The toggle is an act, so it owns its stop: selecting while a
-                // session plays is the authoring case the top-strip stop
-                // exists for. It runs AHEAD of the toggle and the land, like
-                // every other claim's stop — and it stays at the TOP of the
-                // branch because this claim cannot refuse: read-only is allowed
-                // (selection is navigation), the hit index is >= 0 by the gate
-                // above (so the mutator's idx < 0 guard is unreachable here),
-                // and every path below changes membership.
-                playback_lifecycle.stop_playback_if_playing();
-                selection.toggle_selection_membership(mh_index);
-                if (!app.selected_markers.empty())
-                    land_playhead_on_marker(app, audio, viewport,
-                                            app.last_selected_marker);
-                // A marker click is a POINT command, so it takes any resting
-                // scratch span with it (the clear-site list is at
-                // clear_region_highlight, input_handler.h).
-                clear_region_highlight(app, viewport);
+                // THE PRESS ONLY ARMS (2026-08-15): the toggle, its stop, its
+                // land and its region clear are the CLICK, and the click runs
+                // at the motionless lift through the one act owner
+                // (run_marker_click_act). A ctrl arm has no gesture to become,
+                // so a crossing spends it and commits nothing.
+                arm_marker_press(mh_index, x, y, /*shift=*/false,
+                                 /*ctrl=*/true, dc_at_press);
                 return;
             }
             // Markerless top-strip ctrl-exact press: the TRIM BAR sets the BEGIN
@@ -3896,10 +4110,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // of the marker select); a marker click — its FLAG BOX, the marker's
         // one pointer item — is the whole selection interface, BOTH views,
         // UNCHANGED by the ruling: plain
-        // click: single-select, LAND the playhead on the marker (below), and ARM
-        // a pending marker drag (moves the marker if the pointer crosses the
-        // threshold, else a pure click) — select-at-press + the immediate
-        // drag, no deferral. Shift+click: a
+        // click: single-select and LAND the playhead on the marker, both AT THE
+        // LIFT since 2026-08-15, with the press merely arming the pending click
+        // that becomes the reposition drag past the threshold (which runs that
+        // same act at the crossing). Shift+click: a
         // file-manager INCLUSIVE RANGE select from the interaction's anchor
         // (shift-held, else the adopted focus) to the
         // clicked marker (the range end = FOCUS), which LANDS the playhead THERE.
@@ -4057,178 +4271,34 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 return;
             }
             if (mh_index >= 0) {
-                // A marker click — plain or Shift — is
-                // an act (select, land, arm, open), so it owns the stop for the
-                // whole branch: selecting or editing under a live audition is
-                // the case the top-strip stop was written for. One site ahead
-                // of BOTH arms below (the range select, and the plain
-                // single-select + land + editor open),
-                // and it belongs at the TOP because NEITHER arm refuses:
-                // read-only still selects and lands, the hit is >= 0 by the
-                // gate (the mutators' idx < 0 guards are unreachable), and the
-                // plain arm always single-selects and lands. Only the editor
-                // OPEN can decline (read-only / P view / off home), and that is
-                // a second act layered on a click that already committed.
-                playback_lifecycle.stop_playback_if_playing();
-                const int hit = mh_index;
-                if (shift) {
-                    // Shift+click is a file-manager INCLUSIVE RANGE select
-                    // (architect 2026-07-23): the click ranges from the
-                    // interaction's anchor — a LIVE anchor, else the ADOPTED
-                    // FOCUS (architect 2026-07-23: plain-click A
-                    // then shift+click B selects A..B; with nothing focused the
-                    // click anchors on its own marker, selection {hit}). THE
-                    // ANCHOR IS NOT KEYED TO THE PHYSICAL SHIFT HOLD (architect
-                    // 2026-07-29): it SURVIVES a shift release and dies at the
-                    // next membership replace, so a shift interaction re-started
-                    // after a release ranges from the SURVIVING anchor, not from
-                    // the focus — A..B, release, re-press, shift-click C gives
-                    // A..C, the accepted delta of the falling-edge hook's
-                    // deletion. The full contract and clear list live at
-                    // app.shift_range_anchor's declaration (app_state.h). Each
-                    // successive shift-click replaces the selection with the
-                    // inclusive index range between that anchor and
-                    // hit. The clicked marker becomes the range end = FOCUS
-                    // (last_selected), and the playhead LANDS THERE (architect
-                    // 2026-07-28, replacing the earliest-member land): focus and
-                    // land no longer diverge on any click, so nothing is towed
-                    // onto the focus by a later nudge. On an anchoring
-                    // focus-less first click the selection is {hit} and hit is
-                    // the focus, so the land is unchanged. Ctrl+click is the
-                    // individual membership toggle (above, landing on its own
-                    // resulting focus). It arms no drag, seeds/consumes no
-                    // double-click, opens no editor. Allowed in read-only (selection + playhead are
-                    // navigation). ANY RESTING REGION CLEARS whatever the
-                    // result size (architect 2026-07-30): the region is trim
-                    // scratch, not this selection's extent, so the >=2 arm's
-                    // extent write died with the SPAN FORM and the split with
-                    // it.
-                    selection.select_range_from_anchor(hit);
-                    // A range leaving exactly one selected shows its always-on stem;
-                    // select_range_from_anchor owns the subject-change damage.
-                    // The land target is the FOCUS the mutator just set, which is
-                    // `hit` on both its arms — spelled as last_selected_marker so
-                    // the three multi-select clicks read as one rule.
-                    if (!app.selected_markers.empty())
-                        land_playhead_on_marker(app, audio, viewport,
-                                                app.last_selected_marker);
-                    // A marker click is a POINT command and takes any resting
-                    // scratch span with it.
-                    clear_region_highlight(app, viewport);
-                } else {
-                    // ONE PLAIN MARKER PRESS, NO SPECIAL CASE FOR A SELECTED
-                    // MEMBER (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS
-                    // ACT — the doctrine is at the head of position_nudge.h):
-                    // a press on a member of a 2+ selection single-selects and
-                    // lands IMMEDIATELY like a press on any other marker, and the
-                    // drag it arms is an ordinary singleton drag. The two
-                    // file-manager DEFERRALS that used to sit here — one per drag
-                    // surface, each holding the click's committed act back so the
-                    // drag could seed the intact group —
-                    // died with the group drag itself; groups are never moved by
-                    // any route, so nothing needs the selection to survive the
-                    // press. (The second of those surfaces, the tempo drag, is
-                    // gone outright — see marker_drag.h.)
-                    // Plain marker click single-selects (both views; W's
-                    // click-to-edit is retired — the editor now opens on Enter or
-                    // this double-click). Selection is navigation, allowed in
-                    // read-only.
-                    selection.set_single_selection(hit);
-                    // The clicked marker's flag BRIGHTENS here —
-                    // set_single_selection damages the top strip, where the
-                    // flags live. No stem work is
-                    // owed on any arm, the click-an-already-selected no-op
-                    // included: stems are class-colored and always on, so a
-                    // membership change never creates, moves or recolors one.
-                    // Covers the double-click-consume path
-                    // below too (this single-select ran first).
-                    // ...and LANDS the playhead exactly onto the marker (shared
-                    // helper; see land_playhead_on_marker). Runs on EVERY plain
-                    // marker click — the double-click-consume path below (whose
-                    // first click already landed, leaving the second land a
-                    // same-sample no-op) and the plain-select path.
-                    land_playhead_on_marker(app, audio, viewport, hit);
-                    // THE CLICK OWNS ITS CLEAR (architect 2026-07-29): a
-                    // single-select click moves the playhead onto a marker, so
-                    // any resting scratch span ends here — unconditionally, and
-                    // whether or not the land moved anything. A
-                    // re-click of the already-selected marker therefore clears
-                    // a resting highlight too; that is the
-                    // ruling and not an accident (the click says "the playhead is
-                    // HERE, at this point"). The double-click-consume path rides
-                    // this same site, so an editor open through it finds no span.
-                    clear_region_highlight(app, viewport);
-                    // Double-click: a Marker candidate for the SAME index within
-                    // the window opens the flag editor, exactly like Enter on the
-                    // focused marker (the click above already single-selected it).
-                    // The surface + target tag prevents any trim-bar / editor
-                    // candidate from consuming here, and a candidate seeded on
-                    // one part consumes on the other — one surface. Read-only,
-                    // P view (phase resets have no per-flag editor), and the
-                    // off-home column (active_column_authoring_allowed false —
-                    // the warp editor is source-view-only) refuse silently,
-                    // matching Enter's allowlist / view refusal — the candidate
-                    // is cleared and the press stays a plain second select. On a
-                    // consumed open nothing is armed and no fresh candidate
-                    // seeds (the editor now owns input).
-                    bool opened_editor = false;
-                    const DoubleClickCandidate& dc = dc_at_press;
-                    if (dc.surface == DoubleClickSurface::Marker &&
-                        dc.target == hit &&
-                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        if (app.active_markers_view != 'P' &&
-                            !active_view_state(app).read_only &&
-                            active_column_authoring_allowed(app)) {
-                            // Every open route opens fully SELECTED (open-
-                            // selected), so there is no clicked-glyph caret to
-                            // seat. A specific caret spot is a click inside
-                            // the already-open editor (the F2.1 path).
-                            flag_editor.enter_top_flag_edit(hit);
-                            opened_editor = true;
-                        }
-                    }
-                    if (!opened_editor) {
-                        // SEED a Marker candidate at this PRESS — the one seed
-                        // timing for the whole marker surface (the release-time
-                        // seeding is retired). Press-seeding is safe for the
-                        // flag part because a press that becomes a real drag
-                        // drops the candidate at the threshold crossing (see
-                        // on_motion's pending-marker-drag branch).
-                        app.double_click = DoubleClickCandidate{
-                            .surface = DoubleClickSurface::Marker,
-                            .time_ms = monotonic_ms(),
-                            .press_x = x, .press_y = y,
-                            .target  = hit};
-                        // A writable tab arms the pending REPOSITION drag on a
-                        // plain marker press IN THE COLUMN'S HOME VIEW only —
-                        // from the FLAG BOX, the marker's one pointer surface
-                        // (the stem's second-surface arm of 2026-08-01 died
-                        // with the stem surface, 2026-08-12): the drag tracks
-                        // the pointer's x from the press point. The old
-                        // on_flag half of this test
-                        // went with the marker-text lane's run in row 5;
-                        // read-only selects but never arms (marker
-                        // mutation refused). ONE DRAG, ONE GATE since 2026-07-29:
-                        // the home-view split that used to arm the TEMPO drag
-                        // instead in W view + TARGET view exactly — the pointer
-                        // half of the home-view binding's tempo exception, with its
-                        // predecessor-eligibility walk — is DELETED with that whole
-                        // gesture (see marker_drag.h). So EVERY off-home flag press
-                        // (W+target and P+source alike) selects and LANDS the
-                        // playhead but arms nothing at all — the silent
-                        // navigation-class refusal, marker motion being authoring.
-                        if (!active_view_state(app).read_only &&
-                            active_column_authoring_allowed(app)) {
-                            app.pending_marker_drag = PendingMarkerDrag{};
-                            app.pending_marker_drag.active  = true;
-                            app.pending_marker_drag.marker  = hit;
-                            app.pending_marker_drag.press_x = x;
-                            app.pending_marker_drag.press_y = y;
-                        }
-                    }
-                }
+                // THE MARKER CLICK ACTS AT THE LIFT (architect 2026-08-15:
+                // "all actions should be on mouse-up / finger-up" — the
+                // act-at-lift sweep, which began at the chrome roster
+                // 2026-08-13 and reached the overview lane's teleport and this
+                // flag on the same day, reaching the surface it was never
+                // scoped to). THE PRESS ARMS AND COMMITS NOTHING: no stop, no
+                // selection change, no land, no region clear, no editor. All of
+                // it moved into ONE act owner, run_marker_click_act, which the
+                // MOTIONLESS RELEASE runs whole and the THRESHOLD CROSSING runs
+                // minus its double-click half before beginning the drag — so a
+                // drag's user-visible outcome is byte-identical to the
+                // press-time model's, and only a click's TIMING changed.
+                //
+                // THE ARCHITECT'S OWN COUNTER-ARGUMENT IS SUPERSEDED, NOT
+                // DELETED: "marker work keeps its immediacy: flag clicks act at
+                // press time, unlike the navigation surface's deferred click"
+                // was the recorded reason this surface stood outside the sweep,
+                // and his later ruling overrides it. The contract, the carried
+                // modifiers and the carried double-click verdict are at
+                // PendingMarkerPress (app_state.h).
+                //
+                // ALL THREE SHAPES ARM through one owner — plain, Shift and the
+                // ctrl-exact toggle far above — because each now has an act to
+                // carry. The two AUTHORING gates (read-only, home view) guard
+                // the DRAG and live at the crossing, never here: a locked tab
+                // and an off-home column still select and still land.
+                arm_marker_press(mh_index, x, y, shift, /*ctrl=*/false,
+                                 dc_at_press);
             } else {
                 // Empty top-strip spot — no marker flag under the point (the
                 // trim bar already returned above; mh_index < 0 here).
@@ -4936,18 +5006,22 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.pending_trim_drag = PendingTrimDrag{};
         return;
     }
-    if (app.pending_marker_drag.active) {
-        // The pending marker drag never crossed the threshold: a pure flag click.
-        // The press already single-selected its marker, landed the playhead,
-        // collapsed any resting span AND seeded the Marker double-click candidate
-        // (press-time seeding), so there is nothing to commit — just disarm. The
-        // DEFERRED arm that used to complete a held-back click here died with the
-        // group drag (architect 2026-07-29: horizontal movement is a focus act, so
-        // a press on a selected member single-selects at press time like any other
-        // — the doctrine is at the head of position_nudge.h).
-        // (A crossed pending became app.drag — dropping the candidate at the
-        // threshold crossing — and commits through the branch below.)
-        app.pending_marker_drag = PendingMarkerDrag{};
+    if (app.pending_marker_press.active) {
+        // THE FLAG'S MOTIONLESS LIFT — the click act, whole (2026-08-15, when
+        // the marker click moved off the press; the contract is at
+        // PendingMarkerPress, app_state.h). All three shapes resolve here: the
+        // ctrl toggle, the shift range and the plain single-select, plus the
+        // plain arm's double-click consume-or-seed, run by the one act owner on
+        // the ARMED marker — never a re-hit at these coordinates, for the three
+        // reasons stated at run_marker_click_act.
+        // THE RELEASE BODIES' STANDING SHAPE: read the pending, DISARM, then
+        // act, so the act runs with no gesture live.
+        // (A crossed pending is spent at the crossing — a plain one having
+        // become app.drag, which commits through the branch below; a shift or
+        // ctrl one having committed nothing at all.)
+        const PendingMarkerPress press = app.pending_marker_press;
+        app.pending_marker_press = PendingMarkerPress{};
+        run_marker_click_act(press, /*at_lift=*/true);
         return;
     }
     if (!app.drag.active) return;
@@ -5048,21 +5122,31 @@ void GuiInputHandler::finalize_active_drags() {
     // merely DISARMS: a force-end is not a click, so its motionless-release
     // click act does not run, exactly the pendings' shape below.
     app.region_edit_drag = RegionEditDragState{};
-    // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
-    // NOTHING of its own — the marker pending's click committed at the
-    // PRESS, and the bound-set trim pending's bound was written at the press and
-    // stands. There is no release here (the button is still held), so nothing is
-    // owed; a pending otherwise resolves only by the threshold crossing or a real
-    // release / button loss. (TWO pendings, not three, since the tempo drag's
-    // deletion — 2026-07-29, see marker_drag.h.)
-    // THE ASYMMETRY WITH THE DRAGS ABOVE — live gestures COMMIT here while pendings
-    // merely DISARM — is ARCHITECT-ACCEPTED (2026-07-29: "not a real use case - do
-    // whatever is easiest to code and has least loopholes"). It is also the form
-    // with the fewest loopholes: a live gesture has produced state that must land
-    // somewhere, and a pending has produced none, so each does the only thing it
-    // can. Do not add a completion arm here to make the two look alike.
-    app.pending_marker_drag = PendingMarkerDrag{};
-    app.pending_trim_drag   = PendingTrimDrag{};
+    // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
+    // no release here (the button is still held), and a force-end is not a
+    // click — the same rule the four arms above state for their own unmoved
+    // presses, and the same one the touch layer's ABNORMAL end (the
+    // motionless-hold upgrade) delivers by leaving the button unheld. A pending
+    // otherwise resolves only by the threshold crossing or a real release /
+    // button loss. (TWO pendings, not three, since the tempo drag's deletion —
+    // 2026-07-29, see marker_drag.h.)
+    //
+    // THE 2026-07-29 ASYMMETRY RECORDED HERE IS GONE, AND ITS PREMISE IS WHY IT
+    // WAS RIGHT AT THE TIME. It read: live gestures COMMIT here while pendings
+    // merely DISARM, because "a pending has committed NOTHING of its own — the
+    // marker pending's click committed at the PRESS" — architect-accepted ("not
+    // a real use case - do whatever is easiest to code and has least
+    // loopholes") with an explicit instruction not to add a completion arm to
+    // make the two look alike. THAT WAS TRUE OF THE PRESS-TIME CLICK AND IS
+    // FALSE OF THE LIFT-TIME ONE: since 2026-08-15 the marker pending carries
+    // the whole click, so the question is no longer "commit or disarm" but "did
+    // the user finish the gesture", and a force-end is precisely the answer no.
+    // The marker pending therefore ends exactly as every other pending does —
+    // the asymmetry the old rule protected has no subject left, rather than
+    // having been overruled. (The bound-set trim pending is unchanged: its
+    // bound was written at the press and stands, trim being history-less.)
+    app.pending_marker_press = PendingMarkerPress{};
+    app.pending_trim_drag    = PendingTrimDrag{};
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
     // end) — and neither may the trim bar's press record, which would otherwise
@@ -5891,9 +5975,12 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses —
-//     AT PRESS TIME, unchanged by the deferral ruling (the live flag clicks
-//     select at press too; deferral is the navigation surface's, and a flag
-//     box is lane vocabulary). It touches NOTHING else: no store selection,
+//     AT PRESS TIME, which since 2026-08-15 makes it the ONE flag family still
+//     acting at the press: the LIVE views' three flag clicks moved to the lift
+//     that day and this one deliberately did not follow, being a separate
+//     press-time family over a mode-local selection with no drag to become —
+//     it is pending an architect ruling of its own, and its divergence is
+//     recorded rather than assumed. It touches NOTHING else: no store selection,
 //     no live focus, no auto-select, no playback stop. It DOES take a resting
 //     region with it (2026-08-06): a click that lands the playhead is a POINT
 //     command, the live clear-site rule's own shape.
@@ -7290,53 +7377,99 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // (No tempo-drag motion arms: the target-view tempo drag and its pending are
     // DELETED, architect 2026-07-29 — see marker_drag.h. W+target has no pointer
     // authoring gesture at all now.)
-    // Pending marker drag (armed by a plain flag press): usually the marker was
-    // single-selected at press; the reposition begins only once the pointer
-    // travels past the shared Chebyshev threshold (kDragMovedThresholdPx, now
-    // one generic 8px gate for every press-becomes-drag surface). Handled before the hover
-    // fallthrough below and after the other drag branches (a pending drag and
-    // any other pointer gesture are mutually exclusive — the arming press does
-    // no other work). A lost button before the crossing ends it as a plain
-    // click.
-    if (app.pending_marker_drag.active) {
-        if (!mods.primary_button_held) {   // button lost -> just the click
-            // A lost button before the crossing IS the click, matching the release
-            // path: the press already committed the whole click (single-select,
-            // land, span collapse), so this just disarms (the deferred completion
-            // died with the group drag — see the release branch).
-            app.pending_marker_drag = PendingMarkerDrag{};
+    // THE MARKER FLAG'S PENDING CLICK (armed by any of the flag box's three
+    // presses; contract at PendingMarkerPress, app_state.h). Nothing has been
+    // committed yet — the click is the lift's since 2026-08-15 — so this branch
+    // owns both ways the gesture can end early. Handled before the hover
+    // fallthrough below and after the other drag branches (this pending and any
+    // other pointer gesture are mutually exclusive — the arming press does no
+    // other work).
+    if (app.pending_marker_press.active) {
+        if (!mods.primary_button_held) {
+            // A LOST BUTTON COMMITS NOTHING and simply disarms — the standing
+            // rule for every lift-act surface, and the same answer the
+            // force-end finalizer gives. It is also how the TOUCH layer's
+            // ABNORMAL end reaches this state for free: the motionless-hold
+            // upgrade delivers a motion with the button unheld precisely so an
+            // unmoved press commits nothing (codex round 19's ruling), which is
+            // an improvement the press-time click could not have — that model
+            // had already acted and the upgrade could not take it back.
+            app.pending_marker_press = PendingMarkerPress{};
             return;
         }
-        if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
-                     std::abs(mouse_y - app.pending_marker_drag.press_y)) <
+        if (std::max(std::abs(mouse_x - app.pending_marker_press.press_x),
+                     std::abs(mouse_y - app.pending_marker_press.press_y)) <
                 kDragMovedThresholdPx) {
             return;   // still a click; leave the pending armed, do nothing
         }
-        // Threshold crossed: begin the drag anchored at the PRESS column so the
-        // marker tracks the pointer 1:1, this first apply folding the whole
-        // press->crossing delta (the strip/region catch-up pattern). begin_drag
-        // captures the pre-drag snapshot / selection / walls now — exact, since
-        // nothing mutated the store between press and crossing — and sets
-        // app.drag.active. Fall through (no return) so this same motion event
-        // applies the first delta through the marker-drag branch below.
-        const int marker  = app.pending_marker_drag.marker;
-        const int press_x = app.pending_marker_drag.press_x;
-        app.pending_marker_drag = PendingMarkerDrag{};
-        // A moved marker drag drops any double-click candidate: this press is a
-        // drag, not a click of a marker double-click. The arming press seeded a
-        // Marker candidate (press-time seeding), so this clear is what keeps a
-        // moved drag from carrying one — the load-bearing half of seeding at
-        // the press.
-        app.double_click = DoubleClickCandidate{};
-        if (!marker_drag.begin_drag(marker, press_x)) {
+        // THE CROSSING SPENDS THE ARM, whatever its shape. Read, disarm, then
+        // act — the release bodies' standing shape.
+        const PendingMarkerPress press = app.pending_marker_press;
+        app.pending_marker_press = PendingMarkerPress{};
+        // A SHIFT OR CTRL ARM THAT CROSSES COMMITS NOTHING: neither has a
+        // gesture to become (they arm no drag, today as before), so the arm is
+        // simply spent — the overview Pending's own rule, "a Pending that
+        // crosses marks moved and commits nothing". THE DELIBERATE COST,
+        // recorded rather than special-cased: an 8px wobble during a
+        // shift-click therefore selects nothing. That is one threshold rule
+        // across all three arms, and it is exactly what the navigation surface
+        // already does to a wobbled plain click.
+        if (press.shift || press.ctrl) return;
+        // THE PLAIN ARM RUNS ITS CLICK ACT HERE, minus the double-click half
+        // (`at_lift` false), and THEN begins the drag. Two of those acts are
+        // load-bearing for the drag itself, which is why the crossing runs the
+        // act rather than dropping it:
+        //   * THE STOP. The follow-override omission below depends on it: with
+        //     the stop moved to the lift alone, a drag could begin under a live
+        //     scanner with follow_overridden_for_session unset.
+        //   * THE SELECT, for the PAINT and not for the arithmetic. begin_drag /
+        //     apply_drag_motion / commit_drag never read app.selected_markers —
+        //     but the dragged flag's BRIGHTENED face comes from the selection
+        //     (the class ladder's brighter pair, damaged by
+        //     set_single_selection's invalidate_top_strip), so without it the
+        //     user drags an unmarked flag.
+        // The land and the region clear ride along for parity: the press did
+        // both before any drag under the old model, and commit_drag lands the
+        // playhead again at the committed position, so keeping them here
+        // changes nothing observable.
+        run_marker_click_act(press, /*at_lift=*/false);
+        // THE TWO AUTHORING GATES LIVE HERE, not at the arm: they guard the
+        // DRAG (marker motion is authoring), never the click, so a read-only
+        // tab and an off-home column still select, still land and simply refuse
+        // to move anything — which is exactly what the press-time model did.
+        // THE ORDER IS THE RULING: the acts run BEFORE the gate, matching
+        // today's read-only flag press, which selected, landed and stopped and
+        // had only its drag refused. ONE DRAG, ONE GATE since 2026-07-29: the
+        // home-view split that used to arm the TEMPO drag instead in W+target
+        // exactly — the pointer half of the home-view binding's tempo
+        // exception, with its predecessor-eligibility walk — is DELETED with
+        // that whole gesture (see marker_drag.h), so EVERY off-home flag drag
+        // (W+target and P+source alike) is the silent navigation-class refusal.
+        if (active_view_state(app).read_only ||
+            !active_column_authoring_allowed(app))
+            return;
+        // Begin the drag anchored at the PRESS column so the marker tracks the
+        // pointer 1:1, this first apply folding the whole press->crossing delta
+        // (the strip/region catch-up pattern). begin_drag captures the pre-drag
+        // snapshot and the wall math now — exact, since nothing mutated the
+        // store between press and crossing — and sets app.drag.active. Fall
+        // through (no return) so this same motion event applies the first delta
+        // through the marker-drag branch below.
+        // NO DOUBLE-CLICK CLEAR IS OWED HERE, and the clear that stood here is
+        // DELETED rather than kept as a second owner (2026-08-15): the seed
+        // moved to the motionless lift with the rest of the click, so a press
+        // that becomes a drag never seeded one, and on_button_press's own
+        // top-of-frame clear emptied the field before this press did anything —
+        // with the button held, nothing can re-seed it in between.
+        if (!marker_drag.begin_drag(press.marker, press.press_x)) {
                 // Begin refused (bad index / no audio): the gesture is DROPPED,
                 // its pending already cleared above, so this is a gesture end
                 // like any other and takes the loop tail's re-resolve like one.
                 return;
         }
-        // No follow override needed: the marker drag always begins from a
-        // top-strip flag press, which already stopped playback (the marker
-        // click owns that stop), so there is no live playhead to chase.
+        // No follow override needed: the marker drag always begins from this
+        // crossing, which just ran the click act's stop, so there is no live
+        // playhead to chase.
     }
     if (!app.drag.active) {
         // The redesigned rows' own hover, resolved in the same no-gesture tail
@@ -7403,10 +7536,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         static_cast<double>(mouse_x - area.x) * spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
     // Playhead rule: the playhead follows the dragged marker through the drag
-    // inside apply_drag_motion (the arming click landed it on the marker, so
-    // the drag tows it by construction — the DragState ruling). The selection
-    // re-assert already ran at the THRESHOLD CROSSING in begin_drag — a no-op,
-    // the arming press having single-selected the marker, and unconditional so a
+    // inside apply_drag_motion (the crossing's click act landed it on the
+    // marker, so the drag tows it by construction — the DragState ruling). The
+    // selection re-assert already ran at the THRESHOLD CROSSING in begin_drag — a
+    // no-op, that same act having single-selected the marker, and unconditional so a
     // wall-saturated drag still names what it grabbed. apply_drag_motion here only
     // writes the proposal and slides the playhead. Nothing further tracks here.
 }

@@ -29,10 +29,14 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 
     // ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
     // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the whole dead rigid
-    // group-drag machinery are recorded at the head of position_nudge.h). The
-    // arming press single-selected `hit` and landed the playhead on it — no press
-    // defers its click any more — so the drag subject is exactly the grabbed
-    // marker. The one-element vectors below are the DragOverlay's storage contract
+    // group-drag machinery are recorded at the head of position_nudge.h). THE
+    // THRESHOLD CROSSING single-selected `hit` and landed the playhead on it —
+    // the flag's click acts at the LIFT since 2026-08-15, and the crossing runs
+    // that same act (minus its double-click half) immediately before calling
+    // this, which is what keeps the drag subject exactly the grabbed marker.
+    // The selection is not read by any arithmetic here; it is what BRIGHTENS the
+    // dragged flag, which is why the crossing owes it.
+    // The one-element vectors below are the DragOverlay's storage contract
     // (paint matches a store index against dragging_markers), not a group: slot 0
     // is the dragged marker everywhere in this file.
 
@@ -143,8 +147,10 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // app.drag = std::move(d) so it mutates the
     // live selection, not the moved-from local — the pre-capture ordering rule it
     // also used to carry died with the captures. A NO-OP today by construction: the
-    // arming press already single-selected `hit` and landed the playhead on it (no
-    // press defers its click since 2026-07-29 — groups are never moved). It stays as
+    // CROSSING'S OWN CLICK ACT, run a few lines earlier in on_motion, already
+    // single-selected `hit` and landed the playhead on it (2026-08-15: the flag
+    // click acts at the lift, and the crossing runs that act before calling
+    // this; groups are never moved either way, 2026-07-29). It stays as
     // the one site that states "a real drag's subject is what it grabbed", and
     // staying at the crossing rather than behind any_changed is what keeps a
     // WALL-SATURATED drag (the clamped delta pins the proposal — the marker at the
@@ -277,8 +283,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // frame by construction, so the ride and its landing now agree too.
     // Reachable through the PHASE-RESET column, whose home view is the target one
     // (a warp drag is source-home by the arming press's authoring gate).
-    // A marker drag can never run under live playback — the arming
-    // top-strip flag press stops playback — so the scanner is always
+    // A marker drag can never run under live playback — the THRESHOLD
+    // CROSSING stops playback (the click act's own stop, run there since
+    // 2026-08-15) — so the scanner is always
     // inactive here; move_playhead_to only ever writes the cursor
     // field regardless, so this call could not disturb a running
     // scanner even if one existed. The motion-clamped proposal stays
@@ -293,8 +300,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
     viewport.move_playhead_to(sample);
-    // NO REGION WORK, and none is reachable: the arming press single-selected the
-    // marker and cleared any resting scratch span at its own site, so a marker
+    // NO REGION WORK, and none is reachable: the THRESHOLD CROSSING
+    // single-selected the marker and cleared any resting scratch span through
+    // the click act it runs, so a marker
     // drag runs with no
     // region at all. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
@@ -307,7 +315,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // only if the marker actually moved. Playhead rule (drag and nudge,
 // keyboard/mouse counterparts, share it): the playhead follows the dragged
 // marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
-// decoupling). The arming click already landed the playhead on it and the
+// decoupling). The crossing's own click act already landed the playhead on it and the
 // mid-motion follow slid it along, and this land runs regardless of net change (a
 // wall-saturated drag never moved it), so the playhead lands with the marker here,
 // matching the selection, and a later Space auditions FROM it. Every marker click
@@ -477,8 +485,9 @@ void MarkerDragOps::commit_drag() {
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker
     // stems since row 5 — nothing here keys on selection).
-    // NO REGION WORK, and none is reachable: the arming press single-selected the
-    // marker and cleared any resting span, and nothing during the drag forms one.
+    // NO REGION WORK, and none is reachable: the THRESHOLD CROSSING's click act
+    // single-selected the marker and cleared any resting span, and nothing during
+    // the drag forms one.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
     // are never moved; the doctrine is at the head of position_nudge.h).

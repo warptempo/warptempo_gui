@@ -19,15 +19,21 @@ struct GuiTargetRender;
 // nudge GuiPhaseResetMarkersOps::nudge_selected_phase_resets in target home) and
 // the pointer marker DRAG act on ONE marker, the FOCUS: a 2+ selection COLLAPSES
 // TO ITS FOCUS and the focus takes the step (here, in the shared prologue below),
-// and a press on a member of a 2+ selection single-selects it immediately like a
-// press on any other marker, the drag then being an ordinary singleton drag
-// (input_pointer.cpp's plain marker click; marker_drag.cpp carries no group
+// and a click on a member of a 2+ selection single-selects it like a click on
+// any other marker, the drag then being an ordinary singleton drag
+// (run_marker_click_act, input_pointer.cpp — the flag's click acts at the LIFT
+// since 2026-08-15, and its threshold crossing runs that same single-select
+// before beginning the drag, so the collapse is unchanged and only its timing
+// moved; marker_drag.cpp carries no group
 // machinery at all). The per-member nudge and the rigid group drag both existed
 // and both died with this ruling — do not re-propose either: a proposal loop with
 // a whole-press wall refusal and a same-column merge on one side, an
 // intersection-clamped shared delta with a grabbed-anchored rigid commit on the
 // other, and the pointer deferral (a press that held its click back so the group
-// could seed) with them.
+// could seed) with them. That deferral is not the act-at-lift model that stands
+// now: this one held a click back FOR THE DRAG's benefit and had to decide
+// which markers it was about; the lift model holds the whole click for the
+// USER's benefit and decides nothing extra.
 //
 // THE GROUP-VERB DOCTRINE, the general rule this ruling instances — stated ONCE
 // here, every verb site stating only its own class plus a pointer:

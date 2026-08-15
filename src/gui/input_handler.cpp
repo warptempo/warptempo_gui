@@ -427,8 +427,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // region former does, its span being live under the pointer, and because an
     // unmoved press there still owes the deferred click act at its release),
     // and the
-    // pending marker / trim drags (a press held before its drag begins) —
-    // are mutually exclusive with it. scroll_drag belongs on the list too: a live
+    // MARKER FLAG'S PENDING CLICK plus the pending trim drag (a press held
+    // before it resolves) —
+    // are mutually exclusive with it. The marker pending is on this list for a
+    // SECOND reason since 2026-08-15, scroll_drag's own: the whole flag click
+    // runs at the LIFT now, reading the selection, the focus and playback state
+    // there, so no chord may move any of it in between.
+    // scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys rather than letting one run over a latched
     // pan — and its PENDING phase must, because the deferred click act reads
     // playback state at the release and no command may move it in between.
@@ -441,7 +446,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (app.drag.active || app.trim_drag.active ||
         app.region_drag.active || app.region_edit_drag.active ||
         app.scroll_drag.active || app.overview_drag.active ||
-        app.pending_marker_drag.active ||
+        app.pending_marker_press.active ||
         app.pending_trim_drag.active) {
         // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding
         // anywhere): end the gestures as their release would, then run the close
@@ -1648,8 +1653,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // The editor-text drag is included: viewport changes must not fire under a
     // held text-selection drag either (a wheel can emit axis events while the
     // primary button stays held), so this gate is any_pointer_gesture_active,
-    // every gesture — the pending marker drag included, so a wheel cannot pan
-    // or zoom the viewport out from under a flag press before its drag begins.
+    // every gesture — the marker flag's pending click included, so a wheel
+    // cannot pan or zoom the viewport out from under a flag press before it
+    // resolves.
     if (app.prompt.active) return -1;
     // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
     // predicate is const and the platform probes it speculatively — so on_wheel

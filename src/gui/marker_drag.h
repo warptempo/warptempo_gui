@@ -10,8 +10,10 @@ struct GuiTargetRender;
 
 // Marker reposition drag — THE ONLY POINTER MARKER GESTURE, and the single
 // plain-flag-drag fine-tuning gesture
-// (a plain flag press single-selects and arms it; motion past the shared
-// threshold begins the move), shared by the warp and phase reset views and
+// (a plain flag press ARMS a pending click; motion past the shared threshold
+// runs that click's act and begins the move — the click acts at the LIFT since
+// 2026-08-15, so the crossing is what single-selects the grabbed marker; the
+// contract is at PendingMarkerPress, app_state.h), shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
 // the doctrine is at the head of position_nudge.h). It
