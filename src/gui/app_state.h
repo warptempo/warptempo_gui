@@ -3,6 +3,7 @@
 #include "engine_settings.h"
 #include "gui_input.h"
 #include "history_diff.h"
+#include "playback.h"
 #include "render_pipeline.h"
 #include "render.h"
 #include "settings_file.h"
@@ -1801,9 +1802,13 @@ enum class RedesignButton {
     // PLAY AND STOP ARE THE ROSTER'S FIRST STATE-MIRRORED PAIR: one chord,
     // two buttons, the enabled predicate splitting them on the live audition
     // bit (playhead_scanner_active) — Play wears the disabled face while an
-    // audition runs, Stop while none does — so exactly one of the pair is
+    // audition runs, Stop while none does — so AT MOST one of the pair is
     // ever live and the pair reads as a transport rather than as a toggle.
-    // The arm is at redesign_button_enabled below.
+    // Since 2026-08-15 Play also mirrors the launch body's own refusal
+    // (playback_launch_playable), so BOTH can rest dead where a launch would
+    // refuse — the architect's "both play and stop should be disabled
+    // because neither of them is possible at that point". The arms are at
+    // redesign_button_enabled below.
     //
     // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
     // hold-repeat that shipped with the row; the physical arrow KEYS keep
@@ -3195,7 +3200,11 @@ struct AppState {
     // fingerprint dirty-detect) compares the LIVE vector against this stash and
     // pays one invalidate_top_strip on drift — one comparator site, no
     // per-mutation invalidate anywhere. It starts TRUE, so a cold roster settles
-    // in one compare/paint pass.
+    // in one compare/paint pass. LAST PAINTED IS LITERAL (2026-08-15): the one
+    // publisher refreshes these two bits only when the paint's clip actually
+    // covers the button's pixels, so a row pass run under a narrow lane damage
+    // cannot stamp the stash live over stale pixels and blind the comparator —
+    // the mechanism record is at publish_button_face (paint_handler.cpp).
     // `selected` is the second stashed bit and rides the SAME comparator for the
     // same reason: `f` and `i` flip their flags with no top-strip damage at all,
     // so a toggled face would otherwise stay wrong until something else
@@ -5415,19 +5424,52 @@ inline bool active_column_authoring_allowed(const AppState& app) {
 // active_column_authoring_allowed above — the cent step is that predicate's
 // ruled exception (1), reachable in W+target as well as W+source, so what it
 // asks is the COLUMN and not the home view.
-//
-// TWO READERS SINCE 2026-08-13 (architect): the act, and the BOTTOM ROW'S UP
-// AND DOWN ARROW BUTTONS, which wear the grey disabled face wherever this
-// answers false — the roster's gate-mirroring convention, one predicate rather
-// than a second statement of the same fact, so the face and the act cannot
-// disagree. The step's OTHER refusals (an empty selection, no valid focus, a
-// label ref, a wall) stay consumed no-ops with a live face, by the standing
-// rule against refusal-predicting grey states: those move at interaction
-// cadence, while the marker view is a mode the user switched into. LEFT and
-// RIGHT are untouched — they are the marker nudge in the focused marker's home
-// view, with gates of their own.
 inline bool tempo_cent_step_column_allowed(const AppState& app) {
     return app.active_markers_view == 'W';
+}
+
+// THE TEMPO CENT STEP'S STABLE-STATE REFUSALS, composed: the column gate above
+// plus the two subject refusals adjust_tempo_cents runs next — an empty
+// selection and an invalid focus. TWO READERS: the act's own leading refusal
+// block (GuiWarpMarkersOps::adjust_tempo_cents, whose first three returns this
+// predicate IS) and the BOTTOM ROW'S UP AND DOWN ARROW BUTTONS
+// (redesign_button_enabled), so the face and the act are one decision.
+//
+// THE FACE HALF WIDENED 2026-08-15 (architect: "the ENTIRE ROW should be
+// accurate to the live state and not lie by showing something enabled that's
+// not enabled"), SUPERSEDING the 2026-08-13 mirror, which took the column gate
+// alone and left the subject refusals live-faced under the standing rule
+// against refusal-predicting grey states. That rule is OVERRIDDEN for the
+// bottom row by this ruling and only there: the button is not guessing, it is
+// reading the same subject fields the act's own refusals read, the icon row's
+// mirror-the-chord's-refusals model. What stays live-faced is the VALUE-shaped
+// tail — a label ref, a pass marker in target view, the tempo bracket wall —
+// per-marker store facts whose refusals stay consumed no-ops, the walls'
+// standing treatment (the walk arrows' own no-grey-at-the-walls reasoning).
+inline bool tempo_cent_step_actionable(const AppState& app) {
+    return tempo_cent_step_column_allowed(app) &&
+           !app.selected_markers.empty() && app.last_selected_marker >= 0;
+}
+
+// THE HORIZONTAL ARROW STEP'S STABLE-STATE REFUSALS, for the bottom row's LEFT
+// and RIGHT buttons (redesign_button_enabled — the 2026-08-15 whole-row
+// honesty ruling; the supersession record is at tempo_cent_step_actionable
+// above). Bare Left / Right are TWO acts on one chord, forked by the lane
+// model: with an EMPTY selection the playhead is in the waveform lane and the
+// press steps the cursor one painted column — always meaningful on a loaded
+// piece, a wall landing being the clamp's consumed rest. With a selection the
+// press is the MARKER NUDGE, refused off the focused column's home view (the
+// on_key marker-lane branch's two returns, which are exactly
+// active_column_authoring_allowed spelled per view) and refused whole on a
+// locked tab (read_only_key_blocked admits the bare horizontals only in the
+// waveform lane). This predicate is those refusals' one composed mirror; the
+// dispatch keeps its own routing (input_handler.cpp's marker-lane branch),
+// which reads the same fields.
+inline const ViewState& active_view_state(const AppState& a);
+inline bool horizontal_arrow_step_actionable(const AppState& app) {
+    return app.selected_markers.empty() ||
+           (active_column_authoring_allowed(app) &&
+            !active_view_state(app).read_only);
 }
 
 // Restore ascending time_frame order after a mutation that may have
@@ -5833,6 +5875,46 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // for whichever four are not painted — the same shape the modal's yield
 // already used.)
 
+// WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
+// refusal set, hoisted whole (2026-08-15) so its TWO readers are one spelling:
+// GuiPlaybackLifecycle::launch_playback_from, whose every silent refusal this
+// IS, and the bottom row's PLAY button (redesign_button_enabled), which asks it
+// about the resting cursor — the face reads the same bounds the launch reads,
+// so the two cannot drift.
+//
+// TARGET VIEW refuses on three counts: no successful target render has
+// populated the buffer yet (the check must live in the shared body — the scrub
+// launch reaches it with no outer gate); a launch at or past
+// `domain_end() - 1`, the two-frame remainder gate (a remainder of one frame
+// is an isolated impulse, the audible pop — the rationale's full statement is
+// the source arm's below); and a launch below `domain_begin()`. The bounds are
+// THE BOUND BUFFER'S OWN, deliberately not app.trim: the preview buffer
+// embodies the trim AT ITS RENDER, so during an in-flight re-render the bound
+// domain is the truth the audio would actually play — asking the buffer is
+// what keeps the face and the act agreeing through that window.
+//
+// SOURCE VIEW plays to the SONG's end (architect 2026-08-05 — the trim window
+// does not bound source playback; Viewport::trim_range is the navigation range
+// owner only), so the ONE refusal is the two-frame remainder gate against the
+// song end: a launch from `total - 1` (End's landing spot) or past it no-ops
+// silently. There is no lower gate but the domain's own — every producer hands
+// in a clamped non-negative position, and play() floors a start below zero
+// regardless. `launch_pos` is an already-formed int64 at both readers
+// (toggle_playback's overflow-ordered pre-sum gate refuses before an undefined
+// cursor + offset sum could reach the launch body; the face passes the resting
+// cursor), so these absolute compares need no overflow ordering of their own.
+inline bool playback_launch_playable(const AppState& a,
+                                     const GuiPlayback& playback,
+                                     int64_t total_frames,
+                                     int64_t launch_pos) {
+    if (a.active_audio_view == 'T') {
+        if (a.target_buffer_frames <= 0) return false;
+        return launch_pos >= playback.domain_begin() &&
+               launch_pos < playback.domain_end() - 1;
+    }
+    return launch_pos < total_frames - 1;
+}
+
 // THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
 // (row 2's third face, and every row's while the history view stands) and for
 // hoverability, mirroring each chord's OWN refusals rather than inventing a
@@ -5890,10 +5972,19 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
 // second switch can take a `default` because the first has already returned for
-// every id that is not one of the toolbar four's (Save / Undo / Redo /
-// Render — icon-row members since the 2026-08-12 relayout, keeping their
-// mirrored derivations).
-inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
+// every id whose answer does not sit below the loading/blank guard: the
+// toolbar four (Save / Undo / Redo / Render — icon-row members since the
+// 2026-08-12 relayout, keeping their mirrored derivations) and, since
+// 2026-08-15, the BOTTOM ROW'S EIGHT (every chord on that row drops at
+// on_key's loading/blank return, so their honest faces grey there too).
+// IT TAKES GuiPlayback since 2026-08-15: the PLAY button mirrors the launch
+// body's own refusal (playback_launch_playable above), which reads the bound
+// buffer's domain — state that deliberately lives on GuiPlayback, not on
+// AppState (the domain anchor travels with the playback bind; the record is
+// at AppState::target_buffer_frames).
+inline bool redesign_button_enabled(const AppState& a,
+                                    const GuiPlayback& playback,
+                                    int64_t total_frames,
                                     RedesignButton b) {
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
@@ -6000,60 +6091,37 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         // refusal is already a consumed no-op with its own stderr line. So the
         // button joins the row's arm on the row's own terms.
         case RedesignButton::IconHistory:
-        // ROW 8 MIRRORS NOTHING EITHER, except its two ruled pairs below: the
-        // transport's two skips and the HORIZONTAL arrows take the icon row's
-        // own model — presses always dispatch and the CHORDS' refusals answer
-        // (the loading/blank return, the lane model's own refusal shapes),
-        // inherited through on_key
-        // and never mirrored here. The ratified rule: do NOT invent
-        // refusal-predicting grey states. The `h` history view's derived
-        // partition at the top of this body is what greys them in there —
-        // Space and the bare arrows are consumed in the view, so Play, Stop
-        // and the arrows wear the dead face; Home/End are the mode's own
-        // vocabulary, so the two skips
-        // stay live — all derived, nothing hand-listed.
+            return true;
+        // THE BOTTOM ROW MIRRORS ITS ACTS WHOLE since 2026-08-15 (architect:
+        // "the ENTIRE ROW should be accurate to the live state and not lie by
+        // showing something enabled that's not enabled"), SUPERSEDING this
+        // row's share of the ratified do-not-invent-refusal-predicting-grey
+        // rule — FOR THIS ROW ALONE (the icon row's mixed policy is his,
+        // acknowledged, and its own sweep is ruled for later). The override is
+        // not guessing: each arm reads the SAME predicate or bound its act's
+        // own refusal reads, the mirror-the-chord's-refusals model. All eight
+        // arms sit BELOW the loading/blank guard because every chord on the
+        // row drops at on_key's `app.loading || total <= 0` return. The `h`
+        // history view's derived partition at the top of this body still
+        // outranks everything here — Space and the bare arrows are consumed in
+        // the view, so Play, Stop and the arrows wear the dead face; Home/End
+        // are the mode's own vocabulary, so the two skips stay live — all
+        // derived, nothing hand-listed.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
-            return true;
-        // THE VERTICAL ARROWS ARE THE ROW'S SECOND RULED PAIR (architect
-        // 2026-08-13): bare Up and Down are the TEMPO CENT STEP, which is the
-        // WARP column's act alone — in the phase-reset marker view the keys
-        // refuse at the act's own first line, so the buttons must say so.
-        // They read THAT line's predicate (tempo_cent_step_column_allowed,
-        // above), not a restatement of it, which is what keeps the face and
-        // the act one decision. It is a MODE the user switched into rather
-        // than a moment-state, so it does not offend the no-refusal-predicting
-        // rule the horizontals sit under; the step's other refusals (empty
-        // selection, no focus, a label ref, a wall) stay live-faced consumed
-        // no-ops. The horizontal arrows are deliberately NOT here: they are
-        // the marker nudge in the focused marker's home view and keep their
-        // own gates.
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
-            return tempo_cent_step_column_allowed(a);
-        // THE PLAY/STOP PAIR IS THE ROSTER'S FIRST STATE-MIRRORED PAIR
-        // (architect 2026-08-11, with the row): ONE chord — bare Space — split
-        // over two buttons whose faces read the live audition bit, so exactly
-        // one is ever live and the pair reads as a transport. Play is dead
-        // while an audition runs (its press would STOP, a lie about its face),
-        // Stop while none does. The bit is the GUI-side playback mirror
-        // (playhead_scanner_active — set at every launch, cleared by the one
-        // stop owner); a natural end-of-song flips it with no damage of its
-        // own, which the tick comparator repairs exactly as it repairs row
-        // 2's faces. In the history view the derived partition above has
-        // already greyed both (Space is consumed there).
         case RedesignButton::TransportPlay:
-            return !a.playhead_scanner_active;
         case RedesignButton::TransportStop:
-            return a.playhead_scanner_active;
+            break;
         // THE WALK'S TWO STEPS ARE THE ROW'S SECOND FACE EXCEPTION, and the
         // only one that is not mode-SCOPED but mode-INVERTED (architect
         // 2026-08-05): they REST DISABLED and come alive inside the history
-        // view. Every other button on this row mirrors nothing because its
-        // chord always means something and its own refusals answer; bare `,`
-        // and bare `.` are bound in exactly one place in the product
+        // view. Unlike the transport eight, whose mirrors read live gates
+        // below the loading guard, this pair's whole answer is the mode bit —
+        // bare `,` and bare `.` are bound in exactly one place in the product
         // (handle_history_mode_key, the only reader of either key),
         // so outside the view there is no act to refuse, and a live face would
         // promise one. The bit is the mode itself, which is why this arm is a
@@ -6116,12 +6184,62 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
             break;
     }
     if (a.loading || total_frames <= 0) return false;
-    // THE READ-ONLY TERM IS UNDO'S AND REDO'S ALONE since 2026-08-07 (it stood
+    // THE READ-ONLY TERM IS UNDO'S AND REDO'S ALONE among the toolbar four
+    // since 2026-08-07 (it stood
     // here as a blanket line over all four until then): the gate admits Ctrl+S
     // and Ctrl+Alt+R in a locked tab, so greying their buttons would be the face
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
+        // THE BOTTOM ROW'S HONEST ARMS (2026-08-15 — the supersession record
+        // is at the first switch's transport block above). Per button, the
+        // act's own refusal and its mirror:
+        //   * The two SKIPS (bare Home / End) jump the playhead to the trim
+        //     bounds — the loading/blank return above is their only
+        //     stable-state refusal, so past it they are live; a jump landing
+        //     where the playhead already rests is idempotent, the walls'
+        //     standing no-grey treatment (the walk arrows' own reasoning).
+        //   * LEFT / RIGHT mirror the lane fork's stable-state refusals
+        //     through horizontal_arrow_step_actionable — the waveform-lane
+        //     step is always live, the marker-lane nudge refuses off the home
+        //     view and on a locked tab.
+        //   * UP / DOWN mirror the cent step's own leading refusal block
+        //     (tempo_cent_step_actionable — the act's first three returns)
+        //     plus the read-only gate, which drops the vertical arrows in
+        //     every form (read_only_key_blocked has no arm for them); the
+        //     value-shaped tail (a label ref, a pass in target, the bracket
+        //     wall) stays live-faced, recorded at the predicate.
+        //   * PLAY and STOP are the ROSTER'S FIRST STATE-MIRRORED PAIR
+        //     (architect 2026-08-11): ONE chord — bare Space — split over two
+        //     buttons on the live audition bit (playhead_scanner_active, the
+        //     GUI-side playback mirror — set at every launch, cleared by the
+        //     one stop owner), so at most one is ever live. Play is dead while
+        //     an audition runs (its press would STOP, a lie about its face)
+        //     AND — 2026-08-15 — while a launch from the resting cursor would
+        //     refuse (playback_launch_playable, the launch body's own refusal
+        //     on the bound buffer's own domain), so a target-view cursor
+        //     outside the preview window greys BOTH buttons: "both play and
+        //     stop should be disabled because neither of them is possible at
+        //     that point" (architect). In source view a launch outside the
+        //     trim window SUCCEEDS (the 2026-08-05 ruling: source playback
+        //     runs to the song's end), so Play stays live there and the
+        //     predicate says so by construction rather than by a view arm.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward:
+            return true;
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportRight:
+            return horizontal_arrow_step_actionable(a);
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportDown:
+            return tempo_cent_step_actionable(a) &&
+                   !active_view_state(a).read_only;
+        case RedesignButton::TransportPlay:
+            return !a.playhead_scanner_active &&
+                   playback_launch_playable(a, playback, total_frames,
+                                            a.playhead_cursor_sample);
+        case RedesignButton::TransportStop:
+            return a.playhead_scanner_active;
         // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
         // is GLOBAL rather than mode-scoped because the act outlives the view it
         // was launched from: while the worker writes the three sidecars into

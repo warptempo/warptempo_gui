@@ -391,15 +391,16 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // the old off-grid outward snap has no input left to act on.
 void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
                                            bool synthesized_repeat) {
-    // THE COLUMN GATE IS NAMED (tempo_cent_step_column_allowed, app_state.h)
-    // because the bottom row's Up and Down buttons mirror it into their
-    // disabled face — one predicate, so the face and this refusal are one
-    // decision. The refusals below it stay unnamed and unmirrored: they move at
-    // interaction cadence, and the roster does not invent refusal-predicting
-    // grey states for those.
-    if (!tempo_cent_step_column_allowed(app)) return;
-    if (app.selected_markers.empty()) return;
-    if (app.last_selected_marker < 0) return;
+    // THE LEADING REFUSAL BLOCK IS NAMED WHOLE (tempo_cent_step_actionable,
+    // app_state.h — the column gate plus the empty-selection and invalid-focus
+    // refusals) because the bottom row's Up and Down buttons mirror it into
+    // their disabled face — one predicate, so the face and these refusals are
+    // one decision (the 2026-08-15 whole-row honesty ruling widened the mirror
+    // from the column gate alone; the supersession record is at the
+    // predicate). The refusals below it stay unnamed and unmirrored: they are
+    // value-shaped per-marker facts — a label ref, a pass in target view, the
+    // bracket wall — and stay consumed no-ops with a live face.
+    if (!tempo_cent_step_actionable(app)) return;
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below is UNCHANGED
     // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,

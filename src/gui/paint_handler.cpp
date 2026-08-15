@@ -497,25 +497,58 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 }
 
 // THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
-// painter stashes the rect it painted plus the LIVE enabled/selected bits
-// (redesign_button_enabled / redesign_button_selected — the same predicates
-// main.cpp's per-tick drift comparator replays), and returns the face so the
-// caller reads .hovered / .selected back for its own paint. Every row painter
-// publishes through here at the top of its per-button body; the comparator's
-// vector is total over the roster, so the stash is written for every id — a
-// button with no selected state simply stores the predicate's constant false.
-// (The tab row's hand-copied stash once omitted `selected`, which made the
-// comparator disagree with the painter on the active tab EVERY tick — a
-// permanent idle full-top-strip repaint. This owner is why that class of
-// omission cannot recur.)
+// painter stashes the rect it painted plus the enabled/selected bits it is
+// painting (redesign_button_enabled / redesign_button_selected — the same
+// predicates main.cpp's per-tick drift comparator replays), and returns the
+// face so the caller reads .hovered / .selected back for its own paint. Every
+// row painter publishes through here at the top of its per-button body; the
+// comparator's vector is total over the roster, so the stash is written for
+// every id — a button with no selected state simply stores the predicate's
+// constant false. (The tab row's hand-copied stash once omitted `selected`,
+// which made the comparator disagree with the painter on the active tab EVERY
+// tick — a permanent idle full-top-strip repaint. This owner is why that class
+// of omission cannot recur.)
+//
+// THE BITS REFRESH ONLY WHERE THE PIXELS DO (2026-08-15, the transport-pair
+// staleness fix): on_redraw runs once per damage rect under a Cairo clip to
+// exactly that rect, while each row painter runs WHOLE whenever ANY rect
+// intersects its lane — so a narrow damage (the clock cell at scanner cadence,
+// the tab row's status-chain band) used to run this publisher for buttons
+// whose pixels the clip never touched, stamping the stash LIVE over pixels
+// still wearing the OLD face. The comparator's premise — the stash is what the
+// painter last PAINTED — was thereby false, and any enabled/selected flip
+// whose own edge damaged a sliver of the lane (a click act's stop damaging the
+// clock cell) was masked forever: stash equal to live, pixels stale, repaired
+// only by an unrelated full-lane damage such as a hover. The gate below
+// restores the premise at the one writer: a face whose rect is not fully
+// inside the current clip keeps its as-painted bits, the comparator sees the
+// drift on the next tick, and its own full-strip damage is what repaints and
+// republishes — the repair mechanism the comparator was always documented to
+// be. An EMPTY rect refreshes unconditionally: it publishes "not painted at
+// all" (the modal yield, the hidden right cluster), no pixel can be stale for
+// it, and refreshing is what keeps the comparator from thrashing under a
+// standing modal (the contract at paint_bottom_strip's yield branch).
 AppState::RedesignButtonFace& publish_button_face(
-    AppState& app, int64_t total_frames, RedesignButton id,
-    const GuiRect& rect) {
+    cairo_t* cr, AppState& app, const GuiPlayback& playback,
+    int64_t total_frames, RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
-    face.rect     = rect;
-    face.enabled  = redesign_button_enabled(app, total_frames, id);
-    face.selected = redesign_button_selected(app, id);
+    face.rect = rect;
+    bool pixels_covered = rect.w <= 0 || rect.h <= 0;
+    if (!pixels_covered) {
+        double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
+        cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
+        pixels_covered =
+            static_cast<double>(rect.x) >= cx1 &&
+            static_cast<double>(rect.y) >= cy1 &&
+            static_cast<double>(rect.x + rect.w) <= cx2 &&
+            static_cast<double>(rect.y + rect.h) <= cy2;
+    }
+    if (pixels_covered) {
+        face.enabled  = redesign_button_enabled(app, playback, total_frames,
+                                                id);
+        face.selected = redesign_button_selected(app, id);
+    }
     return face;
 }
 
@@ -1013,7 +1046,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            app, audio.total_frames(), def.id,
+            cr, app, playback, audio.total_frames(), def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
@@ -1162,8 +1195,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const int btn_w = widths[i];
 
             AppState::RedesignButtonFace& face = publish_button_face(
-                app, audio.total_frames(), kViewBarButtons[i].id,
-                GuiRect{vx, btn_y, btn_w, btn_h});
+                cr, app, playback, audio.total_frames(),
+                kViewBarButtons[i].id, GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
                 redesign_button_pressed_face(app, kViewBarButtons[i].id);
@@ -1359,7 +1392,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // predicate's own active_tab_view compare, so the painted face below
         // reads THE SAME fact the comparator replays, with no second spelling.
         AppState::RedesignButtonFace& face = publish_button_face(
-            app, audio.total_frames(), def.id,
+            cr, app, playback, audio.total_frames(), def.id,
             GuiRect{x, content_y, tab_w, content_h});
         const bool selected = face.selected;
 
@@ -1958,7 +1991,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
+            cr, app, playback, audio.total_frames(), def.id,
+            GuiRect{x, btn_y, btn, btn});
 
         // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `h` history view
         // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
@@ -2071,7 +2105,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
-//   buttons: Play greyed while an audition runs, Stop while none is), and
+//   buttons: Play greyed while an audition runs or where a launch would
+//   refuse, Stop while no audition runs — the 2026-08-15 honesty arms at
+//   redesign_button_enabled), and
 //   skip-forward (bare End);
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
@@ -2281,7 +2317,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // row.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
+            cr, app, playback, audio.total_frames(), def.id,
+            GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
         const bool hovered = face.hovered && face.enabled;
@@ -2370,8 +2407,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const TransportRowDef* hidden =
             history ? kTransportArrowGroup : kHistoryClusterGroup;
         for (int i = 0; i < 4; ++i) {
-            publish_button_face(app, audio.total_frames(), hidden[i].id,
-                                GuiRect{0, 0, 0, 0});
+            publish_button_face(cr, app, playback, audio.total_frames(),
+                                hidden[i].id, GuiRect{0, 0, 0, 0});
         }
         const int cluster_w = 4 * btn + 3 * btn_gap;
         int ax = lane.x + lane.w - pad - cluster_w;
@@ -4557,18 +4594,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(app, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // BOTH right-cluster tables, whichever one the mode would have
         // painted: the row's tenants stand down whole (2026-08-14 — the
         // history companions are tenants of this row now).
         for (const TransportRowDef& def : kTransportArrowGroup) {
-            publish_button_face(app, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kHistoryClusterGroup) {
-            publish_button_face(app, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

@@ -1935,10 +1935,25 @@ int main(int argc, char** argv) {
             // transport row): a drifting bottom-row face damages its own
             // bottom-row lane, everything else the top
             // strip. Each strip pays only for its own drift — the walk keeps
-            // going until both verdicts are known (or the roster ends). The
-            // play/stop pair is this comparator's newest customer: a natural
-            // end-of-song clears playhead_scanner_active with no damage of its
-            // own, and this is what swaps the pair's faces back.
+            // going until both verdicts are known (or the roster ends).
+            //
+            // THE STASH IT COMPARES AGAINST IS AS-PAINTED, NOT AS-COMPUTED
+            // (2026-08-15, the transport-pair staleness fix — the mechanism
+            // and its record live at publish_button_face, paint_handler.cpp):
+            // a row painter runs whole on any damage intersecting its lane,
+            // but the publisher refreshes a face's enabled/selected bits only
+            // when the current clip covers that button's pixels. Without that
+            // gate a NARROW lane damage in the same frame as the state edge —
+            // the click act's stop damaging the clock cell, the natural
+            // end-of-song teardown doing the same — stamped the stash live
+            // under a clip that never redrew the buttons, so this comparator
+            // saw stash equal to live forever and the play/stop pair stayed
+            // painted stale until an unrelated full-lane damage (a hover)
+            // repaired it. With the gate, the drift survives the masking
+            // frame, this walk catches it on the next tick, and the
+            // full-strip damage below is what both repaints the pixels and
+            // republishes the stash — one pass, the comparator's own
+            // documented model, now true.
             bool drift_top       = false;
             bool drift_transport = false;
             for (int i = 0;
@@ -1948,7 +1963,8 @@ int main(int argc, char** argv) {
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
-                                      app, audio.total_frames(), id) ||
+                                      app, playback, audio.total_frames(),
+                                      id) ||
                     f.selected != redesign_button_selected(app, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))

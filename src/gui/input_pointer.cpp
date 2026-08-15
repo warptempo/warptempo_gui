@@ -226,7 +226,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // PLAY AND STOP SHARE THE ONE Space BINDING — two buttons over one chord,
     // the state-mirrored pair whose enabled split (redesign_button_enabled)
-    // makes exactly one live at a time; neither is a radio (`radio` would
+    // makes AT MOST one live at a time (both rest dead where a launch would
+    // refuse — the 2026-08-15 honesty ruling); neither is a radio (`radio` would
     // consume a press on a SELECTED button, and this pair's split is on the
     // ENABLED bit, which the disabled-press consume above already reads).
     //
@@ -5269,7 +5270,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // resolved in this single walk.
         const bool inside =
             under_pointer &&
-            redesign_button_enabled(app, audio.total_frames(), id);
+            redesign_button_enabled(app, playback, audio.total_frames(), id);
         if (f.hovered != inside) {
             f.hovered = inside;
             if (redesign_button_in_transport_row(id))
@@ -5526,11 +5527,14 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // true there — EXCEPT while the `h` history view stands, which greys
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
-        // row-4 press (history_mode_disables_button, above). ROW 8 adds the one
-        // RESTING consumer outside that mode: the play/stop pair's state
-        // mirror, whose dead half this line consumes so the pair's faces and
-        // presses stay one fact (redesign_button_enabled, app_state.h).
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
+        // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW's
+        // resting consumers live outside that mode too: since 2026-08-15 every
+        // button on it mirrors its act's own refusals — the play/stop pair's
+        // state mirror plus the launch bound, the arrows' lane and column
+        // gates — so this line consumes their dead halves and the row's faces
+        // and presses stay one fact (redesign_button_enabled, app_state.h).
+        if (!redesign_button_enabled(app, playback, audio.total_frames(),
+                                     tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
         // TOGGLE — dispatching would switch AWAY from what the user just
@@ -5646,7 +5650,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // rule. Each held at the press; any that no longer does makes the
         // lift a consumed nothing.
         if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
+        if (!redesign_button_enabled(app, playback, audio.total_frames(),
+                                     tc.id))
             return;
         if (tc.radio && redesign_button_selected(app, tc.id)) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect

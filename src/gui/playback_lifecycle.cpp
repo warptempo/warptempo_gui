@@ -195,60 +195,33 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // cost the user the audition past a trim bound he was aiming. The NAVIGATION
     // range is untouched by this — Home/End still jump to the trim bounds
     // (Viewport::trim_range, the shared owner both used to read here).
-    if (app.active_audio_view == 'T') {
-        // Target view: the target buffer is the live playback source.
-        // Refuse if no successful target render has populated it yet.
-        // Space's outer gate in input_handler.cpp already checks this for
-        // the toggle caller, but the check must live here: the scrub launch
-        // reaches this body with no outer gate, and a future caller can't
-        // slip through either. (Mode logic — "has a successful target render
-        // populated the buffer" — not domain math; the domain range policy
-        // follows.)
-        if (app.target_buffer_frames <= 0) return false;
-        // Validate the launch position against the bound target buffer's
-        // target-domain extent: a launch outside it — including a cursor +
-        // N/2 offset launch at or past the buffer end — is a silent no-op,
-        // nothing to audition. Mirrors the "playhead at or past trim_end is a
-        // silent no-op" pattern below for source view. The `- 1` is the
-        // two-frame remainder gate (rationale at the source arm below).
-        // launch_pos is an already-formed int64: toggle_playback's
-        // overflow-ordered pre-sum gate refuses before an undefined
-        // cursor + offset sum could reach here, and the scrub frame is a
-        // clamped live-domain value by construction — so this absolute-
-        // position compare needs no overflow ordering of its own.
-        if (launch_pos >= playback.domain_end() - 1) return false;
-        if (launch_pos < playback.domain_begin()) return false;
-        start = launch_pos;
-        end   = playback.domain_end();
-    } else {
-        // SOURCE VIEW: the song's end, whatever the trim window says (the ruling
-        // above). The paint domain here is source frames and the bound buffer is
-        // the source file itself, so this is both the domain's end and the
-        // buffer's; play() clamps its end bound to the bound total besides.
-        end = audio.total_frames();
-        // A launch requires at least TWO playable frames of remainder: a
-        // remainder of one (or less) no-ops silently, joining the "nothing
-        // to audition" family. A one-frame session is an isolated impulse —
-        // the audible pop — so playing from the End landing spot (with a full
-        // window End lands the playhead at end - 1, where Space's cursor launch
-        // would start) is degenerate, and End+Space is a common slip of the hand
-        // this product caters to for non-adversarial use. The last frame
-        // (end - 1) therefore no-ops — for a scrub click there too. Deliberate
-        // near-end plays stay admitted — End, then Left a few times, then Space
-        // plays — and start-of-play clicks are normal DAW behaviour, so no
-        // fade/ramp/declick machinery is added (considered and REJECTED by
-        // ruling). A one-frame SOURCE FILE is launch-inert by this gate (its
-        // render still works: the trimmer's one-frame-fady-trim latitude is a
-        // RENDER latitude, not an audition one).
-        if (launch_pos >= end - 1) return false;
-        // THERE IS NO LOWER GATE BUT THE DOMAIN'S OWN (2026-08-05, with the trim
-        // ungating): the launch position no longer has a trim begin to be outside
-        // of, and every producer hands in a clamped live-domain position (the
-        // cursor for Space, the clamped clicked frame for the scrub), so a
-        // negative one has no producer at all — and play() floors a start below
-        // zero regardless. The old refusal's whole job was the trim window.
-        start = launch_pos;
+    // EVERY REFUSAL IS THE ONE SHARED PREDICATE (playback_launch_playable,
+    // app_state.h — hoisted 2026-08-15 so the bottom row's PLAY button reads
+    // the launch's own refusal and the face cannot drift from the act). The
+    // per-arm reasoning moved to the predicate whole: the target arm's
+    // buffer-populated check (which must live on this shared path — the scrub
+    // launch arrives with no outer gate), the two-frame remainder gate against
+    // the bound buffer's own domain end (a one-frame remainder is an isolated
+    // impulse, the audible pop — End+Space is a common slip of the hand this
+    // product caters to; deliberate near-end plays stay admitted, and no
+    // fade/ramp/declick machinery is added, considered and REJECTED by
+    // ruling), the target arm's lower bound, and the source arm's
+    // no-lower-gate-but-the-domain's-own rule. A one-frame SOURCE FILE is
+    // launch-inert by this gate (its render still works: the trimmer's
+    // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
+    if (!playback_launch_playable(app, playback, audio.total_frames(),
+                                  launch_pos)) {
+        return false;
     }
+    start = launch_pos;
+    // WHAT `end` IS SPLITS BY AUDIO VIEW (the ruling above): the bound target
+    // buffer's domain end in target view, and in SOURCE VIEW the song's end,
+    // whatever the trim window says — the paint domain there is source frames
+    // and the bound buffer is the source file itself, so this is both the
+    // domain's end and the buffer's; play() clamps its end bound to the bound
+    // total besides.
+    end = (app.active_audio_view == 'T') ? playback.domain_end()
+                                         : audio.total_frames();
     // Scanner launch = the validated launch position, in the paint domain
     // in every view (see the comment above `start`). Seed the continuous
     // position too so the first paint (where the predictor's cur still equals
