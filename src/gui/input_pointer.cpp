@@ -1582,10 +1582,10 @@ double GuiInputHandler::nav_notional_col() const {
         wf_area, gui.notional_pointer_x() - static_cast<double>(wf_area.x));
 }
 
-// TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's bounds and the
-// column the hidden cursor recentres on when its travel would carry it past
-// one. ONE OWNER for both capture sites (the nav drag's threshold crossing and
-// arm_strip_drag_at), fired immediately after each begin, so the two cannot
+// TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's bounds, between
+// which the hidden cursor folds EDGE TO EDGE when its travel would carry it
+// past one. ONE OWNER for both capture sites (the nav drag's threshold crossing
+// and arm_strip_drag_at), fired immediately after each begin, so the two cannot
 // hand the platform different spans; the platform holds them for the capture's
 // life and knows nothing about a waveform (contract at
 // GuiPlatform::set_capture_wrap_span).
@@ -1594,17 +1594,15 @@ double GuiInputHandler::nav_notional_col() const {
 // they are the same INCLUSIVE pair the column clamp above uses: the first and
 // last painted columns, so a pointer resting exactly on either is inside and
 // stays there.
-// THE CENTRE IS DECIDED HERE AND PASSED because there is no exact centre column
-// to derive: the waveform's width is the window width floored to a multiple of
-// 16 and so always even, which puts the true midpoint between two columns (959
-// and 960 at the 1920 px deployment width). `wf.x + w/2` is the convention —
-// 960 there, one pixel RIGHT of the midpoint — and the choice is deliberate:
-// the alternative is one pixel left, and either is arbitrary at the same cost.
+// NOTHING ELSE IS PASSED: the fold runs bound to bound, so the centre column
+// the one-commit centre form had to decide here is gone, and with it the
+// even-width rounding question it existed to answer — an edge-to-edge fold has
+// no middle, so that question is retired rather than settled.
 void GuiInputHandler::tell_capture_wrap_span() const {
     const GuiRect wf = waveform_area(app);
     const double  lo = static_cast<double>(wf.x);
     const double  hi = lo + (wf.w > 0 ? static_cast<double>(wf.w) - 1.0 : 0.0);
-    set_strip_capture_wrap_span(lo, hi, lo + static_cast<double>(wf.w / 2));
+    set_strip_capture_wrap_span(lo, hi);
 }
 
 // THE ZOOM STEM'S COLUMN X — its column's ORIGIN in surface coordinates, not
@@ -1660,8 +1658,8 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // "I want to undo that idea"). The pop existed because a runaway pan
         // used to leave the pointer PINNED at a wall, where a pivot can show
         // only half of what a zoom is for; the hidden cursor now WRAPS to the
-        // waveform's centre instead of pinning, so it is never out there to be
-        // brought back and the edge has nothing left to do but seat
+        // waveform's opposite bound instead of pinning, so it is never out
+        // there to be brought back and the edge has nothing left to do but seat
         // (GuiPlatform::notional_pointer_x_ carries the wrap's record).
         //
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
@@ -1887,10 +1885,10 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y, double anchor_sample) {
     // GuiPlatform::begin_pointer_capture).
     begin_strip_pointer_capture(GuiCursorKind::Zoom);
     // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately after the
-    // begin and identically at both capture sites: the hidden cursor recentres
-    // on the waveform rather than pinning at its edge, and that is a property
-    // of THE CAPTURED POINTER rather than of a gesture (the contract is at
-    // set_strip_capture_wrap_span, input_handler.h).
+    // begin and identically at both capture sites: the hidden cursor folds to
+    // the waveform's opposite bound rather than pinning at the one it reached,
+    // and that is a property of THE CAPTURED POINTER rather than of a gesture
+    // (the contract is at set_strip_capture_wrap_span, input_handler.h).
     tell_capture_wrap_span();
     // THE PRESS OWES THE STEM'S FIRST FRAME. A press is a DISCRETE command, so
     // the shape is full waveform-area damage rather than a narrow column (the
@@ -6823,10 +6821,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                                                    : GuiCursorKind::Pan);
             // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately
             // after the begin exactly as the overview lane's arm does it: the
-            // hidden cursor recentres on the waveform instead of pinning at
-            // its edge, uniformly for every capture whatever the gesture or
-            // the mode (contract at set_strip_capture_wrap_span,
-            // input_handler.h).
+            // hidden cursor folds to the waveform's opposite bound instead of
+            // pinning at the one it reached, uniformly for every capture
+            // whatever the gesture or the mode (contract at
+            // set_strip_capture_wrap_span, input_handler.h).
             tell_capture_wrap_span();
             // AND THE MODE AT THE CROSSING ALSO SETS THE LATERAL FREEZE. The
             // capture opens unfrozen, and the ctrl edges a sub-threshold press

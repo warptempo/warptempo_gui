@@ -2660,12 +2660,12 @@ void GuiPlatform::note_notional_pointer_x(double x) {
     // contract, and why there is exactly one such position, are at the field).
     const double max_x = width_ > 0 ? static_cast<double>(width_ - 1) : 0.0;
     // AND IT IS THE BACKSTOP RATHER THAN THE RULE for a captured pointer: the
-    // capture's WRAP (on_relative_pointer_motion) folds an overshoot back to
-    // the waveform's centre before the value ever gets here, so this clamp
-    // bites only on a pathological delta larger than the whole span. This body
-    // is deliberately NOT the wrap's owner: it serves every writer, and an
-    // absolute delivery from the compositor is a real position that must be
-    // stored as given rather than folded.
+    // capture's WRAP (on_relative_pointer_motion) folds an overshoot back in at
+    // the waveform's opposite bound before the value ever gets here, so this
+    // clamp bites only on a pathological delta larger than the whole span.
+    // This body is deliberately NOT the wrap's owner: it serves every writer,
+    // and an absolute delivery from the compositor is a real position that
+    // must be stored as given rather than folded.
     notional_pointer_x_ = std::clamp(x, 0.0, max_x);
 }
 
@@ -3873,9 +3873,8 @@ void GuiPlatform::begin_pointer_capture(GuiCursorKind restore_kind) {
     // own (set_capture_wrap_span, fired immediately after this call at both
     // capture sites): a capture that was never told a span must not wrap on
     // the previous one's numbers, and the degenerate span is simply skipped.
-    capture_wrap_lo_     = 0.0;
-    capture_wrap_hi_     = 0.0;
-    capture_wrap_centre_ = 0.0;
+    capture_wrap_lo_ = 0.0;
+    capture_wrap_hi_ = 0.0;
     // Every capture opens with the notional x LIVE. The nav drag asserts the
     // freeze immediately after this call when it crosses into a zoom phase, and
     // at every ctrl edge after that (contract at set_notional_x_frozen); the
@@ -4002,15 +4001,14 @@ void GuiPlatform::set_notional_pointer_x(double surface_x) {
     note_notional_pointer_x(surface_x);
 }
 
-void GuiPlatform::set_capture_wrap_span(double lo, double hi, double centre) {
-    // The GUI states the waveform's span and the column the pointer recentres
-    // on (contract at the declaration). Capture-guarded like its siblings —
+void GuiPlatform::set_capture_wrap_span(double lo, double hi) {
+    // The GUI states the waveform's span, and the fold is edge to edge inside
+    // it (contract at the declaration). Capture-guarded like its siblings —
     // with no capture there is no wrap, the notional position then simply
     // being the delivery funnel's.
     if (!pointer_captured_) return;
-    capture_wrap_lo_     = lo;
-    capture_wrap_hi_     = hi;
-    capture_wrap_centre_ = centre;
+    capture_wrap_lo_ = lo;
+    capture_wrap_hi_ = hi;
 }
 
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
@@ -4027,18 +4025,19 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // stem) the x is notional_pointer_x_ — THE NOTIONAL POSITION, not
             // the travel ledger (architect 2026-08-14; the pair's contract is
             // at the declaration), and that is the WHOLE fork now: the position
-            // wraps to the waveform's centre under a capture instead of pinning
-            // at a bound, so it is always somewhere ordinary and there is no
-            // runaway case left to detect. The raw travel used to be handed over
-            // unclamped on the argument that the compositor clamps an
-            // off-window hint back on-screen anyway, and it does — but its
+            // wraps edge to edge inside the waveform under a capture instead of
+            // pinning at a bound, so it is always somewhere ordinary and there
+            // is no runaway case left to detect. The raw travel used to be
+            // handed over unclamped on the argument that the compositor clamps
+            // an off-window hint back on-screen anyway, and it does — but its
             // clamp is applied ONCE, to a number carrying the whole
             // off-window DEBT, so a drag that went 3000 px past the edge and
             // came 750 px back still restored AT the edge. The notional
             // position clamps at every step and has no debt — and, under a
-            // capture, WRAPS to the waveform's centre rather than pinning at a
-            // bound, so however far the hand ran it is somewhere ordinary and
-            // the cursor comes back where the pointer notionally is. The hint
+            // capture, WRAPS to the waveform's opposite bound rather than
+            // pinning at one, so however far the hand ran it is somewhere
+            // ordinary and the cursor comes back where the pointer notionally
+            // is. The hint
             // is surface-local, the same space as the stem's surface x, and is
             // double-buffered against the constrained surface, so commit it
             // before destroying the lock.
@@ -4237,18 +4236,25 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // GUI's to set; the contract is at set_notional_x_frozen. A frozen phase
     // therefore never wraps either: it writes no position at all.
     //
-    // AND IT WRAPS TO THE WAVEFORM'S CENTRE RATHER THAN PINNING AT A BOUND
-    // (architect 2026-08-14, from the rig: "what if instead we had the cursor,
-    // every time that it touches the bounds, teleport back to the centre of the
-    // waveform? So much of this workflow is centred and centre-oriented"). THE
-    // BOUNDS ARE THE WAVEFORM'S, not the window's, on his own reasoning that
-    // this makes the behaviour identical at every resolution; they and the
-    // centre are TOLD by the GUI (set_capture_wrap_span), this class knowing
-    // nothing about a waveform.
+    // AND IT WRAPS EDGE TO EDGE RATHER THAN PINNING AT A BOUND (architect
+    // 2026-08-14, from the rig: "what if instead we had the cursor, every time
+    // that it touches the bounds, teleport back to the centre of the waveform?"
+    // — and then, having driven that centre form, "make the wraparound a full
+    // screen wraparound, not just the half width wraparound"). A crossing of
+    // the RIGHT bound reappears at the LEFT one and a crossing of the left at
+    // the right: the modular fold he had named as the alternative when he chose
+    // the centre form one commit earlier. THE FOLD IS TWICE AS LONG, which is
+    // the whole of the change — each crossing now buys the waveform's FULL
+    // width of travel instead of half of it, so a pan of several screens folds
+    // half as often and the cursor spends its time spread across the whole
+    // surface rather than clustered around the middle. THE BOUNDS ARE THE
+    // WAVEFORM'S, not the window's, on his own reasoning that this makes the
+    // behaviour identical at every resolution; they are TOLD by the GUI
+    // (set_capture_wrap_span), this class knowing nothing about a waveform.
     //   * CROSSING WRAPS, LANDING DOES NOT: a value exactly on lo or hi is
     //     inside and stays, so a hand that comes honestly to rest on the last
     //     pixel rests there. Only an event that would push the pointer PAST a
-    //     bound recentres it.
+    //     bound folds it to the opposite one.
     //   * THE OVERSHOOT IS CARRIED, so no travel is lost — the pointer moves
     //     continuously through a folded space rather than being reset.
     //   * ONE APPLICATION SUFFICES and there is deliberately no loop: a single
@@ -4281,10 +4287,15 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     if (!notional_x_frozen_) {
         double nx = notional_pointer_x_ + dx;
         if (capture_wrap_hi_ > capture_wrap_lo_) {
+            // The second arm's arithmetic is the mirror of the first, not a
+            // sign error: below the low bound `nx - capture_wrap_lo_` is
+            // NEGATIVE, so adding it to the HIGH bound walks inward from the
+            // right edge by exactly the overshoot, just as the first arm walks
+            // inward from the left edge by its own positive overshoot.
             if (nx > capture_wrap_hi_)
-                nx = capture_wrap_centre_ + (nx - capture_wrap_hi_);
+                nx = capture_wrap_lo_ + (nx - capture_wrap_hi_);
             else if (nx < capture_wrap_lo_)
-                nx = capture_wrap_centre_ + (nx - capture_wrap_lo_);
+                nx = capture_wrap_hi_ + (nx - capture_wrap_lo_);
         }
         note_notional_pointer_x(nx);
     }

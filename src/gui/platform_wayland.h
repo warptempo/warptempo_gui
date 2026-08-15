@@ -481,9 +481,9 @@ public:
     // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
     // below), the grab-pan at the pointer's notional position
-    // (notional_pointer_x_, which WRAPS to the waveform's centre rather than
-    // pinning at a bound — the record is at that field); y is frozen at the
-    // press row for both. Both
+    // (notional_pointer_x_, which WRAPS edge to edge across the waveform rather
+    // than pinning at a bound — the record is at that field); y is frozen at
+    // the press row for both. Both
     // degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
@@ -660,27 +660,27 @@ public:
 
     // THE CAPTURED POINTER'S WRAP SPAN (architect 2026-08-14, from the rig:
     // "what if instead we had the cursor, every time that it touches the
-    // bounds, teleport back to the centre of the waveform? So much of this
-    // workflow is centred and centre-oriented"). Under a capture the notional
+    // bounds, teleport back to the centre of the waveform?" — then, having
+    // driven that centre form, "make the wraparound a full screen wraparound,
+    // not just the half width wraparound"). Under a capture the notional
     // position no longer PINS at a bound: an event that would push it past one
-    // WRAPS it to `centre`, carrying its overshoot, and it goes on travelling
-    // — so a pan of several screens leaves the cursor somewhere ordinary and
-    // the release simply restores where the virtual pointer is, with no
-    // runaway case to detect (the full record is at the accumulation site,
-    // on_relative_pointer_motion, and at notional_pointer_x_).
+    // WRAPS it to the OPPOSITE bound, carrying its overshoot, and it goes on
+    // travelling — so a pan of several screens leaves the cursor somewhere
+    // ordinary and the release simply restores where the virtual pointer is,
+    // with no runaway case to detect (the full record is at the accumulation
+    // site, on_relative_pointer_motion, and at notional_pointer_x_). Each
+    // crossing therefore buys the waveform's FULL width of travel; the centre
+    // form, which bought half of it, lived one commit.
     //
     // THE SIXTH MEMBER OF THE TOLD-NOT-INFERRED FAMILY (set_capture_restore_x,
     // clear_capture_restore_x, set_capture_restore_kind, set_notional_x_frozen,
     // set_notional_pointer_x above), and for the family's own reason: the
     // bounds are THE WAVEFORM'S, and this class knows nothing about a waveform
     // — that is an explicit layering statement at notional_pointer_x_. The GUI
-    // supplies all three from waveform_area at each capture's begin. THE CENTRE
-    // IS PASSED RATHER THAN DERIVED because there is no exact centre column to
-    // derive: the waveform's width is the window width floored to a multiple of
-    // 16 and so always even, which puts the true midpoint between two columns
-    // (959 and 960 at 1920). The GUI's convention is `wf.x + w/2` — 960 there,
-    // one pixel right of the midpoint; the alternative is one pixel left, and
-    // the choice is deliberate rather than incidental.
+    // supplies both from waveform_area at each capture's begin. THERE IS NO
+    // THIRD VALUE: an edge-to-edge fold has no middle, so the centre column
+    // the centre form had to be handed — and the even-width rounding question
+    // that came with it — stopped existing rather than being settled.
     //
     // Capture-guarded like its siblings, and cleared to a DEGENERATE span by
     // begin_pointer_capture so a capture that was never told a span cannot wrap
@@ -691,7 +691,7 @@ public:
     // the values are re-supplied at the next capture, the drift is bounded by
     // the resize itself, and a live push would need a producer that does not
     // exist.
-    void set_capture_wrap_span(double lo, double hi, double centre);
+    void set_capture_wrap_span(double lo, double hi);
 
     // THE POINTER'S NOTIONAL POSITION (surface x, px) — THE PRODUCT'S ONE
     // ANSWER TO "WHERE IS THE POINTER?", live for the whole process and not
@@ -999,9 +999,9 @@ private:
     //     whole process: surface-local x, CLAMPED INTO THE SURFACE AT EVERY
     //     WRITE, so it carries no off-window debt and is always a position
     //     inside the window. UNDER A CAPTURE IT WRAPS rather than pinning: an
-    //     accumulation that would push it past the waveform's bounds recentres
-    //     it, carrying the overshoot (the wrap's whole record is below, the
-    //     span's contract at set_capture_wrap_span).
+    //     accumulation that would push it past one of the waveform's bounds
+    //     re-enters at the other, carrying the overshoot (the wrap's whole
+    //     record is below, the span's contract at set_capture_wrap_span).
     //     ITS WRITERS ARE EVERY DELIVERY THAT CARRIES A REAL POSITION —
     //     deliver_motion is the one funnel (wl_pointer.enter, absolute
     //     wl_pointer.motion, and all four touch-translation deliveries) —
@@ -1058,19 +1058,23 @@ private:
     // notional_pointer_x_ — ALWAYS, with no fork; y is frozen at the press row
     // (capture_restore_y_).
     //
-    // THE HIDDEN CURSOR WRAPS TO THE WAVEFORM'S CENTRE INSTEAD OF PINNING AT
-    // ITS EDGE (architect 2026-08-14, from the rig: "what if instead we had the
-    // cursor, every time that it touches the bounds, teleport back to the
-    // centre of the waveform? So much of this workflow is centred and
-    // centre-oriented" — and then "whatever the virtual point is is where the
-    // cursor shows back up"). Under a capture the position no longer runs out
-    // of room: an accumulation that would push it past a bound recentres it,
-    // carrying the overshoot, and travel continues. A pan of several screens
-    // therefore leaves the cursor somewhere ordinary rather than stranded on
-    // the last pixel, so the release simply restores where the virtual pointer
-    // is. THE WRAP ITSELF LIVES AT THE CAPTURED ACCUMULATION
-    // (on_relative_pointer_motion), which is the one place an overshoot exists;
-    // the span comes from the GUI (set_capture_wrap_span).
+    // THE HIDDEN CURSOR WRAPS EDGE TO EDGE INSTEAD OF PINNING AT A BOUND
+    // (architect 2026-08-14, from the rig: "what if instead we had the cursor,
+    // every time that it touches the bounds, teleport back to the centre of the
+    // waveform?" and "whatever the virtual point is is where the cursor shows
+    // back up" — then, having driven that centre form, "make the wraparound a
+    // full screen wraparound, not just the half width wraparound"). Under a
+    // capture the position no longer runs out of room: an accumulation that
+    // would push it past the right bound re-enters at the left one and vice
+    // versa, carrying the overshoot, and travel continues. A pan of several
+    // screens therefore leaves the cursor somewhere ordinary rather than
+    // stranded on the last pixel, so the release simply restores where the
+    // virtual pointer is — and each crossing buys the waveform's FULL width of
+    // travel, so the folds are half as frequent as the centre form's and the
+    // cursor spends its time spread across the whole surface rather than
+    // clustered around the middle. THE WRAP ITSELF LIVES AT THE CAPTURED
+    // ACCUMULATION (on_relative_pointer_motion), which is the one place an
+    // overshoot exists; the span comes from the GUI (set_capture_wrap_span).
     //
     // THE TELEPORT-ON-CLAMP SPLIT IS SUPERSEDED, AND SUPERSEDED AT ITS PREMISE:
     // it read "a small pan moves the cursor a little, a runaway pan brings it
@@ -1112,15 +1116,14 @@ private:
     double virtual_pointer_y_  = 0.0;
     double notional_pointer_x_ = 0.0;
     double capture_restore_y_  = 0.0;
-    // THE ACTIVE CAPTURE'S WRAP SPAN — the waveform's left bound, its right
-    // bound and the column the pointer recentres on (contract at
+    // THE ACTIVE CAPTURE'S WRAP SPAN — the waveform's left and right bounds,
+    // and nothing else, the fold being edge to edge between them (contract at
     // set_capture_wrap_span, its one writer besides begin_pointer_capture,
-    // which clears all three to the degenerate 0). Read at exactly one place,
+    // which clears both to the degenerate 0). Read at exactly one place,
     // the notional half of on_relative_pointer_motion, and never by the ledger.
     // Told by the GUI because a waveform is not a thing this class knows.
-    double capture_wrap_lo_     = 0.0;
-    double capture_wrap_hi_     = 0.0;
-    double capture_wrap_centre_ = 0.0;
+    double capture_wrap_lo_ = 0.0;
+    double capture_wrap_hi_ = 0.0;
     // THE ACTIVE CAPTURE'S LATERAL FREEZE (contract at set_notional_x_frozen,
     // the only writer besides the two capture edges that clear it). Read at
     // exactly one place — the notional half of on_relative_pointer_motion —

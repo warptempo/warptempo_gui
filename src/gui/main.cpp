@@ -1226,9 +1226,7 @@ int main(int argc, char** argv) {
     input_handler.set_strip_capture_notional_x =
         [&](double sx) { gui.set_notional_pointer_x(sx); };
     input_handler.set_strip_capture_wrap_span =
-        [&](double lo, double hi, double centre) {
-            gui.set_capture_wrap_span(lo, hi, centre);
-        };
+        [&](double lo, double hi) { gui.set_capture_wrap_span(lo, hi); };
 
     // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
     // pan-primary's touch half, the eighth glass ruling 2026-08-12): the

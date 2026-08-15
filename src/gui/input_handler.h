@@ -553,22 +553,23 @@ struct GuiInputHandler {
     // the zoom->pan edge, from the one mode-sync body; a no-op while no
     // capture is live.
     std::function<void(double)> set_strip_capture_notional_x = [](double){};
-    // THE CAPTURED POINTER'S WRAP SPAN (2026-08-14): the waveform's left bound,
-    // its right bound and the column the hidden pointer recentres on when its
-    // travel would carry it past one (contract at
+    // THE CAPTURED POINTER'S WRAP SPAN (2026-08-14): the waveform's left and
+    // right bounds, between which the hidden pointer folds EDGE TO EDGE when
+    // its travel would carry it past one — past the right bound it reappears at
+    // the left, past the left at the right (contract at
     // GuiPlatform::set_capture_wrap_span). Fired IMMEDIATELY AFTER
     // begin_strip_pointer_capture at BOTH capture sites — the nav drag's
     // threshold crossing and arm_strip_drag_at — and nowhere else: the wrap is
     // a property of THE CAPTURED POINTER, not of a particular gesture, so every
     // capture supplies it uniformly by design. The bounds are the waveform's
     // rather than the window's so the behaviour is identical at every
-    // resolution, and THE CENTRE IS THE GUI'S TO DECIDE (the waveform's width
-    // is the window width floored to a multiple of 16 and so always even, which
-    // leaves no exact centre column: `wf.x + w/2` is the convention, one pixel
-    // right of the true midpoint, and the alternative is one pixel left).
+    // resolution, and there is NO third value: an edge-to-edge fold has no
+    // middle, so the centre column the one-commit centre form was handed here
+    // is gone, and the even-width rounding question it raised is retired
+    // with it.
     // A no-op while no capture is live.
-    std::function<void(double, double, double)> set_strip_capture_wrap_span =
-        [](double, double, double){};
+    std::function<void(double, double)> set_strip_capture_wrap_span =
+        [](double, double){};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
@@ -1389,11 +1390,10 @@ struct GuiInputHandler {
     double nav_notional_col() const;
 
     // TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's inclusive
-    // bounds and the column the hidden cursor recentres on. ONE OWNER for the
-    // two capture sites, fired immediately after each begin so neither can
-    // hand the platform a span the other would not (the derivation, the
-    // centre's convention and why the bounds are the waveform's are at the
-    // definition, input_pointer.cpp).
+    // bounds, between which the hidden cursor folds edge to edge. ONE OWNER for
+    // the two capture sites, fired immediately after each begin so neither can
+    // hand the platform a span the other would not (the derivation and why the
+    // bounds are the waveform's are at the definition, input_pointer.cpp).
     void tell_capture_wrap_span() const;
 
     // THE ZOOM STEM'S COLUMN X — the anchor's live column in the waveform's

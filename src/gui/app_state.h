@@ -816,10 +816,10 @@ struct StripDragState {
 //     — cursor-hide + lock, unbounded virtual travel while the viewport
 //     clamps at the song walls; the cursor reappears at the pointer's
 //     NOTIONAL position — never the travel ledger, a pan having no
-//     anchor-stem override, and that position WRAPS to the waveform's centre
-//     rather than pinning at its edge, so a pan of several screens still
-//     leaves the cursor somewhere ordinary), the crossing event folds the whole
-//     press→crossing delta (last_x stays at the press until then),
+//     anchor-stem override, and that position WRAPS edge to edge across the
+//     waveform rather than pinning at a bound, so a pan of several screens
+//     still leaves the cursor somewhere ordinary), the crossing event folds
+//     the whole press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
 //     what suppresses follow for the session (the pan producer class at
 //     follow_overridden_for_session). A PAN IS A PURE VIEWPORT MOVE: it moves
@@ -913,8 +913,8 @@ struct StripDragState {
 //     is SEATED at the pointer's current notional column, EVERY time, and
 //     nothing else happens at the edge (architect 2026-08-14, undoing his own
 //     ctrl-down pop of hours earlier: the hidden cursor WRAPS to the
-//     waveform's centre rather than pinning at a bound, so it is never
-//     stranded out there for a pop to bring home —
+//     waveform's opposite bound rather than pinning at the one it reached, so
+//     it is never stranded out there for a pop to bring home —
 //     GuiPlatform::notional_pointer_x_ carries that record). What is stored is
 //     the SONG FRAME under that column (the seat and the withdrawn
 //     persist-across-toggles experiment are recorded at anchor_sample below),
@@ -1105,9 +1105,10 @@ struct ScrollDragState {
     // teleport that was going to happen — it MANUFACTURED one, by putting the
     // stem there for the cursor to follow.
     // THE QUESTION IS MOOT NOW EITHER WAY: the release has no fork left to
-    // read. The hidden pointer WRAPS to the waveform's centre instead of
-    // pinning at a bound, so it is never stranded and the cursor simply comes
-    // back where the virtual pointer is (GuiPlatform::notional_pointer_x_).
+    // read. The hidden pointer WRAPS to the waveform's opposite bound instead
+    // of pinning at the one it reached, so it is never stranded and the cursor
+    // simply comes back where the virtual pointer is
+    // (GuiPlatform::notional_pointer_x_).
     // Both the ctrl-down pop that briefly answered the same worry and the
     // teleport it was derived from are deleted, and the seat is the whole of
     // what ctrl does.
