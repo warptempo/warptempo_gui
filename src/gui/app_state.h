@@ -1362,11 +1362,13 @@ struct OverviewDragState {
     // position and the viewport CENTER at the grab — the grab-point offset
     // inside the box. Each motion event centers on (pointer position − this).
     double grab_offset = 0.0;
-    // Edge drags only: the FIXED (opposite) viewport bound's active-domain
-    // position, captured at the press that grabbed an endcap — the one site
-    // that decides an edge drag — and held for the drag's life: the per-event
-    // zoom's anchor (anchor_x = that bound's own window column, 0 for the
-    // start, area.w for the end).
+    // Edge drags only: the FIXED (opposite) box edge's active-domain position,
+    // captured at the press that grabbed an endcap — the one site that decides
+    // an edge drag — and held for the drag's life: the per-event zoom's anchor
+    // (anchor_x = that bound's own window column, 0 for the start, area.w for
+    // the end). It is the PAINTED edge (overview_box_edge_samples, the box's
+    // own owner), which differs from the raw viewport end at the right wall
+    // alone — the reasoning is at seat_overview_edge_drag.
     double fixed_edge_sample = 0.0;
 };
 
@@ -5191,6 +5193,18 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // walls) is recorded at apply_overview_drag_at's mapping call, input_pointer.cpp.
 double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
                                    int x);
+// THE BOX'S TWO EDGES AS ACTIVE-DOMAIN SAMPLES — the ONE owner of "where the
+// box's edges are" before they become columns: the live viewport's start and
+// its viewport_end_sample, the END clamped to live_total_frames. TWO readers:
+// overview_box_span below (which turns them into the painted columns) and the
+// edge drag's seat (seat_overview_edge_drag, input_pointer.cpp), which pivots
+// on the fixed edge and must therefore pivot on the PAINTED one — the ruled
+// right-wall grid rest may sit up to a pixel past the song end, which is the
+// only place the raw and painted endpoints differ (the derivation is at the
+// definition, app_state.cpp). Returns false on degenerate geometry (no
+// waveform width, no spp) with the outputs untouched.
+bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
+                               int64_t* out_begin, int64_t* out_end);
 // THE VIEWPORT BOX'S LANE COLUMNS — the ONE owner of the box arithmetic,
 // shared by the painter (paint_overview_strip's layer 3) and the lane's hit
 // geometry (hit_test_overview_endcap below, the press claim's inside-the-box

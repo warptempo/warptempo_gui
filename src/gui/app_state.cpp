@@ -407,24 +407,53 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
         a, audio, static_cast<int64_t>(std::nearbyint(src))));
 }
 
+// THE BOX'S TWO EDGES AS ACTIVE-DOMAIN SAMPLES — the wall-clamped viewport
+// endpoints the box is drawn from, hoisted out of overview_box_span below
+// (2026-08-15) so the EDGE DRAG'S SEAT and the PAINTED box read ONE answer to
+// "where is the box's edge", the same shape the region editor's plate basis
+// takes. THE END CLAMP IS THE WHOLE REASON IT IS A SEPARATE OWNER: the ruled
+// right-wall grid rest deliberately sits up to one waveform pixel PAST the
+// song end (max_viewport_start_grid, main.cpp — <1 px of inert past-EOF
+// padding, which is what keeps the flush-right rest a true grid point), so at
+// that wall alone the RAW viewport end and the PAINTED right edge differ, and a
+// gesture whose contract is "the grabbed edge tracks the finger while the
+// opposite edge holds" must pivot on the painted one. The begin side needs no
+// clamp of its own — clamp_viewport_start floors the start at 0 — and the
+// >= 0 line below states that rather than defending against it.
+bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
+                               int64_t* out_begin, int64_t* out_end) {
+    const GuiRect area = waveform_area(a);
+    const double  spp  = current_samples_per_pixel(a, audio);
+    if (area.w <= 0 || spp <= 0.0) return false;
+    int64_t b = a.viewport_start_sample;
+    int64_t e = viewport_end_sample(b, spp, area.w);
+    const int64_t total = live_total_frames(a, audio);
+    if (b < 0) b = 0;
+    if (total > 0 && e > total) e = total;
+    if (e < b) e = b;
+    *out_begin = b;
+    *out_end   = e;
+    return true;
+}
+
 // THE VIEWPORT BOX'S LANE COLUMNS — the box arithmetic hoisted whole out of
 // paint_overview_strip's layer 3 when the box grew grab handles (the lane
 // rework, 2026-08-12), so painter and hit geometry read ONE derivation and a
 // grabbed edge is exactly a painted one. The LIVE viewport's span in the
-// active domain, inverse-mapped to source columns in target view (the
-// memoized map — the box "does the domain work", the ruled source-domain
-// choice at the painter), wall-clamped, floored at 1px (the span is never
-// nothing). Contract at the declaration (app_state.h).
+// active domain (through the edge owner above, which owns the past-EOF end
+// clamp), inverse-mapped to source columns in target view (the memoized map —
+// the box "does the domain work", the ruled source-domain choice at the
+// painter), wall-clamped in the source domain too (the target map's own ends
+// are not the active domain's), floored at 1px (the span is never nothing).
+// Contract at the declaration (app_state.h).
 bool overview_box_span(const AppState& a, const GuiAudio& audio,
                        int* out_x0, int* out_x1) {
     const GuiRect lane = top_overview_row_area(a);
     const double spp_ov = overview_samples_per_pixel(a, audio);
     if (spp_ov <= 0.0) return false;
-    const GuiRect area = waveform_area(a);
-    const double  spp  = current_samples_per_pixel(a, audio);
-    if (area.w <= 0 || spp <= 0.0) return false;
-    const int64_t vp_start = a.viewport_start_sample;
-    const int64_t vp_end   = viewport_end_sample(vp_start, spp, area.w);
+    int64_t vp_start = 0;
+    int64_t vp_end   = 0;
+    if (!overview_box_edge_samples(a, audio, &vp_start, &vp_end)) return false;
     int64_t src_b = vp_start;
     int64_t src_e = vp_end;
     if (a.active_audio_view == 'T') {

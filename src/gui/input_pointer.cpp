@@ -1827,23 +1827,36 @@ void GuiInputHandler::run_overview_teleport(int x) {
 // threshold for the bounds is fine, the ten pixels on either side works, it's a
 // large enough threshold"), so a bound is dragged by its own grab band and
 // nowhere else. It stays a body because it is the one place an edge drag's kind
-// and its fixed partner are decided together. The fixed bound is the viewport
-// END for a grabbed BEGIN edge (viewport_end_sample, the box owner's own end)
-// and the START for a grabbed END edge, both in the ACTIVE domain — it is the
-// per-event zoom's anchor, held for the drag's life. Returns false on degenerate
-// geometry (no waveform width, no spp), where the caller drops the arm and the
-// press is the band's consumed nothing.
+// and its fixed partner are decided together. The fixed bound is the box's END
+// edge for a grabbed BEGIN edge and its BEGIN edge for a grabbed END edge, both
+// in the ACTIVE domain — it is the per-event zoom's anchor, held for the drag's
+// life.
+//
+// IT IS THE PAINTED EDGE, NOT THE RAW VIEWPORT BOUND (2026-08-15, codex round
+// 22): the seat reads overview_box_edge_samples, the same owner the painter's
+// box span reads, because at the RIGHT WALL the two disagree — the ruled grid
+// rest may legitimately put viewport_end_sample up to one waveform pixel past
+// the song end (<1 px of inert past-EOF padding, max_viewport_start_grid) and
+// the box is drawn from the clamped value. Seating the raw end fixed the
+// drag's span and its anchor to an INVISIBLE endpoint: the whole span was
+// biased long by the overshoot, so the level was a hair too low, and the
+// downstream wall clamp could settle the grabbed edge a painted column left of
+// the finger while the opposite edge stayed at EOF. The gesture's contract is
+// that the grabbed edge tracks the finger and the one the user can see holds
+// still, so both halves must be measured in painted terms.
+//
+// Returns false on degenerate geometry (no waveform width, no spp — the owner's
+// own refusal), where the caller drops the arm and the press is the band's
+// consumed nothing.
 bool GuiInputHandler::seat_overview_edge_drag(bool grabbed_begin) {
-    const GuiRect area = waveform_area(app);
-    const double  spp  = current_samples_per_pixel(app, audio);
-    if (area.w <= 0 || spp <= 0.0) return false;
+    int64_t box_begin = 0;
+    int64_t box_end   = 0;
+    if (!overview_box_edge_samples(app, audio, &box_begin, &box_end))
+        return false;
     app.overview_drag.kind = grabbed_begin ? OverviewDragKind::EdgeBegin
                                            : OverviewDragKind::EdgeEnd;
     app.overview_drag.fixed_edge_sample =
-        grabbed_begin
-            ? static_cast<double>(viewport_end_sample(
-                  app.viewport_start_sample, spp, area.w))
-            : static_cast<double>(app.viewport_start_sample);
+        static_cast<double>(grabbed_begin ? box_end : box_begin);
     return true;
 }
 
