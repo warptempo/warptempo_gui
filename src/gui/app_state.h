@@ -71,24 +71,25 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // exactly, and cross during gestures; ordering degeneracy collapses at the
 // render boundary, not at authoring time.)
 
-// THE OVERVIEW LANE'S RATE, and its alone since 2026-08-14 (the rotation
-// below): VERTICAL drag distance (px) that moves the OVERVIEW LANE's dual-axis
-// ctrl strip drag by one continuous level. That gesture's zoom is still
-// vertical — it drags DOWN to zoom in (deeper, lower level) and UP to zoom out,
-// with its dx spending itself on the pan. Both this scale and that direction
-// are architect-tunable on the labwc pass.
-constexpr double kZoomStripPxPerLevel = 60.0;
+// (kZoomStripPxPerLevel = 60.0 — the OVERVIEW LANE'S vertical zoom rate — is
+// DELETED, producer-less (architect 2026-08-15): the lane lost its zoom
+// entirely when the box became the subject of every lane gesture, so the
+// dual-axis ctrl strip drag that was this constant's ONE reader is gone with
+// its whole subsystem (the ruling is at OverviewDragState below). Its value
+// was the vertical drag distance moving that gesture one continuous level;
+// the calibration ladder recorded below survives it, being the MOUSE
+// surface's, and the surviving rate constant is kNavZoomPxPerLevel.)
 
 // THE NAV DRAG'S RATE, on its HORIZONTAL axis (architect 2026-08-14, the
 // rotation: the ctrl phase reads dx where it read dy — the contract and the
 // sign's derivation are at ScrollDragState below). Horizontal drag distance
 // (px) that moves the navigation drag's zoom phase by one continuous level.
-//
-// SEPARATE FROM kZoomStripPxPerLevel RATHER THAN SHARED WITH IT, because the
-// two are no longer the same quantity: a px-per-level measured across ~1920 px
-// of horizontal room is a different ergonomic from one measured across the
-// overview lane's ~500 px of vertical, and one constant would have made a
-// retune of either gesture silently move the other.
+// THE PRODUCT'S ONLY DRAG-ZOOM RATE since 2026-08-15, the overview lane's own
+// having gone with the lane's zoom; it was deliberately kept separate from
+// that one while both existed, a px-per-level measured across ~1920 px of
+// horizontal room being a different ergonomic from one measured across the
+// lane's vertical, and one shared constant would have made a retune of either
+// gesture silently move the other.
 //
 // THE PINCH IS THE DERIVATION, which is what matters and not the ladder of
 // numbers behind it (architect 2026-08-14, from the rig, having driven both
@@ -725,57 +726,35 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation) — THE OVERVIEW LANE'S
-// CTRL DRAG, its ONE remaining entry since 2026-08-14 (arm_strip_drag_at, the
-// succession record at that definition): the navigation surface's ctrl press
-// left for the one nav drag's live zoom modifier that day (ScrollDragState
-// below), so this record serves the lane alone — anchor at the pressed
-// overview column's whole-song position, domain-corrected in target view (the
-// lane's PLAIN drag carried the entry for the hours between the lane's
-// landing and its rework; plain is the lane's BOX PAN now — OverviewDragState
-// below — and ctrl is "require ctrl on zoom strip also", the architect's own
-// phrase). The RULER's own entry is DELETED FOR GOOD (2026-08-12, the sixth
-// glass ruling; the entry's three changes of hands are recorded at the arm),
-// and there was once a dedicated zoom LANE too, deleted 2026-07-31 — the
-// overview strip is the zoom-strip concept's THIRD HOME. The gesture is
-// DUAL-AXIS AND BOTH AXES ARE PLAIN, simultaneously live per motion event —
-// the pre-lock model again, the segment axis lock having been deleted with
-// its whole calibration ladder (the record above kZoomStripPxPerLevel): the
-// lock existed for the navigation surface's wrist-arc pan, and this lane's
-// deliberate ctrl gesture never produced the complaint. It is INCREMENTAL —
-// each event reads the LIVE zoom level and viewport (never a stored press
-// baseline) and applies its own dx/dy on top, so nothing goes stale across
-// composed pan/zoom phases. One song anchor (anchor_sample) is the focus the
-// zoom pivots around; the pan re-derives its drifted column each event, and
-// the Ableton edge trick REBINDS the anchor to the nearest visible pixel when
-// a pan pushes its column offscreen (the focus pins to the edge it hits and
-// becomes that edge's content). Navigation-class: never touches the playhead
-// or selection, allowed in read-only, does not toggle or override follow.
-// Cleared on button release / button-lost, by the force-end finalizer, and on
-// file load; nothing to revert anywhere (it applies its zoom and pan
-// continuously, and pointer gestures have no cancel).
-struct StripDragState {
-    bool   active    = false;
-    // True once any motion event has applied a change. A motionless
-    // press-release must commit nothing, so the terminating event finalizes
-    // (one final apply + synchronous rebuild) only when this is set.
-    bool   moved     = false;
-    // Pointer position at the press (window px) — the drag-threshold reference
-    // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
-    // baseline: the incremental model reads no press level and no fixed column.
-    int    press_x   = 0;
-    int    press_y   = 0;
-    // Pointer position at the previous motion event (window px), seeded at the
-    // press. Each event's dx/dy is the delta from here; dx pans and dy zooms,
-    // both plain.
-    int    last_x    = 0;
-    int    last_y    = 0;
-    // Song position (frames, double) the zoom pivots around — the frame under
-    // the press at the press, but REBINDABLE: when a pan drives its column off
-    // the effective waveform width, the edge trick pins it to the nearest
-    // onscreen pixel and rewrites this to that pixel's frame.
-    double anchor_sample = 0.0;
-};
+// (THE DUAL-AXIS ZOOM/PAN STRIP DRAG IS DELETED WHOLE — its state, its arm and
+// its per-event apply — architect 2026-08-15, redesigning the overview
+// lane: "zoom is not what I'm looking for in the overview strip, because the
+// overview strip can indirectly control zoom by directly controlling the
+// outline box". The lane's gestures act ON THE BOX and the zoom follows from
+// the box's span, so the CTRL press that armed this gesture there — its LAST
+// entry — is gone and the subsystem went with it: the state and both of its
+// bodies, the anchor stem's third producer, the lane's Zoom
+// cursor arm, the gesture's term in any_pointer_gesture_active and the vertical
+// rate constant kZoomStripPxPerLevel (the one name kept spellable here, since
+// a constant is what someone would grep for before re-adding one).
+//
+// THE ENTRY SUCCESSION, each step a ruling, kept because the zoom-strip
+// concept has now had three homes and been withdrawn from all of them: a
+// dedicated zoom LANE (deleted 2026-07-31); the ctrl-exact WAVEFORM press;
+// the RULER's own plain entry (born with row 5 as "the zoom strip reborn",
+// deleted for good 2026-08-12 at the sixth glass ruling); the NAVIGATION
+// SURFACE's ctrl press (which became the ONE nav drag's LIVE ZOOM MODIFIER on
+// 2026-08-14 — ScrollDragState below — rather than being deleted, and is where
+// a ctrl drag zooms today); and the OVERVIEW lane's press, plain at its
+// landing, ctrl-exact from that evening's rework, gone now.
+//
+// WHAT THE GESTURE WAS, in one line, since the box drags inherited its
+// application chokepoint and not its shape: dual-axis and INCREMENTAL off the
+// live level and viewport, dx panning and dy zooming per motion event about a
+// song anchor with the Ableton edge trick rebinding that anchor at the visible
+// bounds, pointer-captured, stem-at-press. Viewport::apply_strip_drag_zoom —
+// the chokepoint it was named for — STAYS: the nav drag's zoom phase, the
+// touch pinch and the overview box's own EDGE drags all drive it.)
 
 // THE PLAIN PRESS ON THE NAVIGATION SURFACE — a PENDING CLICK that becomes the
 // GRAB-PAN (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: pan is
@@ -867,9 +846,10 @@ struct StripDragState {
 // speaks, so a sign taken from the pan would have had the two surfaces
 // disagree on the one thing the rotation existed to make agree. The touch
 // pinch needed no sign of its own either way, being a distance ratio.
-// THE RATE IS ITS OWN CONSTANT since the rotation (kNavZoomPxPerLevel, above):
-// the overview lane's still-vertical zoom keeps kZoomStripPxPerLevel, the two
-// axes having different room to work in.
+// THE RATE IS ITS OWN CONSTANT since the rotation (kNavZoomPxPerLevel, above),
+// and since 2026-08-15 it is the product's ONLY one: it was separate from the
+// overview lane's vertical rate while that lane still zoomed, and the lane's
+// zoom is gone (the record at the deleted kZoomStripPxPerLevel).
 // THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
 // THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE ARITHMETIC
 // (architect 2026-08-14, from the rig: "I've been operating under the
@@ -1018,8 +998,8 @@ struct ScrollDragState {
     // THE ZOOM PHASE'S PIVOT, AND IT IS A SONG POSITION — frames, double, in
     // the ACTIVE display domain — whose COLUMN is re-derived from the live
     // viewport at every zoom event, the frame held stationary under it while
-    // the level changes. The overview lane's strip drag has anchored this way
-    // throughout, edge trick and all (StripDragState above); this gesture
+    // the level changes. The deleted overview strip drag anchored this way
+    // throughout, edge trick and all (its record above), and this gesture
     // anchors the same way again since 2026-08-14.
     //
     // THE SEAT IS SCREEN-BASED AND IS NOT WHAT CHANGED. THE ZOOM STEM IS
@@ -1134,17 +1114,24 @@ struct ScrollDragState {
     double anchor_sample = 0.0;
 };
 
-// THE OVERVIEW LANE'S OWN DRAG (architect-ruled 2026-08-12, post-relayout —
-// the lane rework: "require ctrl on zoom strip also", plain drag = pan only,
-// the box grows trim-style edge handles, a press outside the box teleports).
-// It SUPERSEDES the lane's plain-press strip-drag entry whole; the dual-axis
-// drag lives on the lane's CTRL press now (StripDragState above). THREE kinds
-// on one plain left press, decided at the press by the box geometry (the
-// painter's own derivation, overview_box_span — one owner, app_state.cpp):
+// THE OVERVIEW LANE'S OWN DRAG, AND THE BOX IS THE SUBJECT OF ALL OF IT
+// (architect 2026-08-15, redesigning the lane: "zoom is not what I'm looking
+// for in the overview strip, because the overview strip can indirectly control
+// zoom by directly controlling the outline box" — superseding the 2026-08-12
+// rework's ctrl arm, whose dual-axis strip drag is DELETED WHOLE, its record
+// above ScrollDragState). THE WHOLE VOCABULARY IS ONE SENTENCE — every gesture
+// here acts ON THE BOX and the zoom follows from the box's span — and IT IS
+// IDENTICAL ON BOTH SURFACES because these drags are ABSOLUTE and
+// CAPTURE-FREE: touch reaches every one of them through the ordinary pointer
+// translation, with no touch code of its own (touch.md's lane paragraph).
+// FOUR kinds on one PLAIN left press, decided at the press by the box geometry
+// (the painter's own derivation, overview_box_span — one owner, app_state.cpp):
 //   * EdgeBegin / EdgeEnd — the box outline's LEFT / RIGHT edge as a grab
 //     handle (hit_test_overview_endcap, the trim endcaps' own inflated-band
 //     model and grab width; the endcap claim OUTRANKS everything else on the
-//     lane, plain only). Dragging one MUTATES THE VIEWPORT SPAN: the dragged
+//     lane, plain only — and it is what covers the FULLY ZOOMED OUT case,
+//     where the box fills the lane and there is no outside to press).
+//     Dragging one MUTATES THE VIEWPORT SPAN: the dragged
 //     edge's whole-song position follows the pointer column and the OPPOSITE
 //     bound stays fixed — a zoom anchored at the far edge, applied per event
 //     through Viewport::apply_strip_drag_zoom with the fixed bound as the
@@ -1152,50 +1139,88 @@ struct ScrollDragState {
 //     max-zoom minimum span as the inclusive cannot-cross clamp at the
 //     partner, the effective ceiling through the level pre-clamp +
 //     clamp_viewport_start).
-//   * Pan — everywhere else on the lane: OUTSIDE the box the press TELEPORTS
-//     first (run_overview_teleport — the viewport CENTERS on the pressed
-//     column's whole-song position through the scroll_viewport funnel, a pure
-//     viewport move) and arms this with ZERO grab offset; INSIDE the box the
-//     press grabs the box, its grab-point offset preserved. Either way the
-//     drag is THE BOX-FOLLOWS-POINTER PAN, PAN ONLY: per motion event the
-//     viewport centers on (pointer's whole-song position − grab_offset),
-//     X ONLY — the handler never reads dy, so vertical motion is ignored
-//     structurally ("no cross axis allowance for up/down": this pan has no
-//     zoom axis at all).
-// ABSOLUTE-POSITION DRAGS, the trim endcap model and not the strip-drag one:
-// NO pointer capture, NO anchor stem, per-event synchronous rebuild through
-// the family's clamp chokepoints. A MOTIONLESS release is just the teleport
-// (outside) or a consumed nothing (inside — the lane's v1 rule standing).
+//   * Pan — INSIDE the box: the press grabs the box where it is, its grab-point
+//     offset preserved, and the drag is THE BOX-FOLLOWS-POINTER PAN, PAN ONLY:
+//     per motion event the viewport centers on (pointer's whole-song
+//     position − grab_offset), X ONLY — the handler never reads dy, so vertical
+//     motion is ignored structurally ("no cross axis allowance for up/down":
+//     this pan has no zoom axis at all). A motionless release inside the box is
+//     a consumed nothing, the lane's v1 rule standing.
+//   * Pending — OUTSIDE the box, and THE PRESS ARMS AND ACTS ON NOTHING. It is
+//     the navigation surface's own pending click (ScrollDragState above) in
+//     this lane's vocabulary, for the identical reason, and it resolves two
+//     ways:
+//       - A MOTIONLESS RELEASE runs THE TELEPORT at the PRESS column
+//         (run_overview_teleport — the viewport CENTERS on that column's
+//         whole-song position through the scroll_viewport funnel, a pure
+//         viewport move, zoom level unchanged). THE ACT MOVED TO THE LIFT on
+//         2026-08-15 with this redesign, which closes the last press-time act
+//         in the product — the act-at-lift sweep had excluded it BY OMISSION —
+//         and THE TOUCH CONSEQUENCE IS WHY IT IS WRONG rather than merely
+//         inconsistent: two fingers can never land on the same frame, so a
+//         press-time teleport necessarily fires on the FIRST finger, before any
+//         second-finger gesture can exist. The press column is the point the
+//         user aimed at, the deferred click act's own rule.
+//       - CROSSING the drag threshold is A BOUND DRAG ON WHICHEVER BOUND IS
+//         NEARER THE PRESS COLUMN, running the Edge kinds' own machinery: the
+//         kind and its fixed partner are decided ONCE, AT THE CROSSING, from
+//         the press column against the box's two bounds, and never re-derived
+//         per event — a bound dragged past the pointer would otherwise hand the
+//         gesture to its partner mid-drag.
+// ABSOLUTE-POSITION DRAGS, the trim endcap model and not the deleted strip
+// drag's: NO pointer capture, NO anchor stem, per-event synchronous rebuild
+// through the family's clamp chokepoints.
+// A SECOND CONTACT DURING A LIVE OVERVIEW DRAG IS A NO-OP, and nothing here
+// claims it (architect 2026-08-15, with his own justification: it matches what
+// a THIRD finger does on the waveform). The platform's own rule delivers it:
+// a second finger arriving during a MOVED translation is ignored whole, the
+// mid-gesture-finger-counts-do-not-mutate-a-committed-gesture family, so a live
+// box or bound drag simply carries on. (A MOTIONLESS hold takes the generic
+// motionless-hold UPGRADE instead — its ordinary release IS this lane's
+// motionless release, so an outside hold teleports on the way — and the
+// two-finger gesture that follows is then REFUSED on the lane,
+// apply_touch_nav_update's own lane test.) THE SIMULTANEOUS TWO-BOUND STRETCH
+// — one finger per bound, both moving at once — is DEFERRED and not dropped:
+// it needs a genuine second contact, and the touch layer translates exactly one
+// finger and spends the second on the nav gesture, so it is its own arc.
 // Navigation-class: touches no playhead, no region, no selection, allowed in
 // read-only and live in the `h` view (the lane's claim sits above the mode's
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's
 // funnel, the edge drags apply_strip_drag_zoom's either-axis term — the
 // producer inventory at follow_overridden_for_session. Cursors: the edges
-// wear the trim endcaps' own pair, the rest of the lane TrimResize for the
-// pan, and ALL THREE DRAGS KEEP THEIR CUE for the gesture's life, read from
-// this record's own `kind` (the trim exception's rule — the edges took it at
-// the lane rework and the PAN joined 2026-08-13, the architect closing the one
-// live lane drag that fell back to the Arrow mid-slide; pointer_cursor_kind).
+// wear the trim endcaps' own pair and the rest of the lane TrimResize, hover
+// and drag alike, and EVERY LIVE DRAG KEEPS ITS CUE for the gesture's life,
+// read from this record's own `kind` (the trim exception's rule — the edges
+// took it at the lane rework and the PAN joined 2026-08-13, the architect
+// closing the one live lane drag that fell back to the Arrow mid-slide;
+// a Pending wears the resting TrimResize its press point already showed, and
+// the crossing re-reads the kind, so the cue changes to the grabbed bound's
+// arrow exactly when the bound is grabbed; pointer_cursor_kind). CTRL BINDS
+// NOTHING ON THE LANE any more — it went with the strip drag — so a ctrl press
+// is a consumed nothing and ctrl's hover answer is the Arrow, the map's own
+// rule for a modifier that arms nothing.
 // Cleared on button release / lost
 // button, by the force-end finalizer, and on file load; pointer gestures
-// have no cancel.
-enum class OverviewDragKind { Pan, EdgeBegin, EdgeEnd };
+// have no cancel, and a force-ended PENDING commits nothing (a force-end is
+// not a click, so no teleport runs — the pendings' own rule).
+enum class OverviewDragKind { Pending, Pan, EdgeBegin, EdgeEnd };
 
 struct OverviewDragState {
     bool active = false;
     bool moved  = false;   // crossed the threshold into a real drag
     OverviewDragKind kind = OverviewDragKind::Pan;
-    int  press_x = 0;      // press position (window px): the Chebyshev gate
+    int  press_x = 0;      // press position (window px): the Chebyshev gate,
+                           // AND the Pending kind's teleport column
     int  press_y = 0;
     // Pan only: active-domain offset between the pressed column's whole-song
-    // position and the viewport CENTER at the grab — zero after a teleport
-    // (the teleport just centered there), the grab-point offset inside the
-    // box. Each motion event centers on (pointer position − this).
+    // position and the viewport CENTER at the grab — the grab-point offset
+    // inside the box. Each motion event centers on (pointer position − this).
     double grab_offset = 0.0;
     // Edge drags only: the FIXED (opposite) viewport bound's active-domain
-    // position, captured at the press and held for the drag's life — the
-    // per-event zoom's anchor (anchor_x = that bound's own window column,
-    // 0 for the start, area.w for the end).
+    // position, captured when the drag is decided — at the press for an endcap
+    // grab, at the CROSSING for a Pending that resolves into one — and held for
+    // the drag's life: the per-event zoom's anchor (anchor_x = that bound's own
+    // window column, 0 for the start, area.w for the end).
     double fixed_edge_sample = 0.0;
 };
 
@@ -1250,8 +1275,10 @@ struct OverviewDragState {
 // the architect's explicit ruling for the second time (touch.md's two-finger
 // section carries the first and his reason).
 // THE SEAT IS ALSO THE ANCHOR STEM'S GATE since 2026-08-14, the pinch being
-// the stem's THIRD producer (paint_strip_drag_anchor, paint_handler.cpp): the
-// gesture record and nothing else, exactly the other two producers' shape. BOTH
+// one of the stem's TWO producers since 2026-08-15 — it joined as the third and
+// the overview lane's strip drag left (paint_strip_drag_anchor,
+// paint_handler.cpp): the
+// gesture record and nothing else, exactly the other producer's shape. BOTH
 // EDGES OWE DAMAGE and neither is free: the SEAT damages at its own site (a
 // seating frame need not apply anything at all under the ordering above, and
 // even one that does can be dropped by apply_strip_drag_zoom's true-no-op
@@ -2434,11 +2461,12 @@ struct AppState {
     //     scroll, the PLAIN-DRAG grab-pan (both plain since 2026-08-12, the
     //     eighth glass ruling — pan-primary; the alt forms are deleted), and —
     //     since the overview lane's rework later that day — the lane's
-    //     CLICK-TELEPORT (run_overview_teleport, the press-time centering: a
+    //     CLICK-TELEPORT (run_overview_teleport, the centering that a motionless
+    //     release outside the box runs since 2026-08-15: a
     //     pure viewport move of the pan class) and its BOX-FOLLOWS-POINTER PAN
     //     (apply_overview_drag_at's Pan arm, per event); plus
     //     Viewport::apply_strip_drag_zoom, which bypasses that
-    //     funnel and suppresses on EITHER of the strip drag's two axes — its own
+    //     funnel and suppresses on EITHER axis its callers write — its own
     //     viewport write AND its level write, the drag's zoom being SONG-ANCHORED
     //     and so carrying the view off the scanner the same way a pan does (a
     //     level change can leave the viewport start bit-identical, which is why
@@ -2854,11 +2882,6 @@ struct AppState {
     // bounds), and on file load.
     TrimDragState trim_drag;
 
-    // The dual-axis zoom/pan navigation drag — the overview lane's ctrl drag,
-    // its one entry since 2026-08-14 (the contract is at StripDragState).
-    // Cleared on button release and file load.
-    StripDragState strip_drag;
-
     // Double-click candidate, shared by the trim-bar, flag, empty-lane and
     // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
     // motionless press-release (or, for Marker alone, at the press — the
@@ -2875,7 +2898,8 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and file load.
     ScrollDragState scroll_drag;
 
-    // The overview lane's plain drag — the box pan and the box-endcap edge
+    // The overview lane's plain drag — the pending outside press, the box pan
+    // and the box-endcap edge
     // drags (contract at OverviewDragState). Cleared on button release / lost
     // button, by the force-end finalizer, and on file load.
     OverviewDragState overview_drag;
@@ -4016,7 +4040,8 @@ struct AppState {
     // scroll, the plain wheel's stepped pan and the overview command move
     // viewport_start_sample or zoom_level,
     // the
-    // pointer's plain-drag pan and ctrl strip drag move both, the mode's OWN
+    // pointer's ONE nav drag moves both through its pan and ctrl zoom phases,
+    // the mode's OWN
     // cursor-moving
     // acts land the playhead (the diff-flag click, the deferred click act, and
     // the
@@ -4889,9 +4914,10 @@ GuiRect top_icon_row_area(const AppState& a);
 // the TRIM BAR, inside the centered block — min/max bars off the peaks pyramid,
 // the viewport box, the playhead tick, and — since the lane rework later that
 // day — the box-endcap edge drags, the click-teleport and the
-// box-follows-pointer pan on the PLAIN press (OverviewDragState) with the
-// dual-axis strip drag behind CTRL — its one entry since 2026-08-14 (the
-// record at arm_strip_drag_at). ONE fixed tiny height
+// box-follows-pointer pan, ALL of them on the PLAIN press and all of them
+// acting on the BOX (OverviewDragState; the ctrl strip drag that shared the
+// lane until 2026-08-15 is deleted, and ctrl binds nothing here now).
+// ONE fixed tiny height
 // on every host (the ruling, the deleted min/max clamp pair and the 1px
 // border-bottom are all at render.h's kOverviewHeightPx). It was a BOTTOM-strip
 // lane under the unified row for the afternoon it landed;
@@ -4912,8 +4938,9 @@ GuiRect top_ruler_row_area(const AppState& a);
 // ctrl+shift bound-set clicks, the span-framing double-click), while the RULER
 // is a member of the NAVIGATION SURFACE since 2026-08-12's eighth glass ruling
 // — plain drag is the pending click / grab-pan, a motionless plain click the
-// deferred playhead placement, SHIFT the one region former, CTRL the dual-axis
-// strip drag. (Its own dedicated strip-drag entry and the ruler-scoped region
+// deferred playhead placement, SHIFT the one region former, CTRL that same
+// drag's live zoom phase (2026-08-14's one-model ruling; it was the dual-axis
+// strip drag for two days). (Its own dedicated strip-drag entry and the ruler-scoped region
 // former it briefly carried are both gone: the entry was deleted for good
 // earlier that day, and the former lived half a day before the ruling folded
 // the ruler into the one vocabulary. top_trim_surface_area — the trim surface
@@ -4954,10 +4981,10 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // lane scale, a source frame by construction — mapped INTO the active domain
 // in target view (source_frame_to_active_domain) so the value is
 // domain-correct for every consumer. Returns a frame position as a double.
-// THREE consumers since the lane rework (2026-08-12): the ctrl strip drag's
-// anchor, the click-teleport's centering position, and the box pan / edge
-// drags' per-event pointer position (which column-clamp x into the lane
-// first — the song walls by construction).
+// TWO consumers since the ctrl strip drag's deletion (2026-08-15; three from
+// the lane rework until then): the click-teleport's centering position and the
+// box pan / edge drags' per-event pointer position (both of which column-clamp
+// x into the lane first — the song walls by construction).
 double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
                                    int x);
 // THE VIEWPORT BOX'S LANE COLUMNS — the ONE owner of the box arithmetic,
@@ -5060,7 +5087,7 @@ inline int64_t snap_authored_frame(double frame) {
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
-           app.strip_drag.active || app.scroll_drag.active ||
+           app.scroll_drag.active ||
            app.overview_drag.active ||
            app.region_drag.active || app.editor_text_drag.active ||
            app.pending_marker_drag.active ||
@@ -5332,8 +5359,9 @@ double  effective_max_zoom_level(int waveform_width_px,
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 // The rightmost on-grid viewport start (the flush-right rest). The single
-// right-wall owner, shared by the clamp_viewport_start chokepoint and the strip
-// drag's per-event pan clamp (apply_strip_drag_at) so both derive the same wall.
+// right-wall owner, hoisted out of the clamp_viewport_start chokepoint when the
+// deleted strip drag's per-event pan clamp needed the same wall; that caller
+// left with the gesture (2026-08-15) and the chokepoint is the one reader again.
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);

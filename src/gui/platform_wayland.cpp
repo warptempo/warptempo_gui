@@ -2686,7 +2686,7 @@ void GuiPlatform::flush_deferred_motion() {
     // dispatch at arrival. Delivering the pending motion here, immediately before
     // any button, guarantees the button handler runs against the latest
     // accumulated position: a press -> threshold-crossing motion -> release inside
-    // one frame then reaches the release with StripDragState.moved already true,
+    // one frame then reaches the release with the drag's `moved` already true,
     // so the drag commits and a trim-bar release does not wrongly seed a
     // double-click candidate. Clearing the flag means on_pointer_frame's trailing
     // delivery does not double-fire the same motion.
@@ -4067,10 +4067,11 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // the stale travel survived until the user next physically moved
             // the mouse, and a click made before that moved was routed at it.
             // THE DEFECT THAT CLOSED (historical account — the ruler entry it
-            // rode is deleted for good since 2026-08-12, the strip drag arming
-            // from the ctrl-waveform press alone now; the exposure and this
-            // fix are entry-agnostic): a ruler-band press armed the strip drag
-            // (arm_strip_drag_at), a drag UP to zoom walked the virtual
+            // rode was deleted for good on 2026-08-12 and the dual-axis strip
+            // drag itself on 2026-08-15; the exposure and this
+            // fix are entry-agnostic, and the nav drag's own capture reaches
+            // them the same way): a ruler-band press armed that strip drag,
+            // a drag UP to zoom walked the virtual
             // position up out of the ruler and into row 4's icon band — one
             // zoom level is 60 px, the bands ~20-70 px apart — the release
             // drew the cursor back on the ruler at the press row, and the NEXT
@@ -4208,7 +4209,7 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // button-delivery site calls flush_deferred_motion() first: the pending
     // motion is delivered before the button, so a fast press -> motion -> release
     // inside one frame cannot reach the release with the drag's motion still
-    // undelivered (which would leave StripDragState.moved false and lose the
+    // undelivered (which would leave the drag's `moved` false and lose the
     // gesture).
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;

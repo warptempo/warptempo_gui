@@ -414,10 +414,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region drags, the one nav drag and its pending
+    // trim / region drags, the one nav drag and its pending
     // click (scroll_drag — one state for the pending, the pan and the ctrl
-    // zoom phase since 2026-08-14),
-    // the overview lane's box drag (overview_drag — the pan and the edge
+    // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
+    // until its deletion, 2026-08-15),
+    // the overview lane's box drag (overview_drag — the pending outside press,
+    // the pan and the edge
     // drags, one state for the pending and moved phases since the lane
     // rework the same day),
     // and the
@@ -433,7 +435,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
-        app.strip_drag.active || app.region_drag.active ||
+        app.region_drag.active ||
         app.scroll_drag.active || app.overview_drag.active ||
         app.pending_marker_drag.active ||
         app.pending_trim_drag.active) {
