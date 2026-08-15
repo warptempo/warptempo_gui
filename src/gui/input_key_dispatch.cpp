@@ -213,6 +213,18 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // typed trim arm (settings_editor.cpp) were all deleted the same day, so the
 // whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
 // rule with no site left to disagree with it.
+// THE LOCK NOW HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
+// 2026-08-15): ten icon-row buttons wear the disabled face while the active
+// tab is locked, so the toggle looks the way the `h` history view already looks
+// — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), the propagate
+// copy/paste pair, the BPM and iteration openers, listen and the load-in-place,
+// which is exactly what this allowlist drops. THE MIRROR IS HAND-LISTED at
+// redesign_button_enabled (app_state.h) rather than derived by walking the
+// chord table through this predicate, and the two classes that walk gets wrong
+// are recorded there — chords claimed ABOVE this gate, whose "blocked" here is
+// vacuous, and the buttons the ruling deliberately leaves lit. SO A CHANGE TO
+// THE ADMISSIONS BELOW NEEDS A HAND EDIT THERE; nothing else in the product
+// reads this gate for a face.
 bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -1293,11 +1305,15 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // not move when this claim arrived: the pair was already answered LIVE by hand,
 // and the derivation now says the same thing, which is what let the hand entry
 // go — BARE `,` / BARE `.`, the walk's own two buttons (2026-08-05), which
-// were the roster's first RESTING-DISABLED entries: their enabled bit is the
-// mode itself, so they dispatch these keys only from in here — and BARE `u`,
-// the Cumulative toggle's own button (2026-08-08), which joined that
-// resting-disabled family on exactly the same terms. Nothing in the roster
-// dispatches bare Tab, Home, End or `c`.
+// were the roster's first RESTING-DISABLED entries — their enabled bit WAS the
+// mode itself, which is how they dispatched these keys only from in here — and
+// BARE `u`, the Cumulative toggle's own button (2026-08-08), which joined that
+// family on exactly the same terms. THE FAMILY IS RETIRED since 2026-08-15
+// (the four answer a plain `true` now — the ruling is at
+// redesign_button_enabled) and what keeps them from dispatching outside the
+// view is the EMPTY RECT the bottom row publishes for them there, the arrows
+// holding those slots. Nothing in the roster dispatches bare Tab, Home, End or
+// `c`.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
     // CTRL IS THE TAB CYCLE'S AND NOTHING ELSE'S, IN BOTH DIRECTIONS since
@@ -1630,9 +1646,17 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         clear_region_highlight(app, viewport);
         // The ACTIVE domain's own ends: live_total_frames is what the displayed
         // timeline runs to in either view, and it is the same total the
-        // full-window trim range resolves to.
-        const int64_t live_total = live_total_frames(app, audio);
-        viewport.move_playhead_to(key == GuiKeys::Home ? 0 : live_total - 1);
+        // full-window trim range resolves to. THE ARITHMETIC LIVES AT THE
+        // SHARED OWNER since 2026-08-15 (playhead_skip_landing_frame,
+        // viewport.cpp), which forks on this very mode bit — one spelling for
+        // the three arms that jump, and for nothing else: the bottom row's two
+        // SKIP buttons read it for one revision and no longer do (they are lit
+        // unconditionally, the ruling and its reason at their case in
+        // redesign_button_enabled). The owner's clamp is idempotent on a value
+        // move_playhead_to would clamp anyway, so this jump is byte-identical
+        // to the hand-spelled one.
+        viewport.move_playhead_to(
+            playhead_skip_landing_frame(app, audio, key == GuiKeys::End));
         return true;
     }
 
@@ -5265,6 +5289,21 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // selection. Without it the flag would keep claiming to be the playhead
         // at its own position and the next bare arrow would tow the playhead
         // back onto the marker, silently discarding the jump.
+        //
+        // THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
+        // (playhead_skip_landing_frame, viewport.cpp — Viewport::trim_range's
+        // begin, pre-clamped), which the three arms that jump share so the
+        // bound is spelled once. The clamp is idempotent on what
+        // move_playhead_to would clamp anyway, so nothing about this jump
+        // changed. THE THREE STEPS ABOVE RUN ON A NO-OP JUMP TOO and are
+        // deliberately not gated on it: the audition stop, the lane exit's
+        // selection clear and the region dissolve are unconditional, so this
+        // key ACTS even when the cursor already rests on the landing frame.
+        // THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY THERE (architect
+        // 2026-08-15, taking back the face that did): a grey would promise less
+        // than this arm delivers, and gating the three steps to make the grey
+        // honest would change behaviour. The full record is at the skips' case
+        // in redesign_button_enabled.
         playback_lifecycle.stop_playback_if_playing();
         if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
             selection.clear_selection();
@@ -5273,7 +5312,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Navigation jump to the trim-begin bound: dissolve a
         // resting region (its span is stale now the playhead jumps).
         clear_region_highlight(app, viewport);
-        viewport.move_playhead_to(viewport.trim_begin_sample());
+        viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
+                                                              false));
         break;
     case GuiKeys::End:
         playback_lifecycle.stop_playback_if_playing();
@@ -5282,7 +5322,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             viewport.invalidate_waveform_area();
         }
         clear_region_highlight(app, viewport);
-        viewport.move_playhead_to(viewport.trim_end_sample() - 1);
+        // The owner's `forward` arm, which is trim_range's END minus one — the
+        // last frame INSIDE the window (see the Home arm above).
+        viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
+                                                              true));
         break;
     default: break;
     }

@@ -1963,8 +1963,8 @@ int main(int argc, char** argv) {
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
-                                      app, playback, audio.total_frames(),
-                                      id) ||
+                                      app, playback,
+                                      audio.total_frames(), id) ||
                     f.selected != redesign_button_selected(app, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))

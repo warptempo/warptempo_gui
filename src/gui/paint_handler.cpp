@@ -530,7 +530,7 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // standing modal (the contract at paint_bottom_strip's yield branch).
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app, const GuiPlayback& playback,
-    int64_t total_frames, RedesignButton id, const GuiRect& rect) {
+    const GuiAudio& audio, RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
@@ -545,8 +545,8 @@ AppState::RedesignButtonFace& publish_button_face(
             static_cast<double>(rect.y + rect.h) <= cy2;
     }
     if (pixels_covered) {
-        face.enabled  = redesign_button_enabled(app, playback, total_frames,
-                                                id);
+        face.enabled  = redesign_button_enabled(app, playback,
+                                                audio.total_frames(), id);
         face.selected = redesign_button_selected(app, id);
     }
     return face;
@@ -1046,7 +1046,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio.total_frames(), def.id,
+            cr, app, playback, audio, def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
@@ -1195,7 +1195,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const int btn_w = widths[i];
 
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, playback, audio.total_frames(),
+                cr, app, playback, audio,
                 kViewBarButtons[i].id, GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
@@ -1392,7 +1392,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // predicate's own active_tab_view compare, so the painted face below
         // reads THE SAME fact the comparator replays, with no second spelling.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio.total_frames(), def.id,
+            cr, app, playback, audio, def.id,
             GuiRect{x, content_y, tab_w, content_h});
         const bool selected = face.selected;
 
@@ -1894,22 +1894,31 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // press is transient and its feedback should be the same wherever it lands,
     // so the pressed tint replaces the selected fill for exactly the hold and
     // the selected fill returns at the release.
-    // THE DISABLED FACE IS THE EXCEPTION FAMILY'S AND THE TOOLBAR MIGRANTS':
-    // the row's own members never grey —
-    // presses always dispatch and the CHORDS' OWN refusals answer (the
-    // read-only gate blocks the authoring ones, loading blocks everything),
-    // inherited through on_key rather than mirrored — while the toolbar four
+    // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
+    // the row's own members never grey for a REFUSAL —
+    // presses always dispatch and the CHORDS' OWN refusals answer (loading
+    // blocks everything, and each arm keeps its home-view, empty-selection and
+    // occupied-frame guards), inherited through on_key rather than mirrored —
+    // while the toolbar four
     // BROUGHT their real disabled derivations with them at the 2026-08-12
     // relayout (Undo/Redo's locked-tab and empty-stack terms, Save's
     // in-flight lockout, Render's source path — redesign_button_enabled's
     // own arms, painted by this body's generic keep-mix with nothing added
-    // here). THE ONE RULED EXCEPTION IS THE `h` HISTORY VIEW'S, and it is a
-    // MODE rather than a refusal, which is what the per-press refusals above
-    // cannot express: while the view stands it greys every button in this row
-    // whose act it consumes (architect 2026-08-04, at the face code below).
-    // The never-grey rule's INVERTED exception — the four resting-disabled
+    // here). THE TWO RULED EXCEPTIONS ARE BOTH MODES rather than refusals,
+    // which is what the per-press refusals above cannot express: the `h`
+    // HISTORY VIEW greys every button in this row whose act it consumes
+    // (architect 2026-08-04, at the face code below), and since 2026-08-15 the
+    // per-tab READ-ONLY LOCK greys the TEN it blocks — the four marker verbs,
+    // the copy/paste pair, the BPM and iteration openers, listen and the
+    // load-in-place — so the lock looks the way the view already looks
+    // (architect; the read-only-LEGAL buttons beside them stay lit, which is
+    // the 2026-08-07 band ruling). A mode is entered deliberately and does not
+    // flicker, which is exactly what separates these two from the refusals the
+    // row still swallows silently. The never-grey rule's INVERTED exception —
+    // the four resting-disabled
     // history buttons, live only inside the view — left this row on
-    // 2026-08-14 with the buttons; it is the BOTTOM row's now. All of it lives
+    // 2026-08-14 with the buttons, and the buttons dropped it whole on
+    // 2026-08-15. All of it lives
     // at redesign_button_enabled, so this row's painter needs no arm of its
     // own.
     const GuiRect lane = top_icon_row_area(app);
@@ -1991,12 +2000,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio.total_frames(), def.id,
+            cr, app, playback, audio, def.id,
             GuiRect{x, btn_y, btn, btn});
 
-        // THE SIXTH FACE, AND THE ROW'S ONLY DEAD ONE: the `h` history view
-        // (architect 2026-08-04). It is the ruled EXCEPTION to the never-grey
-        // rule above, scoped to that mode alone, and since 2026-08-14 EVERY
+        // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
+        // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
+        // are ruled EXCEPTIONS to the never-grey rule above and both are MODE
+        // statements — that is what earns them the face, a refusal alone never
+        // does. Since 2026-08-14 EVERY
         // button in this row the view consumes wears it — the trim scissors,
         // the four marker verbs, Undo / Redo / Render, the mass-marker five,
         // listen, the read-only toggle, and the MOMENT-STATE Save (an empty
@@ -2005,6 +2016,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // stay live. Which is which is DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
         // partition is inventoried); nothing here decides membership.
+        // THE LOCK'S TEN are the marker verbs, the copy/paste pair, the BPM and
+        // iteration openers, listen and the load-in-place, and they are HAND-
+        // LISTED at redesign_button_enabled with read_only_key_blocked named as
+        // their owner — the one place in this face's membership that is not
+        // derived, for reasons recorded there. This painter decides neither.
         //
         // THE FACE IS THE ROW'S OWN INKS AT kRedesignDisabledMix — the product's
         // one disabled blend, row 2's rule applied to this row's glyph and
@@ -2106,9 +2122,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
 //   Home), play and stop (the ONE bare Space binding over two state-mirrored
 //   buttons: Play greyed while an audition runs or where a launch would
-//   refuse, Stop while no audition runs — the 2026-08-15 honesty arms at
-//   redesign_button_enabled), and
-//   skip-forward (bare End);
+//   refuse, Stop while no audition runs — the 2026-08-15 honesty arm at
+//   redesign_button_enabled, and THE ROW'S TRUTHFUL HALF ENTIRE), and
+//   skip-forward (bare End). THE TWO SKIPS ARE LIT UNCONDITIONALLY, which is
+//   ruled and not unfinished: they greyed on the landing frame for one
+//   revision that same day and the architect took it back, bare Home / End
+//   not being pure jumps — each also stops a live audition, clears the
+//   selection and dissolves a region even when the cursor already rests where
+//   it would land — so the grey promised less than the key delivers. The right
+//   cluster is ruled untruthful and always enabled too; both reasonings are at
+//   that predicate;
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
 //   and the no-wiggle cell are all at kClockShape below);
@@ -2167,13 +2190,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
-// blend — worn here by the play/stop pair's resting halves, by the history
-// cluster's conditional greys (Revert with no diff flag selected) and by
-// whatever the `h` history view's derived partition greys (Space is consumed
-// in the view, so Play and Stop grey; Home/End are the mode's own vocabulary,
-// so the two skips stay live — all at redesign_button_enabled, nothing decided
-// here). The ARROWS' own in-view grey went with them: they are not painted in
-// there at all now. The
+// blend — worn here by the PLAY / STOP PAIR ALONE, which is the row's truthful
+// half (architect 2026-08-15): that pair's resting halves, plus whatever the
+// `h` history view's derived partition greys (Space is consumed in the view, so
+// Play and Stop grey there too — all at redesign_button_enabled, nothing
+// decided here). THE TWO SKIPS NEVER WEAR IT and that is a ruling, not an
+// omission: they greyed on the landing frame for one revision and the architect
+// took it back the same day, bare Home / End not being pure jumps — each also
+// stops a live audition, clears the selection and dissolves a region, no-op
+// jump included — so the grey promised less than the key delivers. Inside the
+// view they stay lit as well, Home/End being the mode's own vocabulary. THE
+// RIGHT CLUSTER NEVER WEARS IT EITHER: the four arrows and the four history
+// companions are always enabled by that same ruling, Revert's old conditional
+// grey included, because a glyph blinking on every marker selection restates
+// what the selection already shows. The ARROWS have no in-view answer to paint
+// anyway: they are not painted in there at all. The
 // ONE box-model difference is the border edge: this lane's 1px border is on
 // TOP, the waveform side — the bottom strip's chrome grows toward the
 // waveform, so the border facing it is the one drawn (the mirror of the icon
@@ -2317,7 +2348,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // row.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio.total_frames(), def.id,
+            cr, app, playback, audio, def.id,
             GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
@@ -2407,7 +2438,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const TransportRowDef* hidden =
             history ? kTransportArrowGroup : kHistoryClusterGroup;
         for (int i = 0; i < 4; ++i) {
-            publish_button_face(cr, app, playback, audio.total_frames(),
+            publish_button_face(cr, app, playback, audio,
                                 hidden[i].id, GuiRect{0, 0, 0, 0});
         }
         const int cluster_w = 4 * btn + 3 * btn_gap;
@@ -4594,18 +4625,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // BOTH right-cluster tables, whichever one the mode would have
         // painted: the row's tenants stand down whole (2026-08-14 — the
         // history companions are tenants of this row now).
         for (const TransportRowDef& def : kTransportArrowGroup) {
-            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kHistoryClusterGroup) {
-            publish_button_face(cr, app, playback, audio.total_frames(), def.id,
+            publish_button_face(cr, app, playback, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

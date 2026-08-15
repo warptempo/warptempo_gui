@@ -12,7 +12,15 @@
 
 // THE NAVIGATION RANGE (contract at the declaration): Home/End's jump bounds and
 // the load-time playhead, and since 2026-08-05 no playback consumer at all.
-std::pair<int64_t, int64_t> Viewport::trim_range() const {
+//
+// ITS BODY IS A FREE FUNCTION since 2026-08-15 and the member DELEGATES, so
+// there is still exactly ONE arithmetic: playhead_skip_landing_frame (below,
+// declared in app_state.h) must answer the same bounds the two Home/End arms
+// jump to, and it is a free function itself for the same reason. The member
+// keeps its name and its callers; nothing about the range moved.
+namespace {
+std::pair<int64_t, int64_t> navigation_trim_range(const AppState& app,
+                                                  const GuiAudio& audio) {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store
@@ -53,9 +61,43 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
     }
     return compute_trim_samples(app, audio.total_frames());
 }
+}  // namespace
+
+std::pair<int64_t, int64_t> Viewport::trim_range() const {
+    return navigation_trim_range(app, audio);
+}
 
 int64_t Viewport::trim_begin_sample() const { return trim_range().first; }
 int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
+
+// WHERE BARE Home / End WOULD LAND THE CURSOR — the contract, the `h` fork and
+// the clamp's purpose are all at the declaration (app_state.h). THREE READERS,
+// ALL OF THEM ACTS, which is what the hoist is for: the live Home and End arms
+// (handle_plain_bare_keys, input_key_dispatch.cpp) and the history view's own
+// absolute pair (handle_history_mode_key, same file), three jumps sharing one
+// spelling of one bound instead of three hand-written ones. A FOURTH READER
+// LIVED ONE REVISION and is gone by ruling — the bottom row's two SKIP buttons
+// greyed where the cursor already rested on the landing frame, and the architect
+// took that face back the same day because bare Home / End are not pure jumps
+// (each also stops a live audition, clears the selection and dissolves a
+// region, no-op jump included), so the grey promised less than the key
+// delivers. Do not re-add a face reader here; the full record is at the skips'
+// case in redesign_button_enabled (app_state.h).
+int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
+                                    bool forward) {
+    if (app.history_mode.active) {
+        // The view reviews the WHOLE piece (architect 2026-08-05), so its ends
+        // are the ACTIVE DOMAIN's own — live_total_frames is what the displayed
+        // timeline runs to in either audio view — and deliberately not the trim
+        // bounds. With a full trim window the two answers coincide.
+        return clamp_playhead_to_live_domain(
+            forward ? live_total_frames(app, audio) - 1 : 0, app, audio);
+    }
+    const std::pair<int64_t, int64_t> range =
+        navigation_trim_range(app, audio);
+    return clamp_playhead_to_live_domain(
+        forward ? range.second - 1 : range.first, app, audio);
+}
 
 // Viewport changes repaint the waveform area and the top strip together:
 // flag positions depend on the viewport, so any pan/zoom has to refresh

@@ -248,7 +248,11 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // is the same kind of thing — a PAINT-ONLY variant of the whole surface. The
 // crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button: these
 // three are never disabled (redesign_button_enabled returns true for them, with
-// rows 1, 3 and 4), so there is no dimmed face here at all.
+// the rest of row 1 and with row 3), so there is no dimmed face here at all.
+// (The clause used to name ROW 4 alongside them and no longer can: the icon row
+// greys for two MODES since 2026-08-15 — the `h` view and the read-only lock.
+// The view bar is untouched by either, its 1/2/3 being navigation, which is
+// what keeps this crop set free of a real disabled face.)
 //
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is
