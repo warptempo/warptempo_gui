@@ -71,11 +71,30 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // exactly, and cross during gestures; ordering degeneracy collapses at the
 // render boundary, not at authoring time.)
 
-// Vertical drag distance (px) that moves the strip drag by one continuous
-// level. The strip zoom drags DOWN to zoom in (deeper, lower level) and UP to
-// zoom out. Both this scale and that direction are architect-tunable on the
-// labwc pass.
+// THE OVERVIEW LANE'S RATE, and its alone since 2026-08-14 (the rotation
+// below): VERTICAL drag distance (px) that moves the OVERVIEW LANE's dual-axis
+// ctrl strip drag by one continuous level. That gesture's zoom is still
+// vertical — it drags DOWN to zoom in (deeper, lower level) and UP to zoom out,
+// with its dx spending itself on the pan. Both this scale and that direction
+// are architect-tunable on the labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
+
+// THE NAV DRAG'S RATE, on its HORIZONTAL axis (architect 2026-08-14, the
+// rotation: the ctrl phase reads dx where it read dy — the contract and the
+// sign's derivation are at ScrollDragState below). Horizontal drag distance
+// (px) that moves the navigation drag's zoom phase by one continuous level.
+//
+// SEPARATE FROM kZoomStripPxPerLevel RATHER THAN SHARED WITH IT, because the
+// two are no longer the same quantity: a px-per-level measured across ~1920 px
+// of horizontal room is a different ergonomic from one measured across the
+// overview lane's ~500 px of vertical, and one constant would have made a
+// retune of either gesture silently move the other.
+//
+// 60 IS THE VERTICAL VALUE CARRIED OVER UNCHANGED as a starting point — a first
+// guess, not a measurement. At this rate the horizontal gesture crosses the
+// whole [kMinZoom, effective ceiling] span in roughly 960 px of travel.
+// Architect-tunable on the rig, exactly as the vertical one always was.
+constexpr double kNavZoomPxPerLevel = 60.0;
 
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -786,24 +805,52 @@ struct StripDragState {
 // translates, and asymmetry between them is ACCEPTED WHERE GENUINE, exactly
 // as warp markers carry information where phase resets carry only placement.
 // This is ONE drag with
-// two phases, not two gestures: while ctrl is up each event's dx pans 1:1 and
-// dy is discarded; while ctrl is held each event's dy zooms
-// (dy/kZoomStripPxPerLevel, about the seated pivot) and dx is discarded —
-// each phase one exact axis, the deleted segment lock's answer reached by the
-// modifier instead of by classification (the ladder's record above
-// kZoomStripPxPerLevel). THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
-// THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE DISCARD
+// two phases, not two gestures, AND BOTH PHASES NOW READ THE SAME AXIS
+// (architect 2026-08-14, THE ROTATION — from the rig: "we should rotate the
+// axis of zoom, because on the touchpad zoom is also a horizontal pinch motion
+// — it just happens to have two fingers"): while ctrl is up each event's dx
+// pans 1:1, while ctrl is held each event's dx zooms
+// (dx/kNavZoomPxPerLevel, about the seated pivot), and dy is DISCARDED IN
+// BOTH. The vertical axis has left this drag entirely.
+// THE MODIFIER CHANGES WHAT HORIZONTAL TRAVEL MEANS rather than which axis is
+// live, and that is the whole argument: on glass ONE finger sliding sideways
+// pans and TWO fingers sliding sideways pinch, so the desk's plain-drag /
+// ctrl-drag pair reads as the same sentence the panel already speaks. THIS IS
+// A GENUINE CONVERGENCE, not a symmetry chased for its own sake — the standing
+// ruling is that asymmetry between the two surfaces is ACCEPTED WHERE GENUINE
+// (the co-equality paragraph above), and what happened here is that the
+// difference stopped being real: the same hand motion means the same thing on
+// both, so there is nothing left to except.
+// THE SIGN: LEFT ZOOMS IN, RIGHT ZOOMS OUT (`new_level = zoom_level +
+// dx/kNavZoomPxPerLevel`, and a smaller level is deeper in). The derivation is
+// the plain drag's own sense — dragging LEFT advances the view forward through
+// the piece — plus the fact that a piece OPENS at full zoom out, so forward
+// motion means in.
+// THE RATE IS ITS OWN CONSTANT since the rotation (kNavZoomPxPerLevel, above):
+// the overview lane's still-vertical zoom keeps kZoomStripPxPerLevel, the two
+// axes having different room to work in.
+// THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
+// THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE ARITHMETIC
 // (architect 2026-08-14, from the rig: "I've been operating under the
 // assumption that the zoom control would lock the x position... we need to
-// clamp to zero horizontal movement on zoom"). Discarding dx says the VIEW
-// ignores sideways travel; the pointer's notional position went on
-// accumulating every pixel of it, and because nothing on screen answered that
-// travel it was invisible — so a later ctrl-down seated the pivot far from
-// where the pointer was believed to be, and a zoom→pan switch's release
-// restored the cursor out there too. The freeze is asserted at the crossing
-// and at every ctrl edge and lives where the position is accumulated
-// (GuiPlatform::set_notional_x_frozen); the TRAVEL LEDGER is untouched, so
-// this changes no delta anywhere, including this drag's own. THE Y HAS NO
+// clamp to zero horizontal movement on zoom"). THE ROTATION MADE THE FREEZE
+// MORE NECESSARY, NOT LESS: the zoom phase now SPENDS its lateral travel on
+// the level, and the pointer's position must not spend it a second time.
+// Without the freeze a zoom would be CAPPED AT THE WINDOW'S WIDTH, because the
+// notional position clamps into the surface where the travel ledger does not
+// — so the freeze is exactly what keeps the zoom's travel unlimited, as the
+// vertical axis was unlimited by having no notional coordinate at all.
+// THE ORIGINAL PREMISE IS SUPERSEDED BUT THE HISTORY IS KEPT, because it is
+// how the freeze came to exist and it is still true of the model it was
+// written for: back then the zoom DISCARDED dx, the pointer's notional
+// position went on accumulating every pixel of it, and because nothing on
+// screen answered that travel it was invisible — so a later ctrl-down seated
+// the pivot far from where the pointer was believed to be, and a zoom→pan
+// switch's release restored the cursor out there too. The freeze is asserted
+// at the crossing and at every ctrl edge and lives where the position is
+// accumulated (GuiPlatform::set_notional_x_frozen); the TRAVEL LEDGER is
+// untouched, so this changes no delta anywhere, including this drag's own.
+// THE Y HAS NO
 // TWIN, deliberately — there is no notional y to freeze, and the restore's
 // press-row y is an unchanged ruling (the reasoning is recorded at
 // GuiPlatform::notional_pointer_x_).
@@ -826,12 +873,13 @@ struct StripDragState {
 //     and the withdrawn persist-across-toggles experiment are recorded at
 //     anchor_sample below) — and the anchor stem paints there, at the edge
 //     itself (the ctrl-armed press paints it from the PRESS, the stem-at-press
-//     ruling kept). The level itself cannot jump — dy is a per-event delta off
+//     ruling kept). The level itself cannot jump — dx is a per-event delta off
 //     the LIVE level.
 //   * ctrl UP (zoom -> pan): THE GESTURE'S ARITHMETIC re-seats nothing,
 //     structurally — the pan is incremental on dx from last_x, which BOTH
-//     phases keep current, so the first plain event pans from the pointer's
-//     own position; the stem erases at the edge, the capture's restore-x
+//     phases keep current (the rotation put both phases on that one field, so
+//     the rebase is now the same quantity on both sides of the edge), so the
+//     first plain event pans from the pointer's own position; the stem erases at the edge, the capture's restore-x
 //     override clears there and the restore kind re-stamps to Pan.
 //     THE POINTER'S NOTIONAL POSITION DOES RE-SEAT, and it is the edge's one
 //     lasting write: the gesture HANDS IT THE STEM'S COLUMN
@@ -900,8 +948,8 @@ struct ScrollDragState {
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
     // synced from mods.ctrl at every MODIFIER EDGE and every motion event
     // (sync_nav_drag_mode, the one body). While true the anchor stem paints at
-    // anchor_sample's live column and each event's dy zooms; while false each
-    // event's dx pans.
+    // anchor_sample's live column and each event's dx zooms; while false each
+    // event's dx pans — ONE axis, two meanings, since the rotation.
     // The RELEASE reads this bit and never re-asks ctrl: it cannot be stale
     // now that the edge itself syncs it, which re-stamps the capture's restore
     // KIND there too (and drops the stem's restore-x override on the way back
@@ -913,8 +961,13 @@ struct ScrollDragState {
     // Never rewritten after the arm.
     bool   ctrl_entry = false;
     // Pointer y (px) at the previous motion event, last_x's twin — kept
-    // current in BOTH phases so a mode switch measures its first delta from
-    // the pointer's own position (the jump-free rule above).
+    // current in BOTH phases exactly as last_x is. Since the rotation put the
+    // zoom on dx, NOTHING DIFFERENCES THIS FIELD any more: both phases write it
+    // and neither reads it, so it carries the pointer's row and no arithmetic
+    // at all. It stays current rather than stale so that a vertical term
+    // arriving here later — the one place a reader could plausibly land — finds
+    // the jump-free rebase already in place instead of a value from whenever
+    // the last such term stopped being read.
     int    last_y   = 0;
     // THE ZOOM PHASE'S PIVOT, AND IT IS A SONG POSITION — frames, double, in
     // the ACTIVE display domain — whose COLUMN is re-derived from the live
@@ -1024,8 +1077,12 @@ struct ScrollDragState {
     // A SECOND SEAT OF THE SAME GESTURE LANDS WHERE THE FIRST DID unless the
     // hand panned in between, and that is the lateral freeze's doing (the
     // paragraph above the struct): without it the zoom phase's own sideways
-    // travel — travel nothing on screen answered — walked the notional column
-    // along, and the stem jumped at the next ctrl-down.
+    // travel would walk the notional column along, and the stem would jump at
+    // the next ctrl-down. Since the rotation that travel is the zoom's OWN
+    // INPUT rather than travel nothing answers, which strengthens the point
+    // instead of weakening it — the level has already spent those pixels, and
+    // letting the seat spend them again would move the pivot by exactly the
+    // amount the user was zooming by.
     double anchor_sample = 0.0;
 };
 

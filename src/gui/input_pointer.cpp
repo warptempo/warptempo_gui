@@ -1680,10 +1680,13 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     // THE POINTER'S X FREEZES FOR THE ZOOM PHASE AND RESUMES FOR THE PAN
     // (architect 2026-08-14: the zoom locks the x position). Unconditional
     // here — the platform's own capture guard answers a sub-threshold edge,
-    // and the crossing re-asserts what those edges could not reach. The
-    // gesture's arithmetic is untouched either way: the zoom phase already
-    // discards dx, and the pan phase already differences last_x, which BOTH
-    // phases keep current off the unfrozen travel ledger.
+    // and the crossing re-asserts what those edges could not reach. THE
+    // GESTURE'S ARITHMETIC IS UNTOUCHED EITHER WAY, and that separation is the
+    // whole reason a single bit can do this: both phases difference last_x off
+    // the UNFROZEN TRAVEL LEDGER, so the zoom keeps its unlimited lateral
+    // travel while the pointer's clamped NOTIONAL position simply stops
+    // advancing — the level spends those pixels and the position must not
+    // spend them again.
     set_strip_capture_notional_x_frozen(sd.zooming);
     // The stem's paint or erase: a mode switch is a discrete edge, so full
     // waveform-area damage (the arm's own shape). This is what makes the stem
@@ -1692,18 +1695,23 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
 }
 
 // THE NAV DRAG'S ZOOM PHASE, one event (the live-ctrl model — contract at
-// ScrollDragState, app_state.h): dy zooms plain linear off the LIVE level
-// (drag DOWN zooms in, the strip drag's own response) about the seated pivot,
-// and dx is DISCARDED — the phase's one exact axis, the deleted segment
-// lock's vertical arm reached by the modifier instead of by classification.
+// ScrollDragState, app_state.h): dx zooms plain linear off the LIVE level
+// about the seated pivot, and dy is DISCARDED — the same axis the pan phase
+// reads, with the modifier deciding what horizontal travel MEANS rather than
+// which axis is live (architect 2026-08-14, THE ROTATION).
+// THE SIGN — LEFT ZOOMS IN, RIGHT ZOOMS OUT — is `zoom_level + dx/rate`, dx
+// being negative to the left and a SMALLER level being deeper in. Its
+// derivation is the plain drag's own sense: dragging LEFT is what advances the
+// view forward through the piece, and a piece OPENS at full zoom out, so
+// forward motion means in. (The cross-surface argument for rotating at all is
+// at the contract, not restated here.)
 // AND THE POINTER'S OWN X IS FROZEN WITH IT, which is a SEPARATE STATEMENT
-// and the one that was missing (architect 2026-08-14, from the rig: "I've
-// been operating under the assumption that the zoom control would lock the x
-// position"). Discarding the phase's dx says only that the VIEW does not
-// respond to sideways travel; the pointer's notional position kept advancing
-// through every pixel of it, invisibly, because nothing on screen moved — so
-// a later ctrl-down seated the pivot far from where the user believed the
-// pointer was, and a zoom→pan switch's release restored the cursor there.
+// (architect 2026-08-14, from the rig: "I've been operating under the
+// assumption that the zoom control would lock the x position"). The rotation
+// makes it MORE necessary: this phase SPENDS its lateral travel on the level,
+// and the pointer's notional position must not spend the same pixels a second
+// time — nor could it, without capping a zoom at the window's width, since the
+// notional position clamps into the surface where the travel ledger does not.
 // The freeze is asserted at the mode edges (sync_nav_drag_mode) and lives in
 // the platform, which owns the position; the ledger is untouched.
 // The viewport itself never moves here (a pure zoom pivots about the anchor's
@@ -1711,10 +1719,13 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
 // chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x /
 // last_y stay current in this phase exactly as in the pan phase, which is the
 // ctrl-up switch's whole rebase: the first plain event after a switch
-// measures its dx from the pointer's own position, so nothing can jump.
+// measures its dx from the pointer's own position, so nothing can jump. Since
+// both phases now difference last_x, the rebase is the same quantity on both
+// sides of the edge; last_y has no reader at all and is kept current for the
+// reason recorded at the field.
 void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     ScrollDragState& sd = app.scroll_drag;
-    const double dy = static_cast<double>(y - sd.last_y);
+    const double dx = static_cast<double>(x - sd.last_x);
     sd.last_x = x;
     sd.last_y = y;
 
@@ -1726,7 +1737,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 
     // Incremental off the live level, pre-clamped into the chokepoint's own
     // window exactly as apply_strip_drag_at pre-clamps.
-    double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
+    double new_level = app.zoom_level + dx / kNavZoomPxPerLevel;
     const double max_l = effective_max_zoom_level(W, total,
                                                   audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
@@ -1741,7 +1752,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     // REBINDING the anchor to that edge pixel's frame is what keeps the focus
     // on screen once a wall has pushed it past an edge.
     // WHAT THE REVERSIBILITY PROPERTY IS, stated exactly: THE ANCHORED FRAME
-    // IS INVARIANT FOR THE PHASE, so zooming out and back in by the same dy
+    // IS INVARIANT FOR THE PHASE, so zooming out and back in by the same dx
     // pivots about the SAME song position both ways and the drag reverses into
     // the section it came from. AWAY FROM THE WALLS that is the strict
     // identity — the column re-derives to the value it was placed at, so the
@@ -6652,17 +6663,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             set_strip_capture_notional_x_frozen(sd.zooming);
         }
         if (sd.zooming) {
-            // The ZOOM phase: dy off the live level about the seated pivot,
-            // dx discarded by the gesture AND withheld from the pointer's own
-            // notional x by the freeze asserted above (apply_nav_zoom_at, the
-            // phase's one exact axis — the two are different statements).
+            // The ZOOM phase: dx off the live level about the seated pivot
+            // (left zooms in), dy discarded, and the pointer's own notional x
+            // held still by the freeze asserted above — the level spends the
+            // lateral travel and the position must not spend it twice
+            // (apply_nav_zoom_at; the two are different statements).
             apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);
             return;
         }
         const double spp = current_samples_per_pixel(app, audio);
         const int    dx  = mouse_x - sd.last_x;
         sd.last_x = mouse_x;
-        sd.last_y = mouse_y;   // the ctrl-down switch measures dy from here
+        sd.last_y = mouse_y;   // no reader since the rotation; kept current
+                               // for the reason at the field
         const int64_t delta =
             static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
         if (delta != 0) {

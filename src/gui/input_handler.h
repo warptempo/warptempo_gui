@@ -526,9 +526,14 @@ struct GuiInputHandler {
     // THE NAV DRAG'S LATERAL FREEZE (architect 2026-08-14, from the rig: the
     // zoom phase locks the pointer's x). True while the drag is zooming, false
     // while it pans: the platform then stops advancing the pointer's NOTIONAL
-    // position with the zoom phase's discarded lateral travel, leaving the
-    // travel ledger and every delta untouched (contract at
-    // GuiPlatform::set_notional_x_frozen). Fired at the threshold crossing —
+    // position with the zoom phase's lateral travel, leaving the travel ledger
+    // and every delta untouched (contract at
+    // GuiPlatform::set_notional_x_frozen). SINCE THE ROTATION THAT TRAVEL IS
+    // THE ZOOM'S OWN INPUT rather than travel the phase discards, which is what
+    // makes the freeze load-bearing rather than tidy: the level spends those
+    // pixels, the position must not spend them again, and a position that did
+    // would cap the zoom at the window's width (it clamps into the surface;
+    // the ledger does not). Fired at the threshold crossing —
     // the ctrl edges a sub-threshold press took reached no capture — and at
     // every ctrl edge after it, from the one mode-sync body. The overview
     // lane's strip drag never fires it: that gesture is dual-axis, and its
@@ -1331,13 +1336,15 @@ struct GuiInputHandler {
     // reads the displayed basis, are at the definition.
     double nav_stem_column_x() const;
 
-    // THE NAV DRAG'S ZOOM PHASE, one event: dy off the live level through
-    // Viewport::apply_strip_drag_zoom about the seated pivot, dx discarded
-    // (the phase's exact axis) while the POINTER'S OWN x is frozen for the
-    // phase's whole life by set_strip_capture_notional_x_frozen above — two
-    // statements, not one, and the second is the 2026-08-14 fix. The
-    // capture's restore x is driven to the stem each event. Defined beside
-    // apply_strip_drag_at (input_pointer.cpp).
+    // THE NAV DRAG'S ZOOM PHASE, one event: dx off the live level
+    // (kNavZoomPxPerLevel, LEFT zooming in) through
+    // Viewport::apply_strip_drag_zoom about the seated pivot, dy discarded —
+    // the same axis the pan phase reads, the modifier deciding what horizontal
+    // travel means — while the POINTER'S OWN x is frozen for the phase's whole
+    // life by set_strip_capture_notional_x_frozen above, so the level spends
+    // that travel and the position does not spend it twice: two statements,
+    // not one. The capture's restore x is driven to the stem each event.
+    // Defined beside apply_strip_drag_at (input_pointer.cpp).
     void apply_nav_zoom_at(int x, int y, bool final_event);
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's

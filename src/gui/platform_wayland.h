@@ -582,6 +582,18 @@ public:
     // LEDGER IS UNTOUCHED, so the gesture's own unlimited travel in both axes
     // is exactly as it was, and no delta expression anywhere changes.
     //
+    // WHY IT IS LOAD-BEARING, restated for the 2026-08-14 ROTATION that put the
+    // nav drag's zoom on the HORIZONTAL axis: the argument that first asked for
+    // this bit was that the zoom DISCARDED its lateral travel and accumulating
+    // it invisibly was a defect. That premise is superseded — the zoom now
+    // SPENDS that travel on the zoom level — and the conclusion is stronger for
+    // it. The level having spent those pixels, letting the position spend them
+    // too would count them twice; and because this position CLAMPS into the
+    // surface where the ledger does not, an unfrozen zoom would run out of room
+    // at the window's edge. The freeze is therefore what keeps the zoom's
+    // travel unlimited — the same unlimitedness the vertical axis used to get
+    // for free by having no notional coordinate at all.
+    //
     // WHY THE PLATFORM HOLDS THE BIT AND THE GUI DECIDES ITS VALUE. The
     // position is ACCUMULATED here, per RAW event, and there is exactly one of
     // it (the contract at notional_pointer_x_ records why a second one cannot
@@ -980,21 +992,26 @@ private:
     //     it owns (nav_notional_col, input_pointer.cpp) — a projection, never
     //     an accumulation.
     //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
-    //     omission: the restore's y is frozen at the press row and the zoom
-    //     axis consumes dy as a per-event DELTA, so nothing would read a
-    //     notional y. (It would cost the zoom no travel — a notional position
-    //     is a SECOND quantity beside the ledger, exactly as the x one is — so
-    //     the reason is the missing reader and nothing else.) THE FROZEN
+    //     omission: the restore's y is frozen at the press row and no gesture
+    //     reads a vertical position here — since the 2026-08-14 rotation the
+    //     nav drag discards dy in BOTH phases, and the overview lane's strip
+    //     drag, which still zooms on dy, consumes it as a per-event DELTA off
+    //     the ledger. So nothing would read a notional y. (It would cost that
+    //     zoom no travel — a notional position is a SECOND quantity beside the
+    //     ledger, exactly as the x one is — so the reason is the missing reader
+    //     and nothing else.) THE FROZEN
     //     RESTORE Y IS NOT THE X DEFECT'S OTHER HALF, which is why the
     //     2026-08-14 lateral freeze below did not grow a y twin: the x defect
     //     was an ACCUMULATOR silently diverging from the pointer and feeding
     //     TWO consumers, and there is no y accumulator to diverge and no
     //     second y consumer. What is left is a restore-position preference —
-    //     a zoom that swept 300 px down returns the cursor 300 px up — and the
-    //     press row is the ergonomic answer there: the zoom's vertical travel
-    //     is unbounded and would restore into another lane or off the surface
-    //     entirely, whereas the pan's notional x always lands back on the
-    //     waveform, which spans the full width. Architect's ruling, unchanged.
+    //     a drag that wandered 300 px down returns the cursor 300 px up — and
+    //     the press row is the ergonomic answer there: vertical travel is
+    //     unbounded and would restore into another lane or off the surface
+    //     entirely, whereas the notional x always lands back on the waveform,
+    //     which spans the full width. Architect's ruling, unchanged — and since
+    //     the rotation the nav drag has no vertical term at all, so what the
+    //     press row now answers is nothing but the hand's own drift.
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
     // notional_pointer_x_ — EXCEPT WHEN THE TRAVEL RAN OUT, where it reappears
