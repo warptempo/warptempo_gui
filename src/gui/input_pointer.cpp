@@ -1702,18 +1702,20 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
 // the platform, which owns the position; the ledger is untouched.
 // The viewport itself never moves here (a pure zoom pivots about the anchor's
 // column), so no wall clamp is needed on it — the resting viewport is already
-// chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x /
-// last_y stay current in this phase exactly as in the pan phase, which is the
+// chokepoint-legal, and apply_strip_drag_zoom re-clamps downstream. last_x
+// stays current in this phase exactly as in the pan phase, which is the
 // ctrl-up switch's whole rebase: the first plain event after a switch
-// measures its dx from the pointer's own position, so nothing can jump. Since
-// both phases now difference last_x, the rebase is the same quantity on both
-// sides of the edge; last_y has no reader at all and is kept current for the
-// reason recorded at the field.
+// measures its dx from the pointer's own position, so nothing can jump — both
+// phases difference the SAME quantity, so the rebase holds on both sides of
+// the edge.
+// `y` IS UNREAD HERE, and deliberately: the rotation left this gesture no
+// vertical term at all (the pan phase has none either). The parameter stays
+// because its callers hand the motion event's pair straight through.
 void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
+    (void)y;
     ScrollDragState& sd = app.scroll_drag;
     const double dx = static_cast<double>(x - sd.last_x);
     sd.last_x = x;
-    sd.last_y = y;
 
     const double spp = current_samples_per_pixel(app, audio);
     const GuiRect wf_area = waveform_area(app);
@@ -4449,7 +4451,6 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
     app.scroll_drag.press_x         = x;
     app.scroll_drag.press_y         = y;
     app.scroll_drag.last_x          = x;
-    app.scroll_drag.last_y          = y;
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
@@ -7120,9 +7121,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // argument, as the dropdown hover walk. Both reach the one body.
         sync_nav_drag_mode(mods);
         // Sub-threshold: still the pending click. The press did nothing, so
-        // nothing happens here either — the fork IS the threshold. last_x /
-        // last_y stay at the press until the crossing, which therefore folds
-        // the whole press→crossing travel into its first applied event.
+        // nothing happens here either — the fork IS the threshold. last_x
+        // stays at the press until the crossing, which therefore folds the
+        // whole press→crossing travel into its first applied event.
         if (!sd.moved) {
             if (std::max(std::abs(mouse_x - sd.press_x),
                          std::abs(mouse_y - sd.press_y)) <
@@ -7166,8 +7167,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const double spp = current_samples_per_pixel(app, audio);
         const int    dx  = mouse_x - sd.last_x;
         sd.last_x = mouse_x;
-        sd.last_y = mouse_y;   // no reader since the rotation; kept current
-                               // for the reason at the field
         const int64_t delta =
             static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
         if (delta != 0) {

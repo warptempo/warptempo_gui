@@ -1102,15 +1102,6 @@ struct ScrollDragState {
     // the drag opens in the zoom phase with the pivot seated at the press.
     // Never rewritten after the arm.
     bool   ctrl_entry = false;
-    // Pointer y (px) at the previous motion event, last_x's twin — kept
-    // current in BOTH phases exactly as last_x is. Since the rotation put the
-    // zoom on dx, NOTHING DIFFERENCES THIS FIELD any more: both phases write it
-    // and neither reads it, so it carries the pointer's row and no arithmetic
-    // at all. It stays current rather than stale so that a vertical term
-    // arriving here later — the one place a reader could plausibly land — finds
-    // the jump-free rebase already in place instead of a value from whenever
-    // the last such term stopped being read.
-    int    last_y   = 0;
     // THE ZOOM PHASE'S PIVOT, AND IT IS A SONG POSITION — frames, double, in
     // the ACTIVE display domain — whose COLUMN is re-derived from the live
     // viewport at every zoom event, the frame held stationary under it while
@@ -2301,7 +2292,7 @@ constexpr int64_t kChromeShiftHoldMs  = 500;
 // One latch shape everywhere — a motion event below the threshold is ignored
 // outright (moved stays false, no apply, the drag stays armed); once a drag,
 // always a drag, so dragging back near the press has no dead zone. The NAV
-// drag leaves last_x/last_y at the press until the crossing, so the crossing
+// drag leaves last_x at the press until the crossing, so the crossing
 // event folds the whole accumulated delta and no travel is lost (the two
 // absolute-placement drags — overview and region edit — fold it by
 // construction, placing per event rather than accumulating).

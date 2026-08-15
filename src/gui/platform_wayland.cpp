@@ -2581,11 +2581,11 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // IT FLUSHES RATHER THAN DROPS because the delta is usually OWED, and owed
     // in a way position alone does not capture: the strip drag's `moved` latch is
     // set ONLY by the motion path, the release re-evaluates no threshold, and
-    // last_x/last_y stay at the press until the crossing — so dropping the event
+    // last_x stays at the press until the crossing — so dropping the event
     // that CROSSES the Chebyshev threshold would leave `moved` false and the
     // release would commit nothing at all, losing the whole gesture rather than
     // one frame of travel. (Positionally a drop would cost nothing —
-    // pointer_x_/y_ are written eagerly at stage time and last_x/last_y span any
+    // pointer_x_/y_ are written eagerly at stage time and last_x spans any
     // gap — which is exactly why the latch is the thing that decides this.) The
     // capability teardown's reset DOES drop, beside its two frame-scratch
     // siblings, and states its own mirror-image reason: the holds are down, and
