@@ -4049,8 +4049,13 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
             // override outranks it: a stem column is a place the gesture
             // NAMED, not a place travel ran to, which is what keeps the fork
             // the PAN's answer without a gesture test anywhere in it.
-            const double restore_x = capture_restore_x_override_.value_or(
-                notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_);
+            // THE FORK'S EXPRESSION LIVES IN notional_home_x() rather than
+            // here, because the nav drag's CTRL-DOWN POP sends the pointer to
+            // that same place one edge earlier: "where the cursor comes home
+            // to" has to be one expression, or the pop and the release could
+            // name different columns.
+            const double restore_x =
+                capture_restore_x_override_.value_or(notional_home_x());
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
                 wl_fixed_from_double(restore_x),

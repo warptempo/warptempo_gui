@@ -1629,6 +1629,45 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
     if (!sd.active || mods.ctrl == sd.zooming) return;
     sd.zooming = mods.ctrl;
     if (sd.zooming) {
+        // THE POINTER COMES HOME FIRST, IF ITS TRAVEL HAD RUN OUT (architect
+        // 2026-08-14, from the rig: "the same rule that we have for left click
+        // mouse up on drag should now be applied to control down"). A pan that
+        // ran several screens forward leaves the pointer PINNED at the window
+        // wall, and a pivot seated out there can only show half of what a zoom
+        // is for — his reason, stated whole: "zooming from a pinned stem
+        // position is essentially useless, because the whole point of zoom is
+        // to see what's going on on both sides, before and after your current
+        // viewport, and zooming while pinned only shows you half of that
+        // equation"; the clamp "is simply a measure to keep the cursor from
+        // going off screen and keep coherence there", never a place to pivot
+        // from. So the release's own teleport-on-clamp rule is applied one edge
+        // earlier, through the SAME expression (GuiPlatform::notional_home_x).
+        //
+        // THE SEAT RULE IS UNTOUCHED — the pivot still seats wherever the
+        // cursor is. What changed is where the cursor IS by the time it reads.
+        // THAT IS THE DIFFERENCE FROM THE SUPERSEDED SEAT (recorded at
+        // ScrollDragState::anchor_sample): that one moved the PIVOT to the home
+        // column and left the POINTER pinned, so the two disagreed and the
+        // cursor's homecoming had to be manufactured by the stem override; this
+        // moves the POINTER, and the seat, the stem, the ctrl-up handover and
+        // the release all follow from one honest position.
+        //
+        // UNCONDITIONAL BY CONSTRUCTION, so no "did we clamp" predicate is
+        // needed: notional_home_x() IS the notional position while the hand
+        // still has room, so an unclamped ctrl-down writes back the value
+        // already there and nothing moves. Same argument the ctrl-up handover
+        // already carries.
+        //
+        // IT CLEARS THE CLAMP VERDICT, which is correct and load-bearing: the
+        // write goes through note_notional_pointer_x with an interior value, so
+        // notional_x_clamped_ comes back false and a later release restores at
+        // the popped position plus whatever the hand travelled after it. The
+        // pointer is not in debt any more because it has been TOLD where it is.
+        //
+        // NO CAPTURE, NO POP: set_notional_pointer_x is capture-guarded like its
+        // siblings, so a ctrl-down on a still-sub-threshold press does nothing
+        // here — which is right, nothing has clamped yet.
+        set_strip_capture_notional_x(gui.notional_home_x());
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at
         // ScrollDragState::anchor_sample). The notional column IS the

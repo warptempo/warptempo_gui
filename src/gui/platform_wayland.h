@@ -667,8 +667,42 @@ public:
     // (architect 2026-08-14: the stem goes wherever the cursor is at the
     // ctrl-down, visible or invisible). It briefly read that fork instead, on a
     // premise recorded as FALSE at ScrollDragState::anchor_sample so it is not
-    // re-derived here.
+    // re-derived here. What the ctrl-down edge does instead is MOVE THE POINTER
+    // first (notional_home_x() below, written back through
+    // set_notional_pointer_x), so this position is already home by the time the
+    // seat reads it — the seat's rule never changed, only where the cursor is
+    // when it runs.
     double notional_pointer_x() const { return notional_pointer_x_; }
+
+    // WHERE THE CURSOR COMES HOME TO (surface x, px): the POINTER'S NOTIONAL
+    // POSITION while the hand still has room, and THE CAPTURE'S OWN START
+    // COLUMN once notional_x_clamped_ says the travel ran out and stayed out.
+    // The ran-out rule itself — and why the question is asked of the last
+    // notional WRITE's clamp verdict rather than of the resting position — is
+    // at the fields below; this only names the answer.
+    //
+    // TWO CONSUMERS: the capture release's own restore fork
+    // (release_pointer_lock), and THE NAV DRAG'S CTRL-DOWN POP, which sends the
+    // pointer here before the zoom pivot seats (sync_nav_drag_mode,
+    // input_pointer.cpp) so a zoom never begins from a pinned edge.
+    //
+    // IT HAS MOVED TWICE AND A READER WHO FINDS IT IN HISTORY SHOULD SEE WHY.
+    // It was hoisted out of the release for a FIRST version of the ctrl-down
+    // rule, in which the PIVOT read this fork while the pointer stayed pinned;
+    // that ruling was superseded (its false premise is recorded at
+    // ScrollDragState::anchor_sample), which left this with a single caller,
+    // and it was deleted. It is back because the rule was rebuilt the other way
+    // round — the POINTER moves and the seat is untouched — and that shape has
+    // a second caller, which is what a hoist is for.
+    //
+    // capture_press_x_ IS THE CAPTURE'S START COLUMN — the 8 px threshold
+    // crossing for the nav drag, not the button press — and reading it through
+    // ONE expression is deliberate: the pop and the release must send the
+    // pointer to the same place, and two spellings of "home" could differ by
+    // the slop distance or drift apart later.
+    double notional_home_x() const {
+        return notional_x_clamped_ ? capture_press_x_ : notional_pointer_x_;
+    }
 
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
@@ -1015,8 +1049,9 @@ private:
     // On release the cursor reappears at capture_restore_x_override_ when a
     // strip drag set it (the anchor stem's surface x), else at
     // notional_pointer_x_ — EXCEPT WHEN THE TRAVEL RAN OUT, where it reappears
-    // at capture_press_x_ instead (the paragraph below); y is always frozen at
-    // the press row (capture_restore_y_).
+    // at capture_press_x_ instead (the paragraph below). That fork is
+    // notional_home_x() above, which the nav drag's ctrl-down pop shares; y is
+    // always frozen at the press row (capture_restore_y_).
     //
     // A PAN THAT RAN OUT OF ROOM PUTS THE CURSOR BACK WHERE IT VANISHED
     // (architect 2026-08-14, from the rig, having driven the lateral freeze:
@@ -1048,8 +1083,13 @@ private:
     // across it, which is the right answer for the same reason the freeze
     // exists: a zoom moved the pointer's x not at all, so it can neither run
     // the travel out nor bring it back in.
-    // THE PHASE'S CLOSING EDGE IS A WRITE, THOUGH, and it clears the verdict
-    // honestly: the ctrl-up handover STATES the stem's column
+    // BOTH OF THE PHASE'S EDGES ARE WRITES, THOUGH, and each clears the verdict
+    // honestly. THE OPENING one is the ctrl-down POP: it states
+    // notional_home_x() itself, so a pinned pointer is put back at the start
+    // column and is no longer out of room — the debt is not forgiven, it is
+    // PAID, the pointer having been moved to the place the verdict was going to
+    // send it (the rule is at sync_nav_drag_mode, input_pointer.cpp). THE
+    // CLOSING one is the ctrl-up handover, which STATES the stem's column
     // (set_notional_pointer_x), a position that is interior by construction,
     // so a pan-phase release after a zoom follows the stem rather than going
     // home. That is the agreement the handover exists for — with ctrl still
@@ -1064,7 +1104,10 @@ private:
     // nothing). The one zoom that does arrive here is a ctrl edge with no
     // motion behind it, hard-ended before its first event — it has no stem
     // column to offer, so the fork answers with the PAN phase's own verdict,
-    // which is the honest one. THE Y HAS NO HALF OF THIS EITHER — the
+    // which is the honest one. THE POP DOES NOT CHANGE THAT ANSWER, it only
+    // reaches it a step earlier: the pop already wrote notional_home_x(), so
+    // this fork now reads back the very column it would have chosen, clamped or
+    // not. THE Y HAS NO HALF OF THIS EITHER — the
     // restore's y is the press row unconditionally, which already IS "where it
     // vanished".
     // THE RESTORE ALSO WRITES THE TRACKED POSITION BACK to that same hint —
@@ -1098,8 +1141,10 @@ private:
     bool   notional_x_frozen_  = false;
     // THE LAST NOTIONAL WRITE'S CLAMP VERDICT — true iff note_notional_pointer_x,
     // the ONE clamp body, actually clamped the value it was handed. Written
-    // there and nowhere else, read at exactly one place: the release's
-    // restore-x fallback (the ran-out rule in the block above).
+    // there and nowhere else, and READ AT EXACTLY ONE PLACE, notional_home_x()
+    // above (the ran-out rule in the block above) — which is what puts the
+    // release's restore and the nav drag's ctrl-down pop on one verdict instead
+    // of letting each ask its own question.
     // begin_pointer_capture clears it so a capture cannot inherit a verdict
     // from before it existed — an absolute delivery carries an in-surface
     // position and so never clamps, but the clear makes that structural rather

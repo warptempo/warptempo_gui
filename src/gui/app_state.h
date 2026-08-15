@@ -90,23 +90,28 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // overview lane's ~500 px of vertical, and one constant would have made a
 // retune of either gesture silently move the other.
 //
-// 240 IS SET TO MATCH THE PINCH, which is the derivation that matters and not
-// the ladder of numbers behind it (architect 2026-08-14, from the rig, having
-// driven both surfaces one after the other: "ninety pixels is still a little
-// too fast compared to the touch screen; the touch screen rate of motion is
-// very natural and the mouse is too fast... the waveform is clamped at five
+// THE PINCH IS THE DERIVATION, which is what matters and not the ladder of
+// numbers behind it (architect 2026-08-14, from the rig, having driven both
+// surfaces one after the other: "ninety pixels is still a little too fast
+// compared to the touch screen; the touch screen rate of motion is very
+// natural and the mouse is too fast... the waveform is clamped at five
 // hundred, so let's try two hundred and forty, for a multiple of the sixty").
 // THE GLASS IS THE REFERENCE and the desk is tuned to it: a pinch's level is
 // log2 of the FINGER-GAP RATIO, so its px-per-level is not a constant at all —
 // it depends where the gap starts — but at a comfortable gap one level costs
-// roughly 150-250 px of single-finger travel, and 240 places the mouse hand
+// roughly 150-250 px of single-finger travel, and the desk's rate has to sit
 // inside that band. That band is what "the touch screen rate is very natural"
-// was measuring, so the two surfaces now move the view at about the same rate
-// for the same hand motion, which is the whole point of the rotation that put
-// the desk's zoom on the horizontal in the first place.
+// was measuring, so the two surfaces move the view at about the same rate for
+// the same hand motion, which is the whole point of the rotation that put the
+// desk's zoom on the horizontal in the first place.
+//
+// 200 IS THE LANDING POINT INSIDE THE BAND, after 60, 90 and 240 were each
+// driven from the rig: 240 reached the band but sat at its SLOW END, and the
+// architect, having driven it, found it "a little too slow". 200 is the same
+// derivation with the overshoot taken off, not a new one.
 //
 // WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [kMinZoom, effective
-// ceiling] span is now roughly 3840 px of travel — two screen widths at the
+// ceiling] span is roughly 3200 px of travel — over a screen and a half at the
 // deployment size — and that is fine BECAUSE OF THE CAPTURE. The notional-x
 // freeze (its record is at GuiPlatform::set_notional_x_frozen) is what makes
 // the zoom phase's sideways travel unlimited: the pointer's notional position
@@ -115,7 +120,7 @@ constexpr double kZoomStripPxPerLevel = 60.0;
 // gesture whatever the screen is.
 //
 // Architect-tunable on the rig, exactly as the vertical one is.
-constexpr double kNavZoomPxPerLevel = 240.0;
+constexpr double kNavZoomPxPerLevel = 200.0;
 
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -902,13 +907,21 @@ struct StripDragState {
 // on_motion ALONE, which is why a released ctrl used to leave the stem
 // standing and the capture's restore stamped Zoom until motion resumed. THE
 // RE-SEAT RULE, one per direction, is what makes every switch jump-free:
-//   * ctrl DOWN (pan -> zoom): the pivot is SEATED at the pointer's current
-//     notional column, EVERY time — the SONG FRAME under that column (the seat
-//     and the withdrawn persist-across-toggles experiment are recorded at
-//     anchor_sample below) — and the anchor stem paints there, at the edge
-//     itself (the ctrl-armed press paints it from the PRESS, the stem-at-press
-//     ruling kept). The level itself cannot jump — dx is a per-event delta off
-//     the LIVE level.
+//   * ctrl DOWN (pan -> zoom): TWO STEPS, in this order. FIRST THE POINTER
+//     COMES HOME IF ITS TRAVEL RAN OUT — a pan that went several screens
+//     forward leaves it pinned at the window wall, and the release's own
+//     teleport-on-clamp rule is applied here too, through the one expression
+//     (GuiPlatform::notional_home_x), because a zoom seated at a wall can show
+//     only half of what a zoom is for (architect 2026-08-14; the reasoning is
+//     at the pop, sync_nav_drag_mode). It is unconditional: where nothing
+//     clamped, that expression is the notional position itself and the write
+//     moves nothing. THEN the pivot is SEATED at the pointer's current notional
+//     column, EVERY time — the SONG FRAME under that column (the seat and the
+//     withdrawn persist-across-toggles experiment are recorded at anchor_sample
+//     below) — and the anchor stem paints there, at the edge itself (the
+//     ctrl-armed press paints it from the PRESS, the stem-at-press ruling
+//     kept). The level itself cannot jump — dx is a per-event delta off the
+//     LIVE level.
 //   * ctrl UP (zoom -> pan): THE GESTURE'S ARITHMETIC re-seats nothing,
 //     structurally — the pan is incremental on dx from last_x, which BOTH
 //     phases keep current (the rotation put both phases on that one field, so
@@ -1092,12 +1105,19 @@ struct ScrollDragState {
     // pivot at the grab column therefore did not agree with a teleport that was
     // going to happen — it MANUFACTURED one, by putting the stem there for the
     // cursor to follow.
-    // THE CONSEQUENCE WAS RULED WITH THE RULE and is a decision, not a
-    // regression: a runaway pan FOLLOWED BY A ZOOM leaves the cursor at the
-    // wall the hand ran it into (the stem is there, the override sends it
-    // there), while a runaway pan that never zooms still comes home exactly as
-    // before. The pan half is deliberately untouched — "same rules as current,
-    // those are pretty intuitive and work well".
+    // THE CTRL-DOWN POP IS NOT THAT RULING COMING BACK, and the difference is
+    // the whole of why it works: THAT one moved the PIVOT and left the POINTER
+    // pinned at the wall, so the two disagreed and the cursor's homecoming was
+    // manufactured by the stem override; THIS one moves the POINTER — the
+    // release's teleport-on-clamp rule applied one edge earlier, through the
+    // same expression — and leaves the seat rule ("wherever the cursor is")
+    // untouched, so the seat, the stem, the ctrl-up handover and the release
+    // all follow from one honest position. It also settles the consequence the
+    // superseded ruling had accepted, from the other side: a runaway pan
+    // FOLLOWED BY A ZOOM now brings the cursor home at the ctrl-down and pivots
+    // there, rather than leaving it at the wall the hand ran it into. The PAN
+    // half is untouched throughout — "same rules as current, those are pretty
+    // intuitive and work well".
     // Meaningful only while `zooming`. A PERSISTENT pivot (seated once per
     // gesture and kept across every toggle) was built and WITHDRAWN the same
     // day, and the reason is recorded so it is not re-derived: it was a
