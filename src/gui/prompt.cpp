@@ -51,8 +51,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // the act already refused. Its tooltip names Escape like every other Esc
 // button's does (modal_dialog_button_hint, app_state.h).
 // Modal like every other prompt while active: the pointer veil consumes
-// everything outside the dialog and the key dispatch's prompt gate routes only
-// the response key, at that key's release.
+// everything outside the dialog and on_key routes only the response key.
 void GuiPrompt::open_error_notice(std::string text) {
     // A modal surface is opening: the shared modal stop, same rule as every
     // other prompt open.

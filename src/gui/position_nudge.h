@@ -126,8 +126,8 @@ struct PositionNudgePrologue {
 // empty selection to the waveform-lane playhead step instead and never reaches
 // here, so this is the belt; (3) no-focus
 // refusal; (4) the undo-coalesce verdict, computed before the geometry refusals
-// (coalesce_gesture reads the dispatch's own repeat bit, which
-// `synthesized_repeat` carries down from the key event that reached the
+// (coalesce_gesture reads the press's own repeat bit, which
+// `synthesized_repeat` carries down from the on_key event that reached the
 // handler, to pick its arm — identity for a held key, the fixed tap window plus
 // a subject test for a physical re-press — and it just has to run before
 // record_gesture stamps the burst in the tail); (5) bad

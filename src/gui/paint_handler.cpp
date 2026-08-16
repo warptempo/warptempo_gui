@@ -1987,8 +1987,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the row's own members never grey for a REFUSAL —
     // presses always dispatch and the CHORDS' OWN refusals answer (loading
     // blocks everything, and each arm keeps its home-view, empty-selection and
-    // occupied-frame guards), inherited through the key dispatch rather than
-    // mirrored —
+    // occupied-frame guards), inherited through on_key rather than mirrored —
     // while the toolbar four
     // BROUGHT their real disabled derivations with them at the 2026-08-12
     // relayout (Undo/Redo's locked-tab and empty-stack terms, Save's
