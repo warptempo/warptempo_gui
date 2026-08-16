@@ -161,12 +161,24 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
         if (synthesized_repeat) {
             // ARM (1), REPEAT IDENTITY — NO CLOCK. A press the process
             // synthesized itself from a still-held key merges unconditionally,
-            // because the platform's key-repeat contract already supplies the
-            // adjacency property a clock would enforce numerically: layer (1) of
-            // that contract (stated at GuiPlatform::maybe_fire_repeat) disarms the
+            // because the burst's structure already supplies the adjacency
+            // properties a clock would enforce numerically, in two halves.
+            // (a) Layer (1) of the platform's key-repeat contract (stated at
+            // GuiPlatform::maybe_fire_repeat) disarms the
             // hold at every intervening pointer-button press, key press, and
             // completed wheel emission, so a synthesized repeat STRUCTURALLY
-            // CANNOT arrive after another command ran. "Same selection / same tab
+            // CANNOT arrive after another command ran. (b) The burst's own
+            // OPENER is guaranteed to have taken the PHYSICAL arm first:
+            // under the 2026-08-16 keyup model a hold's press dispatches
+            // nothing, so the press router clears synthesized_repeat on the
+            // hold's FIRST repeat (GuiInputHandler::on_key) — that opener
+            // runs the arrival-invalidate and the tap arm's own rules,
+            // pushing or merging on its own merits, and only the repeats
+            // BEHIND it reach this arm; without the flip, a hold begun over
+            // a surviving foreign stamp would merge its first fire into
+            // another subject's entry. (Before the model the physical press
+            // itself played the opener; the flip restores exactly that
+            // world.) "Same selection / same tab
             // / same history" all follow, which is why this arm needs neither the
             // window nor the subject test below. Keeping it clock-free is
             // deliberate: a hold must coalesce at ANY compositor repeat delay or

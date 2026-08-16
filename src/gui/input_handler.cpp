@@ -18,22 +18,53 @@
 #include <utility>
 #include <vector>
 
-// Keyboard input handler event entry points (on_key, the pointer handlers,
-// on_wheel), dispatching into the operation structs through the reference
-// members (warpops, phase_resets, flag_editor, renders_dir, active_views,
-// playback_lifecycle, save_ops, prompt, selection, undo, viewport).
-// compute_base_tempo_scale + BaseTempoScale live in input_handler.h so
-// this TU can reach them; render_bpm_sweep() is the sole caller.
+// Keyboard input handler event entry points (on_key — the press router — and
+// dispatch_key_command, the one ranked command dispatch behind it; the pointer
+// handlers; on_wheel), dispatching into the operation structs through the
+// reference members (warpops, phase_resets, flag_editor, renders_dir,
+// active_views, playback_lifecycle, save_ops, prompt, selection, undo,
+// viewport). compute_base_tempo_scale + BaseTempoScale live in input_handler.h
+// so this TU can reach them; render_bpm_sweep() is the sole caller.
 
+// THE PRESS ROUTER (architect 2026-08-16): outside a text editor the press
+// only ARMS a key identity and the RELEASE runs the one command dispatch —
+// the model's full statement is at this function's declaration
+// (input_handler.h); the release half is on_key_release
+// (input_key_dispatch.cpp).
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
-    // Double-click lifecycle, KEYBOARD half: any keyboard command between two
+    if (mods.synthesized_repeat) {
+        // THE REPEAT RULE: the stream claims the release — the hold's first
+        // repeat unarms the key, so the release after a hold resolves
+        // nothing. That first repeat is the HOLD'S OPENER, standing in for
+        // the press act the key no longer performs, and it dispatches with
+        // the repeat bit CLEARED so undo coalescing sees exactly the
+        // pre-model world — a "physical" opener (arrival-invalidate,
+        // tap-window/subject rules, its own entry) followed by
+        // identity-merging repeats (the argument is at
+        // Undo::coalesce_gesture). An editor-typing repeat's key never armed
+        // — the island below dispatches its press without arming — so its
+        // opener test is false by construction and the island's stream keeps
+        // the bit, byte-identical to before the model.
+        const bool opener = unarm(key);
+        if (opener) mods.synthesized_repeat = false;
+        dispatch_key_command(key, mods, KeyDispatchPhase::Full);
+        return;
+    }
+    // THE CONTEXT BLOCK — "the user acted" events, which stay at the PHYSICAL
+    // press. Each is idempotent, and each re-runs at the top of
+    // dispatch_key_command (a short re-run block there says why); the four
+    // comments here are the authoritative statements.
+    //
+    // Double-click lifecycle, KEYBOARD half: any keyboard press between two
     // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
     // a key between its two presses, and a cross-context consume (seed a
     // candidate, run a command, click again to consume in a different context)
     // must not fire. The consume lives entirely in on_button_press (nothing on
-    // the keyboard path reads the candidate), and key-repeat re-entering here is
-    // equally fine — no candidate can survive a held key. The pointer-side
+    // the keyboard path reads the candidate), and the dispatch re-running the
+    // clear — at a release or a synthesized repeat — is
+    // equally fine: no candidate can survive a held or released key. The
+    // pointer-side
     // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
     // clears, the force-end finalizer's clear) stay: they own the pointer half of the
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
@@ -62,22 +93,116 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // all, so nothing here has to survive. The bare Esc and Ctrl+Q the ruling
     // names as dismissals are covered by this without being enumerated, and so is
     // every key that opens a modal. Gated inside disarm_menu_row: with a popup
-    // OPEN this is inert and the popup's own keyboard gate below decides.
+    // OPEN this is inert and the popup's own keyboard gate in the dispatch
+    // decides.
     disarm_menu_row();
     // (THE TRANSPORT ARROWS' HOLD-REPEAT DISARM stood here until the repeat's
     // deletion — architect 2026-08-13, act-at-release; the record is at the
     // arrows' chord-table rows, input_pointer.cpp. The platform's OWN key
     // repeat keeps its layer-1 disarms inside maybe_fire_repeat, untouched.)
+
+    // Transient bottom-strip status message clears on every real
+    // keypress, including the press whose release may set a new message
+    // (the handler that sets it does so at the very end of its branch in
+    // the dispatch, after the re-run of this clear there). Guarded so the
+    // bottom-strip invalidate fires only when there was a message to
+    // erase. See AppState::transient_status_message.
+    if (!app.transient_status_message.empty()) {
+        app.transient_status_message.clear();
+        viewport.invalidate_status_chain_area();
+    }
+
+    if (app.prompt.active) {
+        // The painted gate's PRESS half: a press aimed at an unseen surface
+        // is DEAD, not deferred — it arms nothing, so its release resolves
+        // nothing (the gate's whole rule is at PromptState, app_state.h; the
+        // dispatch keeps the release-side half for the armed-before-paint
+        // corner recorded at the model statement).
+        if (!app.prompt.painted) return;
+        // Bare Enter/Space on a focused prompt button press it DOWN at the
+        // press — the ring's arming half (press_modal_ring_arm); the act
+        // stays at the release through the modal arm, exactly as shipped.
+        if (press_modal_ring_arm(key, mods)) return;
+        // Answers, walks, Esc — all at the release, through the dispatch's
+        // prompt gate under live state.
+        arm(key, mods);
+        return;
+    }
+    if (keyboard_modal_editor_active()) {
+        // THE KEYDOWN ISLAND: the pre-model press-time behavior whole —
+        // including the editor_text_drag gate, the keyboard-modal editor
+        // gate, and the ring's own press arm inside — the surface rule and
+        // the OSK reasoning are at the model statement (on_key's
+        // declaration, input_handler.h).
+        dispatch_key_command(key, mods, KeyDispatchPhase::Full);
+        return;
+    }
+    // Dropdown, blank/loading, and every command: the release decides under
+    // live state.
+    arm(key, mods);
+}
+
+// The armed set's three writers (the model is at on_key's declaration; the
+// set's contract at armed_keys_, input_handler.h).
+void GuiInputHandler::arm(GuiKey key, GuiInputState mods) {
+    for (ArmedKey& a : armed_keys_) {
+        if (a.key == key) {
+            // A re-press overwrites the stash: the newest press's modifier
+            // set is the one the release must match.
+            a.ctrl  = mods.ctrl;
+            a.shift = mods.shift;
+            a.alt   = mods.alt;
+            return;
+        }
+    }
+    armed_keys_.push_back(ArmedKey{key, mods.ctrl, mods.shift, mods.alt});
+}
+
+bool GuiInputHandler::unarm(GuiKey key, ArmedKey* stash) {
+    for (auto it = armed_keys_.begin(); it != armed_keys_.end(); ++it) {
+        if (it->key == key) {
+            if (stash) *stash = *it;
+            armed_keys_.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+void GuiInputHandler::clear_armed_keys() {
+    armed_keys_.clear();
+}
+
+// The prompt-gate press half of the ring's Enter/Space act (contract at the
+// declaration): bare-exact Return/Space with the live focus on a button arms
+// the pressed face through the ring's own arm, at Press.
+bool GuiInputHandler::press_modal_ring_arm(GuiKey key, GuiInputState mods) {
+    if (mods.ctrl || mods.shift || mods.alt) return false;
+    if (key != GuiKeys::Return && key != GuiKeys::Space) return false;
+    if (modal_dialog_focus_live() < 0) return false;
+    return route_modal_dialog_focus_key(key, mods, KeyDispatchPhase::Press);
+}
+
+// THE ONE COMMAND DISPATCH — the whole ranked key body, on_key itself until
+// 2026-08-16, renamed verbatim when the press/release split landed (the model
+// is at on_key's declaration, input_handler.h). Entered at Release by
+// on_key_release for an armed physical key, and at Full by the keydown island,
+// the synthesized-repeat path, and the two synthetic chord dispatches (the
+// chrome lift and the dropdown item, input_pointer.cpp).
+void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
+                                           KeyDispatchPhase phase) {
+    // THE CONTEXT BLOCK'S RE-RUN. The press router (on_key) runs these four at
+    // every physical press — the authoritative comments are there — and they
+    // run again here because each is idempotent and this body is also entered
+    // WITHOUT a physical press directly under it: the synthetic chord
+    // dispatches (the chrome lift and the dropdown item) relied on them when
+    // this body WAS on_key and must stay byte-identical.
+    app.double_click = DoubleClickCandidate{};
+    hide_shift_tooltip();
+    disarm_menu_row();
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-
-    // Transient bottom-strip status message clears on every real
-    // keypress, including the press that may set a new message later
-    // in this same on_key call (the handler that sets it does so at
-    // the very end of its branch, after this clear). Guarded so the
-    // bottom-strip invalidate fires only when there was a message to
-    // erase. See AppState::transient_status_message.
     if (!app.transient_status_message.empty()) {
         app.transient_status_message.clear();
         viewport.invalidate_status_chain_area();
@@ -124,7 +249,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the only safe reading of input aimed at an unseen surface, and
         // nothing is lost that a second press after the paint does not
         // recover. The bit's writer is paint_modal_dialog's prompt branch and
-        // the whole rule lives at PromptState (app_state.h).
+        // the whole rule lives at PromptState (app_state.h). Since the keyup
+        // model this line is the rule's RELEASE-SIDE half — the press router
+        // holds the press half (a press aimed at an unseen surface arms
+        // nothing); what reaches here unpainted is the recorded rare corner,
+        // a release whose press predates the prompt.
         if (!app.prompt.painted) return;
         // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
@@ -154,8 +283,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // completion-first Tab arm has no counterpart here and this call is the
         // whole of the prompt's ring. The response letters below are untouched,
         // so answering by letter, Delete or Esc is byte-identical to before the
-        // ring.
-        if (route_modal_dialog_focus_key(key, mods)) {
+        // ring. The phase passes through whole: Press never arrives here
+        // (press_modal_ring_arm calls the ring directly), and the arm's own
+        // Release refusal is stated at the arm.
+        if (route_modal_dialog_focus_key(key, mods, phase)) {
             return;
         }
         char k = 0;
@@ -309,8 +440,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // keys, Ctrl+S, and Ctrl+Q — so this block cannot see a command. Routes
     // BEFORE the render/batch Esc cancel so bare Esc closes the edit
     // first; Esc with no active edit falls through to the rest. Returning false
-    // (Ctrl+Q only) leaves the edit already torn down and lets on_key run the
-    // close routing.
+    // (Ctrl+Q only) leaves the edit already torn down and lets this dispatch
+    // run the close routing.
     if (text_editor::is_active(app.top_flag_editor)) {
         if (handle_top_flag_editor_key(key, mods)) return;
     }
@@ -565,9 +696,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // surface it cannot reach — do_undo / do_redo's target-tab peek (the
     // ACTIVE tab is writable but the top history entry targets the other,
     // read-only tab; this gate tests only the active tab), and the per-gesture
-    // pointer AUTHORING guards (a pointer gesture never passes through on_key —
-    // the ONE pointer surface that does is the redesigned buttons, which
-    // dispatch their chord through on_key precisely so this gate applies to
+    // pointer AUTHORING guards (a pointer gesture never passes through this
+    // dispatch — the ONE pointer surface that does is the redesigned buttons,
+    // which dispatch their chord through it precisely so this gate applies to
     // them unchanged: Undo and Redo drop here in a locked tab exactly as their
     // keys do, while Save and Render now pass exactly as theirs do). Full
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
@@ -730,7 +861,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the commit-title editor (2026-08-07) joined that route and added no
     //       place of its own, which is the point of there being one route;
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
-    //       the top of on_key, unchanged);
+    //       the top of this dispatch, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, the SIXTH binding).
     //       BOTH menus — Settings and File — are this ONE
@@ -754,7 +885,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a) and (b) run
     // in it too — and (c) with them, the checkpoint's own failure notice being a
     // prompt this view can raise — but each of those gates sits ABOVE the
-    // allowlist in on_key, so the press never reaches the admission at all. It gained no
+    // allowlist in this dispatch, so the key never reaches the admission at all. It gained no
     // binding of its own, and Esc cannot close it: the view's toggle is
     // handle_history_mode_key's, whose whole vocabulary is enumerated at
     // history_mode_owns_key (input_key_dispatch.cpp) and carries no Esc shape in
@@ -1107,8 +1238,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare `;` opens the settings prompt as a modal on the bottom row.
-    // Keyboard-only (no click analogue). The active-editor block at the top of
-    // on_key routes subsequent keystrokes; opening here just primes the State.
+    // Keyboard-only (no click analogue). The keydown island (on_key) routes
+    // subsequent keystrokes into the active-editor block at the top of this
+    // dispatch; opening here just primes the State.
     // The settings editor is a modal DIALOG surface, so its open takes the
     // shared modal stop (stop_playback_for_modal_open — the decision table and
     // the flag editor's exemption live at its declaration). THE STOP IS THE
@@ -1950,8 +2082,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 
 void GuiInputHandler::handle_active_audio_view_toggle() {
     // Audio must be loaded — `t` is a silent no-op in blank state.
-    // (The blank/loading guard near the top of on_key already covers
-    // this, but the helper is defensive in case future callers reach
+    // (The blank/loading guard near the top of dispatch_key_command already
+    // covers this, but the helper is defensive in case future callers reach
     // it from elsewhere.)
     if (audio.total_frames() <= 0) return;
 

@@ -2195,16 +2195,22 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
             // delivering this one would hand the application an unpaired edge.
             return;
         }
-        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13). It exists for exactly
-        // one consumer — the modal dialog's keyboard press-and-hold, whose act
-        // is at the lift — and it is delivered for the same key identity the
-        // press carried, through the one translation both branches read. NOT
+        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13; carrying live state
+        // since 2026-08-16, when it became the general keyup dispatch's feed —
+        // the model is at GuiInputHandler::on_key). Delivered for the same key
+        // identity the press carried, through the one translation both
+        // branches read, with the live modifier state and codepoint built
+        // exactly as the press path builds them — the application's mismatch
+        // guard reads the bools, a passing dispatch reads them live, and
+        // `synthesized_repeat` stays false (no release is synthesized). NOT
         // gated on Super (a release binds nothing on its own; the reasoning is
-        // at set_on_key_release, platform_wayland.h) and carrying no modifier
-        // state at all.
+        // at set_on_key_release, platform_wayland.h).
         GuiKey key = 0;
-        if (on_key_release_ && key_from_keycode(xkb_keycode, key))
-            on_key_release_(key);
+        if (on_key_release_ && key_from_keycode(xkb_keycode, key)) {
+            GuiInputState mods = current_mods();
+            mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
+            on_key_release_(key, mods);
+        }
         return;
     }
 
@@ -2437,10 +2443,14 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // and it is safe for undo coalescing: no keyboard command can run in the gap
     // (every key is dropped), and a pointer press in the gap disarms the repeat
     // outright through layer (1) of the repeat contract.
-    // KEY RELEASES need nothing: they are platform-internal (on_keyboard_key
-    // returns on the release path), feeding only the repeat cancel and the
-    // synthesized-left hold end — neither of which may be skipped, or a hold would
-    // orphan. POINTER EVENTS ARE OUT OF SCOPE by the same ruling, and that includes
+    // KEY RELEASES do not come through here: on_keyboard_key's release branch
+    // feeds the repeat cancel and the synthesized-left hold end — neither of
+    // which may be skipped, or a hold would orphan — and then delivers the
+    // release to the application's general keyup dispatch DIRECTLY,
+    // deliberately ungated on Super (the argument is at set_on_key_release,
+    // platform_wayland.h: a release can only resolve an arm an
+    // already-delivered press created, so the drop below is enough).
+    // POINTER EVENTS ARE OUT OF SCOPE by the same ruling, and that includes
     // the kLeftClickKey synthesized button: `e` IS the left mouse button at this
     // boundary and returns above without reaching this function, so Super+`e`
     // behaves exactly like Super+click, which binds nothing here either way.
@@ -2497,6 +2507,11 @@ void GuiPlatform::maybe_fire_repeat() {
     // arm that must work at any compositor repeat delay. (A physical press takes
     // the other arm of the hybrid — the fixed 500 ms tap window — and this bit is
     // exactly what separates the two.)
+    // SINCE THE 2026-08-16 KEYUP MODEL the application CLEARS this bit on a
+    // COMMAND hold's FIRST repeat — the hold's opener, which stands in for the
+    // press act keys no longer perform at the press (the flip and its undo
+    // argument are at GuiInputHandler::on_key). This site stays the bit's only
+    // PRODUCER; that flip is a consumer-side clear on the delivered copy.
     // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
     // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
     // hold at any intervening pointer-button press, completed wheel emission, or

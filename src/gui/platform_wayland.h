@@ -110,13 +110,17 @@ public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
     using ResizeCallback       = std::function<void(int w, int h)>;
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;
-    // A KEY RELEASE, carrying the key alone (2026-08-13). Key releases were
-    // platform-internal until the modal dialog's buttons grew a keyboard
-    // press-and-hold whose act is at the LIFT; the application needs the edge
-    // and needs nothing else from it, so this callback deliberately hands over
-    // no modifier state — the PRESS is what is modifier-exact, exactly as
-    // on_button_release's unused `mods` parameter says of the pointer.
-    using KeyReleaseCallback   = std::function<void(GuiKey key)>;
+    // A KEY RELEASE, carrying the key identity plus the LIVE input state
+    // (2026-08-16; the key alone from 2026-08-13, when its one consumer was
+    // the modal dialog's Enter/Space arm). Releases feed the application's
+    // GENERAL keyup dispatch now — outside a text editor the press only arms
+    // and the release commands (the model is at GuiInputHandler::on_key) — so
+    // the release hands over current_mods() plus the codepoint, built exactly
+    // as the press path builds them: the mismatch guard reads the three
+    // modifier bools, and a passing dispatch reads them live.
+    // `synthesized_repeat` stays false — only maybe_fire_repeat sets it, and
+    // it synthesizes no releases.
+    using KeyReleaseCallback   = std::function<void(GuiKey key, GuiInputState mods)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
     // A scroll wheel notification carrying the NET number of detents crossed
     // in one pointer frame (always >= 1). on_pointer_frame() coalesces a
@@ -226,7 +230,9 @@ public:
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
-    // THE KEY RELEASE HOOK (2026-08-13). It fires for the SAME key identity the
+    // THE KEY RELEASE HOOK (2026-08-13; the application's GENERAL keyup
+    // dispatch since 2026-08-16 — the model is at GuiInputHandler::on_key). It
+    // fires for the SAME key identity the
     // press delivered — the same keysym lookup, the same ASCII case-fold — and
     // it inherits the press path's two drop classes verbatim (standalone
     // modifier keysyms and F1..F35, keys this GUI has no use for) plus one of
@@ -235,10 +241,15 @@ public:
     // delivered either.
     // IT IS DELIBERATELY NOT GATED ON SUPER, where the press path is. The Super
     // drop exists so a chord that belongs to labwc never reaches a BINDING, and
-    // a release binds nothing on its own — it can only resolve an arm an
-    // already-delivered press created. Gating it would strand exactly the arm
-    // whose press got through before Super went down, which is the one case
-    // that could go wrong. Null-safe.
+    // a release binds nothing on its own — it can only RESOLVE an arm an
+    // already-delivered press created. A Super-dropped press arms nothing
+    // application-side (and fires the keyboard-intent cancellation hook below,
+    // which clears the application's armed key set), so ungated releases stay
+    // correct BY CONSTRUCTION; gating them would instead strand exactly the
+    // arm whose press got through before Super went down, which is the one
+    // case that could go wrong. The accepted corner (the modal arm's own
+    // precedent): Super pressed mid-hold does not block an armed act at the
+    // release. Null-safe.
     void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);

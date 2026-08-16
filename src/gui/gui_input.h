@@ -122,7 +122,13 @@ struct GuiInputState {
     // True iff this key event is a SYNTHESIZED KEY REPEAT — one the process
     // generated itself from a held key (GuiPlatform::maybe_fire_repeat, the
     // only writer — the transport arrows' button-side producer was deleted
-    // 2026-08-13 with their hold-repeat), not a fresh physical press. A
+    // 2026-08-13 with their hold-repeat), not a fresh physical press. ONE
+    // PRODUCER, ONE APPLICATION-SIDE CLEAR since the 2026-08-16 keyup model:
+    // a COMMAND hold's first repeat is dispatched with the bit CLEARED by the
+    // press router — the hold's press dispatches nothing under that model, so
+    // the opener stands in for it (the flip and its undo argument are at
+    // GuiInputHandler::on_key; an editor-typing repeat keeps the bit, its
+    // press having acted at the keydown island). A
     // platform-boundary fact in the same
     // spirit as `codepoint`. Its senior consumer is undo coalescing, where it
     // selects
@@ -142,7 +148,7 @@ struct GuiInputState {
 // toggle (the uniform rule: an unbound modifier combination is a no-op). Return
 // / keypad Enter are NOT playback keys — Enter opens the flag editor on the
 // focused marker (see the bare-Enter binding in input_handler.cpp). Shared by
-// the on_key dispatch (input_handler.cpp) and the read-only allowlist predicate
+// the key dispatch (input_handler.cpp) and the read-only allowlist predicate
 // (input_key_dispatch.cpp), which are its only two callers; inline so both TUs
 // see it, and one owner so the two readers cannot drift.
 inline bool is_play_pause_key(GuiKey key, GuiInputState mods) {

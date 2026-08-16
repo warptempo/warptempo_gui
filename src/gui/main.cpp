@@ -1353,12 +1353,13 @@ int main(int argc, char** argv) {
         input_handler.on_key(key, mods);
     });
 
-    // THE KEY RELEASE, this product's one act-on-lift keyboard edge: bare Enter
-    // or bare Space on a focused modal dialog button commits it here (the
-    // contract is at GuiInputHandler::on_key_release). Every other release
-    // resolves nothing.
-    gui.set_on_key_release([&](GuiKey key) {
-        input_handler.on_key_release(key);
+    // THE KEY RELEASE — the product's GENERAL keyup dispatch since 2026-08-16
+    // (the model is at GuiInputHandler::on_key): the modal dialog's armed
+    // Enter/Space resolves first — a modal surface owns input — then an armed
+    // general release runs the one command dispatch under live state (the
+    // ordered body is at GuiInputHandler::on_key_release).
+    gui.set_on_key_release([&](GuiKey key, GuiInputState mods) {
+        input_handler.on_key_release(key, mods);
     });
 
     gui.set_on_close([&]() {
@@ -1635,14 +1636,23 @@ int main(int argc, char** argv) {
     // partial list. The fire classes and the per-swallowed-delivery decision
     // are at the setter's contract (platform_wayland.h). THIS BODY IS THE
     // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
-    // model, and it holds ONE application-side key hold since the transport
-    // arrows' hold-repeat was deleted (2026-08-13, act-at-release — its disarm
-    // was this body's other member): THE MODAL DIALOG'S KEYBOARD PRESS ARM,
-    // which is sharper than a face — that button is painted down waiting for
-    // a RELEASE that these edges guarantee will never be delivered, so the
-    // arm is dropped and the box damaged (clear_modal_dialog_key_press).
+    // model, and it holds TWO application-side key intents since the 2026-08-16
+    // keyup model (one from 2026-08-13 until then; the transport arrows'
+    // hold-repeat disarm was an earlier member, deleted 2026-08-13):
+    //   * THE MODAL DIALOG'S KEYBOARD PRESS ARM,
+    //     which is sharper than a face — that button is painted down waiting for
+    //     a RELEASE that these edges guarantee will never be delivered, so the
+    //     arm is dropped and the box damaged (clear_modal_dialog_key_press);
+    //   * THE ARMED KEY SET — every pressed key waiting for its release to
+    //     command (the model is at GuiInputHandler::on_key) dies whole here,
+    //     on both fire classes for the modal arm's own reasons: keyboard
+    //     leave / capability loss are edges where the owed releases never
+    //     arrive, and the Super-dropped press is an intervening arrival —
+    //     conservative, consistent with the arm this hook already drops
+    //     (clear_armed_keys).
     gui.set_keyboard_intent_cancel_hook([&] {
         input_handler.clear_modal_dialog_key_press();
+        input_handler.clear_armed_keys();
     });
 
     // THE SETTLED BOUNDARY AND ITS THREE CONSUMERS (architect 2026-08-03,

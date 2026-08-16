@@ -27,7 +27,7 @@
 // origin and which strip to repaint.
 //
 // apply_editor_clipboard is intentionally NOT here — it is a keyboard
-// clipboard helper used only by on_key, and stays in input_handler.cpp.
+// clipboard helper used only by the key dispatch, and stays in input_handler.cpp.
 
 // F2.1: mouse drag-to-select for the three text editors. The selection
 // highlight is already painted from the editor State's selection_anchor /
@@ -90,7 +90,7 @@ struct ToolbarChord {
     //
     // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
-    // ABSOLUTE selectors 1/2/3, which are IDEMPOTENT — on_key's own handler
+    // ABSOLUTE selectors 1/2/3, which are IDEMPOTENT — the dispatch's own handler
     // already makes a press on the current combination a no-op, so dispatching
     // would be harmless rather than wrong. The flag is set anyway, and for the
     // FACE: the crops give a selected face and a click face and nothing that is
@@ -124,7 +124,8 @@ struct ToolbarChord {
 // on 2026-08-13 QUIT LEFT THE TABLE WITH ITS BUTTON: row 1 paints no held face,
 // so a button acting at the lift gave no feedback while it was down, and the
 // architect moved the act into a THIRD MENU — File, one item, "Quit", dispatched
-// as this chord through on_key like every other dropdown command (the roster
+// as this chord through the one command dispatch like every other dropdown
+// command (the roster
 // record is at RedesignButton::File, app_state.h). The CHORD is untouched
 // everywhere: the keyboard, the editors' modal admission, the close routing and
 // the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
@@ -132,7 +133,7 @@ struct ToolbarChord {
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1's RIGHT FLOAT — the view bar (2026-08-02). Bare 1/2/3, the ABSOLUTE
     // view selectors: S+W, T+P, T+W. Everything the digits own arrives by
-    // construction through on_key's own handler — the audio-first-then-markers
+    // construction through the dispatch's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
@@ -212,7 +213,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE SINGLE-MARKER VERBS (2026-08-12): drop, delete, disable toggle,
     // inherit/collapse — authoring chords whose refusals (read-only, home
     // view, empty selection, occupied frame) are the keys' own consumed
-    // no-ops, inherited whole through on_key. The `h` view consumes all four
+    // no-ops, inherited whole through the one command dispatch. The `h` view consumes all four
     // outright, and since 2026-08-13 that shows as the DEAD FACE rather than a
     // collapse — as it now does for everything in this row the view refuses,
     // the collapse rule being deleted whole (architect 2026-08-14).
@@ -364,7 +365,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // backwards into the live state and closes the view. Momentary like the two
     // below — not a radio, not a toggle, click face only. It is the one entry
     // here whose chord is NOT claimed by the mode's own vocabulary: it
-    // dispatches from on_key's ordinary body, BELOW the read-only gate, so a
+    // dispatches from dispatch_key_command's ordinary body, BELOW the read-only gate, so a
     // locked tab refuses the click exactly as it refuses the key (the
     // load-in-place's precedent, `'`). BOTH OF ITS REFUSALS ARE FACELESS since
     // 2026-08-15 — the lock's and the mode's empty-subject one — because it is
@@ -675,7 +676,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // (a whole surface wearing a state that is not the enabled bit).
 //
 // IT IS DERIVED, NOT LISTED. Each roster button but two IS a chord
-// (finish_chrome_press_release synthesizes it and calls on_key at the lift),
+// (finish_chrome_press_release synthesizes it and calls dispatch_key_command
+// at the lift),
 // so "the view
 // consumes this button's act" is exactly "the view's keyboard gate consumes this
 // button's chord" — this walks kToolbarChords and asks that gate. So the faces
@@ -3830,7 +3832,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // walk keeps how you were reading it.
             //
             // THE READ-ONLY LOCK DOES NOT APPLY, deliberately: the gate that
-            // refuses on a locked tab is on_key's, and nothing here dispatches a
+            // refuses on a locked tab is the key dispatch's, and nothing here dispatches a
             // key. A lock means hands off the piece's authored state, and the
             // history view is neither authored nor per-tab — refusing it would
             // stop a locked session from READING its own history, which is the
@@ -4032,11 +4034,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
     }
 
-    // THE `h` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
+    // THE `h` HISTORY MODE's pointer gate — the sibling of the key dispatch's
+    // allowlist,
     // and the second and last of the mode's two gates.
     //
     // PLACED BELOW THE FOUR REDESIGNED ROWS' BAND CLAIMS ON PURPOSE. Those rows
-    // dispatch their buttons as synthesized CHORDS through on_key, so they are
+    // dispatch their buttons as synthesized CHORDS through dispatch_key_command,
+    // so they are
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
     // view bar drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
@@ -5385,7 +5389,8 @@ void GuiInputHandler::finalize_active_drags() {
     // caret), the same act its release performs — selection-only, nothing to
     // revert. It seeds NO double-click candidate here: a force-end is not a click
     // (the clean release owns that seeding). The keyboard's own escape hatch for
-    // this drag lives in on_key and is editor modality, not a gesture cancel.
+    // this drag lives in dispatch_key_command and is editor modality, not a
+    // gesture cancel.
     if (app.editor_text_drag.active) finalize_editor_text_drag();
     // The marker reposition drag commits its PROPOSED positions (the overlay
     // becomes the store) and pushes the one undo entry iff the drag netted a
@@ -5935,15 +5940,18 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // must never outrank the live state. A lift anywhere else, or any gate gone,
 // dispatches nothing — the consumed-nothing the press would have been.
 //
-// THE BUTTON IS ITS CHORD, dispatched through on_key: the action is not merely
+// THE BUTTON IS ITS CHORD, dispatched through the one command dispatch
+// (dispatch_key_command at Full — a press-that-acts; through the press router
+// it would arm a phantom key whose release never comes): the action is not
+// merely
 // the same FUNCTION the key calls, it is the same ROUTE — every gate the chord
 // passes on the keyboard (the loading/blank return, the keyboard-modal editor
 // gate, the read-only allowlist, the arm's own refusals) applies here, in the
 // same order, with nothing restated and nothing that can drift. It is the
 // exact inverse of the platform's bare-`e`-as-left-button translation: one
-// vocabulary expressed on the other's surface, at a boundary. WHAT MOVED is
-// only WHEN it fires — the keyboard's own chords still dispatch on the key
-// PRESS; button-is-its-chord is about what a button runs, not when.
+// vocabulary expressed on the other's surface, at a boundary. Since the
+// 2026-08-16 keyup model the keyboard's own chords act at the RELEASE too, so
+// the two surfaces agree about WHEN as well as what.
 void GuiInputHandler::finish_chrome_press_release(
         const AppState::ChromePress& arm, int x, int y) {
     switch (arm.kind) {
@@ -6061,7 +6069,7 @@ void GuiInputHandler::finish_chrome_press_release(
         chord.ctrl  = tc.ctrl;
         chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
-        on_key(tc.key, chord);
+        dispatch_key_command(tc.key, chord, KeyDispatchPhase::Full);
         return;
     }
 }
@@ -6201,13 +6209,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // until its 2026-08-15 deletion) dispatches a chord, the SETTINGS one opens
     // the editor prefilled.
     if (dropdown_is_command_menu(menu)) {
-        // THE ITEM IS ITS KEY, dispatched through on_key exactly as a redesigned
+        // THE ITEM IS ITS KEY, dispatched through the one command dispatch
+        // (dispatch_key_command at Full — a press-that-acts, the chrome lift's
+        // own route; the press router would arm a phantom key whose release
+        // never comes) exactly as a redesigned
         // button dispatches its chord: every gate the keyboard route passes
         // (loading/blank, the modal gates, the read-only allowlist, the arm's own
         // refusals) applies identically, so an item whose command cannot act
         // right now simply does nothing — the buttons-never-grey rule, one
         // surface further out. No stop, no modal, nothing restated here. THE
-        // FILE MENU'S ONE ROW RIDES THIS BODY WHOLE: Ctrl+Q reaches on_key's own
+        // FILE MENU'S ONE ROW RIDES THIS BODY WHOLE: Ctrl+Q reaches the
+        // dispatch's own
         // close route — the drag-modal hatch, the dirty prompt, the WM-close
         // ordering — with no second body anywhere, which is the whole reason the
         // Quit BUTTON could be retired for a menu item without moving the act.
@@ -6224,7 +6236,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         chord.ctrl  = it.ctrl;
         chord.shift = it.shift;
         chord.alt   = it.alt;
-        on_key(it.key, chord);
+        dispatch_key_command(it.key, chord, KeyDispatchPhase::Full);
         return true;
     }
     // SETTINGS: the editor's open is its own ordinary route, prefilled through
@@ -6696,15 +6708,15 @@ void GuiInputHandler::close_dropdown() {
 void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE SETTINGS MENU AND THE `h` HISTORY MODE ARE NEVER UP TOGETHER, and this
     // is the half of that rule the mode cannot enforce from its own gates: the
-    // mode refuses to OPEN while a popup stands (the entry sits below on_key's
-    // dropdown gate), and this line refuses THAT menu while the MODE stands. The
+    // mode refuses to OPEN while a popup stands (the entry sits below the key
+    // dispatch's dropdown gate), and this line refuses THAT menu while the MODE stands. The
     // guard belongs here for the same reason the flag-editor teardown below
     // does — this is the ONE route every open passes, the anchor click, the
     // hover switch and the armed re-open alike.
     //
     // IT IS ALSO WHAT CLOSES THE MODE'S ONE POINTER BYPASS, and that bypass is
     // exactly what the SETTINGS half is scoped to. Every other route out of row 1
-    // dispatches a synthesized chord through on_key and so meets the mode's
+    // dispatches a synthesized chord through dispatch_key_command and so meets the mode's
     // keyboard allowlist; the anchors do not, and a Settings item opens the
     // settings editor by a DIRECT call (finish_dropdown_release), reaching no
     // gate at all. Refusing the menu is one line where covering that path per
@@ -6714,7 +6726,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // construction when it landed 2026-08-13, on the architect's 2026-08-08
     // ruling for the Navigation menu): it has no direct call to shut — its one
     // row is
-    // a CHORD, dispatched through on_key exactly as a redesigned button's is, so
+    // a CHORD, dispatched through dispatch_key_command exactly as a redesigned
+    // button's is, so
     // the mode answers PER ITEM at the same two gates a key meets, and File's
     // Ctrl+Q is on the allowlist. (Navigation's seven rows were answered the
     // same way — the allowlist admitted zoom in / out / overview,
@@ -6761,7 +6774,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // reachable while one of them is up — but the FlagPayload editor is
     // pointer-TRANSPARENT by ruling and swallows nothing, so its edit would
     // otherwise stand under the open menu. That is not merely untidy: a settings
-    // item opens the settings editor, on_key tests the flag editor FIRST, and
+    // item opens the settings editor, the key dispatch tests the flag editor
+    // FIRST, and
     // the typing would land in the flag buffer while the settings editor is what
     // looks focused.
     //
