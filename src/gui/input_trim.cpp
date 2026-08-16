@@ -41,7 +41,8 @@
 //     no-op that writes nothing (the strictly-inside guard at
 //     handle_trim_set_bound). A clamp would move the bound somewhere the user
 //     did not click; a refusal is the ruled answer there. THEY ACT AT THE LIFT
-//     since 2026-08-15 (the act-at-lift sweep's last four acts — the press arms
+//     since 2026-08-15, and since 2026-08-17 they are the ONE click still
+//     deferred (the press arms
 //     PendingClickAct, app_state.h, and a CROSSING runs the set at the press
 //     column and then hands over to that bound's endcap drag): the guard is
 //     unchanged and is simply re-asked live where the act now runs.

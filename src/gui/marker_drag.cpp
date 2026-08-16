@@ -30,12 +30,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
     // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the whole dead rigid
     // group-drag machinery are recorded at the head of position_nudge.h). THE
-    // THRESHOLD CROSSING single-selected `hit` and landed the playhead on it —
-    // the flag's click acts at the LIFT since 2026-08-15, and the crossing runs
-    // that same act (minus its double-click half) immediately before calling
-    // this, which is what keeps the drag subject exactly the grabbed marker.
+    // ARMING PRESS single-selected `hit` and landed the playhead on it —
+    // the flag's click acts AT THE PRESS since 2026-08-17
+    // (run_marker_click_act), and nothing mutates the store between press and
+    // crossing, which is what keeps the drag subject exactly the grabbed
+    // marker.
     // The selection is not read by any arithmetic here; it is what BRIGHTENS the
-    // dragged flag, which is why the crossing owes it.
+    // dragged flag, which is why the press owes it.
     // The one-element vectors below are the DragOverlay's storage contract
     // (paint matches a store index against dragging_markers), not a group: slot 0
     // is the dragged marker everywhere in this file.
@@ -143,24 +144,24 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // (apply_drag_motion's follow and commit_drag's land, the ruling at DragState).
     app.drag = std::move(d);
     // NO SELECTION WRITE HERE, and the deletion of the one that stood here
-    // (2026-08-15) is the point rather than a tidy-up: the THRESHOLD CROSSING runs
-    // run_marker_click_act a few lines before calling this, and that act's plain
+    // (2026-08-15) is the point rather than a tidy-up: the ARMING PRESS ran
+    // run_marker_click_act, whose plain
     // arm single-selects the grabbed marker — so the re-assert was the SECOND
     // mutation of one invariant. set_single_selection is not an assertion: it
     // clears and rebuilds the selection and schedules top-strip and status-chain
     // damage, so every successful drag start issued that damage twice, and two
     // owners for one invariant is exactly the shape that diverges when one of them
-    // is later changed. THE CLICK ACT IS THE OWNER AT BOTH ACT SITES (the
-    // motionless lift and the crossing), so the drag machinery writes no selection
+    // is later changed. THE CLICK ACT IS THE OWNER AT ITS ONE SITE (the arming
+    // press, 2026-08-17), so the drag machinery writes no selection
     // at all — which is also the honest arrangement, begin_drag,
     // apply_drag_motion and commit_drag READing no selection either.
     // THE ARGUMENT THE OLD ASSERT CARRIED IS KEPT, because it is why the write was
-    // not merely unnecessary: the subject must be named at the CROSSING rather
+    // not merely unnecessary: the subject must be named at the ARM rather
     // than behind an any_changed test, since a WALL-SATURATED drag (the clamped
     // delta pins the proposal — the marker at the EOF wall, or the viewport clamp
     // saturated) never changes a position, yet it is a real drag whose grabbed
     // marker must be selected and whose playhead commit_drag lands regardless of
-    // net change. The crossing's click act satisfies that identically: it is
+    // net change. The press's click act satisfies that identically: it is
     // unconditional and runs ahead of the first apply. (Groups are never moved
     // either way, 2026-07-29.)
     return true;

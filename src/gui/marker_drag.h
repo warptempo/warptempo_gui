@@ -9,9 +9,9 @@ struct GuiTargetRender;
 
 // Marker reposition drag — THE ONLY POINTER MARKER GESTURE, and the single
 // plain-flag-drag fine-tuning gesture
-// (a plain flag press ARMS a pending click; motion past the shared threshold
-// runs that click's act and begins the move — the click acts at the LIFT since
-// 2026-08-15, so the crossing is what single-selects the grabbed marker; the
+// (a plain flag press runs its click act AT THE PRESS — 2026-08-17 — and arms
+// a pending; motion past the shared threshold begins the move, the press's
+// single-select already naming the grabbed marker; the
 // contract is at PendingMarkerPress, app_state.h), shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
@@ -34,8 +34,8 @@ struct GuiTargetRender;
 // not re-propose a pointer tempo gesture: this is a ruling, not a gap.
 // NO Selection DEPENDENCY, deleted with the last write on 2026-08-15: the three
 // bodies below neither read nor write app.selected_markers. Naming the drag's
-// subject is the CLICK ACT's, at both of its sites (the motionless lift and the
-// threshold crossing, which runs it immediately before begin_drag) — the
+// subject is the CLICK ACT's, at its one site (the arming press,
+// run_marker_click_act — press-time again since 2026-08-17) — the
 // reasoning is at the deletion in begin_drag. Restoring the edge means restoring
 // a second owner for one invariant, so do not re-wire it to "assert" a selection
 // this gesture does not own.

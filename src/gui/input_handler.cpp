@@ -433,21 +433,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // region former does, its span being live under the pointer, and because an
     // unmoved press there still owes the deferred click act at its release),
     // and the
-    // MARKER FLAG'S PENDING CLICK, THE SWEEP'S LAST FOUR PENDING ACTS
-    // (pending_click — the trim bar's two bound sets and its framing
-    // double-click, the empty lane's create double-click and the `h` view's
-    // three diff-flag clicks, 2026-08-15) plus the pending trim drag (a press
+    // MARKER FLAG'S PENDING PRESS, THE ONE DEFERRED PENDING CLICK ACT
+    // (pending_click — the trim bar's two bound sets, the one click still
+    // lift-deferred since 2026-08-17) plus the pending trim drag (a press
     // held before it resolves) —
-    // are mutually exclusive with it. The marker pending is on this list for a
-    // SECOND reason since 2026-08-15, scroll_drag's own: the whole flag click
-    // runs at the LIFT now, reading the selection, the focus and playback state
-    // there, so no chord may move any of it in between. The four above are here
-    // for that same second reason and it is sharper for them: each act re-asks
-    // its gates LIVE at the lift — the bound set's strictly-inside partner test,
-    // the create's read-only and home-view refusals, the mode's own flag list —
-    // so a chord that moved a trim bound, locked the tab, switched the view or
-    // stepped the walk between press and release would have the lift decide
-    // against a state the user never pressed on.
+    // are mutually exclusive with it. The marker pending's click already ran
+    // at its press (2026-08-17), but it stays on this list: the drag it may
+    // become reads the store and the selection the press left, and the seed
+    // its release writes must pair with the press the user made — so no chord
+    // may move any of it in between. For the bound set the reason is sharper:
+    // its act re-asks its gates LIVE at the lift — the strictly-inside partner
+    // test above all — so a chord that moved a trim bound between press and
+    // release would have the lift decide against a state the user never
+    // pressed on.
     // scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys rather than letting one run over a latched
     // pan — and its PENDING phase must, because the deferred click act reads
