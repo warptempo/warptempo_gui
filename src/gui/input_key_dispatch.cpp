@@ -354,7 +354,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
     // THE TRIM GESTURES (architect 2026-08-07): bare `x` sets the trim window to
-    // the live region and Shift+X maximizes it back to the full window. Trim is
+    // the live region and Shift+X maximizes it back to the full window
+    // (Ctrl+Shift+X joined them 2026-08-16 — its own entry below). Trim is
     // BAND, not content (the header), so both are admitted, and their internal
     // behavior is untouched — the degenerate-result refusal, Shift+X's identity
     // guard, the setter's deselect, the playhead park and the trim-mutation
@@ -365,6 +366,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (!ctrl && !shift && !alt && key == GuiKeys::X);
     const bool is_trim_shift_x =
         (!ctrl && shift && !alt && key == GuiKeys::X);
+    // THE SHOW-REGION BUTTON'S CHORD (architect 2026-08-16), the trim family's
+    // third admitted chord and the EASIEST of the three to admit: it writes no
+    // trim bound at all — only the session's region scratch, and then the
+    // viewport — so it is strictly less than `x` on the very axis the band
+    // ruling turns on. A locked tab could always FORM a region by plain drag
+    // and clear one with bare Esc; this is the same scratch reached by a chord.
+    const bool is_show_region =
+        (ctrl && shift && !alt && key == GuiKeys::X);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -385,7 +394,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
-             is_trim_x || is_trim_shift_x);
+             is_trim_x || is_trim_shift_x || is_show_region);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------

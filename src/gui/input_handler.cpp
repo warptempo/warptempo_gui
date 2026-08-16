@@ -1077,10 +1077,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the resting window; the span is then CONSUMED and the selection cleared —
     // architect 2026-07-30 / 2026-07-29; a DEGENERATE inverse-mapped span refuses
     // instead of writing a pair the crossed-commit reset would throw away), and
-    // with NO region it SHOWS one at the current trim window and writes nothing
-    // — the seed, whose whole contract (a one-time copy, not the retired sync)
-    // is at handle_trim_x, input_trim.cpp. Shift+X writes [0, total-1]
-    // (handle_trim_shift_x). The playhead is an OUTPUT of both, never an input:
+    // and with NO region it is a consumed nothing). Shift+X writes [0, total-1]
+    // (handle_trim_shift_x). CTRL+SHIFT+X SHOWS THE REGION since 2026-08-16
+    // (handle_show_region): make sure a region exists — seeding one at the trim
+    // window if none stands — and bring it into view. It CLEARS nothing and is
+    // NOT a toggle. It is a GENUINELY NEW BINDING and not a widening of either
+    // arm above — the strict-modifier rule made that combination a no-op
+    // everywhere — and it exists because bare `x` had carried the seed for one
+    // day and one key must not mean two unrelated things (show and commit).
+    // The playhead is an OUTPUT of the two trim writes, never an input:
     // every trim WRITE parks it at the new trim start (architect 2026-08-05 —
     // the rule and its membership at the head of input_trim.cpp), and a refused
     // press moves nothing. Trim's pointer routes
@@ -1094,6 +1099,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
     if (!ctrl && shift && !alt && key == GuiKeys::X) {
         handle_trim_shift_x();
+        return;
+    }
+    if (ctrl && shift && !alt && key == GuiKeys::X) {
+        handle_show_region();
         return;
     }
 
@@ -1496,6 +1505,109 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // other zoom commands; the idempotent current-vs-target no-op lives there.
     // NOT apply_zoom_change (which would recenter on the playhead).
     viewport.apply_zoom_to_start(target_level, target_start);
+}
+
+// PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT (architect 2026-07-25
+// post-labwc, decided on PAINTED COLUMNS). This body was the GROUP undo/redo
+// restore's inline tail from that day until 2026-08-16, when the
+// SHOW-REGION button asked for the identical behaviour in the architect's
+// own words — "like undo in terms of zoom/viewport: if the region can fit at
+// current zoom and is not fully in view, it is brought into view just like undo
+// marker group, without affecting zoom; if it cannot fit, zoom is made to fit"
+// — and it was HOISTED rather than described twice. The restore keeps its own
+// class plus a pointer here; this is the one authoritative statement.
+//
+// THE FIT CONTRACT IS PAINTED COLUMNS, not a sample span — an endpoint paints
+// at its OWN column and the painter does NOT edge-clamp it, so the capacity is
+// the pixel range [0, W), NOT q*W samples (which overcounts by up to a column)
+// and NOT the grid-snapped start (clamp_viewport_start moves it ~half a pixel).
+// Both tests decide on the endpoints' columns under the painter's own basis
+// (painter_samples_per_pixel + the shared displayed_column_at rounding — the
+// endpoints already live in the active display domain, so no warp map is
+// walked). THREE ARMS:
+//   - fully visible (both endpoint columns in [0, W) under the CURRENT start)
+//     -> no viewport write at all;
+//   - otherwise TENTATIVELY center at the current zoom (viewport_start =
+//     midpoint - visible/2, then clamp_viewport_start) and re-test the columns
+//     under the clamped start: both in [0, W) -> the SCROLL stands (no zoom
+//     change, no margin);
+//   - else -> frame_span_into_view with margin (the cannot-fit fallback; the
+//     framer only ever zooms OUT to fit — fit level + 2.5%-per-side, centered,
+//     clamped [kMinZoom, effective ceiling], NO playhead recenter). It
+//     OVERWRITES the tentative viewport wholesale (level + start via
+//     apply_zoom_to_start), so the tentative write needs no revert.
+//
+// THE FRAMER'S no-op GUARD AND ITS ONE EXCEPTION (accepted, architect
+// 2026-07-25, ratified after talk-through). apply_zoom_to_start's
+// current-vs-target no-op normally cannot leave the failing tentative state
+// standing, because a fit that failed at the current level forces the framer to
+// a DIFFERENT (more zoomed-out) level to seat the MARGIN-widened span — the
+// level differs, so the guard does not short-circuit. THE EXCEPTION is the
+// CONJUNCTION the two code paths already embody: (a) an endpoint's painted
+// column still fails the [0, W) test after the ceiling / start-0 clamp — which
+// happens for ANY hi landing in the final half-pixel interval at the ceiling q,
+// NOT only total-1 (e.g. W=1920, total=4,410,000, q=2296.875: hi = total-1000
+// rounds to column W without ending at EOF) — AND (b) the margined fit request
+// clamps back to that SAME ceiling, so apply_zoom_to_start no-ops and the
+// ceiling rest at start 0 stands. Both are required: a NARROW EOF-ending span
+// fails (a) but not (b) — e.g. [4,000,000, total-1] ends at EOF yet its
+// 5%-widened span frames to a DEEPER level, exercising no no-op — while the
+// (a)-failing wide case no-ops because its margined span is already at least
+// song-wide. When the conjunction holds the endpoint rests AT or PAST the
+// effective waveform's right edge: half-culled, or (at a non-multiple-of-16
+// window width) sitting in the 0-15px inert right gutter, where a flag at its
+// painted width can show WHOLE just outside the effective span — flag centers
+// use the effective W (floored to a multiple of 16) while the flag surface
+// spans the full strip. At the ruled deployment widths (1920 / 2560 / 3840, all
+// multiples of 16) the gutter is empty and it half-culls. Either way NO route
+// places the endpoint INSIDE the effective span at whole-song-visible — the
+// standing flags-may-hang-half-offscreen geometry (cull only when FULLY out),
+// the SAME cull the level-preserving navigation routes show there (Tab, which
+// keeps the level; the marker-click land, which writes no viewport; and the
+// trim-bar double-click framer itself, no-op under this conjunction) — not a
+// framing defect, and identical under every option reachable within the
+// whole-song-ceiling and centered-flag rulings. The futile framer call is left
+// as-is (a harmless no-op there); a ceiling special-case would be a branch for
+// ZERO behavioral difference. THIS WHOLE BODY DIVERGES from the trim-bar
+// DOUBLE-CLICK's unconditional zoom-to-span; the framer itself is untouched.
+//
+// ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync render and
+// each caller's own unconditional kick runs a second over identical final state
+// — a bounded duplicate on a discrete keystroke (the keyboard zoom's per-press
+// cost).
+//
+// IT WRITES ONLY THE VIEWPORT and damages nothing: the caller owns its own
+// damage and its own sync kick, which is what keeps the restore behaviourally
+// unchanged by the hoist (its tail already invalidated and kicked
+// unconditionally) and what lets the toggle's seed pay the same tail once.
+// A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put, matching
+// the inline version's own guard.
+void bring_span_into_view(AppState& app, const GuiAudio& audio,
+                          Viewport& viewport, int64_t lo, int64_t hi) {
+    const GuiRect area = waveform_area(app);
+    const int     W    = area.w;
+    const double  q    = painter_samples_per_pixel(app, audio, area);
+    // Endpoint column under a given viewport start, on the flag painters' basis
+    // (the shared displayed_column_at rounding, warp_frame_map_view.h).
+    auto both_columns_visible = [&](int64_t vp_start) {
+        const int lo_col = displayed_column_at(
+            static_cast<double>(lo), static_cast<double>(vp_start), q);
+        const int hi_col = displayed_column_at(
+            static_cast<double>(hi), static_cast<double>(vp_start), q);
+        return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
+    };
+    if (q > 0.0 && W > 0 && !both_columns_visible(app.viewport_start_sample)) {
+        // Tentatively center at the current zoom and clamp.
+        const int64_t visible = samples_visible(app, audio);
+        app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
+        clamp_viewport_start(app, audio);
+        if (!both_columns_visible(app.viewport_start_sample)) {
+            // Cannot fit at this level even centered -> zoom out to fit
+            // (overwrites the tentative viewport wholesale).
+            frame_span_into_view(app, audio, viewport, lo, hi,
+                                 /*margin=*/true);
+        }
+    }
 }
 
 void GuiInputHandler::run_span_framing_command() {

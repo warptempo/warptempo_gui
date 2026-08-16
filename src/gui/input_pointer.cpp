@@ -161,15 +161,34 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
     {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    // THE TRIM PAIR — the scissors and, since 2026-08-16, the show-region
+    // button, one separator-led group.
+    //
     // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
     // from region — momentary, click face, not a radio. Every rule the key has
     // the button has: the degenerate-result refusal and the NO-REGION arm (a
-    // SEED at the current trim window since 2026-08-15, not a no-op) are the
-    // key's own, read-only-legal (trim is band), consumed in the `h` view (the
-    // derived partition greys it there). SHIFT IS ADMITTED since 2026-08-15 —
-    // the twin is Shift+X the maximizer, and the reason the keyboard-only
-    // clause was dropped is at redesign_button_shift_admits (app_state.h).
+    // CONSUMED NOTHING again since 2026-08-16, the seed having moved onto its
+    // own chord) are the key's own, read-only-legal (trim is band), consumed in
+    // the `h` view (the derived partition greys it there). SHIFT IS ADMITTED
+    // since 2026-08-15 — the twin is Shift+X the maximizer, and the reason the
+    // keyboard-only clause was dropped is at redesign_button_shift_admits
+    // (app_state.h).
     {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
+    // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, a GENUINELY
+    // NEW BINDING rather than a widening of either `x` arm — the
+    // strict-modifier rule makes an unbound combination a no-op everywhere, so
+    // the chord answered nothing anywhere in the product before this row (the
+    // editors' clipboard chords are ctrl-EXACT, so Ctrl+Shift+X was
+    // NotEditorKey in there too). MOMENTARY, click face, not a radio and NOT a
+    // toggle: it carries no state at all, which is the architect's own fix for
+    // the hole a lamp would have opened (the record is at the roster entry,
+    // app_state.h). No shift ADMISSION either: the shift is already spent
+    // inside the chord, so there is no twin and no hint line (the
+    // static_assert at the tooltip table keeps those two facts one). Consumed
+    // in the `h` view exactly as `x` is, by the mode allowlist and nothing
+    // hand-listed.
+    {RedesignButton::IconShowRegion,
+     GuiKeys::X,   true,  true,  false, false, true},                               // Ctrl+Shift+X
     // THE ZOOM GROUP (2026-08-12, the grand relayout — SUPERSEDING the
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair for
     // these four: the Navigation dropdown kept its rows beside them, the
@@ -364,11 +383,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here — 45
-// rows against the roster's 47 since 2026-08-15's Navigation deletion (earlier
+// every RedesignButton but the two menu anchors carries a chord here — 46
+// rows against the roster's 48 since 2026-08-16, when the SHOW-REGION button
+// joined both (Ctrl+Shift+X is a chord, so the pair moved together).
+// It was 45 against 47 from 2026-08-15's Navigation deletion; earlier
 // that day it was 45 against 48: the marker walk's three in, the collapsed
 // play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
-// so its removal moved the roster and not this table) — so the
+// so its removal moved the roster and not this table — so the
 // table's length plus those two IS the roster. The check is not bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
@@ -5468,8 +5489,8 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's File / Settings and the view bar's three, row 3's two
-// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
-// relayout — and the bottom row's fourteen: 47, the enum's
+// tabs, row 4's twenty-seven — the toolbar four included since the 2026-08-12
+// relayout — and the bottom row's fourteen: 48, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; an UNPAINTED bottom-row cluster member's zero
 // rect resolves unhovered with no arm here).

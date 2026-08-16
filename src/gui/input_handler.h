@@ -277,8 +277,14 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // drags a plain press arms INSIDE a live span, apply_region_edit_drag_at: it
 // EDITS the span, so clearing it would be the one thing it must never do; its
 // UNMOVED release runs the deferred click act instead and clears through that,
-// which is the degenerate full-window case's escape hatch), and THE `x` SEED
-// (the no-region arm, which CREATES a span rather than clearing one), SPACE
+// which is the degenerate full-window case's escape hatch), THE SHOW-REGION
+// BUTTON (Ctrl+Shift+X, handle_show_region — it CREATES a span when none
+// stands and otherwise only moves the viewport to the one that does; it clears
+// a region in NO case, which is a ruling and not an omission: a
+// clear-if-present arm was designed and the architect removed it, because a
+// button that cleared what it was asked to show could strand a scrolled-away
+// span. It was bare `x`'s no-region arm for the day between 2026-08-15 and
+// 2026-08-16 and moved whole when he split show from commit), SPACE
 // (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
 // pans — the plain-drag grab-pan and the plain wheel's stepped pan included,
@@ -437,6 +443,34 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
+
+// PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT — the three-arm framing
+// the GROUP undo/redo restore has taken since 2026-07-25, HOISTED into its own
+// owner on 2026-08-16 when the show-region button needed the identical
+// behaviour ("like undo in terms of zoom/viewport", architect). It is the
+// framer above's caller, not its sibling: arm three IS
+// frame_span_into_view(margin=true).
+//
+// [lo, hi] are ACTIVE-DOMAIN frames, the same domain frame_span_into_view
+// takes and the same one BOTH callers already hold — the restore derives its
+// extent through clamp_playhead_to_live_domain(source_frame_to_active_domain
+// (...)) and the region's endpoints ARE active-domain frames by definition. A
+// caller holding SOURCE frames (the trim bounds, say) converts before it calls,
+// which is what the show-region seed does.
+//
+// It writes ONLY the viewport (level and start) and only through the family's
+// clamp chokepoints; it damages nothing and kicks no render, exactly as the
+// inline version did — each caller owns its own damage, which is why the
+// restore's unconditional invalidate + kick tail is unchanged by the hoist.
+// Order-agnostic: both arms read the pair symmetrically, so no swap is needed
+// (the framer's own defensive swap still stands for its other callers).
+//
+// THE WHOLE ARGUMENT — the three arms, the painted-column fit contract, the
+// ceiling/half-pixel exception the framer's no-op guard cannot cover, and the
+// accepted duplicate render — lives at the DEFINITION in input_handler.cpp.
+// Definition in input_handler.cpp.
+void bring_span_into_view(AppState& app, const GuiAudio& audio,
+                          Viewport& viewport, int64_t lo, int64_t hi);
 
 // THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
@@ -1124,7 +1158,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's File / Settings and
-    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
     // toolbar four included since the 2026-08-12 relayout) and the bottom
     // row's fourteen — the transport three, the marker-walk three, and
     // whichever four the right cluster
@@ -2213,7 +2247,12 @@ private:
     // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
     // read as crossed and reset to the song edges (ARCHITECT-CONFIRMED 2026-07-29;
     // the derivation is at the definition). x never MAXIMIZES either way
-    // (that arm moved to Shift+X).
+    // (that arm moved to Shift+X) and it never SHOWS a region either — the
+    // no-region arm SEEDED one for a day (2026-08-15..16) and the architect
+    // split that act off onto Ctrl+Shift+X because one key had come to mean two
+    // unrelated things, show and commit; the seed is
+    // handle_show_region's now, so "NO region" is a refusal again exactly
+    // as it was before that day.
     // No read-only check, and nothing left for one to do: the keyboard gate
     // ADMITS bare `x` and Shift+X since 2026-08-07 (trim is band, not authored
     // content), so a locked tab runs both exactly as a writable one does. The
@@ -2229,6 +2268,22 @@ private:
     // gated region re-sync it carried died with the trim-window highlight,
     // architect 2026-07-30 — a scratch span is the user's).
     void handle_trim_shift_x();
+
+    // Ctrl+Shift+X SHOWS THE REGION (architect 2026-08-16) — the icon row's
+    // IconShowRegion button and its keyboard twin. ONE ACT: make sure a region
+    // exists (seeding one at the current trim window's two bounds if none
+    // stands) and BRING IT INTO VIEW through bring_span_into_view. It CLEARS
+    // NOTHING and it is deliberately NOT a toggle — a lamp over the region's
+    // existence would strand a scrolled-away span behind a lit button whose
+    // only press cleared it, which is the architect's own reason and is
+    // recorded at the roster entry (app_state.h) and at the definition. It
+    // writes NO TRIM and no authored content, which is why it is
+    // read-only-LEGAL like `x` itself (its entry is on read_only_key_blocked's
+    // allowlist) and why the `h` view simply consumes it (not on that mode's
+    // allowlist — the derived partition greys the button with nothing
+    // hand-listed). The seed half is `x`'s own 2026-08-15 arm moved WHOLE,
+    // ruling and all; the full record is at the definition, input_trim.cpp.
+    void handle_show_region();
 
     // Write the FULL window [0, total-1]. Silent no-op when the window is
     // ALREADY full (the identity guard that replaced the old has-a-bound refusal

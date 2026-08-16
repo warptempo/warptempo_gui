@@ -10,7 +10,7 @@
 // icon is crisp at every gui_scale, exactly like every other redesigned
 // dimension.
 //
-// THE INTERPRETER HAS GROWN EXACTLY THREE FEATURES past the plain filled path
+// THE INTERPRETER HAS GROWN EXACTLY FOUR FEATURES past the plain filled path
 // it started as, each with a committed producer and each taken so that the `d`
 // string in the table stays VERBATIM rather than being flattened by hand:
 //   - a per-path TRANSLATE (dialog-ok-apply's and dialog-cancel's transform);
@@ -19,16 +19,27 @@
 //     rather than invented: the arm lived for part of 2026-08-11 for
 //     distortionfx, went producer-less when the architect reglyphed that
 //     button hours later, and comes back with a real producer plus the one
-//     thing distortionfx never needed, a per-path LINE CAP).
+//     thing distortionfx never needed, a per-path LINE CAP);
+//   - the STROKE'S OWN WIDTH AND DASH (tool-rect-selection, 2026-08-16), which
+//     is a widening of the third rather than a fourth kind of thing: the pen
+//     had been hard-coded to boost's implicit defaults, and the marching-ants
+//     rectangle is the first file to state either attribute.
 // Each is described where it is implemented (icons.cpp's table header and its
 // `d`-interpreter header). A general per-path MATRIX was grown alongside the
-// stroke for distortionfx and did NOT come back with it — boost carries no
-// transform at all — so that one is still git history alone.
+// stroke for distortionfx and did NOT come back with it — neither stroked file
+// carries a transform — so that one is still git history alone.
+//
+// ONE FILE DEPARTS FROM THE VERBATIM RULE and it is stated here as well as at
+// its table entry, because the rule is what this header promises:
+// tool-rect-selection's geometry is a `<rect>` element, not a `<path>`, so
+// there is no `d` in the file to copy and its row holds a four-number
+// derivation instead. A `<rect>` parser was declined for one file.
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
 // d-strings here are copied from them VERBATIM, so a diff between the two is a
-// transcription bug and nothing else. They are read by no code at runtime — the
+// transcription bug and nothing else — with the ONE `<rect>` file's derivation
+// as the stated exception just above. They are read by no code at runtime — the
 // product ships no icon files and reads none.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
@@ -104,6 +115,17 @@ enum class Icon {
     // `.ColorScheme-Text` path of m/c/l/z commands, inside the interpreter's
     // coverage.
     EditCut,             // Set trim from region (bare `x`)
+    // THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16), the trim
+    // group's second member: Breeze's TOOL-RECT-SELECTION, the marching-ants
+    // rectangle — a dashed box says "a selected span" everywhere, and the
+    // button's whole job is to put one on the waveform. Taken at 22 though the
+    // architect named the 24px path: the two files hold the SAME rectangle (24
+    // wraps it in a translate inside a 24 viewBox) and 22 is this set's
+    // convention. It is the table's ONE `<rect>` file, so its `d` is a
+    // four-number derivation rather than a verbatim copy — stated at the table
+    // entry, which also records the two stroke attributes it brought (a
+    // non-default width and the dash).
+    ToolRectSelection,   // Show region (Ctrl+Shift+X)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
     // roster commit — the icon row's zoom group after the trim scissors).
     // Breeze's own magnifier family, one construction four ways: the bare
@@ -239,6 +261,9 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 45 since 2026-08-16: 44 + tool-rect-selection, the show-region
+// button's marching-ants rectangle (the icon row's trim group, beside the
+// scissors).
 // 44 since 2026-08-15 (the bottom row's marker-walk group): 41 + bboxprev,
 // bboxnext and boost. THE PLAY/STOP COLLAPSE OF THE SAME DAY COST NOTHING
 // HERE — one button wearing two glyphs needs both of them, and an Icon has
@@ -247,7 +272,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 44;
+inline constexpr int kIconCount = 45;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

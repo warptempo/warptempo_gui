@@ -3,7 +3,11 @@
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // clear_region_highlight,
                                   // clear_touch_zoom_seat — the W/P write's own,
-                                  // frame_span_into_view — the restore visual tail
+                                  // bring_span_into_view — the restore visual
+                                  // tail's group framing (the shared owner
+                                  // since 2026-08-16; frame_span_into_view is
+                                  // its cannot-fit arm and is no longer called
+                                  // from this TU)
 #include "platform_wayland.h"     // viewport.gui.set_title_dirty — the window
                                   // title's dirty half, pushed from
                                   // recompute_dirty's tail
@@ -722,74 +726,19 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // premise).
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
-            // OFFSCREEN handling (architect 2026-07-25 post-labwc, decided on
-            // PAINTED COLUMNS): PREFER a plain scroll at the current zoom, ZOOM only
-            // when the group cannot fit. The fit contract is PAINTED COLUMNS, not a
-            // sample span — an endpoint's flag paints at its CENTER column and the
-            // painter does NOT edge-clamp that center, so the capacity is the
-            // pixel range [0, W), NOT q*W samples (which overcounts by up to a
-            // column) and NOT the grid-snapped start (clamp_viewport_start moves it
-            // ~half a pixel). Both tests decide on the endpoints' columns under the
-            // painter's own basis (painter_samples_per_pixel + the shared
-            // displayed_column_at rounding — the region endpoints already live in
-            // the active display domain, so no warp map is walked). Three arms:
-            //   - fully visible (both endpoint columns in [0, W) under the CURRENT
-            //     start) -> no viewport write;
-            //   - otherwise TENTATIVELY center at the current zoom (the singleton
-            //     recenter's group sibling: viewport_start = extent midpoint -
-            //     visible/2, then clamp_viewport_start) and re-test the columns
-            //     under the clamped start: both in [0, W) -> the SCROLL stands (no
-            //     zoom change, no margin);
-            //   - else -> frame_span_into_view with margin (the cannot-fit
-            //     fallback; the framer only ever zooms OUT to fit — fit level +
-            //     2.5%-per-side, centered, clamped [kMinZoom, effective ceiling], NO
-            //     playhead recenter). It OVERWRITES the tentative viewport wholesale
-            //     (level + start via apply_zoom_to_start), so the tentative write
-            //     needs no revert. Its apply_zoom_to_start no-op guard normally
-            //     cannot leave the failing tentative state standing, because a fit
-            //     that failed at the current level forces the framer to a DIFFERENT
-            //     (more zoomed-out) level to seat the MARGIN-widened span — the
-            //     level differs, so the guard does not short-circuit. THE ONE
-            //     EXCEPTION (accepted, architect 2026-07-25 (ratified after
-            //     talk-through)) is the
-            //     CONJUNCTION the two code paths already embody: (a) an endpoint's
-            //     painted column still fails the [0, W) test after the ceiling /
-            //     start-0 clamp — which happens for ANY hi landing in the final
-            //     half-pixel interval at the ceiling q, NOT only total-1 (e.g.
-            //     W=1920, total=4,410,000, q=2296.875: hi = total-1000 rounds to
-            //     column W without ending at EOF) — AND (b) the margined fit request
-            //     clamps back to that SAME ceiling, so apply_zoom_to_start no-ops and
-            //     the ceiling rest at start 0 stands. Both are required: a NARROW
-            //     EOF-ending group fails (a) but not (b) — e.g. extent
-            //     [4,000,000, total-1] ends at EOF yet its 5%-widened span frames to
-            //     a DEEPER level, exercising no no-op — while the (a)-failing wide
-            //     case no-ops because its margined span is already at least
-            //     song-wide. When the conjunction holds the endpoint rests AT or
-            //     PAST the effective waveform's right edge: half-culled, or (at a
-            //     non-multiple-of-16 window width) sitting in the 0-15px inert right
-            //     gutter, where the flag (at its painted width) can show WHOLE just
-            //     outside the effective span — flag centers use the effective
-            //     W (floored to a multiple of 16) while the flag surface
-            //     spans the full strip. At
-            //     the ruled deployment widths (1920 / 2560 / 3840, all multiples of
-            //     16) the gutter is empty and it half-culls. Either way NO route
-            //     places the endpoint INSIDE the effective span at whole-song-
-            //     visible — the standing flags-may-hang-half-offscreen geometry (cull
-            //     only when FULLY out), the SAME cull the level-preserving
-            //     navigation routes show there (Tab, which keeps the level; the
-            //     marker-click land, which writes no viewport; and the trim-bar
-            //     double-click framer itself, no-op under this conjunction) — not a
-            //     framing defect, and identical
-            //     under every option reachable within the whole-song-ceiling and
-            //     centered-flag rulings. The futile framer call is left as-is (a
-            //     harmless no-op there); a ceiling special-case would be a branch for
-            //     ZERO behavioral difference. This whole arm diverges from the
-            //     trim-bar DOUBLE-CLICK's unconditional zoom-to-span; the framer
-            //     itself is untouched, an undo-tail rule only.
-            // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
-            // render and the unconditional kick_waveform_sync below runs a second
-            // over identical final state — a bounded duplicate on a discrete
-            // keystroke (the keyboard zoom's per-press cost).
+            // OFFSCREEN handling: PREFER a plain scroll at the current zoom,
+            // ZOOM only when the group cannot fit — this restore's own rule
+            // since 2026-07-25 and, since 2026-08-16, SHARED CODE. The whole
+            // argument (the painted-column fit contract, the three arms, the
+            // ceiling/half-pixel exception to the framer's no-op guard, and the
+            // accepted duplicate render) lives at bring_span_into_view's
+            // definition, input_handler.cpp; it was hoisted verbatim out of
+            // this spot when the show-region button asked for the same
+            // behaviour, so this arm is unchanged in effect and only its home
+            // moved. WHAT IS THIS SITE'S OWN: it hands the owner an
+            // ACTIVE-DOMAIN extent derived just below, and the unconditional
+            // invalidate + kick_waveform_sync at the tail of this body is the
+            // damage the owner deliberately does not do.
             // THE SPAN THE FRAMING DECIDES ON IS THE TOUCHED SET'S OWN
             // [earliest, latest] ACTIVE-DOMAIN EXTENT, derived right here from
             // the restored members' positions (architect 2026-07-30): it used to
@@ -825,33 +774,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 }
             }
             if (have) {
-                const int     W       = waveform_area(app).w;
-                const double  q       = painter_samples_per_pixel(
-                    app, viewport.audio, waveform_area(app));
-                // Endpoint column under a given viewport start, on the flag
-                // painters' basis (the shared displayed_column_at rounding,
-                // warp_frame_map_view.h); empty q (no geometry) leaves the
-                // viewport put.
-                auto both_columns_visible = [&](int64_t vp_start) {
-                    const int lo_col = displayed_column_at(
-                        static_cast<double>(lo), static_cast<double>(vp_start), q);
-                    const int hi_col = displayed_column_at(
-                        static_cast<double>(hi), static_cast<double>(vp_start), q);
-                    return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
-                };
-                if (q > 0.0 && W > 0 &&
-                    !both_columns_visible(app.viewport_start_sample)) {
-                    // Tentatively center at the current zoom and clamp.
-                    const int64_t visible = samples_visible(app, viewport.audio);
-                    app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
-                    clamp_viewport_start(app, viewport.audio);
-                    if (!both_columns_visible(app.viewport_start_sample)) {
-                        // Cannot fit at this level even centered -> zoom out to fit
-                        // (overwrites the tentative viewport wholesale).
-                        frame_span_into_view(app, viewport.audio, viewport,
-                                             lo, hi, /*margin=*/true);
-                    }
-                }
+                bring_span_into_view(app, viewport.audio, viewport, lo, hi);
             }
         }
         // sel_size == 0: nothing — the removal branch cleared, viewport/playhead

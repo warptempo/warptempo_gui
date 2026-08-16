@@ -669,17 +669,26 @@ constexpr IconRowDef kIconRowButtons[] = {
     // group left, ahead of the mass-marker category; 2026-08-14 took the
     // group's four companions to the BOTTOM ROW, brought the READ-ONLY toggle
     // in from the tabs and put the opener last, which is TWENTY-SIX members in
-    // EIGHT groups, all painted, every frame.)
-    // THE TRIM BUTTON (2026-08-11, the trim surface arc), a NEW SEPARATOR-LED
-    // GROUP after the warp/phase radios — the architect's placement ("place it
-    // after the warp/phase radio buttons, create a new separator"), a group
-    // intended to collect VIEWPORT-RELATED ACTS later; today it is the one
-    // member. Bare `x`, set trim from region. The glyph is Breeze's
-    // EDIT-CUT — the scissors, his pick from the rendered candidate sheet
-    // later the same day, over the first cut's planner-picked transform-crop
-    // (read as rectangle-select; the succession is at the icons.h entry and
-    // the retired glyph's one-commit record at the icons.cpp table).
-    {RedesignButton::IconTrim,   icons::Icon::EditCut},
+    // EIGHT groups, all painted, every frame; 2026-08-16 made it TWENTY-SEVEN
+    // by filling the trim group's second slot with the show-region
+    // button, the group count unchanged.)
+    // THE TRIM PAIR (2026-08-11 for the scissors, 2026-08-16 for the button
+    // beside it), a SEPARATOR-LED GROUP after the warp/phase radios — the
+    // architect's placement ("place it after the warp/phase radio buttons,
+    // create a new separator"), a group intended to collect VIEWPORT-RELATED
+    // ACTS later, and the second such act is what filled it.
+    //   Bare `x`, set trim from region. The glyph is Breeze's EDIT-CUT — the
+    //   scissors, his pick from the rendered candidate sheet later the same
+    //   day, over the first cut's planner-picked transform-crop (read as
+    //   rectangle-select; the succession is at the icons.h entry and the
+    //   retired glyph's one-commit record at the icons.cpp table).
+    //   Ctrl+Shift+X, show region. The glyph is TOOL-RECT-SELECTION, the
+    //   marching-ants rectangle — the architect's pick, taken at 22px though he
+    //   named the 24px path (same rectangle, and 22 is the set's convention).
+    //   MOMENTARY like its neighbour: no lamp, no state (the ruling and the
+    //   toggle it replaced are at the roster entry, app_state.h).
+    {RedesignButton::IconTrim,       icons::Icon::EditCut},
+    {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
     // THE ZOOM GROUP (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): zoom in (bare
     // `=`), zoom out (bare `-`), full zoom out (bare `0`) and working-zoom
@@ -1901,17 +1910,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members in
-    // EIGHT groups since 2026-08-14: the toolbar four (Save / Undo / Redo /
+    // width, separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
+    // in EIGHT groups since 2026-08-16: the toolbar four (Save / Undo / Redo /
     // Render, the deleted row 2's, leading the row), the S/T and W/P view
-    // radios, the trim button's group (2026-08-11), the ZOOM GROUP and the
-    // SINGLE-MARKER VERBS (both 2026-08-12), the phase-reset copy/paste pair
-    // with the bpm / iteration / follow modes, and the row's LAST GROUP —
-    // listen, load-in-place, the READ-ONLY toggle and the HISTORY OPENER, the
-    // architect's own order that day.
+    // radios, THE TRIM PAIR (the scissors, 2026-08-11, and the
+    // show-region button that filled its group's second slot on
+    // 2026-08-16), the ZOOM GROUP and the SINGLE-MARKER VERBS (both
+    // 2026-08-12), the phase-reset copy/paste pair with the bpm / iteration /
+    // follow modes, and the row's LAST GROUP — listen, load-in-place, the
+    // READ-ONLY toggle and the HISTORY OPENER, the architect's own order on
+    // 2026-08-14.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-six paint on every
+    // hiding/showing icons in top icon row"): all twenty-seven paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -1919,18 +1930,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // whole, with the sep-owed state machine that served it; the walk below is
     // a plain left-to-right accumulation again. What made the roster necessary
     // is gone with it: the twenty-nine-button row could not fit the Pi's panel,
-    // and TWENTY-SIX can (the width math below), because the four companions
+    // and TWENTY-SEVEN can (the width math below), because the four companions
     // left the row for the bottom one and the trim/zoom/verb groups are all
     // this row has to carry.
     //
-    // THE WIDTH MATH at 100%, RE-DERIVED from the roster after the move (8px
+    // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 26·32 + (26−8)·2 + (8−1)·9 = 8 + 832 + 36 + 63 = 939px,
+    //   8 + 27·32 + (27−8)·2 + (8−1)·9 = 8 + 864 + 38 + 63 = 973px,
     // IN EVERY STATE — the row has one width now, inside the `h` view as
-    // outside it. It fits the Pi's 1024 panel with 85px to spare, where the
-    // twenty-nine-button row's 1048 did not.
+    // outside it. It fits the Pi's 1024 panel with 51px to spare, where the
+    // twenty-nine-button row's 1048 did not. (It was 939px at twenty-six, from
+    // 2026-08-14 until the show-region button joined the trim group on
+    // 2026-08-16 — one more button and one more gap, no new separator, so the
+    // row grew by 34px and the group count did not move. THE MARGIN IS THE
+    // THING TO WATCH on this row: every further member costs 34px against the
+    // Pi's panel, and a NEW GROUP costs 41.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground

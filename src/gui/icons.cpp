@@ -16,19 +16,46 @@ namespace {
 // the color the file resolves to — the FILL source for an ordinary path and the
 // STROKE source for a stroked one (`stroked`, below).
 //
-// NEARLY EVERY PATH HERE IS FILLED, and the ONE STROKED FILE is boost's
-// (2026-08-15, the bottom row's walk-both-tabs button): its group carries
+// NEARLY EVERY PATH HERE IS FILLED, and there are TWO STROKED FILES: boost's
+// (2026-08-15, the bottom row's walk-both-tabs button), whose group carries
 // `fill="none" stroke="currentColor"`, so its four open polylines would come
 // out as four filled slivers under the fill arm — not a case the fill arm
-// could have covered by looking the other way. THE ARM IS RESTORED, NOT NEW:
-// it lived in draw() for part of 2026-08-11 for the set's first stroked file
-// (distortionfx, row 4's Warp radio for those hours), went producer-less when
-// the architect reglyphed that button to speedometer the same day, and comes
-// back verbatim plus one thing distortionfx never needed — a per-path LINE
-// CAP, because two of boost's four paths carry `stroke-linecap="square"` and
-// two take SVG's default butt. The general per-path MATRIX that was grown
-// beside it did NOT come back: boost carries no transform, so that feature is
+// could have covered by looking the other way — and tool-rect-selection's
+// (2026-08-16, the icon row's show-region button), the marching-ants
+// selection rectangle. THE ARM IS RESTORED, NOT NEW: it lived in draw() for
+// part of 2026-08-11 for the set's first stroked file (distortionfx, row 4's
+// Warp radio for those hours), went producer-less when the architect
+// reglyphed that button to speedometer the same day, and comes back verbatim
+// plus one thing distortionfx never needed — a per-path LINE CAP, because two
+// of boost's four paths carry `stroke-linecap="square"` and two take SVG's
+// default butt. The general per-path MATRIX that was grown beside it did NOT
+// come back: neither stroked file carries a transform, so that feature is
 // still git history alone and this table's `xform` is still translates only.
+//
+// TOOL-RECT-SELECTION BROUGHT TWO MORE STROKE ATTRIBUTES AND ONE DEPARTURE,
+// and the departure is the part worth reading twice (2026-08-16):
+//   * A STROKE WIDTH THAT IS NOT 1. Its `stroke-width="1.043"` is the table's
+//     first non-default, so the width is a per-path field now rather than the
+//     literal boost takes. It is still in PATH UNITS and still set inside the
+//     viewBox transform, so the pen scales with the geometry exactly as
+//     before.
+//   * A DASH. `stroke-dasharray="2.08599997,2.08599997"` with
+//     `stroke-dashoffset="4.9125299"` is what makes it read as a SELECTION
+//     rectangle rather than a plain box, so the dash is the glyph's whole
+//     identity and not decoration. Both numbers are in path units like the
+//     width, so cairo's CTM scales them with everything else.
+//   * THE DEPARTURE: THIS FILE'S GEOMETRY IS A `<rect>`, NOT A `<path>`, so
+//     there is no `d` string in it to copy and the property this table
+//     otherwise holds — that a diff against the committed file is a
+//     transcription bug and nothing else — DOES NOT HOLD FOR THIS ONE ROW.
+//     What holds instead is weaker and is stated so a reader checks the right
+//     thing: every NUMBER in the `d` below is a number in the file, in the
+//     file's own spelling, laid out as `m x,y h width v height h -width z` —
+//     the four rect attributes read in the order the element writes them. A
+//     `<rect>` parser was weighed against this and declined: it would be a
+//     second geometry vocabulary in the interpreter for one file, and the
+//     four-number derivation is checkable by eye at the site, which the
+//     interpreter's own coverage would not make truer.
 //
 // THE COLORS ARE HARD-CODED, per the redesign's color ruling (the carve-out is
 // recorded at render.h's palette-block header): they are the SVGs' own values,
@@ -81,6 +108,23 @@ struct IconPath {
     // here for that reason — boost's other two paths take the default in the
     // same group.
     bool          square_cap = false;
+    // THE STROKE WIDTH, read only on a stroked path, in PATH UNITS (2026-08-16).
+    // SVG's default is 1 and boost's group says nothing, so 1.0 transcribes
+    // "no stroke-width attribute"; tool-rect-selection's `stroke-width="1.043"`
+    // is the field's one producer. Per-PATH like the cap, because the attribute
+    // is per-element in SVG.
+    double        stroke_width = 1.0;
+    // THE DASH, read only on a stroked path, in PATH UNITS (2026-08-16).
+    // `dash_on <= 0` means SOLID and transcribes a file with no
+    // stroke-dasharray — which is every path but tool-rect-selection's, whose
+    // `stroke-dasharray="2.08599997,2.08599997"` is a UNIFORM two-value array
+    // and so needs exactly these two numbers plus the offset. A longer or
+    // odd-length array would need a real array here; the two-value form is what
+    // the one producer writes, and a third value would fail to transcribe
+    // loudly rather than quietly, which is the right failure.
+    double        dash_on     = 0.0;
+    double        dash_off    = 0.0;
+    double        dash_offset = 0.0;   // stroke-dashoffset
 };
 
 struct IconDef {
@@ -634,6 +678,39 @@ constexpr IconPath kEditCutPaths[] = {
      "-1.5"},
 };
 
+// THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16, the icon row's
+// second viewport-class button, beside the scissors): TOOL-RECT-SELECTION, the
+// MARCHING-ANTS rectangle — a dashed box is the universal "here is a selected
+// span" mark, and this button's whole job is to put a selectable span on the
+// waveform. THE ARCHITECT NAMED THE 24px FILE and this is the 22px one: the
+// two are the SAME rectangle (24 wraps it in `translate(1,1)` inside a 24
+// viewBox), 22 is every other row in this table, and taking 24 would have
+// bought a viewBox exception and a transform for nothing.
+//
+// IT IS THE TABLE'S ONE `<rect>` FILE, so the `d` below is a DERIVATION rather
+// than a verbatim copy and the header states exactly what survives of the
+// verbatim property. The rect's four attributes, in the element's own order and
+// spelling: x=2.5215156, y=3.5311673, width=16.952848, height=14.931264 — laid
+// out as a relative move to the corner, then across, down, back, close. The
+// closing `z` is what draws the fourth side, so the file's four sides are four
+// sides here too and no number is repeated.
+//
+// STROKED, and every stroke attribute comes off the element: `stroke-width`
+// 1.043 (the table's first non-default), `stroke-dasharray` 2.08599997 on /
+// 2.08599997 off and `stroke-dashoffset` 4.9125299. The default BUTT cap
+// (nothing is said in the file) is what puts a clean dash end at each corner.
+// The 22px file's own `stroke-miterlimit` is absent (its 16px sibling carries
+// one); the arm's SVG-default 4 is what a miter join takes anyway, and a dashed
+// rectangle has no joins left to miter.
+constexpr IconPath kToolRectSelectionPaths[] = {
+    {kIconText,
+     "m2.5215156,3.5311673 h16.952848 v14.931264 h-16.952848 z",
+     {}, /*stroked=*/true, /*square_cap=*/false,
+     /*stroke_width=*/1.043,
+     /*dash_on=*/2.08599997, /*dash_off=*/2.08599997,
+     /*dash_offset=*/4.9125299},
+};
+
 // -- THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
 // roster commit) -------------------------------------------------------------
 //
@@ -844,6 +921,7 @@ constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
 constexpr IconDef kEditCut            {22.0, kEditCutPaths,             1};
+constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
 constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
 constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
@@ -890,6 +968,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
         case Icon::EditCut:             return kEditCut;
+        case Icon::ToolRectSelection:   return kToolRectSelection;
         case Icon::ZoomIn:              return kZoomIn;
         case Icon::ZoomOut:             return kZoomOut;
         case Icon::ZoomFitBest:         return kZoomFitBest;
@@ -1281,27 +1360,43 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         if (p.stroked) {
-            // THE STROKED ARM (boost, the set's one member — RESTORED
-            // 2026-08-15 with that producer, having lived producer-less hours
-            // for distortionfx on 2026-08-11): a line width of 1 in PATH
-            // units — the SVG default its file takes — set inside the
-            // transform above, so cairo's CTM scales the PEN exactly as it
-            // scales the geometry. That is what SVG itself does with
-            // stroke-width, and it is what keeps the glyph's weight on the
-            // gui_scale axis like every filled limb in the table.
+            // THE STROKED ARM (boost since 2026-08-15 — RESTORED with that
+            // producer, having lived producer-less hours for distortionfx on
+            // 2026-08-11 — and tool-rect-selection since 2026-08-16): the line
+            // width is in PATH units and is set INSIDE the transform above, so
+            // cairo's CTM scales the PEN exactly as it scales the geometry.
+            // That is what SVG itself does with stroke-width, and it is what
+            // keeps a stroked glyph's weight on the gui_scale axis like every
+            // filled limb in the table. THE WIDTH IS THE PATH'S OWN since the
+            // second file arrived: boost says nothing and takes SVG's default
+            // of 1 through the field's default, tool-rect-selection says 1.043.
             //
             // The pen is SET rather than inherited, every parameter of it:
             // this cairo_t is the caller's and its stroke state is not ours to
-            // assume. Miter join is SVG's default and cairo's both; the miter
-            // limit differs (SVG 4, cairo 10) and is stated for fidelity. THE
-            // CAP IS THE PATH'S OWN and is the one thing this arm gained on
-            // its return: boost's two arrowheads say stroke-linecap="square"
-            // and its two long limbs say nothing, which is SVG's butt.
-            cairo_set_line_width(cr, 1.0);
+            // assume — which is why the DASH is set on both arms of its own
+            // fork rather than only where a dash exists. Miter join is SVG's
+            // default and cairo's both; the miter limit differs (SVG 4, cairo
+            // 10) and is stated for fidelity. THE CAP IS THE PATH'S OWN and is
+            // the one thing this arm gained on its return: boost's two
+            // arrowheads say stroke-linecap="square" and its two long limbs
+            // say nothing, which is SVG's butt — and so does the rectangle,
+            // whose butt ends are what square off each dash at a corner.
+            //
+            // THE DASH IS IN PATH UNITS TOO, so it rides the same CTM: a dash
+            // that scaled independently of the geometry would break up
+            // differently at every gui_scale, which is the whole reason it is
+            // set here and not in device units.
+            cairo_set_line_width(cr, p.stroke_width);
             cairo_set_line_cap(cr, p.square_cap ? CAIRO_LINE_CAP_SQUARE
                                                 : CAIRO_LINE_CAP_BUTT);
             cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
             cairo_set_miter_limit(cr, 4.0);
+            if (p.dash_on > 0.0) {
+                const double dashes[2] = {p.dash_on, p.dash_off};
+                cairo_set_dash(cr, dashes, 2, p.dash_offset);
+            } else {
+                cairo_set_dash(cr, nullptr, 0, 0.0);
+            }
             cairo_stroke(cr);
         } else {
             cairo_fill(cr);

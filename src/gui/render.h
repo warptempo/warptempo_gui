@@ -1117,7 +1117,7 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
-// tabs (row 4 of the redesign: TWENTY-SIX view/mode/action buttons since
+// tabs (row 4 of the redesign: TWENTY-SEVEN view/mode/action buttons since
 // 2026-08-14, when the four history companions left for the bottom row and the
 // read-only toggle arrived from the tabs — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on

@@ -293,9 +293,12 @@ void GuiInputHandler::handle_trim_clear_both() {
 // A zero-length window is not authorable, so
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
-// NO region → x SHOWS ONE AT THE CURRENT TRIM WINDOW since 2026-08-15 (the
-// ruling and its reasoning are at the arm below; the maximize is still
-// Shift+X's and x never widens the trim). NO read-only check here, and there is
+// NO region → a CONSUMED NOTHING, which is what it has been except for one day:
+// from 2026-08-15 to 2026-08-16 this arm SHOWED a region at the current trim
+// window, and the architect moved that act onto its own chord and its own
+// button (Ctrl+Shift+X, handle_show_region below) because one key had come
+// to mean two unrelated things — show and commit. The maximize is still
+// Shift+X's and x never widens the trim. NO read-only check here, and there is
 // nothing left for one to do: since 2026-08-07 the keyboard gate ADMITS bare `x`
 // and Shift+X, trim being band rather than authored content (this file's header
 // block), so a locked tab runs both exactly as a writable one does. The absence
@@ -321,44 +324,14 @@ void GuiInputHandler::handle_trim_clear_both() {
 // 2026-07-30 land is now the rule every trim write takes.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // NO LIVE REGION → SHOW ONE AT THE CURRENT TRIM WINDOW (architect
-    // 2026-08-15, giving the old silent no-op a job and closing the loop the
-    // region-as-trim-editor model opens: the same three motions that edit a
-    // region now edit THE TRIM, on a surface hundreds of pixels tall instead of
-    // the trim bar's nine). Nothing else happens: NO trim write, NO deselect,
-    // NO playhead move, NO clear — it only paints. `x` is still set-only, and
-    // the maximize is still Shift+X's (handle_trim_shift_x).
-    //
-    // IT IS A ONE-TIME SEED, NOT A SYNC, and the distinction is the
-    // architect's: the retired TRIM-WINDOW HIGHLIGHT SYNC was a CONTINUOUS
-    // INVARIANT binding the two together, republishing the window as a
-    // highlight whenever it moved. This is a single copy — once shown, the
-    // region and the trim have NO CONTRACT and either moves freely, neither
-    // chasing the other. So this is not that ruling coming back, and nothing
-    // here re-publishes anything.
-    //
-    // THE FULL-WINDOW CASE NEEDS NO REFUSAL AND THAT IS DELIBERATE (the
-    // architect walked it and ruled it self-resolving; do not add a guard):
-    // seeding there gives a region covering everything, whose Move is clamped
-    // to a no-op and whose two bounds sit at the screen edges where they are
-    // still grabbable — and a single click destroys it, which is the region's
-    // ordinary lifecycle doing the work.
-    //
-    // The bounds are SOURCE frames and a region's endpoints are ACTIVE-domain
-    // frames, so each crosses through source_frame_to_active_domain (the
-    // identity in source view, the display map's forward hop in target) —
-    // the same one-way conversion every other source->display read takes.
-    if (!app.region.active) {
-        app.region.active  = true;
-        app.region.a_frame = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, app.trim.begin_frame),
-            app, audio);
-        app.region.b_frame = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, app.trim.end_frame),
-            app, audio);
-        viewport.invalidate_waveform_area();
-        return;
-    }
+    // NO LIVE REGION → A CONSUMED NOTHING, which is what it was before
+    // 2026-08-15 and is again since 2026-08-16. For that one day this arm
+    // SEEDED a region at the trim window, and the architect split the seed onto
+    // its own chord and its own button (Ctrl+Shift+X, handle_show_region
+    // below) because ONE KEY HAD COME TO MEAN TWO UNRELATED THINGS — show and
+    // commit. The seed's ruling did not change, only its home: `x` is set-only
+    // again, with the maximize still Shift+X's and the show now its own act.
+    if (!app.region.active) return;
 
     // Live region → trim to it, overwriting any existing bounds.
     const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
@@ -425,6 +398,111 @@ void GuiInputHandler::handle_trim_x() {
 // is the user's, not trim's to dissolve.
 void GuiInputHandler::handle_trim_shift_x() {
     handle_trim_clear_both();
+}
+
+// CTRL+SHIFT+X SHOWS THE REGION (architect 2026-08-16) — the icon row's
+// IconShowRegion button and its keyboard twin, the second act in the
+// viewport-class group the trim scissors opened in 2026-08-11.
+//
+// ONE ACT, ALWAYS MEANINGFUL: make sure a region EXISTS — seeding one at the
+// current trim window's two bounds if none stands — and then BRING IT INTO
+// VIEW. It writes NO trim, NO selection, NO playhead and CLEARS NOTHING; the
+// region's existing clearers (bare Esc, a motionless navigation-surface click,
+// `x`'s commit, every playhead-moving point command) are its whole lifecycle
+// and are untouched by this.
+//
+// WHY IT IS ITS OWN CHORD: the SHOW half was bare `x`'s no-region arm for one
+// day (2026-08-15), which overloaded one key with two unrelated acts — show and
+// commit — and the architect split them. Nothing about the seed's own ruling
+// changed in the move; the text below is that ruling, at its new home.
+//
+// IT IS NOT A TOGGLE, AND THE SUPERSEDED DESIGN IS RECORDED BECAUSE ITS HOLE IS
+// EASY TO RE-INVENT. It was specified as a toggle — press with a region to
+// clear it — whose button wore a lamp reading app.region.active, and the
+// architect found the flaw before it was built: "what if user draws a region,
+// then moves the viewport away via drag? The region toggle is on, but the
+// region view can't be accessed because the toggle is already on." A lamp
+// derived from the region's EXISTENCE says nothing about its VISIBILITY, so a
+// span scrolled offscreen would leave the button lit and the only press
+// available would CLEAR it — putting the one thing the user wanted out of
+// reach. HIS FIX REMOVES THE STATE rather than qualifying the lamp: "maybe the
+// button should not be a toggle, but a 'show region' button, that can always be
+// pressed outside of history. That way it's not stuck having to track the
+// region state — it's just a region-shower, and that's it."
+//
+// SO THERE IS NO REFUSAL AND NOTHING TO GUARD: with no region it makes one and
+// shows it; with a region already fully in view the framing owner's first arm
+// writes no viewport, so the press is a harmless nothing; with a region
+// offscreen it scrolls, or zooms out when the span cannot fit. A second press
+// is idempotent by construction, which is the property the stuck toggle lacked.
+//
+// THE SEED, when one is needed. IT IS A ONE-TIME COPY, NOT A SYNC, and the
+// distinction is the architect's:
+// the retired TRIM-WINDOW HIGHLIGHT SYNC was a CONTINUOUS INVARIANT binding the
+// two together, republishing the window as a highlight whenever it moved. This
+// is a single copy — once shown, the region and the trim have NO CONTRACT and
+// either moves freely, neither chasing the other. So this is not that ruling
+// coming back, and nothing here re-publishes anything.
+//
+// THE FULL-WINDOW CASE NEEDS NO REFUSAL AND THAT IS DELIBERATE (the architect
+// walked it and ruled it self-resolving; do not add a guard): seeding there
+// gives a region covering everything, whose Move is clamped to a no-op and
+// whose two bounds sit at the screen edges where they are still grabbable — and
+// a single click destroys it, which is the region's ordinary lifecycle doing
+// the work.
+//
+// The bounds are SOURCE frames and a region's endpoints are ACTIVE-domain
+// frames, so each crosses through source_frame_to_active_domain (the identity
+// in source view, the display map's forward hop in target) — the same one-way
+// conversion every other source->display read takes.
+//
+// THEN BRING THE SPAN INTO VIEW — the seeded one, or the one that was already
+// standing — exactly as the GROUP undo/redo restore frames its touched set
+// (architect: "like undo in terms of zoom/viewport — if the region can fit at
+// current zoom and is not fully in view, it is brought into view just like undo
+// marker group, without affecting zoom; if it cannot fit, zoom is made to
+// fit"). That is bring_span_into_view, the SHARED owner hoisted out of the
+// restore's tail for this caller (input_handler.cpp carries the three arms and
+// the whole argument). It takes ACTIVE-DOMAIN frames, which BOTH sources here
+// already are — a region's endpoints are active-domain by definition, and the
+// seed's conversion is the one place this route leaves the source domain — and
+// it wants them ORDERED, which a region's stored pair is NOT (endpoints rest in
+// drag order) and a crossed trim pair is not either, so the min/max is stated
+// rather than assumed.
+//
+// THE DAMAGE AND THE KICK ARE THIS SITE'S, by the owner's contract: it writes
+// only the viewport and neither damages nor renders, so this pays one
+// invalidate + one synchronous kick for both halves of what can change (the
+// region ground, which the overlay pass draws, and the plate under a moved
+// viewport). Unconditional, the restore tail's own shape: the already-in-view
+// case's kick is a bounded duplicate on a discrete keystroke, and the
+// alternative is a second predicate over a question the owner has already
+// answered.
+//
+// NO READ-ONLY CHECK and none is wanted: the chord is on the keyboard gate's
+// allowlist (read_only_key_blocked, input_key_dispatch.cpp) because it writes
+// no trim and no authored content at all — strictly less than `x`, which is
+// itself read-only-legal under the 2026-08-07 band ruling. The `h` view is the
+// opposite case and equally derived: the chord is NOT on that mode's allowlist,
+// so the view consumes it and the button greys, with nothing hand-listed in
+// either place.
+void GuiInputHandler::handle_show_region() {
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
+    if (!app.region.active) {
+        app.region.active  = true;
+        app.region.a_frame = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+            app, audio);
+        app.region.b_frame = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.end_frame),
+            app, audio);
+    }
+    bring_span_into_view(
+        app, audio, viewport,
+        std::min(app.region.a_frame, app.region.b_frame),
+        std::max(app.region.a_frame, app.region.b_frame));
+    viewport.invalidate_waveform_area();
+    viewport.kick_waveform_sync();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------

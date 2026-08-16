@@ -232,10 +232,16 @@ struct UndoEntry {
 // the selection as they commit (the setter-deselect rule).
 //
 // THE FORMER — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
-// `region.active = true`: the drag's motion path is the ONE writer since
+// `region.active = true`: the drag's motion path is the ONE FORMING writer since
 // 2026-08-05, every entry reaching it through the one arm arm_region_drag_at, so
 // the inventory IS arm_region_drag_at's callers plus the callers of the body that
-// wraps it, place_playhead_and_arm_region).
+// wraps it, place_playhead_and_arm_region. THE GREP HAS RETURNED TWO SITES SINCE
+// 2026-08-15 and the second is NOT a former: handle_show_region's SEED, which
+// copies the trim window in once (input_trim.cpp — it was bare `x`'s no-region
+// arm for a day and is Ctrl+Shift+X's own since 2026-08-16). It arms no drag, so
+// it is outside this inventory by kind rather than by oversight, and the
+// sentence this line used to carry — "the ONE writer" flat — was falsified the
+// day the seed landed.)
 // THERE IS ONE FORMING GESTURE, THE REGION FORMER, in THREE entries
 // (re-derived 2026-08-12 at the eighth glass ruling's touch half —
 // PAN-PRIMARY: the plain drag
@@ -293,16 +299,26 @@ struct UndoEntry {
 // Everything that used to write a region from somewhere else is DELETED with
 // the span form: the selection-extent owner, the trim-window sync, the two
 // multi-delete demotions, and the whole three-value origin enum RegionState
-// carried. A region has ONE origin now — the user drew it.
+// carried. NOTHING BRANCHES ON WHERE A SPAN CAME FROM, which is what that enum's
+// deletion bought and is the claim that matters here. The producers are TWO: the
+// FORMER in its three entries above, and — since 2026-08-15, on its own chord
+// since 2026-08-16 — THE SHOW-REGION SEED, which copies the trim window in
+// once and then lets go (handle_show_region, input_trim.cpp). The sentence
+// this paragraph used to end with, "a region has ONE origin now — the user drew
+// it", was true from the span form's deletion until the seed existed and is
+// superseded by the count rather than by the principle: a seeded span is
+// indistinguishable from a drawn one to every reader, deliberately.
 //
 // Bare `x` is SET-ONLY and consumes THIS highlight: a live region trims to it,
 // DESELECTS (the setter rule) and then CLEARS the region — its job is done. A
 // DEGENERATE result — an inverse-mapped span coming out end <= begin — refuses
 // rather than writing a pair the crossed-commit auto-clear would destroy (at
-// handle_trim_x). WITH NO REGION `x` SEEDS ONE at the current trim window
-// since 2026-08-15 (the same site), which is the second half of the model
-// below; the old silent no-op is superseded, and the seed is ONE-TIME rather
-// than the retired continuous sync.
+// handle_trim_x). WITH NO REGION `x` IS A CONSUMED NOTHING — it SEEDED one at
+// the current trim window for a day (2026-08-15..16) and the architect moved
+// that act onto its own chord, Ctrl+Shift+X (handle_show_region,
+// input_trim.cpp), because one key had come to mean two unrelated things: show
+// and commit. THE SEED IS THE SECOND HALF OF THE MODEL BELOW either way, and it
+// is ONE-TIME rather than the retired continuous sync.
 //
 // CLEARED wholesale on: file load, the A/B tab switch, the S/T audio-view switch
 // and the W/P marker-column switch (each flips the domain or the owning column out
@@ -329,9 +345,13 @@ struct RegionState {
 // carries the OVERVIEW BOX'S OWN THREE MOTIONS on the waveform — drag inside
 // it to MOVE it, drag within a bound's grab band to move THAT bound, drag
 // anywhere else to PAN as ever — and `x` still commits it to trim. The other
-// half closes the loop: `x` with NO region SHOWS one at the current trim
-// window (handle_trim_x, input_trim.cpp), so the same three motions edit the
-// trim itself on a surface hundreds of pixels tall instead of nine.
+// half closes the loop: CTRL+SHIFT+X SHOWS one at the current trim window
+// (handle_show_region, input_trim.cpp, and the icon row's IconShowRegion
+// toggle), so the same three motions edit the trim itself on a surface hundreds
+// of pixels tall instead of nine. THE SHOW ACT SPENT ONE DAY ON BARE `x`'s
+// no-region arm (2026-08-15..16) and the architect split it off onto its own
+// chord and its own button, one key having come to mean two unrelated things;
+// the model is unchanged and only the show's spelling moved.
 //
 // WHY IT MATTERS BEYOND CONVENIENCE, and this is the argument to keep if
 // anyone later proposes collapsing it: TRIM HAS NO UNDO, excluded from the
@@ -1747,7 +1767,7 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's File and
-// Settings plus the view bar's three, row 3's two TABS, row 4's twenty-six
+// Settings plus the view bar's three, row 3's two TABS, row 4's twenty-seven
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout), then the bottom row's FOURTEEN — the transport
 // three, the MARKER-WALK three (2026-08-15),
@@ -1859,8 +1879,51 @@ enum class RedesignButton {
     // hand-listed). It opens a NEW SEPARATOR-LED GROUP after the warp/phase
     // radios — the architect's placement ("place it after the warp/phase radio
     // buttons, create a new separator"), a group intended to collect
-    // viewport-related acts later.
+    // viewport-related acts later — and the group HAS its second member since
+    // 2026-08-16.
+    // ITS NO-REGION ARM CAME BACK TO A CONSUMED NOTHING and the round trip is
+    // worth stating so nobody reads the line above as never having moved: for
+    // one day (2026-08-15..16) `x` SEEDED a region there, and the architect
+    // split that act onto its own chord and its own button because one key had
+    // come to mean two unrelated things — show and commit. The seed is
+    // IconShowRegion's now, whole.
     IconTrim,
+    // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, the trim
+    // group's second member and the second VIEWPORT-CLASS act the architect's
+    // 2026-08-11 slot was opened for. ONE ACT, always meaningful: make sure a
+    // region exists — seeding one at the current trim window's two bounds if
+    // none stands — and then BRING IT INTO VIEW (bring_span_into_view, the
+    // owner shared with the group undo restore). That is the whole command. IT
+    // CLEARS NOTHING: the region's existing clearers are its whole lifecycle,
+    // unchanged.
+    //
+    // IT IS MOMENTARY AND STATELESS BY RULING, not by omission, and the
+    // superseded design is kept because the hole it had is easy to re-invent.
+    // It was specified as a TOGGLE whose lamp read app.region.active — no new
+    // bit, the roster's standing rule for a selected face — and the architect
+    // found the flaw before it was built: "what if user draws a region, then
+    // moves the viewport away via drag? The region toggle is on, but the region
+    // view can't be accessed because the toggle is already on." A lamp derived
+    // from the region's EXISTENCE says nothing about its VISIBILITY, so a span
+    // scrolled offscreen left the button lit and the only press available
+    // CLEARED it — making the one thing the user wanted unreachable through the
+    // very face meant to help. HIS FIX REMOVES THE STATE rather than qualifying
+    // the lamp: "maybe the button should not be a toggle, but a 'show region'
+    // button, that can always be pressed outside of history. That way it's not
+    // stuck having to track the region state — it's just a region-shower, and
+    // that's it."
+    //
+    // SO IT NEEDS NO REFUSAL AND HAS NO STUCK STATE: with no region it makes
+    // one and shows it, with a region already onscreen the framing owner's
+    // first arm writes no viewport and the press is a harmless nothing, and
+    // with a region offscreen it scrolls or zooms to it. Pressing it twice is
+    // idempotent by construction.
+    //
+    // Always enabled, by the settled face policy — there is no refusal to
+    // mirror. The `h` view greys it through the derived partition (Ctrl+Shift+X
+    // is not on the mode's allowlist, so the mode consumes it exactly as it
+    // consumes `x`), nothing hand-listed.
+    IconShowRegion,
     // THE ZOOM GROUP (2026-08-12, the grand relayout's roster commit): four
     // navigation chords in their own separator-led group after the scissors —
     // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
@@ -2040,11 +2103,13 @@ enum class RedesignButton {
     HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer
 };
 // THE ROSTER, re-derived by counting the enumerators above: FIVE in row 1, two
-// in row 3, twenty-six in row 4 and fourteen in the bottom row — 47. Of those,
-// FORTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
+// in row 3, twenty-seven in row 4 and fourteen in the bottom row — 48. Of those,
+// FORTY-SIX carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (File and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 48 SINCE 2026-08-16: the SHOW-REGION button joined the trim group in
+// row 4 (Ctrl+Shift+X), a pure chord addition — 47 + 1, split 46 + 2.
 // 47 SINCE 2026-08-15's SECOND ROW-1 RULING: the NAVIGATION ANCHOR left with its
 // menu, which is the roster's first LOSS of a non-chord entry (48 - 1) and takes
 // the split from 45 + 3 back to 45 + 2.
@@ -2062,7 +2127,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2126,6 +2191,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconW:
         case RedesignButton::IconP:
         case RedesignButton::IconTrim:
+        case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomIn:
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
@@ -2259,10 +2325,14 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE EIGHT GROUPS, in painted order: the toolbar four, the S/T radios, the
-// W/P radios, the trim scissors, the zoom four, the single-marker verbs, the
-// mass-marker acts, and the row's last group — listen, load-in-place, the
-// read-only toggle and the history opener (architect 2026-08-14, which is
-// also what retired the history group's own boundary).
+// W/P radios, THE TRIM PAIR (the scissors and — since 2026-08-16 — the
+// show-region button; the group was one member from 2026-08-11, opened as
+// the architect's slot for viewport-class acts, and this is the second such
+// act), the zoom four, the single-marker verbs, the mass-marker acts, and the
+// row's last group — listen, load-in-place, the read-only toggle and the
+// history opener (architect 2026-08-14, which is also what retired the history
+// group's own boundary). EIGHT is unchanged: the new button JOINS a group
+// rather than opening one, so it is deliberately absent from the switch below.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
@@ -6405,7 +6475,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     allowlist alone is not the truth — three of its answers do not survive
 //     the walk (below).
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
-//     the trim scissors, the S/T and W/P radios, the zoom four, follow, the
+//     the trim scissors, the SHOW-REGION button beside it (2026-08-16 —
+//     it writes no trim at all, only the session's region scratch), the S/T and
+//     W/P radios, the zoom four, follow, the
 //     read-only toggle itself and the history opener. Greying them would make
 //     the face promise LESS than the key delivers, which is the 2026-08-07 band
 //     ruling's own line: read-only protects the AUTHORED MUSICAL CONTENT and
@@ -6547,6 +6619,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // `h` view greys it through the derived partition above (`x` is
         // consumed there), nothing hand-listed.
         case RedesignButton::IconTrim:
+        // THE SHOW-REGION BUTTON MIRRORS NOTHING EITHER (2026-08-16), and for
+        // a stronger reason than its neighbour: it HAS no refusal to mirror.
+        // Its one act — ensure a region exists, then bring it into view — is
+        // always meaningful on a loaded piece, and the case that would tempt a
+        // face (a region already fully in view) is a harmless nothing rather
+        // than a refusal, the framing owner's first arm simply writing no
+        // viewport. The `h` view greys it through the derived partition above
+        // (Ctrl+Shift+X is off the mode's allowlist, so the mode consumes it
+        // exactly as it consumes `x`), nothing hand-listed.
+        case RedesignButton::IconShowRegion:
         // THE ZOOM GROUP MIRRORS NOTHING (2026-08-12): four navigation chords
         // that always mean something on a loaded file, and the loading/blank
         // guard is the family's shared answer below. LIVE in the `h` view —
@@ -6952,6 +7034,23 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // region is an act that completes, with no state to stay lit for —
         // the window it wrote is the bar's own always-painted display.
         case RedesignButton::IconTrim:
+        // AND SO IS SHOW-REGION BESIDE IT (architect 2026-08-16), which is the
+        // point of that ruling rather than an omission. It was designed as a
+        // TOGGLE with a lamp reading app.region.active, and the architect found
+        // the hole before it was built: "what if user draws a region, then
+        // moves the viewport away via drag? The region toggle is on, but the
+        // region view can't be accessed because the toggle is already on." A
+        // lamp derived from the region's existence LEAVES THE BUTTON LIT for a
+        // region that has scrolled offscreen, so the only press available
+        // CLEARS the span instead of bringing it back — the one thing the user
+        // wanted made unreachable by the face that was supposed to help. HIS
+        // FIX WAS TO REMOVE THE STATE, not to qualify the lamp: "maybe the
+        // button should not be a toggle, but a 'show region' button, that can
+        // always be pressed outside of history. That way it's not stuck having
+        // to track the region state — it's just a region-shower, and that's
+        // it." So it is one always-meaningful act — ensure a span exists, then
+        // bring it into view — with no bit to read and nothing to stay lit for.
+        case RedesignButton::IconShowRegion:
         // THE ZOOM GROUP AND THE MARKER VERBS ARE MOMENTARY like copy and
         // paste (2026-08-12): each is an act that completes — a zoom step, a
         // centering, a drop, a delete — with no state to stay lit for. The
@@ -7214,6 +7313,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconTrim:
             return {"Set trim from region (x)",
                     "Press Shift for the whole song."};
+        // THE SHOW-REGION BUTTON (2026-08-16), one line: the chord has no
+        // shifted twin (Ctrl+Shift+X already spends the shift), so no hint
+        // line and no shift admission — the static_assert below is what keeps
+        // those two facts one. The accelerator keeps its capital and its
+        // spelled-out modifiers, this table's rule for a CHORD. IT IS "REGION"
+        // AND NOT "TRIM REGION" by the architect's own naming: it shows
+        // WHATEVER region stands, and the trim window is only where it seeds
+        // from when there is none.
+        case RedesignButton::IconShowRegion:
+            return {"Show region (Ctrl+Shift+X)", nullptr};
         // THE ZOOM GROUP (2026-08-12), all one-line: the names were aligned
         // with the Navigation dropdown's rows for the two they shared ("Zoom
         // in" / "Zoom out") and are kept verbatim now that the menu is deleted

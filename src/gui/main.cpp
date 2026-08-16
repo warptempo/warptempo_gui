@@ -563,7 +563,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-seven view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these —
 // and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
