@@ -1637,8 +1637,7 @@ int main(int argc, char** argv) {
     // are at the setter's contract (platform_wayland.h). THIS BODY IS THE
     // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
     // model, and it holds TWO application-side key intents since the 2026-08-16
-    // keyup model (one from 2026-08-13 until then; the transport arrows'
-    // hold-repeat disarm was an earlier member, deleted 2026-08-13):
+    // keyup model (one from 2026-08-13 until then):
     //   * THE MODAL DIALOG'S KEYBOARD PRESS ARM,
     //     which is sharper than a face — that button is painted down waiting for
     //     a RELEASE that these edges guarantee will never be delivered, so the
@@ -1650,6 +1649,12 @@ int main(int argc, char** argv) {
     //     arrive, and the Super-dropped press is an intervening arrival —
     //     conservative, consistent with the arm this hook already drops
     //     (clear_armed_keys).
+    // BOTH MEMBERS ARE KEY INTENTS, which is the list's own membership rule and
+    // the reason THE ARROW BUTTONS' HOLD-REPEAT IS NOT HERE (2026-08-16, where
+    // its pre-2026-08-13 form was): that burst hangs off the armed CHROME
+    // PRESS, pointer intent, and no edge of this hook ends a finger's hold on a
+    // button (the reasoning is at the setter's contract, the burst's whole edge
+    // inventory at AppState::ChromePress).
     gui.set_keyboard_intent_cancel_hook([&] {
         input_handler.clear_modal_dialog_key_press();
         input_handler.clear_armed_keys();
@@ -2032,9 +2037,17 @@ int main(int argc, char** argv) {
         if (!any_pointer_gesture_active(app))
             input_handler.recompute_redesign_button_hover();
 
-        // (ROW 8's ARROW HOLD-REPEAT TICK ran here until the repeat's deletion
-        // — architect 2026-08-13, act-at-release; the record is at the arrows'
-        // chord-table rows, input_pointer.cpp.)
+        // THE CHROME BUTTON HOLD-REPEAT (architect 2026-08-16): while a press
+        // stands on one of the bottom row's four cardinal arrows, this
+        // synthesizes its chord on the keyboard's own cadence — a hold beat,
+        // then the compositor's advertised repeat rate — stamped as a repeat so
+        // the undo coalescing is the held key's own rule. One kind compare when
+        // idle; every firing condition (the arm, the schedule, the pointer on
+        // the button, the enabled bit, the eligibility) lives in the body.
+        // Deliberately NOT gated on any_pointer_gesture_active, unlike the
+        // hover recompute above: the held button IS a live pointer act, and the
+        // rows' presses arm no gesture that predicate names.
+        input_handler.tick_chrome_press_repeat();
 
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position

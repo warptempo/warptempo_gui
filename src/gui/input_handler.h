@@ -1430,6 +1430,19 @@ struct GuiInputHandler {
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
                                      int x, int y);
+
+    // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
+    // 2026-08-16), driven from the run loop beside the hover recompute. While a
+    // press stands on a `repeats` button — the bottom row's four cardinal
+    // arrows — this synthesizes that button's chord on the keyboard's own
+    // cadence, the first fire a hold beat after the press and the rest at the
+    // compositor's advertised repeat rate. One kind compare and one integer
+    // compare when idle; every firing condition lives in the body, and the
+    // burst's state and authoritative edge inventory are at
+    // AppState::ChromePress. Deliberately NOT gated on
+    // any_pointer_gesture_active: the held button IS a live pointer act, and
+    // the band claims arm no gesture that predicate names.
+    void tick_chrome_press_repeat();
     // THE OVERVIEW LANE'S GESTURES (the lane rework 2026-08-12, redesigned
     // 2026-08-15 onto the box alone; the vocabulary's contract is at
     // OverviewDragState, app_state.h, and both bodies live together in

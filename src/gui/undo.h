@@ -21,18 +21,21 @@ struct GuiTargetRender;
 // phase-reset position nudges (bare Left/Right in the
 // marker lane) and the tempo cent step (bare Up/Down; no wheel route) — collapses
 // into ONE undo entry under EITHER rule:
-//   (1) REPEAT IDENTITY, for a HELD key: the burst's OPENER pushes the
-//       pre-burst snapshot, and every SYNTHESIZED REPEAT behind it
-//       (GuiInputState::synthesized_repeat — ONE producer again since the
-//       transport arrows' hold-repeat was deleted 2026-08-13:
-//       GuiPlatform::maybe_fire_repeat, for held keys; the arrow BUTTONS are
-//       one act per press-and-lift now) SKIPS its
-//       own push. THE OPENER IS THE HOLD'S FIRST REPEAT under the 2026-08-16
-//       keyup model — a command key's press dispatches nothing, so the press
-//       router clears the delivered bit on that first fire and it takes the
-//       PHYSICAL arm below, exactly as the press itself used to (the flip and
-//       its argument are at GuiInputHandler::on_key; the producer is
-//       untouched, this is a consumer-side clear).
+//   (1) REPEAT IDENTITY, for a HELD key OR a HELD BUTTON: the burst's OPENER
+//       pushes the pre-burst snapshot, and every SYNTHESIZED REPEAT behind it
+//       (GuiInputState::synthesized_repeat — TWO producers, one per surface:
+//       GuiPlatform::maybe_fire_repeat for held keys, and
+//       GuiInputHandler::tick_chrome_press_repeat for the four cardinal arrow
+//       BUTTONS, whose hold-repeat returned 2026-08-16 after three days
+//       deleted) SKIPS its
+//       own push. THE OPENER IS THE HOLD'S FIRST REPEAT on both surfaces, and
+//       for one reason: neither hold's press dispatches anything (a command
+//       key's act is at its release under the 2026-08-16 keyup model, a
+//       button's at its lift since 2026-08-13), so each producer's side clears
+//       the delivered bit on that first fire and it takes the PHYSICAL arm
+//       below, exactly as the press itself used to (the flip and its argument
+//       are at GuiInputHandler::on_key; the platform producer is untouched,
+//       that one being a consumer-side clear).
 //       NO CLOCK IS CONSULTED on this arm, and that independence is the
 //       point of keeping it: a hold coalesces for any compositor at any key-repeat
 //       delay, so nothing here can drift out of sync with the desktop's repeat
@@ -50,9 +53,13 @@ struct GuiTargetRender;
 //
 // "Same target / same tab / same history" follow for FREE on arm (1): a
 // synthesized repeat can
-// only arrive while the hold is still armed, and the platform's hold dies on
-// three input edges — every intervening pointer press, key press, and
-// completed wheel emission (layer (1), stated at maybe_fire_repeat) — so
+// only arrive while the hold is still armed, and each surface's hold dies on
+// the edges that let another command in — the platform key hold on three
+// (every intervening pointer press, key press, and completed wheel emission,
+// layer (1), stated at maybe_fire_repeat), and the BUTTON hold on both physical
+// key edges, the press router's top and the keyup dispatch's (the inventory,
+// and why the pointer and wheel edges need no mirror there, are at
+// AppState::ChromePress) — so
 // no command can run
 // between a burst's opener and the repeats behind it. ARM (2) HAS NO SUCH
 // STRUCTURE — a pointer click, a Tab, a view switch can all run between two taps
@@ -147,11 +154,11 @@ struct Undo {
     // burst's existing undo entry — TRUE on either arm of the hybrid (a
     // synthesized repeat of a matching burst, or a physical fire inside
     // kTapCoalesceMs of the last accepted event with the subject unchanged; the
-    // full shape is at the definition). `synthesized_repeat` is the platform
-    // bit AS DELIVERED (GuiInputState::synthesized_repeat), threaded from the
-    // key event that reached the handler — so a hold's first repeat, whose bit
-    // the press router cleared, arrives here PHYSICAL (the opener; arm (1) at
-    // the head of this file). When it returns true the caller SKIPS its
+    // full shape is at the definition). `synthesized_repeat` is the bit AS
+    // DELIVERED (GuiInputState::synthesized_repeat), threaded from the key
+    // event that reached the handler — so a hold's first repeat, whose bit its
+    // own producer's side cleared, arrives here PHYSICAL (the opener, on either
+    // surface; arm (1) at the head of this file). When it returns true the caller SKIPS its
     // undo push — and a coalesced fire has NO other side effect since row 5
     // (note_coalesced_commit mirrored the push helpers' hover-popup clear, and
     // died with the popup). Either way the caller then calls record_gesture.

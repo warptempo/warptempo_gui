@@ -96,10 +96,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // OPEN this is inert and the popup's own keyboard gate in the dispatch
     // decides.
     disarm_menu_row();
-    // (THE TRANSPORT ARROWS' HOLD-REPEAT DISARM stood here until the repeat's
-    // deletion — architect 2026-08-13, act-at-release; the record is at the
-    // arrows' chord-table rows, input_pointer.cpp. The platform's OWN key
-    // repeat keeps its layer-1 disarms inside maybe_fire_repeat, untouched.)
+    // A PHYSICAL KEY ARRIVAL ENDS A HELD BUTTON'S REPEAT BURST — the first of
+    // the burst's two key edges (the other is the general keyup dispatch's own
+    // top; the authoritative inventory is at AppState::ChromePress). It is
+    // LOAD-BEARING FOR UNDO rather than hand-feel: Undo::coalesce_gesture
+    // merges a synthesized repeat by KIND ALONE with no subject test, on the
+    // premise that no command can run between a burst's opener and the repeats
+    // behind it, and these two edges are what make that true for a held BUTTON
+    // exactly as maybe_fire_repeat's layer-1 disarms make it true for a held
+    // KEY. Only the ARM's schedule dies: the arm itself is the pointer's and a
+    // key press does not end a finger's hold, so the lift still runs the act
+    // this burst had not yet suppressed. Synthesized arrivals are excluded by
+    // the early return above, and correctly — the platform kills its own key
+    // hold at any pointer-button press, so no key repeat can arrive under a
+    // held button at all. (The platform's OWN key repeat keeps its layer-1
+    // disarms inside maybe_fire_repeat, untouched.)
+    app.chrome_press.repeat_due_ms = 0;
 
     // Transient bottom-strip status message clears on every real
     // keypress, including the press whose release may set a new message

@@ -167,11 +167,18 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // GuiPlatform::maybe_fire_repeat) disarms the
             // hold at every intervening pointer-button press, key press, and
             // completed wheel emission, so a synthesized repeat STRUCTURALLY
-            // CANNOT arrive after another command ran. (b) The burst's own
+            // CANNOT arrive after another command ran — and the held-BUTTON
+            // producer beside it (tick_chrome_press_repeat, the four cardinal
+            // arrows) buys the same property from its own edges, the two
+            // physical key ones, the only edges that can let a command in while
+            // a finger holds a button (the inventory is at
+            // AppState::ChromePress). (b) The burst's own
             // OPENER is guaranteed to have taken the PHYSICAL arm first:
-            // under the 2026-08-16 keyup model a hold's press dispatches
-            // nothing, so the press router clears synthesized_repeat on the
-            // hold's FIRST repeat (GuiInputHandler::on_key) — that opener
+            // neither hold's press dispatches anything — a command key's act is
+            // at its release under the 2026-08-16 keyup model, a button's at
+            // its lift — so each producer's side clears synthesized_repeat on
+            // its hold's FIRST fire (GuiInputHandler::on_key for keys, the tick
+            // for buttons) — that opener
             // runs the arrival-invalidate and the tap arm's own rules,
             // pushing or merging on its own merits, and only the repeats
             // BEHIND it reach this arm; without the flip, a hold begun over

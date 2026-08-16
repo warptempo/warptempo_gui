@@ -2244,10 +2244,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   beside the transport lasted one day), in the architect's own order
 //   left-to-right
 //   since 2026-08-14 — DOWN, UP, LEFT, RIGHT (bare Down/Up/Left/Right; it was
-//   vim's left-down-up-right before), a single line and not a d-pad, one act
-//   per press-and-lift like every chrome button (their hold-to-repeat is
-//   deleted — architect 2026-08-13, the record at the arrows' chord-table
-//   rows, input_pointer.cpp), everything else about them unchanged;
+//   vim's left-down-up-right before), a single line and not a d-pad, and THE
+//   ROW'S ONE HOLD GESTURE: held past the hold beat they repeat their own
+//   chords at the compositor's key-repeat rate, the roster's only buttons that
+//   do (architect 2026-08-16, the record at the arrows' chord-table rows,
+//   input_pointer.cpp). Nothing about the PAINT changes for it — the pressed
+//   interior is the ordinary arm's, and the hold has no cue of its own;
 //   THE HISTORY COMPANIONS IN THOSE SAME FOUR SLOTS while the `h` view stands
 //   (architect 2026-08-14) — Cumulative, Revert, Older, Newer, the order they
 //   held in the icon row's history group. A SWAP, not a collapse: one cluster

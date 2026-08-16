@@ -2510,8 +2510,14 @@ void GuiPlatform::maybe_fire_repeat() {
     // SINCE THE 2026-08-16 KEYUP MODEL the application CLEARS this bit on a
     // COMMAND hold's FIRST repeat — the hold's opener, which stands in for the
     // press act keys no longer perform at the press (the flip and its undo
-    // argument are at GuiInputHandler::on_key). This site stays the bit's only
-    // PRODUCER; that flip is a consumer-side clear on the delivered copy.
+    // argument are at GuiInputHandler::on_key). This site stays the KEY
+    // surface's only producer, and that flip is a consumer-side clear on the
+    // delivered copy. The bit has a SECOND producer since 2026-08-16, the
+    // application's own held-BUTTON repeat
+    // (GuiInputHandler::tick_chrome_press_repeat, the four cardinal arrow
+    // buttons): it never passes through this class — it calls the command
+    // dispatch directly — and it buys the adjacency property below from its own
+    // edges, so nothing here has to account for it.
     // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
     // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
     // hold at any intervening pointer-button press, completed wheel emission, or

@@ -118,8 +118,10 @@ public:
     // the release hands over current_mods() plus the codepoint, built exactly
     // as the press path builds them: the mismatch guard reads the three
     // modifier bools, and a passing dispatch reads them live.
-    // `synthesized_repeat` stays false — only maybe_fire_repeat sets it, and
-    // it synthesizes no releases.
+    // `synthesized_repeat` stays false — maybe_fire_repeat is this class's only
+    // writer of it, and it synthesizes no releases. (The application's own
+    // producer, the chrome button hold-repeat, never reaches these callbacks at
+    // all: it calls the command dispatch directly.)
     using KeyReleaseCallback   = std::function<void(GuiKey key, GuiInputState mods)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
     // A scroll wheel notification carrying the NET number of detents crossed
@@ -259,6 +261,33 @@ public:
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
+
+    // THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL, in milliseconds, or 0
+    // when the compositor has key repeat DISABLED (wl_keyboard.repeat_info
+    // with rate 0 — honored here exactly as the platform's own repeat honors
+    // it; the field's contract is at repeat_period_us_). A platform truth
+    // handed out the way notional_pointer_x() is: the GUI holds this class by
+    // reference and reads it directly, no hook.
+    //
+    // ITS ONE APPLICATION CONSUMER is the CHROME BUTTON HOLD-REPEAT
+    // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held arrow
+    // BUTTON at the rate a held arrow KEY runs at rather than at a constant of
+    // its own — so the two holds cannot drift apart when the desktop's repeat
+    // setting is edited. Rate 0 therefore stops the buttons repeating too,
+    // which is the honest mirror of a keyboard that does not repeat. It is
+    // READ PER FIRE and never cached: repeat_info may be re-sent at any time.
+    //
+    // The advertised value is a RATE in Hz, so the period is exact only for
+    // divisors of 1000; the microsecond field is rounded to the nearest
+    // millisecond here and floored at 1, which keeps 0 meaning "disabled"
+    // alone.
+    int64_t key_repeat_period_ms() const {
+        if (repeat_period_us_ == 0) return 0;
+        const int64_t ms =
+            static_cast<int64_t>((repeat_period_us_ + 500ull) / 1000ull);
+        return ms < 1 ? 1 : ms;
+    }
+
     // Fired when the pointer LEAVES the surface (wl_pointer.leave), at
     // pointer-capability loss, and — since touch phase 1 — at a touch pointer
     // translation's end on its NO-FOCUS arm only (as OrdinaryLeave, after the
@@ -320,8 +349,16 @@ public:
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The consumer's authoritative effect
     // list is main.cpp's hook body, which names the two intents it drops.
-    // (The transport arrows' hold-repeat
-    // rode this hook until its deletion, 2026-08-13.) Null-safe.
+    // THE ARROW BUTTONS' HOLD-REPEAT IS DELIBERATELY NOT A MEMBER (2026-08-16,
+    // where the pre-2026-08-13 form of it was): that burst hangs off the ARMED
+    // CHROME PRESS, which is POINTER intent — it dies on the pointer's own
+    // edges (the release, the leave / capability-loss clear), and none of this
+    // hook's edges ends a finger's hold on a button. What the hook's edges
+    // could otherwise argue for is undo adjacency, and they do not reach it
+    // either: a Super-swallowed press runs NO COMMAND, so nothing can land
+    // between the burst's opener and its repeats there. The burst's own
+    // key-arrival disarms are the two physical key edges in the application
+    // (the inventory is at AppState::ChromePress). Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members

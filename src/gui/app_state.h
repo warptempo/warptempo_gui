@@ -2068,10 +2068,13 @@ enum class RedesignButton {
     //     The generic radio consume is untouched — the S/T and W/P rows and the
     //     tabs still use it.
     //
-    // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
-    // hold-repeat that shipped with the row; the physical arrow KEYS keep
-    // their platform repeat). His reasoning is recorded at the arrows' rows in
-    // kToolbarChords (input_pointer.cpp), which is where the machinery lived.
+    // THE FOUR ARROWS REPEAT WHILE HELD (architect 2026-08-16), the row's one
+    // hold gesture: the first fire a hold beat after the press, then the
+    // COMPOSITOR'S own key-repeat rate, so a held arrow BUTTON walks at exactly
+    // the speed a held arrow KEY does. His reasoning is recorded at the arrows'
+    // rows in kToolbarChords (input_pointer.cpp), which owns the `repeats`
+    // column; the burst's state and its whole edge inventory are at
+    // AppState::ChromePress.
     TransportSkipBack, TransportPlayStop, TransportSkipForward,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
     // cluster, behind a separator and ahead of the four arrows): previous
@@ -4122,20 +4125,81 @@ struct AppState {
     // the chord table's `click_face` column, not restated here; HistoryWalkTab
     // paints no pressed face at all (row 3 keeps its own faces) and uses the
     // arm for the act alone.
+    //
+    // THE HOLD-REPEAT RIDES THIS ARM (architect 2026-08-16, reversing his own
+    // 2026-08-13 deletion of the arrows' repeat: the touch panel has no
+    // keyboard, so a held arrow BUTTON is the panel's only nudge run). A press
+    // on a button whose chord row sets `repeats` — the bottom row's four
+    // cardinal arrows and nothing else, kToolbarChords, input_pointer.cpp —
+    // arms a synthesized-repeat burst alongside the act:
+    //   * `repeat_due_ms` is the CLOCK_MONOTONIC stamp of the next fire, and 0
+    //     means THIS ARM CARRIES NO BURST (an unarmed button, an ineligible
+    //     context, a HistoryWalkTab arm). The first fire is one kHoldBeatMs
+    //     after the press — the product's ONE hold beat, so the button hold and
+    //     the key hold cross their threshold together — and every later fire is
+    //     THE COMPOSITOR'S OWN advertised key-repeat interval
+    //     (GuiPlatform::key_repeat_period_ms, read per fire, 0 = the desktop
+    //     has key repeat off and neither the keys nor these buttons repeat).
+    //   * `repeat_fired` records that the burst has produced at least one act,
+    //     and the LIFT reads it: a hold gives the stream and nothing extra, so
+    //     a fired burst SUPPRESSES the release act exactly as a key hold's
+    //     first repeat claims its key's release (the keyup rule's button
+    //     mirror; the model is at GuiInputHandler::on_key).
+    // Both live ON THE ARM rather than beside it, and that is the whole of
+    // their lifetime management: take_chrome_press carries them to the lift and
+    // empties the field in one act, and every edge that drops the arm drops the
+    // burst with it, with no second edge list to keep in step.
+    //
+    // THIS IS THE AUTHORITATIVE INVENTORY OF THE BURST'S ENDS (every site
+    // carries its own member plus a pointer here):
+    //   ARMING is judged under the PRESS-TIME context by the KEYBOARD'S OWN
+    //   predicate SHARED, not mirrored — repeat_eligible, exactly what the
+    //   platform's arming probe asks for a physical key — so the button's hold
+    //   arms in precisely the contexts a held key would (arm_redesign_press).
+    //   THE ARM'S OWN ENDS END THE BURST, all of them by construction: the
+    //   release (take_chrome_press) and the pointer-leave / capability-loss
+    //   clear (clear_redesign_button_press, main.cpp's hook).
+    //   PER FIRE the tick re-asks four things and they answer differently on
+    //   purpose: the pointer being ON the armed button's published rect PAUSES
+    //   the schedule while it is off and resumes on return (the scrollbar-button
+    //   rule); a dead `redesign_button_enabled` PAUSES too (the disabled-press
+    //   consume's mirror); an advertised rate of 0 PAUSES (the desktop's key
+    //   repeat is off, and repeat_info can re-arrive); and repeat_eligible
+    //   going false DISARMS — a context that revoked the burst's eligibility
+    //   ends it rather than parking it.
+    //   ANY PHYSICAL KEY EVENT DISARMS, both edges — the press router's top
+    //   (GuiInputHandler::on_key) and the general keyup dispatch's top
+    //   (on_key_release). It is LOAD-BEARING FOR UNDO, not hand-feel:
+    //   Undo::coalesce_gesture merges a synthesized repeat by KIND ALONE, with
+    //   no subject test, on the premise that no command can run between a
+    //   burst's opener and its repeats — and under the keyup model a key
+    //   command runs at its RELEASE, so the press edge alone no longer spans
+    //   the whole of "a key command happened" (a key held from before the
+    //   button press is disarmed by neither its own platform repeat, which the
+    //   button press killed, nor a press edge that never comes). Modifier keys
+    //   reach neither entry point, so a shift or ctrl tapped mid-hold ends
+    //   nothing.
+    //   NO KEYBOARD-INTENT-CANCEL MEMBERSHIP, deliberately, where the
+    //   pre-2026-08-13 form had one: this burst is POINTER intent and the
+    //   hook's edges run no command (the reasoning is at
+    //   set_keyboard_intent_cancel_hook, platform_wayland.h).
+    //   NOTHING IS MIRRORED FOR THE POINTER-BUTTON AND WHEEL EDGES the old form
+    //   also carried: the left button cannot press again while it is held, the
+    //   other two buttons bind nothing anywhere in this product, and a wheel
+    //   moves the viewport alone — none of the three can change the undo
+    //   subject.
+    // The firing body is tick_chrome_press_repeat (input_pointer.cpp).
     struct ChromePress {
         enum class Kind { None, Roster, HistoryWalkTab };
-        Kind    kind     = Kind::None;
-        int     index    = -1;
-        bool    shift    = false;
-        bool    inside   = true;
-        int64_t press_ms = 0;
+        Kind    kind          = Kind::None;
+        int     index         = -1;
+        bool    shift         = false;
+        bool    inside        = true;
+        int64_t press_ms      = 0;
+        int64_t repeat_due_ms = 0;
+        bool    repeat_fired  = false;
     };
     ChromePress chrome_press;
-
-    // (THE ARROW BUTTONS' HOLD-REPEAT IS DELETED — architect 2026-08-13, with
-    // the act-at-release conversion; the record is at the arrows' chord-table
-    // rows, input_pointer.cpp. The physical arrow KEYS keep their platform
-    // repeat unchanged.)
 
     // THE RENDER BUTTON IS CANCEL WHILE AN EXPLICIT RENDER ACT IS LIVE
     // (architect 2026-08-11: "change the render button into a cancel button

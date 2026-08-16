@@ -104,6 +104,15 @@ struct ToolbarChord {
     // tracks the pointer through the arm's `inside` bit — the paint reads
     // redesign_button_pressed_face, app_state.h.)
     bool           click_face;
+    // REPEATS: a held press on this button synthesizes its own chord over and
+    // over — the pointer twin of holding the key (the bottom row's four
+    // cardinal arrows and nothing else, 2026-08-16). The press arms the burst
+    // on the ChromePress itself and tick_chrome_press_repeat fires it with
+    // GuiInputState::synthesized_repeat set, so the undo coalescing is the
+    // repeat-identity rule the keyboard already has, and a fired burst
+    // suppresses the lift's own act. Defaulted, so the forty-two rows that do
+    // not repeat need no eighth column.
+    bool           repeats = false;
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
@@ -286,17 +295,23 @@ constexpr ToolbarChord kToolbarChords[] = {
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
-    // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
-    // hold-repeat that shipped with the row — the synthesized 575ms/25Hz
-    // bursts, their AppState::transport_repeat arm, the tick's firing body
-    // and the three-plus-one edge disarm lists all went with it; the physical
-    // arrow KEYS keep their platform repeat, repeat_eligible untouched). HIS
-    // REASONING, recorded: these four exist for the touch panel, which has no
-    // keyboard beside the synthetic one, and each thing the repeat bought is
-    // replaceable there — a marker nudge by dragging the marker and
-    // fine-tuning with taps on these arrows, a tempo step by typing the value
-    // in the editor. Like every other chrome button they are one act per
-    // press-and-lift now.
+    // THE FOUR ARROWS ARE THE TABLE'S ONLY `repeats` ROWS (architect
+    // 2026-08-16, reversing his own 2026-08-13 deletion of the same gesture,
+    // which he finds did not hold up in practice): the touch panel has no
+    // keyboard beside the synthetic one, so a HELD ARROW BUTTON is the panel's
+    // only nudge run, and the substitutes the deletion counted on — dragging
+    // the marker, typing the tempo in the editor — do not cover it.
+    //
+    // THE CADENCE IS THE KEYBOARD'S, not a constant of this table's: the first
+    // fire one kHoldBeatMs after the press (the product's ONE hold beat, so the
+    // button hold and the key hold cross their threshold on the same beat) and
+    // every later fire at THE COMPOSITOR'S OWN advertised key-repeat interval,
+    // read per fire — a desktop with key repeat switched off gets no button
+    // repeat either. The burst rides the armed ChromePress and its whole edge
+    // inventory is at that struct (app_state.h); the firing body is
+    // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
+    // throughout, repeat_eligible included — the arm SHARES that predicate
+    // rather than mirroring it.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlayStop,
@@ -332,15 +347,16 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Tab,    true,  true,  false, false, true},                             // Ctrl+Shift+Tab
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
-    // lookup is by id, so this order is for the reader alone.
+    // lookup is by id, so this order is for the reader alone. The eighth
+    // column is `repeats`, and these four are the only rows that set it.
     {RedesignButton::TransportDown,
-     GuiKeys::Down,   false, false, false, false, true},                             // bare Down
+     GuiKeys::Down,   false, false, false, false, true, true},                       // bare Down
     {RedesignButton::TransportUp,
-     GuiKeys::Up,     false, false, false, false, true},                             // bare Up
+     GuiKeys::Up,     false, false, false, false, true, true},                       // bare Up
     {RedesignButton::TransportLeft,
-     GuiKeys::Left,   false, false, false, false, true},                             // bare Left
+     GuiKeys::Left,   false, false, false, false, true, true},                       // bare Left
     {RedesignButton::TransportRight,
-     GuiKeys::Right,  false, false, false, false, true},                             // bare Right
+     GuiKeys::Right,  false, false, false, false, true, true},                       // bare Right
     // THE HISTORY COMPANIONS — the bottom row's right cluster while the `h`
     // view stands, in the arrows' own slots (architect 2026-08-14; they were
     // the icon row's history group until that day, and nothing about their
@@ -5892,9 +5908,33 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // hold against kChromeShiftHoldMs to decide the SHIFT LONG PRESS, and
         // the stamp is taken for every button rather than for the four that can
         // use it, a press having a time whatever it landed on.
+        const int64_t now = monotonic_ms();
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,
-            redesign_button_index(tc.id), mods.shift, true, monotonic_ms()};
+            redesign_button_index(tc.id), mods.shift, true, now};
+        // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the four rows that
+        // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
+        // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
+        // repeat_eligible is exactly what the platform's arming probe asks for
+        // the physical key, so the button's hold arms in precisely the contexts
+        // a held key would — and refuses in the ones it refuses, which is what
+        // keeps a press some surface consumes from arming a burst that would
+        // start firing when that surface closes under a held button. Nothing
+        // has dispatched by this line and nothing will until the lift, so
+        // "press-time" is simply the state this press found.
+        //
+        // The chord is the LIFT's minus its long-press term, which no repeating
+        // row can reach (none of the four admits shift, and a shift press
+        // returned above the arm) — so the predicate is asked about exactly the
+        // chord the burst will fire.
+        if (tc.repeats) {
+            GuiInputState chord{};
+            chord.ctrl  = tc.ctrl;
+            chord.shift = tc.shift || mods.shift;
+            chord.alt   = tc.alt;
+            if (repeat_eligible(tc.key, chord))
+                app.chrome_press.repeat_due_ms = now + kHoldBeatMs;
+        }
         if (tc.click_face) {
             // DAMAGE FOLLOWS THE ROW'S HOME STRIP (row 8, 2026-08-11): the
             // transport row's pixels live in the BOTTOM strip, so its click
@@ -5975,6 +6015,13 @@ void GuiInputHandler::finish_chrome_press_release(
     case AppState::ChromePress::Kind::Roster:
         break;
     }
+    // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16),
+    // the keyup rule's button mirror: a tap gives exactly one act, at the lift,
+    // and a hold gives the stream and nothing extra — precisely as a key hold's
+    // first synthesized repeat claims that key's release (the model is at
+    // GuiInputHandler::on_key). The bit travels ON the arm, so it is asked here
+    // before any gate and dies with the arm the caller already took.
+    if (arm.repeat_fired) return;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_index(tc.id) != arm.index) continue;
         // The lift must land on the armed button itself.
@@ -6070,6 +6117,92 @@ void GuiInputHandler::finish_chrome_press_release(
         chord.ctrl  = tc.ctrl;
         chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
+        dispatch_key_command(tc.key, chord, KeyDispatchPhase::Full);
+        return;
+    }
+}
+
+// THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect
+// 2026-08-16): while a press stands on a button whose chord row sets `repeats`
+// — the bottom row's four cardinal arrows — synthesize that button's chord on
+// the keyboard's own cadence, so a held arrow BUTTON walks at the speed a held
+// arrow KEY does. It exists for the glass rig, which has no keyboard, and it
+// works there with NO TOUCH-SPECIFIC CODE: the one-finger translation delivers
+// an ordinary left press and an ordinary left release, so it arms and ends this
+// arm exactly as a mouse does, and its motion deliveries keep the position this
+// body re-hits honest.
+//
+// THE SCHEDULE'S TWO NUMBERS COME FROM DIFFERENT OWNERS ON PURPOSE. The FIRST
+// fire is one kHoldBeatMs after the press — the product's own hold beat, the
+// constant the chrome shift hold and the touch region hold also read, matched
+// to the architect's compositor delay so all three coincide. Every LATER fire
+// is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
+// (GuiPlatform::key_repeat_period_ms), read PER FIRE because repeat_info may be
+// re-sent at any time, and a compositor advertising rate 0 has key repeat
+// DISABLED — so the buttons stop repeating there too, which is the honest
+// mirror of the keyboard they stand in for.
+//
+// THE BURST'S FIRST FIRE IS ITS UNDO OPENER, symmetric with the keyboard's: a
+// command key's press dispatches nothing under the keyup model, so the press
+// router clears the repeat bit on the hold's first synthesized fire and that
+// opener takes the physical arm in Undo::coalesce_gesture (GuiInputHandler::
+// on_key). This press dispatches nothing either — the act is the lift's — so
+// the same flip applies for the same reason: fire one goes out with
+// synthesized_repeat FALSE and pushes its own entry under the arrival-
+// invalidate and the tap-window rules, and every fire behind it carries TRUE
+// and merges by identity. Without it, a burst begun over a surviving foreign
+// stamp would merge its first act into another subject's entry.
+//
+// THE HOLD'S RECORD IS THE ARM ITSELF (AppState::chrome_press), which is where
+// the schedule and the fired bit live, so "the arm is standing" IS "the hold is
+// standing" and every edge that drops the arm drops the burst. The
+// authoritative inventory of the burst's ends is at that struct; this body owns
+// only the four PER-FIRE questions below, which answer differently on purpose:
+// off the button PAUSES (the scrollbar-button rule — sliding back on resumes,
+// the hold standing throughout; a leave that exits the WINDOW ends the hold
+// outright through the pointer-leave hook, and this body's first line sees the
+// arm gone), a dead enabled bit PAUSES (the disabled-press consume's mirror), a
+// rate of 0 PAUSES (stated at its own line), and lost eligibility DISARMS — a
+// context that revoked the burst ends it
+// rather than parking it. One fire per due tick, the next scheduled from NOW
+// rather than accumulated, so a stalled frame yields one repeat and no burst.
+void GuiInputHandler::tick_chrome_press_repeat() {
+    AppState::ChromePress& arm = app.chrome_press;
+    if (arm.kind != AppState::ChromePress::Kind::Roster) return;
+    if (arm.repeat_due_ms == 0) return;
+    const int64_t now = monotonic_ms();
+    if (now < arm.repeat_due_ms) return;
+    // A COMPOSITOR ADVERTISING RATE 0 HAS KEY REPEAT DISABLED, so these buttons
+    // do not repeat either — the honest mirror of the keyboard they stand in
+    // for. It PAUSES rather than disarms: repeat_info may be re-sent at any
+    // time, and the schedule, already due, resumes on the next tick if it is.
+    const int64_t period = gui.key_repeat_period_ms();
+    if (period <= 0) return;
+    arm.repeat_due_ms = now + period;
+    const RedesignButton id = static_cast<RedesignButton>(arm.index);
+    // PAUSED OFF THE BUTTON. The published rect re-hit at the pointer's
+    // remembered position — the lift's own derive doctrine, not the arm's
+    // `inside` bit, which serves the paint.
+    if (!app.pointer_in_window ||
+        !redesign_button_hit(app, id, app.last_mouse_x, app.last_mouse_y))
+        return;
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (tc.id != id) continue;
+        GuiInputState chord{};
+        chord.ctrl  = tc.ctrl;
+        chord.shift = tc.shift || arm.shift;
+        chord.alt   = tc.alt;
+        if (!repeat_eligible(tc.key, chord)) {
+            arm.repeat_due_ms = 0;
+            return;
+        }
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id)) return;
+        // THE OPENER IS THE FIRST FIRE, exactly as it is for a held key.
+        chord.synthesized_repeat = arm.repeat_fired;
+        arm.repeat_fired = true;
+        // Through the one command dispatch at Full — a press-that-acts — and
+        // NEVER through the press router, which would arm a phantom key whose
+        // release never comes. The same route the lift takes.
         dispatch_key_command(tc.key, chord, KeyDispatchPhase::Full);
         return;
     }
@@ -7096,9 +7229,10 @@ void GuiInputHandler::arm_tooltip_dwell(
 // the arm through take_chrome_press at on_button_release's top. Damage is
 // owed only when a pressed face may be painted (a Roster arm with the pointer
 // inside), through the row's home-strip fork.
-// (THE ARROWS' HOLD-REPEAT DISARM lived at the top of this function until the
-// repeat's deletion, 2026-08-13 — the record is at the arrows' chord-table
-// rows above.)
+// THE ARROWS' HOLD-REPEAT ENDS HERE TOO, and needs no line of its own: the
+// schedule and its fired bit live ON the arm, so taking the arm takes the burst
+// with it. That is the point of homing them there — one hold, one lifetime, no
+// second edge list (the inventory is at AppState::ChromePress).
 void GuiInputHandler::clear_redesign_button_press() {
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None) return;
     (void)take_chrome_press();

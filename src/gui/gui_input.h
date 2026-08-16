@@ -119,17 +119,23 @@ struct GuiInputState {
     // cannot express that (CapsLock defeated the old !shift spelling). Every
     // other consumer reads the GuiKey and ignores this.
     uint32_t codepoint           = 0;
-    // True iff this key event is a SYNTHESIZED KEY REPEAT — one the process
-    // generated itself from a held key (GuiPlatform::maybe_fire_repeat, the
-    // only writer — the transport arrows' button-side producer was deleted
-    // 2026-08-13 with their hold-repeat), not a fresh physical press. ONE
-    // PRODUCER, ONE APPLICATION-SIDE CLEAR since the 2026-08-16 keyup model:
-    // a COMMAND hold's first repeat is dispatched with the bit CLEARED by the
-    // press router — the hold's press dispatches nothing under that model, so
-    // the opener stands in for it (the flip and its undo argument are at
-    // GuiInputHandler::on_key; an editor-typing repeat keeps the bit, its
-    // press having acted at the keydown island). A
-    // platform-boundary fact in the same
+    // True iff this key event is a SYNTHESIZED REPEAT — one the process
+    // generated itself from a HELD input rather than a fresh physical press.
+    // TWO PRODUCERS, one per surface: GuiPlatform::maybe_fire_repeat for a held
+    // KEY (the platform boundary's own), and
+    // GuiInputHandler::tick_chrome_press_repeat for a held BUTTON (the four
+    // cardinal arrow buttons, 2026-08-16 — the pointer twin, which exists so
+    // the keyboard-less glass rig has a nudge run). The two carry the same
+    // meaning to the same senior consumer and differ only in what is being
+    // held. EACH SURFACE CLEARS THE BIT ON ITS BURST'S OPENER, for one shared
+    // reason: neither hold's press dispatches anything (a COMMAND key's act is
+    // at its release since the 2026-08-16 keyup model, a BUTTON's at its lift
+    // since 2026-08-13), so the first fire stands in for the press act and must
+    // take undo's PHYSICAL arm. The key surface's clear is the press router's
+    // (the flip and its undo argument are at GuiInputHandler::on_key; an
+    // editor-typing repeat keeps the bit, its press having acted at the keydown
+    // island); the button surface's is the tick's own, at the same argument.
+    // For the KEY it is a platform-boundary fact in the same
     // spirit as `codepoint`. Its senior consumer is undo coalescing, where it
     // selects
     // the ARM (the hybrid is stated at the head of undo.h): a repeat merges into

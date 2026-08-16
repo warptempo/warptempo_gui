@@ -4834,6 +4834,16 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 //      never a different act.
 //   5. The one command dispatch, under live state.
 void GuiInputHandler::on_key_release(GuiKey key, GuiInputState mods) {
+    // A PHYSICAL KEY ARRIVAL ENDS A HELD BUTTON'S REPEAT BURST, and the RELEASE
+    // is the edge that matters under this model: the command runs HERE, so the
+    // press router's own disarm does not span the whole of "a key command
+    // happened" — a key pressed BEFORE the button and still armed reaches its
+    // command through this body with no press edge in the burst's lifetime at
+    // all (its platform repeat, which would otherwise have claimed the release,
+    // was killed by the button press itself). Unconditional and above every
+    // arm, because the point is the ARRIVAL rather than the outcome. The rule's
+    // undo argument and the full edge inventory are at AppState::ChromePress.
+    app.chrome_press.repeat_due_ms = 0;
     const int armed = app.modal_dialog_key_pressed;
     if (armed >= 0 && app.modal_dialog_key_pressed_key == key) {
         app.modal_dialog_key_pressed     = -1;
