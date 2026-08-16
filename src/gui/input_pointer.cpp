@@ -3591,11 +3591,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // It sits BELOW the modal gates like every other pointer target, which is
     // half of why a popup and an editor are never open together: the popup opens
     // only from a press, and while a DIALOG editor is up
-    // every press dies at the veil (the MODAL-TRAP block above lifts ONLY
-    // roster buttons whose chord the editors admit — Save alone today — and
-    // the TWO menu ANCHORS carry no chord (a third did not either, until the
-    // Navigation anchor left with its menu on 2026-08-15), so no press can open
-    // a popup under an editor through it). The other half is not here — the
+    // every press outside the box's own field and buttons dies at the veil,
+    // which has had NO EXCEPTION since 2026-08-13 (the retired reach-through's
+    // record is at its own site above) — so the menu anchors are never
+    // reached and no press can open a popup under an editor.
+    // The other half is not here — the
     // pointer-transparent FLAG editor swallows nothing, so a press does reach
     // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
     // that edit (the rule is stated there). Two mechanisms, one claim. (The
@@ -5103,7 +5103,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             return;
     }
     // THE CHROME ACT, the roster's own release body (2026-08-13): the lift on
-    // the armed button runs its chord — or the lock's `o`, or the walk tabs'
+    // the armed button runs its chord — or the walk tabs'
     // select — through the one release half, which re-hits the target at
     // these coordinates and re-asks every press-time gate, the veil included —
     // which is why this sits BELOW the editor dialog's own release and ABOVE
@@ -5988,6 +5988,23 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // PRESS; button-is-its-chord is about what a button runs, not when.
 void GuiInputHandler::finish_chrome_press_release(
         const AppState::ChromePress& arm, int x, int y) {
+    // THE VEIL, RE-ASKED ONCE FOR EVERY KIND: a chrome lift is a consumed
+    // nothing while an editor dialog stands, whatever the arm is. It was a
+    // membership test until 2026-08-13, admitting the modal-trap
+    // reach-through's own buttons; with that retired the veil is blanket
+    // again, and its whole job here is the editor OPENED MID-HOLD — a key
+    // press deliberately does not end a pointer hold (main.cpp's set_on_key
+    // hook), so Ctrl+S in the `h` view raises the commit-title editor under a
+    // standing arm, and an arm taken before the dialog rose must not fire into
+    // it. IT SITS ABOVE THE KIND SWITCH because the rule is the roster's and
+    // the walk tabs' alike and neither has an exception to it — carried
+    // per-branch, it was on the roster's and missing from the walk tab's, so
+    // arming a Remote/Local tab, raising the dialog mid-hold and lifting on
+    // the tab switched the walk under the editor.
+    // A PROMPT needs no term here for any kind: on_button_release's prompt
+    // gate returns unconditionally above this call, so no arm reaches this
+    // body while one stands.
+    if (modal_dialog_editor_active()) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -6012,20 +6029,16 @@ void GuiInputHandler::finish_chrome_press_release(
     // a tap gives exactly one act, at the lift, and a hold gives the stream
     // and nothing extra — the burst's fires already acted, so the lift adds
     // nothing on top of the run. The bit travels ON the arm, so it is asked
-    // here before any gate and dies with the arm the caller already took.
+    // here before any of the roster's own gates (the veil above is asked
+    // before it, for every kind) and dies with the arm the caller already took.
     if (arm.repeat_fired) return;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_index(tc.id) != arm.index) continue;
         // The lift must land on the armed button itself.
         if (!redesign_button_hit(app, tc.id, x, y)) return;
-        // THE VEIL, re-asked: under an editor dialog NO roster button may act.
-        // It was a membership test until 2026-08-13, admitting the modal-trap
-        // reach-through's own buttons; with that retired the veil is blanket
-        // again and this line's whole job is the editor OPENED MID-HOLD — an
-        // arm taken before the dialog rose must not fire into it. A PROMPT
-        // never reaches this body at all — on_button_release's prompt gate
-        // consumes the release above it.
-        if (modal_dialog_editor_active()) return;
+        // (The editor veil is re-asked once for every kind at the top of this
+        // body — the roster's own copy lived here until the walk tab was found
+        // to be missing it.)
         // The press-time refusals, re-asked against the live state — the
         // shift admission under the CARRIED shift, the enabled bit, the radio
         // rule. Each held at the press; any that no longer does makes the

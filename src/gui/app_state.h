@@ -3830,9 +3830,14 @@ struct AppState {
     //
     // IT IS DELIBERATELY NOT THE ROSTER'S ARM (AppState::ChromePress): a
     // dialog button is not a roster member, so the two index spaces would have
-    // to be sentinel-encoded into one field, and the two arms can stand at
-    // once in principle (the veil-admitted roster pair is pressable under an
-    // editor dialog while its buttons are too). Since 2026-08-13 the roster's
+    // to be sentinel-encoded into one field, and the two STATES overlap in
+    // time. Neither surface can arm under the other — the veil swallows every
+    // press outside the dialog's own field and buttons, with no exception
+    // since 2026-08-13 (on_button_press, input_pointer.cpp), so no roster
+    // press lands while a dialog stands — but a dialog raised MID-HOLD by a
+    // key chord stands over a roster arm taken before it, which is why the
+    // chrome lift re-asks the veil (finish_chrome_press_release). Since
+    // 2026-08-13 the roster's
     // arm carries the SAME act-at-release lifetime as this one — this arm was
     // the model the chrome conversion copied — so the split is index-space
     // bookkeeping now, not a difference in rule; each keeps its own owner

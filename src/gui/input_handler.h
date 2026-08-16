@@ -1365,11 +1365,11 @@ struct GuiInputHandler {
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed
     // target at the release's own coordinates and re-ask every press-time
-    // gate — the modal veil, shift admission under the CARRIED shift, the
-    // enabled bit, the radio rule, the Render cancel face — then run the act
-    // (the chord through on_key; the tab lock's bare `o`; the walk tabs'
-    // set_history_reading). A lift anywhere else, or a gate that no longer
-    // holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
+    // gate — the modal veil FIRST, for every kind alike, then the roster's own
+    // shift admission under the CARRIED shift, the enabled bit, the radio
+    // rule, the Render cancel face — then run the act (the chord through
+    // on_key; the walk tabs' set_history_reading). A lift anywhere else, or a
+    // gate that no longer holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
     // (kChromeShiftHoldMs, app_state.h, carries the ruling).
@@ -2822,8 +2822,9 @@ private:
     //     dialog-hover branch (2026-08-12) — the modal's own two pointer
     //     surfaces;
     //   the CHROME release's veil re-ask (finish_chrome_press_release,
-    //     2026-08-13), which since the reach-through's retirement refuses the
-    //     roster outright and exists for the editor OPENED MID-HOLD;
+    //     2026-08-13), which since the reach-through's retirement refuses
+    //     every armed kind outright — one term above the kind switch — and
+    //     exists for the editor OPENED MID-HOLD;
     //   the roster hover walk's veil term (recompute_redesign_button_hover —
     //     under an editor dialog nothing hovers, the prompt's own answer);
     //   and on the KEYBOARD side, modal_editor_key_blocked's bare-Tab
