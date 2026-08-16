@@ -685,8 +685,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // (AppState::HistoryMode::head_delta_empty) and again while the worker is
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
-// struct); and it admits CTRL+H only while a diff flag is selected, so the
-// REVERT button greys with an empty subject; and it admits bare `'` only while
+// struct); and it admits CTRL+H only while a diff flag is selected, so this
+// walk answers DEAD for REVERT with an empty subject — AN ANSWER NO FACE READS
+// SINCE 2026-08-15, redesign_button_enabled lifting the four history companions
+// over this partition entirely, so the chord still refuses while the button
+// stays lit and a click on it is a consumed no-op, the roster's standing shape
+// for a refusal (the record, with the architect's blink reasoning, is at that
+// arm in redesign_button_enabled, app_state.h; the note below on the revert act
+// says the same thing where the entry itself is spelled); and bare `'` only while
 // THE ACTIVE WALK CARRIES A MEMBER — one term for both walks since 2026-08-09,
 // when the empty Remote walk became a legal standing state — so the
 // load-in-place button greys over a blank lane, which the Remote tab reaches

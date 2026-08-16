@@ -4301,15 +4301,24 @@ struct AppState {
     //   FILE anchor since 2026-08-13, whose one item is the Ctrl+Q this list
     //   used to name as the Quit BUTTON's (that button is retired; the chord is
     //   admitted exactly as it was).
-    //   THREE OF THE LIT ARE SESSION-CONDITIONAL, each one decision serving the
-    //   key and the face: Save greys with an empty head delta (or a checkpoint
-    //   in flight), Revert greys with no diff flag selected, and the
+    //   TWO OF THE LIT ARE SESSION-CONDITIONAL IN THEIR FACE, each one decision
+    //   serving the key and the face: Save greys with an empty head delta (or a
+    //   checkpoint in flight), and the
     //   load-in-place opener greys on a walk with NO MEMBER — one term for both
     //   walks since 2026-08-09, the act loading the VIEWED member and a blank
     //   lane offering none. The Local walk cannot reach it on a live tab (U + R
     //   + 1 members, bound before the mode goes up), so the REMOTE walk is where
     //   it shows: a piece whose every checkpoint refuses the strict load opens
     //   the view at `0/0`, and that button is the one greyed there.
+    //   REVERT WAS A THIRD UNTIL 2026-08-15 — Ctrl+H is still admitted only
+    //   with a diff flag selected, so this partition still answers DEAD for it
+    //   on an empty subject, but no face reads that answer any more: the
+    //   architect reversed the grey because it tracked the diff-flag SELECTION
+    //   and blinked at interaction cadence, the same argument that took the
+    //   four cardinal arrows always-on, and redesign_button_enabled now lifts
+    //   the four history companions over this partition entirely. The button is
+    //   lit with an empty subject and the click is a consumed no-op, the
+    //   roster's standing shape for a refusal; the record is at that arm.
     // The partition is
     // DERIVED
     // from the two gates above (plus the Settings anchor's toggle_dropdown
@@ -6040,15 +6049,23 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 
 // IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
 // word (architect 2026-08-05): the selected diff flags, else the focused one
-// alone. Empty means Ctrl+H is a consumed no-op and the Revert button greys, and
-// that is ONE decision serving both readers, on the head-delta precedent
-// exactly: history_mode_key_blocked's admission is conditional on this, and the
-// button's face is derived from that admission rather than from a second
-// spelling of it.
+// alone. Empty means Ctrl+H is a consumed no-op — history_mode_key_blocked's
+// admission is conditional on this, and THAT KEY GATE IS THIS PREDICATE'S ONE
+// READER SINCE 2026-08-15.
 //
-// IT IS A PURE READ OF THE MODE, so the face answers per frame with nothing
-// latched: a click that selects lights the button on the next frame and a step
-// that clears greys it again, both through the clearer above.
+// IT HAD TWO, AND THE SUPERSEDED SHAPE IS KEPT BECAUSE IT WAS THE CLEANEST THIS
+// ROSTER HAS HAD: the Revert button's face was DERIVED from that same admission
+// rather than from a second spelling of it, so ONE decision both refused the
+// chord and greyed the button, on the head-delta precedent exactly. THE
+// ARCHITECT REVERSED THE FACE HALF ALONE, and his reason is the blink rather
+// than the logic: this is a PURE READ OF THE MODE, so it moves with every click
+// in the marker lane, and the glyph flipped on each one to report a selection
+// the lane is already showing — the same argument that took the four cardinal
+// arrows always-on. Revert is now lit whatever this answers (it is a member of
+// the bottom row's untruthful right cluster, redesign_button_enabled lifting
+// the four history companions over the derived partition), a click on it with
+// no subject is a consumed no-op, and the full record with the reversal's
+// reasoning lives at that arm. DO NOT GIVE THIS PREDICATE A FACE READER AGAIN.
 inline bool history_mode_revert_subject_standing(
         const AppState::HistoryMode& mode) {
     return !mode.selection.empty() || mode.focus >= 0;
@@ -6379,12 +6396,15 @@ inline bool redesign_button_enabled(const AppState& a,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. (THREE of row 4's fifteen are the ruled
-        // exception, and they are the arm below this one: the walk's older /
-        // newer steps and the revert act rest disabled because their keys are
-        // bound only inside the history view. The rule stated here is still the
-        // row's — the exception is named where it lives, not counted into this
-        // arm.) Their presses
+        // 1 and 3 by their face scope. (ROW 4 HAS NO EXCEPTION LEFT TO COUNT.
+        // THREE of its members were one until 2026-08-14 — the walk's older /
+        // newer steps and the revert act, resting disabled because their keys
+        // are bound only inside the history view, joined by the Cumulative
+        // toggle in 2026-08-08 — and the four left this row for the BOTTOM one
+        // that day, where they are the arrows' mode twin; they answer a plain
+        // `true` since 2026-08-15. Both halves of the succession are recorded
+        // at the history companions' arm below, which is where they live now.)
+        // Their presses
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
@@ -6864,8 +6884,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconLoadInPlace:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
         // it is an ACT, not a mode — it runs once and closes the view — so
-        // there is no bit for a lamp to read. What it has to say about state it
-        // says with its enabled face, which greys when nothing is selected.
+        // there is no bit for a lamp to read. IT SAYS NOTHING WITH ITS ENABLED
+        // FACE EITHER since 2026-08-15: that face greyed when nothing was
+        // selected, and the architect reversed it because the grey tracked the
+        // diff-flag SELECTION and blinked at interaction cadence — the argument
+        // that took the four cardinal arrows always-on. The chord still refuses
+        // on an empty subject and the click is then a consumed no-op; the
+        // record is at the history companions' arm in redesign_button_enabled.
         case RedesignButton::HistoryRevert:
         // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
         // like follow and iteration: each is a step that completes, with no
@@ -7078,8 +7103,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // twin. Like the three below it, this hint is only ever reachable
         // INSIDE the view: the four are painted nowhere else (the bottom row's
         // cluster swap), so the tooltips-on-disabled ruling reaches them only
-        // on the frames the view stands, where Revert's conditional grey is
-        // what it still buys.
+        // on the frames the view stands — AND SINCE 2026-08-15 IT BUYS NOTHING
+        // AT ALL FOR THIS CLUSTER, all four answering a plain `true` there
+        // (Revert's conditional grey was the last thing it still bought, and
+        // the architect reversed it as a per-selection blink). The hints stay
+        // because they explain the buttons, not because anything greys.
         case RedesignButton::HistoryCumulative:
             return {"Cumulative (u)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
@@ -7098,9 +7126,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:
             return {"Newer (.)", "Press Shift for newest."};
-        // THE REVERT ACT, one line: the chord has no shifted twin. It is
-        // greyed inside the view whenever nothing is selected and shows this
-        // hint there too, per the same ruling.
+        // THE REVERT ACT, one line: the chord has no shifted twin. It was
+        // GREYED inside the view whenever nothing was selected and showed this
+        // hint there too, per the same ruling; since 2026-08-15 it is lit in
+        // every frame the view stands (the architect's reversal of a grey that
+        // tracked the diff-flag selection), so the hint is an ordinary enabled
+        // one and the disabled ruling no longer reaches it.
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
         // ROW 8 — the transport row (2026-08-11), all one-line forms: no
         // button on it admits shift. The names are the ratified sentence-case

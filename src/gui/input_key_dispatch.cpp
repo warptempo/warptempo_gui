@@ -1862,13 +1862,24 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             IT IS THE SECOND ADMISSION CONDITIONAL ON THE
 //                             SESSION: with no diff flag selected and none
 //                             focused there is nothing to revert, so the chord
-//                             drops here as a consumed no-op and the Revert
-//                             button greys from this same line
+//                             drops here as a consumed no-op
 //                             (history_mode_revert_subject_standing, app_state.h
-//                             — one decision, both readers). Unlike the head
-//                             delta's, this bit MOVES DURING A VISIT: every
-//                             click that selects or clears changes it, and the
-//                             face follows per frame.
+//                             — the KEY GATE, and since 2026-08-15 its ONE
+//                             reader; it must not gain a face reader again).
+//                             THE FACE NO LONGER MIRRORS IT: the Revert button
+//                             greyed from this same line — one decision for the
+//                             chord and the glyph, the cleanest shape the
+//                             enabled predicate had — and the architect
+//                             reversed that, because this bit MOVES DURING A
+//                             VISIT (every click that selects or clears changes
+//                             it) so the grey tracked the diff-flag SELECTION
+//                             and blinked at interaction cadence, which is the
+//                             same argument that took the four cardinal arrows
+//                             always-on. The button stays lit with an empty
+//                             subject and a click on it is a consumed no-op,
+//                             the roster's standing shape for a refusal; the
+//                             full record is at the four history companions'
+//                             arm in redesign_button_enabled, app_state.h.
 //                             IT IS NOT DISPATCHED FROM HERE, and not from a
 //                             mode arm either: admitting it lets the press fall
 //                             through to on_key's ordinary body, which is what
@@ -2000,7 +2011,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // the active walk carrying a member), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
-// decision rather than two spellings of one. It took the HistoryMode struct
+// decision rather than two spellings of one. ONE ADMISSION HAS NO FACE READER
+// SINCE 2026-08-15 and that is a scope, not a second spelling: the revert act's
+// subject term still decides the KEY here, but redesign_button_enabled lifts
+// the four history companions over the derived partition entirely, so Revert
+// stays lit on an empty subject and its click is a consumed no-op — the
+// architect's reversal of a grey that tracked the diff-flag selection and
+// blinked at interaction cadence, recorded at that arm in app_state.h. It took
+// the HistoryMode struct
 // alone until the in-flight bit arrived, which lives on AppState because the act
 // outlives the view it was launched from.
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -2040,8 +2058,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
     // SECOND session-conditional admission: Ctrl+H is admitted only while there
     // is a subject to revert — a selected diff flag, or the focused one — so
-    // with nothing selected the chord drops here as a consumed no-op and the
-    // Revert button takes its row's disabled face from this same line. Unlike
+    // with nothing selected the chord drops here as a consumed no-op. THE
+    // REVERT BUTTON TOOK ITS ROW'S DISABLED FACE FROM THIS SAME LINE UNTIL
+    // 2026-08-15 — one decision for the chord and the glyph — and the architect
+    // reversed the face half alone: the grey tracked the diff-flag SELECTION,
+    // so it blinked at interaction cadence, the same argument that took the
+    // four cardinal arrows always-on. The button is lit with an empty subject
+    // and the click is a consumed no-op; this term is the KEY GATE only, and
+    // history_mode_revert_subject_standing has exactly one reader — this line.
+    // Unlike
     // the two mutators above it, this chord is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, BELOW the read-only gate, so a
     // locked tab refuses it exactly as it refuses `'`.
@@ -2537,8 +2562,15 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // close the view. The one caller is on_key's own Ctrl+H arm, which is reached
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
-// stands (history_mode_revert_subject_standing, app_state.h, the one decision
-// the Revert button's grey reads too).
+// stands (history_mode_revert_subject_standing, app_state.h, whose ONE reader
+// is that key gate). The Revert BUTTON'S grey read the same decision until
+// 2026-08-15 and no longer does: the architect reversed the face half alone,
+// the grey having tracked the diff-flag selection and blinked at interaction
+// cadence — the argument that took the four cardinal arrows always-on — so the
+// button is lit with no subject and the click is a consumed no-op, the roster's
+// standing shape for a refusal. The record is at the four history companions'
+// arm in redesign_button_enabled, app_state.h; that predicate must not gain a
+// face reader here again.
 //
 // IT IS FULLY MANUAL AND IT ALWAYS FORCES — the architect's explicit ruling, and
 // the reason there is not one coherence check in this body. The user may select

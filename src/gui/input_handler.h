@@ -470,7 +470,13 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // one), and the load-in-place's, on the active walk carrying a member. Both
 // readers hand it the
 // same `app` and neither restates a term of it, which is what
-// keeps the key and the face one decision. It took the HistoryMode struct alone
+// keeps the key and the face one decision — WITH ONE SCOPE SINCE 2026-08-15:
+// the revert act's subject term decides the KEY alone, redesign_button_enabled
+// lifting the four history companions over the derived partition, so Revert
+// stays lit on an empty subject and its click is a consumed no-op (the
+// architect's reversal of a grey that tracked the diff-flag selection and
+// blinked at interaction cadence; the record is at that arm in app_state.h).
+// It took the HistoryMode struct alone
 // until the in-flight bit joined, that bit living on AppState because the act
 // outlives the view it was launched from.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
