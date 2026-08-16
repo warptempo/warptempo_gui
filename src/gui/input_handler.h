@@ -1126,7 +1126,8 @@ struct GuiInputHandler {
     // writer serving the WHOLE roster — row 1's File / Navigation / Settings and
     // the view bar's three, row 3's two tabs, row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout) and the bottom
-    // row's twelve — the transport four plus whichever four the right cluster
+    // row's fourteen — the transport three, the marker-walk three, and
+    // whichever four the right cluster
     // holds, the other four publishing zero rects (definitions beside
     // on_motion in input_pointer.cpp).
     // recompute_

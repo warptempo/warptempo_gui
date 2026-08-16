@@ -1296,24 +1296,34 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // is decided HERE — one line above the allowlist — rather than in it. Spelling
 // the membership twice is exactly how that face would come to lie about the
 // button that opens the view.
-// FOUR OF THESE SHAPES ARE ALSO BUTTON CHORDS, re-derived by reading
-// kToolbarChords rather than remembered (the reverse cycle's CTRL+SHIFT+TAB is
-// not among them — no roster entry carries a shifted Tab, so the 2026-08-07
-// claim moved no face): CTRL+TAB, which arrived with the
-// compare toggle (2026-08-05) — the roster's only Tab entries are the two TABS',
-// and in the mode those buttons ARE the walk selector, so the partition did
-// not move when this claim arrived: the pair was already answered LIVE by hand,
-// and the derivation now says the same thing, which is what let the hand entry
-// go — BARE `,` / BARE `.`, the walk's own two buttons (2026-08-05), which
-// were the roster's first RESTING-DISABLED entries — their enabled bit WAS the
-// mode itself, which is how they dispatched these keys only from in here — and
-// BARE `u`, the Cumulative toggle's own button (2026-08-08), which joined that
-// family on exactly the same terms. THE FAMILY IS RETIRED since 2026-08-15
-// (the four answer a plain `true` now — the ruling is at
-// redesign_button_enabled) and what keeps them from dispatching outside the
-// view is the EMPTY RECT the bottom row publishes for them there, the arrows
-// holding those slots. Nothing in the roster dispatches bare Tab, Home, End or
-// `c`.
+// MOST OF THESE SHAPES ARE ALSO BUTTON CHORDS, and the membership is
+// RE-DERIVED BY READING kToolbarChords rather than remembered — which is what
+// this paragraph got wrong twice, having twice claimed a shape "no roster
+// entry carries" while the roster carried it. The current answer, re-greped:
+//   * CTRL+TAB — the two TABS' chord, which arrived with the compare toggle
+//     (2026-08-05); in the mode those buttons ARE the walk selector, so the
+//     partition did not move when this claim arrived (the pair was already
+//     answered LIVE by hand, and the derivation now says the same thing, which
+//     is what let the hand entry go);
+//   * BARE `,` / BARE `.` — the walk's own two buttons (2026-08-05), the
+//     roster's first RESTING-DISABLED entries; that family is RETIRED since
+//     2026-08-15 (they answer a plain `true` now — the ruling is at
+//     redesign_button_enabled) and what keeps them from dispatching outside
+//     the view is the EMPTY RECT the bottom row publishes for them there, the
+//     arrows holding those slots;
+//   * BARE `u` — the Cumulative toggle's own button (2026-08-08), which joined
+//     that family on exactly the same terms;
+//   * BARE Home / BARE End — the bottom row's two SKIP buttons since
+//     2026-08-11, and this paragraph claimed the opposite until 2026-08-15;
+//   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
+//     relayout, likewise;
+//   * BARE Tab, SHIFT+TAB and CTRL+SHIFT+TAB — the bottom row's MARKER-WALK
+//     GROUP since 2026-08-15, which is what finally put a shifted Tab in the
+//     roster and cashed the 2026-08-07 reverse-cycle claim into a real face:
+//     all three walk buttons are answered LIVE in the view by this predicate,
+//     doing the mode's own cycles.
+// Which leaves BARE `h` — the history button's own chord, and the one shape
+// here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
     // CTRL IS THE TAB CYCLE'S AND NOTHING ELSE'S, IN BOTH DIRECTIONS since
@@ -2395,9 +2405,13 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // which exists only inside the view — the view has just closed and `h`
     // refuses to reopen one while the bit stands — so that half is structural,
     // kept because it is not a second decision. What the user actually sees is
-    // the GLOBAL one: the same bit greys the Save button and relabels it
-    // "Committing..." in every view (redesign_button_enabled /
-    // redesign_button_label), mirroring the save lockout above.
+    // the GLOBAL one: the same bit greys the Save button in every view and
+    // puts "Committing the checkpoint" on its TOOLTIP — the "Committing..."
+    // LABEL died with row 2's labeled faces at the 2026-08-12 relayout, and
+    // this note named its deleted owner until a 2026-08-15 re-grep
+    // (redesign_button_enabled / redesign_button_glyph_swapped / the stateful
+    // tooltip overload are the live readers), mirroring the save lockout
+    // above.
     history_commit_worker.dispatch(
         std::move(job),
         [this](GuiHistoryCommitOutcome outcome) {

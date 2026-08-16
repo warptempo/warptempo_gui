@@ -10,15 +10,20 @@
 // icon is crisp at every gui_scale, exactly like every other redesigned
 // dimension.
 //
-// THE INTERPRETER HAS GROWN EXACTLY TWO FEATURES past the plain filled path it
-// started as, each with a committed producer and each taken so that the `d`
+// THE INTERPRETER HAS GROWN EXACTLY THREE FEATURES past the plain filled path
+// it started as, each with a committed producer and each taken so that the `d`
 // string in the table stays VERBATIM rather than being flattened by hand:
 //   - a per-path TRANSLATE (dialog-ok-apply's and dialog-cancel's transform);
-//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05).
+//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05);
+//   - the STROKED PATH (boost's four open polylines, 2026-08-15 — RESTORED
+//     rather than invented: the arm lived for part of 2026-08-11 for
+//     distortionfx, went producer-less when the architect reglyphed that
+//     button hours later, and comes back with a real producer plus the one
+//     thing distortionfx never needed, a per-path LINE CAP).
 // Each is described where it is implemented (icons.cpp's table header and its
-// `d`-interpreter header). A general matrix and a stroked-path arm were grown
-// for distortionfx on 2026-08-11 and deleted hours later with it, that file
-// being the only producer either ever had; git history holds both.
+// `d`-interpreter header). A general per-path MATRIX was grown alongside the
+// stroke for distortionfx and did NOT come back with it — boost carries no
+// transform at all — so that one is still git history alone.
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
@@ -166,25 +171,37 @@ enum class Icon {
     // which is the act — and the FIRST committed file whose `d` uses the smooth
     // cubic (`s`), the one command the interpreter grew for it.
     DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
-    // Row 8, the transport row (2026-08-11, the touch arc's first surface):
-    // SEVEN new glyphs for its eight buttons — the four cardinal arrows took
+    // Row 8, the transport row (2026-08-11, the touch arc's first surface;
+    // a tenant of the unified bottom row since 2026-08-12):
+    // SEVEN new glyphs for the eight buttons IT THEN HAD — the four cardinal
+    // arrows took
     // GoPrevious / GoNext for left and right, SHARED with the walk pair at
     // first (an Icon is a GLYPH, not a button: VcsCommit already serves two
     // faces) and theirs alone since the walk reglyphed to the keyframe pair
     // later that day — with GoUp / GoDown below completing the chevron family,
     // so all four arrows are the
     // same Breeze construction — one closed outline whose limbs are one
-    // viewBox unit thick, no stroke to set. The transport four are Breeze's
-    // own media-* set (the universal transport vocabulary; media-playback-
+    // viewBox unit thick, no stroke to set. The FOUR media-* glyphs are
+    // Breeze's own set (the universal transport vocabulary; media-playback-
     // pause was the considered runner-up for the stop slot and lost — Space
-    // STOPS, it does not pause, and the face must not promise a resume).
+    // STOPS, it does not pause, and the face must not promise a resume). They
+    // dress THREE buttons since 2026-08-15, play and stop having collapsed
+    // into one; the glyph count did not move with the button count.
     // dialog-cancel (the circle-slash) is Breeze's one "cancel" glyph, no
     // runner-up considered — transcribed for the row's short-lived Esc button
     // (deleted the same day at the architect's live pass) and kept as the
     // RENDER button's mid-render Cancel face (redesign_button_icon).
     MediaSkipBackward,   // Go to start (bare Home)
-    MediaPlaybackStart,  // Play (bare Space, the pair's live-while-stopped half)
-    MediaPlaybackStop,   // Stop (bare Space, the pair's live-while-playing half)
+    // PLAY AND STOP ARE ONE BUTTON'S TWO FACES since 2026-08-15 (architect,
+    // collapsing the pair): bare Space is one toggle, so the roster carries
+    // ONE member — RedesignButton::TransportPlayStop — wearing whichever of
+    // these two the live audition bit selects, Save's and Render's own
+    // stateful-glyph shape (redesign_button_icon, paint_handler.cpp). They
+    // were TWO buttons over the one chord from the row's first day until then,
+    // most recently as a radio pair; an Icon is a GLYPH rather than a button
+    // and neither entry moved.
+    MediaPlaybackStart,  // Play (bare Space, the face while stopped)
+    MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs)
     MediaSkipForward,    // Go to end (bare End)
     DialogCancel,        // Render's mid-render Cancel face (row 2)
     GoDown,              // The down arrow (bare Down)
@@ -195,16 +212,42 @@ enum class Icon {
     // the OPEN one while it is writable, swapped by redesign_button_icon.
     Lock,                // Locked: closed padlock, full color
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
+    // THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15 from a
+    // rendered candidate sheet, the row's right cluster ahead of the four
+    // arrows): previous marker (Shift+Tab), next marker (Tab) and walk both
+    // tabs (Ctrl+Shift+Tab). HIS OWN REASONS, kept because they are about this
+    // row's crowding rather than about the glyphs in isolation:
+    //   bbox-prev / bbox-next are AN ARROW MEETING A BAR, which is the Tab
+    //   key's own shape — and they share no silhouette with the chevrons two
+    //   slots away (the cardinal arrows), the media-skip triangles at the
+    //   row's left, or the keyframe dials the history walk wears in the same
+    //   cluster inside the `h` view.
+    //   boost is A TWO-ARROW CYCLE, which is literally what walking both tabs
+    //   is: step one, step the other, come back round.
+    // boost IS SINGLE-COLOUR (checked at the transcription, because its
+    // sibling boost-boosted is not): all four of its paths are
+    // `.ColorScheme-Text` = #fcfcfc, and the green `.ColorScheme-PositiveText`
+    // tick belongs to boost-boosted ALONE — so deep-history is still the
+    // set's one two-colour glyph. It is, however, the set's ONE STROKED file
+    // (fill="none" stroke="currentColor" on its group), which is what brought
+    // the interpreter's stroked arm back; the record is at the table entry.
+    BboxPrev,            // Previous marker (Shift+Tab)
+    BboxNext,            // Next marker (Tab)
+    Boost,               // Walk both tabs (Ctrl+Shift+Tab)
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 41 since 2026-08-12 (the grand relayout's roster commit): 33 + the zoom
-// group's four (zoom-in / zoom-out / zoom-fit-best / zoom-original) + the
-// single-marker verbs' four (list-add / list-remove / view-hidden /
-// insert-link). 33 was 32 + edit-cut (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 41;
+// 44 since 2026-08-15 (the bottom row's marker-walk group): 41 + bboxprev,
+// bboxnext and boost. THE PLAY/STOP COLLAPSE OF THE SAME DAY COST NOTHING
+// HERE — one button wearing two glyphs needs both of them, and an Icon has
+// never been a button (VcsCommit is the precedent). 41 was 2026-08-12 (the
+// grand relayout's roster commit): 33 + the zoom group's four (zoom-in /
+// zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
+// (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
+// (2026-08-11, the trim surface arc).
+inline constexpr int kIconCount = 44;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

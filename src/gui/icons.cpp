@@ -13,14 +13,22 @@ namespace {
 //
 // One row per committed SVG (assets/icons/breeze/), each holding that file's
 // path elements in file order. `d` is copied VERBATIM from the file; `ink` is
-// the fill source, the color the file resolves to.
+// the color the file resolves to — the FILL source for an ordinary path and the
+// STROKE source for a stroked one (`stroked`, below).
 //
-// EVERY PATH HERE IS FILLED. A STROKED ARM lived in draw() for part of
-// 2026-08-11, grown for the one `fill="none" stroke="currentColor"` file the
-// set ever held (distortionfx, row 4's Warp radio for those hours); the
-// architect reglyphed that button to speedometer the same day, which left the
-// arm without a producer, and it went. Git history has it if a stroked file
-// ever arrives.
+// NEARLY EVERY PATH HERE IS FILLED, and the ONE STROKED FILE is boost's
+// (2026-08-15, the bottom row's walk-both-tabs button): its group carries
+// `fill="none" stroke="currentColor"`, so its four open polylines would come
+// out as four filled slivers under the fill arm — not a case the fill arm
+// could have covered by looking the other way. THE ARM IS RESTORED, NOT NEW:
+// it lived in draw() for part of 2026-08-11 for the set's first stroked file
+// (distortionfx, row 4's Warp radio for those hours), went producer-less when
+// the architect reglyphed that button to speedometer the same day, and comes
+// back verbatim plus one thing distortionfx never needed — a per-path LINE
+// CAP, because two of boost's four paths carry `stroke-linecap="square"` and
+// two take SVG's default butt. The general per-path MATRIX that was grown
+// beside it did NOT come back: boost carries no transform, so that feature is
+// still git history alone and this table's `xform` is still translates only.
 //
 // THE COLORS ARE HARD-CODED, per the redesign's color ruling (the carve-out is
 // recorded at render.h's palette-block header): they are the SVGs' own values,
@@ -32,7 +40,7 @@ namespace {
 // which coincides with the marker-red ring's value by shared Breeze ancestry
 // and by nothing else; it is not a reference to that key either.
 //
-// EVERY ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
+// A FILLED ICON IS ONE FILL PER PATH ELEMENT, with cairo's default NONZERO
 // winding rule — which is the SVG default too, and what makes document-save's
 // holes (the body cutout and the lid slot) come out as holes: its subpaths wind
 // against the outline. Filling subpath-by-subpath would flood them.
@@ -62,9 +70,17 @@ constexpr IconTransform icon_translate(double tx, double ty) {
 }
 
 struct IconPath {
-    GuiColor      ink;      // fill source
+    GuiColor      ink;      // fill source, or stroke source when `stroked`
     const char*   d;
     IconTransform xform{};  // identity unless the file carries a transform
+    bool          stroked = false;
+    // THE LINE CAP, read only on a stroked path. SVG's default is BUTT and so
+    // is cairo's, so `false` transcribes a file that says nothing; boost's two
+    // arrowhead paths say `stroke-linecap="square"` and are the flag's only
+    // producers. It is a per-PATH attribute in the file and a per-path field
+    // here for that reason — boost's other two paths take the default in the
+    // same group.
+    bool          square_cap = false;
 };
 
 struct IconDef {
@@ -739,6 +755,62 @@ constexpr IconPath kInsertLinkPaths[] = {
      "17 L 19 17 L 19 16 L 17 16 L 17 14 L 16 14 z "},
 };
 
+// -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
+//
+// bboxprev (Shift+Tab, previous marker), bboxnext (Tab, next marker) and boost
+// (Ctrl+Shift+Tab, walk both tabs). The architect's reasons for the picks are
+// at the enum entries in icons.h — they are about this row's crowding, which
+// is a roster fact rather than a transcription one.
+//
+// THE TWO BBOX FILES ARE ORDINARY FILLED PATHS, one `.ColorScheme-Text` each.
+// Command coverage: relative `m` with implicit relative-lineto repetition
+// (comma-separated pairs — "0,1 -2,0 0,14" is three linetos), one absolute `M`
+// and one relative `l` per file, and NO `z` at all — the fill closes each
+// subpath implicitly, six committed files' precedent. bboxprev spells its
+// x-coordinates as 7.9999995 and 9.9999995 and they are copied AS THEY STAND:
+// a hand-rounded 8 and 10 would read better and would break the property that
+// a diff against the committed file is a transcription bug and nothing else.
+//
+// BOOST IS THE SET'S ONE STROKED FILE and the reason the interpreter's stroked
+// arm came back (the record is at the table header above and at draw()). Its
+// group carries `fill="none" stroke="currentColor"` with no stroke-width, so
+// each of its four paths takes SVG's default width of 1 IN PATH UNITS — a
+// 22-unit viewBox, so one glyph pixel at the row's 22px box, riding gui_scale
+// with the geometry exactly as every filled limb does. TWO of the four carry
+// `stroke-linecap="square"` (the arrowheads, whose ends must meet flush) and
+// two take the default butt; that is the whole reason `square_cap` is a
+// per-path field.
+//
+// IT IS SINGLE-COLOUR, CHECKED RATHER THAN ASSUMED: its sibling boost-boosted
+// carries a `.ColorScheme-PositiveText` #27ae60 tick, and boost does not — all
+// four paths are `.ColorScheme-Text`. So deep-history is still the set's ONE
+// two-colour glyph, and no second resolved literal is recorded here.
+//
+// Command coverage: relative `m` with `v` and `h` (the first two paths, which
+// is this table's first producer for either — both have been in the
+// interpreter's subset since it was written) plus implicit relative-lineto
+// repetition on the two arrowheads, and no `z` on any of them, which is what
+// an open stroked polyline wants.
+constexpr IconPath kBboxPrevPaths[] = {
+    {kIconText,
+     "m 7.9999995,3 0,1 -2,0 0,14 2,0 0,1 -5,0 0,-1 2,0 0,-14 -2,0 0,-1 5,0 "
+     "M 19,7 l 0,3 0,2 0,3 -1,0 0,-3 -4,0 0,2 L 9.9999995,11 14,8 l 0,2 4,0 "
+     "0,-3 1,0"},
+};
+
+constexpr IconPath kBboxNextPaths[] = {
+    {kIconText,
+     "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
+     "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
+};
+
+constexpr IconPath kBoostPaths[] = {
+    {kIconText, "m17.5 13v-7.5h-12",                          {}, true},
+    {kIconText, "m4.5227 9-0.02274 7.5h12",                   {}, true},
+    {kIconText, "m9.3732 3.613-4.9718 1.883 4.9718 1.883",    {}, true, true},
+    {kIconText, "m12.632 14.621 4.9583 1.8758-4.9583 1.8758", {}, true, true},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -780,6 +852,9 @@ constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
 constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
+constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
+constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
+constexpr IconDef kBoost              {22.0, kBoostPaths,               4};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -823,6 +898,9 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ListRemove:          return kListRemove;
         case Icon::ViewHidden:          return kViewHidden;
         case Icon::InsertLink:          return kInsertLink;
+        case Icon::BboxPrev:            return kBboxPrev;
+        case Icon::BboxNext:            return kBboxNext;
+        case Icon::Boost:               return kBoost;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;
@@ -846,10 +924,11 @@ const IconDef& icon_def(Icon icon) {
 // though media-record's four arcs are circular: arcs recur in this icon set and
 // a circle-only shortcut would be a trap for the next icon.
 //
-// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's one other
-// grown feature is the PATH ELEMENT's, not the string's, and lives where it is
-// used: the per-path translate at IconPath's `xform`. It cannot reach this
-// walk, which appends geometry in the path's own units either way.
+// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other two
+// grown features are the PATH ELEMENT's, not the string's, and live where they
+// are used: the per-path translate at IconPath's `xform`, and the stroked arm
+// (with its line cap) in draw(). Neither can reach this walk, which appends
+// geometry in the path's own units either way.
 struct PathCursor {
     const char* p;
     const char* end;
@@ -1196,10 +1275,37 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         // The path's own color, retained by keep_own and made up with
         // mixed_with — the disabled face. keep_own == 1 (the default every
         // enabled caller takes) returns the table's color bit-identically, so
-        // the enabled path is unchanged by the existence of this one.
+        // the enabled path is unchanged by the existence of this one. It is the
+        // SOURCE either way, so a stroked path dims exactly as a filled one
+        // does and the disabled face needs no arm of its own.
         const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        cairo_fill(cr);
+        if (p.stroked) {
+            // THE STROKED ARM (boost, the set's one member — RESTORED
+            // 2026-08-15 with that producer, having lived producer-less hours
+            // for distortionfx on 2026-08-11): a line width of 1 in PATH
+            // units — the SVG default its file takes — set inside the
+            // transform above, so cairo's CTM scales the PEN exactly as it
+            // scales the geometry. That is what SVG itself does with
+            // stroke-width, and it is what keeps the glyph's weight on the
+            // gui_scale axis like every filled limb in the table.
+            //
+            // The pen is SET rather than inherited, every parameter of it:
+            // this cairo_t is the caller's and its stroke state is not ours to
+            // assume. Miter join is SVG's default and cairo's both; the miter
+            // limit differs (SVG 4, cairo 10) and is stated for fidelity. THE
+            // CAP IS THE PATH'S OWN and is the one thing this arm gained on
+            // its return: boost's two arrowheads say stroke-linecap="square"
+            // and its two long limbs say nothing, which is SVG's butt.
+            cairo_set_line_width(cr, 1.0);
+            cairo_set_line_cap(cr, p.square_cap ? CAIRO_LINE_CAP_SQUARE
+                                                : CAIRO_LINE_CAP_BUTT);
+            cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+            cairo_set_miter_limit(cr, 4.0);
+            cairo_stroke(cr);
+        } else {
+            cairo_fill(cr);
+        }
         cairo_restore(cr);
     }
     cairo_restore(cr);

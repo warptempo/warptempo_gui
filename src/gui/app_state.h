@@ -1749,7 +1749,8 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's File, Navigation and
 // Settings plus the view bar's three, row 3's two TABS, row 4's twenty-six
 // view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout), then the bottom row's TWELVE — the transport four,
+// the 2026-08-12 relayout), then the bottom row's FOURTEEN — the transport
+// three, the MARKER-WALK three (2026-08-15),
 // the four cardinal arrows and the FOUR HISTORY COMPANIONS that replace those
 // arrows while the `h` view stands (2026-08-14). It exists ONCE, here, because
 // it indexes
@@ -1907,67 +1908,98 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. Eight buttons in two groups, in painted order (the enum
+    // detection. TEN buttons in three groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
-    // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
-    // the ONE bare Space binding split over two buttons,
-    // skip-forward = bare End), then the
+    // the right home): the TRANSPORT (skip-back = bare Home, THE ONE PLAY/STOP
+    // BUTTON = bare Space, skip-forward = bare End), then THE MARKER-WALK
+    // GROUP (2026-08-15 — previous = Shift+Tab, next = Tab, walk both tabs =
+    // Ctrl+Shift+Tab), then a SEPARATOR, then the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
     // semantics by dispatching through on_key like every other chord button,
     // and finally THE FOUR HISTORY COMPANIONS, which are the SAME SLOTS as
-    // the arrows: the two clusters swap on the `h` view (below).
+    // the arrows: the two clusters swap on the `h` view (below). The walk
+    // group is NOT part of that swap and paints in both states.
+    //
+    // THE ROW GOT ITS SHAPE AT THE ARCHITECT'S LIVE LOOK (2026-08-15), and the
+    // two halves are one ruling: the left cluster dropped to THREE and the
+    // freed weight went to the right, because four buttons over there read as
+    // crowded next to the arrows — "the more I think about it, the more
+    // awkward it feels to have all of that right next to those three others".
     // (A ninth button — ESC, bare Escape, centered between the groups — shipped
     // with the row and was DELETED the same day at the architect's live pass:
     // "looks like a missing button with that cross out". The mid-render CANCEL
     // moved onto the RENDER button instead — the toolbar's stateful-face
     // precedent — and bare Esc stays keyboard-only.)
     //
-    // PLAY AND STOP ARE ONE CHORD OVER TWO BUTTONS — bare Space, which of them
-    // acts decided by the live audition bit (playhead_scanner_active, the
-    // GUI-side playback mirror). IT NO LONGER SPLITS ON THE ENABLED BIT
-    // (architect 2026-08-15): the pair held a state-mirrored ENABLED split for
-    // the day — Play dead while an audition ran and where a launch would
-    // refuse, Stop dead while none ran — and it went with the rest of the row's
-    // honest arms, "there's not a whole lot of value derived from the icon
-    // faces changing, and it is a little distracting... the user is expected to
-    // know that with the playhead outside trim it's not going to play in target
-    // view". Both are lit at rest now, greying only where the `h` view consumes
-    // Space; the ruling and the whole succession are at redesign_button_enabled
-    // below.
+    // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
+    // live look at the row): bare Space is ONE TOGGLE, so the roster carries
+    // ONE member for it and the GLYPH and the TOOLTIP swap on the live audition
+    // bit (playhead_scanner_active, the GUI-side playback mirror) —
+    // media-playback-start while stopped, media-playback-stop while a session
+    // runs. It is RENDER-IS-CANCEL's own shape (one button, one chord, a
+    // stateful face driven by one bit), and the resolvers are
+    // redesign_button_glyph_swapped + redesign_button_icon for the glyph and
+    // redesign_button_tooltip's stateful overload for the words.
     //
-    // IT SPLITS ON THE SELECTED BIT INSTEAD — THE PAIR IS A RADIO (architect
-    // 2026-08-15, later the same day and his own proposal: "what if we made
-    // play and stop modal just like the warp/phase or source/target buttons? So
-    // clicking on play when it's already playing would be a no-op, just like
-    // clicking on source when we're already in source view is a no-op"). THE
-    // ENABLED SPLIT HAD BEEN DOING TWO JOBS and only one of them was the truth
-    // face: it was also the pair's DISAMBIGUATION, leaving just the meaningful
-    // half clickable, so with the row always-on both halves went live and the
-    // pair became one control wearing two glyphs — a press on Stop while
-    // stopped would have STARTED playback, the glyph contradicting the act.
-    // The radio flag answers it with machinery already in the roster: the
-    // wrong-direction press dies at the claim and again at the lift, and the
-    // only press that survives is the one on the UNLIT half, which is by
-    // definition the direction the toggle wants to go. Bare Space and
-    // toggle_playback are untouched, and neither button gains an act of its own
-    // — the Render-is-Cancel exception stays the roster's only break from
-    // button-is-its-chord. STATE MOVED FROM THE ENABLED AXIS TO THE SELECTED
-    // ONE: grey answers "can I press this", the lamp answers "which one is
-    // live" (redesign_button_selected below carries the lamp and what its own
-    // superseded no-lamp reasoning was).
+    // THIS IS SIMPLER THAN WHAT IT REPLACES AND THAT IS THE POINT. The button
+    // dispatches bare Space and Space toggles, so BUTTON-IS-ITS-CHORD HOLDS
+    // EXACTLY and the Render-is-Cancel exception stays the roster's ONLY break
+    // from it: there is no lit/unlit question, no press to consume, and no way
+    // for the glyph to contradict the act.
     //
-    // SO THE PAIR NO LONGER READS AS A TRANSPORT BY ITS TWO GLYPHS ALONE, which
-    // is what this block said while it had neither face: the glyphs still name
-    // the two halves, and the lamp now says which half the piece is in.
+    // TWO SUPERSEDED SHAPES, both from earlier the same day and both recorded
+    // because each was right for the problem in front of it — a problem this
+    // collapse makes not exist:
+    //   * THE ENABLED SPLIT (the morning's whole-row honesty ruling): Play dead
+    //     while an audition ran and where a launch would refuse, Stop dead
+    //     while none ran. The architect reversed it with the rest of the row's
+    //     honest arms — "there's not a whole lot of value derived from the icon
+    //     faces changing, and it is a little distracting... the user is
+    //     expected to know that with the playhead outside trim it's not going
+    //     to play in target view".
+    //   * THE RADIO PAIR (his own fix for what that reversal exposed): the
+    //     enabled split had been doing TWO jobs, and the second was the pair's
+    //     DISAMBIGUATION — only the meaningful half was ever clickable. With
+    //     the row always-on both halves went live and a press on Stop while
+    //     stopped would have STARTED playback, so the pair became a radio
+    //     ("just like the warp/phase or source/target buttons") and the
+    //     wrong-direction press died at the claim. THE WHOLE PROBLEM WAS TWO
+    //     BUTTONS OVER ONE CHORD, which is what this collapse removes: with one
+    //     button there is no wrong half to press, so the `radio` flag and the
+    //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
+    //     The generic radio consume is untouched — the S/T and W/P rows and the
+    //     tabs still use it.
     //
     // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
     // hold-repeat that shipped with the row; the physical arrow KEYS keep
     // their platform repeat). His reasoning is recorded at the arrows' rows in
     // kToolbarChords (input_pointer.cpp), which is where the machinery lived.
-    TransportSkipBack, TransportPlay, TransportStop, TransportSkipForward,
+    TransportSkipBack, TransportPlayStop, TransportSkipForward,
+    // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
+    // cluster, behind a separator and ahead of the four arrows): previous
+    // marker (Shift+Tab), next marker (Tab) and walk both tabs
+    // (Ctrl+Shift+Tab). Three buttons, THREE CHORDS — each is its own chord
+    // through the ordinary table, with no hold, no double-click and no
+    // modifier gesture on the surface.
+    //
+    // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
+    // the reason is mechanical rather than a preference: EVERY double-click
+    // surface in this product acts on its FIRST click too, so a double-click
+    // on "next" would step one marker AND THEN walk both tabs, landing the
+    // user somewhere he did not ask to be. Making the first click not fire
+    // would mean delaying EVERY single click by the double-click window, which
+    // is exactly what the act-at-lift work exists to avoid.
+    //
+    // THEY ARE ALWAYS ENABLED, by the row's settled face policy (the ruling is
+    // at redesign_button_enabled), and the `h` view's DERIVED partition needs
+    // no hand entry for them: all three keys are the mode's OWN vocabulary in
+    // there (bare Tab and Shift+Tab are the diff-flag cycle, Ctrl+Shift+Tab the
+    // reverse walk-source cycle), so history_mode_owns_key answers for them and
+    // they stay lit and do the mode's own thing.
+    TransportWalkPrev, TransportWalkNext, TransportWalkBoth,
     TransportDown, TransportUp, TransportLeft, TransportRight,
     // THE HISTORY COMPANIONS, THE ARROWS' MODE TWIN (architect 2026-08-14):
     // while the `h` view stands the bottom row's right cluster is these four
@@ -1990,11 +2022,15 @@ enum class RedesignButton {
     HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer
 };
 // THE ROSTER, re-derived by counting the enumerators above: six in row 1, two
-// in row 3, twenty-six in row 4 and twelve in the bottom row — 46. Of those,
-// FORTY-THREE carry a chord in kToolbarChords and THREE are the dropdown anchors
+// in row 3, twenty-six in row 4 and fourteen in the bottom row — 48. Of those,
+// FORTY-FIVE carry a chord in kToolbarChords and THREE are the dropdown anchors
 // (File, Navigation and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 48 SINCE 2026-08-15, and it is TWO NET over three days' worth of arithmetic
+// in one commit: the MARKER-WALK GROUP added three to the bottom row and the
+// PLAY/STOP COLLAPSE took one away (46 - 1 + 3), the pair having been two
+// buttons over the one bare-Space chord since the row's first day.
 // 46 = 45 + THE READ-ONLY TOGGLE (2026-08-14, the padlock leaving the tabs);
 // the same day's other two moves cost nothing, the four history companions
 // having CHANGED ROWS rather than left the roster. 45 was the 2026-08-12 grand
@@ -2005,7 +2041,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 46;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2089,9 +2125,11 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
         case RedesignButton::TransportSkipBack:
-        case RedesignButton::TransportPlay:
-        case RedesignButton::TransportStop:
+        case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportWalkPrev:
+        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalkBoth:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -2101,14 +2139,15 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — the transport four, the four cardinal
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — the transport three, the MARKER-WALK
+// GROUP's three (2026-08-15), the four cardinal
 // arrows and, since 2026-08-14, the FOUR HISTORY COMPANIONS that take the
 // arrows' slots inside the `h` view (row 8's from 2026-08-11; tenants of the
 // unified bottom row since 2026-08-12). Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these eight — the hover recompute, the
+// with the bottom row's own rect for these ten — the hover recompute, the
 // click-face arm and clear, the tick comparator, and the tooltip, which also
 // FLIPS ABOVE the button here (the lane rests on the WINDOW'S FOOT since the
 // relayout's commit B, so there is nothing below it at all; it was the blank
@@ -2120,9 +2159,11 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
     switch (b) {
         case RedesignButton::TransportSkipBack:
-        case RedesignButton::TransportPlay:
-        case RedesignButton::TransportStop:
+        case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportWalkPrev:
+        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalkBoth:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -3406,11 +3447,19 @@ struct AppState {
     // so a toggled face would otherwise stay wrong until something else
     // repainted. (`t` and `p` do damage — they take the full sync rebuild — but
     // they go through the one comparator anyway rather than being trusted.)
+    // `glyph_swapped` is the THIRD (2026-08-15) and rides it for the third time
+    // over: a button wearing a SECOND GLYPH changes its pixels without moving
+    // either of the other two bits, so the comparator was blind to it. Four
+    // buttons have one — Save, Render, the read-only toggle and the collapsed
+    // PLAY/STOP button, whose audition bit is written by six routes, several
+    // damaging nothing wider than the clock cell. The predicate and the full
+    // argument are at redesign_button_glyph_swapped.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
-        bool    hovered  = false;
-        bool    enabled  = true;
-        bool    selected = false;
+        bool    hovered       = false;
+        bool    enabled       = true;
+        bool    selected      = false;
+        bool    glyph_swapped = false;
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
@@ -3991,11 +4040,16 @@ struct AppState {
     // to be the busy session when queue_running is false is exactly what the
     // face never advertised. Keyboard Esc's render-cancel binding is untouched
     // and keeps its own wider reach.
-    // READERS: redesign_button_label (the "Cancel" label, ranked above the
-    // iteration label), redesign_button_icon (Icon::DialogCancel), the
-    // stateful tooltip overload, and finish_chrome_press_release's Render
+    // READERS, re-greped 2026-08-15: redesign_button_glyph_swapped (which is
+    // where the GLYPH's condition lives now — redesign_button_icon reads that
+    // predicate rather than this bit, so the swap and the face STASH the drift
+    // comparator walks cannot disagree), the stateful tooltip overload, and
+    // finish_chrome_press_release's Render
     // arm — the roster's ONE ruled exception to THE BUTTON IS ITS CHORD (the
-    // divergence is recorded at that arm).
+    // divergence is recorded at that arm). redesign_button_label LEFT this
+    // list with row 2's labeled faces at the 2026-08-12 relayout, and the
+    // clause naming it was stale until this re-grep: no label is painted for
+    // Render in any state, the words living on the tooltip alone.
     bool render_cancel_face = false;
 
     // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
@@ -6343,9 +6397,11 @@ inline bool playback_launch_playable(const AppState& a,
 // every id whose answer does not sit below the loading/blank guard: the
 // toolbar four (Save / Undo / Redo / Render — icon-row members since the
 // 2026-08-12 relayout, keeping their mirrored derivations), the TEN the
-// read-only lock blocks, and, since 2026-08-15, the BOTTOM ROW'S EIGHT (every
+// read-only lock blocks, and, since 2026-08-15, the BOTTOM ROW'S TEN (every
 // chord on that row drops at on_key's loading/blank return, so their faces grey
-// there too — and that guard is now the ONLY thing all eight have to say).
+// there too — and that guard is now the ONLY thing all ten have to say; it was
+// EIGHT for the hours between the row's face ruling and the same day's
+// marker-walk group, which added three and collapsed play/stop into one).
 // TWO PARAMETERS CAME AND WENT ON 2026-08-15 and the pattern is worth stating
 // once, because it is the same one twice: a face arm was added, the object it
 // needed was threaded in for it, the architect reversed the arm, and THE
@@ -6509,7 +6565,7 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only;
         // THE BOTTOM ROW IS ALWAYS-ON WHOLE, apart from the `h` view's derived
         // partition (architect 2026-08-15, his final ruling on this row after
-        // it moved three times that day): all eight break out of this switch
+        // it moved three times that day): all ten break out of this switch
         // to take the loading/blank guard — every chord on the row drops at
         // on_key's `app.loading || total <= 0` return — and then answer a plain
         // `true`. HIS REASONING, kept in his own words because it is the whole
@@ -6533,31 +6589,32 @@ inline bool redesign_button_enabled(const AppState& a,
         // OUTRANKS EVERY WORD OF THIS, and the architect confirmed its split
         // explicitly — "making play and stop disabled in h history view, but
         // allowing home and end, that makes sense": Space is consumed in the
-        // view, so Play and Stop wear the dead face in there, while Home/End
-        // are the mode's own vocabulary (the absolute jump to 0 / the last
-        // frame), so the two skips stay LIT exactly as they are outside it.
-        // All derived from the mode's gates, nothing hand-listed — and it is
-        // why these eight break DOWNWARD to a shared `true` instead of
-        // returning one here.
+        // view, so THE PLAY/STOP BUTTON wears the dead face in there, while
+        // Home/End are the mode's own vocabulary (the absolute jump to 0 / the
+        // last frame), so the two skips stay LIT exactly as they are outside
+        // it — as do the MARKER-WALK THREE, whose chords are the mode's
+        // vocabulary too. All derived from the mode's gates, nothing
+        // hand-listed — and it is why these ten break DOWNWARD to a shared
+        // `true` instead of returning one here.
         //
         // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS, and what they lost
-        // is the ENABLED split alone: Play no longer greys while an audition
-        // runs or where a launch would refuse, Stop no longer greys while no
-        // audition runs. The pair is still ONE CHORD OVER TWO BUTTONS — bare
-        // Space, which of them acts decided by the live audition bit — and the
+        // is the ENABLED split alone: no grey while an audition runs, none
+        // where a launch would refuse, none while no audition runs. The
         // strict-user-knowledge line settles the TRUTH half of it: a running
         // audition is the moving scanner's own statement on screen.
         //
-        // WHAT THE SPLIT ALSO CARRIED CAME BACK ON THE OTHER AXIS the same day.
-        // The enabled bit had been the pair's DISAMBIGUATION as well as its
-        // truth face — only the meaningful half was ever clickable — so with
-        // both halves live a press on Stop while stopped would have started
-        // playback. The architect made the pair a RADIO for it ("just like the
-        // warp/phase or source/target buttons"), which puts the state on the
-        // SELECTED axis where it belongs and leaves this predicate exactly as
-        // ruled: grey says "can I press this", the lamp says "which one is
-        // live". Nothing here reads the audition bit; redesign_button_selected
-        // does, and the chord table's radio rows carry the argument.
+        // WHAT THE SPLIT ALSO CARRIED IS NOW MOOT RATHER THAN RELOCATED. The
+        // enabled bit had been the PAIR's DISAMBIGUATION as well as its truth
+        // face — only the meaningful half was ever clickable — so with both
+        // halves live a press on Stop while stopped would have started
+        // playback; the architect made the pair a RADIO for it, putting that
+        // state on the SELECTED axis, and then COLLAPSED THE PAIR INTO ONE
+        // BUTTON later the same day, which removes the wrong half entirely.
+        // The radio flag and the lamp went with it. Nothing here reads the
+        // audition bit and nothing does on the selected axis either: the bit
+        // now picks the button's GLYPH and its TOOLTIP
+        // (redesign_button_glyph_swapped, below), which is Render-is-Cancel's
+        // own shape.
         //
         // playback_launch_playable SURVIVES AND MUST NOT GAIN A FACE READER —
         // it is launch_playback_from's own refusal set and that body calls it
@@ -6634,8 +6691,17 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportRight:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
-        case RedesignButton::TransportPlay:
-        case RedesignButton::TransportStop:
+        case RedesignButton::TransportPlayStop:
+        // THE MARKER-WALK GROUP TAKES THE ROW'S POLICY UNCHANGED (2026-08-15):
+        // always-on below the loading/blank guard, with the `h` view's derived
+        // partition the only thing that could grey them — and it does not,
+        // because all three chords are the mode's OWN vocabulary in there.
+        // Their refusals outside the view are the keys' own consumed no-ops (an
+        // empty marker store, a cycle with nowhere to go), exactly the class
+        // the ruling at the head of this body refuses to mirror.
+        case RedesignButton::TransportWalkPrev:
+        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalkBoth:
             break;
         // THE FOUR HISTORY COMPANIONS ANSWER PLAIN TRUE (architect 2026-08-15):
         // they are the bottom row's RIGHT CLUSTER inside the `h` view — the
@@ -6698,7 +6764,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW HAS NO ARM HERE AT ALL since 2026-08-15 — all eight
+        // THE BOTTOM ROW HAS NO ARM HERE AT ALL since 2026-08-15 — all ten
         // of its buttons return a plain `true` from the `default` below, and
         // the ruling, the architect's reasoning and the three reversals that
         // got there are at the first switch's transport block above. Nothing
@@ -6742,8 +6808,10 @@ inline bool redesign_button_enabled(const AppState& a,
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
 // buttons, row 3's tabs, row 4's four radios and four toggles (the two view
-// pairs; follow, iteration, read-only, history) and the BOTTOM ROW'S two
-// subjects (the Cumulative toggle, and since 2026-08-15 the Play / Stop RADIO)
+// pairs; follow, iteration, read-only, history) and the BOTTOM ROW'S ONE
+// subject, the Cumulative toggle (a SECOND joined it for hours on 2026-08-15,
+// the Play / Stop radio pair, and left with the same day's collapse of that
+// pair into one button — its record is in the momentary arm below)
 // — each reading
 // THE SAME live fact its chord flips, so a lit button and the state it reports
 // can never drift. Three readers: the painter (which stashes what it painted),
@@ -6823,35 +6891,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // face saying the key is elsewhere — went with that arm on 2026-08-15;
         // the empty rect is what says it now.
         case RedesignButton::HistoryCumulative: return a.history_cumulative;
-        // THE TRANSPORT'S PLAY / STOP LAMP (architect 2026-08-15, his own
-        // proposal): the pair is a RADIO like the S/T and W/P buttons, and this
-        // is the fact it selects on — EXACTLY ONE of the two is lit at every
-        // instant, because the pair's whole subject is a single bit. Play is
-        // live while an audition runs, Stop while none does, so the lamp says
-        // WHICH HALF IS THE CURRENT STATE and the unlit half is by definition
-        // the direction the one bare-Space toggle would go — which is what
-        // makes the chord table's radio consume the pair's disambiguation (the
-        // full ruling and the argument are at the pair's rows in kToolbarChords,
-        // input_pointer.cpp).
-        //
-        // IT READS THE GUI-SIDE MIRROR playhead_scanner_active, the same bit
-        // toggle_playback forks on, so the lamp and the act cannot drift — the
-        // toggle pattern follow and iteration already use, over a bit this
-        // button's chord flips indirectly (through the playback lifecycle)
-        // rather than by assignment.
-        //
-        // THIS SUPERSEDES "row 8 is momentary whole: Play and Stop deliberately
-        // carry no lamp — whether an audition runs is the MOVING SCANNER'S own
-        // statement on screen... a lamp here would be that same second statement
-        // in the other face", and the reasoning is worth keeping because it was
-        // right about the question it answered: a lamp is redundant AS A TRUTH
-        // FACE, the scanner having already said it. What that argument did not
-        // cover is a CONTROL knowing its own direction — with the enabled split
-        // reversed the same day, both halves went live and a press on Stop while
-        // stopped would have started playback, the glyph contradicting the act.
-        // The lamp is here for the radio, not for the truth.
-        case RedesignButton::TransportPlay:  return  a.playhead_scanner_active;
-        case RedesignButton::TransportStop:  return !a.playhead_scanner_active;
         case RedesignButton::File:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
@@ -6900,11 +6939,23 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
-        // THE BOTTOM ROW IS MOMENTARY BUT FOR ITS ONE RADIO PAIR: the two
-        // skips and the four arrows are acts that complete, with no state to
-        // stay lit for.
+        // THE BOTTOM ROW IS MOMENTARY WHOLE AGAIN (architect 2026-08-15): the
+        // two skips, the marker-walk three and the four arrows are all acts
+        // that complete, with no state to stay lit for — and so, since the
+        // same day's collapse, is the ONE PLAY/STOP BUTTON. It carried the
+        // row's only lamp for the hours it was a RADIO PAIR, lit on
+        // playhead_scanner_active so exactly one half was live at a time; with
+        // the pair collapsed there is no wrong half to consume a press on, so
+        // the lamp had nothing left to do and the audition bit picks the
+        // button's GLYPH instead (redesign_button_glyph_swapped below). The
+        // superseded lamp's own reasoning is at the roster entry, kept because
+        // it was right about the problem it solved.
         case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportWalkPrev:
+        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalkBoth:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -6912,6 +6963,62 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
             break;
     }
     return false;
+}
+
+// WHICH BUTTONS WEAR A GLYPH OTHER THAN THEIR TABLE ONE, and the LIVE FACT
+// that decides it — the roster's ONE owner of the stateful-glyph CONDITIONS
+// (2026-08-15). The glyphs themselves live with the painter
+// (redesign_button_icon, paint_handler.cpp), which reads this rather than
+// restating any of these bits, so the condition and the swap cannot drift.
+//
+// IT EXISTS FOR THE STALENESS COMPARATOR, and that is the whole reason it is a
+// predicate rather than four conditions inline in the resolver: a face's
+// stashed bits are what main.cpp's per-tick walk compares live against, and
+// until now it compared ENABLED and SELECTED alone. That was enough while
+// every stateful glyph rode a bit one of those two also moved — and it stopped
+// being enough the moment PLAY/STOP collapsed onto a glyph swap, because
+// playhead_scanner_active moves through six writers, several of which damage
+// nothing wider than the CLOCK CELL (the natural end-of-song teardown, the
+// click act's stop). Under a narrow lane damage the bottom row's painter runs
+// but the button's pixels are clipped away, so without a stashed glyph term
+// the row would keep showing the wrong transport glyph until something else
+// damaged the whole lane — which is EXACTLY the bug this arc opened with
+// (publish_button_face's clip-coverage record, paint_handler.cpp). Stashing
+// this bit closes it by the same one mechanism, and closes a LATENT case with
+// it: RENDER's mid-render Cancel glyph rides render_cancel_face, which moves
+// neither of the other two bits, so its repaint had rested on the render
+// routes' own damage alone.
+//
+// EVERY SUBJECT IS BINARY — two glyphs, one bit — which is what lets a single
+// bool serve all four. A future button with THREE glyphs needs a wider stash,
+// not another predicate beside this one.
+//
+// A NAMED LIST WITH A `default`, deliberately, and not the exhaustive shape
+// redesign_button_in_menu_row takes: this is not a classification of the
+// roster (where a new button must be forced to state its row) but a list of
+// the four buttons that HAVE a second glyph, so the honest default for a new
+// button is "wears its table icon".
+inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
+    switch (b) {
+        // SAVE wears the commit glyph in the history view (where Ctrl+S IS the
+        // checkpoint act) and while a checkpoint publishes.
+        case RedesignButton::Save:
+            return a.history_checkpoint_in_flight || a.history_mode.active;
+        // RENDER wears the cancel glyph while an explicit render act is live.
+        case RedesignButton::Render:
+            return a.render_cancel_face;
+        // THE READ-ONLY TOGGLE's table glyph is the CLOSED padlock, so the
+        // swap is the OPEN one — true on a writable tab. The inversion is the
+        // table's choice and not a statement about which state is ordinary.
+        case RedesignButton::IconReadOnly:
+            return !active_view_state(a).read_only;
+        // THE TRANSPORT BUTTON wears media-playback-STOP while an audition
+        // runs; its table glyph is media-playback-start.
+        case RedesignButton::TransportPlayStop:
+            return a.playhead_scanner_active;
+        default:
+            return false;
+    }
 }
 
 // THE PRESSED FACE'S ONE TEST — is this roster button's click face down? True
@@ -7133,20 +7240,37 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tracked the diff-flag selection), so the hint is an ordinary enabled
         // one and the disabled ruling no longer reaches it.
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
-        // ROW 8 — the transport row (2026-08-11), all one-line forms: no
-        // button on it admits shift. The names are the ratified sentence-case
-        // labels, the accelerators the table's own convention (non-letter keys
-        // are themselves). Play and Stop each name their own half of the one
-        // Space binding — the button IS its face's half, so the hint says the
-        // half rather than "toggle".
+        // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
+        // marker-walk group), all one-line forms: no button on it admits
+        // shift. The names are the ratified sentence-case labels, the
+        // accelerators the table's own convention (non-letter keys are
+        // themselves, and a CHORD keeps its capital and its spelled-out
+        // modifiers).
         case RedesignButton::TransportSkipBack:
             return {"Go to start (Home)", nullptr};
-        case RedesignButton::TransportPlay:
+        // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
+        // form — the stateful overload below returns "Stop (Space)" while an
+        // audition runs, Render's own pattern (a constant row for the ordinary
+        // meaning, an override for the live one). It says the half the press
+        // will DO rather than "Toggle playback", which is what the glyph is
+        // saying in the same breath.
+        case RedesignButton::TransportPlayStop:
             return {"Play (Space)", nullptr};
-        case RedesignButton::TransportStop:
-            return {"Stop (Space)", nullptr};
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)", nullptr};
+        // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
+        // marker" are HELP's own words for the bare Tab cycle; "Walk both
+        // tabs" is the Navigation dropdown's own row for Ctrl+Shift+Tab, so
+        // the two surfaces name the act identically. None admits shift —
+        // Shift+Tab is the PREVIOUS button's own base chord rather than a
+        // twin, which is Redo's shape (a shift press on it is a consumed
+        // nothing, exactly as on Redo).
+        case RedesignButton::TransportWalkPrev:
+            return {"Previous marker (Shift+Tab)", nullptr};
+        case RedesignButton::TransportWalkNext:
+            return {"Next marker (Tab)", nullptr};
+        case RedesignButton::TransportWalkBoth:
+            return {"Walk both tabs (Ctrl+Shift+Tab)", nullptr};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps only the sentence-case direction. (Painted
@@ -7162,7 +7286,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 
 // THE TOOLBAR PAIR'S STATEFUL FACES — Save's and Render's, the two buttons
 // whose MEANING is selected by a mode bit (architect 2026-08-02 for Render,
-// 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). SINCE THE
+// 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). A THIRD
+// STATEFUL HINT joined them 2026-08-15 and is deliberately NOT part of this
+// pair's record: the bottom row's collapsed PLAY/STOP button, whose fork is
+// the last arm of the body below. It differs in kind — the toolbar pair's
+// words say which COMMAND the one chord currently is, while the transport's
+// say which DIRECTION the one toggle will go — so it takes the shape and not
+// the paragraph. SINCE THE
 // 2026-08-12 RELAYOUT DISSOLVED ROW 2 the two are ICON buttons and the words
 // live on their TOOLTIPS alone (the stateful overload below; the labeled
 // faces and their four label constants — kRenderIterationsLabel,
@@ -7313,6 +7443,17 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
         return {"Render Iterations (Ctrl+Alt+R)", nullptr};
     }
+    // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
+    // one button over bare Space, so the hint names whichever act the press
+    // will run — "Stop" while an audition is live, the constant table's "Play"
+    // otherwise. The condition is redesign_button_glyph_swapped's, not a
+    // second read of the audition bit, so the WORDS and the GLYPH can never
+    // disagree about which half the button currently is. One line: bare Space
+    // has no shifted twin.
+    if (b == RedesignButton::TransportPlayStop &&
+        redesign_button_glyph_swapped(a, b)) {
+        return {"Stop (Space)", nullptr};
+    }
     return redesign_button_tooltip(b);
 }
 
@@ -7406,9 +7547,11 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // that asymmetry with the tabs is the crops': all three ship a selected-hover
 // state (the accent outline over the selected fill) and row 3 does not. So the
 // zone's carve-out names the tabs alone; the icon row's radios, the view bar's
-// three and the transport's Play / Stop radio (2026-08-15) are hoverable in
-// both states, and their already-selected press is refused in the ACTION (the
-// chord table's `radio` flag), not in their hoverability.
+// three and the bottom row's Cumulative toggle are hoverable in
+// both states, and a radio's already-selected press is refused in the ACTION
+// (the chord table's `radio` flag), not in its hoverability. (The transport's
+// Play / Stop pair was a fourth such radio for hours on 2026-08-15 and is one
+// button with no lamp since that day's collapse.)
 //
 // AND redesign_button_hoverable — this zone AND the enabled term, one call —
 // IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead

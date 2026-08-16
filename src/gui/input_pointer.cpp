@@ -57,7 +57,9 @@ namespace {
 // anchors, each of whose action is a POPUP TOGGLE — not a chord at all, since no
 // keyboard chord opens or closes a dropdown. Both are spelled at their own claim.
 //
-// The `shift` column is each button's OWN chord (only Redo's is set). It is not
+// The `shift` column is each button's OWN chord — THREE rows set it: Redo's
+// Ctrl+Shift+Z and, since 2026-08-15, the marker walk's Shift+Tab (previous
+// marker) and Ctrl+Shift+Tab (walk both tabs). It is not
 // the whole shift story: the SHIFT-ADMITTING buttons OR a shift-exact press
 // into this field to reach their twins, and which buttons those are lives at
 // redesign_button_shift_admits (app_state.h), which the tooltip's own table is
@@ -76,11 +78,15 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). The tab pair, the two view pairs and — since
-    // 2026-08-15 — THE BOTTOM ROW'S PLAY / STOP PAIR are radios; the follow,
-    // iteration, read-only, history and Cumulative buttons are TOGGLES and
-    // press through in both directions, which is why this is a flag and not
-    // `selected` alone.
+    // user just clicked). The tab pair and the two view pairs are radios; the
+    // follow, iteration, read-only, history and Cumulative buttons are TOGGLES
+    // and press through in both directions, which is why this is a flag and
+    // not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP PAIR was a fourth
+    // radio for hours on 2026-08-15 and is not one now — the architect
+    // COLLAPSED that pair into one stateful button later the same day, which
+    // is the only reason it ever needed the flag: two buttons over one chord.
+    // The consume itself is untouched and stayed GENERIC throughout — keyed on
+    // the flag plus the lamp, with no id list anywhere.)
     //
     // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
@@ -215,55 +221,40 @@ constexpr ToolbarChord kToolbarChords[] = {
     // instead, which admits `h` through handle_history_mode_key one line before
     // the allowlist). It closes the row since 2026-08-14.
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
-    // Row 8 — the transport row (architect-ratified 2026-08-11, the touch
-    // arc's first surface). Eight chords, every one BARE, every one already
-    // bound: the row adds no semantics anywhere — each button is its key,
-    // through this one table like the rest of the roster, so the keyboard-
-    // modal editor gate, the history-mode allowlists, the read-only gate and
-    // every refusal apply by construction, a refusal being a consumed no-op on
-    // click exactly as on key. (A ninth chord — bare Escape, the row's Cancel
-    // button — shipped and was deleted the same day with its button; the
-    // mid-render Cancel is the RENDER button's stateful face now, spelled in
-    // this body below.)
+    // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
+    // touch arc's first surface; the marker-walk group added 2026-08-15). TEN
+    // chords, every one already bound elsewhere: the row adds no semantics
+    // anywhere — each button is its key, through this one table like the rest
+    // of the roster, so the keyboard-modal editor gate, the history-mode
+    // allowlists, the read-only gate and every refusal apply by construction, a
+    // refusal being a consumed no-op on click exactly as on key. (An eleventh
+    // chord — bare Escape, the row's Cancel button — shipped on the row's first
+    // day and was deleted that same day with its button; the mid-render Cancel
+    // is the RENDER button's stateful face now, spelled in this body below.)
     //
-    // PLAY AND STOP SHARE THE ONE Space BINDING — two buttons over one chord,
-    // so WHICH of them acts is decided by the live audition bit inside the act
-    // rather than by the button pressed, and either press does the right
-    // thing. BOTH ARE ENABLED AT REST since 2026-08-15: the pair held an
-    // ENABLED split for the day of that morning's whole-row honesty ruling
-    // (Play dead while an audition ran and where a launch would refuse, Stop
-    // dead while none ran) and the architect reversed it with the rest of the
-    // row's honest arms — the ruling and his reasoning are at
-    // redesign_button_enabled.
+    // PLAY AND STOP ARE ONE BUTTON OVER THE ONE Space BINDING since 2026-08-15
+    // (architect, at his live look at the row), so BUTTON-IS-ITS-CHORD HOLDS
+    // EXACTLY here: the press dispatches bare Space, Space toggles, and the
+    // button's GLYPH and TOOLTIP swap on the live audition bit. There is no
+    // wrong half to press, which is why this row carries neither a `radio` flag
+    // nor a lamp.
     //
-    // THE PAIR IS A RADIO, LIKE THE S/T AND W/P BUTTONS (architect 2026-08-15,
-    // his own proposal and the resolution of what the enabled reversal left
-    // open): "what if we made play and stop modal just like the warp/phase or
-    // source/target buttons? So clicking on play when it's already playing
-    // would be a no-op, just like clicking on source when we're already in
-    // source view is a no-op." WHAT THE FLAG REPLACES is the ENABLED split's
-    // OTHER job — the split was not only a truth face, it was the pair's
-    // DISAMBIGUATION, only ever leaving the meaningful half clickable. With the
-    // row always-on both halves went live and the pair became one control
-    // wearing two glyphs, so a press on Stop while stopped would have STARTED
-    // playback: the glyph contradicting the act, which is a sharper lie than a
-    // lit-but-inert button. THE RADIO CONSUME FIXES IT WITH MACHINERY THAT
-    // ALREADY EXISTS — the wrong-direction press dies at the claim (and again
-    // at the lift), and the only press that survives is the one on the UNLIT
-    // button, which BY DEFINITION is the direction the one toggle wants to go.
-    // So bare Space and toggle_playback are UNTOUCHED and neither button needs
-    // an act of its own: the Render-is-Cancel exception stays the roster's only
-    // break from button-is-its-chord. THE STATE MOVED FROM THE ENABLED AXIS TO
-    // THE SELECTED ONE, which is where it belongs — grey answers "can I press
-    // this", the lamp answers "which one is live" (the lamp itself is at
-    // redesign_button_selected, app_state.h).
-    //
-    // THE SUPERSEDED NOTE HERE READ "neither is a radio (`radio` would consume
-    // a press on a SELECTED button, and this pair has never had a selected face
-    // at all — the moving scanner is what says an audition runs)", and BOTH of
-    // its premises died: the pair has a selected face now, and the scanner
-    // being the audition's own statement was an argument against a REDUNDANT
-    // truth face, not against a control that needs to know its own direction.
+    // TWO SUPERSEDED SHAPES, both from earlier that same day. (1) THE ENABLED
+    // SPLIT of the morning's whole-row honesty ruling — Play dead while an
+    // audition ran and where a launch would refuse, Stop dead while none ran —
+    // reversed with the rest of the row's honest arms (the ruling and his
+    // reasoning are at redesign_button_enabled). (2) THE RADIO PAIR, his own
+    // fix for what that reversal exposed: the enabled split had also been the
+    // pair's DISAMBIGUATION, only ever leaving the meaningful half clickable,
+    // so with the row always-on a press on Stop while stopped would have
+    // STARTED playback — the glyph contradicting the act. `radio=true` on both
+    // rows killed the wrong-direction press at the claim and again at the lift.
+    // THE COLLAPSE REMOVES THE PROBLEM RATHER THAN SOLVING IT AGAIN: two
+    // buttons over one chord was the whole difficulty, and one button has no
+    // wrong half. The flag is deleted from these rows and the GENERIC radio
+    // consume is untouched — the S/T and W/P rows and the tabs still use it.
+    // bare Space, toggle_playback and playback_launch_playable are untouched
+    // by construction, as they were under the radio.
     //
     // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
     // hold-repeat that shipped with the row — the synthesized 575ms/25Hz
@@ -278,12 +269,37 @@ constexpr ToolbarChord kToolbarChords[] = {
     // press-and-lift now.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
-    {RedesignButton::TransportPlay,
-     GuiKeys::Space,  false, false, false, true,  true},                             // bare Space
-    {RedesignButton::TransportStop,
-     GuiKeys::Space,  false, false, false, true,  true},                             // bare Space
+    {RedesignButton::TransportPlayStop,
+     GuiKeys::Space,  false, false, false, false, true},                             // bare Space
     {RedesignButton::TransportSkipForward,
      GuiKeys::End,    false, false, false, false, true},                             // bare End
+    // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
+    // behind a separator and ahead of the arrows. THREE BUTTONS, THREE CHORDS
+    // — no hold, no double-click, no modifier gesture on the surface — and the
+    // declined double-click rule's mechanical reason is recorded at the roster
+    // entry (every double-click surface in this product acts on its FIRST
+    // click too, so a double-click on "next" would step a marker AND THEN walk
+    // both tabs).
+    //
+    // PREV'S SHIFT IS ITS OWN CHORD, not an admission: Shift+Tab is the
+    // reverse marker cycle's own spelling, so the `shift` column carries it
+    // exactly as Redo's carries Ctrl+Shift+Z, and this row is the SECOND
+    // producer that column has ever had. A SHIFT press on the button is
+    // therefore a consumed nothing (redesign_button_shift_admits says no), and
+    // that is Redo's behaviour too. The reverse cycle's other spelling,
+    // IsoLeftTab, is deliberately NOT a second row: the dispatch is
+    // synthesized, so it goes out in the Tab spelling every reader accepts.
+    //
+    // THEY ARE LIVE INSIDE THE `h` VIEW and the derived partition says so with
+    // nothing hand-listed — history_mode_owns_key claims all three shapes (the
+    // diff-flag cycle forward and back, and the reverse walk-source cycle), so
+    // this walk answers LIVE and each button does the mode's own thing.
+    {RedesignButton::TransportWalkPrev,
+     GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
+    {RedesignButton::TransportWalkNext,
+     GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
+    {RedesignButton::TransportWalkBoth,
+     GuiKeys::Tab,    true,  true,  false, false, true},                             // Ctrl+Shift+Tab
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone.
@@ -344,7 +360,9 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the three menu anchors carries a chord here, so the
+// every RedesignButton but the three menu anchors carries a chord here — 45
+// rows against the roster's 48 since 2026-08-15 (the marker walk's three in,
+// the collapsed play/stop pair's second row out) — so the
 // table's length plus those three IS the roster. The check is not bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
@@ -667,13 +685,17 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // re-derived at its own definition.
 // THE PARTITION DID NOT MOVE WHEN THAT VOCABULARY GREW, any of the three times
 // (2026-08-05 — first the diff-flag cycle, Home/End and `c`, then the compare
-// toggle; 2026-08-08 — bare `u`, the reading's own toggle). None of the bare
-// shapes is a roster chord EXCEPT `u` (nothing in kToolbarChords dispatches bare
-// Tab, Home, End or `c`), the ONE older roster chord — the tabs' Ctrl+Tab — was
-// already answered LIVE by the hand entry the claim replaced, and `u` needs no
-// entry either: it IS a roster chord, so this walk finds it, and the mode owning
-// it is exactly what makes the walk answer LIVE — the same derivation the walk's
-// two arrows and Revert already ride.
+// toggle; 2026-08-08 — bare `u`, the reading's own toggle), and it did not have
+// to move when the ROSTER later grew buttons for those same shapes either:
+// bare Home / End became the bottom row's SKIPS (2026-08-11), bare `c` the icon
+// row's zoom-original (2026-08-12), and bare Tab / Shift+Tab / Ctrl+Shift+Tab
+// the bottom row's MARKER-WALK GROUP (2026-08-15). Every one of them is a chord
+// the MODE OWNS, which is exactly what makes this walk answer LIVE for its
+// button with nothing hand-listed — the same free derivation the walk's two
+// arrows, the Cumulative toggle and Revert already ride. (The membership is
+// re-greped here rather than inherited: this paragraph carried "nothing in
+// kToolbarChords dispatches bare Tab, Home, End or `c`" for three roster
+// growths after it stopped being true.)
 //
 // THREE ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
 // (2026-08-05 for the first two, 2026-08-08 for the third), which is why this
@@ -736,6 +758,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
 //   them with nothing hand-listed,
+//   and THE BOTTOM ROW'S MARKER-WALK GROUP since 2026-08-15 (bare Tab,
+//   Shift+Tab and Ctrl+Shift+Tab) — the mode's own vocabulary once more, so
+//   all three answer LIVE for free and each does the mode's own thing in
+//   here: the two bbox buttons step the DIFF-FLAG cycle forward and back, and
+//   boost runs the reverse WALK-SOURCE cycle rather than the paired marker
+//   march it runs outside,
+//   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
+//   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
 //   and the same free answer). Those three plus Revert were the roster's FOUR
 //   RESTING-DISABLED buttons until 2026-08-15, when the architect's scoped-truth
@@ -5425,7 +5455,7 @@ void GuiInputHandler::finalize_active_drags() {
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's File / Navigation / Settings and the view bar's three, row 3's two
 // tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
-// relayout — and the bottom row's twelve: 46, the enum's
+// relayout — and the bottom row's fourteen: 48, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; an UNPAINTED bottom-row cluster member's zero
 // rect resolves unhovered with no arm here).
@@ -5592,8 +5622,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // and the three things state moves in it (re-derived from that one function):
     // MEMBERSHIP moves exactly ONCE — row 3's WALK-SELECTOR tabs drop their hint
     // entirely while the `h` view stands, on the view bar's own reasoning — while
-    // the TEXT follows state on two buttons, SAVE (a publishing checkpoint first,
-    // then the history view's "Save and Commit") and RENDER (the iteration bit).
+    // the TEXT follows state on THREE buttons: SAVE (a publishing checkpoint
+    // first, then the history view's "Save and Commit"), RENDER (the
+    // mid-render Cancel, then the iteration bit) and, since 2026-08-15, THE
+    // BOTTOM ROW'S COLLAPSED PLAY/STOP BUTTON (the live audition bit, the same
+    // condition its glyph reads).
     // The walk above covers the whole roster either way: a newly hovered
     // one stamps the clock, and moving between two of them hides and re-stamps,
     // so a fresh dwell begins on each arrival. The run
@@ -5786,16 +5819,18 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
         // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW HAS
-        // NO RESTING CONSUMER HERE AT ALL since 2026-08-15: all eight of its
+        // NO RESTING CONSUMER HERE AT ALL since 2026-08-15: all ten of its
         // buttons are lit outside the `h` view by the architect's scoped-truth
         // ruling (the arrows for the per-selection blink, the two skips
-        // because their key acts even on a no-op jump, and PLAY / STOP last —
+        // because their key acts even on a no-op jump, PLAY / STOP last —
         // "the user is expected to know that with the playhead outside trim
-        // it's not going to play in target view"), so this line fires for them
-        // only inside that view, where the derived partition greys Play and
-        // Stop. Everywhere else their chords do their own refusing and a
-        // refused click is a consumed no-op, which is the roster's standing
-        // shape.
+        // it's not going to play in target view" — and the marker-walk three
+        // on the row's settled policy when they landed), so this line fires
+        // for them only inside that view, where the derived partition greys
+        // the transport button ALONE (Space is consumed there; the walk three
+        // are the mode's own cycles). Everywhere else their chords do their
+        // own refusing and a refused click is a consumed no-op, which is the
+        // roster's standing shape.
         if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a

@@ -74,7 +74,7 @@ inline int status_chain_pad_x() {
 //
 // (bottom_row_pad_x, the modal's own accessor, is deleted with the ruling: it
 // was a separately-measured 13 — the status chain's number, which the modal
-// inherited when it landed on this row — while the row's own eight buttons
+// inherited when it landed on this row — while the row's own buttons
 // already walked from this 8. Two pads on one lane was the drift; the chain's
 // 13 stays its own, on the TAB row, at status_chain_pad_x above.)
 inline int icon_row_pad_x() {
@@ -705,7 +705,8 @@ private:
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
     // cluster (bottom lane 0, the strip's one lane since the relayout's commit
-    // B: the transport four left, the arrow four flush
+    // B: the transport three left, then the marker-walk three, the
+    // separator and the arrow four flush
     // right, declared
     // below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
@@ -740,7 +741,8 @@ private:
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the arrows flush right since the same day's relayout): the
-    // transport four at the left pad, the arrow four at the right margin, at
+    // transport three at the left pad, the marker-walk three + separator +
+    // arrow four at the right margin (2026-08-15), at
     // the icon row's boxes, and the
     // centred monospace clock, painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the

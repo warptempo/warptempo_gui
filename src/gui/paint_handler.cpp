@@ -497,8 +497,9 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 }
 
 // THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
-// painter stashes the rect it painted plus the enabled/selected bits it is
-// painting (redesign_button_enabled / redesign_button_selected — the same
+// painter stashes the rect it painted plus the three face bits it is painting
+// (redesign_button_enabled / redesign_button_selected /
+// redesign_button_glyph_swapped — the same
 // predicates main.cpp's per-tick drift comparator replays), and returns the
 // face so the caller reads .hovered / .selected back for its own paint. Every
 // row painter publishes through here at the top of its per-button body; the
@@ -537,11 +538,14 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // every row and every bit, and the stale-row bug it fixed had nothing to do
 // with which buttons grey. Do not revert it along with the policy.
 //
-// AND IT IS LOAD-BEARING AGAIN RATHER THAN MERELY HISTORICAL: the pair's state
-// moved from the enabled axis to the SELECTED one later that day (the radio
-// ruling, redesign_button_selected), so the very same masking edge — a click
-// act's stop damaging only the clock cell — now flips the pair's LAMP under a
-// clip that redraws no button. Same gate, same repair, the other bit.
+// AND IT IS LOAD-BEARING AGAIN RATHER THAN MERELY HISTORICAL: the transport's
+// state moved axis TWICE more the same day — onto the SELECTED bit with the
+// radio ruling, and onto the GLYPH with the collapse of play and stop into one
+// button — so the very same masking edge (a click act's stop, or the natural
+// end-of-song teardown, damaging only the clock cell) now flips that button's
+// GLYPH under a clip that redraws no button. Same gate, same repair, the third
+// bit; `glyph_swapped` is stashed here for exactly that reason and its whole
+// argument is at the predicate (app_state.h).
 //
 // IT TOOK A GuiPlayback WITH THAT POLICY AND GAVE IT BACK WITH IT: the PLAY
 // button's honest arm was the only reader of the object down this path
@@ -568,6 +572,7 @@ AppState::RedesignButtonFace& publish_button_face(
     if (pixels_covered) {
         face.enabled  = redesign_button_enabled(app, audio.total_frames(), id);
         face.selected = redesign_button_selected(app, id);
+        face.glyph_swapped = redesign_button_glyph_swapped(app, id);
     }
     return face;
 }
@@ -746,32 +751,44 @@ constexpr IconRowDef kIconRowButtons[] = {
 // with.)
 icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
                                  icons::Icon table_icon) {
-    if (b == RedesignButton::Save &&
-        (app.history_checkpoint_in_flight || app.history_mode.active)) {
-        return icons::Icon::VcsCommit;
+    // THE CONDITION IS NOT ASKED HERE (2026-08-15): whether a button wears its
+    // second glyph is redesign_button_glyph_swapped's (app_state.h), because
+    // the roster's face STASH carries that bit for the drift comparator and a
+    // second spelling of the same four conditions is exactly what would drift.
+    // This body owns only WHICH glyph the swap gives.
+    if (!redesign_button_glyph_swapped(app, b)) return table_icon;
+    switch (b) {
+        // SAVE, in the history view (where Ctrl+S IS the checkpoint act) and
+        // while a checkpoint publishes.
+        case RedesignButton::Save:   return icons::Icon::VcsCommit;
+        // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
+        // while a render or sweep is live — dialog-cancel, the circle-slash,
+        // transcribed for row 8's short-lived Esc button and kept for exactly
+        // this face when that button was deleted. The bit, its rank over the
+        // iteration label and the click's divergence are all at
+        // AppState::render_cancel_face.
+        case RedesignButton::Render: return icons::Icon::DialogCancel;
+        // THE READ-ONLY TOGGLE'S PADLOCK (2026-08-14): the CLOSED lock while
+        // the active tab is read-only — which is its TABLE glyph — and the
+        // OPEN one while it is writable, so this row is the swap. It is the
+        // tabs' own two-glyph face carried whole onto the button that took the
+        // padlock's job, and a THIRD kind of stateful glyph: Save's and
+        // Render's swap on a MODE, this one on the very bit its own chord
+        // flips, so it says the same thing as its lit lamp
+        // (redesign_button_selected) in the padlock's vocabulary rather than
+        // the row's. The tabs' DIM on the open lock did not come along — in
+        // this row a dimmed glyph means disabled.
+        case RedesignButton::IconReadOnly: return icons::Icon::Unlock;
+        // THE COLLAPSED PLAY/STOP BUTTON (architect 2026-08-15): one button
+        // over bare Space, wearing media-playback-STOP while an audition runs
+        // and the table's media-playback-start otherwise. It is
+        // RENDER-IS-CANCEL's shape applied to a toggle — and unlike Render it
+        // needs no chord exception, because Space already toggles.
+        case RedesignButton::TransportPlayStop:
+            return icons::Icon::MediaPlaybackStop;
+        default:
+            return table_icon;
     }
-    // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph while
-    // a render or sweep is live — dialog-cancel, the circle-slash, transcribed
-    // for row 8's short-lived Esc button and kept for exactly this face when
-    // that button was deleted. The bit, its rank over the iteration label and
-    // the click's divergence are all at AppState::render_cancel_face.
-    if (b == RedesignButton::Render && app.render_cancel_face) {
-        return icons::Icon::DialogCancel;
-    }
-    // THE READ-ONLY TOGGLE'S PADLOCK (2026-08-14): the CLOSED lock while the
-    // active tab is read-only, the OPEN one while it is writable — the tabs'
-    // own two-glyph face, carried whole onto the button that took the padlock's
-    // job. It is a THIRD kind of stateful glyph here, and worth naming: Save's
-    // and Render's swap on a MODE, this one on the very bit its own chord
-    // flips, so it says the same thing as its lit lamp
-    // (redesign_button_selected) in the padlock's vocabulary rather than the
-    // row's. The tabs' DIM on the open lock did not come along — in this row a
-    // dimmed glyph means disabled.
-    if (b == RedesignButton::IconReadOnly) {
-        return active_view_state(app).read_only ? icons::Icon::Lock
-                                                : icons::Icon::Unlock;
-    }
-    return table_icon;
 }
 
 // -- THE FLOATING SURFACES: the hover tooltip and the menu row's dropdowns --
@@ -2113,10 +2130,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // when a button has no override, so there is no membership to keep.
         // (This is the site the relayout dropped: it took the table icon
         // directly, which left the resolver caller-less and both ruled faces
-        // unpainted for a day — fixed 2026-08-13. Row 8's own draw needs no
-        // such call: none of the transport eight has a stateful glyph, the
-        // play/stop pair being TWO buttons over one chord rather than one
-        // button with two faces.)
+        // unpainted for a day — fixed 2026-08-13. THE BOTTOM ROW'S OWN DRAW
+        // TAKES THE SAME CALL since 2026-08-15: its superseded claim was that
+        // "none of the transport eight has a stateful glyph, the play/stop
+        // pair being TWO buttons over one chord rather than one button with
+        // two faces", and the architect made it one button with two faces
+        // that day.)
         icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
                     static_cast<double>(x + (btn - glyph_px) / 2),
                     static_cast<double>(btn_y + (btn - glyph_px) / 2),
@@ -2132,19 +2151,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the transport row
 // landed 2026-08-11 as the touch arc's first surface, its own lane for one
 // day): permanent on every host — ordinary mouse-clickable buttons, no touch
-// mode, no flag, no detection. The transport four on the row's LEFT, the
-// CLOCK centred in the lane, and the four ARROWS FLUSH AT THE RIGHT
-// MARGIN (the 2026-08-12 relayout's rearrangement — "the nudge based icons
-// in the bottom right", architect-agreed). That is the row's whole roster
+// mode, no flag, no detection. The transport THREE on the row's LEFT, the
+// CLOCK centred in the lane, and — FLUSH AT THE RIGHT MARGIN — the
+// MARKER-WALK GROUP, a separator, and the four ARROWS (the 2026-08-12
+// relayout put the arrows there — "the nudge based icons in the bottom
+// right", architect-agreed — and his 2026-08-15 live look re-weighted the two
+// ends: "the more I think about it, the more awkward it feels to have all of
+// that right next to those three others", so the left cluster dropped to three
+// and the freed weight went right). That is the row's whole roster
 // since 2026-08-13, when the STATUS CHAIN — which right-aligned against the
 // arrows' left edge from the unification — moved into the TAB ROW:
 //
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
-//   Home), play and stop (the ONE bare Space binding over two buttons, the
-//   live audition bit deciding which of them acts, and A RADIO PAIR on that
-//   same bit since 2026-08-15: exactly one of the two is lit, and a press on
-//   the LIT half is a consumed nothing — the ruling is at the pair's rows in
-//   kToolbarChords, input_pointer.cpp) and skip-forward (bare
+//   Home), THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap
+//   on the live audition bit — Render-is-Cancel's own stateful-face shape, and
+//   the reason this row's paint goes through redesign_button_icon; it was TWO
+//   buttons over that one chord until 2026-08-15, most recently as a radio
+//   pair) and skip-forward (bare
 //   End). THE WHOLE ROW IS LIT UNCONDITIONALLY, apart from what the `h`
 //   history view's derived partition greys, and that is a RULING rather than
 //   an unfinished sweep (architect 2026-08-15, reversing his own whole-row
@@ -2157,8 +2180,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
 //   and the no-wiggle cell are all at kClockShape below);
-//   THE CARDINAL ARROWS, right-anchored (their unification-era seat beside the
-//   transport lasted one day), in the architect's own order left-to-right
+//   THE MARKER-WALK GROUP (2026-08-15), the right block's first three —
+//   previous marker (Shift+Tab), next marker (Tab), walk both tabs
+//   (Ctrl+Shift+Tab). Three buttons, three chords, no gesture of their own;
+//   painted in EVERY state, the cluster swap below being the arrows' alone;
+//   THE SEPARATOR, the ruled row-8 divider (1px, 32 tall, 5px each side)
+//   between that group and the cluster — two adjacent groups at one anchor
+//   need a line where anchoring alone used to be the boundary;
+//   THE CARDINAL ARROWS, closing the right block (their unification-era seat
+//   beside the transport lasted one day), in the architect's own order
+//   left-to-right
 //   since 2026-08-14 — DOWN, UP, LEFT, RIGHT (bare Down/Up/Left/Right; it was
 //   vim's left-down-up-right before), a single line and not a d-pad, one act
 //   per press-and-lift like every chrome button (their hold-to-repeat is
@@ -2195,33 +2226,37 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // (bottom_row_content_h_px delegating to icon_row_content_h_px, render.h). One
 // source, so a retune of the icon row carries here by construction.
 //
-// THE TWO GROUPS ARE DIVIDED BY DISTANCE AGAIN (the 2026-08-12 relayout):
-// the arrows moved FLUSH RIGHT at the architect's live ruling, so anchoring
-// is the group boundary as it was before the unification put the pair
-// adjacent, and the row paints NO separator — the ROW-8 SEPARATOR SPEC below
-// reverts to FORWARD SPEC, its original status, after one day with a
-// consumer (the unification's adjacent left cluster). The spec stands so a
-// future row-8-family separator lands on the ruled numbers rather than a
-// re-derivation (architect 2026-08-11): SOURCE
+// THE LEFT GROUP IS DIVIDED BY DISTANCE AND THE RIGHT PAIR BY A LINE
+// (2026-08-15). The 2026-08-12 relayout moved the arrows FLUSH RIGHT, which
+// made anchoring the boundary between the row's two ends and left the ROW-8
+// SEPARATOR SPEC with no consumer; the architect's marker-walk group put a
+// second cluster at that right end, and two adjacent groups need a divider
+// again. So the row paints ONE separator, between the WALK GROUP and the
+// ARROWS, on the spec's own ruled numbers (architect 2026-08-11): SOURCE
 // tmp/screenshots/kdenlive/redesign/row_8_separator.png, 1x32 — a
 // single flat column sampling #4c4e51, which IS kRedesignTabLine (the same
 // grey the icon row's separators paint; recorded as the sampled value, per
 // the palette rule) — a 1px, 32-tall kRedesignTabLine line
 // centered in the content band, with FIVE pixels from button to separator on
-// each side (the ruled metric, against the icon row's 4).
+// each side (the ruled metric, against the icon row's 4). The LEFT cluster is
+// still alone at its end and still needs no line.
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend — worn here by NOTHING AT REST (architect 2026-08-15): the row is
 // always-on whole, and its only grey is what the `h` history view's derived
-// partition decides, which is Play and Stop alone (Space is consumed in the
-// view, while Home/End are the mode's own absolute jumps and stay lit —
-// architect-confirmed) — all at redesign_button_enabled, nothing decided here.
-// THE SELECTED FACE IS WORN TOO, by the Cumulative toggle and — since the
-// pair became a RADIO the same day — by whichever of Play / Stop matches the
-// live audition bit; inside the `h` view those two are the row's one
-// DISABLED+SELECTED combination, which the shared expressions already
-// compose (the note at paint_button).
+// partition decides, which is THE PLAY/STOP BUTTON alone (Space is consumed in
+// the view, while Home/End are the mode's own absolute jumps and the
+// marker-walk three are its own cycles, so all five of those stay lit —
+// architect-confirmed for the skips) — all at redesign_button_enabled, nothing
+// decided here.
+// THE SELECTED FACE IS WORN by the Cumulative toggle and by nothing else on
+// this row. (Play and Stop wore it for hours the same day, as a RADIO PAIR on
+// the live audition bit, and the collapse of that pair into ONE button took
+// the lamp with it — the bit picks the button's GLYPH now. The row's one
+// DISABLED+SELECTED combination is therefore the Cumulative toggle inside the
+// `h` view, which the shared expressions already compose — the note at
+// paint_button.)
 // THAT IS A RULING RATHER THAN AN UNFINISHED SWEEP, and it took back the
 // whole-row honesty ruling of the same morning in three steps: the four
 // arrows and the four history companions first (a glyph blinking on every
@@ -2240,27 +2275,62 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // row's border-bottom; the lane's chrome is paint_bottom_strip's, which calls
 // the body below onto its content band).
 
-// THE ROW AUTHORS NO METRIC OF ITS OWN since 2026-08-14 (the block above): the
-// boxes, glyphs, gap, pads, stroke, radius and content height are all the icon
-// row's, read from its constants and accessors. The kTransportSep* trio is
-// FORWARD SPEC ONLY again (no consumer since the arrows moved flush right;
-// the spec's record is the block above).
-[[maybe_unused]] constexpr double kTransportSepGapPx    = 5.0;   // spec
-[[maybe_unused]] constexpr double kTransportSepWidthPx  = 1.0;   // spec
-[[maybe_unused]] constexpr double kTransportSepHeightPx = 32.0;  // spec
+// THE ROW AUTHORS NO METRIC OF ITS OWN BUT ITS SEPARATOR'S (the block above):
+// the boxes, glyphs, gap, pads, stroke, radius and content height are all the
+// icon row's, read from its constants and accessors. The kTransportSep* trio
+// IS LIVE AGAIN since 2026-08-15, the MARKER-WALK GROUP being the divider's
+// third consumer — it was the unification's adjacent left cluster for one day
+// in 2026-08-12, forward spec again when the arrows moved flush right, and
+// forward spec is exactly what this arrival cashes in: the numbers are the
+// ruled ones off row_8_separator.png rather than a re-derivation, which is
+// what a spec kept without a consumer is for.
+//
+// THEY ARE THE ICON ROW'S SEPARATOR AT ROW 8'S OWN METRICS, deliberately not
+// the icon row's constants: same 1px kRedesignTabLine line, but 32 tall
+// against row 4's 34 and a 5px gap per side against row 4's 4, both sampled
+// from this row's own crop. (The rest of the row reads row 4's constants; a
+// sampled number of this row's own does not become a shared one because its
+// neighbours are.)
+constexpr double kTransportSepGapPx    = 5.0;
+constexpr double kTransportSepWidthPx  = 1.0;
+constexpr double kTransportSepHeightPx = 32.0;
 
-// The painter's half of the row's roster: two groups, painted left to right.
+// The painter's half of the row's roster: three groups plus the cluster's
+// mode twin, painted left to right.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
     RedesignButton id;
     icons::Icon    icon;
 };
+// THE LEFT CLUSTER IS THREE since 2026-08-15 (architect, at his live look):
+// play and stop collapsed into ONE stateful button, so the table carries
+// media-playback-START as that button's resting glyph and the resolver swaps
+// in media-playback-STOP while an audition runs (redesign_button_icon —
+// Save's and Render's own shape, and the reason this row's paint goes through
+// the resolver at all now). The freed weight went to the row's RIGHT, where
+// the marker-walk group landed in the same ruling.
 constexpr TransportRowDef kTransportGroup[] = {
     {RedesignButton::TransportSkipBack,    icons::Icon::MediaSkipBackward},
-    {RedesignButton::TransportPlay,        icons::Icon::MediaPlaybackStart},
-    {RedesignButton::TransportStop,        icons::Icon::MediaPlaybackStop},
+    {RedesignButton::TransportPlayStop,    icons::Icon::MediaPlaybackStart},
     {RedesignButton::TransportSkipForward, icons::Icon::MediaSkipForward},
+};
+// THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster ahead
+// of the separator and the arrows: previous marker (Shift+Tab), next marker
+// (Tab), walk both tabs (Ctrl+Shift+Tab). THE GLYPHS ARE HIS OWN PICKS from a
+// rendered candidate sheet and the reasons are at their icons.h entries — bbox
+// is an arrow meeting a bar (the Tab key's own shape, sharing no silhouette
+// with the chevrons two slots away, the media triangles at the row's left, or
+// the keyframe dials the history cluster wears in this same band), boost is a
+// two-arrow cycle, which is what walking both tabs is.
+//
+// IT IS NOT PART OF THE CLUSTER SWAP: the `h` view replaces the ARROWS with
+// the history companions, and these three paint in both states, doing the
+// mode's own cycles in there.
+constexpr TransportRowDef kTransportWalkGroup[] = {
+    {RedesignButton::TransportWalkPrev,    icons::Icon::BboxPrev},
+    {RedesignButton::TransportWalkNext,    icons::Icon::BboxNext},
+    {RedesignButton::TransportWalkBoth,    icons::Icon::Boost},
 };
 // DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
 // row's original vim order (h j k l = left / down / up / right) with no
@@ -2371,16 +2441,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_y = content_y + (content_h - btn) / 2;
 
     // One button, the icon row's face logic verbatim minus the letter arm.
-    // The SELECTED states are live here since 2026-08-14 and there are TWO
-    // subjects since 2026-08-15: the history cluster's Cumulative toggle lights
-    // on the session reading, and the TRANSPORT'S PLAY / STOP RADIO lights on
-    // the live audition bit — exactly one of that pair at every instant — so
-    // the shared expressions' `selected` term is no longer a constant false on
-    // this row. THE DISABLED BLEND COMPOSES WITH IT rather than excluding it:
-    // `keep` mixes both the fill and the line toward the ground, so inside the
-    // `h` view — where the derived partition greys Play and Stop while one of
-    // them is still lit — the pair wears the DIMMED SELECTED face, the same
-    // composition the Cumulative toggle already relies on.
+    // The SELECTED state is live here since 2026-08-14, with ONE subject: the
+    // history cluster's Cumulative toggle, lighting on the session reading, so
+    // the shared expressions' `selected` term is not a constant false on this
+    // row. (A second subject lived for hours on 2026-08-15 — the Play / Stop
+    // RADIO PAIR on the live audition bit — and went with that pair's collapse
+    // into one button.) THE DISABLED BLEND COMPOSES WITH IT rather than
+    // excluding it: `keep` mixes both the fill and the line toward the ground,
+    // so a lit button the derived partition greys wears the DIMMED SELECTED
+    // face, which is the combination the Cumulative toggle relies on inside
+    // the `h` view.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, def.id,
@@ -2408,60 +2478,77 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                               has_line ? &line : nullptr);
             if (has_fill) under = fill;
         }
-        // The TABLE glyph, deliberately: no button on this row has a stateful
-        // face (redesign_button_icon's three subjects — Save, Render and the
-        // read-only toggle — are all icon row members), so nothing here has a
-        // state to resolve.
-        icons::draw(cr, def.icon,
+        // THE GLYPH IS THE STATE RESOLVER'S since 2026-08-15, as the icon
+        // row's already was: this row hosts a stateful face now — the
+        // collapsed PLAY/STOP button, which wears media-playback-stop while an
+        // audition runs — so redesign_button_icon has a fourth subject and
+        // this site can no longer take the table icon directly. It goes
+        // through the resolver for EVERY button, the icon row's own rule: the
+        // table icon is what the resolver returns when a button has no
+        // override, so there is no membership to keep in step here.
+        // (THE ROW'S SUPERSEDED CLAIM WAS "no button on this row has a
+        // stateful face... the play/stop pair being TWO buttons over one chord
+        // rather than one button with two faces", which was exactly true until
+        // the architect made it one button with two faces.)
+        icons::draw(cr, redesign_button_icon(app, def.id, def.icon),
                     static_cast<double>(x + (btn - glyph_px) / 2),
                     static_cast<double>(btn_y + (btn - glyph_px) / 2),
                     static_cast<double>(glyph_px), keep, under);
     };
 
-    // THE TRANSPORT LEFT, THE RIGHT CLUSTER FLUSH RIGHT, THE CELL CENTRED
+    // THE TRANSPORT LEFT, THE RIGHT BLOCK FLUSH RIGHT, THE CELL CENTRED
     // BETWEEN (the 2026-08-12 relayout's rearrangement, architect-agreed: "the
-    // nudge based icons in the bottom right"): the transport four walk from the
-    // row's left pad as before, and FOUR BUTTONS anchor at the RIGHT margin —
-    // the CARDINAL ARROWS ordinarily (↓ ↑ ← →, the architect's order since
-    // 2026-08-14) and THE HISTORY COMPANIONS while the `h` view stands (the
-    // cluster swap, same day). ONE GROUP REMAINS ON EACH SIDE, so the ROW-8
-    // SEPARATOR that divided the adjacent pair for the unification's hours is
-    // GONE — anchoring is the group boundary again, exactly as it was before
-    // the rows merged, and the spec constants above revert to FORWARD SPEC
-    // (their original status). The clock is centred in the LANE, so it sits on
+    // nudge based icons in the bottom right"; RE-WEIGHTED 2026-08-15 at his
+    // live look — "the more I think about it, the more awkward it feels to
+    // have all of that right next to those three others"): the TRANSPORT THREE
+    // walk from the row's left pad, and the RIGHT BLOCK anchors at the RIGHT
+    // margin as THREE + SEPARATOR + FOUR — the MARKER-WALK GROUP, the ruled
+    // row-8 divider, and then the four-slot cluster that is the CARDINAL
+    // ARROWS ordinarily (↓ ↑ ← →, the architect's order since 2026-08-14) and
+    // THE HISTORY COMPANIONS while the `h` view stands (the cluster swap, same
+    // day). The clock is centred in the LANE, so it sits on
     // the window's own midline whatever the clusters do; the span between the
-    // cell and the right cluster is BARE GROUND since 2026-08-13, the status
+    // cell and the right block is BARE GROUND since 2026-08-13, the status
     // chain that right-aligned in it having moved to the tab row.
     //
     // THE CLUSTERS AND THE CELL CAN OVERLAP AT THE FLOOR, and the row accepts
     // it exactly as row 1's floats do — no collision rule anywhere in the
-    // redesign (re-derived at the rearranged metrics): at the 640px
+    // redesign (re-derived at the 2026-08-15 metrics): at the 640px
     // defensive floor with gui_scale at its 100 default the transport ends at
-    // 142 (8px pad, four 32px boxes, three 2px gaps), the right cluster spans
-    // 498..632 mirror-image (134 wide inside the same 8px pad, whichever four
-    // it holds), and the 9-glyph cell sits inside 280..360
-    // about the midline — nothing meets until the cell doubles at the 200
+    // 108 (8px pad, three 32px boxes, two 2px gaps), the right block is 245
+    // wide (100 walk + 11 separator span + 134 cluster) and so spans 387..632
+    // inside the same 8px pad, and the 9-glyph cell sits inside 280..360
+    // about the midline — 27px of clearance at the tightest point the product
+    // can be driven to, and nothing meets until the cell grows toward the 200
     // ceiling, the same crop-at-the-floor allowance recorded at
-    // kMinWindowWidthPx; at the Pi's 1024 the cluster starts at 882 and the
-    // cell ends well short of it. (The cell NARROWED at the clock's move to
-    // 11pt, 2026-08-14, so every clearance here only grew.)
+    // kMinWindowWidthPx. At the Pi's 1024 the block starts at 771 and at
+    // 1920 at 1667, both far clear of a cell centred on the midline. (The cell
+    // NARROWED at the clock's move to 11pt, 2026-08-14, so every clearance
+    // here is a lower bound.)
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
         x += btn + btn_gap;
     }
 
-    // THE RIGHT CLUSTER, from its right-anchored origin: four boxes and three
-    // gaps measured whole, the LAST button's right edge one pad in from the
-    // lane's right edge. WHICH four is the `h` view's, and the other four
+    // THE RIGHT BLOCK, from its right-anchored origin: the WALK GROUP's three
+    // boxes, the separator with its 5px gap on each side, then the four-slot
+    // cluster whose LAST button's right edge is one pad in from the lane's
+    // right edge. The whole block is measured first and laid left to right
+    // from there, so one expression owns the anchor and no group re-derives it.
+    //
+    // THE SWAP IS THE CLUSTER'S ALONE and the walk group is no part of it:
+    // WHICH four the cluster holds is the `h` view's, and the other four
     // publish ZERO RECTS — the swap's whole mechanism (architect 2026-08-14),
     // and the row's own model under a modal: a zero rect contains no point, so
     // the press claim, the hover walk and the tooltip dwell cannot reach an
-    // unpainted button, while the live enabled/selected bits keep going out so
+    // unpainted button, while the live face bits keep going out so
     // main.cpp's staleness comparator does not thrash. The ARITHMETIC IS
     // SHARED, which is what makes it a swap: both clusters are four of the
     // row's uniform boxes at one anchor, so nothing on the row moves at a mode
-    // edge. THE SWAP NEEDS NO DAMAGE OF ITS OWN — both edges of the `h` view
+    // edge — the walk group and the separator included, which is why the
+    // block's width has no mode term in it. THE SWAP NEEDS NO DAMAGE OF ITS
+    // OWN — both edges of the `h` view
     // already invalidate the window whole (open_history_mode_fresh and
     // close_history_mode, input_key_dispatch.cpp: the lane swaps its whole
     // content there), so the frame that changes the mode is the frame that
@@ -2476,8 +2563,29 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             publish_button_face(cr, app, audio,
                                 hidden[i].id, GuiRect{0, 0, 0, 0});
         }
+        const int sep_gap = scaled_px(kTransportSepGapPx);
+        // Floored at 1 for the reason the icon row's separator is: a line that
+        // rounds to 0 at gui_scale 50 is a divider that is simply not there.
+        const int sep_w   = scaled_px(kTransportSepWidthPx, 1);
+        const int sep_h   = scaled_px(kTransportSepHeightPx);
+        const int sep_y   = content_y + (content_h - sep_h) / 2;
+        const int walk_w    = 3 * btn + 2 * btn_gap;
         const int cluster_w = 4 * btn + 3 * btn_gap;
-        int ax = lane.x + lane.w - pad - cluster_w;
+        const int block_w   = walk_w + sep_gap + sep_w + sep_gap + cluster_w;
+        int ax = lane.x + lane.w - pad - block_w;
+        for (const TransportRowDef& def : kTransportWalkGroup) {
+            paint_button(def, ax);
+            ax += btn + btn_gap;
+        }
+        // The last walk button consumed a trailing button gap above; the
+        // separator's own 5px gap replaces it rather than adding to it, which
+        // is what the spec's "five pixels from button to separator" means.
+        ax += sep_gap - btn_gap;
+        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                             kRedesignTabLine.b);
+        cairo_rectangle(cr, ax, sep_y, sep_w, sep_h);
+        cairo_fill(cr);
+        ax += sep_w + sep_gap;
         for (int i = 0; i < 4; ++i) {
             paint_button(shown[i], ax);
             ax += btn + btn_gap;
@@ -2592,7 +2700,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         line1 = b.tooltip.c_str();
         btn   = b.rect;
         // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
-        // same flip the row's own eight buttons take, for the same reason
+        // same flip the row's own ten buttons take, for the same reason
         // (nothing exists below that lane).
         flip_above = true;
     } else {
@@ -2670,7 +2778,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // B (it was the blank foot's own band before, zero on a short window):
     // there is nothing below them at all, so the hint hangs upward there, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's twelve roster buttons and, since 2026-08-13, the modal's own,
+    // the row's fourteen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -4516,8 +4624,9 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: the transport four, the four arrows, the clock, the status
-// chain and the critical chip all stand down, nothing negotiates for space,
+// YIELDS WHOLE: the transport three, the marker-walk three, the four arrows,
+// the clock and the row's own separator all stand down, nothing negotiates
+// for space,
 // and paint_modal_dialog paints the modal into the lane they left.
 //
 // The two helpers below are that fork, shared by the row's painter (which
@@ -4578,9 +4687,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
     // into ONE lane — under the waveform then, on the WINDOW'S FOOT since the
     // same day's relayout commit B, which also moved the arrows FLUSH RIGHT):
-    // the transport four
-    // on the left at the icon row's boxes, the monospace clock centred, and
-    // the four cardinal arrows flush right. THAT IS THE WHOLE ROSTER since
+    // the transport three
+    // on the left at the icon row's boxes, the monospace clock centred, and —
+    // flush right since 2026-08-15 — the marker-walk three, the ruled
+    // separator and the four cardinal arrows. THAT IS THE WHOLE ROSTER since
     // 2026-08-13, when the architect moved the STATUS CHAIN — the critical
     // chip and section C's precedence ladder — up into the TAB ROW: this
     // painter owns the lane's CHROME (ground + border-top) and nothing else;
@@ -4642,16 +4752,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // here: paint_modal_dialog owns the lane from this frame until the
     // dialog's closer.
     //
-    // THE TWELVE BUTTONS PUBLISH ZERO RECTS rather than stranding the last
+    // THE FOURTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
     // point), so nothing can hit an unpainted button and no consumer of those
-    // rects can read a phantom bound. Their ENABLED and SELECTED bits ARE
-    // still published: those two are read by main.cpp's staleness comparator
+    // rects can read a phantom bound. Their THREE FACE BITS ARE
+    // still published: those are read by main.cpp's staleness comparator
     // alone, and a stash frozen for the modal's whole life would drift the
     // moment the open changed one — a modal open STOPS PLAYBACK, which flips
-    // the play/stop RADIO's lamp (it flipped that pair's ENABLED split for the
-    // day that split existed; the state moved to the selected axis 2026-08-15
-    // and the example holds on the new one) — leaving the comparator to
+    // the transport button's GLYPH (the same edge flipped that button's
+    // ENABLED bit while the row was honest, and the play/stop pair's LAMP
+    // while it was a radio; the state has moved axis twice and the example
+    // holds on each) — leaving the comparator to
     // invalidate this row on every tick with nothing to repaint but the modal.
     //
     // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
@@ -4662,6 +4773,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
+            publish_button_face(cr, app, audio, def.id,
+                                GuiRect{0, 0, 0, 0});
+        }
+        // The MARKER-WALK GROUP stands down with them (2026-08-15): it is a
+        // tenant of this lane like every other member, and the modal takes the
+        // lane whole.
+        for (const TransportRowDef& def : kTransportWalkGroup) {
             publish_button_face(cr, app, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }

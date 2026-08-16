@@ -151,10 +151,11 @@ namespace {
 // font-scaled lanes in this strip. The BOTTOM strip is ONE lane again: THE
 // UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
-// transport four at the left
-// pad and a four-button cluster flush right (the roster commit's
-// rearrangement): the cardinal arrows, or the history companions while the `h`
-// view stands. All at the icon row's boxes, the clock centered in monospace —
+// transport three at the left
+// pad and, flush right, the marker-walk three, the ruled separator and a
+// four-button cluster (the roster commit's
+// rearrangement, re-weighted 2026-08-15): the cardinal arrows, or the history
+// companions while the `h` view stands. All at the icon row's boxes, the clock centered in monospace —
 // sitting AT THE WINDOW'S FOOT with the flexible gap 2
 // between it and the waveform. (The strip was one lane from row 7's collapse,
 // 2026-08-01, two from row 8, 2026-08-11, one at the unification, two again
@@ -614,8 +615,9 @@ GuiRect top_marker_row_area(const AppState& a) {
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), resting on
 // the WINDOW'S FOOT since commit B, with GAP 2's blank window ground between it
-// and the waveform: the transport four on the left at the icon
-// row's boxes, a RIGHT-ANCHORED CLUSTER of four — the cardinal arrows, or the
+// and the waveform: the transport three on the left at the icon
+// row's boxes, a RIGHT-ANCHORED BLOCK of the marker-walk three, the ruled
+// separator and a CLUSTER of four — the cardinal arrows, or the
 // history companions while the `h` view stands (2026-08-14) — and the
 // monospace clock centered. (The status chain moved into the TAB ROW on
 // 2026-08-13; the OVERVIEW STRIP was bottom lane 0 under this row for
@@ -1902,10 +1904,10 @@ int main(int argc, char** argv) {
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its twelve roster
-            // buttons (the transport four and whichever four the right cluster
-            // holds — the arrows, or the history companions in the `h` view
-            // since 2026-08-14) and the MODAL's own buttons
+            // second arm covers both of the row's surfaces, its fourteen roster
+            // buttons (the transport three, the marker-walk three, and whichever
+            // four the right cluster holds — the arrows, or the history
+            // companions in the `h` view since 2026-08-14) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.
             const AppState::RedesignTooltip::Owner tip_owner =
@@ -1953,10 +1955,22 @@ int main(int argc, char** argv) {
             // frame, this walk catches it on the next tick, and the
             // full-strip damage below is what both repaints the pixels and
             // republishes the stash — one pass, the comparator's own
-            // documented model, now true. (The pair's state was the ENABLED
-            // bit when that fix landed and is the SELECTED one since the same
-            // day's radio ruling — this comparator reads both, so the repair
-            // it describes carried across the move untouched.)
+            // documented model, now true. (The transport's state was the
+            // ENABLED bit when that fix landed, the SELECTED bit under the
+            // same day's radio ruling, and is the GLYPH since the collapse of
+            // play and stop into one button — this comparator reads all three,
+            // so the repair it describes carried across both moves untouched.)
+            //
+            // THE GLYPH TERM IS THE THIRD AND IT CLOSED A LATENT CASE WITH IT
+            // (2026-08-15): a stateful GLYPH changes a button's pixels without
+            // moving either of the other two bits, so this walk was blind to
+            // one. Four buttons have a second glyph — Save, Render, the
+            // read-only toggle and the collapsed play/stop button — and only
+            // the read-only toggle's rode a bit already stashed (its lamp).
+            // RENDER'S mid-render Cancel face is the one that was quietly
+            // uncovered before this term: render_cancel_face moves neither
+            // enabled nor selected, so its repaint rested on the render
+            // routes' own damage alone.
             bool drift_top       = false;
             bool drift_transport = false;
             for (int i = 0;
@@ -1967,7 +1981,9 @@ int main(int argc, char** argv) {
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
                                       app, audio.total_frames(), id) ||
-                    f.selected != redesign_button_selected(app, id);
+                    f.selected != redesign_button_selected(app, id) ||
+                    f.glyph_swapped !=
+                        redesign_button_glyph_swapped(app, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))
                     drift_transport = true;
