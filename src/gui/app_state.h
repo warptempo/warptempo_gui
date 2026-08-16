@@ -1870,32 +1870,20 @@ enum class RedesignButton {
     // the toggle — is answered by construction now rather than by placement.
     Save, Undo, Redo, Render,
     IconS, IconT, IconW, IconP,
-    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
-    // from region — the button IS its chord, so every rule `x` has, the button
-    // has (refusal-gated: no region = a consumed nothing, degenerate result =
-    // the same; region-consuming on success). Momentary, click face, no
-    // selected state, never-grey per the icon row's rule (in the `h` view the
-    // derived partition greys it, `x` being consumed there — nothing
-    // hand-listed). It opens a NEW SEPARATOR-LED GROUP after the warp/phase
-    // radios — the architect's placement ("place it after the warp/phase radio
-    // buttons, create a new separator"), a group intended to collect
-    // viewport-related acts later — and the group HAS its second member since
-    // 2026-08-16.
-    // ITS NO-REGION ARM CAME BACK TO A CONSUMED NOTHING and the round trip is
-    // worth stating so nobody reads the line above as never having moved: for
-    // one day (2026-08-15..16) `x` SEEDED a region there, and the architect
-    // split that act onto its own chord and its own button because one key had
-    // come to mean two unrelated things — show and commit. The seed is
-    // IconShowRegion's now, whole.
-    IconTrim,
-    // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, the trim
-    // group's second member and the second VIEWPORT-CLASS act the architect's
-    // 2026-08-11 slot was opened for. ONE ACT, always meaningful: make sure a
-    // region exists — seeding one at the current trim window's two bounds if
-    // none stands — and then BRING IT INTO VIEW (bring_span_into_view, the
-    // owner shared with the group undo restore). That is the whole command. IT
-    // CLEARS NOTHING: the region's existing clearers are its whole lifecycle,
-    // unchanged.
+    // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, and THE
+    // TRIM GROUP'S OPENER since later that same day — the second VIEWPORT-CLASS
+    // act the architect's 2026-08-11 slot was opened for, and the one that now
+    // leads it ("reverse the order of the icons — show region first, then the
+    // scissors"). The scissors opened this group from 2026-08-11 until that
+    // ruling; the group keeps its separator, its place after the warp/phase
+    // radios and its membership, so the reorder changes no count and no width
+    // (the row is one left-to-right accumulation, and swapping two members
+    // moves neither the boundary nor the total). ONE ACT, always meaningful:
+    // make sure a region exists — seeding one at the current trim window's two
+    // bounds if none stands — and then BRING IT INTO VIEW
+    // (bring_span_into_view, the owner shared with the group undo restore).
+    // That is the whole command. IT CLEARS NOTHING: the region's existing
+    // clearers are its whole lifecycle, unchanged.
     //
     // IT IS MOMENTARY AND STATELESS BY RULING, not by omission, and the
     // superseded design is kept because the hole it had is easy to re-invent.
@@ -1924,6 +1912,26 @@ enum class RedesignButton {
     // is not on the mode's allowlist, so the mode consumes it exactly as it
     // consumes `x`), nothing hand-listed.
     IconShowRegion,
+    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
+    // from region — the button IS its chord, so every rule `x` has, the button
+    // has (refusal-gated: no region = a consumed nothing, degenerate result =
+    // the same; region-consuming on success). Momentary, click face, no
+    // selected state, never-grey per the icon row's rule (in the `h` view the
+    // derived partition greys it, `x` being consumed there — nothing
+    // hand-listed). It OPENED the group above from 2026-08-11 — the architect's
+    // placement ("place it after the warp/phase radio buttons, create a new
+    // separator"), a group intended to collect viewport-related acts later —
+    // and it PAINTS SECOND there since 2026-08-16, when the viewport act that
+    // group was opened for arrived and the architect put it first ("reverse the
+    // order of the icons — show region first, then the scissors"). The
+    // placement ruling stands whole; only which member leads it moved.
+    // ITS NO-REGION ARM CAME BACK TO A CONSUMED NOTHING and the round trip is
+    // worth stating so nobody reads the line above as never having moved: for
+    // one day (2026-08-15..16) `x` SEEDED a region there, and the architect
+    // split that act onto its own chord and its own button because one key had
+    // come to mean two unrelated things — show and commit. The seed is
+    // IconShowRegion's now, whole.
+    IconTrim,
     // THE ZOOM GROUP (2026-08-12, the grand relayout's roster commit): four
     // navigation chords in their own separator-led group after the scissors —
     // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
@@ -2325,20 +2333,24 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE EIGHT GROUPS, in painted order: the toolbar four, the S/T radios, the
-// W/P radios, THE TRIM PAIR (the scissors and — since 2026-08-16 — the
-// show-region button; the group was one member from 2026-08-11, opened as
-// the architect's slot for viewport-class acts, and this is the second such
-// act), the zoom four, the single-marker verbs, the mass-marker acts, and the
-// row's last group — listen, load-in-place, the read-only toggle and the
+// W/P radios, THE TRIM PAIR (the show-region button and then the scissors; the
+// group was one member from 2026-08-11, opened as the architect's slot for
+// viewport-class acts, and the show-region button is the second such act
+// (2026-08-16), the zoom four, the single-marker verbs, the mass-marker acts,
+// and the row's last group — listen, load-in-place, the read-only toggle and the
 // history opener (architect 2026-08-14, which is also what retired the history
-// group's own boundary). EIGHT is unchanged: the new button JOINS a group
-// rather than opening one, so it is deliberately absent from the switch below.
+// group's own boundary). EIGHT is unchanged across both of that pair's moves:
+// the second button JOINED a group rather than opening one, and the architect's
+// same-day reorder ("show region first, then the scissors") moved WHICH member
+// leads the trim group — this switch's one edit — and nothing else. The
+// boundary itself, the row's member count and its width are all untouched by a
+// reorder.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
         case RedesignButton::IconS:
         case RedesignButton::IconW:
-        case RedesignButton::IconTrim:
+        case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomIn:
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconCopy:

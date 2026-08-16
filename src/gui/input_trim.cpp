@@ -402,7 +402,10 @@ void GuiInputHandler::handle_trim_shift_x() {
 
 // CTRL+SHIFT+X SHOWS THE REGION (architect 2026-08-16) — the icon row's
 // IconShowRegion button and its keyboard twin, the second act in the
-// viewport-class group the trim scissors opened in 2026-08-11.
+// viewport-class group the trim scissors opened in 2026-08-11 — and the
+// button that LEADS that group since the architect's reorder later on
+// 2026-08-16 ("reverse the order of the icons — show region first, then the
+// scissors"), a paint-order change alone.
 //
 // ONE ACT, ALWAYS MEANINGFUL: make sure a region EXISTS — seeding one at the
 // current trim window's two bounds if none stands — and then BRING IT INTO

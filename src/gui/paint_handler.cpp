@@ -676,19 +676,26 @@ constexpr IconRowDef kIconRowButtons[] = {
     // beside it), a SEPARATOR-LED GROUP after the warp/phase radios — the
     // architect's placement ("place it after the warp/phase radio buttons,
     // create a new separator"), a group intended to collect VIEWPORT-RELATED
-    // ACTS later, and the second such act is what filled it.
-    //   Bare `x`, set trim from region. The glyph is Breeze's EDIT-CUT — the
-    //   scissors, his pick from the rendered candidate sheet later the same
-    //   day, over the first cut's planner-picked transform-crop (read as
-    //   rectangle-select; the succession is at the icons.h entry and the
-    //   retired glyph's one-commit record at the icons.cpp table).
+    // ACTS later, and the second such act is what filled it. SHOW REGION LEADS
+    // IT since later on 2026-08-16 ("reverse the order of the icons — show
+    // region first, then the scissors"); the scissors led it from the group's
+    // first day until then. THIS TABLE IS THE ROW'S PAINTED ORDER — the walk
+    // below is a plain accumulation over it — so a reorder is these two rows
+    // swapping, plus the group's leader in redesign_button_opens_icon_group
+    // (app_state.h) and the roster enum's own order, which the three keep in
+    // step. No count, no gap and no width follows a swap.
     //   Ctrl+Shift+X, show region. The glyph is TOOL-RECT-SELECTION, the
     //   marching-ants rectangle — the architect's pick, taken at 22px though he
     //   named the 24px path (same rectangle, and 22 is the set's convention).
     //   MOMENTARY like its neighbour: no lamp, no state (the ruling and the
     //   toggle it replaced are at the roster entry, app_state.h).
-    {RedesignButton::IconTrim,       icons::Icon::EditCut},
+    //   Bare `x`, set trim from region. The glyph is Breeze's EDIT-CUT — the
+    //   scissors, his pick from the rendered candidate sheet later the same
+    //   day, over the first cut's planner-picked transform-crop (read as
+    //   rectangle-select; the succession is at the icons.h entry and the
+    //   retired glyph's one-commit record at the icons.cpp table).
     {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
+    {RedesignButton::IconTrim,       icons::Icon::EditCut},
     // THE ZOOM GROUP (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): zoom in (bare
     // `=`), zoom out (bare `-`), full zoom out (bare `0`) and working-zoom
@@ -1913,9 +1920,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // width, separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
     // in EIGHT groups since 2026-08-16: the toolbar four (Save / Undo / Redo /
     // Render, the deleted row 2's, leading the row), the S/T and W/P view
-    // radios, THE TRIM PAIR (the scissors, 2026-08-11, and the
-    // show-region button that filled its group's second slot on
-    // 2026-08-16), the ZOOM GROUP and the SINGLE-MARKER VERBS (both
+    // radios, THE TRIM PAIR (the show-region button and then the scissors —
+    // the scissors opened that group on 2026-08-11, the show-region button
+    // filled its second slot on 2026-08-16 and took the lead later that same
+    // day at the architect's reorder), the ZOOM GROUP and the SINGLE-MARKER
+    // VERBS (both
     // 2026-08-12), the phase-reset copy/paste pair with the bpm / iteration /
     // follow modes, and the row's LAST GROUP — listen, load-in-place, the
     // READ-ONLY toggle and the HISTORY OPENER, the architect's own order on

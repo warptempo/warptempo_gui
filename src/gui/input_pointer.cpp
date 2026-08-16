@@ -161,19 +161,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
     {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
-    // THE TRIM PAIR — the scissors and, since 2026-08-16, the show-region
-    // button, one separator-led group.
+    // THE TRIM PAIR — the show-region button and then the scissors, one
+    // separator-led group (the scissors opened it in 2026-08-11 and led it
+    // until the architect's 2026-08-16 reorder). THIS TABLE DOES NOT DECIDE
+    // PAINTED ORDER — every one of its readers matches by id or by published
+    // rect, never by position — but it is kept in the row's order so nobody
+    // reads a mismatch here as the layout's truth; that truth is the painter's
+    // kIconRowButtons, with the group's leader at
+    // redesign_button_opens_icon_group (app_state.h).
     //
-    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
-    // from region — momentary, click face, not a radio. Every rule the key has
-    // the button has: the degenerate-result refusal and the NO-REGION arm (a
-    // CONSUMED NOTHING again since 2026-08-16, the seed having moved onto its
-    // own chord) are the key's own, read-only-legal (trim is band), consumed in
-    // the `h` view (the derived partition greys it there). SHIFT IS ADMITTED
-    // since 2026-08-15 — the twin is Shift+X the maximizer, and the reason the
-    // keyboard-only clause was dropped is at redesign_button_shift_admits
-    // (app_state.h).
-    {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
     // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, a GENUINELY
     // NEW BINDING rather than a widening of either `x` arm — the
     // strict-modifier rule makes an unbound combination a no-op everywhere, so
@@ -189,6 +185,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // hand-listed.
     {RedesignButton::IconShowRegion,
      GuiKeys::X,   true,  true,  false, false, true},                               // Ctrl+Shift+X
+    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
+    // from region — momentary, click face, not a radio. Every rule the key has
+    // the button has: the degenerate-result refusal and the NO-REGION arm (a
+    // CONSUMED NOTHING again since 2026-08-16, the seed having moved onto its
+    // own chord) are the key's own, read-only-legal (trim is band), consumed in
+    // the `h` view (the derived partition greys it there). SHIFT IS ADMITTED
+    // since 2026-08-15 — the twin is Shift+X the maximizer, and the reason the
+    // keyboard-only clause was dropped is at redesign_button_shift_admits
+    // (app_state.h).
+    {RedesignButton::IconTrim,   GuiKeys::X,   false, false, false, false, true},   // bare x
     // THE ZOOM GROUP (2026-08-12, the grand relayout — SUPERSEDING the
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair for
     // these four: the Navigation dropdown kept its rows beside them, the
