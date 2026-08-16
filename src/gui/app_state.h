@@ -4010,9 +4010,12 @@ struct AppState {
     // clears it; the three focus moves above cancel it; the painter drops it
     // with the rest of the face state on every edge that changes the dialog;
     // and the platform's keyboard-intent cancellation (keyboard leave,
-    // keyboard-capability loss, a Super-swallowed press) drops it too, because
-    // the release it is waiting for will never be delivered. Every write
-    // damages the box.
+    // keyboard-capability loss, a Super-swallowed press) drops it too: on the
+    // first two because the release it is waiting for will never be delivered,
+    // and on the Super-swallowed press because that press is an INTERVENING KEY
+    // ARRIVAL — the release path is ungated on Super, so that member is
+    // conservative rather than forced (main.cpp's hook body is the
+    // authoritative list). Every write damages the box.
     int    modal_dialog_key_pressed     = -1;
     GuiKey modal_dialog_key_pressed_key = 0;
 

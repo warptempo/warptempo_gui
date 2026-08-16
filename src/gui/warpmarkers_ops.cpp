@@ -677,8 +677,10 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     if (touched.empty()) return;   // defensive (a fully-stale selection)
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
-    // indices. A coalesced repeat skips the push (the hold's physical press owns
-    // the pre-burst snapshot and its hints). NO SELECTION-DRIVEN STEM WORK IS
+    // indices. A coalesced repeat skips the push (the BURST'S OPENER — the
+    // hold's first repeat, dispatched physical because its own surface cleared
+    // the bit, the press itself only arming — owns the pre-burst snapshot and
+    // its hints; the model is at Undo::coalesce_gesture). NO SELECTION-DRIVEN STEM WORK IS
     // OWED HERE: since row 5 every enabled marker stems always, in its CLASS
     // colour alone, so a selection neither creates nor moves a stem — the
     // group's cue is its members' brightened flags plus the landed cursor.
@@ -842,10 +844,12 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // marker (the prologue collapsed to it).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
-    // the identity hints; each synthesized repeat skips the redundant push and
-    // instead REFRESHES the surviving entry's touched_live to this press's
-    // post-reorder index (touched_snapshot stays the first press's pre-burst
+    // Coalesce a held key: the BURST'S OPENER — the hold's FIRST repeat, which
+    // arrives dispatched physical because the press itself only arms (the model
+    // is at Undo::coalesce_gesture) — pushed the pre-burst snapshot with
+    // the identity hints; each synthesized repeat behind it skips the redundant push and
+    // instead REFRESHES the surviving entry's touched_live to this fire's
+    // post-reorder index (touched_snapshot stays the opener's pre-burst
     // coordinates — a restore produces that snapshot, and the whole hold moves the
     // same marker, since a selection change needs a command and a command ends the
     // hold). The post-mutation re-record happens in the shared tail.

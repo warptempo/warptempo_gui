@@ -2115,8 +2115,9 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
 //     as a GuiKey, so the key event is pure noise. "SEPARATELY", NOT
 //     "COMPLETELY": on_keyboard_modifiers tracks exactly FOUR — ctrl /
 //     shift / alt, which reach the application through GuiInputState, and
-//     SUPER, which reaches nothing because it gates key DELIVERY instead
-//     (deliver_key). The others (Meta, Hyper, the locks, the level-shifts)
+//     SUPER, which reaches nothing because it gates key PRESS delivery
+//     instead (deliver_key; releases are ungated, the corner at
+//     set_on_key_release). The others (Meta, Hyper, the locks, the level-shifts)
 //     are modelled nowhere, so no predicate can see them; a future binding
 //     that needed one would have to model it first — which is exactly the
 //     gap Super had until 2026-07-30.
@@ -2349,7 +2350,8 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
     mod_ctrl_  = next_ctrl;
     mod_shift_ = next_shift;
     mod_alt_   = next_alt;
-    // SUPER, tracked for ONE purpose: gating key DELIVERY (deliver_key). It is
+    // SUPER, tracked for ONE purpose: gating key PRESS delivery (deliver_key;
+    // releases are ungated by ruling). It is
     // deliberately absent from current_mods() and from the scroll-chord reset
     // below — the wheel chords are plain and Ctrl only, so a Super press changes
     // no chord and must not drop an accumulating sub-detent remainder.
@@ -2431,8 +2433,19 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // editors' cancel, Super+Return their commit. labwc grabs many Super chords,
     // but Escape / Return / Space / Delete / the arrows / Home / End are not among
     // them and arrive here. Rather than add a fourth bool to every reader, the
-    // event is dropped HERE, which makes the rule true BY CONSTRUCTION for the one
-    // modifier this program never binds.
+    // event is dropped HERE. WHAT THAT MAKES TRUE BY CONSTRUCTION IS EXACTLY WHAT
+    // IS CONSTRUCTED: no Super-carrying PRESS is ever delivered, so no Super chord
+    // can reach a binding — "the GUI binds no Super chord" is the rule, for the one
+    // modifier this program never binds. IT IS NOT THE WIDER CLAIM THAT NOTHING CAN
+    // HAPPEN WHILE SUPER IS PHYSICALLY DOWN (architect 2026-08-16, ruling the corner
+    // KEPT: "super is the desktop's; the GUI basically ignores it — Super usage
+    // inside the GUI is outside the GUI's providence"). An act the user ARMED BEFORE
+    // Super went down — a pressed command key waiting on the keyup dispatch, or the
+    // modal Enter/Space arm — completes at its release on its own terms. That is the
+    // GUI running its own command, not a Super chord, and refereeing what the user
+    // does with the desktop's modifier meanwhile is not this program's business. THE
+    // CORNER'S HOME is set_on_key_release's contract (platform_wayland.h), which
+    // carries the argument for leaving the release path ungated.
     // THIS IS THE SHARED DELIVERY PATH, which is what makes one gate enough: both
     // the physical press (on_keyboard_key) and the SYNTHESIZED REPEAT
     // (maybe_fire_repeat) come through here. A key held BEFORE Super went down
@@ -2440,9 +2453,13 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // arming, so it disarms nothing, and the eligibility re-probe cannot see Super
     // either — so its repeats keep firing and are simply swallowed here for as long
     // as Super is held, resuming when it is released. That is exactly the intent,
-    // and it is safe for undo coalescing: no keyboard command can run in the gap
-    // (every key is dropped), and a pointer press in the gap disarms the repeat
-    // outright through layer (1) of the repeat contract.
+    // and it is safe for undo coalescing: no keyboard command can START in the gap
+    // (every press is dropped), and a pointer press in the gap disarms the repeat
+    // outright through layer (1) of the repeat contract. The ruled corner above — an
+    // act armed before Super went down COMPLETING at its release inside the gap — is
+    // no hole in that either: that key's own arming press was itself a layer-(1)
+    // edge (a different key press re-arms or disarms; the same key's release cancels
+    // the repeat), so no burst older than the command can outlive it.
     // KEY RELEASES do not come through here: on_keyboard_key's release branch
     // feeds the repeat cancel and the synthesized-left hold end — neither of
     // which may be skipped, or a hold would orphan — and then delivers the
@@ -2456,9 +2473,9 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // behaves exactly like Super+click, which binds nothing here either way.
     if (mod_super_) {
         // THE DROPPED PRESS IS STILL AN INTERVENING KEY ARRIVAL for the
-        // application's held key intent (the modal dialog's keyboard press
-        // arm) — no application disarm ever sees
-        // it — and the platform's own layer-1 disarmed its armed repeat at
+        // application's held key intents (main.cpp's keyboard-intent
+        // cancellation hook body is the authoritative list) — no application
+        // disarm ever sees it — and the platform's own layer-1 disarmed its armed repeat at
         // this very press (the arming else-branch above, which runs before
         // this drop). So the keyboard-intent cancellation hook fires per
         // swallowed NON-SYNTHESIZED press, the faithful mirror of that edge
@@ -2499,25 +2516,29 @@ void GuiPlatform::maybe_fire_repeat() {
         repeat_key_ = 0;
         return;
     }
-    // THE REPEAT BIT, and the ONLY site that sets it — stamped after the
-    // eligibility re-probe so the probes stay a function of key+modifiers alone.
-    // It lets the application tell a held key's continuation presses from fresh
-    // physical ones, and UNDO COALESCING IS BUILT ON IT (Undo::coalesce_gesture):
-    // a burst carrying this bit merges with NO clock test at all, which is the
-    // arm that must work at any compositor repeat delay. (A physical press takes
-    // the other arm of the hybrid — the fixed 500 ms tap window — and this bit is
-    // exactly what separates the two.)
-    // SINCE THE 2026-08-16 KEYUP MODEL the application CLEARS this bit on a
-    // COMMAND hold's FIRST repeat — the hold's opener, which stands in for the
-    // press act keys no longer perform at the press (the flip and its undo
-    // argument are at GuiInputHandler::on_key). This site stays the KEY
-    // surface's only producer, and that flip is a consumer-side clear on the
-    // delivered copy. The bit has a SECOND producer since 2026-08-16, the
-    // application's own held-BUTTON repeat
-    // (GuiInputHandler::tick_chrome_press_repeat, the four cardinal arrow
-    // buttons): it never passes through this class — it calls the command
-    // dispatch directly — and it buys the adjacency property below from its own
-    // edges, so nothing here has to account for it.
+    // THE REPEAT BIT — stamped after the eligibility re-probe so the probes stay
+    // a function of key+modifiers alone. It lets the application tell a held
+    // key's continuation presses from fresh physical ones, and UNDO COALESCING
+    // IS BUILT ON IT (Undo::coalesce_gesture): a burst carrying this bit merges
+    // with NO clock test at all, which is the arm that must work at any
+    // compositor repeat delay. (A physical press takes the other arm of the
+    // hybrid — the fixed 500 ms tap window — and this bit is exactly what
+    // separates the two.)
+    // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
+    // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
+    // held BUTTON — the four cardinal arrow buttons, whose hold-repeat returned
+    // 2026-08-16. The button producer never passes through this class (it calls
+    // the command dispatch directly) and buys the adjacency property below from
+    // its own edges, so nothing here has to account for it; this site is the KEY
+    // surface's whole producer.
+    // AND EACH SURFACE CLEARS THE BIT ON ITS HOLD'S FIRST FIRE, the burst's undo
+    // OPENER, which stands in for the press act NEITHER surface performs any
+    // more (a command key's act is at its RELEASE under the 2026-08-16 keyup
+    // model, a chrome button's at its LIFT since 2026-08-13): on the key side
+    // the clear is the application's, in the press router (the flip and its undo
+    // argument are at GuiInputHandler::on_key) — a consumer-side clear on the
+    // delivered copy, which is why this producer is untouched by it; on the
+    // button side it is inline in that producer's own first fire.
     // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
     // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
     // hold at any intervening pointer-button press, completed wheel emission, or

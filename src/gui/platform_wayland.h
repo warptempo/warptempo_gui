@@ -249,9 +249,16 @@ public:
     // which clears the application's armed key set), so ungated releases stay
     // correct BY CONSTRUCTION; gating them would instead strand exactly the
     // arm whose press got through before Super went down, which is the one
-    // case that could go wrong. The accepted corner (the modal arm's own
-    // precedent): Super pressed mid-hold does not block an armed act at the
-    // release. Null-safe.
+    // case that could go wrong. THE CORNER LIVES HERE AND IS RULED KEPT
+    // (architect 2026-08-16, codex round 26's M1: "super is the desktop's; the
+    // GUI basically ignores it — Super usage inside the GUI is outside the
+    // GUI's providence"): Super pressed mid-hold does not block an armed act at
+    // the release (the modal arm's own precedent). The GUI's rule is that it
+    // BINDS NO SUPER CHORD, which the press drop makes true by construction —
+    // not that nothing may happen while the desktop's modifier is physically
+    // down. An act armed BEFORE Super went down and completed at its release is
+    // the GUI running its own command, not a Super chord, and is not this
+    // program's to referee. Null-safe.
     void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
@@ -341,11 +348,16 @@ public:
     //     on_key disarm never sees, and the platform's own layer-1 disarms its
     //     armed repeat at that very press (the arming else-branch in
     //     on_keyboard_key runs BEFORE the drop) — per-delivery is the faithful
-    //     mirror. Deliberately NOT at Super's press edge: the Super keysym
-    //     itself "disarms nothing" platform-side, and a bare Super hold with no
-    //     key pressed runs no command (adjacency stands), while the hold
-    //     itself is a POINTER act, which the Super ruling explicitly scopes
-    //     out (Super+click clicks).
+    //     mirror. Deliberately NOT at Super's press edge, and since 2026-08-16
+    //     the ground for that is the RULING rather than the older premise that
+    //     nothing could fire under Super anyway (which the armed key set
+    //     outdates): the Super keysym itself "disarms nothing" platform-side,
+    //     and Super's edge has nothing to cancel because a PENDING ARMED ACT IS
+    //     THE GUI'S OWN COMMAND, NOT A SUPER CHORD — it completes at its release
+    //     on its own terms, outside the GUI's providence to referee (the corner
+    //     is at set_on_key_release above). The hold itself is also a POINTER
+    //     act, which the Super ruling explicitly scopes out (Super+click
+    //     clicks).
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The consumer's authoritative effect
     // list is main.cpp's hook body, which names the two intents it drops.
@@ -527,7 +539,7 @@ public:
     // over the waveform and the platform is that fact's owner — the consumer
     // therefore never reaches back for it, and no second copy of the modifier
     // state exists to go stale. Super is deliberately not in it (absent from
-    // GuiInputState; it gates key delivery instead).
+    // GuiInputState; it gates key PRESS delivery instead, releases ungated).
     void set_loop_settled_hook(std::function<void(GuiInputState)> cb);
 
     void set_on_tick(TickCallback cb);
@@ -1032,9 +1044,11 @@ private:
     bool mod_shift_ = false;
     bool mod_alt_   = false;
     // SUPER (Logo) is tracked but NEVER projected into GuiInputState: it belongs
-    // to labwc, and this program's answer to it is to deliver no key event at all
-    // while it is held (the ruling is at deliver_key, platform_wayland.cpp). That
-    // is why there is no `super` bool on GuiInputState and no reader anywhere.
+    // to labwc, and this program's answer to it is to deliver no key PRESS at all
+    // while it is held, so the GUI binds no Super chord (the ruling is at
+    // deliver_key, platform_wayland.cpp; releases stay ungated, the corner at
+    // set_on_key_release). That is why there is no `super` bool on GuiInputState
+    // and no reader anywhere.
     bool mod_super_ = false;
 
     // -- Pointer capture (pointer-constraints + relative-pointer) --

@@ -2872,10 +2872,12 @@ void GuiInputHandler::clear_modal_dialog_press() {
 // THE KEYBOARD ARM'S HARD END, the twin of the one above and on the twin edge:
 // the platform's keyboard-intent cancellation (keyboard leave, keyboard-
 // capability loss, a Super-swallowed press — the fire classes are at
-// set_keyboard_intent_cancel_hook, platform_wayland.h). The release this arm
-// waits for can never be delivered across those edges, and an act that has not
-// happened yet must not be left waiting for it. Transition-gated, damaging the
-// stashed box when it fires; the contract is at
+// set_keyboard_intent_cancel_hook, platform_wayland.h). On the two focus edges
+// the release this arm waits for can never be delivered, and an act that has
+// not happened yet must not be left waiting for it; on the Super-swallowed
+// press the drop is the conservative one — that press is an intervening key
+// arrival, the release path itself being ungated on Super. Transition-gated,
+// damaging the stashed box when it fires; the contract is at
 // AppState::modal_dialog_key_pressed.
 void GuiInputHandler::clear_modal_dialog_key_press() {
     if (app.modal_dialog_key_pressed < 0) return;

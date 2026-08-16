@@ -263,10 +263,12 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // reset (the prologue collapsed to it).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
-    // the identity hints; each synthesized repeat skips the redundant push and
-    // REFRESHES the surviving entry's touched_live to this press's post-reorder
-    // index (touched_snapshot stays the first press's pre-burst coordinates). The
+    // Coalesce a held key: the BURST'S OPENER — the hold's FIRST repeat, which
+    // arrives dispatched physical because the press itself only arms (the model
+    // is at Undo::coalesce_gesture) — pushed the pre-burst snapshot with
+    // the identity hints; each synthesized repeat behind it skips the redundant push and
+    // REFRESHES the surviving entry's touched_live to this fire's post-reorder
+    // index (touched_snapshot stays the opener's pre-burst coordinates). The
     // post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.refresh_coalesced_touched_live(std::move(touched_live));
