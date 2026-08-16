@@ -1953,7 +1953,10 @@ int main(int argc, char** argv) {
             // frame, this walk catches it on the next tick, and the
             // full-strip damage below is what both repaints the pixels and
             // republishes the stash — one pass, the comparator's own
-            // documented model, now true.
+            // documented model, now true. (The pair's state was the ENABLED
+            // bit when that fix landed and is the SELECTED one since the same
+            // day's radio ruling — this comparator reads both, so the repair
+            // it describes carried across the move untouched.)
             bool drift_top       = false;
             bool drift_transport = false;
             for (int i = 0;
@@ -1963,8 +1966,7 @@ int main(int argc, char** argv) {
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
-                                      app, playback,
-                                      audio.total_frames(), id) ||
+                                      app, audio.total_frames(), id) ||
                     f.selected != redesign_button_selected(app, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))

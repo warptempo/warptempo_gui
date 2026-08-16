@@ -393,13 +393,17 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
                                            bool synthesized_repeat) {
     // THE LEADING REFUSAL BLOCK IS NAMED WHOLE (tempo_cent_step_actionable,
     // app_state.h — the column gate plus the empty-selection and invalid-focus
-    // refusals) because the bottom row's Up and Down buttons mirror it into
-    // their disabled face — one predicate, so the face and these refusals are
-    // one decision (the 2026-08-15 whole-row honesty ruling widened the mirror
-    // from the column gate alone; the supersession record is at the
-    // predicate). The refusals below it stay unnamed and unmirrored: they are
+    // refusals), and THIS BODY IS ITS ONLY READER since 2026-08-15: the bottom
+    // row's Up and Down buttons mirrored it into their disabled face for one
+    // evening under that morning's whole-row honesty ruling, and the architect
+    // reversed it the same day because every term past the column gate is a
+    // SELECTION fact and the pair blinked on every marker click. Naming the
+    // block still earns itself — it is what makes this act's leading refusals
+    // legible in one place — and the predicate's own header carries the
+    // supersession. The refusals below it stay unnamed: they are
     // value-shaped per-marker facts — a label ref, a pass in target view, the
-    // bracket wall — and stay consumed no-ops with a live face.
+    // bracket wall — and are consumed no-ops with a live face, as the whole
+    // row now is.
     if (!tempo_cent_step_actionable(app)) return;
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below is UNCHANGED

@@ -1911,7 +1911,7 @@ enum class RedesignButton {
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT (skip-back = bare Home, play and stop =
-    // the ONE bare Space binding split over two state-mirrored buttons,
+    // the ONE bare Space binding split over two buttons,
     // skip-forward = bare End), then the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
@@ -1925,16 +1925,43 @@ enum class RedesignButton {
     // moved onto the RENDER button instead — the toolbar's stateful-face
     // precedent — and bare Esc stays keyboard-only.)
     //
-    // PLAY AND STOP ARE THE ROSTER'S FIRST STATE-MIRRORED PAIR: one chord,
-    // two buttons, the enabled predicate splitting them on the live audition
-    // bit (playhead_scanner_active) — Play wears the disabled face while an
-    // audition runs, Stop while none does — so AT MOST one of the pair is
-    // ever live and the pair reads as a transport rather than as a toggle.
-    // Since 2026-08-15 Play also mirrors the launch body's own refusal
-    // (playback_launch_playable), so BOTH can rest dead where a launch would
-    // refuse — the architect's "both play and stop should be disabled
-    // because neither of them is possible at that point". The arms are at
-    // redesign_button_enabled below.
+    // PLAY AND STOP ARE ONE CHORD OVER TWO BUTTONS — bare Space, which of them
+    // acts decided by the live audition bit (playhead_scanner_active, the
+    // GUI-side playback mirror). IT NO LONGER SPLITS ON THE ENABLED BIT
+    // (architect 2026-08-15): the pair held a state-mirrored ENABLED split for
+    // the day — Play dead while an audition ran and where a launch would
+    // refuse, Stop dead while none ran — and it went with the rest of the row's
+    // honest arms, "there's not a whole lot of value derived from the icon
+    // faces changing, and it is a little distracting... the user is expected to
+    // know that with the playhead outside trim it's not going to play in target
+    // view". Both are lit at rest now, greying only where the `h` view consumes
+    // Space; the ruling and the whole succession are at redesign_button_enabled
+    // below.
+    //
+    // IT SPLITS ON THE SELECTED BIT INSTEAD — THE PAIR IS A RADIO (architect
+    // 2026-08-15, later the same day and his own proposal: "what if we made
+    // play and stop modal just like the warp/phase or source/target buttons? So
+    // clicking on play when it's already playing would be a no-op, just like
+    // clicking on source when we're already in source view is a no-op"). THE
+    // ENABLED SPLIT HAD BEEN DOING TWO JOBS and only one of them was the truth
+    // face: it was also the pair's DISAMBIGUATION, leaving just the meaningful
+    // half clickable, so with the row always-on both halves went live and the
+    // pair became one control wearing two glyphs — a press on Stop while
+    // stopped would have STARTED playback, the glyph contradicting the act.
+    // The radio flag answers it with machinery already in the roster: the
+    // wrong-direction press dies at the claim and again at the lift, and the
+    // only press that survives is the one on the UNLIT half, which is by
+    // definition the direction the toggle wants to go. Bare Space and
+    // toggle_playback are untouched, and neither button gains an act of its own
+    // — the Render-is-Cancel exception stays the roster's only break from
+    // button-is-its-chord. STATE MOVED FROM THE ENABLED AXIS TO THE SELECTED
+    // ONE: grey answers "can I press this", the lamp answers "which one is
+    // live" (redesign_button_selected below carries the lamp and what its own
+    // superseded no-lamp reasoning was).
+    //
+    // SO THE PAIR NO LONGER READS AS A TRANSPORT BY ITS TWO GLYPHS ALONE, which
+    // is what this block said while it had neither face: the glyphs still name
+    // the two halves, and the lamp now says which half the piece is in.
     //
     // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
     // hold-repeat that shipped with the row; the physical arrow KEYS keep
@@ -6092,11 +6119,19 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // already used.)
 
 // WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
-// refusal set, hoisted whole (2026-08-15) so its TWO readers are one spelling:
-// GuiPlaybackLifecycle::launch_playback_from, whose every silent refusal this
-// IS, and the bottom row's PLAY button (redesign_button_enabled), which asks it
-// about the resting cursor — the face reads the same bounds the launch reads,
-// so the two cannot drift.
+// refusal set, hoisted whole (2026-08-15). IT HAS ONE READER AND MUST NOT GAIN
+// A SECOND OF THE FACE KIND: GuiPlaybackLifecycle::launch_playback_from, whose
+// every silent refusal this IS and which CALLS IT — so this is a real
+// producer's own predicate, not a producer-less leftover, and it stays exactly
+// as it is. It was hoisted for a SECOND reader, the bottom row's PLAY button
+// (redesign_button_enabled), which asked it about the resting cursor for the
+// day the whole-row honesty ruling stood; the architect reversed that ruling
+// the same day ("there's not a whole lot of value derived from the icon faces
+// changing... the user is expected to know that with the playhead outside trim
+// it's not going to play in target view") and only the FACE read went, the
+// shape tempo_cent_step_actionable had taken hours earlier. DO NOT RE-ADD A
+// FACE READER HERE without a new ruling: the row is always-on now apart from
+// the `h` view's derived partition.
 //
 // TARGET VIEW refuses on three counts: no successful target render has
 // populated the buffer yet (the check must live in the shared body — the scrub
@@ -6107,7 +6142,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // THE BOUND BUFFER'S OWN, deliberately not app.trim: the preview buffer
 // embodies the trim AT ITS RENDER, so during an in-flight re-render the bound
 // domain is the truth the audio would actually play — asking the buffer is
-// what keeps the face and the act agreeing through that window.
+// what makes the refusal agree with what is bound rather than with what was
+// last asked for.
 //
 // SOURCE VIEW plays to the SONG's end (architect 2026-08-05 — the trim window
 // does not bound source playback; Viewport::trim_range is the navigation range
@@ -6115,10 +6151,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // song end: a launch from `total - 1` (End's landing spot) or past it no-ops
 // silently. There is no lower gate but the domain's own — every producer hands
 // in a clamped non-negative position, and play() floors a start below zero
-// regardless. `launch_pos` is an already-formed int64 at both readers
+// regardless. `launch_pos` is an already-formed int64 at its reader
 // (toggle_playback's overflow-ordered pre-sum gate refuses before an undefined
-// cursor + offset sum could reach the launch body; the face passes the resting
-// cursor), so these absolute compares need no overflow ordering of their own.
+// cursor + offset sum could reach the launch body), so these absolute compares
+// need no overflow ordering of their own.
 inline bool playback_launch_playable(const AppState& a,
                                      const GuiPlayback& playback,
                                      int64_t total_frames,
@@ -6138,26 +6174,36 @@ inline bool playback_launch_playable(const AppState& a,
 // dispatched), and main.cpp's staleness comparator.
 //
 // THE POLICY, AT ITS RULED SHAPE (architect 2026-08-15, settling a question
-// that moved twice that day): THE ROSTER TELLS THE TRUTH EXACTLY WHERE THE
-// SCREEN DOES NOT ALREADY ANSWER THE QUESTION, and stays live-faced everywhere
-// else — INCLUDING where a refusal is real. Four things are truthful and they
-// are the whole list:
-//   * the bottom row's PLAY / STOP pair, each mirroring its act's own refusal;
-//     the two SKIPS beside them are deliberately NOT truthful — the ruling and
-//     its reason are at their arm below;
+// that moved three times that day): THE ROSTER TELLS THE TRUTH EXACTLY WHERE
+// THE SCREEN DOES NOT ALREADY ANSWER THE QUESTION, and stays live-faced
+// everywhere else — INCLUDING where a refusal is real. Three things are
+// truthful and they are the whole list:
 //   * the SAVE / UNDO / REDO group, the buttons he consults for truth;
 //   * the `h` HISTORY VIEW'S partition — a MODE statement, derived;
 //   * the per-tab READ-ONLY lock — the other MODE statement, new that day.
-// EVERYTHING ELSE STAYS LIT. The two MODE statements are what the pattern is
+// EVERYTHING ELSE STAYS LIT, THE WHOLE BOTTOM ROW INCLUDED since that day's
+// last ruling on it, in the architect's own words: "there's not a whole lot of
+// value derived from the icon faces changing, and it is a little distracting.
+// The whole premise of the GUI is that it expects strict user knowledge — the
+// user is expected to know that with the playhead outside trim it's not going
+// to play in target view." So the row's PLAY / STOP pair — the last arm the
+// whole-row honesty ruling still had — answers plain `true` like the rest of
+// it, and the `h` view's derived partition is the row's only grey (Play and
+// Stop dead in there because Space is consumed, the two SKIPS lit because
+// Home/End are the mode's own vocabulary — architect-confirmed, the record at
+// their block below). The two MODE statements are what the pattern is
 // built on and they are not interaction-cadence facts: a mode is entered
 // deliberately, is invisible chrome state otherwise, and does not flicker —
 // read-only changes only when `o` is pressed.
 //
-// HOW IT GOT HERE, kept because the two reversals are the argument. The row
+// HOW IT GOT HERE, kept because the reversals are the argument. The row
 // scopes were the original rule ("do not invent refusal-predicting grey
 // states"), overridden FOR THE BOTTOM ROW ALONE hours earlier that day when the
-// architect ruled the whole transport row honest; a FULL-TRUTHFULNESS
-// EXPERIMENT for the icon row followed and was REVERSED UNBUILT once the cost
+// architect ruled the whole transport row honest — AND THAT OVERRIDE IS ITSELF
+// REVERSED NOW, in three steps, so the original rule stands over the bottom row
+// again with no exception but the `h` view's derived partition; a
+// FULL-TRUTHFULNESS EXPERIMENT for the icon row followed and was REVERSED
+// UNBUILT once the cost
 // exceptions were laid out — FOUR refusal classes cannot be computed per frame
 // on a row that repaints on every hover (a per-frame resolver plus a frame-map
 // build, an uncached directory tree walk, worker state the painter cannot
@@ -6181,7 +6227,11 @@ inline bool playback_launch_playable(const AppState& a,
 // at their arm below: their honest arm rested on a false premise — that bare
 // Home / End are pure jumps — when in fact both also stop a live audition,
 // clear the marker selection and dissolve a resting region UNCONDITIONALLY, so
-// a greyed skip promised LESS than its key delivers. THE WALLS ARE THE OTHER
+// a greyed skip promised LESS than its key delivers. AND PLAY / STOP WENT LAST,
+// on the reason quoted at the top of this comment: the faces changing bought
+// little and distracted, and the product expects strict user knowledge — the
+// user knows a playhead outside the trim will not play in target view, so the
+// glyph need not say it. THE WALLS ARE THE OTHER
 // STANDING EXCLUSION and always were: a step into a wall is a consumed no-op by
 // key and by click alike, and no button in this roster has ever mirrored one.
 //
@@ -6278,20 +6328,24 @@ inline bool playback_launch_playable(const AppState& a,
 // 2026-08-12 relayout, keeping their mirrored derivations), the TEN the
 // read-only lock blocks, and, since 2026-08-15, the BOTTOM ROW'S EIGHT (every
 // chord on that row drops at on_key's loading/blank return, so their faces grey
-// there too — the four arrows for the guard alone, having nothing else to say).
-// IT TAKES GuiPlayback since 2026-08-15: the PLAY button mirrors the launch
-// body's own refusal (playback_launch_playable above), which reads the bound
-// buffer's domain — state that deliberately lives on GuiPlayback, not on
-// AppState (the domain anchor travels with the playback bind; the record is
-// at AppState::target_buffer_frames).
-// IT TOOK A GuiAudio TOO FOR ONE REVISION and does not any more: the skip arms
-// were its only reader (they called playhead_skip_landing_frame, which needs
-// the object rather than the frame count, this header only FORWARD-DECLARING
-// GuiAudio), and those arms went back to a plain `true` the same day — so the
-// parameter left with its one producer rather than resting unread. The frame
-// count is the only audio fact this predicate ever wanted.
+// there too — and that guard is now the ONLY thing all eight have to say).
+// TWO PARAMETERS CAME AND WENT ON 2026-08-15 and the pattern is worth stating
+// once, because it is the same one twice: a face arm was added, the object it
+// needed was threaded in for it, the architect reversed the arm, and THE
+// PARAMETER LEFT WITH ITS ONE PRODUCER RATHER THAN RESTING UNREAD.
+//   * GuiAudio was the skips' — they called playhead_skip_landing_frame, which
+//     needs the object rather than the frame count (this header only
+//     FORWARD-DECLARES GuiAudio) — and left when the skips went back to a
+//     plain `true`. The frame count is the only audio fact this predicate ever
+//     wanted.
+//   * GuiPlayback was PLAY'S — it read the bound preview buffer's domain
+//     through playback_launch_playable, state that deliberately lives on
+//     GuiPlayback rather than AppState (the domain anchor travels with the
+//     playback bind; the record is at AppState::target_buffer_frames) — and
+//     left with the pair's enabled split. publish_button_face
+//     (paint_handler.cpp) gave up its own GuiPlayback parameter in the same
+//     move, this having been its only reader.
 inline bool redesign_button_enabled(const AppState& a,
-                                    const GuiPlayback& playback,
                                     int64_t total_frames,
                                     RedesignButton b) {
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
@@ -6433,29 +6487,77 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
             return !active_view_state(a).read_only;
-        // THE BOTTOM ROW'S PLAY / STOP PAIR MIRRORS ITS ACTS (architect
-        // 2026-08-15: "the ENTIRE ROW should be accurate to the live state and
-        // not lie by showing something enabled that's not enabled"),
-        // SUPERSEDING that pair's share of the ratified
-        // do-not-invent-refusal-predicting-grey rule (the ruling said the whole
-        // row that morning and was narrowed twice the same day — first to the
-        // left cluster, then off the two SKIPS; the head of this body carries
-        // the scoped rule and both reversals' reasoning). The override is not
-        // guessing: each arm reads the SAME predicate its act's own refusal
-        // reads, the mirror-the-chord's-refusals model. All eight of the row's
-        // arms sit BELOW the loading/blank guard because every chord on the row
-        // drops at on_key's `app.loading || total <= 0` return. The `h` history
-        // view's derived partition at the top of this body still outranks
-        // everything here — Space is consumed in the view, so Play and Stop
-        // wear the dead face, while Home/End are the mode's own vocabulary, so
-        // the two skips stay LIT in there exactly as they are outside it — all
-        // derived, nothing hand-listed.
+        // THE BOTTOM ROW IS ALWAYS-ON WHOLE, apart from the `h` view's derived
+        // partition (architect 2026-08-15, his final ruling on this row after
+        // it moved three times that day): all eight break out of this switch
+        // to take the loading/blank guard — every chord on the row drops at
+        // on_key's `app.loading || total <= 0` return — and then answer a plain
+        // `true`. HIS REASONING, kept in his own words because it is the whole
+        // argument: "there's not a whole lot of value derived from the icon
+        // faces changing, and it is a little distracting. The whole premise of
+        // the GUI is that it expects strict user knowledge — the user is
+        // expected to know that with the playhead outside trim it's not going
+        // to play in target view."
         //
-        // THE FOUR CARDINAL ARROWS ARE THE UNTRUTHFUL HALF and fall through to
-        // the plain `return true` at the bottom: they had honest arms for one
-        // evening — the marker-lane fork and the cent step's leading refusals —
-        // and the architect took them back the same day. HIS REASONING, which
-        // is per-pair and worth keeping in his own terms:
+        // THIS SUPERSEDES THE WHOLE-ROW HONESTY RULING OF THAT MORNING ("the
+        // ENTIRE ROW should be accurate to the live state and not lie by
+        // showing something enabled that's not enabled"), which was narrowed
+        // three times and then reversed outright — first off the left cluster,
+        // then off the two SKIPS, and finally off PLAY and STOP, the last arms
+        // standing. So the row scopes' original rule — do not invent
+        // refusal-predicting grey states — is back in force here unbroken, and
+        // the head of this body carries what the roster still does tell the
+        // truth about.
+        //
+        // THE `h` HISTORY VIEW'S PARTITION AT THE TOP OF THIS BODY STILL
+        // OUTRANKS EVERY WORD OF THIS, and the architect confirmed its split
+        // explicitly — "making play and stop disabled in h history view, but
+        // allowing home and end, that makes sense": Space is consumed in the
+        // view, so Play and Stop wear the dead face in there, while Home/End
+        // are the mode's own vocabulary (the absolute jump to 0 / the last
+        // frame), so the two skips stay LIT exactly as they are outside it.
+        // All derived from the mode's gates, nothing hand-listed — and it is
+        // why these eight break DOWNWARD to a shared `true` instead of
+        // returning one here.
+        //
+        // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS, and what they lost
+        // is the ENABLED split alone: Play no longer greys while an audition
+        // runs or where a launch would refuse, Stop no longer greys while no
+        // audition runs. The pair is still ONE CHORD OVER TWO BUTTONS — bare
+        // Space, which of them acts decided by the live audition bit — and the
+        // strict-user-knowledge line settles the TRUTH half of it: a running
+        // audition is the moving scanner's own statement on screen.
+        //
+        // WHAT THE SPLIT ALSO CARRIED CAME BACK ON THE OTHER AXIS the same day.
+        // The enabled bit had been the pair's DISAMBIGUATION as well as its
+        // truth face — only the meaningful half was ever clickable — so with
+        // both halves live a press on Stop while stopped would have started
+        // playback. The architect made the pair a RADIO for it ("just like the
+        // warp/phase or source/target buttons"), which puts the state on the
+        // SELECTED axis where it belongs and leaves this predicate exactly as
+        // ruled: grey says "can I press this", the lamp says "which one is
+        // live". Nothing here reads the audition bit; redesign_button_selected
+        // does, and the chord table's radio rows carry the argument.
+        //
+        // playback_launch_playable SURVIVES AND MUST NOT GAIN A FACE READER —
+        // it is launch_playback_from's own refusal set and that body calls it
+        // (playback_lifecycle.cpp), so it is not producer-less; only the FACE
+        // read went, the same shape tempo_cent_step_actionable kept hours
+        // earlier when the arrows were reversed.
+        //
+        // THE ONE FACE-RELATED FIX FROM THIS ARC THAT STAYS is
+        // publish_button_face's CLIP-COVERAGE TEST (paint_handler.cpp): the
+        // stash means "last PAINTED", not "last computed", so a button whose
+        // drawing the damage clip discarded must not refresh its cached face.
+        // That is not a policy choice and is no part of this reversal — it is
+        // what makes any face update at all reliable, and reverting it with the
+        // policy would bring back the stale-row bug the arc opened with.
+        //
+        // THE FOUR CARDINAL ARROWS WERE REVERSED FIRST, hours earlier: they
+        // had honest arms for one evening — the marker-lane fork and the cent
+        // step's leading refusals — and the architect took them back the same
+        // day. HIS REASONING, which is per-pair and worth keeping in his own
+        // terms:
         //   * LEFT / RIGHT were always-on for a REASON rather than by omission
         //     — "left and right were always on because the playhead can always
         //     move". The horizontal step almost always acts, so mirroring the
@@ -6576,41 +6678,15 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW'S PLAY / STOP PAIR — the row's two honest arms
-        // (2026-08-15; the scoped rule and both reversals are at the head of
-        // this body, the row's own record at the first switch's transport block
-        // above). Per button, the act's own refusal and its mirror:
-        //   * The two SKIPS (bare Home / End) are NOT here any more, and that
-        //     is a RULING rather than an omission: they greyed on the landing
-        //     frame for one revision and the architect took it back the same
-        //     day, because the jump is not the whole act — the record, the
-        //     reason and the do-not-re-add line are at their case in the first
-        //     switch above.
-        //   * LEFT / RIGHT and UP / DOWN are NOT here any more: they answered
-        //     the marker-lane fork and the cent step's leading refusals for one
-        //     evening and now return plain `true` from the first switch — the
-        //     record and the architect's reason are at that block.
-        //   * PLAY and STOP are the ROSTER'S FIRST STATE-MIRRORED PAIR
-        //     (architect 2026-08-11): ONE chord — bare Space — split over two
-        //     buttons on the live audition bit (playhead_scanner_active, the
-        //     GUI-side playback mirror — set at every launch, cleared by the
-        //     one stop owner), so at most one is ever live. Play is dead while
-        //     an audition runs (its press would STOP, a lie about its face)
-        //     AND — 2026-08-15 — while a launch from the resting cursor would
-        //     refuse (playback_launch_playable, the launch body's own refusal
-        //     on the bound buffer's own domain), so a target-view cursor
-        //     outside the preview window greys BOTH buttons: "both play and
-        //     stop should be disabled because neither of them is possible at
-        //     that point" (architect). In source view a launch outside the
-        //     trim window SUCCEEDS (the 2026-08-05 ruling: source playback
-        //     runs to the song's end), so Play stays live there and the
-        //     predicate says so by construction rather than by a view arm.
-        case RedesignButton::TransportPlay:
-            return !a.playhead_scanner_active &&
-                   playback_launch_playable(a, playback, total_frames,
-                                            a.playhead_cursor_sample);
-        case RedesignButton::TransportStop:
-            return a.playhead_scanner_active;
+        // THE BOTTOM ROW HAS NO ARM HERE AT ALL since 2026-08-15 — all eight
+        // of its buttons return a plain `true` from the `default` below, and
+        // the ruling, the architect's reasoning and the three reversals that
+        // got there are at the first switch's transport block above. Nothing
+        // on that row is to be given a face term again without a new ruling:
+        // the pattern each attempt fell into was mirroring a refusal that
+        // changes at INTERACTION cadence, which makes a glyph blink to restate
+        // what the screen already shows.
+        //
         // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
         // is GLOBAL rather than mode-scoped because the act outlives the view it
         // was launched from: while the worker writes the three sidecars into
@@ -6632,19 +6708,23 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:
-            // REACHED BY EXACTLY SIX IDS since 2026-08-15 — the four cardinal
-            // arrows and the two SKIPS, which broke out of the first switch to
-            // take the loading/blank guard and have nothing else to say (their
-            // honest arms lived one revision each; the record, and the two
-            // separate reasons they were taken back, are at that block). Every
-            // other id returned above, from one switch or the other.
+            // REACHED BY EXACTLY EIGHT IDS since 2026-08-15 — THE WHOLE BOTTOM
+            // ROW, which breaks out of the first switch to take the
+            // loading/blank guard and has nothing else to say (each of the four
+            // pairs held an honest arm for a revision or two; the ruling and
+            // the three separate reasons they were taken back are at that
+            // block). Every other id returned above, from one switch or the
+            // other.
             break;
     }
     return true;
 }
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
-// buttons, row 3's tabs and row 4's four radio/two toggle buttons, each reading
+// buttons, row 3's tabs, row 4's four radios and four toggles (the two view
+// pairs; follow, iteration, read-only, history) and the BOTTOM ROW'S two
+// subjects (the Cumulative toggle, and since 2026-08-15 the Play / Stop RADIO)
+// — each reading
 // THE SAME live fact its chord flips, so a lit button and the state it reports
 // can never drift. Three readers: the painter (which stashes what it painted),
 // the press claim's RADIO refusal (a radio button already selected is a consumed
@@ -6723,6 +6803,35 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // face saying the key is elsewhere — went with that arm on 2026-08-15;
         // the empty rect is what says it now.
         case RedesignButton::HistoryCumulative: return a.history_cumulative;
+        // THE TRANSPORT'S PLAY / STOP LAMP (architect 2026-08-15, his own
+        // proposal): the pair is a RADIO like the S/T and W/P buttons, and this
+        // is the fact it selects on — EXACTLY ONE of the two is lit at every
+        // instant, because the pair's whole subject is a single bit. Play is
+        // live while an audition runs, Stop while none does, so the lamp says
+        // WHICH HALF IS THE CURRENT STATE and the unlit half is by definition
+        // the direction the one bare-Space toggle would go — which is what
+        // makes the chord table's radio consume the pair's disambiguation (the
+        // full ruling and the argument are at the pair's rows in kToolbarChords,
+        // input_pointer.cpp).
+        //
+        // IT READS THE GUI-SIDE MIRROR playhead_scanner_active, the same bit
+        // toggle_playback forks on, so the lamp and the act cannot drift — the
+        // toggle pattern follow and iteration already use, over a bit this
+        // button's chord flips indirectly (through the playback lifecycle)
+        // rather than by assignment.
+        //
+        // THIS SUPERSEDES "row 8 is momentary whole: Play and Stop deliberately
+        // carry no lamp — whether an audition runs is the MOVING SCANNER'S own
+        // statement on screen... a lamp here would be that same second statement
+        // in the other face", and the reasoning is worth keeping because it was
+        // right about the question it answered: a lamp is redundant AS A TRUTH
+        // FACE, the scanner having already said it. What that argument did not
+        // cover is a CONTROL knowing its own direction — with the enabled split
+        // reversed the same day, both halves went live and a press on Stop while
+        // stopped would have started playback, the glyph contradicting the act.
+        // The lamp is here for the radio, not for the truth.
+        case RedesignButton::TransportPlay:  return  a.playhead_scanner_active;
+        case RedesignButton::TransportStop:  return !a.playhead_scanner_active;
         case RedesignButton::File:
         case RedesignButton::Settings:
         case RedesignButton::Navigation:
@@ -6766,14 +6875,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
-        // ROW 8 IS MOMENTARY WHOLE: every button is an act that completes.
-        // Play and Stop deliberately carry no lamp — whether an audition runs
-        // is the moving scanner's own statement, and the pair already says it
-        // with the enabled split (one live, one dead); a lit Play beside a
-        // dead Play would be the same fact said twice.
+        // THE BOTTOM ROW IS MOMENTARY BUT FOR ITS ONE RADIO PAIR: the two
+        // skips and the four arrows are acts that complete, with no state to
+        // stay lit for.
         case RedesignButton::TransportSkipBack:
-        case RedesignButton::TransportPlay:
-        case RedesignButton::TransportStop:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
@@ -7266,10 +7371,11 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // carry — ENABLED, which the hover FACE adds at its one site and the hint does
 // not:
 //
-// ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and that asymmetry with
-// the tabs is the crops': both ship a selected-hover state (the accent outline
-// over the selected fill) and row 3 does not. So the zone's carve-out names the
-// tabs alone; the icon row's radios and the view bar's three are hoverable in
+// ROW 4'S, THE VIEW BAR'S AND THE BOTTOM ROW'S SELECTED BUTTONS DO HOVER, and
+// that asymmetry with the tabs is the crops': all three ship a selected-hover
+// state (the accent outline over the selected fill) and row 3 does not. So the
+// zone's carve-out names the tabs alone; the icon row's radios, the view bar's
+// three and the transport's Play / Stop radio (2026-08-15) are hoverable in
 // both states, and their already-selected press is refused in the ACTION (the
 // chord table's `radio` flag), not in their hoverability.
 //

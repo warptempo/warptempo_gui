@@ -195,10 +195,13 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // cost the user the audition past a trim bound he was aiming. The NAVIGATION
     // range is untouched by this — Home/End still jump to the trim bounds
     // (Viewport::trim_range, the shared owner both used to read here).
-    // EVERY REFUSAL IS THE ONE SHARED PREDICATE (playback_launch_playable,
-    // app_state.h — hoisted 2026-08-15 so the bottom row's PLAY button reads
-    // the launch's own refusal and the face cannot drift from the act). The
-    // per-arm reasoning moved to the predicate whole: the target arm's
+    // EVERY REFUSAL IS THE ONE PREDICATE (playback_launch_playable,
+    // app_state.h — hoisted out of this body 2026-08-15 so the bottom row's
+    // PLAY button could read the launch's own refusal; the architect reversed
+    // that face arm the same day and the predicate stayed, THIS being its one
+    // remaining reader, so it is a hoist that outlived its second consumer
+    // rather than a producer-less leftover). The per-arm reasoning moved to
+    // the predicate whole: the target arm's
     // buffer-populated check (which must live on this shared path — the scrub
     // launch arrives with no outer gate), the two-frame remainder gate against
     // the bound buffer's own domain end (a one-frame remainder is an isolated

@@ -76,9 +76,11 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). The tab pair and the two view pairs are radios; the
-    // follow and iteration buttons are TOGGLES and press through in both
-    // directions, which is why this is a flag and not `selected` alone.
+    // user just clicked). The tab pair, the two view pairs and — since
+    // 2026-08-15 — THE BOTTOM ROW'S PLAY / STOP PAIR are radios; the follow,
+    // iteration, read-only, history and Cumulative buttons are TOGGLES and
+    // press through in both directions, which is why this is a flag and not
+    // `selected` alone.
     //
     // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
@@ -225,11 +227,43 @@ constexpr ToolbarChord kToolbarChords[] = {
     // this body below.)
     //
     // PLAY AND STOP SHARE THE ONE Space BINDING — two buttons over one chord,
-    // the state-mirrored pair whose enabled split (redesign_button_enabled)
-    // makes AT MOST one live at a time (both rest dead where a launch would
-    // refuse — the 2026-08-15 honesty ruling); neither is a radio (`radio` would
-    // consume a press on a SELECTED button, and this pair's split is on the
-    // ENABLED bit, which the disabled-press consume above already reads).
+    // so WHICH of them acts is decided by the live audition bit inside the act
+    // rather than by the button pressed, and either press does the right
+    // thing. BOTH ARE ENABLED AT REST since 2026-08-15: the pair held an
+    // ENABLED split for the day of that morning's whole-row honesty ruling
+    // (Play dead while an audition ran and where a launch would refuse, Stop
+    // dead while none ran) and the architect reversed it with the rest of the
+    // row's honest arms — the ruling and his reasoning are at
+    // redesign_button_enabled.
+    //
+    // THE PAIR IS A RADIO, LIKE THE S/T AND W/P BUTTONS (architect 2026-08-15,
+    // his own proposal and the resolution of what the enabled reversal left
+    // open): "what if we made play and stop modal just like the warp/phase or
+    // source/target buttons? So clicking on play when it's already playing
+    // would be a no-op, just like clicking on source when we're already in
+    // source view is a no-op." WHAT THE FLAG REPLACES is the ENABLED split's
+    // OTHER job — the split was not only a truth face, it was the pair's
+    // DISAMBIGUATION, only ever leaving the meaningful half clickable. With the
+    // row always-on both halves went live and the pair became one control
+    // wearing two glyphs, so a press on Stop while stopped would have STARTED
+    // playback: the glyph contradicting the act, which is a sharper lie than a
+    // lit-but-inert button. THE RADIO CONSUME FIXES IT WITH MACHINERY THAT
+    // ALREADY EXISTS — the wrong-direction press dies at the claim (and again
+    // at the lift), and the only press that survives is the one on the UNLIT
+    // button, which BY DEFINITION is the direction the one toggle wants to go.
+    // So bare Space and toggle_playback are UNTOUCHED and neither button needs
+    // an act of its own: the Render-is-Cancel exception stays the roster's only
+    // break from button-is-its-chord. THE STATE MOVED FROM THE ENABLED AXIS TO
+    // THE SELECTED ONE, which is where it belongs — grey answers "can I press
+    // this", the lamp answers "which one is live" (the lamp itself is at
+    // redesign_button_selected, app_state.h).
+    //
+    // THE SUPERSEDED NOTE HERE READ "neither is a radio (`radio` would consume
+    // a press on a SELECTED button, and this pair has never had a selected face
+    // at all — the moving scanner is what says an audition runs)", and BOTH of
+    // its premises died: the pair has a selected face now, and the scanner
+    // being the audition's own statement was an argument against a REDUNDANT
+    // truth face, not against a control that needs to know its own direction.
     //
     // THE FOUR ARROWS DO NOT REPEAT (architect 2026-08-13, deleting the
     // hold-repeat that shipped with the row — the synthesized 575ms/25Hz
@@ -245,9 +279,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlay,
-     GuiKeys::Space,  false, false, false, false, true},                             // bare Space
+     GuiKeys::Space,  false, false, false, true,  true},                             // bare Space
     {RedesignButton::TransportStop,
-     GuiKeys::Space,  false, false, false, false, true},                             // bare Space
+     GuiKeys::Space,  false, false, false, true,  true},                             // bare Space
     {RedesignButton::TransportSkipForward,
      GuiKeys::End,    false, false, false, false, true},                             // bare End
     // The arrows, in their painted order since 2026-08-14 (the architect's:
@@ -5488,7 +5522,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // resolved in this single walk.
         const bool inside =
             under_pointer &&
-            redesign_button_enabled(app, playback, audio.total_frames(), id);
+            redesign_button_enabled(app, audio.total_frames(), id);
         if (f.hovered != inside) {
             f.hovered = inside;
             if (redesign_button_in_transport_row(id))
@@ -5746,17 +5780,17 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
         // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW HAS
-        // A RESTING CONSUMER OUTSIDE THAT MODE TOO, and since 2026-08-15 it is
-        // the PLAY / STOP PAIR alone — the row's one truthful arm, the audition
-        // state mirror plus the launch bound — so this line consumes that
-        // pair's dead half and its face and press stay one fact
-        // (redesign_button_enabled, app_state.h). The row's other six are lit
-        // unconditionally by the same day's scoped-truth ruling (the four
-        // arrows for the blink, the two skips because their key acts even on a
-        // no-op jump), so this line never fires for them and their chords do
-        // their own refusing, which is the roster's standing shape.
-        if (!redesign_button_enabled(app, playback, audio.total_frames(),
-                                     tc.id))
+        // NO RESTING CONSUMER HERE AT ALL since 2026-08-15: all eight of its
+        // buttons are lit outside the `h` view by the architect's scoped-truth
+        // ruling (the arrows for the per-selection blink, the two skips
+        // because their key acts even on a no-op jump, and PLAY / STOP last —
+        // "the user is expected to know that with the playhead outside trim
+        // it's not going to play in target view"), so this line fires for them
+        // only inside that view, where the derived partition greys Play and
+        // Stop. Everywhere else their chords do their own refusing and a
+        // refused click is a consumed no-op, which is the roster's standing
+        // shape.
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
         // TOGGLE — dispatching would switch AWAY from what the user just
@@ -5872,8 +5906,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // rule. Each held at the press; any that no longer does makes the
         // lift a consumed nothing.
         if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
-        if (!redesign_button_enabled(app, playback, audio.total_frames(),
-                                     tc.id))
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return;
         if (tc.radio && redesign_button_selected(app, tc.id)) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect

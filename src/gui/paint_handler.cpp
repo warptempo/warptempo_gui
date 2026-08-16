@@ -528,8 +528,29 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // all" (the modal yield, the hidden right cluster), no pixel can be stale for
 // it, and refreshing is what keeps the comparator from thrashing under a
 // standing modal (the contract at paint_bottom_strip's yield branch).
+//
+// THE CLIP TEST SURVIVED THE FACE-POLICY REVERSAL THAT FOLLOWED IT, and that is
+// deliberate rather than an oversight: it landed in the same arc that made the
+// transport row honest, and the architect reversed that policy whole hours
+// later (redesign_button_enabled, app_state.h). This is NOT part of it. It is
+// not a policy choice at all — it is what makes ANY face update reliable, for
+// every row and every bit, and the stale-row bug it fixed had nothing to do
+// with which buttons grey. Do not revert it along with the policy.
+//
+// AND IT IS LOAD-BEARING AGAIN RATHER THAN MERELY HISTORICAL: the pair's state
+// moved from the enabled axis to the SELECTED one later that day (the radio
+// ruling, redesign_button_selected), so the very same masking edge — a click
+// act's stop damaging only the clock cell — now flips the pair's LAMP under a
+// clip that redraws no button. Same gate, same repair, the other bit.
+//
+// IT TOOK A GuiPlayback WITH THAT POLICY AND GAVE IT BACK WITH IT: the PLAY
+// button's honest arm was the only reader of the object down this path
+// (redesign_button_enabled asked playback_launch_playable about the bound
+// preview buffer's domain), so the parameter left with its one producer rather
+// than resting unread — the same move the GuiAudio parameter of that predicate
+// made a revision earlier. `cr` stays because the clip test is the survivor.
 AppState::RedesignButtonFace& publish_button_face(
-    cairo_t* cr, AppState& app, const GuiPlayback& playback,
+    cairo_t* cr, AppState& app,
     const GuiAudio& audio, RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
@@ -545,8 +566,7 @@ AppState::RedesignButtonFace& publish_button_face(
             static_cast<double>(rect.y + rect.h) <= cy2;
     }
     if (pixels_covered) {
-        face.enabled  = redesign_button_enabled(app, playback,
-                                                audio.total_frames(), id);
+        face.enabled  = redesign_button_enabled(app, audio.total_frames(), id);
         face.selected = redesign_button_selected(app, id);
     }
     return face;
@@ -1046,7 +1066,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio, def.id,
+            cr, app, audio, def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
@@ -1195,7 +1215,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const int btn_w = widths[i];
 
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, playback, audio,
+                cr, app, audio,
                 kViewBarButtons[i].id, GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
@@ -1392,7 +1412,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // predicate's own active_tab_view compare, so the painted face below
         // reads THE SAME fact the comparator replays, with no second spelling.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio, def.id,
+            cr, app, audio, def.id,
             GuiRect{x, content_y, tab_w, content_h});
         const bool selected = face.selected;
 
@@ -2000,7 +2020,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio, def.id,
+            cr, app, audio, def.id,
             GuiRect{x, btn_y, btn, btn});
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
@@ -2120,18 +2140,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // arrows' left edge from the unification — moved into the TAB ROW:
 //
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
-//   Home), play and stop (the ONE bare Space binding over two state-mirrored
-//   buttons: Play greyed while an audition runs or where a launch would
-//   refuse, Stop while no audition runs — the 2026-08-15 honesty arm at
-//   redesign_button_enabled, and THE ROW'S TRUTHFUL HALF ENTIRE), and
-//   skip-forward (bare End). THE TWO SKIPS ARE LIT UNCONDITIONALLY, which is
-//   ruled and not unfinished: they greyed on the landing frame for one
-//   revision that same day and the architect took it back, bare Home / End
-//   not being pure jumps — each also stops a live audition, clears the
-//   selection and dissolves a region even when the cursor already rests where
-//   it would land — so the grey promised less than the key delivers. The right
-//   cluster is ruled untruthful and always enabled too; both reasonings are at
-//   that predicate;
+//   Home), play and stop (the ONE bare Space binding over two buttons, the
+//   live audition bit deciding which of them acts, and A RADIO PAIR on that
+//   same bit since 2026-08-15: exactly one of the two is lit, and a press on
+//   the LIT half is a consumed nothing — the ruling is at the pair's rows in
+//   kToolbarChords, input_pointer.cpp) and skip-forward (bare
+//   End). THE WHOLE ROW IS LIT UNCONDITIONALLY, apart from what the `h`
+//   history view's derived partition greys, and that is a RULING rather than
+//   an unfinished sweep (architect 2026-08-15, reversing his own whole-row
+//   honesty ruling of that morning in three steps — the arrows, then the
+//   skips, then play and stop): "there's not a whole lot of value derived from
+//   the icon faces changing, and it is a little distracting. The whole premise
+//   of the GUI is that it expects strict user knowledge — the user is expected
+//   to know that with the playhead outside trim it's not going to play in
+//   target view." Every reasoning, per pair, is at redesign_button_enabled;
 //   THE CLOCK, centred in the lane — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
 //   and the no-wiggle cell are all at kClockShape below);
@@ -2190,20 +2212,27 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
-// blend — worn here by the PLAY / STOP PAIR ALONE, which is the row's truthful
-// half (architect 2026-08-15): that pair's resting halves, plus whatever the
-// `h` history view's derived partition greys (Space is consumed in the view, so
-// Play and Stop grey there too — all at redesign_button_enabled, nothing
-// decided here). THE TWO SKIPS NEVER WEAR IT and that is a ruling, not an
-// omission: they greyed on the landing frame for one revision and the architect
-// took it back the same day, bare Home / End not being pure jumps — each also
-// stops a live audition, clears the selection and dissolves a region, no-op
-// jump included — so the grey promised less than the key delivers. Inside the
-// view they stay lit as well, Home/End being the mode's own vocabulary. THE
-// RIGHT CLUSTER NEVER WEARS IT EITHER: the four arrows and the four history
-// companions are always enabled by that same ruling, Revert's old conditional
-// grey included, because a glyph blinking on every marker selection restates
-// what the selection already shows. The ARROWS have no in-view answer to paint
+// blend — worn here by NOTHING AT REST (architect 2026-08-15): the row is
+// always-on whole, and its only grey is what the `h` history view's derived
+// partition decides, which is Play and Stop alone (Space is consumed in the
+// view, while Home/End are the mode's own absolute jumps and stay lit —
+// architect-confirmed) — all at redesign_button_enabled, nothing decided here.
+// THE SELECTED FACE IS WORN TOO, by the Cumulative toggle and — since the
+// pair became a RADIO the same day — by whichever of Play / Stop matches the
+// live audition bit; inside the `h` view those two are the row's one
+// DISABLED+SELECTED combination, which the shared expressions already
+// compose (the note at paint_button).
+// THAT IS A RULING RATHER THAN AN UNFINISHED SWEEP, and it took back the
+// whole-row honesty ruling of the same morning in three steps: the four
+// arrows and the four history companions first (a glyph blinking on every
+// marker selection restates what the selection already shows), then the two
+// SKIPS (bare Home / End are not pure jumps — each also stops a live audition,
+// clears the selection and dissolves a region, no-op jump included, so a grey
+// promised less than the key delivers), then PLAY and STOP last, on the reason
+// that covers the whole row: "there's not a whole lot of value derived from
+// the icon faces changing, and it is a little distracting... the user is
+// expected to know that with the playhead outside trim it's not going to play
+// in target view". The ARROWS would have had no in-view answer to paint
 // anyway: they are not painted in there at all. The
 // ONE box-model difference is the border edge: this lane's 1px border is on
 // TOP, the waveform side — the bottom strip's chrome grows toward the
@@ -2342,13 +2371,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_y = content_y + (content_h - btn) / 2;
 
     // One button, the icon row's face logic verbatim minus the letter arm.
-    // The SELECTED states are live here since 2026-08-14: the history
-    // cluster's Cumulative toggle lights on the session reading, so the shared
-    // expressions' `selected` term is no longer a constant false on this
-    // row.
+    // The SELECTED states are live here since 2026-08-14 and there are TWO
+    // subjects since 2026-08-15: the history cluster's Cumulative toggle lights
+    // on the session reading, and the TRANSPORT'S PLAY / STOP RADIO lights on
+    // the live audition bit — exactly one of that pair at every instant — so
+    // the shared expressions' `selected` term is no longer a constant false on
+    // this row. THE DISABLED BLEND COMPOSES WITH IT rather than excluding it:
+    // `keep` mixes both the fill and the line toward the ground, so inside the
+    // `h` view — where the derived partition greys Play and Stop while one of
+    // them is still lit — the pair wears the DIMMED SELECTED face, the same
+    // composition the Cumulative toggle already relies on.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, playback, audio, def.id,
+            cr, app, audio, def.id,
             GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
@@ -2438,7 +2473,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const TransportRowDef* hidden =
             history ? kTransportArrowGroup : kHistoryClusterGroup;
         for (int i = 0; i < 4; ++i) {
-            publish_button_face(cr, app, playback, audio,
+            publish_button_face(cr, app, audio,
                                 hidden[i].id, GuiRect{0, 0, 0, 0});
         }
         const int cluster_w = 4 * btn + 3 * btn_gap;
@@ -4614,8 +4649,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // still published: those two are read by main.cpp's staleness comparator
     // alone, and a stash frozen for the modal's whole life would drift the
     // moment the open changed one — a modal open STOPS PLAYBACK, which flips
-    // the play/stop pair — leaving the comparator to invalidate this row on
-    // every tick with nothing to repaint but the modal.
+    // the play/stop RADIO's lamp (it flipped that pair's ENABLED split for the
+    // day that split existed; the state moved to the selected axis 2026-08-15
+    // and the example holds on the new one) — leaving the comparator to
+    // invalidate this row on every tick with nothing to repaint but the modal.
     //
     // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
     // rect owner degrade HONESTLY: a zero cell answers the WHOLE LANE at
@@ -4625,18 +4662,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(cr, app, playback, audio, def.id,
+            publish_button_face(cr, app, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // BOTH right-cluster tables, whichever one the mode would have
         // painted: the row's tenants stand down whole (2026-08-14 — the
         // history companions are tenants of this row now).
         for (const TransportRowDef& def : kTransportArrowGroup) {
-            publish_button_face(cr, app, playback, audio, def.id,
+            publish_button_face(cr, app, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kHistoryClusterGroup) {
-            publish_button_face(cr, app, playback, audio, def.id,
+            publish_button_face(cr, app, audio, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};
