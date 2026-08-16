@@ -2977,9 +2977,12 @@ ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
 
 // Press-time key-repeat eligibility (see the declaration). Repeat serves
 // held-step gestures and editor typing; edge-triggered commands never repeat.
-// Eligibility is judged under the PRESS-TIME context, so a press that opens an
-// editor (evaluated before the open) does not arm, while typing inside an
-// already-open editor does.
+// Eligibility is judged under the context standing AT THE PRESS, which the
+// press itself has not changed: outside an editor a press only arms an
+// identity and its command runs at the release (the model is at on_key's
+// declaration), so a key whose command OPENS an editor is judged pre-open and
+// does not arm repeat, while typing inside an ALREADY-OPEN editor — the
+// keydown island, where the press does act — does.
 bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // A press a live pointer gesture would swallow must not arm: its owning
     // context rejected the press, and the gate lifting later must not

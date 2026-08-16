@@ -612,7 +612,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     //
     // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt, an open
     // dropdown, loading-or-absent audio, the editor text drag, any of the four
-    // keyboard-modal editors and any live pointer gesture all swallow the press
+    // keyboard-modal editors and any live pointer gesture all swallow the key
     // above this line, so `h` cannot open the mode in any of those states and no
     // predicate is re-tested here to say so. The full statement is at
     // handle_history_mode_key.
@@ -825,7 +825,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     // RANKED HERE, between the editors/prompts above and the render cancel below:
     // a modal surface still wins the key, and a resting region wins over the
     // render cancel because it is the more local thing on screen. With no region
-    // resting the press falls straight through and cancels the render exactly as
+    // resting the key falls straight through and cancels the render exactly as
     // before.
     // CLEAR BUT NEVER CANCEL, and that is STRUCTURAL rather than a test here: a
     // drag in flight is swallowed by the DRAG-MODAL GATE far above (which admits
@@ -849,7 +849,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
     // other key while a gesture is in flight; it is NOT one of the six), each of
     // the six earlier in this function than this point, so reaching here means
-    // the press has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
+    // the key has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
@@ -901,7 +901,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     // the standing gap in the clear-site set (clear_region_highlight,
     // input_handler.h), closed by giving the user a key for it.
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
-    // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
+    // is an explicit no-op (handle_plain_bare_keys) — the one place the key ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
@@ -923,7 +923,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     //
     // IT IS DISPATCHED HERE RATHER THAN CLAIMED BY handle_history_mode_key, and
     // that placement is the whole gate story: this line sits BELOW the read-only
-    // gate, so a locked tab drops the press exactly as it drops `'` — the lock
+    // gate, so a locked tab drops the chord exactly as it drops `'` — the lock
     // means hands off the piece's authored state, and this act writes markers.
     // (It parted company with the checkpoint act on 2026-08-07, when the gate
     // reclassified saving and rendering as authoring-free; that act runs from a
@@ -1287,7 +1287,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
     // nudges' shared prologue and the focus alone steps — groups are never moved
     // (the doctrine at the head of position_nudge.h). With no selection the
     // playhead is in
-    // the waveform lane and this branch does not match: the press falls through
+    // the waveform lane and this branch does not match: the key falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is NOT
     // one — it clears a resting span and nothing else, touching no selection),
@@ -1323,7 +1323,7 @@ void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
         const int direction = (key == GuiKeys::Left) ? -1 : +1;
-        // Both routes take the press's platform repeat bit: it is what makes a
+        // Both routes take the key event's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
         if (app.active_markers_view == 'P') {

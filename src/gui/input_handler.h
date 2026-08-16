@@ -1827,8 +1827,9 @@ struct GuiInputHandler {
     // Press-time key-repeat eligibility, the platform's repeat_eligible_probe_.
     // Repeat serves held-step gestures and editor typing; edge-triggered
     // commands (one-shot actions, toggles, editor openers) never repeat. Judged
-    // under the PRESS-TIME context (the platform evaluates it before dispatch),
-    // so a press that opens an editor is judged pre-open and does not arm, while
+    // under the context standing AT THE PRESS (the platform evaluates it before
+    // delivering the press, and outside an editor a press only arms), so a key
+    // whose command opens an editor is judged pre-open and does not arm, while
     // typing inside an already-open editor does. Public because main.cpp's
     // probe lambda calls it. ONE THING REPEATS ON A MODAL SURFACE, the focus
     // ring's Tab walk (architect 2026-08-13) — on a prompt and under a dialog

@@ -136,7 +136,8 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
     // snapshot, the grab-playhead sample and the pre-drag region existed only for
     // an Esc/Ctrl+Q cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
-    // reasoning are at the drag-modal gate (input_handler.cpp's on_key). The drag
+    // reasoning are at the drag-modal gate (input_handler.cpp's
+    // dispatch_key_command). The drag
     // still captures the pre-drag STORE above, but that is the undo payload
     // commit_drag pushes, not cancel machinery: undo is what takes a committed drag
     // back. Playhead-follows-marker is unchanged as a live mechanic

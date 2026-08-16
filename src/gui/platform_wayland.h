@@ -300,10 +300,10 @@ public:
 
     // THE KEYBOARD-INTENT CANCELLATION HOOK (codex round 4, 2026-08-11): fired
     // wherever the platform ENDS OR CONSUMES the keyboard stream WITHOUT a
-    // delivery, so application-side key intent — the modal dialog's keyboard
-    // press arm, whose own disarms can only see events that reach the
-    // application — dies on the same edges the platform's own key-repeat
-    // state does. TWO fire classes, each stated at its site:
+    // delivery, so application-side key intent — the armed key set and the
+    // modal dialog's keyboard press arm, whose own disarms can only see events
+    // that reach the application — dies on the same edges the platform's own
+    // key-repeat state does. TWO fire classes, each stated at its site:
     //   * forget_keyboard_state — wl_keyboard.leave and keyboard-capability
     //     loss, the edges that clear repeat_key_ itself: a keyboard-driven
     //     focus change ends every release the stream owed;
@@ -319,8 +319,8 @@ public:
     //     out (Super+click clicks).
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The consumer's authoritative effect
-    // list is main.cpp's hook body; the arm it drops is
-    // AppState::modal_dialog_key_pressed. (The transport arrows' hold-repeat
+    // list is main.cpp's hook body, which names the two intents it drops.
+    // (The transport arrows' hold-repeat
     // rode this hook until its deletion, 2026-08-13.) Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 

@@ -422,7 +422,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // moves no other behavior. coalesce_gesture computes its verdict BEFORE that
     // invalidate (the hybrid's order rule, stated at its definition), so an early
     // call still answers this press correctly. It reads the press's own repeat bit
-    // (threaded down from the on_key event that reached this handler) to pick its
+    // (threaded down from the key event that reached this handler) to pick its
     // arm, so it is
     // order-independent of the focus-collapse below; it just has to run before
     // record_gesture stamps the burst. The Up/Down step is the only route reaching

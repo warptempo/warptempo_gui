@@ -264,7 +264,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // PLAY AND STOP ARE ONE BUTTON OVER THE ONE Space BINDING since 2026-08-15
     // (architect, at his live look at the row), so BUTTON-IS-ITS-CHORD HOLDS
-    // EXACTLY here: the press dispatches bare Space, Space toggles, and the
+    // EXACTLY here: the lift dispatches bare Space, Space toggles, and the
     // button's GLYPH and TOOLTIP swap on the live audition bit. There is no
     // wrong half to press, which is why this row carries neither a `radio` flag
     // nor a lamp.
@@ -694,7 +694,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // admits, so its menu works in there.
 // (NAVIGATION was a third entry, LIVE from 2026-08-08 — the architect ruled its
 // menu open in the view, the toggle stopped refusing it, and every one of its
-// seven rows was a chord that met the mode's own gates through on_key, so
+// seven rows was a chord that met the mode's own gates through the key
+// dispatch, so
 // nothing about it was a hand answer beyond this function's silence on it. The
 // one row the view consumed greyed at the ITEM instead, a surface this
 // partition does not reach: it answers about BUTTONS, and a menu row is not

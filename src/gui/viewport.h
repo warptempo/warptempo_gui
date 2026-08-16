@@ -275,7 +275,8 @@ struct Viewport {
     //     park's retraction, finalize_render_run) and target_render (the
     //     "Updating..." stamp, the run hold's late clear and the three
     //     context-ending clears).
-    //   * the transient message: its clear at on_key's top
+    //   * the transient message: its clear at on_key's top and the same clear
+    //     re-run at dispatch_key_command's head
     //     (input_handler.cpp), phase_reset_propagate's three divergence
     //     reports, and input_key_dispatch's four one-line refusals (`'` with
     //     a render running or no renders, `l` with no player or no renders).

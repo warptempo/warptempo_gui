@@ -536,7 +536,8 @@ struct DragState {
     // NO CANCEL CAPTURES (the selection snapshot, the grab playhead and the
     // pre-drag region all deleted 2026-07-29): POINTER GESTURES HAVE NO CANCEL —
     // Esc mid-drag is a consumed no-op, release commits, and undo is the mitigation
-    // (the rule is stated at the drag-modal gate in input_handler.cpp's on_key).
+    // (the rule is stated at the drag-modal gate in input_handler.cpp's
+    // dispatch_key_command).
     // What survives above is the pre-drag STORE, which is the undo payload, not a
     // restore origin.
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
@@ -720,7 +721,8 @@ struct UndoHistory {
 // TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a mid-drag Esc is
 // swallowed by the drag-modal gate and the drag keeps extending under the
 // pointer; the release rests the region where it stands (under the sliver
-// gate). Esc clears a RESTED span (architect 2026-07-30, the arm in on_key) —
+// gate). Esc clears a RESTED span (architect 2026-07-30, the arm in the key
+// dispatch) —
 // clear but never cancel, and the gate is what makes those two cases
 // distinct. This state was the first to lose its pre-press snapshot — the
 // whole family followed. The rule is at the drag-modal gate
@@ -1724,8 +1726,9 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 PAN seeds nothing, the TrimBar pattern (the seed rode the
 //                 press while the press placed at press time, pre-2026-08-12).
 // Cleared on file load, the moment an action fires, and — the KEYBOARD and
-// WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel
-// command: any keyboard command OR wheel frame between two
+// WHEEL halves of the lifetime — at the TOP of on_key (the press router, which
+// runs it at every physical press) AND of every on_wheel
+// frame: any keyboard press OR wheel frame between two
 // clicks breaks EVERY candidate at those chokepoints, so a seed formed in one
 // context can never consume in another after an intervening keypress (Esc
 // included) or a wheel pan that moved content under the pointer. The
@@ -1786,7 +1789,7 @@ struct TrimBarPressSeed {
 // than growing a parallel pair: their rect is painter-published from a shaped
 // label exactly as every other entry's is, their hover is the same one-transition
 // recompute, and their press is the same band claim dispatching a chord through
-// on_key. What they do NOT take is the two row-2-only faces — no click face, and
+// dispatch_key_command. What they do NOT take is the two row-2-only faces — no click face, and
 // no disabled face of their own — which is stated at each face's site rather
 // than modelled here (row 4 takes the click face but not the disabled one; the
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
@@ -2009,7 +2012,8 @@ enum class RedesignButton {
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
-    // semantics by dispatching through on_key like every other chord button,
+    // semantics by dispatching through dispatch_key_command like every other
+    // chord button,
     // and finally THE FOUR HISTORY COMPANIONS, which are the SAME SLOTS as
     // the arrows: the two clusters swap on the `h` view (below). The walk
     // group is NOT part of that swap and paints in both states.
@@ -2443,7 +2447,7 @@ inline constexpr int kSettingsPopupItemCount =
 // THE COMMAND MENU'S ITEMS — the row type a menu of COMMANDS uses (the settings
 // menu is the other kind, a list of keys to edit). It carries the row's LABEL,
 // the accelerator column's text, the chord the release dispatches through
-// on_key, and where a category parts.
+// dispatch_key_command, and where a category parts.
 //
 // IT HAS ONE INSTANCE TODAY, the FILE table below (2026-08-13), and it stays a
 // TYPE rather than collapsing into that table's fields: it was two instances
@@ -2467,7 +2471,8 @@ struct CommandPopupItem {
 // row's, and the menu is deliberately minimal. NO SEPARATOR — one category, and
 // chrome around a single item would be chrome around nothing.
 //
-// THE ITEM IS ITS CHORD: Ctrl+Q dispatched through on_key, so the drag-modal
+// THE ITEM IS ITS CHORD: Ctrl+Q dispatched through dispatch_key_command, so
+// the drag-modal
 // hatch, the dirty prompt and the WM-close ordering are the keyboard route's own
 // with no second body. Ctrl+Q is on the history view's own allowlist, so this
 // menu works inside the `h` view exactly as it does outside it.
@@ -2512,7 +2517,8 @@ inline constexpr int kFilePopupItemCount =
 // separator: "Zoom in" `=`, "Zoom out" `-`, "Overview" `0` and "Center on focus"
 // `C`, then "Next marker" Tab, "Previous marker" Shift+Tab and "Walk both tabs"
 // Ctrl+Shift+Tab. Every row WAS an existing keyboard command dispatched through
-// on_key exactly as a redesigned button dispatches its chord, which is the model
+// dispatch_key_command exactly as a redesigned button dispatches its chord,
+// which is the model
 // the File menu inherited whole and which survives here.
 //
 // WHY IT WENT, and it is a duplication argument rather than a design reversal:
@@ -4230,8 +4236,8 @@ struct AppState {
     // departure needed a line in here — which is the shape's whole point),
     // hanging under whichever button
     // emits it. `menu` is the whole modality AND the whole "never two at once"
-    // rule: while it is not None the popup owns the keyboard (on_key's popup
-    // gate), the pointer (the press claim's popup-first block) and the wheel,
+    // rule: while it is not None the popup owns the keyboard (the key
+    // dispatch's popup gate), the pointer (the press claim's popup-first block) and the wheel,
     // the roster stops hovering, and opening the other menu is simply writing
     // this field — one value, one menu, no invariant to keep.
     // `hovered_item` is -1 or an index into the open menu's item table, written
@@ -4397,7 +4403,8 @@ struct AppState {
     // against a repository that worker is mid-mutation on would be a lie, so the
     // open is a consumed no-op with one stderr line while
     // history_checkpoint_in_flight stands. The key reaches the toggle only
-    // from on_key's main body, so every gate above that point is an entry
+    // from dispatch_key_command's main body, so every gate above that point is
+    // an entry
     // refusal for free — a prompt, any of the five editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
@@ -4438,7 +4445,8 @@ struct AppState {
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
     // key_blocked (the keyboard allowlist, which the redesigned buttons and the
     // File menu's one item pass through too, since both dispatch as chords
-    // via on_key) and handle_history_mode_press (the pointer allowlist). Each
+    // via dispatch_key_command) and handle_history_mode_press (the pointer
+    // allowlist). Each
     // states its own admitted set at its definition. THE SETTINGS DROPDOWN is
     // shut out structurally instead, at toggle_dropdown: its six items all open
     // the settings editor, a modal this view has no place for, and refusing the
@@ -4448,7 +4456,8 @@ struct AppState {
     // THE FILE DROPDOWN OPENS IN HERE, so a popup and this mode DO stand
     // together and the old "never together" invariant is retired to the Settings
     // half. It costs the gates nothing: its one row is a CHORD dispatched
-    // through on_key, so the two gates above answer per item exactly as they do
+    // through dispatch_key_command, so the two gates above answer per item
+    // exactly as they do
     // for a redesigned button — Ctrl+Q is on the allowlist. (The ruling is the
     // architect's 2026-08-08 one and it was made for the NAVIGATION menu, whose
     // seven rows the gates answered per item the same way: zoom in / out /
@@ -4575,7 +4584,8 @@ struct AppState {
     // the state it
     // was measured against. THE EDITOR-OPEN SUB-STATE is the mode standing with
     // that editor up: the mode's two gates stop being reached — the
-    // keyboard-modal editor gate sits above them in on_key, and any pointer
+    // keyboard-modal editor gate sits above them in dispatch_key_command, and
+    // any pointer
     // press outside the editor's own text-drag reach is the editor's to swallow
     // — so `h`, `,` and `.` TYPE into the buffer rather than stepping the walk,
     // and the mode's status corner KEEPS its cell throughout (2026-08-12: the
@@ -4587,7 +4597,8 @@ struct AppState {
     // the mode stands that chord is not the plain disk save but THE
     // SAVE-AND-COMMIT ACT — the mode bit selecting the command exactly as the
     // iteration bit selects the sweep, one route with the selection inside it
-    // (on_key's `s` arm). It belongs on THIS chord because the act runs the
+    // (dispatch_key_command's `s` arm). It belongs on THIS chord because the
+    // act runs the
     // ordinary save as its first step, so the Save button is the surface that
     // tells the truth about it; Render kept its own chord and greys in the view
     // with the rest of the consumed roster, and THE PLAIN DISK SAVE HAS NO
@@ -6444,7 +6455,7 @@ inline bool playback_launch_playable(const AppState& a,
 // WHAT EACH ENTRY MIRRORS, read off the routes themselves:
 //   * ALL FOUR toolbar chords (Save / Undo / Redo / Render — icon-row members
 //     since the 2026-08-12 relayout deleted their labeled row, the same
-//     machinery under a glyph face) drop at on_key's
+//     machinery under a glyph face) drop at dispatch_key_command's
 //     `app.loading || total <= 0` guard
 //     (input_handler.cpp). THE PER-TAB READ-ONLY GATE NOW SPLITS THEM (architect
 //     2026-08-07): read-only protects the AUTHORED MUSICAL CONTENT — the marker
@@ -6501,9 +6512,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     so it is not tried again as an obvious cleanup. The walk diverges on NINE
 //     buttons, in two classes. (1) FOUR CHORDS NEVER REACH THAT GATE: bare `h`,
 //     bare `u`, bare `,` and bare `.` are claimed by handle_history_mode_key,
-//     which returns from on_key ABOVE the read-only gate, so the allowlist's
+//     which returns from dispatch_key_command ABOVE the read-only gate, so the
+//     allowlist's
 //     "blocked" for them is VACUOUS rather than a refusal — and knowing that
-//     means knowing on_key's dispatch ORDER, which no table holds. (2) FIVE ARE
+//     means knowing that dispatch's ORDER, which no table holds. (2) FIVE ARE
 //     THE RULING'S OWN EXCLUSIONS: the four cardinal arrows (Up and Down are
 //     blocked outright, Left and Right blocked only while a selection stands —
 //     the exact per-selection blink this ruling removes) and Revert, whose
@@ -6535,7 +6547,8 @@ inline bool playback_launch_playable(const AppState& a,
 // toolbar four (Save / Undo / Redo / Render — icon-row members since the
 // 2026-08-12 relayout, keeping their mirrored derivations), the TEN the
 // read-only lock blocks, and, since 2026-08-15, the BOTTOM ROW'S TEN (every
-// chord on that row drops at on_key's loading/blank return, so their faces grey
+// chord on that row drops at the key dispatch's loading/blank return, so their
+// faces grey
 // there too — and that guard is now the ONLY thing all ten have to say; it was
 // EIGHT for the hours between the row's face ruling and the same day's
 // marker-walk group, which added three and collapsed play/stop into one).
@@ -6601,7 +6614,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
         // ones, the loading gate blocks everything, each arm keeps its own
-        // guards. Inherited through on_key, never mirrored here — which is why
+        // guards. Inherited through the key dispatch, never mirrored here —
+        // which is why
         // these are a plain `return true` and not a second copy of those gates.
         // (The history view above is the one thing that greys them, and it is
         // scoped to that mode: leave the view and these rows answer true again
@@ -6664,7 +6678,8 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconReadOnly:
         // THE HISTORY BUTTON MIRRORS NOTHING EITHER, and its gates are worth
         // naming because the temptation to mirror them is real: `h` refuses
-        // while audio is loading or absent (on_key's own blank-state return,
+        // while audio is loading or absent (the key dispatch's own blank-state
+        // return,
         // above every dispatch) and the mode refuses to open when the git walk
         // finds no history — and that second answer is NOT KNOWABLE PER FRAME.
         // It costs subprocesses to ask, the row repaints on every hover, and the
@@ -6690,7 +6705,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // the other mirrored arms: this arm adds ONE term to what they already
         // answered and must add no second one. Dropping them past the guard
         // would also grey them during a load — arguably truthful, since their
-        // chords drop at on_key's own loading return, but it is a change this
+        // chords drop at the key dispatch's own loading return, but it is a
+        // change this
         // ruling did not make and would be the row's third policy.
         //
         // THE MEMBERSHIP IS HAND-LISTED AND ITS OWNER IS NAMED, not derived —
@@ -6713,7 +6729,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // partition (architect 2026-08-15, his final ruling on this row after
         // it moved three times that day): all ten break out of this switch
         // to take the loading/blank guard — every chord on the row drops at
-        // on_key's `app.loading || total <= 0` return — and then answer a plain
+        // dispatch_key_command's `app.loading || total <= 0` return — and then
+        // answer a plain
         // `true`. HIS REASONING, kept in his own words because it is the whole
         // argument: "there's not a whole lot of value derived from the icon
         // faces changing, and it is a little distracting. The whole premise of
