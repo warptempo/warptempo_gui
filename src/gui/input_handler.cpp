@@ -191,7 +191,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     BINDING FOR EVERY MENU: the gate reads the shared popup state, so the
     //     Navigation dropdown (2026-08-02) and the File one (2026-08-13) joined
     //     the existing binding rather
-    //     than adding a seventh — a dropdown is a dropdown;
+    //     than adding a seventh — a dropdown is a dropdown — and the Navigation
+    //     one's deletion (2026-08-15) took none away for the same reason;
     //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
     //     below, matching every other modal's Ctrl+Q hatch.
     // A popup and an editor CANNOT be open together, so this gate can never
@@ -732,10 +733,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the top of on_key, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, the SIXTH binding).
-    //       ALL THREE menus — Settings, Navigation and File — are this ONE
+    //       BOTH menus — Settings and File — are this ONE
     //       binding: they
     //       share one popup state and one gate, so the second dropdown
-    //       (2026-08-02) and the third (2026-08-13) added no seventh place. It cannot collide with (a)/(b):
+    //       (Navigation, 2026-08-02) and the third (File, 2026-08-13) added no
+    //       seventh place and the Navigation one's deletion (2026-08-15) took
+    //       none away — the count is a property of the GATE, not of the menu
+    //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
     //       — the four dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is

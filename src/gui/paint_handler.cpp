@@ -228,11 +228,14 @@ struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
 };
-// SETTINGS SITS LAST (architect 2026-08-03, moving it behind Navigation). The
+// SETTINGS SITS LAST (architect 2026-08-03, moving it behind the NAVIGATION
+// anchor that then sat between it and File). The
 // float is adjacent with no gap and the walk below is a pure shaped-run walk, so
 // the order lives HERE and in the roster enum (app_state.h, whose comment states
 // that enum order IS painted order) and in nothing else — no width, pad or
-// anchor term reads it.
+// anchor term reads it. THE FLOAT IS TWO BUTTONS SINCE 2026-08-15, when the
+// Navigation anchor was deleted with its menu; Settings still sits last, one
+// slot earlier.
 constexpr MenuButtonDef kMenuButtons[] = {
     // THE THIRD DROPDOWN (architect 2026-08-13) — a COMMAND MENU of ONE row,
     // "Quit", in the slot the Quit BUTTON held from 2026-07-31: row 1 paints no
@@ -241,11 +244,14 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // else moved — the label is shorter, so the float is 3px narrower at 100%
     // (the measurement is in the right float's collision note below).
     {RedesignButton::File,       "File"},
-    // THE SECOND DROPDOWN (architect 2026-08-02): a COMMAND MENU of the zoom and
-    // stepping commands, sharing the row's usual no gap. Like Settings its
-    // action is a popup toggle rather than a chord, and all three share one popup
-    // state — see AppState::Dropdown.
-    {RedesignButton::Navigation, "Navigation"},
+    // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
+    // of the zoom and stepping commands — painted between these two from that
+    // day until 2026-08-15, when the architect deleted it whole: every one of
+    // its seven rows had grown a button, so the menu was a slower path to
+    // commands that all had one. Like Settings its action was a popup toggle
+    // rather than a chord, and it shared the one popup state — see
+    // AppState::Dropdown. Its removal is one row here and one enumerator there;
+    // no width, pad or anchor term reads this table's length.)
     {RedesignButton::Settings,   "Settings"},
 };
 
@@ -889,10 +895,15 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // WHICH MENU IT BINDS ON, measured: the SETTINGS menu, whose content asks for
 // 57 + 113 + 30 − 8 = 192 at 100% (384 at 200%), so the floor answers at both
 // scales — and the whole +42 therefore lands on that popup's width, 208 -> 250
-// at 100% and 416 -> 500 at 200%. The NAVIGATION menu does not move at all: its
-// accelerator column puts content at 57 + 117 ("Previous marker") + 13 + 101
-// ("Ctrl+Shift+Tab") + 30 − 8 = 310, already past both floors, so its box stays
-// 318px wide.
+// at 100% and 416 -> 500 at 200%. IT BINDS ON THE FILE MENU TOO, and by a wide
+// margin: one row, "Quit" beside "Ctrl+Q", so its content is nowhere near the
+// floor and the floor IS its width — which is what gives a one-row menu a box
+// that reads as a menu at all. (The deleted NAVIGATION menu was the one that
+// did not move: its accelerator column put content at 57 + 117 ("Previous
+// marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already past both
+// floors, so its box stayed 318px wide. That measurement is the record of the
+// only menu this floor never touched, kept because it is what shows the floor
+// and the derived column composing.)
 //
 // What the 2026-08-03 harmonization did to the SETTINGS box is separate and
 // still true: the labels now start on the shared 57px indent rather than a 12px
@@ -995,14 +1006,15 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "File", "Navigation" and
+    // ground carrying TWO FLOATS — the LEFT one, "File" and
     // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
-    // float 2026-08-02, File replacing the Quit button 2026-08-13). No ring;
+    // float 2026-08-02, File replacing the Quit button 2026-08-13, the
+    // Navigation anchor deleted from between them 2026-08-15). No ring;
     // the kdenlive bar is flat.
     //
-    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for ALL
-    // THREE buttons — plus ONE mode-scoped third, the history view's disabled
-    // face, which since 2026-08-08 lands on the SETTINGS anchor alone (Navigation
+    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for BOTH
+    // buttons — plus ONE mode-scoped third, the history view's disabled
+    // face, which since 2026-08-08 lands on the SETTINGS anchor alone (File
     // stays lit in there, its menu working; the partition is
     // history_mode_disables_button's and nothing here restates it) (below, at the
     // pill):
@@ -1013,14 +1025,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // only pointer-out rests it. The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
-    // ALL THREE ACTIONS ARE THE SAME KIND since 2026-08-13: each button TOGGLES
-    // A DROPDOWN — the roster's three non-chord actions, since no keyboard chord
+    // BOTH ACTIONS ARE THE SAME KIND since 2026-08-13: each button TOGGLES
+    // A DROPDOWN — the roster's two non-chord actions, since no keyboard chord
     // opens or closes a popup. The menus lead only where the keyboard already
-    // goes: the bare `;` key still opens the settings editor directly, every
-    // navigation item is a key, and File's one item is Ctrl+Q. (The left float
+    // goes: the bare `;` key still opens the settings editor directly, and
+    // File's one item is Ctrl+Q. (The left float
     // held a CHORD button until that day — Quit, dispatched through the shared
     // chord table like every other redesigned button; the act is the File menu's
-    // item now, and the chord is untouched.)
+    // item now, and the chord is untouched. It held a THIRD ANCHOR, Navigation,
+    // until 2026-08-15: its every item was a key too, which is exactly what
+    // deleted it — the keys had all grown buttons of their own.)
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
     // div, five faces from its own crops, and three chord buttons that are bare
@@ -1089,7 +1103,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — Settings or Navigation, whichever emitted the open
+        // well as on hover — File or Settings, whichever emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the
@@ -1099,7 +1113,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A PAINT CONDITION, NOT A `selected` BIT. Two reasons, both structural:
         // redesign_button_selected is defined as the live fact a button's CHORD
         // flips, and no menu button has a chord at all (they are the
-        // roster's three non-chord actions) — a dropdown is not a resting mode. And
+        // roster's two non-chord actions) — a dropdown is not a resting mode. And
         // the tick comparator that watches the selected bits would be pure
         // duplication here: the popup's two writers, toggle_dropdown and the one
         // close owner close_dropdown, ALREADY invalidate the top strip on both
@@ -1117,8 +1131,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // THE ROW'S THIRD FACE, AND IT EXISTS ONLY IN THE `h` HISTORY VIEW
         // (architect 2026-08-04): while that view stands the SETTINGS ANCHOR is
         // dead — toggle_dropdown refuses that one menu — so it alone wears the
-        // disabled face, Navigation and File staying live with their menus
-        // (2026-08-08 and 2026-08-13). Built from the
+        // disabled face, FILE staying live with its menu (2026-08-13; the
+        // Navigation anchor was the other live one from 2026-08-08 until its
+        // deletion 2026-08-15). Built from the
         // row's own vocabulary rather than a new sample: row 1's whole ink is
         // its label, so the label retains kRedesignDisabledMix of itself over
         // the row ground, exactly as row 2's icon+label pair does. The partition
@@ -1189,26 +1204,33 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // FLUSH AT THE WINDOW'S RIGHT EDGE (no margin stated, so none exists).
         //
         // THERE IS STILL NO COLLISION RULE, and the measurement that used to
-        // justify one has changed — recorded rather than acted on, since an
-        // overlap layout is the architect's to specify. RE-DERIVED FOR THE FILE
-        // BUTTON from the face's own advance widths (Liberation Sans at this
-        // row's 16px; the method reproduces the three numbers the 2026-08-02
+        // justify one has changed twice — recorded rather than acted on, since an
+        // overlap layout is the architect's to specify. RE-DERIVED FOR THE
+        // TWO-BUTTON FLOAT from the face's own advance widths (Liberation Sans at
+        // this row's 16px; the method reproduces the three numbers the 2026-08-02
         // shaped-run walk recorded — Quit 29, Navigation 76, Settings 58 —
         // exactly, which is what makes File's 26 comparable to them): the
-        // left float is 220px at 100% (shaped labels File 26 + Navigation 76 +
-        // Settings 58, each plus its two 10px pads — 46 + 96 + 78; the ORDER
-        // moved 2026-08-03 and the sum did not, and this label swap moved the
-        // sum by exactly the 3px the two labels differ by) and the div 183 —
-        // 403 of the 1920px
-        // deployment width, 1517px of slack, and 310 of the 640px floor as
-        // before. At 200% they are 439 and 366: still 1115px of slack at 1920,
-        // but 805 against a 640px floor THAT DOES NOT SCALE — so at that one
-        // corner (the schema's ceiling scale on the defensive minimum window)
-        // the floats OVERLAP by 165px, where the pre-Navigation pair cleared
-        // it by 19. What happens there is what the painters already do: the div
-        // fills its background last and covers the tail of the left float's
-        // labels. Nothing else changes, nothing is clickable that was not, and
-        // the deployment geometry is nowhere near it.
+        // left float is 124px at 100% (shaped labels File 26 + Settings 58, each
+        // plus its two 10px pads — 46 + 78) and the div 183 — 307 of the 1920px
+        // deployment width, 1613px of slack, and 333 of the 640px floor. AT 200%
+        // IT IS THE RECORDED THREE-BUTTON 439 LESS NAVIGATION'S OWN DOUBLED SLOT
+        // (~192), i.e. ~247, and the exact pixel is deliberately left unstated:
+        // the 2026-08-02 walk recorded only the TOTAL at that scale, and a
+        // shaped run's width is not exactly twice its 100% value — which is why
+        // that total reads 439 rather than 440. It does not matter which way
+        // that one pixel falls: against the div's 366 the pair comes to ~613 on
+        // the 640px floor THAT DOES NOT SCALE, so the floats CLEAR IT BY ~26-27
+        // and the overlap is gone outright rather than narrowed.
+        // IT WAS REAL WHILE THE NAVIGATION
+        // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
+        // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
+        // the 640px floor at ceiling scale, where the pre-Navigation pair had
+        // cleared it by 19. What happened there is what the painters already do:
+        // the div fills its background last and covered the tail of the left
+        // float's labels — nothing clickable, nothing else changed, and the
+        // deployment geometry was nowhere near it. That is the record of a
+        // corner this row no longer has, kept because the SHAPE of the answer
+        // ("the div covers the tail") is what a future third button inherits.
         // Defensive only, and it takes the whole float: a lane so short that the
         // two margins eat the button leaves nothing to paint and nothing to
         // click, which is the same early-out the row's own content_h guard above
@@ -2848,19 +2870,22 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // and the accelerator's right margin.
     //
     // THE TWO MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
-    // accelerator COLUMN, which navigation has and settings does not. The width
+    // accelerator COLUMN, which File has and Settings does not. The width
     // FOLLOWS from it — one expression with an optional term — rather than being
     // a second difference of its own, and everything else (chrome, item height,
     // insets, separator, faces, baseline, and now the label indent and right
     // margin) is one set of numbers by construction.
     //
-    // THE PER-ITEM DISABLED STATE (2026-08-08) IS NOT A SECOND DIFFERENCE either,
-    // for the same reason the accelerator column is not two rules: this painter
-    // asks one predicate per row (dropdown_item_enabled) and the MENUS are not
-    // named in it. Navigation happens to be the only one with a producer today —
-    // its "Walk both tabs" row inside the `h` history view — and Settings gets
-    // the identical treatment the day it grows one. Geometry is untouched on
-    // any menu: a greyed row still occupies its slot at its full height.
+    // (THE PER-ITEM DISABLED STATE, 2026-08-08 to 2026-08-15, was not a second
+    // difference either, for the same reason the accelerator column is not two
+    // rules: this painter asked one predicate per row, dropdown_item_enabled,
+    // and the MENUS were not named in it. The Navigation menu's "Walk both
+    // tabs" row inside the `h` history view was its ONE producer for its whole
+    // life, and it went producer-less with that menu; this painter's own
+    // disabled arms — the two dim inks and the face suppression — went with it.
+    // Geometry was untouched on any menu, a greyed row still occupying its slot
+    // at its full height, which is why nothing about the layout below moved when
+    // the arms left. The record is at kFilePopupItems, app_state.h.)
     app.dropdown.rect = GuiRect{0, 0, 0, 0};
     app.dropdown.item_rects = {};
     if (!app.dropdown.open()) return;
@@ -2918,10 +2943,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // rules per menu — which is exactly what let the FILE menu land in 2026-08-13
     // with an accelerator column and no edit in this body at all.
     //
-    // The authored minimum applies to all three — it is the item box's floor,
+    // The authored minimum applies to both — it is the item box's floor,
     // the reason a menu of short labels still reads as a menu, and it is what
-    // gives the one-row FILE menu its width — and the navigation
-    // menu simply never reaches it.
+    // gives the one-row FILE menu its width. (The deleted NAVIGATION menu's
+    // long labels simply never reached it, which is how the floor and the
+    // derived column were shown to compose.)
     const int pad_l    = scaled_px(kPopupLabelIndentPx);
     const int gap      = scaled_px(kPopupHotkeyGapPx);
     const int pad_r    = scaled_px(kPopupPadRightPx);
@@ -2974,19 +3000,19 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const GuiRect item{x + inset, iy, item_w, item_h};
         app.dropdown.item_rects[static_cast<size_t>(i)] = item;
 
-        // A DISABLED ROW KEEPS ITS GEOMETRY AND LOSES ITS FACES (2026-08-08, with
-        // the menus' first per-item disabled state): the rect above is published
-        // exactly as a live row's is — the row still occupies its slot, and the
-        // width, the layout and the item block's height know nothing about this —
-        // and what changes is that no hover or press face is drawn and the two
-        // inks swap to their sampled dim pair. The input side already refuses to
-        // hover or arm one, so the test below is the SAME predicate read a second
-        // time rather than a second rule: the face and the press cannot disagree
-        // about a row, which is the roster's disabled-button doctrine one surface
-        // out.
-        const bool item_live = dropdown_item_enabled(app, menu, i);
-        const bool pressed = item_live && (app.dropdown.pressed_item == i);
-        const bool hovered = item_live && (app.dropdown.hovered_item == i);
+        // (A DISABLED ROW KEPT ITS GEOMETRY AND LOST ITS FACES, 2026-08-08 to
+        // 2026-08-15: the rect above was published exactly as a live row's is —
+        // the row still occupied its slot, and the width, the layout and the item
+        // block's height knew nothing about it — and what changed was that no
+        // hover or press face was drawn and the two inks swapped to their sampled
+        // dim pair. The input side already refused to hover or arm one, so the
+        // test here was the SAME predicate read a second time rather than a
+        // second rule: the face and the press could not disagree about a row,
+        // which is the roster's disabled-button doctrine one surface out. The
+        // predicate went producer-less with the Navigation menu and the two
+        // terms below are unconditional again.)
+        const bool pressed = (app.dropdown.pressed_item == i);
+        const bool hovered = (app.dropdown.hovered_item == i);
         if (pressed || hovered) {
             // TWO FACES FROM THE ITEM CROPS, and they are built differently
             // because one has an outline and the other does not:
@@ -3033,14 +3059,13 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
         // edge in every menu, and vertically centred by the shared solver. On
         // the settings menu the right side carries the leftover, which the
-        // minimum width above is what guarantees; on the navigation menu the
+        // minimum width above is what guarantees; on a COMMAND menu the
         // accelerator carries it.
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        const GuiColor label_ink =
-            item_live ? kRedesignLabel : kRedesignPopupDisabledLabel;
-        cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
 
@@ -3049,17 +3074,23 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // crop measured, and aligning to it keeps every hotkey's last ink column
         // on one line whatever the item inset is. Its ink is the sampled dim
         // (kRedesignPopupHotkey), in every face — the item's fill is the whole
-        // hover/press cue, as it is for the label. A DISABLED row swaps it for
-        // the sampled dim pair's other half, keeping the accelerator dimmer than
-        // its own label exactly as the live pair does (the two derivations are
-        // recorded together at kRedesignPopupDisabledLabel).
+        // hover/press cue, as it is for the label. (A DISABLED row swapped it
+        // for the sampled dim pair's other half, keeping the accelerator dimmer
+        // than its own label exactly as the live pair does; both derivations are
+        // recorded at render.h's palette block, where the retired pair lives.)
+        //
+        // ITS ONE PRODUCER IS THE FILE MENU'S "Ctrl+Q" since 2026-08-15: the
+        // column was authored for the Navigation menu's seven rows and outlived
+        // it, so the optional term above is exercised by a live menu and is not
+        // producer-less — which is the whole reason the term was driven off the
+        // item TABLE rather than off the menu enumerator.
         if (row.hotkey != nullptr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            const GuiColor hot_ink =
-                item_live ? kRedesignPopupHotkey : kRedesignPopupDisabledHotkey;
-            cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
+            cairo_set_source_rgb(cr, kRedesignPopupHotkey.r,
+                                 kRedesignPopupHotkey.g,
+                                 kRedesignPopupHotkey.b);
             text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
         }
         iy += item_h;

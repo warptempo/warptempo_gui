@@ -447,10 +447,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // closes the popup itself and then takes the close-window route, which ends the
 // process rather than the view; the WM close is the same), and there is no
 // pointer closer at all. THE PREFETCH ARRIVAL IS THE EXCEPTION — it runs off a
-// poll, not a key, so the Navigation menu that has stood inside the view since
-// 2026-08-08 may be up when a failed scan ends the visit. A standing menu is
-// LEFT STANDING there, deliberately: it is row 1's own surface, its seven items
-// are live commands in the editor exactly as they were in the view, and nothing
+// poll, not a key, so the FILE menu, which opens inside the view (2026-08-13,
+// on the architect's 2026-08-08 ruling that first opened the deleted Navigation
+// menu in here), may be up when a failed scan ends the visit. A standing menu is
+// LEFT STANDING there, deliberately: it is row 1's own surface, its item is a
+// live command in the editor exactly as it was in the view, and nothing
 // about it named the mode. Closing it would be a second dismissal riding an
 // event the user did not cause.
 void GuiInputHandler::close_history_mode() {
@@ -1985,29 +1986,30 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // argument's premise is gone, while the tab-band argument, which was never about
 // markers, stands untouched.
 //
-// THE REDESIGNED BUTTONS AND THE NAVIGATION MENU'S ITEMS PASS THROUGH HERE
+// THE REDESIGNED BUTTONS AND THE COMMAND MENU'S ITEMS PASS THROUGH HERE
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
 // chord and call on_key (finish_chrome_press_release and
 // finish_dropdown_release, each at its own lift),
 // so Save, Undo, Redo, Render and the view bar drop at this gate exactly as
-// their keys do. AND THE MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
-// merely in principle: that menu now OPENS inside the view (the architect
+// their keys do. AND A MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
+// merely in principle: a command menu OPENS inside the view (the architect
 // narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
 // the settings editor by a direct call and so have no gate of their own), and
-// this predicate is what admits its zoom, zoom-out and overview rows in there
-// while refusing nothing else on it — the remaining four are claimed one line
-// above as the mode's own vocabulary. The row whose chord means something ELSE
-// in the view greys at the item instead (dropdown_item_enabled, app_state.h),
-// which is the one thing a chord dispatch cannot express: the chord acts, it is
-// just not the act the label names.
+// this predicate is what admits File's Ctrl+Q in there.
+// (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
+// the same way, refusing nothing else on it — its remaining four were claimed
+// one line above as the mode's own vocabulary — while the row whose chord means
+// something ELSE in the view greyed at the item instead, which is the one thing
+// a chord dispatch cannot express: the chord acts, it is just not the act the
+// label names. That menu and that grey are deleted 2026-08-15.)
 //
 // AND SINCE 2026-08-04 THIS GATE IS ALSO READ BY THE FACES: a button whose chord
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the three anchors alone, which have no chord to ask about: Settings dead
-// on the toggle_dropdown lockout, Navigation live since 2026-08-08, File live
-// since 2026-08-13), never
+// for the two anchors alone, which have no chord to ask about: Settings dead
+// on the toggle_dropdown lockout, File live since 2026-08-13 — a third,
+// Navigation, was live from 2026-08-08 until its 2026-08-15 deletion), never
 // hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
@@ -2850,8 +2852,9 @@ void GuiInputHandler::run_history_revert() {
 
 // THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is
 // one popup state and a dropdown is a dropdown (the Navigation menu joined
-// 2026-08-02 and needed nothing here: bare Esc stays the SIXTH bare-Esc binding
-// rather than becoming a seventh). Returns true when the press is SWALLOWED (the
+// 2026-08-02 and the File one 2026-08-13, each needing nothing here, and the
+// Navigation menu's 2026-08-15 deletion needed nothing either: bare Esc is the
+// SIXTH bare-Esc binding through all of it, never a seventh and never a fifth). Returns true when the press is SWALLOWED (the
 // popup consumed it, or it was inert); false only for Ctrl+Q, which closes the
 // popup and then lets on_key run the close route.
 //

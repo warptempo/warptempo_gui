@@ -3035,7 +3035,7 @@ void GuiPlatform::resolve_touch_window_to_pointer() {
     // under a held primary button): with the bit raised only after the entry
     // motion, that pre-press motion read UNHELD, hover-opened an armed
     // anchor's menu, and the press in the same burst toggle-closed it — a tap
-    // on Settings/Navigation with the row armed visibly did nothing. The
+    // on File or Settings with the row armed visibly did nothing. The
     // was_held capture reads the two SIBLING sources only, so its value is
     // order-independent.
     const bool was_held = pointer_left_held_ || synth_left_held_;

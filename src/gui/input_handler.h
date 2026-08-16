@@ -1123,7 +1123,7 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's File / Navigation / Settings and
+    // writer serving the WHOLE roster — row 1's File / Settings and
     // the view bar's three, row 3's two tabs, row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout) and the bottom
     // row's fourteen — the transport three, the marker-walk three, and
@@ -1153,12 +1153,13 @@ struct GuiInputHandler {
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of BOTH non-chord buttons, Settings and Navigation: it closes the
+    // action of BOTH non-chord buttons, File and Settings: it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
     // than a rule. Its ONE refusal is the `h` history view's, and it is
-    // MENU-SCOPED since 2026-08-08: Settings does not open in there, Navigation
-    // does (the reasoning is at the definition). close_ is what every dismissal route calls — an outside
+    // MENU-SCOPED since 2026-08-08: Settings does not open in there, File
+    // does (the scope was re-derived rather than inherited when the Navigation
+    // menu was deleted 2026-08-15 — the reasoning is at the definition). close_ is what every dismissal route calls — an outside
     // press, a wheel, bare Esc, Ctrl+Q, an item click, and any full relayout.
     // Both damage the top strip AND the popup's published rect, because the
     // popup hangs below the strip. toggle_ does NOT record the press claim that
@@ -1170,8 +1171,7 @@ struct GuiInputHandler {
     // item, or on the anchor whose menu it opened — the ARMED item with it, one
     // walk, one hit, because a menu lights exactly one item and the press only
     // decides which face it wears (the rule, and why the arm cannot double as the
-    // liveness test, are at the definition); a DISABLED row resolves to NO item
-    // there, so neither face can ever name one. IT HAS TWO CALLERS AND BOTH ARE
+    // liveness test, are at the definition). IT HAS TWO CALLERS AND BOTH ARE
     // LOAD-BEARING: on_motion's open-dropdown branch runs it per DELIVERED
     // MOTION, because a dispatch batch can carry a motion and then the PAINT that
     // reads these faces with no loop tail in between, and main.cpp's settled hook
@@ -1226,15 +1226,15 @@ struct GuiInputHandler {
     void update_menu_row_exit(int mouse_x, int mouse_y);
     void disarm_menu_row();
     // Which item is at (x, y), or -1 — the painter's published boxes. PURE
-    // GEOMETRY: a DISABLED row keeps its box and answers here like any other,
-    // and whether it may be hovered, armed or activated is the separate question
-    // each of the three callers asks for itself (dropdown_item_enabled,
-    // app_state.h).
+    // GEOMETRY, and since 2026-08-15 the whole answer: no item on either menu
+    // can grey (the retired per-item disabled state's record is at the
+    // definition, input_pointer.cpp).
     int  dropdown_item_at(int x, int y) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
     // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
     // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
-    // stop and the prefilled editor; navigation: the item's chord through on_key).
+    // stop and the prefilled editor; a command menu: the item's chord through
+    // on_key).
     // IT TAKES THE RELEASE'S OWN (x, y) and, while the press CLAIM is live,
     // DERIVES that item with dropdown_item_at — the arm's own defining
     // expression, read at delivery — instead of trusting the recorded arm, which
@@ -1305,12 +1305,13 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled / radio refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). The three buttons
-    // outside it are row 1's File, Navigation and Settings, whose action is a
+    // being a consumed nothing). The two buttons
+    // outside it are row 1's File and Settings, whose action is a
     // dropdown
     // toggle — the recorded press-time exception, stated at their claim (row 1
     // had a chord button, Quit, inside it until 2026-08-13, when its act became
-    // the File menu's one item).
+    // the File menu's one item, and a THIRD anchor, Navigation, until its menu
+    // was deleted 2026-08-15).
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed
@@ -2851,7 +2852,7 @@ private:
     //     entry-gate list.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
-    //     stands. The redesigned buttons and the Navigation menu's items reach it
+    //     stands. The redesigned buttons and the File menu's one item reach it
     //     through their synthesized chords, so it covers them too — and since
     //     2026-08-04 it also DECIDES THEIR FACES (history_mode_disables_button,
     //     app_state.h). It is a FREE function beside this class, with

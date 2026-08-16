@@ -693,7 +693,7 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
     // flat
-    // sampled ground plus the "File", "Navigation" and "Settings" menu
+    // sampled ground plus the "File" and "Settings" menu
     // buttons and the view bar), the TAB ROW
     // (top lane 1, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —

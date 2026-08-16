@@ -558,7 +558,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
-// ground carrying the left float's File/Navigation/Settings menu buttons and
+// ground carrying the left float's File/Settings menu buttons and
 // the right float's view
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
