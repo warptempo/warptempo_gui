@@ -199,8 +199,9 @@ bool GuiInputHandler::press_modal_ring_arm(GuiKey key, GuiInputState mods) {
 // 2026-08-16, renamed verbatim when the press/release split landed (the model
 // is at on_key's declaration, input_handler.h). Entered at Release by
 // on_key_release for an armed physical key, and at Full by the keydown island,
-// the synthesized-repeat path, and the two synthetic chord dispatches (the
-// chrome lift and the dropdown item, input_pointer.cpp).
+// the synthesized-repeat path, and three synthetic chord dispatches (the
+// chrome lift, the chrome button hold-repeat, and the dropdown item,
+// input_pointer.cpp).
 void GuiInputHandler::dispatch_key_command(GuiKey key, GuiInputState mods,
                                            KeyDispatchPhase phase) {
     // THE CONTEXT BLOCK'S RE-RUN. The press router (on_key) runs these four at
