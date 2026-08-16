@@ -1019,9 +1019,10 @@ struct GuiInputHandler {
     // the glass. It is the same one predicate the mouse press claim and the
     // cursor map read, so the two can never disagree about where a region
     // begins. THE CONSEQUENCE FOR THE REGION HOLD IS RECORDED AND ACCEPTED: the
-    // ~500 ms hold is a PAN-ZONE gesture, so a hold INSIDE an existing region no
-    // longer reaches it — it is a pointer press on the region's editor instead,
-    // and a motionless one lifts into the ordinary click act, which destroys the
+    // hold-beat hold is a PAN-ZONE gesture, so a hold INSIDE an existing
+    // region no longer reaches it — it is a pointer press on the region's
+    // editor instead, and a motionless one lifts into the ordinary click act,
+    // which destroys the
     // region. Drawing a fresh region over a standing one therefore needs one tap
     // to clear it first, or a hold started OUTSIDE it (the sweep may then run
     // through it freely — only the DOWN point is asked). SURFACE GEOMETRY ONLY:
@@ -1053,7 +1054,7 @@ struct GuiInputHandler {
     // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
     // ruling 2026-08-12 — "region select to be hold and then drag because
     // the pan is way more common": the pan zone's stretched window expires
-    // at the ~500 ms region-hold beat into THE REGION FORMER, so
+    // at the region-hold beat into THE REGION FORMER, so
     // hold-then-drag sweeps a region on glass; the dead trim-move hooks'
     // exact pattern reborn — touch.md carries both records). The three ARE
     // the one region former's own machinery driven from the platform's

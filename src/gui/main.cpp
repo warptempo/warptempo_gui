@@ -1254,7 +1254,7 @@ int main(int argc, char** argv) {
     // refusal, so once one finger is down on such a lane the second is
     // completely ignored and no nav gesture ever runs there (2026-08-15).
     // The REGION TRIO is the eighth ruling's half: the zone's stretched
-    // window (the ~500 ms region-hold beat) expires into the region former —
+    // window (the region-hold beat) expires into the region former —
     // begin at the down point, one update per frame, an end that always
     // fires — the dead trim-move hooks' exact pattern reborn (contracts at
     // GuiPlatform::set_touch_nav_hooks; the GUI bodies at

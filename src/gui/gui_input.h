@@ -74,6 +74,31 @@ namespace GuiKeys {
 // exactly as it would for a physical BTN_LEFT device.
 constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
+// THE PRODUCT'S ONE HOLD-BEAT DURATION — how long any deliberate hold must
+// rest before it crosses into its held meaning. Every gesture hold in the
+// product reads THIS: the chrome roster's shift long press
+// (kChromeShiftHoldMs, app_state.h) and the touch pan zone's region hold
+// (kTouchRegionHoldMs, platform_wayland.cpp), so a keyboard hold, a chrome
+// shift hold and a touch region hold all cross their threshold on the same
+// beat rather than on three numbers that happen to be near each other.
+//
+// 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
+// DELIBERATELY and not by coincidence: it is the architect's own labwc
+// <repeatDelay>, so the beat the hand already knows from every held key on
+// the desktop is the beat this program's own holds use.
+//
+// THE KEYBOARD'S OWN DELAY IS NOT THIS CONSTANT AND NEVER SHOULD BE. Key
+// repeat arrives from the compositor through wl_keyboard.repeat_info, so it
+// tracks the user's desktop setting and moves with every other application if
+// that setting is ever edited. This constant is the number OUR gesture holds
+// use to agree with it — hard-coding the key delay to match would be the one
+// place the product fights the desktop, and it would buy nothing, because the
+// two numbers already agree.
+//
+// It rides NO SCALE, deliberately: a duration is not a length, so gui_scale
+// has nothing to say about it.
+constexpr int kHoldBeatMs = 575;
+
 struct GuiInputState {
     bool     ctrl                = false;
     bool     shift               = false;

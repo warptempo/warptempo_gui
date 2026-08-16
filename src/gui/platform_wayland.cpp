@@ -188,12 +188,14 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
 // REGION-HOLD BEAT (the eighth glass ruling, 2026-08-12: pan is the common
 // act and takes the primary drag, so the region is the deliberate act —
 // "region select to be hold and then drag because the pan is way more
-// common", the duration his own "maybe five hundred milliseconds"). A down
-// on the navigation surface runs its window to this deadline, and the
-// EXPIRY there is the REGION HOLD: the region former armed through the
-// region hooks, so hold-then-drag sweeps a region on glass. 500 ms is the
-// same order as labwc's own 575 ms key-repeat delay — a beat the hand
-// already knows — and long past any aimed drag's natural dwell, the lesson
+// common"). A down on the navigation surface runs its window to this
+// deadline, and the EXPIRY there is the REGION HOLD: the region former armed
+// through the region hooks, so hold-then-drag sweeps a region on glass. The
+// duration is kHoldBeatMs (gui_input.h), the product's ONE hold beat — the
+// same number the chrome roster's shift long press reads, matched by
+// convention with the compositor's key-repeat delay, so it is a beat the hand
+// already knows from every held key on the desktop — and it is long past any
+// aimed drag's natural dwell, the lesson
 // of the dead kTouchTrimHoldMs (the trim band's hold-a-beat deadline of
 // 2026-08-11, whose first cut rode the 60 ms window and turned every
 // deliberate band drag into the trim move; that GESTURE stayed dead — this
@@ -216,7 +218,7 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
 // the press, and that motion crosses the GUI's own drag gate by
 // construction, so a touch drag becomes a drag the moment it resolves.
 constexpr int    kTouchDisambiguateMs = 60;
-constexpr int    kTouchRegionHoldMs   = 500;
+constexpr int    kTouchRegionHoldMs   = kHoldBeatMs;
 constexpr double kTouchSlopPx         = 8.0;
 
 } // namespace
@@ -3309,9 +3311,10 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
                                       static_cast<int>(std::nearbyint(y)));
             // THE TWO-DEADLINE FORK (the eighth glass ruling, 2026-08-12 —
             // the dead trim-band beat's pattern reborn): ON the zone the
-            // window runs to the REGION-HOLD beat, 500 ms; OFF it the 60 ms
-            // disambiguation window as before. The arithmetic at this site:
-            // on the zone a tap still lifts long before 500 ms and delivers
+            // window runs to the REGION-HOLD beat (kTouchRegionHoldMs, the
+            // product's one hold beat); OFF it the 60 ms disambiguation
+            // window as before. The arithmetic at this site:
+            // on the zone a tap still lifts long before that beat and delivers
             // whole at the lift, a drag still crosses the 8 px slop into the
             // pan within the first frames, so the stretch costs neither —
             // only the deliberate motionless hold ever reaches the beat.

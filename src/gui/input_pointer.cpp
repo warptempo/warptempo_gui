@@ -2600,7 +2600,7 @@ void GuiInputHandler::end_touch_nav() {
 // for the finger up, but on the lower half it immediately dispatches the
 // scanner — so there's an asymmetry, and now that I understand it we should
 // eliminate the asymmetry"). A one-finger drag pans anywhere on the waveform,
-// the ~500 ms region hold reaches anywhere on it, and a motionless tap on the
+// the region hold reaches anywhere on it, and a motionless tap on the
 // lower half is the tap-at-lift burst whose motionless press-release IS the
 // deferred scrub act — the mouse's own machinery, inherited with no touch code.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
@@ -2616,7 +2616,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // (that owner is also what keeps the RULER and the MARKER LANE out of it —
     // they answer None there, so a region covering their columns still pans).
     // THE REGION HOLD'S ANSWER IS RECORDED AT THE DECLARATION and is accepted:
-    // the ~500 ms hold is a pan-zone gesture, so a hold INSIDE an existing
+    // the hold-beat hold is a pan-zone gesture, so a hold INSIDE an existing
     // region no longer begins a new one — a hold started outside it, or a tap
     // to clear it first, both still do.
     if (region_manipulation_hit(x, y) != RegionHit::None) return false;
@@ -2658,7 +2658,7 @@ bool GuiInputHandler::touch_point_on_thin_lane(int x, int y) const {
 // the full contract, the refusal list and the accepted cross-device edge are
 // at the declarations (input_handler.h). These three ARE the one region
 // former's machinery driven from the platform's region hooks: no pending and
-// no threshold wait at the begin — the ~500 ms hold already disambiguated,
+// no threshold wait at the begin — the hold beat already disambiguated,
 // so the begin runs the former's press half directly — and no second former
 // anywhere.
 
@@ -6024,7 +6024,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // shifted twin, the waveform region hold's shape on the roster's
         // surface. It exists for GLASS — the road rig has no keyboard, so
         // without it a finger could reach only the plain half of each shifted
-        // pair — and it costs the desk nothing, a 500ms hold being well past
+        // pair — and it costs the desk nothing, the hold beat being well past
         // any ordinary click.
         //
         // THE MEMBERSHIP IS redesign_button_shift_admits AND NOT A LIST: the

@@ -266,7 +266,7 @@ struct UndoEntry {
 //     full waveform height plus the same two lanes — so the view is no longer
 //     the exception it was), the same recipe with the MODE's focus clear in
 //     place of the store deselect;
-//   * the TOUCH REGION HOLD (the eighth ruling's touch half): a ~500 ms
+//   * the TOUCH REGION HOLD (the eighth ruling's touch half): a hold-beat
 //     one-finger hold on the same navigation surface (the touch pan zone)
 //     expires into begin_touch_region, which FORKS on the mode exactly as
 //     the shift press forks at its two claims — the live arm through the
@@ -674,7 +674,7 @@ struct UndoHistory {
 };
 
 // State for the REGION FORMER — THE ONE REGION GESTURE, shift+drag on the
-// desk and the ~500 ms region hold on glass
+// desk and the hold-beat region hold on glass
 // (architect 2026-08-12, the eighth glass ruling, PAN-PRIMARY: the plain drag
 // is the grab-pan now, so the region is the deliberate act and takes the
 // secondary form on both devices). The SHIFT-exact PRESS
@@ -2630,18 +2630,12 @@ constexpr int     kDoubleClickSlackPx = 8;
 // (finish_chrome_press_release, input_pointer.cpp), against the press stamp the
 // arm carries (AppState::ChromePress::press_ms).
 //
-// IT IS ITS OWN CONSTANT AND NOT THE TOUCH REGION HOLD'S, though both rest at
-// the architect's "~500ms" and both are hold beats. Three reasons, in order of
-// weight: the region hold is a PLATFORM constant (platform_wayland.cpp's
-// anonymous namespace, below the GUI model by design) and sharing it would
-// mean hoisting a disambiguation deadline into the GUI's input layer; it is
-// tuned for a DRAG gesture on the waveform — the mark at which a finger that
-// has not moved stops being a possible pan and becomes a region sweep — while
-// this one is tuned for a stationary press on a small button, so the two can
-// want different numbers from the same glass session; and the surfaces have
-// different futures (the region hold answers to the pan zone's two-deadline
-// window, this to the roster). They are equal today by coincidence of the same
-// ruling, and either may be retuned without the other.
+// IT READS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE HOLD BEAT — the same
+// number the touch pan zone's region hold (kTouchRegionHoldMs) reads, matched
+// by convention with the compositor's key-repeat delay, so every deliberate
+// hold in the product crosses its threshold on one beat. The constant's own
+// declaration carries that ruling, including why the keyboard's delay stays
+// the compositor's rather than joining as a third copy.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
 // nothing to say about it (the same rule the drag-slop and disambiguation
@@ -2649,7 +2643,7 @@ constexpr int     kDoubleClickSlackPx = 8;
 //
 // The beat is DELIBERATELY LONG relative to a click. A shifted act is the rarer
 // one on all four buttons, so the cost of an accidental hold must land on the
-// rare act rather than on the common one; 500ms is well past any ordinary
+// rare act rather than on the common one; the beat is well past any ordinary
 // click-and-lift and just short of the point where a user would assume the
 // press was lost.
 //
@@ -2657,7 +2651,7 @@ constexpr int     kDoubleClickSlackPx = 8;
 // TOUCH PANEL's, and tooltips do not show there, so a hint at the beat would
 // ride a surface the gesture's only user never sees. No feedback is to be
 // built for this constant; the ruling's home is the read site.
-constexpr int64_t kChromeShiftHoldMs  = 500;
+constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
 // DRAG (architect-tunable), shared by EVERY press-becomes-drag surface. THE
@@ -7214,7 +7208,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (reset the trim to the whole song). Its 2026-08-11 "Shift+X stays
 // keyboard-only" clause is SUPERSEDED and the reason is the glass rig: the
 // maximizer had no pointer route at all, so a keyboardless panel could set a
-// trim window and never get back out of it. The admission grants the 500 ms
+// trim window and never get back out of it. The admission grants the hold-beat
 // long press → shift act (kChromeShiftHoldMs) and the two-line hint with no new
 // machinery.
 //
