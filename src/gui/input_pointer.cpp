@@ -1496,10 +1496,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // nothing shows the Arrow. The band-wide TrimResize was true only while an
     // outside press extended the nearer BOUND, and that extension was deleted
     // on 2026-08-15 ("the threshold for the bounds is fine, the ten pixels on
-    // either side works") — since then an outside press is a Pending whose
-    // crossing commits nothing, so an ew-resize there promised a drag the lane
-    // no longer has. What the outside press still does is TELEPORT at its
-    // motionless lift, and a click carries no cue anywhere in the product.
+    // either side works") — since then an ew-resize out there would promise a
+    // drag the lane does not have. What the outside press does is TELEPORT AT
+    // THE PRESS ITSELF, arming nothing at all (2026-08-17, the certain-identity
+    // ruling; the two-day Pending went with it), and a click carries no cue
+    // anywhere in the product.
     // The inside/outside question is asked through the painter's own span
     // owner (overview_box_span), in the press router's own order and off the
     // press router's own predicates, so cue and gesture agree by construction;

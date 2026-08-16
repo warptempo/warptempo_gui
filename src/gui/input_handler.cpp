@@ -424,10 +424,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // click (scroll_drag — one state for the pending, the pan and the ctrl
     // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
     // until its deletion, 2026-08-15),
-    // the overview lane's box drag (overview_drag — the pending outside press,
-    // the pan and the edge
-    // drags, one state for the pending and moved phases since the lane
-    // rework the same day),
+    // the overview lane's box drag (overview_drag — the box pan and the two
+    // edge drags, and nothing else: the OUTSIDE press is not a member, since
+    // it teleports at the press and arms no record at all, 2026-08-17),
     // THE STANDING REGION'S OWN EDITOR (region_edit_drag — the move and the two
     // bound drags, 2026-08-15: it must swallow chords for the same reason the
     // region former does, its span being live under the pointer, and because an

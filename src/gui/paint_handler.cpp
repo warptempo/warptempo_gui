@@ -4503,8 +4503,8 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // LATER PHASE of the ratification, RESOLVED: the box-drag pan and the
 // trim-style zoom brackets are BUILT, architect-ratified the same day):
 // the box's edges are ENDCAP handles (edge drags mutating the viewport
-// span), a plain press elsewhere TELEPORTS outside the box — at its
-// motionless LIFT since 2026-08-15 — and grabs it inside, where the drag is
+// span), a plain press elsewhere TELEPORTS outside the box — AT THE PRESS
+// ITSELF, arming nothing (2026-08-17) — and grabs it inside, where the drag is
 // the box-follows-pointer PAN, and the wheel is unchanged (wheel_context's
 // overview arm: plain pan / ctrl zoom step). THE LANE'S VOCABULARY IS THOSE
 // THREE GESTURES AND NOTHING ELSE since the redesign of 2026-08-15: the

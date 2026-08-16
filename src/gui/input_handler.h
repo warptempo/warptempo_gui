@@ -633,8 +633,8 @@ struct GuiInputHandler {
     // with every mid-gesture ctrl switch
     // re-stamping it through set_strip_capture_restore_kind below, so the
     // release restores the phase the gesture ended in. The overview lane's
-    // drags (the pending outside press, the
-    // box pan and the edge drags) never capture at all — absolute-position
+    // drags (the box pan and the two edge drags — the outside press is no
+    // drag at all, teleporting at the press) never capture — absolute-position
     // drags, the trim endcap model. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
@@ -2553,13 +2553,13 @@ private:
     //   box-follows-pointer PAN, a move-the-whole-span gesture, "left/right
     //   arrows like on plain trim hover" (the architect's words). OUTSIDE the
     //   box the lane answers the ARROW (codex round 19): the press there arms
-    //   a Pending whose crossing commits nothing, and its one act is the
-    //   teleport at the motionless lift, a click act needing no cue — the
-    //   band-wide resize promise outlived the outside-drag extension deleted
-    //   on 2026-08-15. A LIVE
+    //   NOTHING — its one act is the TELEPORT AT THE PRESS ITSELF, a click act
+    //   needing no cue, leaving no record for a later motion or lift to read —
+    //   the band-wide resize promise outlived the outside-drag extension
+    //   deleted on 2026-08-15. A LIVE
     //   box pan KEEPS the cue since 2026-08-13, the edge drags' own rule
-    //   (below) grown by one member; a live PENDING keeps the Arrow, the same
-    //   one kind for its whole span.
+    //   (below) grown by one member; outside the box no state ever stands, so
+    //   there is nothing to keep a cue for and the Arrow answers throughout.
     //   AND EVERY MARKER FLAG BOX, plain (architect 2026-08-13): markers move
     //   SIDE TO SIDE, the bridge's own promise, and the flag box is the
     //   marker's one pointer surface in every view since stems went

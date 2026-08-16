@@ -3207,9 +3207,19 @@ bool GuiPlatform::end_touch_left_hold(bool clean_release) {
     //     the spelling every gesture already answers (the button-lost arms in
     //     GuiInputHandler::on_motion, and the force-end finalizer's own rule):
     //     a MOVED drag finalizes like a release, an UNMOVED press commits
-    //     NOTHING — no click act, no double-click seed, and no chrome dispatch,
-    //     since dispatching an armed chrome/modal/menu press is the RELEASE's
-    //     job and no release is delivered. AND THE ARMS THOSE SURFACES HOLD ARE
+    //     NOTHING FURTHER — no click act still owed, no double-click seed, and
+    //     no chrome dispatch, since dispatching an armed chrome/modal/menu
+    //     press is the RELEASE's job and no release is delivered. NOTHING
+    //     FURTHER RATHER THAN NOTHING SINCE 2026-08-17: a resolved MARKER touch
+    //     has already run its click act at the synthesized PRESS, and this
+    //     abnormal end drops the pending ALONE and leaves that committed click
+    //     — the selection, the land, the playback stop — standing (the
+    //     pending_marker_press arm at input_pointer.cpp's on_motion). That is
+    //     the recorded accepted cost of press-time acting, undo the mitigation;
+    //     the surfaces that still commit nothing at an unmoved press are the
+    //     ones whose act was never owed until the lift, the nav surface's
+    //     deferred click among them. touch.md's upgrade bullet is the ruling.
+    //     AND THE ARMS THE CHROME / MODAL / MENU SURFACES HOLD ARE
     //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below
     //     (codex round 20): the GUI ends its release-time claims — the chrome
     //     press, the modal's armed button, the popup's item claim — at exactly
