@@ -795,10 +795,10 @@ struct GuiInputHandler {
     // site states only its own class plus a pointer here.
     //
     // THE PRESS ONLY ARMS. Outside a text editor, on_key (the press router)
-    // records the key identity plus the press's {ctrl, shift, alt} in the
-    // armed set (armed_keys_, private below) and runs no command; the RELEASE
-    // (on_key_release, below) consumes the armed entry and runs the one
-    // command dispatch (dispatch_key_command) under LIVE state.
+    // records the key identity plus the press's chord — {ctrl, shift, alt}
+    // and the codepoint — in the armed set (armed_keys_, private below) and
+    // runs no command; the RELEASE (on_key_release, below) consumes the armed
+    // entry and runs the one command dispatch (dispatch_key_command).
     //
     // EXCEPTION 1 — TEXT EDITORS ARE KEYDOWN ISLANDS, WHOLE (surface-based,
     // not per-key). While any keyboard-modal editor stands (the five:
@@ -819,14 +819,33 @@ struct GuiInputHandler {
     // both edges there, so the router never sees either edge. Do not later
     // "complete" the release conversion onto it.
     //
-    // THE MISMATCH GUARD: the armed entry stashes the press's three modifier
-    // bools; if the live {ctrl, shift, alt} at the release differ, the
-    // release is a CONSUMED NOTHING — never a different binding's act (the
-    // hazard that forced the choice: Ctrl+S with ctrl lifted early would
-    // otherwise release as bare `s`, the marker drop). This is deliberately
-    // NOT a ChromePress-style carry: nothing is ever dispatched with stale
-    // state — the stash can only REFUSE, and when it passes, live and press
-    // mods are identical and the dispatch reads live.
+    // THE CHORD IS WHAT YOU PRESSED — COMMITMENT AT THE PRESS (architect
+    // 2026-08-16: "if I press a modifier, I can still prevent myself from
+    // pressing the key. If I press the key, I have committed to the action,
+    // and ctrl+z is always a click away"). CHORD IDENTITY IS READ ONCE, AT THE
+    // PRESS, and carried by the armed entry: the {ctrl, shift, alt} bools and
+    // the codepoint that dispatch at the release are the PRESS'S, in either
+    // release order — lift ctrl first or the letter first, Ctrl+S is Ctrl+S.
+    // This is the ChromePress rule in the keyboard's terms, so keys, chrome
+    // buttons and touch now share one sentence: modifiers are read at the
+    // press, the act runs at the lift. The stash decides WHAT runs; LIVE STATE
+    // STILL DECIDES WHETHER — the island skip and the modal rank in
+    // on_key_release and every gate inside the dispatch are asked at the
+    // release against the live world, and `primary_button_held` comes from the
+    // live delivery for the same reason (it is gate state, not chord
+    // identity). A bare modifier arms nothing and so commits nothing: holding
+    // ctrl alone is still free to be abandoned. Rolling into the next chord is
+    // safe too — a bare Tab already pressed stays bare Tab even if ctrl goes
+    // down before its release.
+    //
+    // STRICT MODIFIER VALIDATION IS UNTOUCHED AND IS THE ONLY REFUSAL LEFT ON
+    // THIS PATH: an unbound stashed chord is a consumed no-op at dispatch,
+    // exactly as an unbound live chord always was.
+    //
+    // ONE DIVERGENCE, DELIBERATE: A REPEAT STREAM READS MODIFIERS LIVE PER
+    // FIRE. A tap is ONE act and is read at its press; a hold is MANY acts, so
+    // each fire reads the world it fires in — which is what keeps Ctrl+Z with
+    // shift added mid-hold flipping the run to redo (architect 2026-07-23).
     //
     // THE REPEAT RULE: a synthesized repeat claims the release — the hold's
     // first repeat unarms the key — so a tap is exactly one act, at the
@@ -840,10 +859,12 @@ struct GuiInputHandler {
     // arrives at the compositor repeat delay instead of t=0.
     //
     // NO CANCEL: a pressed key cannot be aborted before its release (undo is
-    // the mitigation), mirroring "pointer gestures have no cancel".
+    // the mitigation), mirroring "pointer gestures have no cancel". There is
+    // no modifier escape hatch either — reshaping the chord after the key is
+    // down changes nothing about what runs, by design.
     //
-    // LIVE STATE DECIDES — the ChromePress doctrine's keyboard mirror: the
-    // press only SELECTS an identity; every gate is asked at the release
+    // LIVE STATE DECIDES WHETHER — the ChromePress doctrine's keyboard
+    // mirror: the press commits WHAT runs; every GATE is asked at the release
     // under live state. Recorded corners, accepted: a modal opening mid-hold
     // swallows the release (conservative); a modal closing mid-hold lets the
     // release dispatch into the live app; a prompt painted mid-hold can be
@@ -852,10 +873,12 @@ struct GuiInputHandler {
     // THE PRODUCT'S GENERAL KEYUP DISPATCH (2026-08-16; from 2026-08-13 until
     // then its one consumer was the modal dialog's Enter/Space arm, which it
     // still resolves first — a modal surface owns input). Then the armed
-    // general release runs the one command dispatch under live state; the
-    // model is at on_key above, the ranked body in input_key_dispatch.cpp.
-    // It takes the release's LIVE modifier state: the mismatch guard reads
-    // it, and a passing dispatch reads live.
+    // general release runs the one command dispatch on the ARMED ENTRY'S
+    // CHORD; the model is at on_key above, the ranked body in
+    // input_key_dispatch.cpp. Of the release's own LIVE state it takes only
+    // `primary_button_held` (gate state, not chord identity) — every gate the
+    // dispatch asks is live regardless, since gates read the app, not the
+    // passed mods.
     void on_key_release(GuiKey key, GuiInputState mods);
     // The armed set's hard clear, a member of the keyboard-intent
     // cancellation hook's body (main.cpp, the hook's authoritative effect
@@ -2986,16 +3009,25 @@ private:
                               KeyDispatchPhase phase);
 
     // THE ARMED SET: a key is in it iff its RELEASE should be considered for
-    // dispatch (the model is at on_key's declaration). Each entry stashes the
-    // press's three modifier bools for the mismatch guard — a stash that can
-    // only REFUSE, never a carry. ROLLOVER IS DELIBERATE: multiple keys arm
-    // independently and each release fires its own act (a fast `,`/`.`
-    // alternation loses nothing), so this is a set, not one slot. arm() keeps
-    // keys unique — a re-press overwrites the stash; unarm() find-erases and
-    // reports the stashed bools through `stash` when asked. Cleared whole by
+    // dispatch (the model is at on_key's declaration). EACH ENTRY CARRIES THE
+    // PRESS'S WHOLE CHORD — the three modifier bools AND the codepoint — and
+    // that chord is WHAT DISPATCHES at the release: the entry is a CARRY, the
+    // ChromePress rule in the keyboard's terms. The codepoint rides along so
+    // the dispatched event is wholly "as pressed": the prompt's letter arm
+    // compares `mods.codepoint`, so a shift released early would otherwise
+    // pair stashed-shift bools with a live lowercase character. ROLLOVER IS
+    // DELIBERATE: multiple keys arm independently and each release fires its
+    // own act (a fast `,`/`.` alternation loses nothing), so this is a set,
+    // not one slot. arm() keeps keys unique — a re-press overwrites the stash,
+    // the newest press being the committed chord; unarm() find-erases and
+    // reports the stashed chord through `stash` when asked. Cleared whole by
     // clear_armed_keys (public above) on the keyboard-intent cancellation
     // edges.
-    struct ArmedKey { GuiKey key; bool ctrl, shift, alt; };
+    struct ArmedKey {
+        GuiKey key;
+        bool ctrl, shift, alt;
+        uint32_t codepoint;
+    };
     std::vector<ArmedKey> armed_keys_;
     void arm(GuiKey key, GuiInputState mods);
     bool unarm(GuiKey key, ArmedKey* stash = nullptr);

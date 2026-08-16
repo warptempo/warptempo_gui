@@ -2201,8 +2201,12 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
         // the model is at GuiInputHandler::on_key). Delivered for the same key
         // identity the press carried, through the one translation both
         // branches read, with the live modifier state and codepoint built
-        // exactly as the press path builds them — the application's mismatch
-        // guard reads the bools, a passing dispatch reads them live, and
+        // exactly as the press path builds them — the application dispatches
+        // the PRESS'S chord rather than this one (the commitment rule at
+        // GuiInputHandler::on_key), so of what is built here only
+        // `primary_button_held` reaches the dispatch; the rest is delivered
+        // because this boundary states the live world and the boundary's job
+        // is not to know which fields a consumer keeps.
         // `synthesized_repeat` stays false (no release is synthesized). NOT
         // gated on Super (a release binds nothing on its own; the reasoning is
         // at set_on_key_release, platform_wayland.h).

@@ -4801,7 +4801,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 
 // THE PRODUCT'S GENERAL KEYUP DISPATCH (2026-08-16; from 2026-08-13 until
 // then its whole body was the modal dialog's Enter/Space arm). The model —
-// press arms, release commands under live state — is at on_key's declaration
+// the press commits a chord, the release runs it — is at on_key's declaration
 // (input_handler.h); this body runs its release half, in order:
 //
 //   1. THE MODAL DIALOG'S KEYBOARD PRESS ARM resolves FIRST — the act, at the
@@ -4815,13 +4815,13 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 //      replaced — the act does not fire. The painter has usually dropped the
 //      arm outright on those same edges; this is the second wall, exactly as
 //      the pointer's release is. MODIFIERS AT THE RELEASE ARE NOT RE-READ on
-//      this arm — ITS OWN rule, kept across the keyup model (the pointer
-//      release's rule: the PRESS is what is bare-exact, and a shift tapped
-//      mid-hold does not turn a committed press into something else). The
-//      boundary against the general path's mismatch guard below is deliberate:
-//      the guard stops a COMMAND release from becoming a different binding's
-//      act, while this arm selects no binding by its modifiers at all — the
-//      armed button IS the act.
+//      this arm (the pointer release's rule: the PRESS is what is bare-exact,
+//      and a shift tapped mid-hold does not turn a committed press into
+//      something else) — AND THE GENERAL PATH BELOW NOW AGREES WITH IT. The
+//      two are one doctrine, ChromePress's: the press commits the modifier
+//      context, the lift runs the act. This arm reaches it from the other
+//      side, selecting no binding by its modifiers at all — the armed button
+//      IS the act.
 //   2. THE ARMED ENTRY: a release with no entry resolves nothing — the island
 //      consumed the press, the prompt ring armed the face instead, a
 //      synthesized repeat claimed it, or the press was never delivered.
@@ -4829,10 +4829,8 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 //      whose release lands inside one is consumed — the island is press-time;
 //      without this, a rollover release could type into or command a
 //      just-opened editor.
-//   4. THE MISMATCH GUARD (the model's, at on_key's declaration): changed
-//      {ctrl, shift, alt} between press and release is a consumed nothing,
-//      never a different act.
-//   5. The one command dispatch, under live state.
+//   4. The one command dispatch, ON THE ARMED ENTRY'S CHORD (the model's
+//      commitment rule, at on_key's declaration).
 void GuiInputHandler::on_key_release(GuiKey key, GuiInputState mods) {
     // A PHYSICAL KEY ARRIVAL ENDS A HELD BUTTON'S REPEAT BURST, and the RELEASE
     // is the edge that matters under this model: the command runs HERE, so the
@@ -4856,11 +4854,23 @@ void GuiInputHandler::on_key_release(GuiKey key, GuiInputState mods) {
     ArmedKey stash{};
     if (!unarm(key, &stash)) return;
     if (keyboard_modal_editor_active()) return;
-    if (stash.ctrl != mods.ctrl || stash.shift != mods.shift ||
-        stash.alt != mods.alt) {
-        return;
-    }
-    dispatch_key_command(key, mods, KeyDispatchPhase::Release);
+    // THE CHORD IS WHAT YOU PRESSED: the armed entry's own {ctrl, shift, alt}
+    // and codepoint are what dispatches, in either release order, so lifting
+    // ctrl a moment before the `s` still runs Ctrl+S. The press committed the
+    // act; this release only runs it (the rule and the architect's argument
+    // are at on_key's declaration, input_handler.h). `synthesized_repeat` is
+    // false because no release is synthesized — the repeat stream's own live
+    // read is a separate path entirely. `primary_button_held` alone comes from
+    // the LIVE delivery: it is gate state rather than chord identity, and the
+    // gates keep reading the live world.
+    GuiInputState dispatch_mods{};
+    dispatch_mods.ctrl                = stash.ctrl;
+    dispatch_mods.shift               = stash.shift;
+    dispatch_mods.alt                 = stash.alt;
+    dispatch_mods.codepoint           = stash.codepoint;
+    dispatch_mods.synthesized_repeat  = false;
+    dispatch_mods.primary_button_held = mods.primary_button_held;
+    dispatch_key_command(key, dispatch_mods, KeyDispatchPhase::Release);
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the

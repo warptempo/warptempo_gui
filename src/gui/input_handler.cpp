@@ -136,7 +136,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // stays at the release through the modal arm, exactly as shipped.
         if (press_modal_ring_arm(key, mods)) return;
         // Answers, walks, Esc — all at the release, through the dispatch's
-        // prompt gate under live state.
+        // prompt gate under live gates, on the chord this press commits (the
+        // letter answers compare the codepoint, which the arm carries).
         arm(key, mods);
         return;
     }
@@ -149,8 +150,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         dispatch_key_command(key, mods, KeyDispatchPhase::Full);
         return;
     }
-    // Dropdown, blank/loading, and every command: the release decides under
-    // live state.
+    // Dropdown, blank/loading, and every command: this press commits the
+    // chord and the release runs it, under live gates.
     arm(key, mods);
 }
 
@@ -159,15 +160,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 void GuiInputHandler::arm(GuiKey key, GuiInputState mods) {
     for (ArmedKey& a : armed_keys_) {
         if (a.key == key) {
-            // A re-press overwrites the stash: the newest press's modifier
-            // set is the one the release must match.
-            a.ctrl  = mods.ctrl;
-            a.shift = mods.shift;
-            a.alt   = mods.alt;
+            // A re-press overwrites the stash: the newest press's chord is
+            // the committed one, and it is what the release will dispatch.
+            a.ctrl      = mods.ctrl;
+            a.shift     = mods.shift;
+            a.alt       = mods.alt;
+            a.codepoint = mods.codepoint;
             return;
         }
     }
-    armed_keys_.push_back(ArmedKey{key, mods.ctrl, mods.shift, mods.alt});
+    armed_keys_.push_back(
+        ArmedKey{key, mods.ctrl, mods.shift, mods.alt, mods.codepoint});
 }
 
 bool GuiInputHandler::unarm(GuiKey key, ArmedKey* stash) {

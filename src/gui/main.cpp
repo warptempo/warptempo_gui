@@ -1356,8 +1356,9 @@ int main(int argc, char** argv) {
     // THE KEY RELEASE — the product's GENERAL keyup dispatch since 2026-08-16
     // (the model is at GuiInputHandler::on_key): the modal dialog's armed
     // Enter/Space resolves first — a modal surface owns input — then an armed
-    // general release runs the one command dispatch under live state (the
-    // ordered body is at GuiInputHandler::on_key_release).
+    // general release runs the one command dispatch on the chord its PRESS
+    // committed, under live gates (the ordered body is at
+    // GuiInputHandler::on_key_release).
     gui.set_on_key_release([&](GuiKey key, GuiInputState mods) {
         input_handler.on_key_release(key, mods);
     });

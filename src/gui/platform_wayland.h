@@ -116,8 +116,9 @@ public:
     // GENERAL keyup dispatch now — outside a text editor the press only arms
     // and the release commands (the model is at GuiInputHandler::on_key) — so
     // the release hands over current_mods() plus the codepoint, built exactly
-    // as the press path builds them: the mismatch guard reads the three
-    // modifier bools, and a passing dispatch reads them live.
+    // as the press path builds them. THE APPLICATION DISPATCHES THE PRESS'S
+    // CHORD, not this one, and keeps only `primary_button_held` from here;
+    // this boundary states the live world either way, which is its whole job.
     // `synthesized_repeat` stays false — maybe_fire_repeat is this class's only
     // writer of it, and it synthesizes no releases. (The application's own
     // producer, the chrome button hold-repeat, never reaches these callbacks at

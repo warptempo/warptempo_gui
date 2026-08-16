@@ -117,7 +117,12 @@ struct GuiInputState {
     // LETTER responses — the last joined 2026-07-30, because the prompt is the
     // product's one CASE-SENSITIVE letter surface and the case-folded GuiKey
     // cannot express that (CapsLock defeated the old !shift spelling). Every
-    // other consumer reads the GuiKey and ignores this.
+    // other consumer reads the GuiKey and ignores this. ONE CARRIER, not a
+    // fourth consumer: the armed key set stashes the PRESS's codepoint and
+    // hands it back at the release, so a general keyup dispatches the
+    // character as pressed (the commitment rule at GuiInputHandler::on_key) —
+    // which is what keeps the prompt's letter arm reading a capital that a
+    // shift lifted early would otherwise have folded away.
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED REPEAT — one the process
     // generated itself from a HELD input rather than a fresh physical press.
