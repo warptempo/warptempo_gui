@@ -1579,7 +1579,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // IT WRITES ONLY THE VIEWPORT and damages nothing: the caller owns its own
 // damage and its own sync kick, which is what keeps the restore behaviourally
 // unchanged by the hoist (its tail already invalidated and kicked
-// unconditionally) and what lets the toggle's seed pay the same tail once.
+// unconditionally) and what lets the SHOW-REGION command pay the same tail
+// once. That command is MOMENTARY AND STATELESS and deliberately not a toggle
+// — a lamp reading the region's EXISTENCE would strand a scrolled-away span
+// behind a lit button whose only press cleared it — so it clears nothing,
+// ever; the architect's own reasoning is at handle_show_region
+// (input_trim.cpp).
 // A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put, matching
 // the inline version's own guard.
 void bring_span_into_view(AppState& app, const GuiAudio& audio,

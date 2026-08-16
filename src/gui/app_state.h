@@ -347,8 +347,10 @@ struct RegionState {
 // anywhere else to PAN as ever — and `x` still commits it to trim. The other
 // half closes the loop: CTRL+SHIFT+X SHOWS one at the current trim window
 // (handle_show_region, input_trim.cpp, and the icon row's IconShowRegion
-// toggle), so the same three motions edit the trim itself on a surface hundreds
-// of pixels tall instead of nine. THE SHOW ACT SPENT ONE DAY ON BARE `x`'s
+// button — MOMENTARY and stateless, never a toggle, the ruling and the hole it
+// closes being at that button's roster entry), so the same three motions edit
+// the trim itself on a surface hundreds of pixels tall instead of nine.
+// THE SHOW ACT SPENT ONE DAY ON BARE `x`'s
 // no-region arm (2026-08-15..16) and the architect split it off onto its own
 // chord and its own button, one key having come to mean two unrelated things;
 // the model is unchanged and only the show's spelling moved.
@@ -4054,9 +4056,10 @@ struct AppState {
     // is DELETED with the padlock's move into the icon row, 2026-08-14: the
     // read-only toggle is a roster button now, so it arms as Roster like every
     // other chord button.)
-    // (The three dropdown ANCHORS are deliberately NOT armed: their toggle is
-    // the recorded press-time exception — the reasoning is at their press
-    // claim in on_button_press.)
+    // (The TWO dropdown ANCHORS — File and Settings, a third having left with
+    // the Navigation menu on 2026-08-15 — are deliberately NOT armed: their
+    // toggle is the recorded press-time exception, and the reasoning is at
+    // their press claim in on_button_press.)
     //
     // `shift` is THE PRESS-TIME MODIFIER, carried with the arm because the
     // release deliberately does not re-read modifiers (the modal release's own
@@ -5279,8 +5282,12 @@ struct AppState {
     // Trim is a region authored purely by the plain trim-bar pointer drags
     // (single-bound endcap, inter-endcap bridge/pair), the ctrl /
     // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
-    // trim to it and consumes the span; with NO region `x` SHOWS one at the
-    // current window and writes nothing — the seed, 2026-08-15), the
+    // trim to it and consumes the span; with NO region `x` is a CONSUMED
+    // NOTHING — for one day, 2026-08-15..16, that arm SEEDED a region at this
+    // window instead, and the architect split the seed onto Ctrl+Shift+X and
+    // its own button because one key had come to mean two unrelated things,
+    // show and commit; the show act writes no trim at all, so it is not a
+    // producer here), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's
     // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full

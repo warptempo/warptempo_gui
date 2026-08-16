@@ -929,9 +929,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // THE CLOCK'S RECT — the unified bottom row's reserved centre cell as the
 // painter last drew it (AppState::clock_cell_rect, whose stash contract is at
 // the field). Narrow by construction: on_redraw clips to the damage region,
-// so paint_bottom_strip runs but its buttons and status chain fall outside
+// so paint_bottom_strip runs but its buttons and its separator fall outside
 // the clip and cost nothing, which is what makes this affordable at the
-// pre-paint hook's per-frame cadence.
+// pre-paint hook's per-frame cadence. (The row's STATUS CHAIN was the third
+// such tenant until 2026-08-13, when it moved into the TAB ROW — see the
+// deleted status cell's record just above; this lane carries no chain now.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame

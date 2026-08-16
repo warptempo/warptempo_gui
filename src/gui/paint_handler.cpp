@@ -237,7 +237,9 @@ struct MenuButtonDef {
 // Navigation anchor was deleted with its menu; Settings still sits last, one
 // slot earlier.
 constexpr MenuButtonDef kMenuButtons[] = {
-    // THE THIRD DROPDOWN (architect 2026-08-13) — a COMMAND MENU of ONE row,
+    // THE FILE MENU (architect 2026-08-13) — the row's THIRD dropdown when it
+    // landed, and one of TWO since the Navigation anchor's deletion on
+    // 2026-08-15 — a COMMAND MENU of ONE row,
     // "Quit", in the slot the Quit BUTTON held from 2026-07-31: row 1 paints no
     // held face, so a button acting at the lift said nothing while it was down,
     // and the standard home for Quit is a File menu (kdenlive's own). Nothing
@@ -701,8 +703,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // `=`), zoom out (bare `-`), full zoom out (bare `0`) and working-zoom
     // center (bare `c`), a separator-led group of four navigation acts. The
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair is
-    // SUPERSEDED by this order — the Navigation dropdown keeps its rows, and
-    // these buttons are the same commands' pointer home for the glass rig.
+    // SUPERSEDED by this order: these buttons are the same commands' pointer
+    // home for the glass rig, and they kept their rows in the Navigation
+    // dropdown besides — until 2026-08-15, when that duplication was what
+    // deleted the MENU instead, every one of its seven rows having grown a
+    // button of its own (the record is at kFilePopupItems, app_state.h).
     {RedesignButton::IconZoomIn,       icons::Icon::ZoomIn},
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},

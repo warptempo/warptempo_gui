@@ -764,8 +764,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05, re-derived 2026-08-13 when the Quit button
 // left the roster for the File menu — its LIVE entry is now the FILE ANCHOR's,
-// hand-answered with the other two, and the Ctrl+Q admission it rested on is
-// unchanged):
+// hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
+// on is unchanged; the hand entries were three until the Navigation anchor left
+// with its menu on 2026-08-15):
 //   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
@@ -821,14 +822,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   entirely, so the chord still refuses on an empty subject while the button
 //   stays lit. The reasoning is the blink, not the logic, and it is recorded
 //   there; this answer is kept exact because the KEY still reads it.
-//   and THE NAVIGATION ANCHOR since 2026-08-08 (architect) — one of the
-//   three hand entries, flipped: its menu opens in the view and its commands act
-//   there, so a dead face would be a lie about a working button. It is one of
-//   the two LIVE entries that are not a chord's admission, which is why they are
-//   spelled in the body rather than derived,
-//   and THE FILE ANCHOR joined it 2026-08-13 for the same reason: its menu opens
-//   in the view too and its one item is Ctrl+Q, which the mode's allowlist
-//   admits, so its face must be live.
+//   and THE FILE ANCHOR since 2026-08-13 — THE ONE LIVE ENTRY THAT IS NOT A
+//   CHORD'S ADMISSION, which is why it is spelled in the body rather than
+//   derived: an anchor has no chord to ask about, its menu opens in the view
+//   and its one item is Ctrl+Q, which the mode's allowlist admits, so a dead
+//   face would be a lie about a working button. (THE NAVIGATION ANCHOR was the
+//   other one, live here from 2026-08-08 on that same reasoning, and it left
+//   the roster with its menu on 2026-08-15 — so the LIVE hand entries went from
+//   two to one and the hand entries in total from three to two.)
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
 //   (Ctrl+Alt+R, which left the allowlist with its shifted twin when the act
 //   moved onto Ctrl+S — so the button wears its ordinary Render face over this
@@ -3574,8 +3575,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // only from a press, and while a DIALOG editor is up
     // every press dies at the veil (the MODAL-TRAP block above lifts ONLY
     // roster buttons whose chord the editors admit — Save alone today — and
-    // the three menu ANCHORS carry no chord, so no press can open a popup under
-    // an editor through it). The other half is not here — the
+    // the TWO menu ANCHORS carry no chord (a third did not either, until the
+    // Navigation anchor left with its menu on 2026-08-15), so no press can open
+    // a popup under an editor through it). The other half is not here — the
     // pointer-transparent FLAG editor swallows nothing, so a press does reach
     // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
     // that edit (the rule is stated there). Two mechanisms, one claim. (The
