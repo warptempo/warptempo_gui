@@ -110,20 +110,13 @@ public:
     using RedrawCallback       = std::function<void(cairo_t*, int x, int y, int w, int h)>;
     using ResizeCallback       = std::function<void(int w, int h)>;
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;
-    // A KEY RELEASE, carrying the key identity plus the LIVE input state
-    // (2026-08-16; the key alone from 2026-08-13, when its one consumer was
-    // the modal dialog's Enter/Space arm). Releases feed the application's
-    // GENERAL keyup dispatch now — outside a text editor the press only arms
-    // and the release commands (the model is at GuiInputHandler::on_key) — so
-    // the release hands over current_mods() plus the codepoint, built exactly
-    // as the press path builds them. THE APPLICATION DISPATCHES THE PRESS'S
-    // CHORD, not this one, and keeps only `primary_button_held` from here;
-    // this boundary states the live world either way, which is its whole job.
-    // `synthesized_repeat` stays false — maybe_fire_repeat is this class's only
-    // writer of it, and it synthesizes no releases. (The application's own
-    // producer, the chrome button hold-repeat, never reaches these callbacks at
-    // all: it calls the command dispatch directly.)
-    using KeyReleaseCallback   = std::function<void(GuiKey key, GuiInputState mods)>;
+    // A KEY RELEASE, carrying the key alone (2026-08-13). Key releases were
+    // platform-internal until the modal dialog's buttons grew a keyboard
+    // press-and-hold whose act is at the LIFT; the application needs the edge
+    // and needs nothing else from it, so this callback deliberately hands over
+    // no modifier state — the PRESS is what is modifier-exact, exactly as
+    // on_button_release's unused `mods` parameter says of the pointer.
+    using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
     // A scroll wheel notification carrying the NET number of detents crossed
     // in one pointer frame (always >= 1). on_pointer_frame() coalesces a
@@ -233,9 +226,7 @@ public:
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
-    // THE KEY RELEASE HOOK (2026-08-13; the application's GENERAL keyup
-    // dispatch since 2026-08-16 — the model is at GuiInputHandler::on_key). It
-    // fires for the SAME key identity the
+    // THE KEY RELEASE HOOK (2026-08-13). It fires for the SAME key identity the
     // press delivered — the same keysym lookup, the same ASCII case-fold — and
     // it inherits the press path's two drop classes verbatim (standalone
     // modifier keysyms and F1..F35, keys this GUI has no use for) plus one of
@@ -247,14 +238,15 @@ public:
     // a release binds nothing on its own — it can only RESOLVE an arm an
     // already-delivered press created. A Super-dropped press arms nothing
     // application-side (and fires the keyboard-intent cancellation hook below,
-    // which clears the application's armed key set), so ungated releases stay
+    // which drops the one armed key intent), so ungated releases stay
     // correct BY CONSTRUCTION; gating them would instead strand exactly the
     // arm whose press got through before Super went down, which is the one
     // case that could go wrong. THE CORNER LIVES HERE AND IS RULED KEPT
     // (architect 2026-08-16, codex round 26's M1: "super is the desktop's; the
     // GUI basically ignores it — Super usage inside the GUI is outside the
-    // GUI's providence"): Super pressed mid-hold does not block an armed act at
-    // the release (the modal arm's own precedent). The GUI's rule is that it
+    // GUI's providence"): Super pressed mid-hold does not block the one armed
+    // act at its release — the modal dialog's Enter/Space arm, the product's
+    // one act-on-lift keyboard edge. The GUI's rule is that it
     // BINDS NO SUPER CHORD, which the press drop makes true by construction —
     // not that nothing may happen while the desktop's modifier is physically
     // down. An act armed BEFORE Super went down and completed at its release is
@@ -337,10 +329,10 @@ public:
 
     // THE KEYBOARD-INTENT CANCELLATION HOOK (codex round 4, 2026-08-11): fired
     // wherever the platform ENDS OR CONSUMES the keyboard stream WITHOUT a
-    // delivery, so application-side key intent — the armed key set and the
-    // modal dialog's keyboard press arm, whose own disarms can only see events
-    // that reach the application — dies on the same edges the platform's own
-    // key-repeat state does. TWO fire classes, each stated at its site:
+    // delivery, so application-side key intent — the modal dialog's keyboard
+    // press arm, whose own disarms can only see events that reach the
+    // application — dies on the same edges the platform's own key-repeat
+    // state does. TWO fire classes, each stated at its site:
     //   * forget_keyboard_state — wl_keyboard.leave and keyboard-capability
     //     loss, the edges that clear repeat_key_ itself: a keyboard-driven
     //     focus change ends every release the stream owed;
@@ -349,19 +341,19 @@ public:
     //     on_key disarm never sees, and the platform's own layer-1 disarms its
     //     armed repeat at that very press (the arming else-branch in
     //     on_keyboard_key runs BEFORE the drop) — per-delivery is the faithful
-    //     mirror. Deliberately NOT at Super's press edge, and since 2026-08-16
-    //     the ground for that is the RULING rather than the older premise that
-    //     nothing could fire under Super anyway (which the armed key set
-    //     outdates): the Super keysym itself "disarms nothing" platform-side,
+    //     mirror. Deliberately NOT at Super's press edge, and the ground is
+    //     the RULING (the corner at set_on_key_release above): the Super
+    //     keysym itself "disarms nothing" platform-side,
     //     and Super's edge has nothing to cancel because a PENDING ARMED ACT IS
-    //     THE GUI'S OWN COMMAND, NOT A SUPER CHORD — it completes at its release
-    //     on its own terms, outside the GUI's providence to referee (the corner
-    //     is at set_on_key_release above). The hold itself is also a POINTER
+    //     THE GUI'S OWN COMMAND, NOT A SUPER CHORD — the modal Enter/Space arm
+    //     completes at its release
+    //     on its own terms, outside the GUI's providence to referee. The hold
+    //     itself is also a POINTER
     //     act, which the Super ruling explicitly scopes out (Super+click
     //     clicks).
     // ONE hook rather than another application-side list, so a platform edge
     // added later joins by firing it. The consumer's authoritative effect
-    // list is main.cpp's hook body, which names the two intents it drops.
+    // list is main.cpp's hook body, which names the one intent it drops.
     // THE ARROW BUTTONS' HOLD-REPEAT IS DELIBERATELY NOT A MEMBER (2026-08-16,
     // where the pre-2026-08-13 form of it was): that burst hangs off the ARMED
     // CHROME PRESS, which is POINTER intent — it dies on the pointer's own
@@ -370,8 +362,9 @@ public:
     // could otherwise argue for is undo adjacency, and they do not reach it
     // either: a Super-swallowed press runs NO COMMAND, so nothing can land
     // between the burst's opener and its repeats there. The burst's own
-    // key-arrival disarms are the two physical key edges in the application
-    // (the inventory is at AppState::ChromePress). Null-safe.
+    // key-arrival disarm is the physical key delivery in the application
+    // (main.cpp's set_on_key hook; the inventory is at AppState::ChromePress).
+    // Null-safe.
     void set_keyboard_intent_cancel_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members

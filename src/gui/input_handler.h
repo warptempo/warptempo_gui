@@ -39,10 +39,8 @@
 
 struct GuiPaintHandler;
 
-// Keyboard input handler. Owns the keyboard press router (on_key), the
-// general keyup dispatch (on_key_release), and the one command dispatch
-// behind both (dispatch_key_command); lifetime is the same scope as the
-// other operation structs.
+// Keyboard input handler. Owns the on_key callback body; lifetime is the
+// same scope as the other operation structs.
 //
 // Also provides on_button_press / on_button_release as public methods plus
 // the shared wheel handler as a private helper, and on_motion the same way.
@@ -268,8 +266,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     no trim write. It is ranked under the editors and prompts and over the
 //     render cancel, and a DRAG IN FLIGHT never reaches it — the drag-modal gate
 //     swallows the key first, so Esc clears a rested span but cancels no gesture.
-//     The full Esc enumeration lives at its dispatch point in
-//     dispatch_key_command
+//     The full Esc enumeration lives at its dispatch point in on_key
 //     (input_handler.cpp).
 // DELIBERATELY NOT CLEARED, the whole list (the scrub membership re-derived by
 // grepping scrub_press_at, 2026-08-13): THE SCRUB — the waveform LOWER-HALF
@@ -788,103 +785,31 @@ struct GuiInputHandler {
     // now run by the commit-title editor's Enter, which is a private method of
     // this same struct.)
 
-    // KEY COMMANDS ACT AT THE RELEASE (architect 2026-08-16, "key behaviour
-    // except for text editors, key up") — the keyboard joins the pointer's
-    // act-at-lift arc: ONE mental model across mouse, touch, and keys. THIS
-    // COMMENT IS THE MODEL'S ONE AUTHORITATIVE STATEMENT; every other touched
-    // site states only its own class plus a pointer here.
-    //
-    // THE PRESS ONLY ARMS. Outside a text editor, on_key (the press router)
-    // records the key identity plus the press's chord — {ctrl, shift, alt}
-    // and the codepoint — in the armed set (armed_keys_, private below) and
-    // runs no command; the RELEASE (on_key_release, below) consumes the armed
-    // entry and runs the one command dispatch (dispatch_key_command).
-    //
-    // EXCEPTION 1 — TEXT EDITORS ARE KEYDOWN ISLANDS, WHOLE (surface-based,
-    // not per-key). While any keyboard-modal editor stands (the five:
-    // settings, load, commit-title, bpm bracket, top-strip flag), the
-    // keyboard behaves exactly as before the model: every admitted key —
-    // typing, Enter commit, Esc cancel, the clipboard chords, Tab
-    // completion/ring walk, Ctrl+S, Ctrl+Q — acts at the PRESS, and repeats
-    // work as before. The architect's reasoning: on the rig the on-screen
-    // keypad's press/release timing is the OSK's own and uncontrollable, so
-    // only a surface rule ("a text editor is a keydown surface") feels
-    // identical on both machines; and typing surfaces are press-instant
-    // everywhere else in computing. The one release-act inside a dialog stays
-    // what already shipped: bare Enter/Space pressing a focused BUTTON — a
-    // button act, not typing (AppState::modal_dialog_key_pressed).
-    //
-    // EXCEPTION 2 — BARE `e` IS NOT A KEY ACT: it is the left mouse button,
-    // translated at the platform boundary (kLeftClickKey) and swallowed on
-    // both edges there, so the router never sees either edge. Do not later
-    // "complete" the release conversion onto it.
-    //
-    // THE CHORD IS WHAT YOU PRESSED — COMMITMENT AT THE PRESS (architect
-    // 2026-08-16: "if I press a modifier, I can still prevent myself from
-    // pressing the key. If I press the key, I have committed to the action,
-    // and ctrl+z is always a click away"). CHORD IDENTITY IS READ ONCE, AT THE
-    // PRESS, and carried by the armed entry: the {ctrl, shift, alt} bools and
-    // the codepoint that dispatch at the release are the PRESS'S, in either
-    // release order — lift ctrl first or the letter first, Ctrl+S is Ctrl+S.
-    // This is the ChromePress rule in the keyboard's terms, so keys, chrome
-    // buttons and touch now share one sentence: modifiers are read at the
-    // press, the act runs at the lift. The stash decides WHAT runs; LIVE STATE
-    // STILL DECIDES WHETHER — the island skip and the modal rank in
-    // on_key_release and every gate inside the dispatch are asked at the
-    // release against the live world, and `primary_button_held` comes from the
-    // live delivery for the same reason (it is gate state, not chord
-    // identity). A bare modifier arms nothing and so commits nothing: holding
-    // ctrl alone is still free to be abandoned. Rolling into the next chord is
-    // safe too — a bare Tab already pressed stays bare Tab even if ctrl goes
-    // down before its release.
-    //
-    // STRICT MODIFIER VALIDATION IS UNTOUCHED AND IS THE ONLY REFUSAL LEFT ON
-    // THIS PATH: an unbound stashed chord is a consumed no-op at dispatch,
-    // exactly as an unbound live chord always was.
-    //
-    // ONE DIVERGENCE, DELIBERATE: A REPEAT STREAM READS MODIFIERS LIVE PER
-    // FIRE. A tap is ONE act and is read at its press; a hold is MANY acts, so
-    // each fire reads the world it fires in — which is what keeps Ctrl+Z with
-    // shift added mid-hold flipping the run to redo (architect 2026-07-23).
-    //
-    // THE REPEAT RULE: a synthesized repeat claims the release — the hold's
-    // first repeat unarms the key — so a tap is exactly one act, at the
-    // release, and a hold is the repeat stream with nothing extra at the end.
-    // That first repeat is the HOLD'S OPENER, standing in for the press act
-    // the key no longer performs: it dispatches with synthesized_repeat
-    // CLEARED, so undo coalescing sees exactly the pre-model world — a
-    // "physical" opener (arrival-invalidate, tap-window/subject rules, its
-    // own entry) followed by identity-merging repeats (the argument is at
-    // Undo::coalesce_gesture). Visible change, accepted: a hold's first act
-    // arrives at the compositor repeat delay instead of t=0.
-    //
-    // NO CANCEL: a pressed key cannot be aborted before its release (undo is
-    // the mitigation), mirroring "pointer gestures have no cancel". There is
-    // no modifier escape hatch either — reshaping the chord after the key is
-    // down changes nothing about what runs, by design.
-    //
-    // LIVE STATE DECIDES WHETHER — the ChromePress doctrine's keyboard
-    // mirror: the press commits WHAT runs; every GATE is asked at the release
-    // under live state. Recorded corners, accepted: a modal opening mid-hold
-    // swallows the release (conservative); a modal closing mid-hold lets the
-    // release dispatch into the live app; a prompt painted mid-hold can be
-    // answered by a release whose press predates it (rare; undo mitigates).
+    // KEYBOARD COMMANDS ACT AT THE PRESS. This is the one ranked key
+    // dispatch: the platform delivers physical presses and synthesized
+    // repeats to it (main.cpp's set_on_key hook), and three pointer surfaces
+    // synthesize chords through this same body so every gate applies to them
+    // identically — the chrome lift, the dropdown item, and the arrow
+    // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
+    // live at their own homes: the five editors' modality
+    // (route_modal_editor_key), strict modifier validation (an unbound
+    // modifier combination is a consumed no-op; conventions.md), the Super
+    // press drop (deliver_key, platform_wayland.cpp), the modal Enter/Space
+    // act at the RELEASE — the product's one act-on-lift keyboard edge
+    // (on_key_release, below) — bare `e` as the left mouse button, swallowed
+    // at the platform boundary (kLeftClickKey, gui_input.h), and the held
+    // arrow BUTTONS' repeat burst (AppState::ChromePress).
     void on_key(GuiKey key, GuiInputState mods);
-    // THE PRODUCT'S GENERAL KEYUP DISPATCH (2026-08-16; from 2026-08-13 until
-    // then its one consumer was the modal dialog's Enter/Space arm, which it
-    // still resolves first — a modal surface owns input). Then the armed
-    // general release runs the one command dispatch on the ARMED ENTRY'S
-    // CHORD; the model is at on_key above, the ranked body in
-    // input_key_dispatch.cpp. Of the release's own LIVE state it takes only
-    // `primary_button_held` (gate state, not chord identity) — every gate the
-    // dispatch asks is live regardless, since gates read the app, not the
-    // passed mods.
-    void on_key_release(GuiKey key, GuiInputState mods);
-    // The armed set's hard clear, a member of the keyboard-intent
-    // cancellation hook's body (main.cpp, the hook's authoritative effect
-    // list): on the edges where the platform ends or consumes the keyboard
-    // stream, every armed entry dies — owed releases never arrive there.
-    void clear_armed_keys();
+    // THE KEY RELEASE, and the ONE thing in this product that acts on one
+    // (2026-08-13): bare Enter / bare Space on a focused DIALOG BUTTON press it
+    // down at the press and commit it here, the keyboard's own act-at-release
+    // matching the pointer's. Every other release is a no-op — the platform
+    // delivered releases to nothing at all before this, and the whole rest of
+    // the keyboard contract is still edge-on-press. It takes no modifiers, for
+    // the reason on_button_release names its own unused: the PRESS is what is
+    // bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
+    // in input_key_dispatch.cpp beside the ring that arms it.
+    void on_key_release(GuiKey key);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
     void on_button_release(GuiMouseButton button, int x, int y,
                            GuiInputState mods);
@@ -1343,7 +1268,7 @@ struct GuiInputHandler {
     // onto the titlebar the mode survives; a capability loss makes it always),
     // and from the top of
     // on_button_press and
-    // on_key, plus dispatch_key_command's re-run (any press, any chord). It carries the "no menu open" gate, because
+    // on_key (any press, any chord). It carries the "no menu open" gate, because
     // leaving the WINDOW is not a dismissal, a menu left standing is still the
     // mode, and while one is up the POPUP's own routes own the mode.
     void open_menu_row_anchor_on_hover(int mouse_x, int mouse_y);
@@ -1358,7 +1283,7 @@ struct GuiInputHandler {
     // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
     // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
     // stop and the prefilled editor; a command menu: the item's chord through
-    // dispatch_key_command).
+    // on_key).
     // IT TAKES THE RELEASE'S OWN (x, y) and, while the press CLAIM is live,
     // DERIVES that item with dropdown_item_at — the arm's own defining
     // expression, read at delivery — instead of trusting the recorded arm, which
@@ -1442,8 +1367,7 @@ struct GuiInputHandler {
     // target at the release's own coordinates and re-ask every press-time
     // gate — the modal veil, shift admission under the CARRIED shift, the
     // enabled bit, the radio rule, the Render cancel face — then run the act
-    // (the chord through dispatch_key_command; the tab lock's bare `o`; the
-    // walk tabs'
+    // (the chord through on_key; the tab lock's bare `o`; the walk tabs'
     // set_history_reading). A lift anywhere else, or a gate that no longer
     // holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
     // measured against the arm's press stamp and ORed into the one shift term
@@ -1534,8 +1458,7 @@ struct GuiInputHandler {
     void close_top_flag_editor_for_outside_press(int x, int y);
 
     // True when the open dropdown swallowed `key` — the popup-modal gate,
-    // ranked directly under the prompt at the top of dispatch_key_command.
-    // Bare Esc closes,
+    // ranked directly under the prompt at the top of on_key. Bare Esc closes,
     // Ctrl+Q closes and falls through to the close route, everything else is
     // swallowed inert so no command can run under an open popup.
     bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
@@ -1615,8 +1538,7 @@ struct GuiInputHandler {
 
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated
-    // at the drag-modal gate in dispatch_key_command). The marker drag commits
-    // its proposed
+    // at the drag-modal gate in on_key). The marker drag commits its proposed
     // position with its undo entry, the trim drag keeps its live bounds and runs its
     // commit tail, the region drag rests its region, the strip / grab-pan drags
     // just end (they applied continuously), and the THREE PENDINGS disarm having
@@ -1627,15 +1549,13 @@ struct GuiInputHandler {
     // the whole gesture is deleted, see marker_drag.h.)
     // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). FOUR
-    // CALLERS: the Ctrl+Q hatch in dispatch_key_command, main.cpp's WM-close
-    // and resize
+    // CALLERS: the Ctrl+Q hatch in on_key, main.cpp's WM-close and resize
     // callbacks (close ends the gestures before raising the prompt, so none is
     // left live under it; resize ends them before the geometry rebuild, whose
     // new samples-per-pixel would otherwise make the next motion derive its
     // delta across two coordinate systems), and — since 2026-08-09 —
     // on_history_prefetch_ready's FAILED-SCAN closer, the product's one
-    // asynchronous closer, which bypasses the key dispatch's drag-modal gate
-    // and so has to
+    // asynchronous closer, which bypasses on_key's drag-modal gate and so has to
     // re-establish by hand the invariant every other closer gets from it (the
     // reasoning is at that site).
     // NO CALLER OWES THE POINTER CURSOR ANYTHING — the cue has one owner, which
@@ -1863,9 +1783,8 @@ struct GuiInputHandler {
     // Press-time key-repeat eligibility, the platform's repeat_eligible_probe_.
     // Repeat serves held-step gestures and editor typing; edge-triggered
     // commands (one-shot actions, toggles, editor openers) never repeat. Judged
-    // under the context standing AT THE PRESS (the platform evaluates it before
-    // delivering the press, and outside an editor a press only arms), so a key
-    // whose command opens an editor is judged pre-open and does not arm, while
+    // under the PRESS-TIME context (the platform evaluates it before dispatch),
+    // so a press that opens an editor is judged pre-open and does not arm, while
     // typing inside an already-open editor does. Public because main.cpp's
     // probe lambda calls it. ONE THING REPEATS ON A MODAL SURFACE, the focus
     // ring's Tab walk (architect 2026-08-13) — on a prompt and under a dialog
@@ -2154,8 +2073,7 @@ private:
     void run_span_framing_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, BARE Esc
-    // cancels it. Returns true if it consumed the key (the dispatch then
-    // returns).
+    // cancels it. Returns true if it consumed the key (on_key then returns).
     // Routed after the editor modal (which cancels an active edit on Esc
     // first) and before the rest of the key handlers. Takes the modifiers
     // because a modified Escape must not cancel a running render, as no modified
@@ -2169,8 +2087,7 @@ private:
     // Both read the ITERATION-MODE bit (architect 2026-08-02): mode off, they
     // are the single render beside the source and the `_miscellaneous` cell as
     // ever; mode ON, the plain chord becomes the ITERATION SWEEP and the shift
-    // chord is a consumed no-op. Returns true if key+mods matched one (the
-    // dispatch
+    // chord is a consumed no-op. Returns true if key+mods matched one (on_key
     // then returns), false otherwise.
     bool handle_render_dispatch_keys(GuiKey key, GuiInputState mods);
 
@@ -2181,13 +2098,13 @@ private:
 
     // P / I / M / L letter-key handlers: Ctrl+P-family phase-reset clipboard
     // ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `l` listen-to-
-    // renders launcher. Returns true if key+mods matched one (the dispatch then
+    // renders launcher. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
 
     // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /
     // Shift+Tab / IsoLeftTab cycle marker focus. Returns true if key+mods
-    // matched one (the dispatch then returns), false otherwise.
+    // matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
@@ -2200,9 +2117,8 @@ private:
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
     // the load prompt, the commit-title editor, the bpm bracket editor, and
     // (architect 2026-07-28) the top-strip flag editor. The modal contract is stated once
-    // at the definition; returns true if the editor consumed the key (the
-    // dispatch then returns), false on Ctrl+Q so dispatch_key_command runs the
-    // close routing.
+    // at the definition; returns true if the editor consumed the key (on_key
+    // then returns), false on Ctrl+Q so on_key runs the close routing.
     // `autocomplete` is the ONLY OPTIONAL hook — the FORWARD-Tab one (the
     // reverse walk never completes), passed by
     // the SETTINGS and LOAD editors and returning whether it ADVANCED the
@@ -2210,8 +2126,7 @@ private:
     // walk the focus ring (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13,
     // stated in full at the definition). The commit-title, bpm and flag editors
     // have nothing to complete and pass an empty hook; for the flag editor bare
-    // Tab never arrives at all, the dispatch's gate swallowing it before this
-    // route
+    // Tab never arrives at all, the on_key gate swallowing it before this route
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the four dialog surfaces
@@ -2229,8 +2144,7 @@ private:
                                 const std::function<void()>& repaint);
 
     // Routes a key to the active top-flag editor. Returns true if the editor
-    // consumed it (the dispatch then returns); false on Ctrl+Q so
-    // dispatch_key_command runs the
+    // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
     // close routing. BOTH kinds now take route_modal_editor_key: the bpm
     // bracket editor as ever, and the FlagPayload flag editor since it became
     // keyboard-modal — the two differ only in their commit/cancel bodies and in
@@ -2294,7 +2208,7 @@ private:
     // it to ask something worth asking.
     //
     // open_history_commit_editor: the opener, reached from ONE place —
-    // Ctrl+S's own arm, which the mode bit re-aims (the dispatch's `s` handler,
+    // Ctrl+S's own arm, which the mode bit re-aims (on_key's `s` handler,
     // input_handler.cpp; it was Ctrl+Alt+R's arm until 2026-08-08, when the
     // architect moved the act onto the SAVE button's chord).
     // commit_title_editor_commit: Enter — validate non-blank, close the editor,
@@ -2831,7 +2745,7 @@ private:
     // lower half's motionless release, its one entry),
     // a pointer act that starts or stops a scanner and
     // never moves the resting cursor. "Scrub" names that and only that.
-    // TWO READERS, one owner: the key dispatch (which picks the lane) and
+    // TWO READERS, one owner: the on_key dispatch (which picks the lane) and
     // read_only_key_blocked's is_playhead_step entry (which admits the bare
     // horizontal arrows only while this is FALSE — in the marker lane they
     // author, and this gate is their sole read-only defense).
@@ -2862,8 +2776,7 @@ private:
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
-    // THREE READERS, re-derived 2026-08-12 (the touch half): the key dispatch's
-    // gate
+    // THREE READERS, re-derived 2026-08-12 (the touch half): the on_key gate
     // (input_handler.cpp), paired with modal_editor_key_blocked, the
     // roster hover walk's no-dwell term (recompute_redesign_button_hover,
     // input_pointer.cpp — no shift-tooltip dwell runs under a surface that
@@ -2990,66 +2903,12 @@ private:
     bool modal_dialog_stash_current() const;
     int  modal_dialog_focus_live() const;
 
-    // Which caller a key-dispatch run serves. Press is the modal ring's arming
-    // press (route_modal_dialog_focus_key only); Release is a physical key's
-    // release resolving its armed entry; Full is a press-that-acts — the keydown
-    // island (an open text editor), the synthesized-repeat path, and the synthetic
-    // chord dispatches (chrome lift, dropdown item) — exactly the pre-2026-08-16
-    // body.
-    enum class KeyDispatchPhase { Press, Release, Full };
-
-    // THE ONE COMMAND DISPATCH — the whole ranked key body (the context
-    // re-run, the modal gates, the five editors, the global commands), which
-    // WAS on_key until 2026-08-16 and was renamed verbatim when the
-    // press/release split landed (the model is at on_key's declaration,
-    // public above). It only ever receives Release or Full; the phase
-    // threads into exactly one consumer, route_modal_dialog_focus_key's
-    // Enter/Space arm below.
-    void dispatch_key_command(GuiKey key, GuiInputState mods,
-                              KeyDispatchPhase phase);
-
-    // THE ARMED SET: a key is in it iff its RELEASE should be considered for
-    // dispatch (the model is at on_key's declaration). EACH ENTRY CARRIES THE
-    // PRESS'S WHOLE CHORD — the three modifier bools AND the codepoint — and
-    // that chord is WHAT DISPATCHES at the release: the entry is a CARRY, the
-    // ChromePress rule in the keyboard's terms. The codepoint rides along so
-    // the dispatched event is wholly "as pressed": the prompt's letter arm
-    // compares `mods.codepoint`, so a shift released early would otherwise
-    // pair stashed-shift bools with a live lowercase character. ROLLOVER IS
-    // DELIBERATE: multiple keys arm independently and each release fires its
-    // own act (a fast `,`/`.` alternation loses nothing), so this is a set,
-    // not one slot. arm() keeps keys unique — a re-press overwrites the stash,
-    // the newest press being the committed chord; unarm() find-erases and
-    // reports the stashed chord through `stash` when asked. Cleared whole by
-    // clear_armed_keys (public above) on the keyboard-intent cancellation
-    // edges.
-    struct ArmedKey {
-        GuiKey key;
-        bool ctrl, shift, alt;
-        uint32_t codepoint;
-    };
-    std::vector<ArmedKey> armed_keys_;
-    void arm(GuiKey key, GuiInputState mods);
-    bool unarm(GuiKey key, ArmedKey* stash = nullptr);
-
-    // The press router's prompt half of the ring's Enter/Space act: true iff
-    // a bare-exact (no ctrl/shift/alt) Return or Space landed with the live
-    // focus on a button, in which case the ring ARMED the pressed face
-    // (KeyDispatchPhase::Press). Needed only for PROMPTS — a dialog EDITOR's
-    // Enter/Space reaches the same arm through the island's Full dispatch,
-    // the pre-model path exactly. Ranked in on_key under the painted gate,
-    // as the dispatch's prompt gate ranks the ring.
-    bool press_modal_ring_arm(GuiKey key, GuiInputState mods);
-
     // THE MODAL'S KEYBOARD FOCUS RING, one route for both surfaces (2026-08-13;
     // the state and the two meanings of its -1 are at
     // AppState::modal_dialog_focus, the navigation rules at the definition,
-    // input_key_dispatch.cpp). Called by the prompt gate
-    // (dispatch_key_command's, and press_modal_ring_arm above at Press)
+    // input_key_dispatch.cpp). Called by the prompt gate (input_handler.cpp)
     // and by route_modal_editor_key, and returns true when it consumed the
-    // key. `phase` is read by the Enter/Space arm ALONE (arm at Press and
-    // Full, consumed no-op at Release — the reason is at the arm); every
-    // walk shape is phase-blind. It takes no statement about the field's own Tab: an editor with an
+    // key. It takes no statement about the field's own Tab: an editor with an
     // autocomplete gets FIRST REFUSAL on the FORWARD key upstream, and by the
     // time a Tab reaches this route the completion has already declined it (the
     // one autocomplete model, at route_modal_editor_key). The REVERSE walk —
@@ -3061,8 +2920,7 @@ private:
     // 2026-08-13: with the focus on a BUTTON they press it DOWN and the act
     // runs at the key's release (on_key_release, public above); with the focus
     // in the FIELD they never reach this route and keep their old meanings.
-    bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods,
-                                      KeyDispatchPhase phase);
+    bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods);
 
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The
@@ -3073,8 +2931,8 @@ private:
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
     //     the toggle, the walk, the diff-flag cycle, the absolute Home/End and
     //     `c` — and returns true when it consumed the press. The membership is
-    //     re-derived at history_mode_owns_key; its position in
-    //     dispatch_key_command IS its entry-gate list.
+    //     re-derived at history_mode_owns_key; its position in on_key IS its
+    //     entry-gate list.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
     //     stands. The redesigned buttons and the File menu's one item reach it
@@ -3171,8 +3029,7 @@ private:
     //     live store of the active column and then closes the view. Its chord,
     //     Ctrl+H, is NOT part of the mode's own vocabulary — it is admitted by
     //     the allowlist (conditionally, on a subject standing) and dispatched
-    //     from dispatch_key_command's ordinary body BELOW the read-only gate,
-    //     so a locked tab
+    //     from on_key's ordinary body BELOW the read-only gate, so a locked tab
     //     refuses it exactly as it refuses `'` — but no longer as it refuses the
     //     checkpoint act, which authors nothing and runs from a locked tab
     //     (2026-08-07's band ruling; the act's chord is Ctrl+S since

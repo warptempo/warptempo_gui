@@ -1350,17 +1350,36 @@ int main(int argc, char** argv) {
     // (input_handler.h), driven by the iteration and BPM sweeps.
 
     gui.set_on_key([&](GuiKey key, GuiInputState mods) {
+        // A PHYSICAL KEY ARRIVAL ENDS A HELD ARROW BUTTON'S REPEAT BURST, and
+        // THIS hook is that edge: it sees exactly the platform's key
+        // deliveries and none of the synthetic on_key entries (the chrome
+        // lift, the dropdown item, and the burst's own tick fires — which
+        // must not end the schedule they ride, so the disarm cannot live at
+        // on_key's own top). It is LOAD-BEARING FOR UNDO rather than
+        // hand-feel: Undo::coalesce_gesture merges a synthesized repeat by
+        // KIND ALONE, with no subject test, on the premise that no command
+        // can run between a burst's opener and the repeats behind it — and
+        // under press-time dispatch the PRESS edge alone spans that premise:
+        // a key RELEASE runs no command (the one release act, the modal
+        // Enter/Space commit, needs its own arming press, which this line
+        // already caught — and a prompt standing disarms the burst anyway,
+        // through the tick's per-fire repeat_eligible re-ask). Only the ARM's
+        // schedule dies: the arm itself is the pointer's and a key press does
+        // not end a finger's hold, so the lift still runs the act the burst
+        // had not yet suppressed. A synthesized KEY repeat cannot arrive
+        // under a held button at all — the platform kills its own key hold at
+        // any pointer-button press — so no repeat-bit test is needed. The
+        // burst's full edge inventory is at AppState::ChromePress.
+        app.chrome_press.repeat_due_ms = 0;
         input_handler.on_key(key, mods);
     });
 
-    // THE KEY RELEASE — the product's GENERAL keyup dispatch since 2026-08-16
-    // (the model is at GuiInputHandler::on_key): the modal dialog's armed
-    // Enter/Space resolves first — a modal surface owns input — then an armed
-    // general release runs the one command dispatch on the chord its PRESS
-    // committed, under live gates (the ordered body is at
-    // GuiInputHandler::on_key_release).
-    gui.set_on_key_release([&](GuiKey key, GuiInputState mods) {
-        input_handler.on_key_release(key, mods);
+    // THE KEY RELEASE, this product's one act-on-lift keyboard edge: bare Enter
+    // or bare Space on a focused modal dialog button commits it here (the
+    // contract is at GuiInputHandler::on_key_release). Every other release
+    // resolves nothing.
+    gui.set_on_key_release([&](GuiKey key) {
+        input_handler.on_key_release(key);
     });
 
     gui.set_on_close([&]() {
@@ -1637,28 +1656,19 @@ int main(int argc, char** argv) {
     // partial list. The fire classes and the per-swallowed-delivery decision
     // are at the setter's contract (platform_wayland.h). THIS BODY IS THE
     // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
-    // model, and it holds TWO application-side key intents since the 2026-08-16
-    // keyup model (one from 2026-08-13 until then):
-    //   * THE MODAL DIALOG'S KEYBOARD PRESS ARM,
-    //     which is sharper than a face — that button is painted down waiting for
-    //     a RELEASE that these edges guarantee will never be delivered, so the
-    //     arm is dropped and the box damaged (clear_modal_dialog_key_press);
-    //   * THE ARMED KEY SET — every pressed key waiting for its release to
-    //     command (the model is at GuiInputHandler::on_key) dies whole here,
-    //     on both fire classes for the modal arm's own reasons: keyboard
-    //     leave / capability loss are edges where the owed releases never
-    //     arrive, and the Super-dropped press is an intervening arrival —
-    //     conservative, consistent with the arm this hook already drops
-    //     (clear_armed_keys).
-    // BOTH MEMBERS ARE KEY INTENTS, which is the list's own membership rule and
-    // the reason THE ARROW BUTTONS' HOLD-REPEAT IS NOT HERE (2026-08-16, where
+    // model, and it holds ONE application-side key intent: THE MODAL DIALOG'S
+    // KEYBOARD PRESS ARM, which is sharper than a face — that button is
+    // painted down waiting for a RELEASE that these edges guarantee will never
+    // be delivered, so the arm is dropped and the box damaged
+    // (clear_modal_dialog_key_press).
+    // THE MEMBER IS A KEY INTENT, which is the list's membership rule and the
+    // reason THE ARROW BUTTONS' HOLD-REPEAT IS NOT HERE (2026-08-16, where
     // its pre-2026-08-13 form was): that burst hangs off the armed CHROME
     // PRESS, pointer intent, and no edge of this hook ends a finger's hold on a
     // button (the reasoning is at the setter's contract, the burst's whole edge
     // inventory at AppState::ChromePress).
     gui.set_keyboard_intent_cancel_hook([&] {
         input_handler.clear_modal_dialog_key_press();
-        input_handler.clear_armed_keys();
     });
 
     // THE SETTLED BOUNDARY AND ITS THREE CONSUMERS (architect 2026-08-03,

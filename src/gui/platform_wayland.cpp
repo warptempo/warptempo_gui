@@ -2196,26 +2196,16 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
             // delivering this one would hand the application an unpaired edge.
             return;
         }
-        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13; carrying live state
-        // since 2026-08-16, when it became the general keyup dispatch's feed —
-        // the model is at GuiInputHandler::on_key). Delivered for the same key
-        // identity the press carried, through the one translation both
-        // branches read, with the live modifier state and codepoint built
-        // exactly as the press path builds them — the application dispatches
-        // the PRESS'S chord rather than this one (the commitment rule at
-        // GuiInputHandler::on_key), so of what is built here only
-        // `primary_button_held` reaches the dispatch; the rest is delivered
-        // because this boundary states the live world and the boundary's job
-        // is not to know which fields a consumer keeps.
-        // `synthesized_repeat` stays false (no release is synthesized). NOT
+        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13). It exists for exactly
+        // one consumer — the modal dialog's keyboard press-and-hold, whose act
+        // is at the lift — and it is delivered for the same key identity the
+        // press carried, through the one translation both branches read. NOT
         // gated on Super (a release binds nothing on its own; the reasoning is
-        // at set_on_key_release, platform_wayland.h).
+        // at set_on_key_release, platform_wayland.h) and carrying no modifier
+        // state at all.
         GuiKey key = 0;
-        if (on_key_release_ && key_from_keycode(xkb_keycode, key)) {
-            GuiInputState mods = current_mods();
-            mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
-            on_key_release_(key, mods);
-        }
+        if (on_key_release_ && key_from_keycode(xkb_keycode, key))
+            on_key_release_(key);
         return;
     }
 
@@ -2444,8 +2434,8 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // HAPPEN WHILE SUPER IS PHYSICALLY DOWN (architect 2026-08-16, ruling the corner
     // KEPT: "super is the desktop's; the GUI basically ignores it — Super usage
     // inside the GUI is outside the GUI's providence"). An act the user ARMED BEFORE
-    // Super went down — a pressed command key waiting on the keyup dispatch, or the
-    // modal Enter/Space arm — completes at its release on its own terms. That is the
+    // Super went down — the modal Enter/Space arm, the product's one armed keyboard
+    // act — completes at its release on its own terms. That is the
     // GUI running its own command, not a Super chord, and refereeing what the user
     // does with the desktop's modifier meanwhile is not this program's business. THE
     // CORNER'S HOME is set_on_key_release's contract (platform_wayland.h), which
@@ -2457,17 +2447,17 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // arming, so it disarms nothing, and the eligibility re-probe cannot see Super
     // either — so its repeats keep firing and are simply swallowed here for as long
     // as Super is held, resuming when it is released. That is exactly the intent,
-    // and it is safe for undo coalescing: no keyboard command can START in the gap
+    // and it is safe for undo coalescing: no keyboard command can run in the gap
     // (every press is dropped), and a pointer press in the gap disarms the repeat
-    // outright through layer (1) of the repeat contract. The ruled corner above — an
-    // act armed before Super went down COMPLETING at its release inside the gap — is
-    // no hole in that either: that key's own arming press was itself a layer-(1)
+    // outright through layer (1) of the repeat contract. The ruled corner above —
+    // the modal Enter/Space arm COMPLETING at its release inside the gap — is
+    // no hole in that either: that arm's own arming press was itself a layer-(1)
     // edge (a different key press re-arms or disarms; the same key's release cancels
-    // the repeat), so no burst older than the command can outlive it.
+    // the repeat), so no burst older than the act can outlive it.
     // KEY RELEASES do not come through here: on_keyboard_key's release branch
     // feeds the repeat cancel and the synthesized-left hold end — neither of
     // which may be skipped, or a hold would orphan — and then delivers the
-    // release to the application's general keyup dispatch DIRECTLY,
+    // release to the application's release hook (the modal arm's feed) DIRECTLY,
     // deliberately ungated on Super (the argument is at set_on_key_release,
     // platform_wayland.h: a release can only resolve an arm an
     // already-delivered press created, so the drop below is enough).
@@ -2477,8 +2467,9 @@ void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
     // behaves exactly like Super+click, which binds nothing here either way.
     if (mod_super_) {
         // THE DROPPED PRESS IS STILL AN INTERVENING KEY ARRIVAL for the
-        // application's held key intents (main.cpp's keyboard-intent
-        // cancellation hook body is the authoritative list) — no application
+        // application's held key intent (the modal dialog's keyboard press
+        // arm; main.cpp's keyboard-intent cancellation hook body is the
+        // authoritative effect list) — no application
         // disarm ever sees it — and the platform's own layer-1 disarmed its armed repeat at
         // this very press (the arming else-branch above, which runs before
         // this drop). So the keyboard-intent cancellation hook fires per
@@ -2532,17 +2523,15 @@ void GuiPlatform::maybe_fire_repeat() {
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
     // held BUTTON — the four cardinal arrow buttons, whose hold-repeat returned
     // 2026-08-16. The button producer never passes through this class (it calls
-    // the command dispatch directly) and buys the adjacency property below from
-    // its own edges, so nothing here has to account for it; this site is the KEY
+    // on_key application-side) and buys the adjacency property below from
+    // its own edge, so nothing here has to account for it; this site is the KEY
     // surface's whole producer.
-    // AND EACH SURFACE CLEARS THE BIT ON ITS HOLD'S FIRST FIRE, the burst's undo
-    // OPENER, which stands in for the press act NEITHER surface performs any
-    // more (a command key's act is at its RELEASE under the 2026-08-16 keyup
-    // model, a chrome button's at its LIFT since 2026-08-13): on the key side
-    // the clear is the application's, in the press router (the flip and its undo
-    // argument are at GuiInputHandler::on_key) — a consumer-side clear on the
-    // delivered copy, which is why this producer is untouched by it; on the
-    // button side it is inline in that producer's own first fire.
+    // ONLY THE BUTTON PRODUCER CLEARS THE BIT ON ITS HOLD'S FIRST FIRE — its
+    // burst's undo OPENER, standing in for the press act a chrome button does
+    // not perform (its act is at the LIFT since 2026-08-13; the flip and its
+    // argument are at that producer's own head). A held KEY needs no flip: its
+    // physical press acts and IS the burst's opener, so every fire from this
+    // site carries the bit as stamped.
     // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
     // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
     // hold at any intervening pointer-button press, completed wheel emission, or

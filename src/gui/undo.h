@@ -28,37 +28,35 @@ struct GuiTargetRender;
 //       GuiInputHandler::tick_chrome_press_repeat for the four cardinal arrow
 //       BUTTONS, whose hold-repeat returned 2026-08-16 after three days
 //       deleted) SKIPS its
-//       own push. THE OPENER IS THE HOLD'S FIRST REPEAT on both surfaces, and
-//       for one reason: neither hold's press dispatches anything (a command
-//       key's act is at its release under the 2026-08-16 keyup model, a
-//       button's at its lift since 2026-08-13), so each producer's side clears
-//       the delivered bit on that first fire and it takes the PHYSICAL arm
-//       below, exactly as the press itself used to (the flip and its argument
-//       are at GuiInputHandler::on_key; the platform producer is untouched,
-//       that one being a consumer-side clear).
+//       own push. THE OPENER DIFFERS PER SURFACE: a held KEY's burst opens
+//       with the PHYSICAL press itself — the press acts and pushes, then its
+//       repeats merge behind it — while a held BUTTON's opens with the
+//       burst's FIRST FIRE, dispatched with the bit cleared by the tick's own
+//       flip, because a button's press acts at the lift and pushes nothing
+//       (the flip and its argument are at tick_chrome_press_repeat,
+//       input_pointer.cpp; the platform producer needs no flip).
 //       NO CLOCK IS CONSULTED on this arm, and that independence is the
 //       point of keeping it: a hold coalesces for any compositor at any key-repeat
 //       delay, so nothing here can drift out of sync with the desktop's repeat
 //       configuration.
-//   (2) THE TAP WINDOW, for consecutive PHYSICAL TAPS (each acting at its own
-//       key's release): a tap of the same
+//   (2) THE TAP WINDOW, for consecutive PHYSICAL presses: a press of the same
 //       kind arriving within kTapCoalesceMs of the last ACCEPTED coalesce event
 //       merges too. FIXED compiled constant, no settings key, no compositor
 //       coupling — the full derivation (and why this is NOT the retired
 //       kGestureCoalesceMs reborn) is at the constant below.
 // Either way the visible move, reorder/remap, dirty tracking, and the target-view
-// preview stay per-fire and unchanged — only the redundant history push is
+// preview stay per-press and unchanged — only the redundant history push is
 // suppressed, and a single Ctrl+Z reverts the whole burst.
-// Taps BEYOND the window are separate entries, as they always were.
+// Presses BEYOND the window are separate entries, as they always were.
 //
 // "Same target / same tab / same history" follow for FREE on arm (1): a
 // synthesized repeat can
 // only arrive while the hold is still armed, and each surface's hold dies on
 // the edges that let another command in — the platform key hold on three
 // (every intervening pointer press, key press, and completed wheel emission,
-// layer (1), stated at maybe_fire_repeat), and the BUTTON hold on both physical
-// key edges, the press router's top and the keyup dispatch's (the inventory,
-// and why the pointer and wheel edges need no mirror there, are at
+// layer (1), stated at maybe_fire_repeat), and the BUTTON hold on the one
+// physical key delivery (main.cpp's set_on_key hook; the inventory, and why
+// the pointer and wheel edges need no mirror there, are at
 // AppState::ChromePress) — so
 // no command can run
 // between a burst's opener and the repeats behind it. ARM (2) HAS NO SUCH
@@ -76,10 +74,10 @@ enum class GestureKind {
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL
-// TAPS of the same eligible kind, no more than this many milliseconds apart,
+// presses of the same eligible kind, no more than this many milliseconds apart,
 // land in ONE undo entry. Measured on std::chrono::steady_clock from the last
 // ACCEPTED coalesce event (the push, or the last merge — physical or synthesized
-// alike), so a whole run of taps extends the window tap by tap rather than
+// alike), so a whole run of taps extends the window press by press rather than
 // racing one fixed deadline from the first.
 //
 // IT IS NOT kGestureCoalesceMs REBORN, and the distinction is what keeps the
@@ -150,32 +148,32 @@ struct Undo {
     void do_undo();
     void do_redo();
 
-    // Whether the current eligible gesture fire of `kind` coalesces into the
+    // Whether the current eligible gesture press of `kind` coalesces into the
     // burst's existing undo entry — TRUE on either arm of the hybrid (a
-    // synthesized repeat of a matching burst, or a physical fire inside
+    // synthesized repeat of a matching burst, or a physical press inside
     // kTapCoalesceMs of the last accepted event with the subject unchanged; the
     // full shape is at the definition). `synthesized_repeat` is the bit AS
     // DELIVERED (GuiInputState::synthesized_repeat), threaded from the key
-    // event that reached the handler — so a hold's first repeat, whose bit its
-    // own producer's side cleared, arrives here PHYSICAL (the opener, on either
-    // surface; arm (1) at the head of this file). When it returns true the caller SKIPS its
-    // undo push — and a coalesced fire has NO other side effect since row 5
+    // event that reached the handler — a held BUTTON burst's first fire
+    // arrives here PHYSICAL by its producer's own flip (the opener; arm (1)
+    // at the head of this file). When it returns true the caller SKIPS its
+    // undo push — and a coalesced press has NO other side effect since row 5
     // (note_coalesced_commit mirrored the push helpers' hover-popup clear, and
     // died with the popup). Either way the caller then calls record_gesture.
     // NOT A PURE QUERY since 2026-07-29: a PHYSICAL
-    // fire (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
-    // arrival, AFTER computing its own verdict — so a fire that goes on to REFUSE
-    // leaves no stamp for anything later to merge through, while a fire that
+    // press (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
+    // arrival, AFTER computing its own verdict — so a press that goes on to REFUSE
+    // leaves no stamp for anything later to merge through, while a press that
     // COMMITS re-stamps in record_gesture. It stays callable
     // anywhere before record_gesture and in any order with the handler's own
     // refusals; the point of putting it at the ENTRY question is precisely that it
     // runs BEFORE those refusals can return.
     bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
-    // Record this eligible fire as the burst's latest, stamping the whole
+    // Record this eligible press as the burst's latest, stamping the whole
     // coalescing state: the KIND, the ACCEPTED-EVENT TIMESTAMP the tap window
     // measures from, and the SUBJECT (selection + A/B tab) the tap arm re-tests.
     // Call after the push / skip — and ONLY on the accepted path, which is what
-    // makes a refusing fire leave the stamp invalid.
+    // makes a refusing press leave the stamp invalid.
     void record_gesture(GestureKind kind);
     // Refresh the coalesced burst entry's touched_live to a continuation press's
     // LATEST post-reorder indices (the position nudges, which reorder — the

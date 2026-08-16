@@ -160,7 +160,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     if (stamp_matches) {
         if (synthesized_repeat) {
             // ARM (1), REPEAT IDENTITY — NO CLOCK. A press the process
-            // synthesized itself from a still-held key merges unconditionally,
+            // synthesized itself from a still-held input merges unconditionally,
             // because the burst's structure already supplies the adjacency
             // properties a clock would enforce numerically, in two halves.
             // (a) Layer (1) of the platform's key-repeat contract (stated at
@@ -169,23 +169,22 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // completed wheel emission, so a synthesized repeat STRUCTURALLY
             // CANNOT arrive after another command ran — and the held-BUTTON
             // producer beside it (tick_chrome_press_repeat, the four cardinal
-            // arrows) buys the same property from its own edges, the two
-            // physical key ones, the only edges that can let a command in while
-            // a finger holds a button (the inventory is at
-            // AppState::ChromePress). (b) The burst's own
-            // OPENER is guaranteed to have taken the PHYSICAL arm first:
-            // neither hold's press dispatches anything — a command key's act is
-            // at its release under the 2026-08-16 keyup model, a button's at
-            // its lift — so each producer's side clears synthesized_repeat on
-            // its hold's FIRST fire (GuiInputHandler::on_key for keys, the tick
-            // for buttons) — that opener
-            // runs the arrival-invalidate and the tap arm's own rules,
-            // pushing or merging on its own merits, and only the repeats
-            // BEHIND it reach this arm; without the flip, a hold begun over
-            // a surviving foreign stamp would merge its first fire into
-            // another subject's entry. (Before the model the physical press
-            // itself played the opener; the flip restores exactly that
-            // world.) "Same selection / same tab
+            // arrows) buys the same property from its own edge, the physical
+            // key delivery (main.cpp's set_on_key hook), the only edge that
+            // can let a command in while a finger holds a button (the
+            // inventory is at AppState::ChromePress). (b) The burst's OPENER
+            // is guaranteed to have taken the PHYSICAL arm first. For a held
+            // KEY that opener is its own physical press — the press acts and
+            // pushes on its own merits before any repeat arrives, the plain
+            // adjacency of a press and its repeats. For a held BUTTON it is
+            // the burst's FIRST FIRE, which its producer dispatches with
+            // synthesized_repeat CLEARED because a button's press acts at the
+            // lift and pushes nothing (the flip is the tick's own, stated at
+            // its head). Either way the opener runs the arrival-invalidate
+            // and the tap arm's own rules, and only the repeats BEHIND it
+            // reach this arm — without that, a hold begun over a surviving
+            // foreign stamp would merge its first fire into
+            // another subject's entry. "Same selection / same tab
             // / same history" all follow, which is why this arm needs neither the
             // window nor the subject test below. Keeping it clock-free is
             // deliberate: a hold must coalesce at ANY compositor repeat delay or

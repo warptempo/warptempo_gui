@@ -117,12 +117,7 @@ struct GuiInputState {
     // LETTER responses — the last joined 2026-07-30, because the prompt is the
     // product's one CASE-SENSITIVE letter surface and the case-folded GuiKey
     // cannot express that (CapsLock defeated the old !shift spelling). Every
-    // other consumer reads the GuiKey and ignores this. ONE CARRIER, not a
-    // fourth consumer: the armed key set stashes the PRESS's codepoint and
-    // hands it back at the release, so a general keyup dispatches the
-    // character as pressed (the commitment rule at GuiInputHandler::on_key) —
-    // which is what keeps the prompt's letter arm reading a capital that a
-    // shift lifted early would otherwise have folded away.
+    // other consumer reads the GuiKey and ignores this.
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED REPEAT — one the process
     // generated itself from a HELD input rather than a fresh physical press.
@@ -132,14 +127,13 @@ struct GuiInputState {
     // cardinal arrow buttons, 2026-08-16 — the pointer twin, which exists so
     // the keyboard-less glass rig has a nudge run). The two carry the same
     // meaning to the same senior consumer and differ only in what is being
-    // held. EACH SURFACE CLEARS THE BIT ON ITS BURST'S OPENER, for one shared
-    // reason: neither hold's press dispatches anything (a COMMAND key's act is
-    // at its release since the 2026-08-16 keyup model, a BUTTON's at its lift
-    // since 2026-08-13), so the first fire stands in for the press act and must
-    // take undo's PHYSICAL arm. The key surface's clear is the press router's
-    // (the flip and its undo argument are at GuiInputHandler::on_key; an
-    // editor-typing repeat keeps the bit, its press having acted at the keydown
-    // island); the button surface's is the tick's own, at the same argument.
+    // held. ONLY THE BUTTON PRODUCER CLEARS THE BIT ON ITS BURST'S OPENER —
+    // its first fire goes out with the bit FALSE and takes undo's PHYSICAL
+    // arm, because a button's press dispatches nothing (its act is at the
+    // lift since 2026-08-13) and the first fire stands in for it (the flip
+    // and its argument are at tick_chrome_press_repeat, input_pointer.cpp). A
+    // held KEY needs no flip: its physical press acts and IS its burst's
+    // opener, so every platform repeat carries the bit as stamped.
     // For the KEY it is a platform-boundary fact in the same
     // spirit as `codepoint`. Its senior consumer is undo coalescing, where it
     // selects
@@ -159,7 +153,7 @@ struct GuiInputState {
 // toggle (the uniform rule: an unbound modifier combination is a no-op). Return
 // / keypad Enter are NOT playback keys — Enter opens the flag editor on the
 // focused marker (see the bare-Enter binding in input_handler.cpp). Shared by
-// the key dispatch (input_handler.cpp) and the read-only allowlist predicate
+// the on_key dispatch (input_handler.cpp) and the read-only allowlist predicate
 // (input_key_dispatch.cpp), which are its only two callers; inline so both TUs
 // see it, and one owner so the two readers cannot drift.
 inline bool is_play_pause_key(GuiKey key, GuiInputState mods) {
