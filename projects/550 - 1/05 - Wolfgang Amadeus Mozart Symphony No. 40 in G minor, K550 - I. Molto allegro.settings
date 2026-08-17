@@ -1,7 +1,7 @@
 title=Mozart - Symphony No. 40 in G Minor (K. 550) - I. Molto allegro (2024 Remaster, Tempo Warp)
 scale=0.9964369042370034
 bpm=36 beats @ 220 bpm from 00:02.442 to 00:14.965
-notes=Hummel: minim = 108 in 2/2 (216 bpm); Grodd: minim = 112.5 in 2/2 (225 bpm); warptempo: minim = 110 in 2/2 (220 bpm)
+notes=Hummel: minim = 108 in 2/2 (216 bpm); Grodd: minim = 112.5 in 2/2 (225 bpm); warptempo: minim = 110 in 2/2 (220 bpm).
 url=https://music.youtube.com/watch?v=f10ISOkJZuA
 cover=Koyaanisqatsi (1982)
 active_audio_view=T
@@ -15,9 +15,9 @@ projects_repo=github.com/warptempo/warptempo_gui
 tab_a_trim_begin=0
 tab_a_trim_end=25448051
 tab_a_read_only=false
-tab_a_viewport_start=0
-tab_a_zoom=9.569111886640775
-tab_a_playhead_cursor=4376040
+tab_a_viewport_start=2435443
+tab_a_zoom=5.601792784949373
+tab_a_playhead_cursor=2806214
 tab_b_trim_begin=14158881
 tab_b_trim_end=15921312
 tab_b_read_only=false
