@@ -1307,9 +1307,12 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B moved the overview strip up
-// into the centered block): the transport three on the left, the monospace
-// clock centered, and the marker-walk three + separator + four cardinal
-// arrows flush right (2026-08-15), all one line AT THE
+// into the centered block): the transport three on the left with the monospace
+// clock behind their separator (left-anchored since 2026-08-18, centred in the
+// lane before it), and the four marker verbs with ADD TO SELECTION behind them
+// + separator + marker-walk three + separator + four cardinal
+// arrows flush right (2026-08-15 for the walk group, 2026-08-18 for the
+// verbs), all one line AT THE
 // WINDOW'S FOOT, with the flexible blank
 // gap 2 between it and the waveform above
 // it. (The STATUS CHAIN — the critical chip + section C — right-aligned on

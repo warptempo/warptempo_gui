@@ -689,14 +689,21 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // internals. The load-in-place closers pay a redundant rebuild for a different
 // reason, stated at the exit (which owns the closer inventory).
 //
-// THE ORDER IS FIXED at every caller, and it is one rule in two spellings: this
-// call comes LAST of the acts that change what the lane should show. In view that
-// is state write, focus clear, stash drop, region clear, and the entry's framing
-// where there is one, THEN this; at the exit it is the whole-struct reset, the
-// stash drop, the parked-band restore, THEN this. Everything the rebuild reads
-// must already be true, and the viewport the flags are mapped onto must already
-// have settled — which at the exit means strictly below apply_zoom_to_start,
-// whose own kick this would otherwise precede and waste.
+// THE ORDER IS FIXED at every caller, and it is ONE rule at all four now that
+// the view writes no viewport anywhere: this call comes LAST of the acts that
+// change what the lane should show. In view that is the state write (the walk
+// index, or the source/reading pair), the focus clear, the stash drop and the
+// region clear, THEN this; at the exit it is the whole-struct reset, the stash
+// drop, THEN this. Everything the rebuild reads must already be true —
+// `history_mode.active` decides which arm of the flag cache runs, and the
+// index, focus and compare fields decide what that arm publishes, so a call
+// placed above any of them publishes the state the press is leaving.
+// THERE IS NO VIEWPORT PREREQUISITE LEFT (2026-08-18): the entry's framing and
+// the exit's parked-band restore were the two writes this had to sit below
+// (each ran a synchronous rebuild of its own, so a call placed above one was
+// the one erased), and both are deleted with the view's navigation-state
+// ownership. Only `viewport.invalidate_all()` follows this call at every
+// caller, damage being the last thing every edge does.
 void GuiInputHandler::republish_history_lane_now() {
     viewport.kick_waveform_sync();
 }
@@ -1217,13 +1224,15 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 //     one chord as a radio pair; this claim is what answers their face LIVE
 //     inside the view, their resting grey outside it being their own arm's;
 //   * BARE `,` / BARE `.` — the walk's own two buttons (2026-08-05), the
-//     roster's first RESTING-DISABLED entries; that family is RETIRED since
-//     2026-08-15 (they answer a plain `true` now — the ruling is at
-//     redesign_button_enabled) and what keeps them from dispatching outside
-//     the view is the EMPTY RECT the bottom row publishes for them there, the
-//     arrows holding those slots;
+//     roster's first RESTING-DISABLED entries, and resting-disabled again
+//     since 2026-08-18: the icon row hides nothing, so what keeps them from
+//     dispatching outside the view is their ENABLED BIT
+//     (redesign_button_enabled reads `history_mode.active` for them and states
+//     the whole succession, including the plain `true` they answered from
+//     2026-08-15 while the bottom row's cluster swap left them unpainted out
+//     there);
 //   * BARE `u` — the Cumulative toggle's own button (2026-08-08), which joined
-//     that family on exactly the same terms;
+//     that family on exactly the same terms and shares that arm;
 //   * BARE Home / BARE End — the bottom row's two SKIP buttons since
 //     2026-08-11, and this paragraph claimed the opposite until 2026-08-15;
 //   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
@@ -1450,9 +1459,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // and zooms once and reads the SAME WINDOW through every step of the
         // walk, so a checkpoint's flags are compared against the previous one's
         // at the magnification he chose rather than at an overview he has to
-        // re-establish after each press. Only the ENTRY frames the whole song
-        // now, and the trim bar's double-click is the on-demand "show me this
-        // delta's span". So this edge writes NO viewport at all.
+        // re-establish after each press. NO EDGE FRAMES AT ALL since
+        // 2026-08-18, the entry's own framing having gone with the view's
+        // navigation-state ownership: the trim bar's double-click is the view's
+        // one framing gesture, the on-demand "show me this delta's span". So
+        // this edge writes NO viewport at all.
         //
         // THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07, the
         // architect's reported flicker): the drop above emptied the lane and

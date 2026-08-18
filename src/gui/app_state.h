@@ -7002,7 +7002,7 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only;
         // THE BOTTOM ROW IS ALWAYS-ON EXCEPT FOR ITS OWN TWO GREYS (architect
         // 2026-08-15, his final ruling on this row after it moved three times
-        // that day): its TEN always-on members break out of this switch
+        // that day): its ELEVEN always-on members break out of this switch
         // to take the loading/blank guard — every chord on the row drops at
         // on_key's `app.loading || total <= 0` return — and then answer a plain
         // `true`. HIS REASONING, kept in his own words because it is the whole
@@ -7030,10 +7030,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
         // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS and ADD TO SELECTION (bare `k` is consumed
-        // in there like the verbs' four chords). The two SKIPS and the
-        // marker-walk three
-        // stay lit, being the mode's own absolute jumps and its own cycles.
+        // FOUR SINGLE-MARKER VERBS, ADD TO SELECTION (bare `k` is consumed
+        // in there like the verbs' four chords) and WALK BOTH TABS
+        // (Ctrl+Shift+Tab, blocked by the allowlist again since the mode's
+        // reverse walk cycle left with the walk selector on 2026-08-18) —
+        // ELEVEN of the fifteen. The two SKIPS and the walk's two STEPS
+        // stay lit, being the mode's own absolute jumps and its diff-flag
+        // cycle.
         // OUTSIDE THE VIEW: the four VERBS on a locked tab, their own gate,
         // carried down from the icon row and stated at their arm above — and
         // ADD TO SELECTION is NOT with them there, its chord being navigation.
@@ -7161,8 +7164,11 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportPlayStop:
         // THE MARKER-WALK GROUP TAKES THE ROW'S POLICY UNCHANGED (2026-08-15):
         // always-on below the loading/blank guard, with the `h` view's derived
-        // partition the only thing that could grey them — and it does not,
-        // because all three chords are the mode's OWN vocabulary in there.
+        // partition the only thing that greys any of them — and since
+        // 2026-08-18 it greys ONE, WALK BOTH TABS: bare Tab and Shift+Tab are
+        // the mode's OWN vocabulary in there (its diff-flag cycle), while
+        // Ctrl+Shift+Tab ran the mode's reverse WALK-SOURCE cycle until the
+        // walk selector left row 3 and the allowlist blocks it again.
         // Their refusals outside the view are the keys' own consumed no-ops (an
         // empty marker store, a cycle with nowhere to go), exactly the class
         // the ruling at the head of this body refuses to mirror.
@@ -7269,7 +7275,8 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW'S TEN ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL since
+        // THE BOTTOM ROW'S ELEVEN ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL
+        // since
         // 2026-08-15 — they return a plain `true` from the `default` below, and
         // the ruling, the architect's reasoning and the three reversals that
         // got there are at the first switch's transport block above. (Its four
@@ -7636,7 +7643,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // button has no tooltip", and the buttons that carry none are the WHOLE MENU
 // ROW — stated as the row rather than as a count, so a button added to row 1
 // inherits the exclusion instead of falsifying a number. The switch's null arms
-// and redesign_button_in_menu_row's true arms are the same six names.
+// are exactly redesign_button_in_menu_row's true arms — the same NAMES, and the
+// count is deliberately not restated here: that predicate is the roster's one
+// forced-classification site and owns the membership.
 //
 // THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
 // names (architect 2026-07-31): row 1's buttons are word labels that already

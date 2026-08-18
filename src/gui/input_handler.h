@@ -1174,9 +1174,10 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's File / Settings and
-    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-eight (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
-    // five closing it since 2026-08-18) and the bottom
+    // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
+    // the four companions) and the bottom
     // row's fifteen — the transport three, then the right block's four marker
     // verbs with ADD TO SELECTION behind them (2026-08-18), three walk steps
     // and four cardinal arrows. EVERY ONE OF THEM

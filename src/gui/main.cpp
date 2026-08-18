@@ -152,10 +152,13 @@ namespace {
 // UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
-// pad and, flush right, the marker-walk three, the ruled separator and a
-// four-button cluster (the roster commit's
-// rearrangement, re-weighted 2026-08-15): the cardinal arrows, or the history
-// companions while the `h` view stands. All at the icon row's boxes, the clock centered in monospace —
+// pad and, flush right, the four single-marker verbs with Add to Selection
+// behind them, the marker-walk three and the four cardinal arrows, divided by
+// two of the ruled separators (the roster commit's
+// rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
+// which deleted the mode SWAP that put the history companions in the arrows'
+// slots inside the `h` view). All at the icon row's boxes, the clock in
+// monospace beside the transport's own separator —
 // sitting AT THE WINDOW'S FOOT with the flexible gap 2
 // between it and the waveform. (The strip was one lane from row 7's collapse,
 // 2026-08-01, two from row 8, 2026-08-11, one at the unification, two again
@@ -563,10 +566,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-eight view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these, and
-// the history group's five close them since 2026-08-18 —
+// the history group's seven close them since 2026-08-18 —
 // and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
 // its one fixed tiny height, moved here from the bottom strip by commit B — its
 // painter (paint_overview_strip), its press claim, its wheel band and its
@@ -618,7 +621,8 @@ GuiRect top_marker_row_area(const AppState& a) {
 // the WINDOW'S FOOT since commit B, with GAP 2's blank window ground between it
 // and the waveform: the transport three on the left at the icon
 // row's boxes with the monospace clock behind their separator (left-aligned
-// since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the four marker verbs, the
+// since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the four marker verbs with
+// ADD TO SELECTION behind them, the
 // marker-walk three and the four cardinal arrows, divided by two more of the
 // ruled separators. (The arrows' four slots were a mode SWAP with the history
 // companions from 2026-08-14 until the 2026-08-18 relayout took those four

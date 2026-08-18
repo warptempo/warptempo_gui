@@ -537,9 +537,12 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // drift on the next tick, and its own full-strip damage is what repaints and
 // republishes — the repair mechanism the comparator was always documented to
 // be. An EMPTY rect refreshes unconditionally: it publishes "not painted at
-// all" (the modal yield, the hidden right cluster), no pixel can be stale for
-// it, and refreshing is what keeps the comparator from thrashing under a
-// standing modal (the contract at paint_bottom_strip's yield branch).
+// all", no pixel can be stale for it, and refreshing is what keeps the
+// comparator from thrashing under a standing modal. THE MODAL YIELD IS THE ONE
+// PRODUCER of an empty rect since 2026-08-18 — every row paints every member
+// otherwise, the bottom row's cluster swap having gone with the history
+// companions' return to the icon row — and the contract is at
+// paint_bottom_strip's yield branch.
 //
 // THE CLIP TEST SURVIVED THE FACE-POLICY REVERSAL THAT FOLLOWED IT, and that is
 // deliberate rather than an oversight: it landed in the same arc that made the
@@ -1954,11 +1957,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the ZOOM GROUP (2026-08-12), the phase-reset copy/paste pair with the
     // bpm / iteration / follow modes, the RENDER-ENTRY group — listen,
     // load-in-place, the READ-ONLY toggle, the architect's own order on
-    // 2026-08-14 — and THE HISTORY GROUP, the opener with its four companions
-    // behind it (2026-08-18, the companions back from the bottom row).
+    // 2026-08-14 — and THE HISTORY GROUP, the opener leading the TWO WALK
+    // RADIOS and its four companions (2026-08-18, the companions back from the
+    // bottom row and the radios down from row 3 later that day).
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-six paint on every
+    // hiding/showing icons in top icon row"): all twenty-eight paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -1974,13 +1978,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 26·32 + (26−8)·2 + (8−1)·9 = 8 + 832 + 36 + 63 = 939px,
+    //   8 + 28·32 + (28−8)·2 + (8−1)·9 = 8 + 896 + 40 + 63 = 1007px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 947,
-    // inside the Pi's 1024 panel. (It was 973px at twenty-seven from
-    // 2026-08-16, and 939 at twenty-six before that — the same number by
-    // coincidence rather than by symmetry: that roster was this one with the
-    // four verbs in and the four companions out. THE MARGIN IS THE
+    // outside it. Add the 8px trailing pad and the row's ink ends at 1015,
+    // inside the Pi's 1024 panel BY 9px at gui_scale 100. (It was 939px at
+    // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at
+    // twenty-seven from 2026-08-16; and 939 at twenty-six before that — the
+    // 2026-08-16 and the relayout rosters matching by coincidence rather than
+    // by symmetry, the earlier one being this one with the four verbs in, the
+    // four companions out and no radios. THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px against the
     // Pi's panel, and a NEW GROUP costs 41.)
     //
@@ -2019,19 +2025,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // which is what the per-press refusals above cannot express: the `h`
     // HISTORY VIEW greys every button in this row whose act it consumes
     // (architect 2026-08-04, at the face code below), and since 2026-08-15 the
-    // per-tab READ-ONLY LOCK greys the TEN it blocks — the four marker verbs,
-    // the copy/paste pair, the BPM and iteration openers, listen and the
-    // load-in-place — so the lock looks the way the view already looks
-    // (architect; the read-only-LEGAL buttons beside them stay lit, which is
-    // the 2026-08-07 band ruling). A mode is entered deliberately and does not
-    // flicker, which is exactly what separates these two from the refusals the
-    // row still swallows silently. The never-grey rule's INVERTED exception —
-    // the four resting-disabled
-    // history buttons, live only inside the view — left this row on
-    // 2026-08-14 with the buttons, and the buttons dropped it whole on
-    // 2026-08-15. All of it lives
-    // at redesign_button_enabled, so this row's painter needs no arm of its
-    // own.
+    // per-tab READ-ONLY LOCK greys what it blocks — SIX of them on this row
+    // (the copy/paste pair, the BPM and iteration openers, listen and the
+    // load-in-place; the four marker verbs carried the same term down to the
+    // bottom row on 2026-08-18, and the membership is inventoried once at
+    // redesign_button_enabled) — so the lock looks the way the view already
+    // looks (architect; the read-only-LEGAL buttons beside them stay lit, which
+    // is the 2026-08-07 band ruling). A mode is entered deliberately and does
+    // not flicker, which is exactly what separates these two from the refusals
+    // the row still swallows silently. THE NEVER-GREY RULE'S INVERTED EXCEPTION
+    // IS BACK ON THIS ROW since 2026-08-18 — the resting-disabled history
+    // buttons, live only inside the view, which left on 2026-08-14 and returned
+    // with the roster relayout (the opener's four companions plus the two walk
+    // radios that landed behind it later the same day). All of it lives at
+    // redesign_button_enabled, so this row's painter needs no arm of its own.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -2358,14 +2365,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — TEN of the fifteen, where it used to be one: in the `h` view the
+// rulings — ELEVEN of the fifteen, where it used to be one: in the `h` view the
 // derived partition greys the PLAY/STOP button (Space is consumed there), the
 // FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
-// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS and ADD TO
-// SELECTION (bare `k`, consumed in there like the verbs' chords); the two
-// SKIPS and the marker-walk three stay lit, Home/End being the mode's own
-// absolute jumps and the walk three its own cycles (architect-confirmed for
+// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, ADD TO
+// SELECTION (bare `k`, consumed in there like the verbs' chords) and WALK BOTH
+// TABS (Ctrl+Shift+Tab, which ran the mode's reverse walk cycle until the walk
+// selector left row 3 and is blocked by the allowlist again); the two
+// SKIPS and the walk's two STEPS stay lit, Home/End being the mode's own
+// absolute jumps and Tab/Shift+Tab its diff-flag cycle (architect-confirmed for
 // the skips). Outside the view the four VERBS grey on a locked tab, their own
 // gate, and nothing else on the row greys at all — which is the architect's
 // 2026-08-15 always-on ruling, made about the RESTING face of the ten members
@@ -2714,8 +2723,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     }
     const int clock_cell_x = paint_separator(x);
 
-    // THE RIGHT BLOCK, from its right-anchored origin: the VERB GROUP's four
-    // boxes, a separator, the WALK GROUP's three, a separator, and the four
+    // THE RIGHT BLOCK, from its right-anchored origin: the VERB GROUP's five
+    // boxes (the four single-marker verbs with ADD TO SELECTION behind them
+    // since 2026-08-18), a separator, the WALK GROUP's three, a separator, and the four
     // ARROWS whose LAST button's right edge is one pad in from the lane's
     // right edge. The whole block is measured first and laid left to right
     // from there, so one expression owns the anchor and no group re-derives it.
@@ -2864,18 +2874,22 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         line1 = b.tooltip.c_str();
         btn   = b.rect;
         // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
-        // same flip the row's own ten buttons take, for the same reason
-        // (nothing exists below that lane).
+        // same flip the row's own tenants take, for the same reason (nothing
+        // exists below that lane); their membership is
+        // redesign_button_in_transport_row, which the roster branch below
+        // reads.
         flip_above = true;
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
         const RedesignTooltipText text = redesign_button_tooltip(app, id);
-        // THE TEXT CAN GO AWAY UNDER A STANDING DWELL — the walk-selector tabs
-        // drop their tooltips when the `h` view opens — and a hint with no
-        // line 1 is no hint.
-        // The stamp's own hides cover every other route; this is the one state
-        // that needs no pointer event to reach.
+        // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
+        // a standing dwell any more — tooltip MEMBERSHIP is the menu row and
+        // nothing else, in every state (the rule is at redesign_button_tooltip,
+        // app_state.h), and the dwell writer only ever stamps a button whose
+        // line 1 is non-null. So this reads as the table's total answer rather
+        // than as a state guard, and it keeps the painter honest against the
+        // stamp without knowing which arms are null.
         if (text.line1 == nullptr) return;
         line1      = text.line1;
         line2      = text.line2;
@@ -4798,8 +4812,10 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: the transport three, the marker-walk three, the four arrows,
-// the clock and the row's own separator all stand down, nothing negotiates
+// YIELDS WHOLE: all FIFTEEN buttons — the transport three, the four
+// single-marker verbs with Add to Selection behind them, the marker-walk three
+// and the four arrows — plus the clock and the row's three separators stand
+// down, nothing negotiates
 // for space,
 // and paint_modal_dialog paints the modal into the lane they left.
 //

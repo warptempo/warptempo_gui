@@ -52,10 +52,12 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. TWO roster entries are absent (re-derived 2026-08-06 by walking
-// RedesignButton against the table below): row 1's SETTINGS and NAVIGATION
-// anchors, each of whose action is a POPUP TOGGLE — not a chord at all, since no
+// the same ids. TWO roster entries are absent — row 1's FILE and SETTINGS
+// anchors, each of whose action is a POPUP TOGGLE, not a chord at all, since no
 // keyboard chord opens or closes a dropdown. Both are spelled at their own claim.
+// THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
+// table, which is what makes "the table's length plus those two IS the roster"
+// a build-time fact rather than a remembered pair of names.
 //
 // The `shift` column is each button's OWN chord — THREE rows set it: Redo's
 // Ctrl+Shift+Z and, since 2026-08-15, the marker walk's Shift+Tab (previous
@@ -879,12 +881,15 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
-//   and the same free answer). Those three plus Revert were the roster's FOUR
-//   RESTING-DISABLED buttons until 2026-08-15, when the architect's scoped-truth
-//   ruling gave the whole cluster a plain `true` — the record is at their arm in
-//   redesign_button_enabled. This walk's answers for them did not change and
-//   this paragraph is still what says they ACT in here; what changed is that
-//   nothing reads it for them any more (see the note on Revert below). The
+//   and the same free answer). Those three plus Revert are the roster's
+//   RESTING-DISABLED family — four of them, joined by the TWO WALK RADIOS on
+//   2026-08-18 for six, all six gated at rest on `history_mode.active` by their
+//   own arm in redesign_button_enabled (which carries the succession, the plain
+//   `true` of 2026-08-15..18 included). This walk's answers for them have never
+//   changed and this paragraph is still what says they ACT in here; what the
+//   companions' own arm does is answer the RESTING face this partition cannot
+//   reach, and lift the four over this partition INSIDE the view (see the note
+//   on Revert below). The
 //   arrows never greyed at a walk WALL either — a step past the oldest or
 //   newest member is a consumed no-op, which is the same nothing every other
 //   refusal in this partition is.
@@ -4011,10 +4016,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
     // view bar drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
-    // coverage true. TWO PRESS ROUTES IN THESE ROWS DISPATCH NO CHORD (re-derived
-    // 2026-08-06, again 2026-08-15 when the Navigation anchor left, and again
-    // 2026-08-18 when the walk selector did): ONE press route in these rows
-    // dispatches no chord — the two menu anchors, which have none and are
+    // coverage true. ONE PRESS ROUTE IN THESE ROWS DISPATCHES NO CHORD
+    // (re-derived 2026-08-06, again 2026-08-15 when the Navigation anchor left,
+    // and again 2026-08-18 when the walk selector did): the two menu anchors,
+    // which have none and are
     // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
     // THIS MODE STOOD, from 2026-08-05 to 2026-08-18: the tab row's band claim
     // intercepted it and armed set_history_reading at the lift, the walk
@@ -5428,9 +5433,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's File / Settings and the view bar's three, row 3's two
-// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
-// relayout, the history group's five since 2026-08-18 — and the bottom row's
-// fifteen: 48, the enum's
+// tabs, row 4's twenty-eight — the toolbar four included since the 2026-08-12
+// relayout, the history group's seven since 2026-08-18 — and the bottom row's
+// fifteen: 50, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -5592,15 +5597,17 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
-    // and redesign_button_tooltip's stateful overload owns both that membership
-    // and the three things state moves in it (re-derived from that one function):
-    // MEMBERSHIP moves exactly ONCE — row 3's WALK-SELECTOR tabs drop their hint
-    // entirely while the `h` view stands, on the view bar's own reasoning — while
-    // the TEXT follows state on THREE buttons: SAVE (a publishing checkpoint
-    // first, then the history view's "Save and Commit"), RENDER (the
-    // mid-render Cancel, then the iteration bit) and, since 2026-08-15, THE
-    // BOTTOM ROW'S COLLAPSED PLAY/STOP BUTTON (the live audition bit, the same
-    // condition its glyph reads).
+    // and that membership is a CONSTANT: only the TEXT is stateful, never
+    // whether a button has one. Re-derived from redesign_button_tooltip's
+    // stateful overload, which moves the words on THREE buttons and takes no
+    // hint away from any: SAVE (a publishing checkpoint first, then the history
+    // view's "Save and Commit"), RENDER (the mid-render Cancel, then the
+    // iteration bit) and, since 2026-08-15, THE BOTTOM ROW'S COLLAPSED
+    // PLAY/STOP BUTTON (the live audition bit, the same condition its glyph
+    // reads). (Row 3's tabs were the one membership move in the product, going
+    // silent while the `h` view repurposed them as its walk selector; the
+    // selector left the row on 2026-08-18 and they carry their ordinary hint in
+    // every state again.)
     // The walk above covers the whole roster either way: a newly hovered
     // one stamps the clock, and moving between two of them hides and re-stamps,
     // so a fresh dwell begins on each arrival. The run
@@ -5786,17 +5793,20 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
         // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW'S
-        // TEN ALWAYS-ON MEMBERS HAVE NO RESTING CONSUMER HERE since
+        // ELEVEN ALWAYS-ON MEMBERS HAVE NO RESTING CONSUMER HERE since
         // 2026-08-15: they are lit outside the `h` view by the architect's
         // scoped-truth ruling (the arrows for the per-selection blink, the two
         // skips because their key acts even on a no-op jump, PLAY / STOP last —
         // "the user is expected to know that with the playhead outside trim
-        // it's not going to play in target view" — and the marker-walk three
-        // on the row's settled policy when they landed), so this line fires
+        // it's not going to play in target view" — the marker-walk three
+        // on the row's settled policy when they landed, and ADD TO SELECTION
+        // on the same policy when it landed 2026-08-18, its chord being
+        // navigation with no refusal to mirror), so this line fires
         // for them only inside that view, where the derived partition greys
-        // the PLAY/STOP button and the FOUR ARROWS (Space and the bare arrows
-        // are all consumed there; the two skips are the mode's absolute jumps
-        // and the walk three its own cycles, so those five stay lit). The
+        // the PLAY/STOP button, the FOUR ARROWS, ADD TO SELECTION and WALK
+        // BOTH TABS (Space, the bare arrows, bare `k` and Ctrl+Shift+Tab are
+        // all consumed there; the two skips are the mode's absolute jumps and
+        // Tab/Shift+Tab its diff-flag cycle, so those four stay lit). The
         // arrows joined that list on 2026-08-18 by being PAINTED in the view at
         // all — the cluster swap that hid them went with the history
         // companions. Everywhere else their chords do their
@@ -5805,7 +5815,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // (2026-08-18, when they moved down from the icon row): they keep the
         // BUTTONS' own two greys — the `h` view and a locked tab — so this line
         // consumes their press in both, exactly as it did while they sat in
-        // row 4.
+        // row 4. ADD TO SELECTION IS NOT ONE OF THEM despite sitting in their
+        // group: the lock does not carry it, a selection being navigation.
         if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a

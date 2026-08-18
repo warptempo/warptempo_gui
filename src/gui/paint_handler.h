@@ -699,9 +699,9 @@ private:
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
     // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
     // the
-    // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
+    // ICON ROW (top lane 2, row 4: the twenty-eight view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
-    // and the history group's five close them since 2026-08-18 — their
+    // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
     // cluster (bottom lane 0, the strip's one lane since the relayout's commit
@@ -741,10 +741,13 @@ private:
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the arrows flush right since the same day's relayout): the
-    // transport three at the left pad, the marker-walk three + separator +
-    // arrow four at the right margin (2026-08-15), at
+    // transport three at the left pad, then the right margin's block — the
+    // four marker verbs with ADD TO SELECTION behind them + separator +
+    // marker-walk three + separator + arrow four (2026-08-15 for the walk
+    // group, 2026-08-18 for the verbs) — at
     // the icon row's boxes, and the
-    // centred monospace clock, painted onto the lane paint_bottom_strip has
+    // monospace clock at its own left-anchored pen behind the transport's
+    // separator (centred in the lane until 2026-08-18), painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row
     // painter separate only because the button cluster's tables and the
