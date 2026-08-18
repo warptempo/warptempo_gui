@@ -130,9 +130,10 @@ class GuiHistoryPrefetch;
 // AppState::history_cumulative is the bit (its contract lives at that field),
 // bare `u` and row 4's Cumulative button toggle it, and it is OFF — iterative —
 // at program start and KEPT ACROSS VISITS thereafter, since the mode's own
-// struct is reset whole at both edges and this deliberately is not in it. Row 3
-// selects the WALK SOURCE while the view stands ("Remote" / "Local"), and
-// Ctrl+Tab cycles those sources; neither touches the reading.
+// struct is reset whole at both edges and this deliberately is not in it. THE
+// WALK SOURCE is the icon row's two radio buttons and bare `g` since 2026-08-18
+// (row 3's tabs and Ctrl+Tab selected it from 2026-08-05 until then); neither
+// surface touches the reading.
 //
 //   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
 //   ITEM as the new one. It compares FORWARD, toward now: the next-newer

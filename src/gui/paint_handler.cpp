@@ -106,9 +106,10 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // the tabs should win and they should be on top of the text. But don't
 // anticipate that"). There is no clipping against the tabs, no reflow and no
 // shrink-to-fit anywhere in this painter. THE `h` HISTORY VIEW IS WHERE IT
-// GOES LIVE and it is the accepted case, not a bug: in there row 3 is the
-// Remote/Local walk selector, whose words are wider than A/B, and tier 1 —
-// the mode's own line — is exactly what the chain is showing.
+// GOES LIVE and it is the accepted case, not a bug: in there tier 1 — the
+// mode's own line — is the longest thing the chain ever shows, and it shows it
+// beside tabs the view no longer widens (the walk selector's "Remote" / "Local"
+// words were wider than A/B until 2026-08-18).
 //
 // The chip keeps the marker flag's ANATOMY (1px left border, pads, fill, top
 // edge — the one invalid red, called not copied) but RE-DERIVES ITS BOX on
@@ -436,8 +437,10 @@ constexpr double kTabCornerRadiusPx  = 5.0;
 // publishes on every run.
 //
 // `letter` is the A/B tab's own — what the paint compares against
-// app.active_tab_view — and `label` the NON-mode word; in the `h` view the
-// override (redesign_button_label) answers for both slots instead.
+// app.active_tab_view — and `label` the painted word, in every state since
+// 2026-08-18: the `h` view's walk selector had an override answering for both
+// slots ("Remote" / "Local") from 2026-08-05 until then, and it is deleted with
+// the repurposing.
 struct TabDef {
     RedesignButton id;
     char           letter;
@@ -676,7 +679,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // button, the group count unchanged; and the 2026-08-18 ROSTER RELAYOUT
     // brought it back to TWENTY-SIX in EIGHT — the scissors deleted, the four
     // MARKER VERBS gone to the bottom row with their group, the four HISTORY
-    // COMPANIONS returned behind the opener in a group of its own.)
+    // COMPANIONS returned behind the opener in a group of its own — and the
+    // WALK RADIOS made it TWENTY-EIGHT in EIGHT later that day, landing inside
+    // the history group between the opener and the cumulative toggle.)
     // THE TRIM GROUP (2026-08-11 for the scissors that opened it, 2026-08-16
     // for the show-region button that filled and then led it, 2026-08-18 for
     // the scissors' deletion that left it one member), a SEPARATOR-LED GROUP
@@ -762,15 +767,24 @@ constexpr IconRowDef kIconRowButtons[] = {
     // in this row is ever hidden, so every x here is a constant by
     // construction.
     //
-    // THE OPENER (bare `h`) leads, then the four companions in the order they
+    // THE OPENER (bare `h`) leads, then the TWO WALK RADIOS (bare `g`, later on
+    // 2026-08-18), then the four companions in the order they
     // have always held — how the delta READS, what you can DO from inside the
-    // view, then where you can STEP. Their glyphs come back with them
+    // view, then where you can STEP. The companions' glyphs came back with them
     // unchanged but for one: the CUMULATIVE toggle wears BLACK_SUM, the
     // summation sigma, since 2026-08-18 (a cumulative delta is a sum over the
     // walk's members), where it wore Breeze's two-colour deep-history from
-    // 2026-08-09 — that glyph is freed for the history view's Git walk radio.
+    // 2026-08-09 — and that glyph is what the Git walk radio wears here.
     // Revert keeps document-revert and the walk keeps the keyframe dials.
     {RedesignButton::IconHistory,       icons::Icon::VcsDiff},
+    // THE TWO WALK RADIOS (architect 2026-08-18: "add two radio buttons after
+    // history button, before cumulative"). GIT wears the DEEP-HISTORY clock the
+    // Cumulative toggle yielded that same day — a clock face with a curl-back
+    // arrow sweeping around it, which is exactly what a committed history is —
+    // and SESSION wears its shallow sibling, the same dial with NO sweep arm,
+    // for a timeline that reaches back no further than this run.
+    {RedesignButton::HistoryWalkGit,     icons::Icon::DeepHistory},
+    {RedesignButton::HistoryWalkSession, icons::Icon::ShallowHistory},
     {RedesignButton::HistoryCumulative, icons::Icon::BlackSum},
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     {RedesignButton::HistoryOlder,      icons::Icon::KeyframePrevious},
@@ -1348,19 +1362,17 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // (a tab press is a chord, never a refusal), and this row has NO disabled
     // face at all.
     //
-    // THE ROW IS THE WALK SELECTOR WHILE THE `h` HISTORY VIEW STANDS (architect
-    // 2026-08-05 for the repurposing, 2026-08-08 for what it selects), which is
-    // a REPURPOSING of the surface, not a state of the tabs: the labels read
-    // "Remote" and "Local" — the committed checkpoint walk and the session's own
-    // timeline — the selected face marks the live one
-    // (redesign_button_selected's own history arm), a press on the other
-    // switches (the tab row's band claim, input_pointer.cpp) and THE LOCK SLOTS
-    // ARE GONE WHOLE — no padlock drawn, no rect published, no width reserved,
-    // because a lock is TAB state and these are not tabs. It is why the row's
-    // own former disabled face (the mode's, 2026-08-04) is retired with this
-    // arc: the tabs are live in the view now, and every other state of this row
-    // is the ordinary one. ONE NAME for that state, read once here and consulted
-    // by the three places it changes: the width, the label and the lock.
+    // THE ROW HAS ONE MEANING IN EVERY STATE SINCE 2026-08-18: it is the A/B
+    // tabs, in the `h` history view exactly as outside it. From 2026-08-05 the
+    // view REPURPOSED the surface as its WALK SELECTOR — the labels reading
+    // "Remote" and "Local", the selected face marking the live walk rather than
+    // the live tab, a press routed to set_history_reading by a band claim of
+    // the mode's own — and the walk has its own radio pair in the icon row now,
+    // so the label override, the selected-face arm, the tooltip silence and
+    // that band claim are all deleted. Nothing in this painter forks on the
+    // mode any more. THE LOCK SLOTS ARE GONE WHOLE and for their own reason
+    // (2026-08-14): no padlock drawn, no rect published, no width reserved, the
+    // padlock being the icon row's own button.
     //
     // THE ROW IS TWO SLOTS AGAIN (architect 2026-08-08). It carried the (walk
     // source, reading) product for one day — four self-labelled tabs on
@@ -1371,11 +1383,6 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // membership flag, the empty-rect publication it required and the text-block
     // painter are deleted whole.
     //
-    // THE PADLOCK PUBLICATION IS ZEROED FIRST, every run, so a tab that stops
-    // being read-only (or stops being active) cannot strand a clickable rect
-    // where nothing is drawn — the same write-it-every-run rule the floating
-    // surfaces and the flag editor's box follow. In the history view it stays
-    // zero for the whole run, no lock being drawn at all.
     const GuiRect lane = top_tab_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
@@ -1455,25 +1462,25 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // the minimum — and nothing else, so it is identical selected or not (the
     // side borders draw inside the box). With the A/B labels the minimum is what
     // binds, which makes both tabs exactly the same width and the row regular by
-    // construction; in the history view each tab is sized by its own word —
-    // "Remote" clears the minimum by 18 px at 100% and "Local" sits at it — so
-    // the two differ in width, which is what a label-sized tab bar does and the
-    // reason nothing in this walk assumes they match.
+    // construction — and nothing in this walk ASSUMES that, deliberately: the
+    // history view's walk words sized each tab by its own shaped run until
+    // 2026-08-18 ("Remote" clearing the minimum by 18 px at 100% while "Local"
+    // sat at it), which is what a label-sized tab bar does, so the measure stays
+    // the general one.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
-        // THE LABEL IS THE OVERRIDE OWNER'S (redesign_button_label, app_state.h,
-        // which also answers for the Save and Render buttons' mode labels), so
-        // the table's constant and the history view's walk word are one lookup
-        // and cannot drift into two spellings.
+        // THE LABEL IS THIS TABLE'S OWN, with no override left to ask
+        // (2026-08-18): the tabs say "A" and "B" in every state now that the
+        // walk selector has its own radio pair in the icon row.
         const text_shape::ShapedRun run = text_shape::shape_text_run(
-            font, redesign_button_label(app, def.id, def.label));
+            font, def.label);
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
         // THE TAB IS ITS FIELD, in every state since 2026-08-14: the shaped
-        // label auto-sizes it against the minimum, so the history view's words
-        // widen the tabs and nothing else moves. (It was field + the padlock's
+        // label auto-sizes it against the minimum, and with "A" and "B" the
+        // minimum is what binds. (It was field + the padlock's
         // reserved slot on the A/B pair from 2026-08-01 until the padlock
-        // moved into the icon row; the walk selector never carried the slot,
-        // which is why this row lost a state along with it.)
+        // moved into the icon row; the walk selector, which is what made the
+        // auto-size visible at all until 2026-08-18, never carried the slot.)
         const int field_w = std::max(min_w, label_w + 2 * pad);
         const int tab_w   = field_w;
 
@@ -1493,10 +1500,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // THE ROW HAS NO DISABLED FACE AGAIN (2026-08-05). It grew one on
         // 2026-08-04 for the `h` history view, which greyed both tabs because
         // their chord was consumed; the architect then made the view REPURPOSE
-        // the pair as the walk selector, so the tabs are live in the one
-        // state that ever dimmed them — derived, since Ctrl+Tab is that
-        // selector's own chord and the mode claims it (history_mode_owns_key)
-        // — and redesign_button_enabled answers true for them everywhere. The dim machinery went with
+        // the pair as the walk selector, so the tabs went live in the one state
+        // that ever dimmed them, and since 2026-08-18 they are live in there as
+        // ORDINARY TABS — Ctrl+Tab is on the mode's allowlist, so the derived
+        // partition answers live and redesign_button_enabled answers true for
+        // them everywhere. The dim machinery went with
         // its producer rather than sitting here unreachable; the product's one
         // disabled blend is unchanged and still the rule on row 4.
         const bool hovered = face.hovered;

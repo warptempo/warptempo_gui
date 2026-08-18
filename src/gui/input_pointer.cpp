@@ -110,7 +110,7 @@ struct ToolbarChord {
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
-    // suppresses the lift's own act. Defaulted, so the forty-two rows that do
+    // suppresses the lift's own act. Defaulted, so the forty-four rows that do
     // not repeat need no eighth column.
     bool           repeats = false;
 };
@@ -158,10 +158,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
     // the already-selected half a consumed nothing rather than a switch away.
+    // THESE TWO ROWS DISPATCH IN EVERY STATE SINCE 2026-08-18, the `h` view
+    // included: the mode's own band claim over this row is deleted with the
+    // walk selector, so a press on a tab arms and lifts as an ordinary roster
+    // press and Ctrl+Tab switches the A/B tab in there exactly as it does
+    // outside (the architect's ruling; the record is at RedesignButton::TabA).
     // (The row carried two MORE slots for one day, 2026-08-07..08, when it was
-    // the (walk source, reading) product; they never dispatched — the `h`
-    // view's band claim routes every press in that row to the switch owner —
-    // and they went with the reading, which is row 4's own toggle now.)
+    // the (walk source, reading) product; they never dispatched — the mode's
+    // band claim owned the row then — and they went with the reading, which is
+    // row 4's own toggle now.)
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     // Row 4 — the icon row. The four view buttons are radios on the same two
@@ -246,6 +251,24 @@ constexpr ToolbarChord kToolbarChords[] = {
     // instead, which admits `h` through handle_history_mode_key one line before
     // the allowlist). It closes the row since 2026-08-14.
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
+    // THE TWO WALK RADIOS (architect 2026-08-18) — which walk the `h` view's
+    // lane reads: GIT is the committed checkpoint history, SESSION this
+    // session's own undo/redo timeline. ONE CHORD FOR THE PAIR, BARE `g`, which
+    // was free, and the `radio` flag on both rows is what the shape needs: the
+    // chord is a TOGGLE over the two walks, so a press on the half already lit
+    // would switch AWAY from what the user just clicked — the same reason the
+    // tabs' Ctrl+Tab and the S/T and W/P pairs' bare `t` and `p` carry it. The
+    // consume is the generic one, keyed on this flag plus the lamp.
+    //
+    // BOTH ARE BOUND ONLY INSIDE THE VIEW, like the four companions below, and
+    // what keeps them from dispatching outside one is their ENABLED bit: they
+    // paint in every state on this row, and outside the view they wear the dead
+    // face and the press is consumed at arm_redesign_press's disabled line.
+    // Even reached, bare `g` is bound in handle_history_mode_key alone.
+    {RedesignButton::HistoryWalkGit,
+     GuiKeys::G,      false, false, false, true,  true},                             // bare g
+    {RedesignButton::HistoryWalkSession,
+     GuiKeys::G,      false, false, false, true,  true},                             // bare g
     // THE HISTORY COMPANIONS — the icon row's last group behind the opener
     // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
     // row's swapped cluster from 2026-08-14, and back here with the architect's
@@ -401,10 +424,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IsoLeftTab, is deliberately NOT a second row: the dispatch is
     // synthesized, so it goes out in the Tab spelling every reader accepts.
     //
-    // THEY ARE LIVE INSIDE THE `h` VIEW and the derived partition says so with
-    // nothing hand-listed — history_mode_owns_key claims all three shapes (the
-    // diff-flag cycle forward and back, and the reverse walk-source cycle), so
-    // this walk answers LIVE and each button does the mode's own thing.
+    // TWO OF THE THREE ARE LIVE INSIDE THE `h` VIEW and the derived partition
+    // says so with nothing hand-listed — history_mode_owns_key claims bare Tab
+    // and Shift+Tab as the diff-flag cycle forward and back. WALK BOTH TABS
+    // GREYS THERE since 2026-08-18: its Ctrl+Shift+Tab was the mode's reverse
+    // WALK-SOURCE cycle until the walk got its own radio pair in the icon row,
+    // and the chord is back off the mode's allowlist — the paired marker march
+    // has no meaning over a lane of diff flags.
     {RedesignButton::TransportWalkPrev,
      GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
     {RedesignButton::TransportWalkNext,
@@ -426,10 +452,14 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here — 46
-// rows against the roster's 48 since 2026-08-18's SECOND ruling, when ADD TO
-// SELECTION arrived on bare `k` (a chord, so the pair moved together). It was
-// 45 against 47 earlier that day, when the TRIM SCISSORS left
+// every RedesignButton but the two menu anchors carries a chord here — 48
+// rows against the roster's 50 since 2026-08-18's THIRD ruling, when the two
+// WALK RADIOS arrived on bare `g` (two chords, so the pairs moved together;
+// the same ruling took the walk selector off row 3, which moved neither number
+// — the tabs were always two rows here and still are, on Ctrl+Tab). It was 46
+// against 48 earlier that day, when ADD TO
+// SELECTION arrived on bare `k` (a chord, so the pair moved together), and
+// 45 against 47 before that, when the TRIM SCISSORS left
 // both (they carried a chord, so the pair moved together; bare `x` itself is
 // untouched). The same relayout moved eight buttons BETWEEN ROWS and this
 // table did not feel it: it is keyed by id and every reader matches by id or
@@ -743,17 +773,18 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // one. The anchor and its menu are deleted 2026-08-15, and the item-grey
 // predicate went producer-less with them.)
 //
-// THE TWO TABS NEEDED A SECOND HAND ENTRY FOR ONE DAY AND NO LONGER DO
-// (2026-08-05). While it stands row 3 is the WALK SELECTOR — Remote and Local,
-// one axis since 2026-08-08 — with a mode-local press route at the tab row's own
-// band claim; the pair shipped with no hotkey at all, so their chord was
-// consumed while their buttons were live and only a hand entry could say so.
-// Ctrl+Tab BECAME the cycle later that day, claimed by the mode's own vocabulary
-// (history_mode_owns_key), so the derivation now answers LIVE for them on its
-// own and the exception is gone. Ctrl+Shift+Tab joined it as the REVERSE cycle
-// on 2026-08-07 and changes nothing here — no roster entry carries a shifted Tab
-// — and no lock rides this row in any state since 2026-08-14, the padlock
-// having moved to the icon row's own read-only button.
+// THE TWO TABS ARE DERIVED LIKE EVERYTHING ELSE, and have been since
+// 2026-08-05 — through two different facts. From then until 2026-08-18 the row
+// was the WALK SELECTOR and Ctrl+Tab was the mode's own walk CYCLE, claimed by
+// history_mode_owns_key, so this walk answered LIVE for the pair on its own;
+// since 2026-08-18 the row is the A/B tabs again and Ctrl+Tab is on the mode's
+// own ALLOWLIST (the architect's ruling that a tab switch works normally in the
+// view), so the same walk answers LIVE from the other predicate. THE ONE DAY
+// THAT NEEDED A HAND ENTRY was the walk selector's first, when the pair shipped
+// with no hotkey at all: their chord was consumed while their buttons were
+// live, and only a hand entry could say so. No lock rides this row in any state
+// since 2026-08-14, the padlock having moved to the icon row's own read-only
+// button.
 //
 // THE MODE'S OWN KEYS ARE ASKED FIRST, and that is not a detail: the allowlist
 // never sees the mode's own vocabulary — handle_history_mode_key consumes it one
@@ -829,20 +860,22 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   (bare `h`, the
 //   mode's own key,
 //   selected while it stands),
-//   and BOTH TABS since 2026-08-05 — live as the WALK SELECTOR rather than
-//   as tabs (Ctrl+Tab, the mode's own cycle, so they come out of the walk
-//   like any other admitted chord), with their padlocks not drawn at all (the
-//   mode's tabs are not tabs, so there is no lock state to show and no lock rect
-//   published for bare `o` to be refused through),
+//   and BOTH TABS since 2026-08-05 — live as the walk selector until
+//   2026-08-18 and as ORDINARY A/B TABS since (Ctrl+Tab is on the allowlist,
+//   so they come out of the walk like any other admitted chord), with no
+//   padlock drawn on either in any state since 2026-08-14,
+//   and THE TWO WALK RADIOS since 2026-08-18 (bare `g`, the mode's own
+//   vocabulary),
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
 //   them with nothing hand-listed,
-//   and THE BOTTOM ROW'S MARKER-WALK GROUP since 2026-08-15 (bare Tab,
-//   Shift+Tab and Ctrl+Shift+Tab) — the mode's own vocabulary once more, so
-//   all three answer LIVE for free and each does the mode's own thing in
-//   here: the two bbox buttons step the DIFF-FLAG cycle forward and back, and
-//   boost runs the reverse WALK-SOURCE cycle rather than the paired marker
-//   march it runs outside,
+//   and TWO OF THE BOTTOM ROW'S MARKER-WALK GROUP since 2026-08-15 (bare Tab
+//   and Shift+Tab) — the mode's own vocabulary once more, so both answer LIVE
+//   for free and step the DIFF-FLAG cycle forward and back. THE GROUP'S THIRD
+//   IS IN THE DEAD COLUMN SINCE 2026-08-18: Ctrl+Shift+Tab ran the reverse
+//   WALK-SOURCE cycle in here from 2026-08-07 until the walk moved to the icon
+//   row's own radio pair, and the allowlist blocks it again — the paired marker
+//   march has no meaning over a lane of diff flags,
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
@@ -885,7 +918,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   (bare `l`); the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
-//   this walk asks about a chord, never about a lane); and the SETTINGS anchor
+//   this walk asks about a chord, never about a lane); ADD TO SELECTION (bare
+//   `k`) and WALK BOTH TABS (Ctrl+Shift+Tab), both since 2026-08-18; and the
+//   SETTINGS anchor
 //   — the only anchor here
 //   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its
 //   menu (FILE has never been in this column: it landed live, 2026-08-13).
@@ -1032,12 +1067,12 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //     since 2026-07-30 (its collapse died with the SPAN FORM), so the selection
 //     here may be a GROUP, and the land seats the cursor on its focus exactly as
 //     it does for a singleton. THE `h` HISTORY VIEW'S EXIT RESTORE joined this
-//     class 2026-08-08 (close_history_mode, input_key_dispatch.cpp): its
-//     restore re-spells the flip's column-preserving translation whenever the
-//     visit left the entry audio view, so it re-spells the flip's land too, on
-//     the same non-empty-selection gate and in that TRANSLATION ARM ALONE — an
-//     unflipped visit restores the parked cursor bit-exact and has no round trip
-//     to repair. Ctrl+Tab left this class
+//     class 2026-08-08 (close_history_mode, input_key_dispatch.cpp) and LEFT IT
+//     on 2026-08-18: its restore re-spelled the flip's column-preserving
+//     translation whenever a visit left the entry audio view, so it re-spelled
+//     the flip's land too, and the whole restore is deleted with the view's
+//     navigation-state ownership — the `h` view lands nothing at its exit now.
+//     Ctrl+Tab left this class
 //     when the parked
 //     selections died: it restores its tab's stored cursor VERBATIM, hands the
 //     lane nothing, and its only land is the auto-select's below;
@@ -3773,61 +3808,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // since 2026-08-14: the active tab's padlock was a second one
             // until the read-only toggle moved into the icon row.
             //
-            // THE ROW IS THE WALK SELECTOR WHILE THE `h` VIEW STANDS (architect
-            // 2026-08-05 for the repurposing, 2026-08-08 for the axis), so its
-            // presses are routed HERE and never reach the chord table below:
-            // these SELECT a walk source, which is not what a chord dispatch
-            // would do — the tabs' chord, Ctrl+Tab, became the mode's own CYCLE
-            // and would step past whichever slot was clicked.
+            // THE ROW IS THE A/B TABS IN EVERY STATE SINCE 2026-08-18, the
+            // `h` history view included (architect: "ctrl+tab should work as
+            // normal in history view"). It was that view's WALK SELECTOR from
+            // 2026-08-05 — a claim right here routed every press in the band to
+            // set_history_reading, each slot naming its own walk, arming a
+            // HistoryWalkTab press whose lift selected rather than dispatching
+            // a chord — because the tabs' own Ctrl+Tab had become the mode's
+            // walk cycle and would have stepped past whichever slot was
+            // clicked. THE WALK HAS ITS OWN RADIO PAIR IN THE ICON ROW NOW
+            // (bare `g`), so the chord means what it says again and this row
+            // needs no mode branch at all: the claim, the arm kind and the
+            // switch owner's pointer call site are deleted together.
             //
-            // ONE SWITCH OWNER for all five routes into the (source, reading)
-            // pair — these two slots, the keyboard cycle's two directions
-            // (Ctrl+Tab, Ctrl+Shift+Tab) and the `u` reading toggle, all through
-            // set_history_reading — and it is IDEMPOTENT, which is where the
-            // live tabs' radio rule comes from: a press on the tab already lit
-            // is a consumed no-op because the owner returns, not because this
-            // site tests for it.
-            //
-            // THE READING IS NOT ON THIS ROW since 2026-08-08 (it was, as two
-            // more slots and then as two labelled groups, for one day): a press
-            // here passes the CURRENT reading through unchanged, so switching
-            // walk keeps how you were reading it.
-            //
-            // THE READ-ONLY LOCK DOES NOT APPLY, deliberately: the gate that
-            // refuses on a locked tab is on_key's, and nothing here dispatches a
-            // key. A lock means hands off the piece's authored state, and the
-            // history view is neither authored nor per-tab — refusing it would
-            // stop a locked session from READING its own history, which is the
-            // one thing the view is for. (The padlock was not drawn in here
-            // even before it left the row, so this branch has never had a
-            // second target to test for.)
-            //
-            // Shift-exact, like every other non-shift-admitting button on these
-            // rows: a shift press is a consumed nothing rather than the plain
-            // act.
-            if (app.history_mode.active) {
-                if (button == GuiMouseButton::Left && !mods.shift) {
-                    // EACH SLOT NAMES ITS OWN WALK, in painted order — which is
-                    // what a DIRECT selector is, against the keyboard's cycle.
-                    // A press that lands on neither (the row's empty tail past
-                    // the last tab) falls out of the walk having claimed
-                    // nothing, the band claim above having already consumed it.
-                    // THE SELECT IS AT THE LIFT like every chrome act
-                    // (2026-08-13): the press arms the tab's roster index and
-                    // finish_chrome_press_release re-derives the walk source
-                    // from it — the release-side twin of this walk.
-                    for (const RedesignButton id :
-                         {RedesignButton::TabA, RedesignButton::TabB}) {
-                        if (!redesign_button_hit(app, id, x, y)) continue;
-                        app.chrome_press = AppState::ChromePress{
-                            AppState::ChromePress::Kind::HistoryWalkTab,
-                            redesign_button_index(id), false, true,
-                            monotonic_ms()};
-                        break;
-                    }
-                }
-                return;
-            }
             // THE ROW HAS ONE TARGET PER TAB AGAIN (2026-08-14): the
             // padlock left this row for the icon row's own roster button
             // (RedesignButton::IconReadOnly, bare `o`), so a press anywhere in
@@ -4007,15 +4000,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // view bar drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
     // coverage true. TWO PRESS ROUTES IN THESE ROWS DISPATCH NO CHORD (re-derived
-    // 2026-08-06, and again 2026-08-15 when the Navigation anchor left): the two
-    // menu anchors, which have none and are
-    // shut at toggle_dropdown instead, and — WHILE THIS MODE STANDS — the A/B TAB
-    // PAIR, which the tab row's own band claim intercepts above and arms for
-    // set_history_reading at the lift (the walk selector, deliberately not a
-    // chord: the keyboard twin is Ctrl+Tab, claimed a line above the allowlist,
-    // and the pair's own chord is the A/B switch the mode consumes). Both
-    // exceptions are refusals or acts decided ABOVE this gate, so neither leaves
-    // the mode uncovered.
+    // 2026-08-06, again 2026-08-15 when the Navigation anchor left, and again
+    // 2026-08-18 when the walk selector did): ONE press route in these rows
+    // dispatches no chord — the two menu anchors, which have none and are
+    // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
+    // THIS MODE STOOD, from 2026-08-05 to 2026-08-18: the tab row's band claim
+    // intercepted it and armed set_history_reading at the lift, the walk
+    // selector being deliberately not a chord. The walk has its own radio pair
+    // in the icon row now, so the tabs dispatch Ctrl+Tab in here like
+    // everywhere else.) That exception is a refusal decided ABOVE this gate, so
+    // it leaves the mode uncovered nowhere.
     // The double-click SNAPSHOT is handed in because the mode has a double-click
     // act of its own (the trim bar's framing) and this function's own field was
     // cleared at the top of the press; nothing else about the call is special.
@@ -5030,8 +5024,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             return;
     }
     // THE CHROME ACT, the roster's own release body (2026-08-13): the lift on
-    // the armed button runs its chord — or the walk tabs'
-    // select — through the one release half, which re-hits the target at
+    // the armed button runs its chord through the one release half, which
+    // re-hits the target at
     // these coordinates and re-asks every press-time gate, the veil included —
     // which is why this sits BELOW the editor dialog's own release and ABOVE
     // the editor swallows further down. Mutually exclusive with every gesture branch
@@ -5556,7 +5550,6 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         case AppState::ChromePress::Kind::None:
             break;
         case AppState::ChromePress::Kind::Roster:
-        case AppState::ChromePress::Kind::HistoryWalkTab:
             inside = rect_contains(
                 app.redesign_buttons[static_cast<size_t>(
                                          app.chrome_press.index)].rect,
@@ -5565,9 +5558,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         }
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
-            // Only a Roster arm with a click face paints a pressed interior,
-            // and its home strip pays — the row fork the face writers all
-            // take. (HistoryWalkTab and the two-face rows paint
+            // Only an arm with a click face paints a pressed interior, and
+            // its home strip pays — the row fork the face writers all
+            // take. (Row 3's two-face tabs paint
             // none; their flip costs nothing.)
             if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster &&
                 roster_index_click_face(app.chrome_press.index)) {
@@ -5872,8 +5865,7 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside &&
         roster_index_click_face(arm.index)) {
         // The pressed face is painted; erase it through the row fork.
-        // (HistoryWalkTab and the two-face rows paint none — no
-        // damage owed.)
+        // (The two-face rows paint none — no damage owed.)
         if (redesign_button_in_transport_row(
                 static_cast<RedesignButton>(arm.index)))
             viewport.invalidate_rect(bottom_row_area(app));
@@ -5912,11 +5904,12 @@ void GuiInputHandler::finish_chrome_press_release(
     // press deliberately does not end a pointer hold (main.cpp's set_on_key
     // hook), so Ctrl+S in the `h` view raises the commit-title editor under a
     // standing arm, and an arm taken before the dialog rose must not fire into
-    // it. IT SITS ABOVE THE KIND SWITCH because the rule is the roster's and
-    // the walk tabs' alike and neither has an exception to it — carried
-    // per-branch, it was on the roster's and missing from the walk tab's, so
-    // arming a Remote/Local tab, raising the dialog mid-hold and lifting on
-    // the tab switched the walk under the editor.
+    // it. IT SITS ABOVE THE KIND SWITCH because the rule is every arm's and
+    // none has an exception to it. (Carried per-branch it once was on the
+    // roster's and missing from the deleted walk-tab kind's, so arming a
+    // Remote/Local tab, raising the dialog mid-hold and lifting on the tab
+    // switched the walk under the editor — which is why the term is stated
+    // once, above the switch, rather than per branch.)
     // A PROMPT needs no term here for any kind: on_button_release's prompt
     // gate returns unconditionally above this call, so no arm reaches this
     // body while one stands.
@@ -5924,20 +5917,6 @@ void GuiInputHandler::finish_chrome_press_release(
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
-    case AppState::ChromePress::Kind::HistoryWalkTab: {
-        // The `h` view's walk selector: the lift on the armed tab selects its
-        // walk, passing the CURRENT reading through unchanged (the one switch
-        // owner's radio rule — idempotent on the lit tab). The mode gate is
-        // re-asked: a view closed under the hold selects nothing.
-        if (!app.history_mode.active) return;
-        const RedesignButton id = static_cast<RedesignButton>(arm.index);
-        if (!redesign_button_hit(app, id, x, y)) return;
-        set_history_reading(id == RedesignButton::TabA
-                                ? GuiHistoryWalkSource::Commit
-                                : GuiHistoryWalkSource::Local,
-                            app.history_compare());
-        return;
-    }
     case AppState::ChromePress::Kind::Roster:
         break;
     }
@@ -6414,7 +6393,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     family rule at RegionState, app_state.h). The drag rides the one motion
 //     path, playhead on the moving endpoint. The region is a READING MARK in
 //     here — `x` is consumed, nothing auditions — and VIEW-LOCAL: the exit,
-//     every `,` / `.` step and every compare switch clear it (the mode
+//     every `,` / `.` step and every walk-or-reading switch clear it (the mode
 //     edges' own rule, close_history_mode and set_history_reading).
 //
 // THE SYMMETRY RULING (architect 2026-08-06) is why the acts read as they do:

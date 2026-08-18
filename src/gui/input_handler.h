@@ -253,7 +253,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     REGION RULE): the mode's EXIT (close_history_mode, the one exit owner) and
 //     each `,` / `.` STEP and each WALK-OR-READING SWITCH (the switching-
 //     commits family, input_key_dispatch.cpp — set_history_reading is the one
-//     switch owner behind the tabs, Ctrl+Tab and bare `u` alike). A span drawn in the view is a reading mark on the
+//     switch owner behind bare `g` and bare `u` alike). A span drawn in the view is a reading mark on the
 //     checkpoint it was drawn against, so it does not outlive that checkpoint —
 //     and cannot rest in the editor at all, which is what keeps "a region rests
 //     only beside an EMPTY selection" true out there while the view's own press
@@ -481,10 +481,12 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // 2026-08-12 collapse rule alone and is deleted with it, 2026-08-14.)
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
-//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle), Ctrl+Tab
-//     and Ctrl+Shift+Tab (the row-3 tab cycle over the WALK SOURCES, forward
-//     and reverse — the two ctrl-carrying shapes), bare Home / End and bare
-//     `c`. The definition carries the derivation. handle_history_mode_key consumes exactly these,
+//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle), bare `g`
+//     (the WALK toggle over the two sources, the icon row's radio pair's chord
+//     since 2026-08-18 — it was Ctrl+Tab and Ctrl+Shift+Tab, forward and
+//     reverse over row 3's repurposed tabs, until then), bare Home / End and
+//     bare `c`. NOTHING CTRL-CARRYING IS CLAIMED. The definition carries the
+//     derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
 //     this first.
 //   * history_mode_key_blocked — the allowlist gate, read_only_key_blocked's
@@ -1371,7 +1373,7 @@ struct GuiInputHandler {
     // gate — the modal veil FIRST, for every kind alike, then the roster's own
     // shift admission under the CARRIED shift, the enabled bit, the radio
     // rule, the Render cancel face — then run the act (the chord through
-    // on_key; the walk tabs' set_history_reading). A lift anywhere else, or a
+    // on_key). A lift anywhere else, or a
     // gate that no longer holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
@@ -2963,22 +2965,26 @@ private:
     //     the waveform a modifier names a gesture, not a selection — the
     //     2026-08-06 symmetry ruling — and since 2026-08-12 a plain waveform
     //     press resolves no flag either: the placement press at every column).
-    //   * close_history_mode is the ONE exit owner; every closer calls it, and
-    //     since 2026-08-05 it is also the ONE site that puts the editor's parked
-    //     navigation band back (the snapshot's own record is at
-    //     AppState::HistoryMode).
+    //   * close_history_mode is the ONE exit owner; every closer calls it. It
+    //     PUT THE EDITOR'S PARKED NAVIGATION BAND BACK from 2026-08-05 to
+    //     2026-08-18 and does not any more: the view owns no navigation state
+    //     at all, so it touches no viewport, no zoom and no playhead (the
+    //     record is at AppState::HistoryMode). What it still owns is the
+    //     whole-struct reset behind a surviving generation counter, the
+    //     view-local REGION clear, the lane-stash drop and the LIVE lane's
+    //     republication, the full-window damage, and the deferred prefetch
+    //     kick's flush.
     //   * frame_viewed_commit_diff_span frames the viewed checkpoint's whole
     //     delta. Since 2026-08-05 it is an ON-DEMAND ACT with ONE caller — the
     //     trim bar's plain DOUBLE-CLICK, the regular views' span-framing gesture
     //     with this act as its command — rather than an edge effect. Its own
     //     comment carries the recipe and the span rule.
-    //   * frame_history_view_whole_song is what the ENTRY does instead: a fresh
-    //     visit opens at FULL ZOOM OUT. It is the mode's ONLY viewport write
-    //     since 2026-08-08 — the `,` / `.` step and the compare switch stopped
-    //     calling it, the window being the USER'S for the whole visit and
-    //     unified across every walk and reading — so its callers are the entry
-    //     owner and
-    //     the framing act above, whose empty-delta arm falls through to it.
+    //   * frame_history_view_whole_song is the whole song in the window, and
+    //     since 2026-08-18 it is ONE CALLER's alone — the framing act above,
+    //     whose empty-delta arm falls through to it. The MODE WRITES NO
+    //     VIEWPORT ANYWHERE now: the `,` / `.` step and the walk-or-reading
+    //     switch stopped calling it on 2026-08-08 and the ENTRY on 2026-08-18,
+    //     the window being the USER'S from before `h` until after it.
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
@@ -2993,21 +2999,21 @@ private:
     //     grep 2026-08-06). Its own comment carries the argument and is the
     //     authoritative statement of the edge set.
     //   * republish_history_lane_now REFILLS it in the same press, at ALL FOUR
-    //     edges (entry, step, reading switch, exit — the last one below its
-    //     parked-band restore, where the mode is down and the lane it publishes
+    //     edges (entry, step, reading switch, exit — the last one after the
+    //     whole-struct reset, where the mode is down and the lane it publishes
     //     is the LIVE one). It is the view switch's own synchronous route, and it
     //     is what makes an edge swap the lane's content atomically instead of
     //     blanking it for a frame (architect 2026-08-07). The drop's comment
     //     carries both arguments.
     //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
-    //     2026-08-07 to the (walk source, reading) PAIR): row 3's repurposed
-    //     tabs SELECT THE WALK through it — the mode's only pointer surface
-    //     outside the waveform and the lane — Ctrl+Tab CYCLES the two walks
-    //     through it, and bare `u` FLIPS THE READING through it (2026-08-08,
+    //     2026-08-07 to the (walk source, reading) PAIR): bare `g` STEPS THE
+    //     WALK through it (2026-08-18, the icon row's two radio buttons' chord
+    //     — row 3's repurposed tabs selected it directly until then) and bare
+    //     `u` FLIPS THE READING through it (2026-08-08,
     //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
-    //     shape, and the owner is idempotent, which is what makes a press on the
-    //     already-shown tab a consumed nothing at its call sites.
+    //     shape, and the owner is idempotent, which is what makes a step onto
+    //     the walk already shown a consumed nothing at its call site.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * the COMMIT-TITLE EDITOR asks for the message (its cluster is declared
