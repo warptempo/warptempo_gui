@@ -1172,11 +1172,14 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's File / Settings and
-    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
-    // toolbar four included since the 2026-08-12 relayout) and the bottom
-    // row's fourteen — the transport three, the marker-walk three, and
-    // whichever four the right cluster
-    // holds, the other four publishing zero rects (definitions beside
+    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
+    // toolbar four included since the 2026-08-12 relayout, the history group's
+    // five closing it since 2026-08-18) and the bottom
+    // row's fourteen — the transport three, then the right block's four marker
+    // verbs, three walk steps and four cardinal arrows. EVERY ONE OF THEM
+    // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
+    // cluster swap, which published zero rects for whichever four it hid, went
+    // with the history companions on 2026-08-18 (definitions beside
     // on_motion in input_pointer.cpp).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects

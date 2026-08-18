@@ -563,9 +563,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-seven view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
-// relayout, whose roster commit removed that lane and renumbered these —
+// relayout, whose roster commit removed that lane and renumbered these, and
+// the history group's five close them since 2026-08-18 —
 // and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
 // its one fixed tiny height, moved here from the bottom strip by commit B — its
 // painter (paint_overview_strip), its press claim, its wheel band and its
@@ -616,10 +617,12 @@ GuiRect top_marker_row_area(const AppState& a) {
 // render.h), resting on
 // the WINDOW'S FOOT since commit B, with GAP 2's blank window ground between it
 // and the waveform: the transport three on the left at the icon
-// row's boxes, a RIGHT-ANCHORED BLOCK of the marker-walk three, the ruled
-// separator and a CLUSTER of four — the cardinal arrows, or the
-// history companions while the `h` view stands (2026-08-14) — and the
-// monospace clock centered. (The status chain moved into the TAB ROW on
+// row's boxes with the monospace clock behind their separator (left-aligned
+// since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the four marker verbs, the
+// marker-walk three and the four cardinal arrows, divided by two more of the
+// ruled separators. (The arrows' four slots were a mode SWAP with the history
+// companions from 2026-08-14 until the 2026-08-18 relayout took those four
+// back to the icon row.) (The status chain moved into the TAB ROW on
 // 2026-08-13; the OVERVIEW STRIP was bottom lane 0 under this row for
 // the afternoon of 2026-08-12 and is TOP lane 3 now.) The dirty flag is
 // the window title's dot, not a tenant here. THE LANE IS THE ICON ROW'S
@@ -926,12 +929,15 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // row's LANE whole; the bottom row's remaining two owners are the clock cell
 // below and Viewport::invalidate_modal_dialog_area's lane.)
 
-// THE CLOCK'S RECT — the unified bottom row's reserved centre cell as the
-// painter last drew it (AppState::clock_cell_rect, whose stash contract is at
-// the field). Narrow by construction: on_redraw clips to the damage region,
-// so paint_bottom_strip runs but its buttons and its separator fall outside
-// the clip and cost nothing, which is what makes this affordable at the
-// pre-paint hook's per-frame cadence. (The row's STATUS CHAIN was the third
+// THE CLOCK'S RECT — the unified bottom row's reserved cell as the
+// painter last drew it, in the row's LEFT BLOCK behind the transport's
+// separator since 2026-08-18 (AppState::clock_cell_rect, whose stash contract
+// is at the field). Narrow by construction: on_redraw clips to the damage
+// region, so paint_bottom_strip runs but its buttons and its three separators
+// fall outside the clip and cost nothing, which is what makes this affordable
+// at the pre-paint hook's per-frame cadence. THE MOVE MADE IT NO WIDER AND NO
+// NARROWER — the cell's width is the same shaped specimen and only its origin
+// changed — so nothing about this owner or its consumers moved with it. (The row's STATUS CHAIN was the third
 // such tenant until 2026-08-13, when it moved into the TAB ROW — see the
 // deleted status cell's record just above; this lane carries no chain now.)
 //
@@ -1933,9 +1939,9 @@ int main(int argc, char** argv) {
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
             // second arm covers both of the row's surfaces, its fourteen roster
-            // buttons (the transport three, the marker-walk three, and whichever
-            // four the right cluster holds — the arrows, or the history
-            // companions in the `h` view since 2026-08-14) and the MODAL's own buttons
+            // buttons (the transport three, and the right block's four marker
+            // verbs, three walk steps and four cardinal arrows since
+            // 2026-08-18) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.
             const AppState::RedesignTooltip::Owner tip_owner =

@@ -106,17 +106,17 @@ enum class Icon {
     DocumentImport,      // Target audio view (bare `t`)
     Speedometer,         // Warp markers (bare `p`)
     ChronometerStart,    // Phase reset markers (bare `p`)
-    // THE TRIM BUTTON'S GLYPH (2026-08-11, the trim surface arc): Breeze's
-    // EDIT-CUT — the scissors, ARCHITECT-PICKED from the rendered candidate
-    // sheet the same day, superseding the planner's transform-crop of the
-    // first cut (he read the crop frame as rectangle-select rather than
-    // crop; its one-commit life is recorded at the table). Cutting IS
-    // trimming, the scissors the universal glyph for it. One
-    // `.ColorScheme-Text` path of m/c/l/z commands, inside the interpreter's
-    // coverage.
-    EditCut,             // Set trim from region (bare `x`)
-    // THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16), the trim
-    // group's second member: Breeze's TOOL-RECT-SELECTION, the marching-ants
+    // (THE TRIM SCISSORS' EDIT-CUT IS DELETED with its button, 2026-08-18: the
+    // architect retired the "set trim from region" BUTTON in the roster
+    // relayout — the CHORD, bare `x`, is untouched — which left this glyph with
+    // no consumer at all, so the enumerator, the table row and
+    // assets/icons/breeze/edit-cut.svg went together rather than resting
+    // unpainted. It served the trim button from 2026-08-11 and was the
+    // architect's own pick from the rendered candidate sheet, over the first
+    // cut's planner-picked transform-crop; both are git history now.)
+    // THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
+    // group's ONE member since the scissors left on 2026-08-18: Breeze's
+    // TOOL-RECT-SELECTION, the marching-ants
     // rectangle — a dashed box says "a selected span" everywhere, and the
     // button's whole job is to put one on the waveform. Taken at 22 though the
     // architect named the 24px path: the two files hold the SAME rectangle (24
@@ -127,7 +127,7 @@ enum class Icon {
     // non-default width and the dash).
     ToolRectSelection,   // Show region (Ctrl+Shift+X)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
-    // roster commit — the icon row's zoom group after the trim scissors).
+    // roster commit — the icon row's zoom group after the trim group).
     // Breeze's own magnifier family, one construction four ways: the bare
     // magnifier with a plus (zoom in), a minus (zoom out), the fit frame
     // (full zoom out — bare `0`'s whole-song arm), and the 1:1 original
@@ -155,20 +155,41 @@ enum class Icon {
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
-    BlackSum,            // Iteration mode
+    // THE SUMMATION SIGMA, ON THE CUMULATIVE READING SINCE 2026-08-18
+    // (architect): a cumulative delta is a SUM over the walk's members, read
+    // against the iterative reading's one step at a time — the Σ says exactly
+    // that, which deep-history's swept clock only implied. It dressed
+    // ITERATION MODE from 2026-08-01 until this move (an iteration sweep is
+    // also a sum over cells), and that slot took mathmode below.
+    BlackSum,            // The cumulative reading (`u`)
+    // ITERATION MODE'S GLYPH SINCE 2026-08-18 (architect): the slot keeps a
+    // MATH SYMBOL and f(x) names the operation — a render as a function of a
+    // variable swept across a bracket — where the Σ it yields to says summing,
+    // which is the reading the history walk wanted.
+    Mathmode,            // Iteration mode (bare `i`)
     GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
-    // THE CUMULATIVE READING'S TOGGLE (architect 2026-08-09), the history
-    // group's second: Breeze's own deep-history — a clock face with a curl-back
-    // arrow sweeping around it, reaching across the whole span at once, against
-    // the iterative reading's one step at a time. THE SET'S FIRST TWO-COLOR
-    // ICON, knowingly: the dial is .ColorScheme-Text and the arrow
-    // .ColorScheme-Accent, so the arrow reads as the act over what it sweeps.
-    // The table's entry records both resolved literals, the command-coverage
-    // check and the four glyphs tried before it.
-    DeepHistory,               // The cumulative reading (`u`)
+    // Breeze's deep-history — a clock face with a curl-back arrow sweeping
+    // around it. THE SET'S ONE TWO-COLOR ICON, knowingly: the dial is
+    // .ColorScheme-Text and the arrow .ColorScheme-Accent, so the arrow reads
+    // as the act over what it sweeps. The table's entry records both resolved
+    // literals, the command-coverage check and the four glyphs tried before it.
+    //
+    // IT DRESSED THE CUMULATIVE READING'S TOGGLE from 2026-08-09 (architect's
+    // pick then) until 2026-08-18, when that toggle took the summation sigma
+    // and this glyph was FREED for the history view's Git walk radio — a
+    // committed history is what the deep clock sweeps. Nothing paints it in
+    // the meantime, which is expected and is why the entry stays.
+    DeepHistory,               // The Git (committed) walk
+    // ITS SHALLOW SIBLING (2026-08-18), for the history view's Session walk
+    // radio: the same clock face with NO sweep arrow — the session's own
+    // undo/redo timeline, which reaches back no further than this run.
+    ShallowHistory,            // The Session (local) walk
+    // THE ADD-TO-SELECTION ACT'S GLYPH (2026-08-18): Breeze's edit-select, the
+    // pointer arrow over a marquee corner — picking one more thing up.
+    EditSelect,          // Add to selection
     // THE WALK'S TWO ARROWS (2026-08-05 as go-previous / go-next, REGLYPHED
     // 2026-08-11): the checkpoint walk's older (`,`) and newer (`.`) steps wear
     // Breeze's keyframe-previous / keyframe-next — a stopwatch dial with a
@@ -261,6 +282,14 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 47 since 2026-08-18, the roster relayout: 45 − edit-cut (the trim scissors,
+// deleted with its button — the chord survives, the glyph had no other
+// consumer) + shallow-history, mathmode and edit-select. TWO OF THE THREE
+// ARRIVE AHEAD OF THEIR BUTTONS (shallow-history's walk radio and
+// edit-select's add-to-selection button land in the following commits) and
+// deep-history is left painted by nothing for the same span — an unreferenced
+// enumerator costs a latch slot and nothing else, and one asset commit beats
+// three.
 // 45 since 2026-08-16: 44 + tool-rect-selection, the show-region
 // button's marching-ants rectangle (the icon row's trim group, beside the
 // scissors).
@@ -272,7 +301,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 45;
+inline constexpr int kIconCount = 47;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

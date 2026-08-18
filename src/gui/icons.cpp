@@ -217,15 +217,38 @@ constexpr IconPath kMusicNote16thPaths[] = {
      "17.328427 7,16.5 7,15.671573 7.8954305,15 9,15 Z"},
 };
 
-// ITERATION MODE's icon since 2026-08-01 (architect-picked, replacing
-// media-playlist-repeat): black_sum, the summation sigma — an iteration sweep is
-// a SUM over cells, which the repeat arrows never said.
+// THE CUMULATIVE READING'S ICON SINCE 2026-08-18 (architect, with the roster
+// relayout): black_sum, the summation sigma — a CUMULATIVE delta is a sum over
+// the walk's members, against the iterative reading's one step at a time, and
+// the Σ says so outright where deep-history's swept clock only implied it.
+// (It dressed ITERATION MODE from 2026-08-01, architect-picked then over
+// media-playlist-repeat on the same reading — an iteration sweep is also a sum
+// over cells. That slot took mathmode below in the same ruling; the sigma
+// moved rather than being duplicated, so no two buttons wear one math symbol.)
 constexpr IconPath kBlackSumPaths[] = {
     {kIconText,
      "M 3 3 L 7 11 L 3 19 L 3.5 19 L 4 19 L 4.0625 19 L 4.5 19 L 19 19 L 19 16 "
      "L 19 15 L 18 15 L 18 18 L 14 18 L 13 18 L 12 18 L 5.65625 18 L 4.9375 18 "
      "L 8.25 11 L 4.8125 4 L 5.71875 4 L 12 4 L 16 4 L 18 4 L 18 6 L 18 7 L 19 "
      "7 L 19 6 L 19 3 L 4.5 3 L 4.0625 3 L 4 3 L 3.5 3 L 3 3 z "},
+};
+
+// ITERATION MODE's icon since 2026-08-18 (architect, with the roster relayout,
+// taking the slot the summation sigma left for the cumulative reading):
+// mathmode — an italic f beside a multiplication cross, which reads as f(x).
+// THE SLOT KEEPS A MATH SYMBOL and this one names the OPERATION: a render as a
+// function of a variable swept across a bracket, which is what an iteration
+// sweep is. Command coverage: absolute M / C / L / z with implicit
+// absolute-lineto repetition, every family already committed here many times
+// over.
+constexpr IconPath kMathmodePaths[] = {
+    {kIconText,
+     "M 9 3 C 7.34315 3 6 4.3431 6 6 L 6 8 L 4 8 L 4 9 L 6 9 L 6 10 L 6 19 L "
+     "7 19 L 7 9 L 8 9 L 9 9 L 9 8 L 8 8 L 7 8 L 7 6 C 7 4.89543 7.89543 4 9 4 "
+     "L 10 4 L 10 3 L 9 3 z M 12.742188 13 L 12 13.732422 L 14.292969 16 L 12 "
+     "18.267578 L 12.742188 19 L 15.035156 16.732422 L 17.257812 18.931641 L "
+     "18 18.199219 L 15.775391 16 L 18 13.800781 L 17.257812 13.068359 L "
+     "15.035156 15.267578 L 12.742188 13 z "},
 };
 
 // FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
@@ -511,12 +534,17 @@ constexpr IconPath kDocumentRevertPaths[] = {
 
 // -- THE CUMULATIVE READING'S GLYPH (architect 2026-08-09) ---------------------
 //
-// deep-history, the history group's second button: bare `u` picks the CUMULATIVE
-// delta (the viewed member against the live now side) over the iterative one
-// (against the next-newer member). The glyph is a CLOCK FACE WITH A CURL-BACK
-// ARROW sweeping around it — reaching back across the whole span of history at
-// once, which is exactly what the cumulative reading does, against the iterative
-// reading's one step at a time.
+// deep-history: a CLOCK FACE WITH A CURL-BACK ARROW sweeping around it,
+// reaching back across the whole span of history at once.
+//
+// IT DRESSED THE CUMULATIVE READING'S TOGGLE (bare `u`) from 2026-08-09 until
+// 2026-08-18, when the architect's roster relayout gave that toggle the
+// SUMMATION SIGMA instead — a cumulative delta is a sum over the walk's
+// members, and the Σ names the arithmetic where this dial only implied it.
+// THE GLYPH IS FREED RATHER THAN RETIRED: the sweep across a whole COMMITTED
+// history is what the history view's Git walk radio wants, and it takes this
+// row. Nothing paints it for the span between the two commits, which is
+// expected and is why the row and its asset stay put.
 //
 // THE SET'S FIRST TWO-COLOR ICON, and the architect chose it knowing that: path
 // 1 is the clock body and its hands in `.ColorScheme-Text`, path 2 the curl-back
@@ -576,6 +604,41 @@ constexpr IconPath kDeepHistoryPaths[] = {
     {kIconAccent,
      "m13.65625 14v1h.845703 1.998047a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1"
      " -1.5 1.5v1a2.5 2.5 0 0 0 2.5 -2.5 2.5 2.5 0 0 0 -2.5 -2.5h-2.84375"},
+};
+
+// DEEP-HISTORY'S SHALLOW SIBLING (2026-08-18), for the history view's SESSION
+// walk radio: the same clock face and hands with NO sweep arrow at all — the
+// session's own undo/redo timeline reaches back no further than this run,
+// which is exactly what the missing sweep says beside the Git walk's swept
+// dial. Taking the PAIR is the point: two readings of one surface should be
+// one construction seen twice, not two unrelated pictures.
+//
+// SINGLE-COLOUR, unlike its sibling: the file has ONE `.ColorScheme-Text` path
+// and no `.ColorScheme-Accent` at all, so deep-history is still the set's one
+// two-colour glyph. Command coverage: relative `m` with `c`, `v` and `h` plus
+// implicit repetition and no closing `z` — path 1 of deep-history's own
+// families, verbatim.
+constexpr IconPath kShallowHistoryPaths[] = {
+    {kIconText,
+     "m11 3c-4.431998 0-8 3.568002-8 8 0 4.431998 3.568002 8 8 8 4.431998 "
+     "0 8-3.568002 8-8 0-4.431998-3.568002-8-8-8m0 1c3.877999 0 7 3.122001 7 "
+     "7 0 3.877999-3.122001 7-7 7-3.877999 0-7-3.122001-7-7 0-3.877999 "
+     "3.122001-7 7-7m-1 1v7h1 5v-1h-5v-6h-1"},
+};
+
+// THE ADD-TO-SELECTION ACT'S GLYPH (2026-08-18): edit-select, the pointer
+// arrow with its own grab dot — picking one more thing up, which is what the
+// act does to a standing selection.
+//
+// Command coverage: absolute `M` / `A` / `L` with implicit repetition on both
+// the arc run (four quarter-arcs spelling the dot) and the lineto run, and no
+// closing `z` on either subpath — the fill closes implicitly, six committed
+// files' precedent. Arcs are implemented generally here, so the four circular
+// ones cost nothing new.
+constexpr IconPath kEditSelectPaths[] = {
+    {kIconText,
+     "M6 3A1 1 0 0 0 5 4 1 1 0 0 0 6 5 1 1 0 0 0 7 4 1 1 0 0 0 6 3M7 6L7.00586 "
+     "19 10.900391 14.300781 17 14 7 6"},
 };
 
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
@@ -650,36 +713,17 @@ constexpr IconPath kGoUpPaths[] = {
      "-6.125-6.125L11 7.707 9.832 8.875 3.707 15"},
 };
 
-// THE TRIM BUTTON'S GLYPH (2026-08-11, the trim surface arc): EDIT-CUT, the
-// scissors — the ARCHITECT'S PICK from the rendered candidate sheet, over
-// transform-crop (the first cut's planner pick, which he read as
-// rectangle-select rather than crop; that glyph lived ONE COMMIT and its
-// `M/L/z` crop frame is git history). Transcribed byte-verbatim from
-// breeze-dark's actions/22/edit-cut.svg: one `.ColorScheme-Text` path of
-// m/c/l/z with implicit repeats, chained leading-dot decimals and
-// negative-as-separator numbers — all inside the interpreter's stated subset.
-constexpr IconPath kEditCutPaths[] = {
-    {kIconText,
-     "m7.01172 3c-.57735 1-.878131 1-.300781 2l3.541016 6.140625"
-     "-2.058594 3.527344c-.445257-.411453-1.036498-.667969-1.693359"
-     "-.667969-1.385 0-2.5 1.115-2.5 2.5 0 1.385 1.115 2.5 2.5 2.5 "
-     "1.385 0 2.5-1.115 2.5-2.5 0-.167103-.01785-.330523-.048828"
-     "-.488281l1.162109-2.01367c.780419-.001.878798-.774603 "
-     "1.333985-.785156l1.603515 2.78125c-.033193.163037-.050781"
-     ".332734-.050781.505859 0 1.385 1.115 2.5 2.5 2.5 1.385 0 2.5"
-     "-1.115 2.5-2.5 0-1.385-1.115-2.5-2.5-2.5-.653333 0-1.241072"
-     ".254586-1.685547.662109l-2.054687-3.521484 3.541015-6.140625"
-     "c.57735-1 .276569-1-.300781-2l-3.994141 6.847656-3.99414"
-     "-6.847656m3.988281 8c.277 0 .5.223.5.5 0 .277-.223.5-.5.5"
-     "-.277 0-.5-.223-.5-.5 0-.277.223-.5.5-.5zm-4.5 4c.831 0 1.5"
-     ".669 1.5 1.5 0 .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 "
-     "0-.831.669-1.5 1.5-1.5m9 0c.831 0 1.5.669 1.5 1.5 0 .831"
-     "-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5"
-     "-1.5"},
-};
+// (EDIT-CUT, THE TRIM SCISSORS, IS DELETED — 2026-08-18, with its button:
+// the architect's roster relayout retired the "set trim from region" BUTTON,
+// the CHORD bare `x` untouched, which left this row with no consumer at all.
+// The enumerator, this transcription and assets/icons/breeze/edit-cut.svg went
+// together rather than the table carrying an unpainted glyph. It served the
+// trim button from 2026-08-11 and was the architect's own pick over the first
+// cut's planner-picked transform-crop; both are git history.)
 
 // THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16, the icon row's
-// second viewport-class button, beside the scissors): TOOL-RECT-SELECTION, the
+// one viewport-class group, alone in it since the scissors left on
+// 2026-08-18): TOOL-RECT-SELECTION, the
 // MARCHING-ANTS rectangle — a dashed box is the universal "here is a selected
 // span" mark, and this button's whole job is to put a selectable span on the
 // waveform. THE ARCHITECT NAMED THE 24px FILE and this is the 22px one: the
@@ -900,6 +944,7 @@ constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
+constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
@@ -913,6 +958,8 @@ constexpr IconDef kKeyframePrevious   {22.0, kKeyframePreviousPaths,    1};
 constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
+constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
+constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -920,7 +967,6 @@ constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
 constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
-constexpr IconDef kEditCut            {22.0, kEditCutPaths,             1};
 constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
 constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
 constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
@@ -948,6 +994,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditPaste:           return kEditPaste;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::BlackSum:            return kBlackSum;
+        case Icon::Mathmode:            return kMathmode;
         case Icon::GoJump:              return kGoJump;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
@@ -960,6 +1007,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::KeyframeNext:        return kKeyframeNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::DeepHistory:         return kDeepHistory;
+        case Icon::ShallowHistory:      return kShallowHistory;
+        case Icon::EditSelect:          return kEditSelect;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
@@ -967,7 +1016,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogCancel:        return kDialogCancel;
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
-        case Icon::EditCut:             return kEditCut;
         case Icon::ToolRectSelection:   return kToolRectSelection;
         case Icon::ZoomIn:              return kZoomIn;
         case Icon::ZoomOut:             return kZoomOut;

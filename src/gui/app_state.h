@@ -1710,12 +1710,12 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's File and
-// Settings plus the view bar's three, row 3's two TABS, row 4's twenty-seven
+// Settings plus the view bar's three, row 3's two TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout), then the bottom row's FOURTEEN — the transport
-// three, the MARKER-WALK three (2026-08-15),
-// the four cardinal arrows and the FOUR HISTORY COMPANIONS that replace those
-// arrows while the `h` view stands (2026-08-14). It exists ONCE, here, because
+// the 2026-08-12 relayout; the HISTORY OPENER AND ITS FOUR COMPANIONS close
+// them since 2026-08-18), then the bottom row's FOURTEEN — the transport
+// three, the FOUR SINGLE-MARKER VERBS (2026-08-18), the MARKER-WALK three
+// (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -1793,13 +1793,26 @@ enum class RedesignButton {
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
-    // living on as the tooltips), the two view radio pairs, the trim button's
-    // group, the ZOOM GROUP and the SINGLE-MARKER VERBS (both 2026-08-12,
-    // the architect's live placement "after the trim"), the phase-reset
-    // clipboard pair with the three mode/editor buttons, and THE ROW'S LAST
-    // GROUP — listen, load-in-place, THE READ-ONLY TOGGLE and the history
-    // opener, in that order (architect 2026-08-14: "make the last section of
-    // the icon row: listen, load-in-place, readonly, history").
+    // living on as the tooltips), the two view radio pairs, the TRIM GROUP
+    // (the show-region button alone since 2026-08-18), the ZOOM GROUP
+    // (2026-08-12, the architect's live placement "after the trim"), the
+    // phase-reset clipboard pair with the three mode/editor buttons, the
+    // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
+    // the HISTORY OPENER leading its four companions.
+    //
+    // THE 2026-08-18 ROSTER RELAYOUT is what gave the row that tail and took
+    // its verbs away, both in the architect's own words: "move
+    // drop/delete/disable/toggle inherit to bottom right row" and "move
+    // cumulative/restore/older/newer to top icon row — place a separator
+    // before the history button, and place cumulative/etc after the history
+    // button". So the SINGLE-MARKER VERBS left this row for the bottom one
+    // (they are the enum's bottom-row block now, keeping their Icon* names —
+    // a roster id names the button, not the lane it happens to sit in), the
+    // four HISTORY COMPANIONS came back up from it, and the opener left the
+    // render-entry group to lead a separator-led group of its own again. The
+    // same ruling deleted the TRIM SCISSORS whole ("remove the 'set trim from
+    // region' icon"), leaving the show-region button alone in the trim group;
+    // bare `x` is untouched everywhere.
     //
     // NOTHING IN THIS ROW IS EVER HIDDEN (architect 2026-08-14: "no more
     // hiding/showing icons in top icon row"). Every member paints in every
@@ -1814,14 +1827,20 @@ enum class RedesignButton {
     Save, Undo, Redo, Render,
     IconS, IconT, IconW, IconP,
     // THE SHOW-REGION BUTTON (architect 2026-08-16): Ctrl+Shift+X, and THE
-    // TRIM GROUP'S OPENER since later that same day — the second VIEWPORT-CLASS
-    // act the architect's 2026-08-11 slot was opened for, and the one that now
-    // leads it ("reverse the order of the icons — show region first, then the
-    // scissors"). The scissors opened this group from 2026-08-11 until that
-    // ruling; the group keeps its separator, its place after the warp/phase
-    // radios and its membership, so the reorder changes no count and no width
-    // (the row is one left-to-right accumulation, and swapping two members
-    // moves neither the boundary nor the total). ONE ACT, always meaningful:
+    // TRIM GROUP'S ONE MEMBER since 2026-08-18 — the second VIEWPORT-CLASS act
+    // the architect's 2026-08-11 slot was opened for, which took the lead later
+    // on 2026-08-16 ("reverse the order of the icons — show region first, then
+    // the scissors") and is alone in the group now that the scissors are
+    // retired ("remove the 'set trim from region' icon"). The group keeps its
+    // separator and its place after the warp/phase radios; only its second slot
+    // went, so the row lost one box and one gap and no boundary moved.
+    //
+    // THE SCISSORS' RETIREMENT IS THE BUTTON'S ALONE. Bare `x` — set trim from
+    // region — is untouched: the chord, its degenerate-result refusal, its
+    // region-consuming success, its place on the read-only allowlist and its
+    // HELP entry all stand exactly as they did. What went is the roster member,
+    // its chord row, its face and its glyph (icons::Icon::EditCut, deleted
+    // consumer-less with it). ONE ACT, always meaningful:
     // make sure a region exists — seeding one at the current trim window's two
     // bounds if none stands — and then BRING IT INTO VIEW
     // (bring_span_into_view, the owner shared with the group undo restore).
@@ -1855,28 +1874,8 @@ enum class RedesignButton {
     // is not on the mode's allowlist, so the mode consumes it exactly as it
     // consumes `x`), nothing hand-listed.
     IconShowRegion,
-    // THE TRIM BUTTON (2026-08-11, the trim surface arc): bare `x`, set trim
-    // from region — the button IS its chord, so every rule `x` has, the button
-    // has (refusal-gated: no region = a consumed nothing, degenerate result =
-    // the same; region-consuming on success). Momentary, click face, no
-    // selected state, never-grey per the icon row's rule (in the `h` view the
-    // derived partition greys it, `x` being consumed there — nothing
-    // hand-listed). It OPENED the group above from 2026-08-11 — the architect's
-    // placement ("place it after the warp/phase radio buttons, create a new
-    // separator"), a group intended to collect viewport-related acts later —
-    // and it PAINTS SECOND there since 2026-08-16, when the viewport act that
-    // group was opened for arrived and the architect put it first ("reverse the
-    // order of the icons — show region first, then the scissors"). The
-    // placement ruling stands whole; only which member leads it moved.
-    // ITS NO-REGION ARM CAME BACK TO A CONSUMED NOTHING and the round trip is
-    // worth stating so nobody reads the line above as never having moved: for
-    // one day (2026-08-15..16) `x` SEEDED a region there, and the architect
-    // split that act onto its own chord and its own button because one key had
-    // come to mean two unrelated things — show and commit. The seed is
-    // IconShowRegion's now, whole.
-    IconTrim,
     // THE ZOOM GROUP (2026-08-12, the grand relayout's roster commit): four
-    // navigation chords in their own separator-led group after the scissors —
+    // navigation chords in their own separator-led group after the trim group —
     // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
     // whose ceiling arm runs the `c` command), and working-zoom center (bare
     // `c`). Every one is a momentary navigation act, never-grey per the
@@ -1891,15 +1890,6 @@ enum class RedesignButton {
     // of its rows a second path to a command that already had one — so these
     // four are the zoom commands' pointer home outright now.
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
-    // THE SINGLE-MARKER VERBS (2026-08-12, the same order): drop (bare `s`),
-    // delete (`Delete`), the disable toggle (`Ctrl+D`), and inherit/collapse
-    // (`Ctrl+N`). Authoring chords, so their HOME-VIEW, empty-selection and
-    // occupied-frame refusals are the chords' own consumed no-ops (never-grey),
-    // the `h` view GREYS all four as it greys everything else in this row that
-    // it refuses, and — since 2026-08-15 — SO DOES THE READ-ONLY LOCK, the
-    // roster's second MODE statement (redesign_button_enabled's read-only arm;
-    // the lock used to be in the never-grey list above and no longer is).
-    IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // THE MASS-MARKER CATEGORY: copy phase resets (Ctrl+P), paste phase
     // resets (Ctrl+Alt+P), the BPM opener (bare `m`), iteration mode (bare
     // `i`) and follow (bare `f`). All five are consumed in the `h` view and
@@ -1907,13 +1897,19 @@ enum class RedesignButton {
     // 2026-08-13..14). FOUR OF THE FIVE grey on a locked tab too — FOLLOW is
     // the exception, bare `f` being navigation and on the lock's allowlist.
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
-    // THE ROW'S LAST GROUP (architect 2026-08-14): the two render-entry
-    // buttons — listen (bare `l`) and load in place (`'`) — then THE READ-ONLY
-    // TOGGLE and the HISTORY OPENER, which is the order he dictated and which
-    // also lands the opener in last place. THE FIRST TWO GREY ON A LOCKED TAB
-    // (2026-08-15): the lock blocks bare `l` and `'` alike, `'` replacing the
-    // whole authored state. The toggle and the opener do not — `o` is the
-    // escape chord and `h` never meets the gate.
+    // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
+    // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
+    // the last section of the icon row: listen, load-in-place, readonly,
+    // history"). THE FIRST TWO GREY ON A LOCKED TAB (2026-08-15): the lock
+    // blocks bare `l` and `'` alike, `'` replacing the whole authored state.
+    // The toggle does not — `o` is the escape chord.
+    //
+    // IT IS NO LONGER THE ROW'S LAST GROUP: the HISTORY OPENER left it on
+    // 2026-08-18 to lead a separator-led group of its own again, which is what
+    // the architect asked for when its four companions came back up from the
+    // bottom row ("place a separator before the history button, and place
+    // cumulative/etc after the history button"). The three that stay keep his
+    // order and their separator.
     IconListen, IconLoadInPlace,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE
@@ -1929,31 +1925,67 @@ enum class RedesignButton {
     // of read_only beside the key. Recorded so the harder variant is not
     // revived.
     IconReadOnly,
-    // THE HISTORY MODE'S BUTTON (2026-08-04), ruled with the mode itself and
-    // landed with the commit act: bare `h`, lit while the mode stands. Its
-    // chord toggles, so the same click that opened the view closes it. It had
-    // a separator-led group of its own from 2026-08-04 until 2026-08-14, when
-    // its four companions left the row for the bottom one and the architect
-    // put the opener last.
+    // THE HISTORY GROUP — the row's LAST, and its own again since 2026-08-18
+    // (architect: "place a separator before the history button, and place
+    // cumulative/etc after the history button"). The OPENER leads it: bare
+    // `h`, ruled with the mode itself on 2026-08-04 and landed with the commit
+    // act, lit while the mode stands, its chord a toggle so the same click that
+    // opened the view closes it. It held a separator-led group of exactly this
+    // shape from 2026-08-04 until 2026-08-14, when the four companions left for
+    // the bottom row and the opener joined the render-entry group in last
+    // place; this ruling puts both halves back where they were.
     IconHistory,
+    // THE FOUR COMPANIONS, behind the opener in the order they have always held
+    // — how the delta READS, what you can DO from inside the view, then where
+    // you can STEP: the cumulative toggle (bare `u`), the revert act (Ctrl+H)
+    // and the walk's older / newer steps (bare `,` and `.`).
+    //
+    // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT (2026-08-18), which
+    // is this row's own settled rule — what a mode refuses simply GREYS — and a
+    // REVIVAL of the arm they held 2026-08-05..15 for exactly this reason:
+    // their keys are bound in one place in the product and it is inside the
+    // view. That arm went plain-true on 2026-08-15 because the move to the
+    // bottom row had stopped painting them outside the view at all, so no face
+    // read it; THIS ROW HIDES NOTHING, so they paint in every state and the
+    // face has to be honest again. The arm is at redesign_button_enabled and
+    // says which owner it uses and why.
+    //
+    // TWO 2026-08-15 REVERSALS SURVIVE THAT REVIVAL UNTOUCHED and must not be
+    // re-retired with it: REVERT keeps NO conditional in-view grey (the mode
+    // admits Ctrl+H only while a diff flag stands, and the architect reversed
+    // that face as a per-selection blink — redesign_button_is_history_companion
+    // is what still lifts the four over the derived partition), and the
+    // CUMULATIVE toggle keeps its unconditional lamp, which outside the view
+    // now composes disabled+selected — a combination the shared face
+    // expressions already handle.
+    HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer,
     // The BOTTOM ROW's transport cluster (row 8, architect-ratified
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. TEN buttons in three groups, in painted order (the enum
+    // detection. FOURTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
-    // the right home): the TRANSPORT (skip-back = bare Home, THE ONE PLAY/STOP
-    // BUTTON = bare Space, skip-forward = bare End), then THE MARKER-WALK
-    // GROUP (2026-08-15 — previous = Shift+Tab, next = Tab, walk both tabs =
-    // Ctrl+Shift+Tab), then a SEPARATOR, then the
+    // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
+    // THE ONE PLAY/STOP BUTTON = bare Space, skip-forward = bare End) with the
+    // CLOCK behind its separator, then — FLUSH AT THE RIGHT MARGIN, three
+    // groups divided by two more separators — THE FOUR SINGLE-MARKER VERBS
+    // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
+    // = Ctrl+N), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
+    // next = Tab, walk both tabs = Ctrl+Shift+Tab), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
-    // semantics by dispatching through on_key like every other chord button,
-    // and finally THE FOUR HISTORY COMPANIONS, which are the SAME SLOTS as
-    // the arrows: the two clusters swap on the `h` view (below). The walk
-    // group is NOT part of that swap and paints in both states.
+    // semantics by dispatching through on_key like every other chord button.
+    //
+    // NOTHING ON THIS ROW SWAPS OR HIDES SINCE 2026-08-18. The four HISTORY
+    // COMPANIONS took the arrows' four slots while the `h` view stood from
+    // 2026-08-14 until then — one cluster of four painted at that anchor in
+    // either state, the other publishing zero rects — and they went back to the
+    // ICON ROW with the roster relayout ("move cumulative/restore/older/newer
+    // to top icon row"). The swap machinery went with them whole rather than
+    // being kept: the arrows paint unconditionally now, and the row's layout
+    // has no mode term left in it anywhere.
     //
     // THE ROW GOT ITS SHAPE AT THE ARCHITECT'S LIVE LOOK (2026-08-15), and the
     // two halves are one ruling: the left cluster dropped to THREE and the
@@ -2013,6 +2045,25 @@ enum class RedesignButton {
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
     TransportSkipBack, TransportPlayStop, TransportSkipForward,
+    // THE SINGLE-MARKER VERBS, THE RIGHT BLOCK'S FIRST GROUP since 2026-08-18
+    // (architect: "move drop/delete/disable/toggle inherit to bottom right
+    // row — place a separator to the left of previous marker icon, and place
+    // drop/etc to its left"): drop (bare `s`), delete (`Delete`), the disable
+    // toggle (`Ctrl+D`) and inherit/collapse (`Ctrl+N`). They opened a group of
+    // their own in the ICON ROW from 2026-08-12 until this move, and NOTHING
+    // ABOUT THEM CHANGED WITH THE ROW — the chords, the gates and both faces
+    // came across whole.
+    //
+    // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S, which is the one thing
+    // to read twice here: the bottom row is otherwise lit unconditionally, and
+    // these four are its exception in both directions. Authoring chords, so
+    // their HOME-VIEW, empty-selection and occupied-frame refusals stay the
+    // chords' own consumed no-ops (never-grey); the `h` view GREYS all four
+    // through the derived partition, and so does the READ-ONLY LOCK, the
+    // roster's second MODE statement (redesign_button_enabled's read-only arm,
+    // 2026-08-15). They keep their Icon* names: a roster id names the button,
+    // not the lane it sits in.
+    IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
     // cluster, behind a separator and ahead of the four arrows): previous
     // marker (Shift+Tab), next marker (Tab) and walk both tabs
@@ -2035,33 +2086,20 @@ enum class RedesignButton {
     // reverse walk-source cycle), so history_mode_owns_key answers for them and
     // they stay lit and do the mode's own thing.
     TransportWalkPrev, TransportWalkNext, TransportWalkBoth,
-    TransportDown, TransportUp, TransportLeft, TransportRight,
-    // THE HISTORY COMPANIONS, THE ARROWS' MODE TWIN (architect 2026-08-14):
-    // while the `h` view stands the bottom row's right cluster is these four
-    // instead of the arrows — Cumulative, Revert, Older, Newer, the order
-    // they held in the icon row's history group. It is a SWAP and not a
-    // collapse: one cluster of four is painted at that anchor in either
-    // state, so the slot count never changes and nothing on the row reflows.
-    // OUTSIDE THE VIEW THEY DO NOT EXIST ANYWHERE — not painted, not greyed,
-    // a zero published rect exactly as the row's tenants publish under a
-    // modal — which is the whole of "hidden" left in the product; the ICON
-    // ROW hides nothing at all any more.
-    //
-    // THEY ANSWER PLAIN TRUE since 2026-08-15 (redesign_button_enabled below),
-    // dropping BOTH of their greys: the resting-disabled arm they had held
-    // since 2026-08-05, whose reasoning — their keys are bound only inside the
-    // view — went moot when the move to this row stopped painting them outside
-    // it, and Revert's conditional in-view grey, which the architect reversed
-    // as a per-selection blink. The full record, with the superseded reasoning
-    // kept, is at that arm; the chords refuse exactly as they always did.
-    HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer
+    TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: FIVE in row 1, two
-// in row 3, twenty-seven in row 4 and fourteen in the bottom row — 48. Of those,
-// FORTY-SIX carry a chord in kToolbarChords and TWO are the dropdown anchors
+// in row 3, twenty-six in row 4 and fourteen in the bottom row — 47. Of those,
+// FORTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (File and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 47 SINCE 2026-08-18, THE ROSTER RELAYOUT, and the arithmetic is one loss over
+// three moves: the TRIM SCISSORS were deleted whole (48 − 1, split 46 + 2 to
+// 45 + 2 — the chord table lost its row with the button and bare `x` is
+// untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
+// the four HISTORY COMPANIONS moved back up to row 4, both CHANGING ROWS rather
+// than leaving the roster, so neither the total nor the split felt them.
 // 48 SINCE 2026-08-16: the SHOW-REGION button joined the trim group in
 // row 4 (Ctrl+Shift+X), a pure chord addition — 47 + 1, split 46 + 2.
 // 47 SINCE 2026-08-15's SECOND ROW-1 RULING: the NAVIGATION ANCHOR left with its
@@ -2081,7 +2119,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 48;
+inline constexpr int kRedesignButtonCount = 47;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2134,26 +2172,21 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
             return true;
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
         case RedesignButton::IconS:
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
-        case RedesignButton::IconTrim:
         case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomIn:
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
-        case RedesignButton::IconMarkerDrop:
-        case RedesignButton::IconMarkerDelete:
-        case RedesignButton::IconMarkerDisable:
-        case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -2170,31 +2203,42 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
-        case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
+        case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
             break;
     }
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — the transport three, the MARKER-WALK
-// GROUP's three (2026-08-15), the four cardinal
-// arrows and, since 2026-08-14, the FOUR HISTORY COMPANIONS that take the
-// arrows' slots inside the `h` view (row 8's from 2026-08-11; tenants of the
-// unified bottom row since 2026-08-12). Named
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — FOURTEEN since 2026-08-18: the
+// transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
+// row that day, the MARKER-WALK GROUP's three (2026-08-15) and the four
+// cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
+// since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
+// until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these ten — the hover recompute, the
-// click-face arm and clear, the tick comparator, and the tooltip, which also
+// with the bottom row's own rect for these fourteen. THE CONSUMERS, re-greped
+// rather than inherited: the hover clear and the hover recompute
+// (clear_redesign_button_hover / recompute_redesign_button_hover), the click
+// face's arm and its erase (arm_redesign_press / take_chrome_press), the
+// per-tick staleness comparator (main.cpp) and the tooltip, which also
 // FLIPS ABOVE the button here (the lane rests on the WINDOW'S FOOT since the
 // relayout's commit B, so there is nothing below it at all; it was the blank
-// foot's own band, zero on a short window, for the afternoon before).
+// foot's own band, zero on a short window, for the afternoon before). Every
+// one of them keys off THIS predicate rather than off a button list, so the
+// four verbs started answering with the bottom lane and the four companions
+// with the top strip the moment the membership above moved.
 // A membership predicate like redesign_button_is_tab, deliberately NOT the
 // exhaustive-switch shape: redesign_button_in_menu_row above is the roster's
 // one classification chokepoint (a new button fails to compile there until its
@@ -2204,35 +2248,42 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
-        case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
+        case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
-        case RedesignButton::HistoryCumulative:
-        case RedesignButton::HistoryRevert:
-        case RedesignButton::HistoryOlder:
-        case RedesignButton::HistoryNewer:
             return true;
         default:
             return false;
     }
 }
 
-// WHICH BUTTONS ARE THE HISTORY COMPANIONS — the four that take the cardinal
-// arrows' slots on the bottom row while the `h` view stands. Named 2026-08-15
-// for its ONE consumer, and the consumer is what the name has to earn: the
-// architect's scoped-truth ruling makes the bottom row's RIGHT cluster
-// untruthful and always enabled, and REVERT is the one member whose chord the
-// mode admits CONDITIONALLY (on a diff flag standing), so the derived `h`
-// partition would grey it inside the view. This membership is what lifts the
-// four over that partition at redesign_button_enabled — a one-line exception
+// WHICH BUTTONS ARE THE HISTORY COMPANIONS — the four that follow the history
+// opener in the icon row's last group (they were the bottom row's right
+// cluster from 2026-08-14 until the 2026-08-18 relayout brought them back up;
+// the membership never moved with the row). Named 2026-08-15
+// for its ONE consumer, and the consumer is what the name has to earn: REVERT
+// is the one member whose chord the mode admits CONDITIONALLY (on a diff flag
+// standing), so the derived `h` partition would grey it INSIDE the view. This
+// membership is what lifts the four over that partition at
+// redesign_button_enabled — a one-line exception
 // to a derived rule, named rather than spelled inline so the exception and the
 // cluster are one fact. It is deliberately the FOUR and not just Revert: the
 // ruling is about the cluster, and a future companion whose chord the mode
 // gates conditionally must inherit it without a second edit.
+//
+// IT SAYS NOTHING ABOUT THE FACE OUTSIDE THE VIEW, and that is worth stating
+// since 2026-08-18: the four grey out there again (the icon row's own mode
+// rule, revived when they came back to a row that hides nothing), and that
+// answer is the arm's own — this predicate only keeps the mode's conditional
+// grey off them while the view stands.
 inline constexpr bool redesign_button_is_history_companion(RedesignButton b) {
     switch (b) {
         case RedesignButton::HistoryCumulative:
@@ -2279,18 +2330,20 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE EIGHT GROUPS, in painted order: the toolbar four, the S/T radios, the
-// W/P radios, THE TRIM PAIR (the show-region button and then the scissors; the
-// group was one member from 2026-08-11, opened as the architect's slot for
-// viewport-class acts, and the show-region button is the second such act
-// (2026-08-16), the zoom four, the single-marker verbs, the mass-marker acts,
-// and the row's last group — listen, load-in-place, the read-only toggle and the
-// history opener (architect 2026-08-14, which is also what retired the history
-// group's own boundary). EIGHT is unchanged across both of that pair's moves:
-// the second button JOINED a group rather than opening one, and the architect's
-// same-day reorder ("show region first, then the scissors") moved WHICH member
-// leads the trim group — this switch's one edit — and nothing else. The
-// boundary itself, the row's member count and its width are all untouched by a
-// reorder.
+// W/P radios, THE TRIM GROUP (the show-region button, alone in it since the
+// scissors were deleted on 2026-08-18 — it was opened by the scissors on
+// 2026-08-11 as the architect's slot for viewport-class acts, filled by the
+// show-region button as the second such act on 2026-08-16 and led by it later
+// the same day), the zoom four, the mass-marker acts, the render-entry group
+// (listen, load-in-place, the read-only toggle) and THE HISTORY GROUP — the
+// opener and its four companions.
+//
+// EIGHT ACROSS THE 2026-08-18 RELAYOUT, and the two edits here are what kept it
+// there rather than arithmetic that happened to cancel: the SINGLE-MARKER VERBS
+// left the row for the bottom one, so IconMarkerDrop stopped opening a group,
+// and the HISTORY OPENER left the render-entry group to lead one again, so
+// IconHistory started. The scissors' deletion cost no boundary — they were the
+// trim group's SECOND member, and a group survives losing one.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
@@ -2298,9 +2351,9 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         case RedesignButton::IconW:
         case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomIn:
-        case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconCopy:
         case RedesignButton::IconListen:
+        case RedesignButton::IconHistory:
             return true;
         default:
             return false;
@@ -3962,7 +4015,9 @@ struct AppState {
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
     // centre in monospace; the row unification merged that row and the status
-    // line into the one bottom row a day later). It is a PAINTER STASH in the
+    // line into the one bottom row a day later, and the architect moved the
+    // cell to the row's LEFT BLOCK, behind the transport's own separator, on
+    // 2026-08-18). It is a PAINTER STASH in the
     // roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen on the monospace face at the live size, which only the
@@ -6141,7 +6196,8 @@ std::pair<long long, long long> compute_trim_samples(
 // follows the basis of what it repaints (playhead_pixel_x above states the same
 // rule for the waveform's two bases).
 //
-//   clock_invalidate_rect — the reserved CLOCK CELL at the lane's centre, and
+//   clock_invalidate_rect — the reserved CLOCK CELL in the lane's left
+//   block, and
 //   nothing else on the row: every route that moves the PLAYHEAD or the
 //   SCANNER, which is the only thing the clock reads. Reached through
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
@@ -6261,11 +6317,12 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 // than the logic: this is a PURE READ OF THE MODE, so it moves with every click
 // in the marker lane, and the glyph flipped on each one to report a selection
 // the lane is already showing — the same argument that took the four cardinal
-// arrows always-on. Revert is now lit whatever this answers (it is a member of
-// the bottom row's untruthful right cluster, redesign_button_enabled lifting
-// the four history companions over the derived partition), a click on it with
+// arrows always-on. Revert is lit whatever this answers WHILE THE VIEW STANDS
+// (redesign_button_enabled lifts the four history companions over the derived
+// partition), a click on it with
 // no subject is a consumed no-op, and the full record with the reversal's
-// reasoning lives at that arm. DO NOT GIVE THIS PREDICATE A FACE READER AGAIN.
+// reasoning lives at that arm. OUTSIDE the view it is dead like its three
+// neighbours, which is the companions' own resting arm and not this term. DO NOT GIVE THIS PREDICATE A FACE READER AGAIN.
 inline bool history_mode_revert_subject_standing(
         const AppState::HistoryMode& mode) {
     return !mode.selection.empty() || mode.focus >= 0;
@@ -6330,10 +6387,13 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // levels, the four history mode-companions at rest and the wholly-consumed
 // groups right of the history opener inside the `h` view, and both are gone:
 // the companions LEFT the row for the bottom one and everything the view
-// refuses in this row now wears the ordinary dead face. The only hiding left
-// in the product is the bottom row's cluster SWAP, which publishes zero rects
-// for whichever four are not painted — the same shape the modal's yield
-// already used.)
+// refuses in this row now wears the ordinary dead face. (They came BACK on
+// 2026-08-18 and wear that same dead face at rest — their arm is at
+// redesign_button_enabled — which is the rule working rather than the
+// collapse returning.) THERE IS NO HIDING LEFT IN THE PRODUCT AT ALL since
+// that day: the bottom row's cluster SWAP was the last of it, and the modal's
+// yield — where the row's tenants publish zero rects — is the one remaining
+// site of that shape.)
 
 // WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
 // refusal set, hoisted whole (2026-08-15). IT HAS ONE READER AND MUST NOT GAIN
@@ -6437,7 +6497,8 @@ inline bool playback_launch_playable(const AppState& a,
 // at all in the PHASE RESET one, so with the honest arm in place "every time I
 // selected a marker, that pair would blink in and out, and it would be
 // distracting". That is why the bottom row's RIGHT cluster — the four cardinal
-// arrows, and the four history companions that supplant them inside the view —
+// arrows, and the four history companions that supplanted them inside the view
+// until the 2026-08-18 relayout —
 // went back to a plain `true` the same day, giving up the selection-reading
 // arms the whole-row honesty ruling had just given them. THE TWO SKIPS WENT
 // BACK WITH THEM (architect 2026-08-15) on a DIFFERENT reason, stated in full
@@ -6499,10 +6560,13 @@ inline bool playback_launch_playable(const AppState& a,
 //     allowlist alone is not the truth — three of its answers do not survive
 //     the walk (below).
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
-//     the trim scissors, the SHOW-REGION button beside it (2026-08-16 —
+//     the SHOW-REGION button (2026-08-16 —
 //     it writes no trim at all, only the session's region scratch), the S/T and
 //     W/P radios, the zoom four, follow, the
-//     read-only toggle itself and the history opener. Greying them would make
+//     read-only toggle, the history opener and its four companions. (THE TRIM
+//     SCISSORS were on this list, bare `x` being read-only-legal like every
+//     trim gesture, until their button was deleted on 2026-08-18; the key's
+//     admission is untouched.) Greying them would make
 //     the face promise LESS than the key delivers, which is the 2026-08-07 band
 //     ruling's own line: read-only protects the AUTHORED MUSICAL CONTENT and
 //     nothing else.
@@ -6518,8 +6582,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     THE RULING'S OWN EXCLUSIONS: the four cardinal arrows (Up and Down are
 //     blocked outright, Left and Right blocked only while a selection stands —
 //     the exact per-selection blink this ruling removes) and Revert, whose
-//     Ctrl+H the lock really does eat but which is a member of the untruthful
-//     right cluster. A derivation would therefore need an override list on top
+//     Ctrl+H the lock really does eat but whose face the companions' own arm
+//     decides. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
 //   * Row 1's two anchors and row 3's tabs answer true HERE: row 1 keeps its
@@ -6582,16 +6646,22 @@ inline bool redesign_button_enabled(const AppState& a,
     // mode's own gates (history_mode_disables_button, above), so this line
     // cannot fall out of step with the allowlist.
     //
-    // ITS ONE EXCEPTION IS THE HISTORY COMPANIONS (architect 2026-08-15): the
-    // bottom row's RIGHT cluster is untruthful and always enabled by the ruling
-    // at the head of this body, and the four companions ARE that cluster inside
-    // the view. Three of them the partition already answers LIVE for free (the
-    // mode owns bare `u`, `,` and `.`), so the exception exists for REVERT
-    // alone, whose Ctrl+H the mode admits only while a diff flag stands — a
-    // per-selection blink, exactly what the ruling removes. The membership is
+    // ITS ONE EXCEPTION IS THE HISTORY COMPANIONS (architect 2026-08-15), and
+    // it is scoped to what happens INSIDE the view: three of the four the
+    // partition already answers LIVE for free (the mode owns bare `u`, `,` and
+    // `.`), so the exception exists for REVERT alone, whose Ctrl+H the mode
+    // admits only while a diff flag stands — a per-selection blink, which the
+    // architect reversed as a face while leaving the chord's refusal exactly as
+    // it was. The membership is
     // named once (redesign_button_is_history_companion) rather than spelled
     // here, and it is the cluster rather than Revert because the ruling is
     // about the cluster.
+    //
+    // THE FOUR ARE STILL GREY OUTSIDE THE VIEW and this line is not what says
+    // so (2026-08-18, with their return to the icon row): this whole test is
+    // inside `a.history_mode.active`, so it has no opinion about a button out
+    // there at all. Their own arm below carries that answer and states why it
+    // owns it.
     if (a.history_mode.active &&
         !redesign_button_is_history_companion(b) &&
         history_mode_disables_button(a, b)) {
@@ -6600,14 +6670,15 @@ inline bool redesign_button_enabled(const AppState& a,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. (ROW 4 HAS NO EXCEPTION LEFT TO COUNT.
-        // THREE of its members were one until 2026-08-14 — the walk's older /
-        // newer steps and the revert act, resting disabled because their keys
-        // are bound only inside the history view, joined by the Cumulative
-        // toggle in 2026-08-08 — and the four left this row for the BOTTOM one
-        // that day, where they are the arrows' mode twin; they answer a plain
-        // `true` since 2026-08-15. Both halves of the succession are recorded
-        // at the history companions' arm below, which is where they live now.)
+        // 1 and 3 by their face scope. (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
+        // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
+        // the `h` view and which grey at rest for that reason. They held the
+        // same arm from 2026-08-05 (2026-08-08 for the Cumulative toggle) until
+        // 2026-08-14, when they left this row for the BOTTOM one and became the
+        // arrows' mode twin; the arm went plain-true on 2026-08-15 because down
+        // there they were not painted outside the view at all. The relayout
+        // brought them back to a row that hides nothing, and the arm with them.
+        // The whole succession is at their own arm below.)
         // Their presses
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
@@ -6637,14 +6708,9 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
-        // THE TRIM BUTTON MIRRORS NOTHING (2026-08-11): bare `x`'s refusals —
-        // no region, a degenerate inverse-mapped pair — are consumed no-ops on
-        // the key and stay so on the click, per the row's never-grey rule. The
-        // `h` view greys it through the derived partition above (`x` is
-        // consumed there), nothing hand-listed.
-        case RedesignButton::IconTrim:
-        // THE SHOW-REGION BUTTON MIRRORS NOTHING EITHER (2026-08-16), and for
-        // a stronger reason than its neighbour: it HAS no refusal to mirror.
+        // THE SHOW-REGION BUTTON MIRRORS NOTHING (2026-08-16), and for a
+        // stronger reason than the trim scissors it outlived: it HAS no refusal
+        // to mirror.
         // Its one act — ensure a region exists, then bring it into view — is
         // always meaningful on a loaded piece, and the case that would tempt a
         // face (a region already fully in view) is a harmless nothing rather
@@ -6683,11 +6749,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // button joins the row's arm on the row's own terms.
         case RedesignButton::IconHistory:
             return true;
-        // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the icon row's
+        // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the roster's
         // one grey that is not the `h` view's: these TEN are exactly what
         // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab,
         // so the lock now LOOKS the way the history view already looks, which
-        // is what the architect asked for. THE TERM IS THE BIT AND NOTHING
+        // is what the architect asked for. IT IS NO LONGER ONE ROW'S: since the
+        // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's, and
+        // they carry this term with them — a button's gates are the BUTTON's,
+        // and the bottom row's always-on policy is what the other ten of its
+        // members take, not a property of the lane. THE TERM IS THE BIT AND NOTHING
         // ELSE, deliberately: every one of these chords has further refusals of
         // its own (home view, an empty selection, an occupied frame, an empty
         // clipboard) and NONE of them is mirrored — those stay consumed no-ops
@@ -6720,9 +6790,9 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
             return !active_view_state(a).read_only;
-        // THE BOTTOM ROW IS ALWAYS-ON WHOLE, apart from the `h` view's derived
-        // partition (architect 2026-08-15, his final ruling on this row after
-        // it moved three times that day): all ten break out of this switch
+        // THE BOTTOM ROW IS ALWAYS-ON EXCEPT FOR ITS OWN TWO GREYS (architect
+        // 2026-08-15, his final ruling on this row after it moved three times
+        // that day): its TEN always-on members break out of this switch
         // to take the loading/blank guard — every chord on the row drops at
         // on_key's `app.loading || total <= 0` return — and then answer a plain
         // `true`. HIS REASONING, kept in his own words because it is the whole
@@ -6741,6 +6811,21 @@ inline bool redesign_button_enabled(const AppState& a,
         // refusal-predicting grey states — is back in force here unbroken, and
         // the head of this body carries what the roster still does tell the
         // truth about.
+        //
+        // WHAT THE ROW ACTUALLY GREYS, re-derived since 2026-08-18 rather than
+        // stated as "nothing but Play/Stop" (which was true while its roster
+        // was ten and half of it was unpainted in the view). IN THE `h` VIEW,
+        // all through the DERIVED partition at the top of this body: the
+        // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
+        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
+        // allowlist — an answer that reached no pixel while the cluster swap
+        // hid them, and reaches one now that they paint in every state) and THE
+        // FOUR SINGLE-MARKER VERBS. The two SKIPS and the marker-walk three
+        // stay lit, being the mode's own absolute jumps and its own cycles.
+        // OUTSIDE THE VIEW: the four VERBS on a locked tab, their own gate,
+        // carried down from the icon row and stated at their arm above.
+        // Nothing else on the row has a resting grey, which is what this ruling
+        // is about — the set that breaks out below.
         //
         // THE `h` HISTORY VIEW'S PARTITION AT THE TOP OF THIS BODY STILL
         // OUTRANKS EVERY WORD OF THIS, and the architect confirmed its split
@@ -6813,9 +6898,21 @@ inline bool redesign_button_enabled(const AppState& a,
         // alike). Walls are the one refusal class this roster has never
         // mirrored anywhere; do not "complete" this arm with a wall term.
         // Their chords refuse exactly as they did; a click on a refusing arrow
-        // is a consumed no-op, the roster's standing shape. (In the `h` view
-        // they are not painted at all — the cluster swaps to the history
-        // companions — so the partition's answer for them reaches no pixel.)
+        // is a consumed no-op, the roster's standing shape.
+        //
+        // THEY ARE PAINTED IN THE `h` VIEW SINCE 2026-08-18 — the cluster swap
+        // that replaced them with the history companions went when those four
+        // returned to the icon row — AND THEY WEAR THE DEAD FACE IN THERE,
+        // which is a real face this arm never had to produce before. It is the
+        // DERIVED partition's answer and nothing hand-listed: bare Up / Down /
+        // Left / Right are neither the mode's own vocabulary
+        // (history_mode_owns_key) nor on its allowlist
+        // (history_mode_key_blocked), so the view consumes all four and greys
+        // them exactly as it greys every other button whose act it consumes.
+        // Truthful, and it costs no term here: the answer comes from the line
+        // at the top of this body, which the arrows fall under like everything
+        // else. (Under the swap it reached no pixel, which is why the arms
+        // above discuss their RESTING face alone.)
         //
         // THE TWO SKIPS (bare Home / End) ARE UNTRUTHFUL TOO AND DELIBERATELY
         // SO (architect 2026-08-15), and they fall through to the same plain
@@ -6860,37 +6957,45 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
             break;
-        // THE FOUR HISTORY COMPANIONS ANSWER PLAIN TRUE (architect 2026-08-15):
-        // they are the bottom row's RIGHT CLUSTER inside the `h` view — the
-        // arrows' mode twin in the arrows' own slots — and the ruling at the
-        // head of this body makes that cluster untruthful and always enabled.
-        // They are ALSO the one arm the mode line at the top of this body is
-        // told to skip (redesign_button_is_history_companion), which is what
-        // the exception is for.
+        // THE FOUR HISTORY COMPANIONS GREY OUTSIDE THE `h` VIEW AND ARE LIVE
+        // INSIDE IT (2026-08-18) — the ICON ROW's own settled rule, which is
+        // where they live again since the roster relayout: what a mode refuses
+        // simply GREYS, and their four chords (bare `u`, Ctrl+H, bare `,` and
+        // bare `.`) are bound in exactly one place in the product and it is
+        // inside the view.
         //
-        // TWO EARLIER RULES DIE HERE AND BOTH WERE RIGHT FOR THE POLICY THAT
-        // THEN STOOD, so they are recorded rather than deleted:
-        //   * THE RESTING-DISABLED FAMILY (2026-08-05 for the walk's two steps
-        //     and Revert, 2026-08-08 for the Cumulative toggle): this arm read
-        //     `a.history_mode.active`, on the reasoning that bare `,`, `.` and
-        //     `u` are bound in exactly one place in the product
-        //     (handle_history_mode_key) and Ctrl+H inside the view alone, so
-        //     outside it there is no act and a live face would promise one.
-        //     TRUE, AND NOW MOOT: since the 2026-08-14 move to this row the
-        //     four are not PAINTED outside the view at all — the arrows hold
-        //     the slots and these publish zero rects — so the resting answer
-        //     reached no pixel and only ever fed the comparator's totality. A
-        //     resting `true` is invisible in exactly the same way.
-        //   * REVERT'S IN-VIEW GREY, which was not decided here but by the
-        //     derived partition: the view's allowlist admits Ctrl+H only while
-        //     a diff flag stands (history_mode_revert_subject_standing), so ONE
-        //     decision both refused the chord and greyed the button — the
-        //     cleanest shape this predicate has. THE ARCHITECT'S REASON FOR
-        //     REVERSING IT IS THE BLINK, NOT THE LOGIC: that admission tracks
-        //     the diff-flag SELECTION, so the glyph flipped on every click in
-        //     the marker lane to report a selection the lane is already
-        //     showing. The chord is untouched and still refuses with an empty
-        //     subject; only the face stopped saying so.
+        // THE OWNER IS THIS ARM AND NOT THE DERIVED PARTITION, deliberately,
+        // and the reason is that the partition CANNOT ANSWER IT: the mode line
+        // at the top of this body runs only while `a.history_mode.active`, so
+        // it has nothing at all to say about a button outside the view — and
+        // asked inside it, history_mode_owns_key claims three of these four as
+        // the mode's OWN vocabulary and answers LIVE, which is the reverse of
+        // the fact wanted here. One `a.history_mode.active` term states both
+        // halves at once and cannot fall out of step with itself.
+        //
+        // IT IS A REVIVAL, and the ruling it revives is what a reader must not
+        // re-retire. The four ANSWERED PLAIN TRUE from 2026-08-15 to
+        // 2026-08-18, and that was right for the row they were on: the
+        // 2026-08-14 move to the BOTTOM row put them in the cardinal arrows'
+        // own slots under a cluster swap, so outside the view they were not
+        // painted at all — they published zero rects — and the resting answer
+        // reached no pixel, which made the arm below moot rather than wrong.
+        // THE ICON ROW HIDES NOTHING, so the premise is gone: they paint in
+        // every state now and the face has to be honest again. The arm is the
+        // one they held 2026-08-05..15 (2026-08-08 for the Cumulative toggle),
+        // for this same reason, restored verbatim in effect.
+        //
+        // REVERT'S IN-VIEW GREY IS NOT REVIVED WITH IT and the two are separate
+        // rulings. That one was the DERIVED partition's: the view admits Ctrl+H
+        // only while a diff flag stands (history_mode_revert_subject_standing),
+        // so one decision refused the chord and greyed the button. THE
+        // ARCHITECT REVERSED IT ON 2026-08-15 FOR THE BLINK, NOT THE LOGIC —
+        // that admission tracks the diff-flag SELECTION, so the glyph flipped
+        // on every click in the marker lane to report a selection the lane is
+        // already showing — and redesign_button_is_history_companion is what
+        // still lifts the four over that partition inside the view. The chord
+        // is untouched and still refuses on an empty subject; only the face
+        // stays quiet.
         //
         // THEY NEVER GREYED AT THE WALK'S WALLS EITHER, and that reasoning
         // survives intact as the smaller case of the same rule: stepping past
@@ -6901,12 +7006,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE CUMULATIVE TOGGLE'S SELECTED FACE IS UNAFFECTED and was never
         // scoped this way: the reading is a session preference
         // (AppState::history_cumulative) that outlives every visit, so the lamp
-        // reports it wherever the button is painted.
+        // reports it wherever the button is painted — which now includes every
+        // frame outside the view, where it composes DISABLED + SELECTED. The
+        // shared face expressions already handle that pair (the note at
+        // paint_button, paint_handler.cpp): the disabled blend mixes the fill
+        // and the line toward the ground rather than dropping them, so the
+        // reading stays readable and dimmed.
+        //
+        // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
+        // loading piece, so `false` is already this arm's answer there.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryCumulative:
-            return true;
+            return a.history_mode.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -6921,10 +7034,13 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW HAS NO ARM HERE AT ALL since 2026-08-15 — all ten
-        // of its buttons return a plain `true` from the `default` below, and
+        // THE BOTTOM ROW'S TEN ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL since
+        // 2026-08-15 — they return a plain `true` from the `default` below, and
         // the ruling, the architect's reasoning and the three reversals that
-        // got there are at the first switch's transport block above. Nothing
+        // got there are at the first switch's transport block above. (Its four
+        // MARKER VERBS are not among them: their read-only term is in the arm
+        // above, carried down from the icon row with the buttons on
+        // 2026-08-18.) Nothing
         // on that row is to be given a face term again without a new ruling:
         // the pattern each attempt fell into was mirroring a refusal that
         // changes at INTERACTION cadence, which makes a glyph blink to restate
@@ -6951,25 +7067,30 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:
-            // REACHED BY EXACTLY EIGHT IDS since 2026-08-15 — THE WHOLE BOTTOM
-            // ROW, which breaks out of the first switch to take the
-            // loading/blank guard and has nothing else to say (each of the four
-            // pairs held an honest arm for a revision or two; the ruling and
-            // the three separate reasons they were taken back are at that
-            // block). Every other id returned above, from one switch or the
-            // other.
+            // REACHED BY EXACTLY TEN IDS, re-derived after the 2026-08-18
+            // relayout — the bottom row's ALWAYS-ON members (the transport
+            // three, the marker-walk three and the four arrows), which break
+            // out of the first switch to take the loading/blank guard and have
+            // nothing else to say (each of the four pairs held an honest arm
+            // for a revision or two; the ruling and the three separate reasons
+            // they were taken back are at that block). The row's other four —
+            // the single-marker verbs — return from the read-only arm above
+            // like the six icon-row members they came down with. Every other id
+            // returned above, from one switch or the other.
             break;
     }
     return true;
 }
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
-// buttons, row 3's tabs, row 4's four radios and four toggles (the two view
-// pairs; follow, iteration, read-only, history) and the BOTTOM ROW'S ONE
-// subject, the Cumulative toggle (a SECOND joined it for hours on 2026-08-15,
-// the Play / Stop radio pair, and left with the same day's collapse of that
-// pair into one button — its record is in the momentary arm below)
-// — each reading
+// buttons, row 3's tabs and row 4's four radios and FIVE toggles (the two view
+// pairs; follow, iteration, read-only, history, and the CUMULATIVE reading,
+// which came back to this row with the history group on 2026-08-18). THE
+// BOTTOM ROW HAS NO SUBJECT AT ALL AGAIN: the Cumulative toggle was its one
+// from 2026-08-14 until that relayout, and the Play / Stop radio pair was a
+// second for hours on 2026-08-15, leaving with the same day's collapse of that
+// pair into one button (its record is in the momentary arm below).
+// Each reads
 // THE SAME live fact its chord flips, so a lit button and the state it reports
 // can never drift. Three readers: the painter (which stashes what it painted),
 // the press claim's RADIO refusal (a radio button already selected is a consumed
@@ -7040,13 +7161,16 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // bit that is NOT the mode's: history_cumulative is a program-session
         // preference, so this reads true wherever the session left it.
         // Publishing it unconditionally is the point — a mode term here would
-        // make the row lie about the reading the moment the view closed. It is
-        // read only where the button is PAINTED, which since the 2026-08-14
-        // move to the bottom row is inside the `h` view alone (outside it the
-        // arrows hold the slot and this button publishes an empty rect). The
-        // clause that used to end this note — the button's own resting-disabled
-        // face saying the key is elsewhere — went with that arm on 2026-08-15;
-        // the empty rect is what says it now.
+        // make the row lie about the reading the moment the view closed. SINCE
+        // 2026-08-18 THAT IS VISIBLE RATHER THAN THEORETICAL: the button is
+        // back in the ICON ROW, which paints every member in every state, so
+        // the lamp shows the session's reading outside the view too and
+        // composes with the button's own resting grey — DISABLED + SELECTED,
+        // dimmed by the shared blend rather than dropped, which is exactly
+        // what a true-but-not-yours-right-now state should look like. (From
+        // 2026-08-14 to 2026-08-18 it lived on the bottom row's swapped
+        // cluster, painted inside the `h` view alone and publishing an empty
+        // rect outside it, so this lamp reached no pixel out there at all.)
         case RedesignButton::HistoryCumulative: return a.history_cumulative;
         case RedesignButton::File:
         case RedesignButton::Settings:
@@ -7054,11 +7178,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
-        // THE TRIM BUTTON IS MOMENTARY like copy and paste: set-trim-from-
-        // region is an act that completes, with no state to stay lit for —
-        // the window it wrote is the bar's own always-painted display.
-        case RedesignButton::IconTrim:
-        // AND SO IS SHOW-REGION BESIDE IT (architect 2026-08-16), which is the
+        // SHOW-REGION IS MOMENTARY (architect 2026-08-16), which is the
         // point of that ruling rather than an omission. It was designed as a
         // TOGGLE with a lamp reading app.region.active, and the architect found
         // the hole before it was built: "what if user draws a region, then
@@ -7078,6 +7198,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // THE ZOOM GROUP AND THE MARKER VERBS ARE MOMENTARY like copy and
         // paste (2026-08-12): each is an act that completes — a zoom step, a
         // centering, a drop, a delete — with no state to stay lit for. The
+        // verbs took that answer to the BOTTOM ROW with them on 2026-08-18 and
+        // it did not change: a lamp is the BUTTON's fact, not the lane's. The
         // disable toggle deliberately carries no lamp either: it acts on the
         // SELECTION, whose members' own flags show the state per marker,
         // and a single lamp could not say which.
@@ -7112,10 +7234,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
-        // THE BOTTOM ROW IS MOMENTARY WHOLE AGAIN (architect 2026-08-15): the
-        // two skips, the marker-walk three and the four arrows are all acts
+        // THE BOTTOM ROW IS MOMENTARY WHOLE (architect 2026-08-15, and whole
+        // WITHOUT AN EXCEPTION since 2026-08-18, when the Cumulative toggle —
+        // its one lamp — went back up to the icon row): the
+        // two skips, the marker-walk three, the four arrows and the four
+        // marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
-        // same day's collapse, is the ONE PLAY/STOP BUTTON. It carried the
+        // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
         // row's only lamp for the hours it was a RADIO PAIR, lit on
         // playhead_scanner_active so exactly one half was live at a time; with
         // the pair collapsed there is no wrong half to consume a press on, so
@@ -7207,21 +7332,24 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
+// FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
 // source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Paste
-// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state), THE
+// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state) and THE
 // WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
 // bare `.` steps one newer and Shift+`.` goes to the newest
 // (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
-// dispatch them through the one press body like every other button) — and,
-// since 2026-08-15, THE TRIM SCISSORS, whose twin is Shift+X the MAXIMIZER
-// (reset the trim to the whole song). Its 2026-08-11 "Shift+X stays
-// keyboard-only" clause is SUPERSEDED and the reason is the glass rig: the
-// maximizer had no pointer route at all, so a keyboardless panel could set a
-// trim window and never get back out of it. The admission grants the hold-beat
-// long press → shift act (kChromeShiftHoldMs) and the two-line hint with no new
-// machinery.
+// dispatch them through the one press body like every other button).
+//
+// THE TRIM SCISSORS WERE A FIFTH from 2026-08-15 until their button was
+// retired on 2026-08-18, and WHAT THAT ADMISSION WAS FOR IS WORTH KEEPING
+// because it names a hole rather than a preference: their twin is Shift+X the
+// MAXIMIZER (reset the trim to the whole song), and the admission superseded
+// the 2026-08-11 "Shift+X stays keyboard-only" clause on the glass rig's
+// account — the maximizer had no pointer route at all, so a keyboardless panel
+// could set a trim window and never get back out of it. With the button gone
+// SHIFT+X IS KEYBOARD-ONLY AGAIN and that hole is open again; nothing here
+// closes it, and closing it needs a surface the architect rules on.
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -7243,8 +7371,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render || b == RedesignButton::IconPaste ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer ||
-           b == RedesignButton::IconTrim;
+           b == RedesignButton::HistoryNewer;
 }
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
@@ -7329,14 +7456,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (t)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
-        // THE TRIM BUTTON, in the TWO-LINE form since 2026-08-15: its shifted
-        // twin is Shift+X the MAXIMIZER, admitted so the glass rig has a route
-        // to it at all (the reason is at redesign_button_shift_admits). The
-        // 2026-08-11 record that "bare `x` has no shifted twin ON THE BUTTON"
-        // is superseded.
-        case RedesignButton::IconTrim:
-            return {"Set trim from region (x)",
-                    "Press Shift for the whole song."};
         // THE SHOW-REGION BUTTON (2026-08-16), one line: the chord has no
         // shifted twin (Ctrl+Shift+X already spends the shift), so no hint
         // line and no shift admission — the static_assert below is what keeps
@@ -7361,16 +7480,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Full zoom out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
             return {"Center on focus (c)", nullptr};
-        // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
-        // plainly in HELP's vocabulary. None admits shift.
-        case RedesignButton::IconMarkerDrop:
-            return {"Drop marker (s)", nullptr};
-        case RedesignButton::IconMarkerDelete:
-            return {"Delete markers (Delete)", nullptr};
-        case RedesignButton::IconMarkerDisable:
-            return {"Disable markers (Ctrl+D)", nullptr};
-        case RedesignButton::IconMarkerInherit:
-            return {"Toggle inherit (Ctrl+N)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
@@ -7396,14 +7505,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // key toggles and there is no shifted twin.
         case RedesignButton::IconHistory: return {"History (h)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
-        // twin. Like the three below it, this hint is only ever reachable
-        // INSIDE the view: the four are painted nowhere else (the bottom row's
-        // cluster swap), so the tooltips-on-disabled ruling reaches them only
-        // on the frames the view stands — AND SINCE 2026-08-15 IT BUYS NOTHING
-        // AT ALL FOR THIS CLUSTER, all four answering a plain `true` there
-        // (Revert's conditional grey was the last thing it still bought, and
-        // the architect reversed it as a per-selection blink). The hints stay
-        // because they explain the buttons, not because anything greys.
+        // twin. Like the three below it, this hint is reachable IN EVERY STATE
+        // again since 2026-08-18: the four came back to the ICON ROW, which
+        // paints every member always, so they carry a DEAD face outside the `h`
+        // view and this hint over it — which is exactly the tooltips-on-
+        // disabled ruling's own case (architect 2026-08-07, kdenlive's
+        // behaviour: a disabled icon still explains itself). It bought nothing
+        // for these four from 2026-08-15 to 2026-08-18, when they answered a
+        // plain `true` on the bottom row's swapped cluster and were painted
+        // inside the view alone.
         case RedesignButton::HistoryCumulative:
             return {"Cumulative (u)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
@@ -7414,10 +7524,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // undo/redo timeline, not checkpoints, so "checkpoint" would lie on half
         // the surface these arrows serve.
         // The tooltips-on-disabled ruling (architect 2026-08-07, kdenlive's own
-        // behavior: a disabled icon still explains itself) still governs where
-        // these are painted; since 2026-08-12 that is inside the view alone,
-        // first as the icon row's collapsed four and since 2026-08-14 as the
-        // bottom row's swapped cluster.
+        // behavior: a disabled icon still explains itself) governs these where
+        // they rest disabled, which since 2026-08-18 is every frame outside the
+        // `h` view. They were painted inside the view alone from 2026-08-12
+        // (first as the icon row's collapsed four, then as the bottom row's
+        // swapped cluster) until the relayout brought them back to a row that
+        // hides nothing.
         case RedesignButton::HistoryOlder:
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:
@@ -7425,12 +7537,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE REVERT ACT, one line: the chord has no shifted twin. It was
         // GREYED inside the view whenever nothing was selected and showed this
         // hint there too, per the same ruling; since 2026-08-15 it is lit in
-        // every frame the view stands (the architect's reversal of a grey that
-        // tracked the diff-flag selection), so the hint is an ordinary enabled
-        // one and the disabled ruling no longer reaches it.
+        // every frame the view STANDS (the architect's reversal of a grey that
+        // tracked the diff-flag selection). The disabled ruling reaches it
+        // again OUTSIDE the view since 2026-08-18, on the companions' revived
+        // resting grey — a different fact from the one that was reversed, and
+        // the two do not meet.
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
-        // marker-walk group), all one-line forms: no button on it admits
+        // marker-walk group, 2026-08-18 for the four MARKER VERBS below), all
+        // one-line forms: no button on it admits
         // shift. The names are the ratified sentence-case labels, the
         // accelerators the table's own convention (non-letter keys are
         // themselves, and a CHORD keeps its capital and its spelled-out
@@ -7447,6 +7562,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Play (Space)", nullptr};
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)", nullptr};
+        // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
+        // plainly in HELP's vocabulary. None admits shift. They are the bottom
+        // row's since 2026-08-18 and their rows did not change with the lane —
+        // this table is keyed by id and carries no row of its own; it is kept
+        // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
+        // RULING REACHES THEM HERE (architect 2026-08-07): these four are the
+        // one part of this row that greys — in the `h` view and on a locked
+        // tab, both the buttons' own gates — and a dead icon still explains
+        // itself.
+        case RedesignButton::IconMarkerDrop:
+            return {"Drop marker (s)", nullptr};
+        case RedesignButton::IconMarkerDelete:
+            return {"Delete markers (Delete)", nullptr};
+        case RedesignButton::IconMarkerDisable:
+            return {"Disable markers (Ctrl+D)", nullptr};
+        case RedesignButton::IconMarkerInherit:
+            return {"Toggle inherit (Ctrl+N)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
         // marker" are HELP's own words for the bare Tab cycle; "Walk both
         // tabs" was the Navigation dropdown's own row for Ctrl+Shift+Tab, and
@@ -7687,8 +7819,6 @@ static_assert(
     (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
      nullptr) ==
         redesign_button_shift_admits(RedesignButton::HistoryNewer) &&
-    (redesign_button_tooltip(RedesignButton::IconTrim).line2 != nullptr) ==
-        redesign_button_shift_admits(RedesignButton::IconTrim) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     (redesign_button_tooltip(RedesignButton::IconCopy).line2 == nullptr),
     "the shift hint and the shift binding must name the same buttons");
@@ -7734,11 +7864,12 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // carry — ENABLED, which the hover FACE adds at its one site and the hint does
 // not:
 //
-// ROW 4'S, THE VIEW BAR'S AND THE BOTTOM ROW'S SELECTED BUTTONS DO HOVER, and
-// that asymmetry with the tabs is the crops': all three ship a selected-hover
+// ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and
+// that asymmetry with the tabs is the crops': both rows ship a selected-hover
 // state (the accent outline over the selected fill) and row 3 does not. So the
-// zone's carve-out names the tabs alone; the icon row's radios, the view bar's
-// three and the bottom row's Cumulative toggle are hoverable in
+// zone's carve-out names the tabs alone; the icon row's radios and toggles —
+// the Cumulative one included, back on that row since 2026-08-18 — and the
+// view bar's three are hoverable in
 // both states, and a radio's already-selected press is refused in the ACTION
 // (the chord table's `radio` flag), not in its hoverability. (The transport's
 // Play / Stop pair was a fourth such radio for hours on 2026-08-15 and is one

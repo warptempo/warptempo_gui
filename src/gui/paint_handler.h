@@ -699,15 +699,15 @@ private:
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
     // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
     // the
-    // ICON ROW (top lane 2, row 4: the twenty-seven view/mode/action buttons —
+    // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
-    // — their
+    // and the history group's five close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
     // cluster (bottom lane 0, the strip's one lane since the relayout's commit
-    // B: the transport three left, then the marker-walk three, the
-    // separator and the arrow four flush
-    // right, declared
+    // B: the transport three and the clock left, then the marker verbs, the
+    // marker-walk three and the arrow four flush
+    // right behind their separators, declared
     // below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
