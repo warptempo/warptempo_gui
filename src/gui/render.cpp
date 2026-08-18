@@ -1320,8 +1320,11 @@ void render_phase_reset_flags(cairo_t* cr,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
-        // token (render.h owns it and the reason for its width). No exempt span:
-        // the iter bracket is a WARP-column form and this column has none.
+        // token (render.h owns it and what it reads). It is longer than the
+        // nine-glyph budget, so the shared cap below truncates it like any
+        // other label — the one label in the product that does so by
+        // construction rather than by user text. No exempt span: the iter
+        // bracket is a WARP-column form and this column has none.
         [&](int) {
             return FlagLabelText{std::string(kPhaseResetLaneToken),
                                  std::string::npos, 0};

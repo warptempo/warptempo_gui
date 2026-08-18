@@ -1384,9 +1384,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // so its TrimResize stays true for the whole gesture and dropping to the
     // Arrow mid-slide was the odd one out. The gesture keeps no cursor of any
     // other kind — the pan is capture-free, so there is a visible cursor to
-    // keep. (The outside press arms nothing at all since 2026-08-17 — its
-    // teleport runs at the press — so this record only ever holds a real drag
-    // and the Pending kind's Arrow arm went with the kind.)
+    // keep. (The record only ever holds a real drag: an OUTSIDE press arms
+    // this same Pan after running its teleport at the press, so it needs no
+    // kind of its own, and the Pending kind that carried the 2026-08-15 lift
+    // deferral — with its Arrow arm — is deleted.)
     if (app.overview_drag.active) {
         switch (app.overview_drag.kind) {
             case OverviewDragKind::Pan:
@@ -1556,26 +1557,26 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // endcaps' own pair — TrimBoundBegin on the outline's left edge,
     // TrimBoundEnd on its right, through the shared hit test, since a plain
     // press there extends ONE viewport bound exactly as a trim cap extends
-    // one trim bound — INSIDE THE BOX it is TrimResize ("left/right arrows
-    // like on plain trim hover", the architect's words), which is honest
-    // there: the drag is the box-follows-pointer pan, an x-only
-    // move-the-whole-span gesture, the trim bridge's own shape — and OUTSIDE
-    // THE BOX IT IS THE ARROW (codex round 19), which is the map's own
-    // standing rule reasserted rather than a new exception: a point arming
-    // nothing shows the Arrow. The band-wide TrimResize was true only while an
-    // outside press extended the nearer BOUND, and that extension was deleted
-    // on 2026-08-15 ("the threshold for the bounds is fine, the ten pixels on
-    // either side works") — since then an ew-resize out there would promise a
-    // drag the lane does not have. What the outside press does is TELEPORT AT
-    // THE PRESS ITSELF, arming nothing at all (2026-08-17, the certain-identity
-    // ruling; the two-day Pending went with it), and a click carries no cue
-    // anywhere in the product.
-    // The inside/outside question is asked through the painter's own span
-    // owner (overview_box_span), in the press router's own order and off the
-    // press router's own predicates, so cue and gesture agree by construction;
-    // degenerate geometry publishes no box, which makes every press an outside
-    // press and every point the Arrow — the right degenerate arm on both
-    // sides. Ctrl/shift/alt/mixed presses on the lane bind nothing,
+    // one trim bound — and EVERYWHERE ELSE ON THE LANE IT IS TrimResize
+    // ("left/right arrows like on plain trim hover", the architect's words),
+    // because everywhere else the plain drag is the same one: the
+    // box-follows-pointer pan, an x-only move-the-whole-span gesture, the trim
+    // bridge's own shape. THE CUE NAMES THE DRAG, NOT THE CLICK, which is the
+    // marker flag box's own rule (it wears TrimResize while its plain press
+    // also runs a click act) — so the outside point wears it too, its press
+    // teleporting and then arming that pan (2026-08-18).
+    // THE BAND-WIDE ANSWER IS BACK AND ITS PREMISE IS NEW: it was true until
+    // 2026-08-15 because an outside press extended the nearer BOUND, went to
+    // the Arrow at codex round 19 under the map's standing rule that a point
+    // arming nothing shows the Arrow, and returns now because the outside
+    // point arms the PAN. Keeping the Arrow would also have made the cue
+    // CHANGE at the drag's crossing — the live-drag arm above answers
+    // TrimResize for a Pan — which is exactly the mid-slide flip the architect
+    // closed on 2026-08-13.
+    // The inside/outside question no longer reaches the cue at all, so the box
+    // span is not asked here; degenerate geometry (no box) is the same answer,
+    // its press being an outside press that teleports and pans like any other.
+    // Ctrl/shift/alt/mixed presses on the lane bind nothing,
     // so they fell to the Arrow above; the `h` view keeps these cues — every
     // lane gesture is the mode's admitted navigation class. IT MUST STAY
     // ABOVE THE `inside_top` FALL-THROUGH below: the lane is a TOP-STRIP lane
@@ -1589,13 +1590,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
                 case TrimHit::None:  break;
             }
-            int bx0 = 0;
-            int bx1 = 0;
-            const bool have_box = overview_box_span(app, audio, &bx0, &bx1);
-            const bool inside_box =
-                have_box && x >= ov.x + bx0 && x < ov.x + bx1;
-            return inside_box ? GuiCursorKind::TrimResize
-                              : GuiCursorKind::Arrow;
+            return GuiCursorKind::TrimResize;
         }
     }
     // A STANDING REGION'S OWN ZONES OUTRANK THE PAN, because inside them the
@@ -2034,16 +2029,18 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 // by scroll_viewport's funnel exactly as any pan — the producer inventory at
 // follow_overridden_for_session, app_state.h). IT RUNS AT THE PRESS since
 // 2026-08-17 (CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN: an outside
-// press can only mean the teleport and arms nothing, so there is nothing for a
-// lift to disambiguate; the two-day lift deferral of 2026-08-15 — and the
-// Pending kind that carried it — are deleted). The touch consequence that
+// press can only mean the teleport, so there is nothing for a lift to
+// disambiguate; the two-day lift deferral of 2026-08-15 — and the Pending kind
+// that carried it — are deleted). The touch consequence that
 // moved it to the lift is answered by the DISAMBIGUATION WINDOW rather than by
 // deferral: the synthesized press is delivered only when the window resolves
 // to ONE finger, and a pair landing inside the window goes straight to Nav
 // with no press ever delivered, so a fast two-finger landing cannot fire this.
 // ONE caller: the press router's outside-the-box arm, which hands
-// it THE PRESS column — the point the user aimed at, the deferred click act's
-// own rule. THE CENTERING ARITHMETIC is center_viewport_on_playhead's own
+// it THE PRESS column — the point the user aimed at — and then FALLS THROUGH
+// into the box pan's arm, so the teleport is the head of a gesture rather than
+// the whole of one (2026-08-18). THE CENTERING ARITHMETIC is
+// center_viewport_on_playhead's own
 // over the lane's mapping: position = overview_anchor_sample_at_x at the
 // lane-clamped column (the song walls by construction), start =
 // nearbyint(position) − samples_visible/2, the delta handed to
@@ -3914,13 +3911,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //   * PLAIN left press INSIDE the box arms the BOX PAN with the grab-point
     //     offset preserved; a motionless release there is a consumed nothing
     //     (the lane's v1 rule standing).
-    //   * PLAIN left press OUTSIDE the box TELEPORTS AT THE PRESS AND ARMS
-    //     NOTHING (2026-08-17 — content acts the moment its identity is
-    //     certain: the press can only mean the teleport, there being no
-    //     outside drag since 2026-08-15's extension deletion, so nothing needs
-    //     the lift; the ruling and the touch-window argument are at the
-    //     contract). Subsequent motion under the held button is DEAD — no
-    //     gesture armed — and the release resolves nothing.
+    //   * PLAIN left press OUTSIDE the box TELEPORTS AT THE PRESS AND THEN
+    //     ARMS THE SAME BOX PAN (2026-08-18 — "overview teleport should
+    //     transition into drag immediately if finger/pointer drags"): the
+    //     teleport centers the box on the press column, and the pointer that
+    //     keeps moving keeps panning from there, so the outside press falls
+    //     THROUGH into the inside-box arm below rather than seating a second
+    //     copy of it. A motionless release is then the pan's own consumed
+    //     nothing. (The act still runs AT THE PRESS — content acts the moment
+    //     its identity is certain, 2026-08-17 — because acting and arming a
+    //     drag are not the deferred-click case; the reasoning is at the
+    //     contract, OverviewDragState.)
     //   * EVERY OTHER press — ctrl, shift, alt, mixed, non-left — is a consumed
     //     nothing, the band-claim family's shape. CTRL is on that list since
     //     2026-08-15: it carried the dual-axis strip drag until the redesign
@@ -3966,13 +3967,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const bool have_box = overview_box_span(app, audio, &bx0, &bx1);
             const bool inside_box =
                 have_box && x >= ov.x + bx0 && x < ov.x + bx1;
-            if (!inside_box) {
-                // THE TELEPORT, AT THIS PRESS, ARMING NOTHING (2026-08-17; the
-                // header bullet above and the contract carry the ruling). The
-                // press column is the point the user aimed at.
-                run_overview_teleport(x);
-                return;
-            }
+            // THE TELEPORT, AT THIS PRESS, AND THEN THE FALL-THROUGH: an
+            // outside press centers the box on the press column — the point
+            // the user aimed at — and then arms the pan below on exactly the
+            // terms an inside press does, so a pointer or finger that keeps
+            // moving keeps panning. No `return` and no second seat: after the
+            // teleport the press column IS inside the box, which is what makes
+            // the one arm below correct for both entries.
+            if (!inside_box) run_overview_teleport(x);
             app.overview_drag = OverviewDragState{};
             app.overview_drag.active  = true;
             app.overview_drag.kind    = OverviewDragKind::Pan;
@@ -3980,7 +3982,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             app.overview_drag.press_y = y;
             // The grab-point offset: pointer's whole-song position minus
             // the viewport center, both in the active domain, so the
-            // grabbed spot under the box stays under the pointer.
+            // grabbed spot under the box stays under the pointer. READ AFTER
+            // THE TELEPORT, deliberately: for an outside press the teleport
+            // has already moved the viewport, so this measures the box where
+            // it now IS. The result is near zero by construction (the teleport
+            // centered on this very column) but NOT exactly zero — the
+            // centering rounds the position, halves an integer span and then
+            // takes clamp_viewport_start's grid snap and wall clamp, so what
+            // rests here is that residue, and at a WALL, where the teleport
+            // saturated, it is the whole leftover. Measuring it instead of
+            // assuming zero is what keeps the first motion event from jumping
+            // the box.
             const double pos =
                 overview_anchor_sample_at_x(app, audio, x);
             const double center =
@@ -5188,11 +5200,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // pan's one deferred resync — and drops any double-click candidate,
         // the moved-drag rule.
         // A MOTIONLESS release completes NOTHING, the lane's v1 consumed
-        // nothing — this state only ever holds a real drag (the outside
-        // press's teleport runs at the press since 2026-08-17 and arms
-        // nothing, so no act is owed to any lift here). No capture to end, no
-        // stem to erase, and the lane seeds no double-click candidate of its
-        // own.
+        // nothing — every act this lane owes has already run at its press (the
+        // outside press's teleport since 2026-08-17, and the pan it arms after
+        // it since 2026-08-18 commits per motion event), so no act is owed to
+        // any lift here. No capture to end, no stem to erase, and the lane
+        // seeds no double-click candidate of its own.
         const bool moved = app.overview_drag.moved;
         if (moved) {
             apply_overview_drag_at(x, /*final_event=*/true);
@@ -5369,10 +5381,10 @@ void GuiInputHandler::finalize_active_drags() {
         // per-event resyncs were deferred (continuous scroll) and the edge
         // drag's mid-gesture applies skipped them the same way — and nothing
         // else: no capture, no stem, no act. An UNMOVED press merely
-        // DISARMS and commits nothing — a force-end is not a click. (This
-        // state only ever holds a real drag since 2026-08-17: the outside
-        // press's teleport runs at the press and arms nothing, so no pending
-        // teleport can be in flight here.)
+        // DISARMS and commits nothing — a force-end is not a click, and the
+        // outside press's own teleport already ran at the press, so nothing is
+        // lost here. (No pending phase can be in flight: the record holds a
+        // real drag or nothing, the two-day Pending teleport being deleted.)
         if (app.overview_drag.moved && playback.is_playing())
             playback.resync_predictor();
         app.overview_drag = OverviewDragState{};
@@ -7536,9 +7548,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // release: a MOVED drag runs the final apply (the edge drag's final
     // apply_strip_drag_zoom, the pan's one deferred predictor resync); an
     // UNMOVED press just disarms and COMMITS NOTHING — a force-end is not a
-    // click. (This state only ever holds a real drag since 2026-08-17: the
-    // outside press's teleport runs at the press and arms nothing, so there is
-    // no Pending phase to reason about here.)
+    // click, the outside press's teleport having already run at its press.
+    // (This state only ever holds a real drag: an outside press arms the same
+    // Pan, and the Pending phase that deferred the teleport is deleted.)
     if (app.overview_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (app.overview_drag.moved)

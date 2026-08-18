@@ -2599,17 +2599,30 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 // (flag_text_iter). DISPLAY ONLY — a phase reset authors no payload and
 // serializes as a bare frame, so this string exists nowhere but the flag.
 //
-// ONE GLYPH (architect 2026-08-01, at the row-6 live look). It had been "p.r."
-// since the marker-text lane widened it from the original "p": a dense reset
-// cluster sat right on that lane's all-or-nothing fit verdict, and a small zoom
-// change flipped the whole lane between modes — the lane blinked. THAT LANE AND
-// ITS VERDICT ARE GONE (row 5 — flags simply overlap, later over earlier), so
-// nothing depends on the width any more, and the reason to spend four glyphs
-// went with the mechanism that needed them. Back to "p", which is what the
-// widening had taken away. Nothing else moves: every flag's width is
-// pad + shaped(label) + pad, so the boxes re-derive from the shaping pass by
-// construction, and the token stays far under the nine-glyph budget so it never
-// truncates. Its producers collapsed to ONE with the resolver: the flag painter
-// (render.cpp).
-inline constexpr char kPhaseResetLaneToken[] = "p";
+// THE WORDS THEMSELVES (architect 2026-08-18: "phase reset flags should read
+// 'phas...'"). The flag says what the marker IS, and the lane's own budget
+// decides how much of it fits — so the painted flag reads `phase res...`:
+// eleven bytes handed to cap_marker_label, nine kept, then the three-period
+// truncation marker. IT IS THE FIRST TOKEN IN THE PRODUCT TO SPEND ITS OWN
+// BUDGET — every other label reaching a flag box is user text — and the shapes
+// that receive it were already built for it: the phase-reset column paints
+// through the shared render_flag_boxes_impl, whose cap runs on every label, and
+// this token carries no exempt span ({npos, 0} — the iter bracket is a
+// warp-column form and this column has none), so it takes the plain arm. The
+// box grows with it and nothing lays out against the old width: every flag's
+// width is pad + shaped(label) + pad, re-derived from the shaping pass, and
+// marker_flag_max_width_px already bounds the left cull at budget + marker
+// glyphs, which is exactly what this paints. Its producers collapsed to ONE
+// with the resolver: the flag painter (render.cpp).
+//
+// THE SUCCESSION, because it is the kind of thing that gets re-invented
+// backwards: the original "p" was widened to "p.r." for the retired
+// marker-text lane, whose all-or-nothing fit verdict a dense reset cluster sat
+// right on top of (a small zoom change flipped the whole lane between modes and
+// it blinked); with that lane gone, nothing depended on the width and the token
+// went back to ONE GLYPH (architect 2026-08-01, at the row-6 live look). The
+// words replace that glyph — a single `p` names nothing to a reader who has not
+// been told — and the flags simply overlap, later over earlier, as they have
+// since row 5.
+inline constexpr char kPhaseResetLaneToken[] = "phase reset";
 

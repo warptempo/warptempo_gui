@@ -4614,8 +4614,9 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // trim-style zoom brackets are BUILT, architect-ratified the same day):
 // the box's edges are ENDCAP handles (edge drags mutating the viewport
 // span), a plain press elsewhere TELEPORTS outside the box — AT THE PRESS
-// ITSELF, arming nothing (2026-08-17) — and grabs it inside, where the drag is
-// the box-follows-pointer PAN, and the wheel is unchanged (wheel_context's
+// ITSELF (2026-08-17) — and grabs it inside, where the drag is
+// the box-follows-pointer PAN; an outside press arms that same pan behind its
+// teleport (2026-08-18), and the wheel is unchanged (wheel_context's
 // overview arm: plain pan / ctrl zoom step). THE LANE'S VOCABULARY IS THOSE
 // THREE GESTURES AND NOTHING ELSE since the redesign of 2026-08-15: the
 // DUAL-AXIS strip drag that sat behind CTRL here — the last of that gesture's
@@ -4623,9 +4624,9 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // drag captures the pointer. The press claim and the drag bodies are
 // input_pointer.cpp's; the mappings are overview_anchor_sample_at_x and
 // overview_box_span; cursors (pointer_cursor_kind): the endcap pair on the
-// edges, TrimResize inside the box, and the ARROW everywhere else on the
-// lane — outside the box and under every modifier alike, a point arming
-// nothing showing the arrow.
+// edges, TrimResize on the whole plain surface off them (the pan is what a
+// plain press arms everywhere there), and the ARROW under every modifier, a
+// point arming nothing showing the arrow.
 void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
     if (lane.w <= 0 || lane.h <= 0) {
         overview_bar_cache.destroy_surface();

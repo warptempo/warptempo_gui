@@ -635,9 +635,9 @@ struct GuiInputHandler {
     // with every mid-gesture ctrl switch
     // re-stamping it through set_strip_capture_restore_kind below, so the
     // release restores the phase the gesture ended in. The overview lane's
-    // drags (the box pan and the two edge drags — the outside press is no
-    // drag at all, teleporting at the press) never capture — absolute-position
-    // drags, the trim endcap model. A capture hides the cursor and makes the
+    // drags (the box pan and the two edge drags — an outside press teleports
+    // at the press and then arms that same pan) never capture —
+    // absolute-position drags, the trim endcap model. A capture hides the cursor and makes the
     // GUI's pointer position virtual, so the platform cannot re-derive what to
     // restore and must not guess from what was showing at press time — the
     // reasoning, and why the stamp rides the lock-REQUEST path only, are at
@@ -1400,8 +1400,9 @@ struct GuiInputHandler {
     // OverviewDragState, app_state.h, and both bodies live together in
     // input_pointer.cpp).
     // run_overview_teleport: the centering an outside-the-box press runs AT
-    // THE PRESS (2026-08-17), arming nothing — the viewport centers on that
-    // column's whole-song position at the unchanged zoom
+    // THE PRESS (2026-08-17) before arming the box pan (2026-08-18) — the
+    // viewport centers on that column's whole-song position at the unchanged
+    // zoom
     // level, a pure viewport move of the pan class through scroll_viewport's
     // funnel (follow suppression included; the exact arithmetic is at the
     // definition). apply_overview_drag_at: the one motion body for the box
@@ -2558,15 +2559,16 @@ private:
     //   which moves BOTH bounds together — AND THE OVERVIEW BOX'S INTERIOR,
     //   plain (the lane rework): the drag there is the
     //   box-follows-pointer PAN, a move-the-whole-span gesture, "left/right
-    //   arrows like on plain trim hover" (the architect's words). OUTSIDE the
-    //   box the lane answers the ARROW (codex round 19): the press there arms
-    //   NOTHING — its one act is the TELEPORT AT THE PRESS ITSELF, a click act
-    //   needing no cue, leaving no record for a later motion or lift to read —
-    //   the band-wide resize promise outlived the outside-drag extension
-    //   deleted on 2026-08-15. A LIVE
+    //   arrows like on plain trim hover" (the architect's words) — AND THE
+    //   LANE'S WHOLE PLAIN SURFACE with it, since an OUTSIDE press teleports
+    //   and then arms that same pan (2026-08-18), so the cue is the same
+    //   promise everywhere off the endcaps. It names the DRAG, not the
+    //   teleport the press also runs, the marker flag box's own rule. (It was
+    //   the ARROW outside the box from codex round 19 until then, under the
+    //   standing rule that a point arming nothing shows the Arrow.) A LIVE
     //   box pan KEEPS the cue since 2026-08-13, the edge drags' own rule
-    //   (below) grown by one member; outside the box no state ever stands, so
-    //   there is nothing to keep a cue for and the Arrow answers throughout.
+    //   (below) grown by one member, and the band-wide hover answer is what
+    //   keeps an outside press from changing cue at its own crossing.
     //   AND EVERY MARKER FLAG BOX, plain (architect 2026-08-13): markers move
     //   SIDE TO SIDE, the bridge's own promise, and the flag box is the
     //   marker's one pointer surface in every view since stems went

@@ -1351,7 +1351,8 @@ struct ScrollDragState {
 // translation, with no touch code of its own (touch.md's lane paragraph).
 // THREE kinds on one PLAIN left press, decided at the press by the box geometry
 // (the painter's own derivation, overview_box_span — one owner, app_state.cpp),
-// plus the outside press, which is an ACT rather than a kind:
+// plus the outside press's TELEPORT, which is an ACT rather than a kind — it
+// runs and then hands the same press to the Pan:
 //   * EdgeBegin / EdgeEnd — the box outline's LEFT / RIGHT edge as a grab
 //     handle (hit_test_overview_endcap, the trim endcaps' own inflated-band
 //     model and grab width; the endcap claim OUTRANKS everything else on the
@@ -1365,27 +1366,41 @@ struct ScrollDragState {
 //     max-zoom minimum span as the inclusive cannot-cross clamp at the
 //     partner, the effective ceiling through the level pre-clamp +
 //     clamp_viewport_start).
-//   * Pan — INSIDE the box: the press grabs the box where it is, its grab-point
+//   * Pan — INSIDE the box, and OUTSIDE it too once the teleport below has
+//     run: the press grabs the box where it is, its grab-point
 //     offset preserved, and the drag is THE BOX-FOLLOWS-POINTER PAN, PAN ONLY:
 //     per motion event the viewport centers on (pointer's whole-song
 //     position − grab_offset), X ONLY — the handler never reads dy, so vertical
 //     motion is ignored structurally ("no cross axis allowance for up/down":
 //     this pan has no zoom axis at all). A motionless release inside the box is
 //     a consumed nothing, the lane's v1 rule standing.
-//   * OUTSIDE the box — THE TELEPORT, AT THE PRESS, ARMING NOTHING
+//   * OUTSIDE the box — THE TELEPORT, AT THE PRESS, AND THEN THE PAN
 //     (run_overview_teleport — the viewport CENTERS on the press column's
 //     whole-song position through the scroll_viewport funnel, a pure viewport
 //     move, zoom level unchanged). CONTENT ACTS THE MOMENT ITS IDENTITY IS
 //     CERTAIN (architect 2026-08-17): an outside press can only mean the
-//     teleport — it arms no drag (the outside-drag extension was deleted
-//     2026-08-15: "we can remove that, because the threshold for the bounds is
-//     fine, the ten pixels on either side works, it's a large enough
-//     threshold" — so A BOUND IS DRAGGED BY ITS OWN GRAB BAND AND NOWHERE
-//     ELSE), so there is nothing for a lift to disambiguate and the deferral
-//     it wore for two days (2026-08-15..17, the Pending kind, deleted with
-//     this ruling) protected a nonexistent case. Subsequent motion under the
-//     held button is DEAD — no gesture is armed — and the release resolves
-//     nothing. TOUCH IS WHY THIS IS SAFE WHERE THE PRESS-TIME LANDING MODEL OF
+//     teleport, so there is nothing for a lift to disambiguate and the
+//     deferral it wore for two days (2026-08-15..17, the Pending kind, deleted
+//     with that ruling) protected a nonexistent case. THE PRESS THEN ARMS THE
+//     BOX PAN (architect 2026-08-18: "overview teleport should transition into
+//     drag immediately if finger/pointer drags"), so a pointer or finger that
+//     keeps moving keeps panning and a motionless release is the pan's own
+//     consumed nothing. ACTING AND ARMING A DRAG IS NOT A CONTRADICTION OF THE
+//     THIRD CLAUSE, and this is the shape it already has at the MARKER FLAG,
+//     whose plain press runs run_marker_click_act and then arms
+//     PendingMarkerPress: the deferral rule governs a press whose MEANING is
+//     ambiguous until the lift, and this press's is not — it means teleport
+//     either way, and the drag CONTINUES it rather than replacing it. The seat
+//     is the inside-box arm itself, reached by fall-through, and the pan's
+//     grab_offset is measured AFTER the teleport through the same expressions,
+//     so it is near zero by construction and exact at the walls (the
+//     derivation is at the press router, input_pointer.cpp). WHAT DOES NOT
+//     COME BACK is the deleted outside-drag extension — dragging a BOUND from
+//     outside the box (deleted 2026-08-15: "we can remove that, because the
+//     threshold for the bounds is fine, the ten pixels on either side works,
+//     it's a large enough threshold"), so A BOUND IS STILL DRAGGED BY ITS OWN
+//     GRAB BAND AND NOWHERE ELSE. TOUCH IS WHY THE PRESS-TIME ACT IS SAFE
+//     WHERE THE PRESS-TIME LANDING MODEL OF
 //     2026-08-15 WAS NOT: the synthesized press is delivered only when the
 //     disambiguation window RESOLVES to one finger, and a second finger inside
 //     the window goes straight to Nav with no press ever delivered (the
@@ -1403,8 +1418,9 @@ struct ScrollDragState {
 // box or bound drag simply carries on. A MOTIONLESS hold is ignored on the same
 // line and by the same door: the second-finger fork tests the THIN-LANE bit
 // beside the moved latch, so nothing on this lane upgrades whatever the finger
-// has done — the first finger's translation simply runs to its own lift (an
-// outside press's teleport already ran at the press, so the lift owes
+// has done — the first finger's translation simply runs to its own lift (every
+// act this lane owes has run by then: the outside press's teleport at the
+// press, the pan per motion event, so the lift owes
 // nothing). (The generic motionless-hold UPGRADE that
 // this paragraph used to hand the lane is unreachable here twice over now: the
 // thin-lane door refuses it, and the upgrade's end is the ABNORMAL one since
@@ -1431,22 +1447,25 @@ struct ScrollDragState {
 // gate). Follow suppression: the pan and the teleport ride scroll_viewport's
 // funnel, the edge drags apply_strip_drag_zoom's either-axis term — the
 // producer inventory at follow_overridden_for_session. Cursors: the box EDGES
-// wear the trim endcaps' own pair, the box's INTERIOR wears TrimResize (the
-// bridge's own shape — the pan is an x-only slide of the whole span), and
-// EVERYWHERE ELSE ON THE LANE IS THE ARROW since codex round 19, which is the
-// map's own standing rule rather than an exception (a point arming nothing
-// shows the Arrow: outside the box the press teleports at the press and arms
-// nothing, and a click carries no cue anywhere in the product). Hover and drag
+// wear the trim endcaps' own pair and THE WHOLE REST OF THE LANE WEARS
+// TrimResize (the bridge's own shape — the pan is an x-only slide of the whole
+// span), inside the box and outside it alike, because the plain drag is that
+// same pan everywhere: the cue names the DRAG a press arms, not the act it
+// also runs, which is the marker flag box's own rule. (It was the ARROW
+// outside the box from codex round 19 to 2026-08-18, correctly, under the
+// map's standing rule that a point arming nothing shows the Arrow — the
+// outside press armed nothing then. It arms the pan now.) Hover and drag
 // alike, and
 // EVERY LIVE DRAG KEEPS ITS CUE for the gesture's life, read from this record's
 // own `kind` (the trim exception's rule — the edges took it at the lane rework
 // and the PAN joined 2026-08-13, the architect closing the one live lane drag
-// that fell back to the Arrow mid-slide; pointer_cursor_kind). (The band-wide
-// TrimResize
-// and the crossing's change to a grabbed-bound arrow that this paragraph
-// described were true only while an outside press extended the NEARER bound,
-// and that extension was deleted 2026-08-15 with the rest of the outside
-// drag.) CTRL BINDS
+// that fell back to the Arrow mid-slide; pointer_cursor_kind) — which is the
+// second reason the band-wide answer is right: an outside press whose hover
+// cue was the Arrow would flip to TrimResize at its own crossing, that same
+// mid-slide flip. (The crossing's change to a GRABBED-BOUND arrow that this
+// paragraph once described is a different thing and stays deleted: it was true
+// only while an outside press extended the NEARER bound, and that extension
+// went on 2026-08-15.) CTRL BINDS
 // NOTHING ON THE LANE any more — it went with the strip drag — so a ctrl press
 // is a consumed nothing and ctrl's hover answer is the Arrow, the map's own
 // rule for a modifier that arms nothing.
@@ -1454,7 +1473,8 @@ struct ScrollDragState {
 // button, by the force-end finalizer, and on file load; pointer gestures
 // have no cancel. (The Pending kind — the outside press's two-day lift
 // deferral, 2026-08-15..17 — is deleted: the outside press acts at the press
-// and arms no record at all, so this state now only ever holds a real drag.)
+// and then arms the ordinary Pan, so this state only ever holds a real drag
+// and needs no kind for a press that has not decided yet.)
 enum class OverviewDragKind { Pan, EdgeBegin, EdgeEnd };
 
 struct OverviewDragState {
@@ -1466,6 +1486,8 @@ struct OverviewDragState {
     // Pan only: active-domain offset between the pressed column's whole-song
     // position and the viewport CENTER at the grab — the grab-point offset
     // inside the box. Each motion event centers on (pointer position − this).
+    // An OUTSIDE press seats it the same way from the same expressions, after
+    // its teleport has moved the viewport, so it lands near zero there.
     double grab_offset = 0.0;
     // Edge drags only: the FIXED (opposite) box edge's active-domain position,
     // captured at the press that grabbed an endcap — the one site that decides
@@ -2783,9 +2805,10 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 //     one already resting;
 //   * OverviewDragState — the overview lane's box gestures (2026-08-12; the
 //     lane's DELETED ctrl strip drag is what "strip" used to name here, and
-//     this state is not it): the box pan and the two edge drags (the Pending
-//     outside press was a member for two days, 2026-08-15..17 — the outside
-//     press teleports at the press now and arms nothing);
+//     this state is not it): the box pan and the two edge drags — an OUTSIDE
+//     press is the pan too, after its own teleport at the press (the Pending
+//     kind that deferred that teleport was a member for two days,
+//     2026-08-15..17, and is deleted);
 //   * PendingTrimDrag — the trim bar's endcap / bridge drag;
 //   * PendingMarkerPress — the marker flag's PLAIN press, its click already
 //     acted at the press (2026-08-17), whose crossing becomes the reposition
@@ -3681,8 +3704,8 @@ struct AppState {
 
     // The overview lane's plain drag — the box pan
     // and the box-endcap edge
-    // drags (contract at OverviewDragState; the outside press acts at the
-    // press and never arms this). Cleared on button release / lost
+    // drags (contract at OverviewDragState; an outside press arms the pan here
+    // too, after its teleport). Cleared on button release / lost
     // button, by the force-end finalizer, and on file load.
     OverviewDragState overview_drag;
 
@@ -5894,10 +5917,12 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // lane scale, a source frame by construction — mapped INTO the active domain
 // in target view (source_frame_to_active_domain) so the value is
 // domain-correct for every consumer. Returns a frame position as a double.
-// TWO consumers since the ctrl strip drag's deletion (2026-08-15; three from
-// the lane rework until then): the click-teleport's centering position and the
-// box pan / edge drags' per-event pointer position (both of which column-clamp
-// x into the lane first — the song walls by construction).
+// THREE call sites (re-greped 2026-08-18; the ctrl strip drag was a fourth
+// until its deletion, 2026-08-15): the click-teleport's centering position,
+// the box pan / edge drags' per-event pointer position — both of which
+// column-clamp x into the lane first, the song walls by construction — and the
+// box pan's grab-offset seat in the press router, whose x is inside the lane
+// already, the claim's own rect having admitted it.
 // IT IS A PURE SCALE, NOT A HIT TEST, AND x MAY LEGITIMATELY BE lane.x + lane.w
 // (codex round 21): what it returns is the NEAR boundary of column x, so a
 // caller wanting a column's FAR boundary — which is what an END bound is, the
@@ -7712,7 +7737,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Center on focus (c)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
-                                                 "Press Shift for paste phase state."};
+                                                 "Press Shift for paste phase reset state."};
         case RedesignButton::IconBpm:    return {"BPM editor (m)", nullptr};
         case RedesignButton::IconIter:   return {"Iteration mode (i)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
