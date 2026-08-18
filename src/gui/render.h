@@ -119,11 +119,13 @@ struct TrimRange {
 // needs them back.
 //
 // EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all, and
-// the redesign kept the doctrine: a highlight recolors the GROUND UNDER the ink
-// (kWaveformRegionCanvas) rather than washing over it, so ink over a highlighted
-// span is the same ink and only the ground reads the highlight; a disabled face
-// resolves to a solid color through mix_color before it reaches cairo, never a
-// fade.
+// the redesign kept the doctrine: a highlight REPLACES the colors it lifts
+// rather than washing over them. The region highlight is two opaque colors in
+// two passes — kWaveformRegionCanvas for the ground under the ink, then
+// kWaveformRegionInk for the ink itself, masked through the plate's own BINARY
+// alpha so every pixel ends up fully one color or fully the other and nothing
+// blends; a disabled face resolves to a solid color through mix_color before it
+// reaches cairo, never a fade.
 
 // THE BASE CHROME ERASE (render_background) — and the surviving half of the
 // GROUND SPLIT: this goes under everything, and the redesigned rows then paint
@@ -636,19 +638,37 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // (one step gave (27, 58, 53) = #1b3a35, the value this constant held between
 // the row-6 re-derivation and the tweak).
 //
-// THE ARCHITECT'S TUNING KNOB, explicitly: the lift is a derivation and not a
-// measurement, so this constant is the one to move if the highlight wants to be
-// stronger or weaker. Nothing else in the region path has a value to tune.
-//
-// IT IS AN OPAQUE GROUND RECOLOR, NOT A BLEND — the same mechanism it always
-// was (paint_region_ground, painted BEFORE the plate blit): the span's canvas
-// is REPLACED by this colour and the ink then composites over it exactly as it
-// composites over the plain canvas. Since the aliasing deletion the plate's
-// alpha is BINARY, so an ink pixel is fully opaque and a gap is fully
-// transparent: the highlight shows through the gaps and the ink is bit-identical
-// either way. "The ink looks unaffected" is now structurally true rather than a
-// near-miss, which is why nothing in the ink path is touched here.
+// IT IS AN OPAQUE GROUND RECOLOR, NOT A BLEND (paint_region_ground, painted
+// BEFORE the plate blit): the span's canvas is REPLACED by this colour, and the
+// ink then composites over it exactly as it composites over the plain canvas.
+// Since the aliasing deletion the plate's alpha is BINARY, so an ink pixel is
+// fully opaque and a gap is fully transparent: this colour shows through the
+// gaps and blends with nothing.
 inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
+
+// THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
+// 2026-08-18: "apply overlay alpha to wave along with canvas on region
+// highlight"). The ground recolor alone lit the background behind unlit
+// content; lifting the ink too makes the span read as ONE lit region.
+//
+// DERIVED EXACTLY AS ITS SIBLING WAS, so the pair is one construction rather
+// than a colour and a guess: Breeze's own View -> ViewAlternate lift of
+// +9/+9/+10 per channel, taken TWICE — the theme's own relationship applied
+// twice, not a tint invented for it —
+//     kWaveformInk (28, 129, 107) + 2*(9, 9, 10) = (46, 147, 127) = #2e937f
+//
+// STILL FULLY OPAQUE, NOT A WASH: paint_region_ink masks this colour through
+// the plate's own BINARY alpha in a second pass AFTER the blit, so every ink
+// pixel inside the span becomes exactly this colour and every gap is left
+// untouched — still showing the kWaveformRegionCanvas ground the first pass
+// laid down. A translucent wash painted over the plate is the retired form the
+// opaque recolor model rejects, and this is not it.
+//
+// THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
+// derivation and not a measurement, so this constant and kWaveformRegionCanvas
+// above are the two to move if the highlight wants to be stronger or weaker,
+// and they are the whole of what the region path has to tune.
+inline constexpr GuiColor kWaveformRegionInk = hex(0x2E937F);  // (46, 147, 127)
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -1817,7 +1837,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // render_canvas paints at its top and bottom — 2px each since row 6
 // (waveform_border_px, the black border that replaced the 1px grey one). Every
 // pass that fills a BAND inside the area clips to this — the plate blit and the
-// region ground recolor — so the border rows survive the frame no matter what
+// region highlight's two halves, ground and ink — so the border rows survive
+// the frame no matter what
 // covers the area. THE PHASE-RESET OVERLAY RING LEFT THIS LIST 2026-08-01: its
 // horizontals now ride the borders' OUTERMOST rows deliberately (the ruling is
 // at paint_phase_reset_overlay_ring), so it reads the full area. 1px VERTICALS
@@ -1928,13 +1949,15 @@ struct WaveformBasis {
 // a table. The surface is flushed before the first CPU write and marked dirty
 // after the last, so later cairo use sees the pixels.
 //
-// The plate paints uniformly in `color` — it is trim-agnostic, and nothing
-// recolors it after the fact: the out-of-trim dim that once masked a second
-// color through this alpha is retired, the trim bar spanning the window being
-// the whole inside-the-window signal now. Its alpha is BINARY now: opaque bars and
+// The plate paints uniformly in `color` — it is trim-agnostic, and the
+// out-of-trim dim that once masked a second color through this alpha is
+// retired, the trim bar spanning the window being the whole inside-the-window
+// signal now. Its alpha is BINARY now: opaque bars and
 // transparent gaps, with no fractional edges left. The gaps are what let a
 // recolored GROUND (kWaveformRegionCanvas, painted before the blit) show
-// through.
+// through, and the SET pixels are what the one remaining after-the-fact
+// recolor reads: paint_region_ink masks kWaveformRegionInk through this same
+// alpha inside the region's column span, leaving the plate itself untouched.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,

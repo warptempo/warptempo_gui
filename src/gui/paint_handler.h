@@ -598,8 +598,9 @@ struct GuiPaintHandler {
     // basis. Endpoints are active-domain frames stored in drag order; normalize
     // to [lo, hi] then map to columns via the plain viewport transform (the
     // endpoints already live in the displayed domain, so no warp map is walked).
-    // TWO consumers since 2026-08-15, and the second is why this is PUBLIC:
-    // paint_region_ground draws the highlight from it, and
+    // THREE consumers, and the last is why this is PUBLIC: paint_region_ground
+    // and paint_region_ink draw the highlight's two halves from it — the ground
+    // and the ink cannot disagree about where the region is — and
     // GuiInputHandler::region_manipulation_hit (input_pointer.cpp) HIT-TESTS the
     // standing span's move zone and its two grab bands from the same call on the
     // same PLATE basis — so a grabbed bound is exactly a painted one, by
@@ -658,10 +659,11 @@ private:
 
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
-    // recolor model, architect 2026-07-26: the plate is never recolored after
-    // the blit, and the trim bar spanning the window is the whole
-    // inside-the-window signal.
-    // Neither helper had any other consumer, so both went with the pass.)
+    // recolor model, architect 2026-07-26: TRIM recolors no blitted pixel, the
+    // trim bar spanning the window being the whole inside-the-window signal.
+    // Neither helper had any other consumer, so both went with the pass. The
+    // dim's second-masked-pass MECHANISM came back for the region's ink half in
+    // 2026-08-18 — paint_region_ink — over the region's span alone.)
 
     // (The region-select span's column pair, RegionColumns / region_columns,
     // moved up into the PUBLIC block beside plate_viewport_basis on 2026-08-15,
@@ -785,11 +787,16 @@ private:
     // free function directly, in the floating-surfaces slot and for their
     // reason: it publishes geometry the pointer path reads.)
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit
-    // (the Ableton model — the highlight changes the ground, the ink is
-    // untouched). The region highlight is the only one: the phase-reset overlay
-    // recolors no ground (architect 2026-07-27).
+    // THE REGION HIGHLIGHT, ONE HIGHLIGHT IN TWO OPAQUE HALVES STRADDLING THE
+    // PLATE BLIT (the Ableton model, extended to the ink 2026-08-18). The GROUND
+    // half paints after render_canvas and BEFORE the blit; the INK half masks
+    // its own colour through the blitted plate's binary alpha immediately AFTER
+    // it, over the identical span. Neither half is a wash, and the two share the
+    // basis and column owners so they cannot disagree. The region is the only
+    // recolor there is: the phase-reset overlay recolors nothing (architect
+    // 2026-07-27).
     void paint_region_ground(cairo_t* cr, const GuiRect& area);
+    void paint_region_ink(cairo_t* cr, const GuiRect& area);
     // The overlay band's 1px ring — the phase-reset overlay's whole visual —
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.

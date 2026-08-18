@@ -3709,15 +3709,19 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // waveform display, masked by the existing load-time progress
     // bar.
     //
-    // BLIT-ONLY, AND NOTHING RECOLORS IT AFTER: the out-of-trim dim (a second
-    // ink color masked through the plate's own alpha) is retired
-    // with the opaque recolor model (architect 2026-07-26). The trim bridge bar
-    // is the whole inside-the-window signal now, and the plate's pixels are
-    // exactly what the renderer wrote, composited once over whichever ground —
-    // kWaveformCanvas, or a kWaveformRegionCanvas recolor — the pass before
-    // this one left. The aliased renderer's alpha is binary (the antialiased
-    // plate is deleted), so ink over a highlighted span is identical to ink
-    // over plain canvas everywhere.
+    // BLIT-ONLY HERE, WITH EXACTLY ONE PASS RECOLORING IT AFTER: this call
+    // writes the plate's pixels as the renderer wrote them, composited once
+    // over whichever ground — kWaveformCanvas, or a kWaveformRegionCanvas
+    // recolor — the pass before this one left. The one later pass that touches
+    // those pixels is paint_region_ink, the very next call in on_redraw, which
+    // masks kWaveformRegionInk through the plate's own alpha inside the REGION's
+    // column span alone; outside that span, and on every frame where no region
+    // stands, the blitted pixels are final. The plate SURFACE is never rewritten
+    // either way — both passes recolor at paint time.
+    //
+    // The out-of-trim dim — the same second-masked-pass mechanism applied to the
+    // whole out-of-trim stretch — stays retired (architect 2026-07-26): the trim
+    // bridge bar is the whole inside-the-window signal now.
     //
     // The clip is the CONTENT band, not the full area: the area's top and
     // bottom rows are render_canvas's 2px black border (row 6) and no
@@ -3769,17 +3773,22 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 
 // -- GuiPaintHandler::paint_region_ground --------------------------------
 
-// THE REGION HIGHLIGHT IS A GROUND RECOLOR (the Ableton model, architect
-// 2026-07-26): the span's CANVAS becomes the opaque kWaveformRegionCanvas over
+// THE REGION HIGHLIGHT'S GROUND HALF (the Ableton model, architect 2026-07-26):
+// the span's CANVAS becomes the opaque kWaveformRegionCanvas over
 // the full
 // content height. Called from on_redraw after render_canvas and BEFORE
 // paint_waveform_plate, so the ARGB32 plate composites over the recolored
 // ground — and since the aliased renderer's alpha is BINARY (the antialiased
-// plate is deleted; docs/engineering/waveform_antialiasing_retired.md), the
-// ink over a highlighted span is bit-identical to ink over plain canvas
-// everywhere, and only the ground carries the highlight. The retired form was
-// a translucent wash painted OVER the plate, which lifted the ink itself —
-// exactly what the recolor model rejects.
+// plate is deleted; docs/engineering/waveform_antialiasing_retired.md), an ink
+// pixel is fully opaque and a gap fully transparent, so this fill shows through
+// the gaps exactly and blends with nothing.
+//
+// It is HALF the highlight, not all of it: paint_region_ink below lifts the INK
+// over the same span after the blit (architect 2026-08-18), so the highlight
+// reads as one lit region rather than as a lit background behind unlit content.
+// That is still no wash — it masks a second OPAQUE colour through the plate's
+// own binary alpha, the mechanism the recolor model admits, where a translucent
+// wash painted over the plate is the form it rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
 // clipped to the CONTENT band so it cannot cover the area's border rows.
@@ -3814,6 +3823,65 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     cairo_rectangle(cr, x0, static_cast<double>(content.y),
                     x1 - x0, static_cast<double>(content.h));
     cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// -- GuiPaintHandler::paint_region_ink -----------------------------------
+
+// THE HIGHLIGHT'S SECOND HALF (architect 2026-08-18): the span's INK takes the
+// same doubled Breeze lift its canvas already takes, so the highlight lifts the
+// whole picture instead of only the ground behind it. Called from on_redraw
+// immediately AFTER paint_waveform_plate — the pair with paint_region_ground
+// above, one highlight in two passes with the blit between them.
+//
+// A SECOND OPAQUE COLOR MASKED THROUGH THE PLATE'S OWN ALPHA, never a
+// translucent wash over the plate — the wash is the retired form the opaque
+// recolor model rejects. Because the aliased renderer's alpha is BINARY (the
+// antialiased plate is deleted; docs/engineering/waveform_antialiasing_retired.md)
+// the mask has no fractional coverage anywhere: every ink pixel in the span
+// becomes exactly kWaveformRegionInk and every gap is left alone, so the
+// kWaveformRegionCanvas ground the previous pass laid down still shows through
+// the gaps unchanged.
+//
+// The plate is not rewritten: this recolors at PAINT time and writes nothing
+// into the cache, so a pan or a zoom that reuses the surface reuses the plain
+// ink. Damage is the ground pass's — a subspan of pixels that pass already owns
+// in the same redraw. Session-only, nothing persisted, no cache involved.
+//
+// The span comes from plate_viewport_basis() and region_columns(), the very
+// calls paint_region_ground makes, so the ground and the ink cannot disagree
+// about where the region is; the clip is the CONTENT band, so neither half can
+// reach the area's 2px black border rows.
+void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
+    if (!app.region.active) return;
+    if (area.w <= 0 || area.h <= 0) return;
+    // The blit's own guard: with no published plate there is no alpha to mask
+    // through, and the ground pass's fill is the whole highlight for that frame.
+    if (!wf_cache.surface) return;
+
+    const PlateViewportBasis basis = plate_viewport_basis();
+    if (basis.spp <= 0.0) return;
+
+    const RegionColumns cols = region_columns(basis);
+
+    double x0 = static_cast<double>(area.x + cols.lo_col);
+    double x1 = static_cast<double>(area.x + cols.hi_col);
+    // Clamp to the visible strip; a span wholly offscreen paints nothing.
+    x0 = std::max(x0, static_cast<double>(area.x));
+    x1 = std::min(x1, static_cast<double>(area.x + area.w));
+    if (x1 <= x0) return;
+
+    const GuiRect content = waveform_content_rect(area);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // (the region's column span) INTERSECT (the content band)
+    cairo_rectangle(cr, x0, static_cast<double>(content.y),
+                    x1 - x0, static_cast<double>(content.h));
+    cairo_clip(cr);
+    cairo_set_source_rgb(cr, kWaveformRegionInk.r, kWaveformRegionInk.g,
+                         kWaveformRegionInk.b);
+    // The blit's own origin, so the mask lands on the pixels it came from.
+    cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
     cairo_restore(cr);
 }
 
@@ -5943,7 +6011,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
-        //   4. region ground -> waveform plate -> phase-reset overlay ring.
+        //   4. region ground -> waveform plate -> region ink -> phase-reset
+        //      overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: the lane
         //      ground, the window's bar, the two endcaps and the midpoint mark.
         //   6. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
@@ -5965,12 +6034,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // with the other redesigned rows at step 3, on every frame class, and
         // overlaps none of these passes.)
         // Two structural rulings live in this sequence:
-        //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the
-        //     GROUND, so the ONE ground recolor (the region's) paints BEFORE the
-        //     plate and the ink composites over it. The phase-reset overlay
-        //     contributes no ground at all (architect 2026-07-27): its 1px RING
-        //     is its whole visual, and a boundary line paints AFTER the plate,
-        //     crossing the ink like the stems do.
+        //   THE RECOLOR MODEL (architect 2026-07-26, extended to the ink
+        //     2026-08-18) — a highlight REPLACES colors, it never washes over
+        //     them, and the region's is the ONE highlight that recolors: its
+        //     GROUND half paints BEFORE the plate and the ink composites over
+        //     it, then its INK half masks a second opaque color through the
+        //     blitted plate's binary alpha over the same span, so the whole
+        //     span lifts without a single compositing alpha. The phase-reset
+        //     overlay contributes no ground at all (architect 2026-07-27): its
+        //     1px RING is its whole visual, and a boundary line paints AFTER
+        //     the plate, crossing the ink like the stems do.
         //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead's
         //     STEM passes UNDER
         //     marker flags, so a cursor resting on a marker sits hidden behind
@@ -5983,12 +6056,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     moving line does not blink out at every marker it crosses.)
 
         if (rects_intersect(exposed, area)) {
-            // THE GROUND RECOLOR, under the plate. render_canvas already laid
+            // THE REGION HIGHLIGHT'S TWO HALVES, straddling the blit.
+            // GROUND, under the plate: render_canvas already laid
             // the kWaveformCanvas ground for the whole area above; this repaints the
             // region's span of it opaquely, so the plate's transparent gaps show
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
+            // INK, over the plate and over the identical span: the blitted ink
+            // is remasked in the lifted colour, so the highlight lifts the whole
+            // picture rather than only the ground behind it.
+            paint_region_ink(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top
