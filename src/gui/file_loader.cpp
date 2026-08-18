@@ -294,6 +294,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // selection.clear_selection() above already clears it — the Selection
     // mutators are the anchor's only owners).
     app.shift_range_anchor = -1;
+    // The STICKY CTRL rides the same belt for the same reason: a new piece
+    // starts with no mode standing, and the clear_selection above has already
+    // ended it (the two bits share the Selection chokepoint; the contract is
+    // at AppState::add_to_selection).
+    app.add_to_selection = false;
     // (The displayed hit map AND the resting selection region are cleared in
     // apply_settings_engine_and_prefs, the shared load / load-in-place
     // view-establishment routine, not here. The live-pointer-drag scratch

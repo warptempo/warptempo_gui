@@ -214,8 +214,10 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
 // rule with no site left to disagree with it.
 // THE LOCK NOW HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
-// 2026-08-15): ten icon-row buttons wear the disabled face while the active
-// tab is locked, so the toggle looks the way the `h` history view already looks
+// 2026-08-15): ten roster buttons wear the disabled face while the active
+// tab is locked — six in the icon row and, since the 2026-08-18 relayout moved
+// them, four on the BOTTOM one — so the toggle looks the way the `h` history
+// view already looks
 // — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), the propagate
 // copy/paste pair, the BPM and iteration openers, listen and the load-in-place,
 // which is exactly what this allowlist drops. THE MIRROR IS HAND-LISTED at
@@ -374,6 +376,17 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // and clear one with bare Esc; this is the same scratch reached by a chord.
     const bool is_show_region =
         (ctrl && shift && !alt && key == GuiKeys::X);
+    // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
+    // header's own standard rather than a new one: the chord flips a session
+    // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
+    // — the ctrl-branch membership toggle — is a SELECTION act, which this
+    // gate has never blocked. A locked tab has always been able to select
+    // markers by click, by Tab and by shift+click; this adds the one spelling
+    // of that vocabulary a keyboardless rig had no way to reach. Nothing it
+    // enables writes a store: membership, focus and the playhead are all
+    // navigation. Bare-exact, exactly the dispatch arm's own spelling.
+    const bool is_add_to_selection =
+        (!ctrl && !shift && !alt && key == GuiKeys::K);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -394,7 +407,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
-             is_trim_x || is_trim_shift_x || is_show_region);
+             is_trim_x || is_trim_shift_x || is_show_region ||
+             is_add_to_selection);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------
@@ -5194,6 +5208,34 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             if (app.selected_markers.insert(s).second) restored = true;
         }
         if (restored) viewport.invalidate_top_strip();
+        return true;
+    }
+
+    // `k` (no modifiers): toggle ADD TO SELECTION, the sticky ctrl (architect
+    // 2026-08-18). It is `i`'s and `p`'s shape exactly — one bit, flipped both
+    // ways by one key, with the bottom row's button dispatching this same
+    // chord — and the ONE route that SETS the bit; every clear is the
+    // Selection layer's (the whole contract, the clear list and the shift rule
+    // are at AppState::add_to_selection).
+    //
+    // NO GATE OF ITS OWN, and each omission is deliberate: it is legal in both
+    // columns and both audio views (a selection is not authored content, so
+    // the home-view binding has nothing to say about it), legal on a LOCKED
+    // tab (read_only_key_blocked admits it, where it drops the four marker
+    // verbs), and unreachable in the `h` view, whose allowlist consumes it
+    // above this dispatch. It stops no playback and clears no region: turning
+    // the mode on IS NOT a selection act — the click that follows is, and that
+    // click runs the marker act's own stop and region clear.
+    //
+    // THE REPAINT IS THE BOTTOM LANE'S — the button's lamp lives there, so
+    // this takes the row's own damage fork (invalidate_rect on
+    // bottom_row_area) where `i` and `p` take invalidate_top_strip. It is not
+    // left to main.cpp's per-tick face comparator: that walk would catch the
+    // drift on the NEXT tick, and a mode toggle must light in the frame it was
+    // asked for.
+    if (key == GuiKeys::K && !ctrl && !shift && !alt) {
+        app.add_to_selection = !app.add_to_selection;
+        viewport.invalidate_rect(bottom_row_area(app));
         return true;
     }
 

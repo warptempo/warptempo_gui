@@ -920,8 +920,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / I / M letter keys (phase-reset clipboard, view toggle, iteration,
-    // bpm mode).
+    // P / I / M / K / L letter keys (phase-reset clipboard, view toggle,
+    // iteration, bpm mode, add-to-selection, listen).
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the

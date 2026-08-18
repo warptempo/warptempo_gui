@@ -296,8 +296,9 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Period, false, false, false, false, true},                             // bare .
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
-    // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18).
-    // FOURTEEN
+    // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
+    // ADD TO SELECTION landed behind them later that day).
+    // FIFTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -368,6 +369,21 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's fifth and the
+    // roster's newest chord: BARE `k`, which was free — he picked it over `n`
+    // (already reading as INHERIT) and over `a` (too easy to hit by accident).
+    // It is a MODE toggle, so the button's lamp reads the same bit the key
+    // flips and button-is-its-chord holds literally: the press dispatches bare
+    // `k` through on_key at the LIFT like every other chrome button, while the
+    // KEY acts at the press like every other hotkey — both fall out of the
+    // machinery, with no timing code of its own anywhere.
+    //
+    // ITS GATES DIVERGE FROM THE FOUR ABOVE IT and that is the point: the `h`
+    // view consumes bare `k` and greys the button with them, but the READ-ONLY
+    // lock ADMITS it (read_only_key_blocked's allowlist) — a selection is
+    // navigation, not authored content.
+    {RedesignButton::IconAddToSelection,
+     GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
     // behind a separator and ahead of the arrows. THREE BUTTONS, THREE CHORDS
     // — no hold, no double-click, no modifier gesture on the surface — and the
@@ -410,8 +426,10 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here — 45
-// rows against the roster's 47 since 2026-08-18, when the TRIM SCISSORS left
+// every RedesignButton but the two menu anchors carries a chord here — 46
+// rows against the roster's 48 since 2026-08-18's SECOND ruling, when ADD TO
+// SELECTION arrived on bare `k` (a chord, so the pair moved together). It was
+// 45 against 47 earlier that day, when the TRIM SCISSORS left
 // both (they carried a chord, so the pair moved together; bare `x` itself is
 // untouched). The same relayout moved eight buttons BETWEEN ROWS and this
 // table did not feel it: it is keyed by id and every reader matches by id or
@@ -3070,7 +3088,15 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // lift deferral of 2026-08-15 is inverted, its reasoning at
 // PendingMarkerPress, app_state.h). ONE owner with TWO call sites, both in
 // on_button_press's marker claims: the ctrl-exact toggle branch and the
-// plain / shift branch. It runs the stop, the three-way selection fork, the
+// plain / shift branch. BOTH ARE FLAG HITS AND NOTHING ELSE (re-greped
+// 2026-08-18): each sits behind a resolved `mh_index >= 0` inside the top
+// strip, so the empty marker lane — its plain click, its double-click create —
+// never reaches this body, and the `h` view's diff flags are a different press
+// router with its own mode-local multi-selection. THE TOGGLE ARM HAS TWO
+// PRODUCERS since 2026-08-18: a real ctrl press, and a plain press while the
+// ADD TO SELECTION mode stands (the fold, and the shift rule that goes with
+// it, are at the `toggle` term below).
+// It runs the stop, the three-way selection fork, the
 // land, the region clear and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
 // later edge: the reposition DRAG a plain press may become (the crossing
@@ -3097,7 +3123,23 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // refuses (read-only still selects and lands, and the index came from a
     // live hit test).
     playback_lifecycle.stop_playback_if_playing();
-    if (ctrl) {
+    // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
+    // 2026-08-18): while the mode stands, a PLAIN press on a flag is a ctrl
+    // press in every respect — same branch, same land, same nothing-armed
+    // tail — because the mode's whole definition is "run the ctrl branch".
+    // Folding it into the term rather than growing a fourth arm is what makes
+    // that true by construction instead of by two bodies agreeing.
+    //
+    // `&& !shift` IS THE SHIFT RULE AND IT IS LOAD-BEARING (the architect:
+    // "Shift+click needs no rule here, because it has its own gesture"). The
+    // fork below is `if (toggle) ... else if (shift)`, so a bare fold onto
+    // ctrl would let a lit mode SWALLOW a held shift and turn a range select
+    // into a membership toggle. A real ctrl+click is unaffected either way —
+    // `ctrl` is already true — and ctrl+shift never reaches this owner at all
+    // (the ctrl call site is ctrl-EXACT, and the plain/shift one passes
+    // ctrl=false), so this term reads on the mode's arm alone.
+    const bool toggle = ctrl || (app.add_to_selection && !shift);
+    if (toggle) {
         // The individual membership TOGGLE. Whether it ADDED or REMOVED, the
         // playhead lands on the FOCUS the toggle leaves behind (architect
         // 2026-07-28, replacing the earliest-selected land): an ADD focuses the
@@ -3163,7 +3205,14 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // neither has a drag to become, and their click has just committed whole —
     // so they arm NOTHING, exactly as they did before the one-day lift model
     // (an armed marker pending is plain by construction).
-    if (shift || ctrl) return;
+    // THE MODE REACHES THIS RETURN THROUGH `toggle`, and that is INTENDED
+    // rather than tolerated (2026-08-18): while Add to Selection stands, a
+    // plain press is a ctrl press in every respect, so it must arm neither the
+    // reposition DRAG nor the double-click SEED — a marker cannot be dragged
+    // and a flag editor cannot be double-clicked open while the mode is
+    // accumulating a selection, exactly as neither can be under a held ctrl.
+    // Turning the mode off restores both in the same press.
+    if (shift || toggle) return;
     // THE PLAIN ARM'S DOUBLE-CLICK CONSUME, AT THIS PRESS (2026-08-17 — the
     // architect on the deferred open: "a tad slow compared to the Enter key"):
     // a candidate for the SAME index within the window opens the flag editor,
@@ -5375,7 +5424,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's File / Settings and the view bar's three, row 3's two
 // tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
 // relayout, the history group's five since 2026-08-18 — and the bottom row's
-// fourteen: 47, the enum's
+// fifteen: 48, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

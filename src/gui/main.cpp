@@ -1938,9 +1938,10 @@ int main(int argc, char** argv) {
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its fourteen roster
+            // second arm covers both of the row's surfaces, its fifteen roster
             // buttons (the transport three, and the right block's four marker
-            // verbs, three walk steps and four cardinal arrows since
+            // verbs with Add to Selection behind them, three walk steps and
+            // four cardinal arrows since
             // 2026-08-18) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.

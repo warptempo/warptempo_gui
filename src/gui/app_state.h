@@ -1713,8 +1713,9 @@ struct TrimBarPressSeed {
 // Settings plus the view bar's three, row 3's two TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER AND ITS FOUR COMPANIONS close
-// them since 2026-08-18), then the bottom row's FOURTEEN — the transport
-// three, the FOUR SINGLE-MARKER VERBS (2026-08-18), the MARKER-WALK three
+// them since 2026-08-18), then the bottom row's FIFTEEN — the transport
+// three, the FOUR SINGLE-MARKER VERBS with ADD TO SELECTION behind them
+// (2026-08-18), the MARKER-WALK three
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
@@ -1963,7 +1964,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. FOURTEEN buttons in four groups, in painted order (the enum
+    // detection. FIFTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -1971,7 +1972,8 @@ enum class RedesignButton {
     // CLOCK behind its separator, then — FLUSH AT THE RIGHT MARGIN, three
     // groups divided by two more separators — THE FOUR SINGLE-MARKER VERBS
     // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
-    // = Ctrl+N), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
+    // = Ctrl+N) WITH ADD TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
+    // — later the same day), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
     // next = Tab, walk both tabs = Ctrl+Shift+Tab), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
@@ -2064,6 +2066,39 @@ enum class RedesignButton {
     // 2026-08-15). They keep their Icon* names: a roster id names the button,
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
+    // ADD TO SELECTION — the verb group's FIFTH member, seated by the
+    // architect himself (2026-08-18: "add group selection icon ('Add to
+    // Selection') after toggle inherit, before the separator"). Bare `k`, the
+    // edit-select glyph, and a MODE rather than an act: while it is lit a
+    // plain flag click takes the CTRL BRANCH — toggle membership, land the
+    // playhead on the focus the toggle leaves, keep the rest of the selection
+    // — and the mode auto-clears at the first selection act that is not that
+    // toggle. Nothing about the click is new; the mode only routes a plain
+    // press into the branch ctrl+click already ran. The whole contract, the
+    // shift rule and the clear list are at AppState::add_to_selection.
+    //
+    // WHY GLASS NEEDS IT, in the architect's own words (2026-08-18): "none of
+    // the modifier-click vocabulary exists on touch, so buttons are how glass
+    // gets selection work." A finger has no ctrl to hold, so the one gesture
+    // that ACCUMULATES a selection was unreachable on the rig; a lit mode is
+    // the pointer-only spelling of the same act, and the keyboard keeps the
+    // modifier it always had.
+    //
+    // IT WEARS THE SELECTED FACE, being a mode — the roster's standing rule
+    // and the lamp IconIter and IconFollow already wear, reading the live bit
+    // its own chord flips. THE ROW HAS A LAMP AGAIN because of it, having had
+    // none between the Cumulative toggle's departure earlier the same day and
+    // this arrival.
+    //
+    // ITS GATES ARE ITS OWN, like the four verbs beside it, and they are NOT
+    // theirs: the `h` view GREYS it through the derived partition (bare `k` is
+    // neither the mode's vocabulary nor on its allowlist), while the READ-ONLY
+    // LOCK LEAVES IT LIT — a selection is navigation, not authored content,
+    // the same reasoning that keeps the trim gestures legal on a locked tab,
+    // so bare `k` is on read_only_key_blocked's allowlist and this button is
+    // not one of the lock's ten. It keeps the group's Icon* naming: a roster
+    // id names the button, not the lane it sits in.
+    IconAddToSelection,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
     // cluster, behind a separator and ahead of the four arrows): previous
     // marker (Shift+Tab), next marker (Tab) and walk both tabs
@@ -2089,12 +2124,15 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: FIVE in row 1, two
-// in row 3, twenty-six in row 4 and fourteen in the bottom row — 47. Of those,
-// FORTY-FIVE carry a chord in kToolbarChords and TWO are the dropdown anchors
+// in row 3, twenty-six in row 4 and fifteen in the bottom row — 48. Of those,
+// FORTY-SIX carry a chord in kToolbarChords and TWO are the dropdown anchors
 // (File and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
-// 47 SINCE 2026-08-18, THE ROSTER RELAYOUT, and the arithmetic is one loss over
+// 48 SINCE 2026-08-18'S SECOND ROSTER RULING: ADD TO SELECTION joined the
+// bottom row's marker-verb group on bare `k`, a pure chord addition — 47 + 1,
+// split 45 + 2 to 46 + 2.
+// 47 EARLIER THAT DAY, AT THE ROSTER RELAYOUT, and the arithmetic is one loss over
 // three moves: the TRIM SCISSORS were deleted whole (48 − 1, split 46 + 2 to
 // 45 + 2 — the chord table lost its row with the button and bare `x` is
 // untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
@@ -2119,7 +2157,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2207,6 +2245,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
@@ -2219,16 +2258,17 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — FOURTEEN since 2026-08-18: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — FIFTEEN since 2026-08-18: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row that day, the MARKER-WALK GROUP's three (2026-08-15) and the four
+// row that day with ADD TO SELECTION landing behind them, the MARKER-WALK
+// GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these fourteen. THE CONSUMERS, re-greped
+// with the bottom row's own rect for these fifteen. THE CONSUMERS, re-greped
 // rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -2252,6 +2292,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
@@ -3280,6 +3321,62 @@ struct AppState {
     // adopt-the-focus seed re-derived 2 from the focus), and gives 2..7 now from
     // the surviving anchor 2.
     int           shift_range_anchor = -1;
+
+    // ADD TO SELECTION — THE STICKY CTRL (architect 2026-08-18). While this
+    // bit is set, a PLAIN FLAG CLICK takes the ctrl branch of the marker click
+    // act: toggle the clicked marker's membership, land the playhead on the
+    // focus the toggle leaves behind, and keep the rest of the selection. IT
+    // IS NOT A NEW ACT — ctrl+click has always done exactly that, and the mode
+    // is nothing but a second producer for the same branch (the fold is one
+    // term at run_marker_click_act, input_pointer.cpp).
+    //
+    // WHY IT EXISTS, in the architect's words: "none of the modifier-click
+    // vocabulary exists on touch, so buttons are how glass gets selection
+    // work." A finger cannot hold ctrl, so accumulating a selection had no
+    // spelling at all on the rig.
+    //
+    // SET BY ONE ROUTE — bare `k` / the bottom row's Add to Selection button,
+    // which toggles it both ways (handle_mode_keys, input_key_dispatch.cpp).
+    // The button's lamp reads THIS bit, so the face and the mode cannot drift.
+    // SESSION SCRATCH, NEVER SERIALIZED, like shift_range_anchor beside it and
+    // history_cumulative: no sidecar key, no undo entry, no snapshot field.
+    //
+    // SCOPE: FLAG HITS ONLY. run_marker_click_act is the one act owner and it
+    // runs on a resolved marker hit and nothing else, so the empty marker
+    // lane — its plain click, its double-click create — never sees this bit at
+    // all. The `h` view's diff flags have their own mode-local multi-selection
+    // and are a different press router entirely; the button greys in there and
+    // bare `k` is consumed.
+    //
+    // SHIFT BEATS THE MODE, deliberately (the architect: "Shift+click needs no
+    // rule here, because it has its own gesture"). The act's fork is
+    // `if (ctrl) ... else if (shift)`, so a bare fold onto `ctrl` would make a
+    // lit mode swallow a held shift; the fold carries `&& !shift` for exactly
+    // that reason and a real shift+click still ranges while the mode stands.
+    //
+    // IT AUTO-CLEARS ON THE BOUNDARY THAT ENDS A PLAIN CTRL+CLICK'S EFFECT —
+    // that effect being the accumulated membership, which any selection
+    // REPLACE or CLEAR ends. Implemented as the SHIFT-RANGE ANCHOR'S OWN RULE
+    // with the keeper swapped, which is what makes the two mirror images:
+    // Selection::toggle_selection_membership — the mode's own act — KEEPS the
+    // mode and clears the anchor, while Selection::select_range_from_anchor
+    // keeps the anchor and clears the mode; every OTHER Selection mutator
+    // clears BOTH. THE AUTHORITATIVE CLEAR LIST, re-derived by grepping every
+    // Selection body rather than copied from the anchor's: set_single_selection,
+    // clear_selection, collapse_to_focused, select_range_from_anchor and
+    // sanitize_selection_after_restore (cycle_selection and the two marker
+    // walks clear through set_single_selection; load_source_file's explicit
+    // clear is belt over the clear_selection it already runs).
+    // repair_last_selected is NOT one of them and must not become one: it is a
+    // FOCUS repair reached only from inside the toggle, so clearing there
+    // would make the mode die on the very act that defines it.
+    // A marker REORDER does not clear it either — a bool has no index to go
+    // stale, and remap_marker_indices_after_reorder carries the anchor through
+    // rather than dissolving it for the same reason.
+    // Riding the Selection chokepoint costs no inventory of its own and cannot
+    // drift: a Selection mutator added later inherits the CLEAR by default,
+    // which is the safe direction.
+    bool          add_to_selection = false;
 
     // STEMS ARE NO LONGER A SELECTION VISUAL AT ALL (row 5, architect). Every
     // ENABLED marker of the active column stems, always, in its class's
@@ -6819,11 +6916,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
-        // hid them, and reaches one now that they paint in every state) and THE
-        // FOUR SINGLE-MARKER VERBS. The two SKIPS and the marker-walk three
+        // hid them, and reaches one now that they paint in every state), THE
+        // FOUR SINGLE-MARKER VERBS and ADD TO SELECTION (bare `k` is consumed
+        // in there like the verbs' four chords). The two SKIPS and the
+        // marker-walk three
         // stay lit, being the mode's own absolute jumps and its own cycles.
         // OUTSIDE THE VIEW: the four VERBS on a locked tab, their own gate,
-        // carried down from the icon row and stated at their arm above.
+        // carried down from the icon row and stated at their arm above — and
+        // ADD TO SELECTION is NOT with them there, its chord being navigation.
         // Nothing else on the row has a resting grey, which is what this ruling
         // is about — the set that breaks out below.
         //
@@ -6956,6 +7056,19 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
+        // ADD TO SELECTION TAKES THE ROW'S POLICY TOO (2026-08-18), and it is
+        // the one member of the verbs' group that does: its chord authors
+        // nothing, so the READ-ONLY arm above deliberately does not carry it —
+        // a selection is navigation, the same ruling that keeps the trim
+        // gestures legal on a locked tab. There is no refusal to mirror
+        // either: bare `k` flips a session bit on any loaded piece, in either
+        // column and either audio view. The `h` VIEW is the one thing that
+        // greys it, through the DERIVED partition at the top of this body
+        // (bare `k` is neither history_mode_owns_key's vocabulary nor on
+        // history_mode_key_blocked's allowlist, so the mode consumes it and
+        // the face follows) — nothing hand-listed. Its LAMP, not its enabled
+        // bit, is what reports the mode (redesign_button_selected below).
+        case RedesignButton::IconAddToSelection:
             break;
         // THE FOUR HISTORY COMPANIONS GREY OUTSIDE THE `h` VIEW AND ARE LIVE
         // INSIDE IT (2026-08-18) — the ICON ROW's own settled rule, which is
@@ -7067,9 +7180,10 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:
-            // REACHED BY EXACTLY TEN IDS, re-derived after the 2026-08-18
-            // relayout — the bottom row's ALWAYS-ON members (the transport
-            // three, the marker-walk three and the four arrows), which break
+            // REACHED BY EXACTLY ELEVEN IDS, re-derived after the 2026-08-18
+            // roster rulings — the bottom row's ALWAYS-ON members (the
+            // transport three, the marker-walk three, the four arrows and ADD
+            // TO SELECTION), which break
             // out of the first switch to take the loading/blank guard and have
             // nothing else to say (each of the four pairs held an honest arm
             // for a revision or two; the ruling and the three separate reasons
@@ -7086,8 +7200,10 @@ inline bool redesign_button_enabled(const AppState& a,
 // buttons, row 3's tabs and row 4's four radios and FIVE toggles (the two view
 // pairs; follow, iteration, read-only, history, and the CUMULATIVE reading,
 // which came back to this row with the history group on 2026-08-18). THE
-// BOTTOM ROW HAS NO SUBJECT AT ALL AGAIN: the Cumulative toggle was its one
-// from 2026-08-14 until that relayout, and the Play / Stop radio pair was a
+// BOTTOM ROW HAS EXACTLY ONE SUBJECT — ADD TO SELECTION, which landed there
+// later the same day, hours after the relayout had left the row lampless: the
+// Cumulative toggle was its one from 2026-08-14 until that relayout, and the
+// Play / Stop radio pair was a
 // second for hours on 2026-08-15, leaving with the same day's collapse of that
 // pair into one button (its record is in the momentary arm below).
 // Each reads
@@ -7145,6 +7261,17 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconP:      return a.active_markers_view == 'P';
         case RedesignButton::IconFollow: return a.follow_mode;
         case RedesignButton::IconIter:   return a.iteration_mode_enabled;
+        // ADD TO SELECTION IS THE BOTTOM ROW'S ONE LAMP (2026-08-18), on the
+        // same toggle pattern as the two above: it reads the live bit bare `k`
+        // flips, so the lit face and the sticky ctrl cannot drift. IT IS THE
+        // ONLY CUE THE MODE GETS, by ruling — the flags' own brightened face
+        // already says which markers are selected, so there is no badge and no
+        // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
+        // the `h` view (a mode left on, then the view opened), which the
+        // shared face expressions already handle: the disabled blend mixes
+        // fill and line toward the ground rather than dropping them, exactly
+        // as it does for the Cumulative toggle up in row 4.
+        case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // The iteration button's pattern exactly: a TOGGLE reading the live bit
         // its own chord flips, so the lamp and the mode cannot drift.
         case RedesignButton::IconHistory: return a.history_mode.active;
@@ -7234,9 +7361,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
-        // THE BOTTOM ROW IS MOMENTARY WHOLE (architect 2026-08-15, and whole
-        // WITHOUT AN EXCEPTION since 2026-08-18, when the Cumulative toggle —
-        // its one lamp — went back up to the icon row): the
+        // THE BOTTOM ROW IS MOMENTARY BUT FOR ITS ONE MODE (architect
+        // 2026-08-15; it was momentary WHOLE for the hours of 2026-08-18
+        // between the Cumulative toggle going back up to the icon row and ADD
+        // TO SELECTION arriving, which is the row's lamp now — its arm is
+        // above with the other toggles, where a mode's lamp belongs): the
         // two skips, the marker-walk three, the four arrows and the four
         // marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
@@ -7579,6 +7708,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
+        // ADD TO SELECTION (2026-08-18), the verb group's fifth and a MODE
+        // rather than an act — the hint names it in the architect's own words
+        // and stops there. ONE LINE, no shift line (it admits no shift press)
+        // and NO GESTURE HINT: the words never explain how to use the mode,
+        // which is the product's standing rule about UI text. It greys in the
+        // `h` view alone and still explains itself there, the
+        // tooltips-on-disabled ruling above.
+        case RedesignButton::IconAddToSelection:
+            return {"Add to Selection (k)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
         // marker" are HELP's own words for the bare Tab cycle; "Walk both
         // tabs" was the Navigation dropdown's own row for Ctrl+Shift+Tab, and

@@ -1175,8 +1175,9 @@ struct GuiInputHandler {
     // the view bar's three, row 3's two tabs, row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // five closing it since 2026-08-18) and the bottom
-    // row's fourteen — the transport three, then the right block's four marker
-    // verbs, three walk steps and four cardinal arrows. EVERY ONE OF THEM
+    // row's fifteen — the transport three, then the right block's four marker
+    // verbs with ADD TO SELECTION behind them (2026-08-18), three walk steps
+    // and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
@@ -2092,8 +2093,9 @@ private:
     // preconditions and its own refusals are stated at the definition.
     void run_iteration_sweep_render();
 
-    // P / I / M / L letter-key handlers: Ctrl+P-family phase-reset clipboard
-    // ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `l` listen-to-
+    // P / I / M / K / L letter-key handlers: Ctrl+P-family phase-reset
+    // clipboard ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `k`
+    // ADD TO SELECTION (the sticky ctrl, 2026-08-18) and `l` listen-to-
     // renders launcher. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
