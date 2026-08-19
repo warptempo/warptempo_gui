@@ -678,15 +678,14 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         input->handle_active_audio_view_toggle();
     }
     active_views.switch_active_markers_view_to('P');
-    // HIDE THE TRIM REGION OVERLAY (architect 2026-07-29): this tail hands the
-    // marker lane a wholesale new selection in a column the user was not
-    // authoring in, which is the turn-to-other-work the whole hide inventory
-    // answers to. Unconditional, and it discards nothing — the trim stands and
-    // the overlay would re-derive from it unchanged. No damage call of its own
-    // is needed —
-    // this tail invalidates the whole waveform area below — but the helper owns
-    // one anyway.
-    clear_region_highlight(app, viewport);
+    // (THE TAIL'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
+    // inventory it belonged to.) The CREATED-SET arm below still hides, where
+    // the rule puts it: it LANDS the playhead on the first created reset, and
+    // the land is one of the rule's two movement owners (clear_region_highlight,
+    // input_handler.h). The NO-CREATED arm lands nothing and hides nothing —
+    // a paste that materialized no reset moved no playhead and touched no
+    // marker, and the overlay it may leave standing derives from the tab's own
+    // trim, unchanged by the paste.
     if (!created.empty()) {
         app.selected_markers     = created;
         // FIRST created reset as the focus. This is a PROGRAMMATIC group

@@ -93,14 +93,15 @@
 // move rides each route's EXISTING regime — the trim-mutation playback stop and
 // the setter's deselect are unchanged and stay where they are.
 //
-// THE PARK DOES NOT HIDE THE TRIM REGION OVERLAY, and that is the ONE
-// membership change of 2026-08-18: the trim writes joined
-// clear_region_highlight's inventory on 2026-08-05 as one class, back when a
-// region was free scratch a playhead-moving command was entitled to dissolve.
-// The region IS the trim now, so hiding here would hide the overlay the instant
-// the user dragged its own bound. The trim writes are the inventory's one
-// EXCLUDED class; everything else in it still hides (the full list and its
-// deliberate non-members are at clear_region_highlight, input_handler.h).
+// THE PARK DOES NOT HIDE THE TRIM REGION OVERLAY, and since 2026-08-19 it is
+// exempt BY CONSTRUCTION rather than by an exclusion written anywhere: the hide
+// belongs to two movement owners (Viewport::move_playhead_to and the marker
+// land — the rule is at clear_region_highlight, input_handler.h) and this
+// function passes through neither, writing app.playhead_cursor_sample direct.
+// The sweep's per-motion carry is direct for the same reason. THE TRIM'S OWN
+// SURFACES ARE EXEMPT because touching the thing the overlay depicts cannot be
+// a reason to stop depicting it — the region IS the trim, so hiding here would
+// hide the overlay the instant the user dragged its own bound.
 // (Bare `x` was this list's PRECEDENT and is no longer a member: setting the
 // region IS setting the trim, so the SET act it named no longer exists and the
 // key was repointed onto the trim region overlay's show/hide toggle, which
@@ -238,15 +239,15 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     // (viewport.h).
     viewport.invalidate_clock_area();
     // AND THE TRIM REGION OVERLAY STAYS SHOWN. This call hid it from 2026-08-05
-    // (when the trim writes joined clear_region_highlight's inventory as the
-    // ordinary playhead-moving-command clear) until 2026-08-18, when the region
-    // BECAME the trim: hiding here would now hide the overlay the instant the
-    // user dragged its own bound, so the trim writes are that inventory's one
-    // excluded class. Nothing replaces the call — the overlay derives from the
-    // pair this function has just read, so the repaint the caller already owes
-    // shows the new span with no state to update. The argument is in this
-    // file's header block; the inventory itself is at clear_region_highlight
-    // (input_handler.h).
+    // until 2026-08-18, when the region BECAME the trim: hiding here would hide
+    // the overlay the instant the user dragged its own bound. THE DIRECT CURSOR
+    // WRITE ABOVE IS WHAT MAKES THAT STRUCTURAL since 2026-08-19 — the hide
+    // lives at two movement owners and this function reaches neither, so the
+    // exemption is the shape of the code rather than a rule written down twice
+    // (the rule at clear_region_highlight, input_handler.h). Nothing replaces
+    // the call — the overlay derives from the pair this function has just read,
+    // so the repaint the caller already owes shows the new span with no state to
+    // update.
 }
 
 // The shared trim commit tail — contract, the four callers and the one

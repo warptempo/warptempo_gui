@@ -1224,7 +1224,10 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     // writes.
     clear_history_mode_focus(app.history_mode);
     app.history_mode.focus = there;
-    clear_region_highlight(app, viewport);
+    // THE LAND HIDES THE TRIM REGION OVERLAY (2026-08-19 — it is one of the
+    // rule's two movement owners; the rule is at clear_region_highlight,
+    // input_handler.h), so the walk's own hide is deleted with the inventory
+    // it belonged to. Every branch that reaches here lands, so nothing is lost.
     land_playhead_on_source_frame(
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
@@ -1439,9 +1442,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // that commits a new cursor position stops a live audition and HIDES the
     // trim region overlay (the keyboard stop rule at stop_playback_if_playing,
     // whose cursor-moving navigation class names Home/End and the Tab family;
-    // the hide-site set at clear_region_highlight). That is where they part from
-    // the mode's diff-flag CLICK, which deliberately touches neither — a pointer
-    // route with its own recorded regime.
+    // the hide follows from the movement owners these arms write through, the
+    // rule at clear_region_highlight). That is where they part from the mode's
+    // diff-flag CLICK on the STOP alone — the click's own land hides just as
+    // these do, and it is the stop it deliberately omits.
     // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
     // (recorded at the arms 2026-08-06, where the docs had carried it alone):
     // the entry owner stops any session running before `h` and nothing in the
@@ -1526,7 +1530,6 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         if (clear_history_mode_focus(app.history_mode)) {
             viewport.invalidate_all();
         }
-        clear_region_highlight(app, viewport);
         // The ACTIVE domain's own ends: live_total_frames is what the displayed
         // timeline runs to in either view, and it is the same total the
         // full-window trim range resolves to. THE ARITHMETIC LIVES AT THE
@@ -5227,11 +5230,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        // Navigation playhead step: HIDE the trim region overlay (the playhead
-        // is leaving it, and hiding discards nothing). This dispatch site fires
-        // once per press; move_playhead_pixels is its only caller, so the hide
-        // cannot leak to a non-navigation path.
-        clear_region_highlight(app, viewport);
+        // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
+        // reached through move_playhead_pixels -> move_playhead_to (the rule at
+        // clear_region_highlight, input_handler.h). The playhead is leaving the
+        // overlay, and hiding discards nothing.
         viewport.move_playhead_pixels(-1);
         break;
     case GuiKeys::Right:
@@ -5240,7 +5242,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        clear_region_highlight(app, viewport);
         viewport.move_playhead_pixels(+1);
         break;
     case GuiKeys::F:
@@ -5276,10 +5277,13 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // begin, pre-clamped), which the three arms that jump share so the
         // bound is spelled once. The clamp is idempotent on what
         // move_playhead_to would clamp anyway, so nothing about this jump
-        // changed. THE THREE STEPS ABOVE RUN ON A NO-OP JUMP TOO and are
+        // changed. THE THREE STEPS RUN ON A NO-OP JUMP TOO and are
         // deliberately not gated on it: the audition stop, the lane exit's
         // selection clear and the overlay hide are unconditional, so this
         // key ACTS even when the cursor already rests on the landing frame.
+        // The hide is unconditional AT ITS OWNER (move_playhead_to hides before
+        // it writes, whatever the write turns out to be), so moving it there in
+        // 2026-08-19 changed nothing this paragraph promises.
         // THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY THERE (architect
         // 2026-08-15, taking back the face that did): a grey would promise less
         // than this arm delivers, and gating the three steps to make the grey
@@ -5290,10 +5294,11 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        // Navigation jump to the trim-begin bound: HIDE the trim region
-        // overlay (the playhead is jumping away from it; the trim it derives
-        // from is untouched).
-        clear_region_highlight(app, viewport);
+        // Navigation jump to the trim-begin bound: the overlay hide is the
+        // MOVEMENT OWNER's, inside move_playhead_to (the rule at
+        // clear_region_highlight, input_handler.h) — unconditional there, which
+        // is what keeps the no-op jump's three acts three, as this arm's own
+        // paragraph above promises. The trim it derives from is untouched.
         viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
                                                               false));
         break;
@@ -5303,7 +5308,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        clear_region_highlight(app, viewport);
         // The owner's `forward` arm, which is trim_range's END minus one — the
         // last frame INSIDE the window (see the Home arm above).
         viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,

@@ -269,13 +269,13 @@ struct UndoEntry {
 // TRIM through the one raise owner show_trim_region_overlay (input_handler.h,
 // which carries its whole call-site inventory, the no-framing rule and the `h`
 // carve-out): the SWEEP'S arm and the 9 px band's three press claims.
-// HIDDEN by that same toggle and by clear_region_highlight,
-// whose whole call-site inventory is at its declaration (input_handler.h):
-// turning to unrelated work hides the overlay, and HIDING DISCARDS NOTHING —
-// the trim persists and re-showing restores an identical overlay, which is what
-// makes the hide safe by construction. TRIM WRITES ARE THE ONE CLASS EXCLUDED
-// from that inventory, or the overlay would hide itself the instant the user
-// dragged its own bound.
+// HIDDEN by that same toggle and by clear_region_highlight, whose declaration
+// (input_handler.h) states THE RULE: the overlay hides when the playhead's
+// position in the music changes and when a marker is touched, and at no other
+// time. HIDING DISCARDS NOTHING — the trim persists and re-showing restores an
+// identical overlay, which is what makes the rule safe to state as a rule. The
+// trim's own gestures never hide, and need no exclusion to say so: they write
+// the cursor direct and so reach neither movement owner.
 //
 // ONLY THE WAVEFORM ANSWERS, by the architect's ruling: the RULER and the
 // MARKER LANE stay plain navigation surface throughout, which is what keeps a
@@ -3570,16 +3570,14 @@ struct AppState {
 
     // THE TRIM REGION OVERLAY'S VISIBILITY — the whole of the region state
     // since 2026-08-18, the span itself being DERIVED from the trim every frame
-    // (the model is at RegionState). BARE ESC HIDES IT — the one route that
-    // hides and does nothing else, and one of the six bare-Esc bindings — along
-    // with every playhead-moving and selection-changing route, all of them
-    // through clear_region_highlight (input_handler.h), whose declaration owns
-    // the authoritative hide-site inventory and the equally authoritative list
-    // of what deliberately does NOT hide (the trim writes above all: they are
-    // this surface's own gestures). The three hides that stay IN PLACE rather
-    // than going through it are file load, the A/B tab switch and the S/T
-    // audio-view switch, each pairing the reset with a domain flip or a full
-    // repaint rather than that exact damage shape.
+    // (the model is at RegionState). IT HIDES WHEN THE PLAYHEAD'S POSITION IN
+    // THE MUSIC CHANGES AND WHEN A MARKER IS TOUCHED, and at no other time — the
+    // rule, its two movement owners, its three call sites and everything it
+    // deliberately leaves standing are stated once at clear_region_highlight
+    // (input_handler.h). BARE ESC is the one route that hides and does nothing
+    // else, and one of the six bare-Esc bindings. The one hide that stays IN
+    // PLACE rather than going through the helper is the FILE LOAD's, which
+    // pairs it with a whole new piece.
     RegionState region;
 
     // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button

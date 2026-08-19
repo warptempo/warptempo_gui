@@ -997,14 +997,16 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // commits: the two position nudges, and both arms of the Up/Down cent step in
 // their target-view re-warp tails).
 //
-// THE LAND IS A PURE PLAYHEAD WRITE: it has no region side effect whatsoever.
-// The REGION IS THE TRIM (its contract is at RegionState, app_state.h) and
-// every command that moves the playhead or replaces the selection HIDES the
-// overlay at its OWN site, unconditionally — never gated on whether the
-// playhead actually moved. The one authoritative hide-site enumeration lives at
-// clear_region_highlight (input_handler.h); do not restate it here or anywhere
-// else. What is worth stating at the land is only this: the hide is never a land
-// side effect, and the land never decides it.
+// THE LAND HIDES THE TRIM REGION OVERLAY, and since 2026-08-19 that is the
+// land's own act rather than every caller's. The REGION IS THE TRIM (its
+// contract is at RegionState, app_state.h) and the overlay hides when the
+// playhead's position in the music changes — so the two functions that change it
+// are the two that hide, this one and Viewport::move_playhead_to. The rule, its
+// exemptions and the RESEAT entry point for the callers whose write is not a
+// movement all live at clear_region_highlight (input_handler.h); do not restate
+// them here or anywhere else. What is worth stating at the land is only this:
+// the hide sits ABOVE the write, so it is unconditional even where the seat
+// early-returns.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -1060,15 +1062,19 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //     input_handler.h). A provable NO-OP by
 //     construction (its selection predicate IS this function's equality test), and
 //     it is in the list because the adjacency is the rule, not because it moves
-//     anything;
+//     anything — WHICH IS WHY IT TAKES THE RESEAT rather than this entry point
+//     since 2026-08-19: a no-op write must not carry the land's hide;
 //   * (THE MAP CHANGERS ARE GONE FROM THIS LIST, architect 2026-07-29:
 //     the settings engine-commit and the settings-only 'S' undo/redo arm each
 //     landed here, target view only, because the rebuilt map moved the focused
 //     marker's image out from under a resting cursor — and both now CLEAR THE
 //     SELECTION at their own tails instead, so there is no lane and no focus left
 //     to re-land. The map-change re-land SHAPE survives in exactly one place, the
-//     Up/Down cent step's target-view tail, which re-lands through move_playhead_to
-//     rather than here because it wants the keep-visible scroll.)
+//     Up/Down cent step's target-view tail, which re-lands through
+//     Viewport::reseat_playhead_to rather than here — for the keep-visible
+//     scroll, and since 2026-08-19 for the second reason too: a re-land onto a
+//     marker whose IMAGE moved is a translation, not a movement, so it must not
+//     hide the overlay.)
 // The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
@@ -1085,17 +1091,51 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // land is a direct RESTING-cursor write and a live scanner is untouched by
 // cursor writes (move_playhead_to's scanner-inactive
 // convention). External linkage (declared in input_handler.h) so undo.cpp and
-// the ops/views TUs can reach it.
+// the ops/views TUs can reach it. THE `p` SWAP LEFT THIS LIST 2026-08-19 with
+// its own overlay hide: a column switch lands nothing (the swap empties the
+// selection, so there is no focus to re-express) and hides nothing.
 // THE STORE LOOKUP IS ALL THIS FUNCTION ADDS to the one below it. Resolving the
 // index to an authored frame is the marker-shaped half; the two-step placement
 // basis and the damage are the frame-shaped half, hoisted into
-// land_playhead_on_source_frame so a caller holding a frame that belongs to NO
+// seat_playhead_on_source_frame so a caller holding a frame that belongs to NO
 // store entry — the `h` history mode's diff flags, whose removed lines exist in
 // no store at all — lands through the identical expression instead of a second
-// copy of it. Everything the list above says about WHEN a land happens and what
+// copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
+// The shared write, defined below the two entry points that share it.
+static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
+                                          Viewport& viewport, int64_t src_frame);
+
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
+    // THE HIDE IS THE LAND'S, not the caller's, since 2026-08-19 — this is the
+    // second of the rule's two movement owners (the rule and its exemptions are
+    // at clear_region_highlight, input_handler.h). It sits ABOVE the store
+    // lookup and above the frame half's idempotence return, so a land that
+    // seats nothing still hides: an unconditional hide is the marker click's own
+    // recorded shape and the Home/End skip buttons' too.
+    clear_region_highlight(app, viewport);
+    reseat_playhead_on_marker(app, audio, viewport, hit);
+}
+
+// THE MARKER RESEAT — the same store lookup and the same write with NO hide, for
+// the callers whose land is not a movement (2026-08-19). RE-DERIVED BY GREP —
+// two:
+//   * THE S/T AUDIO-VIEW FLIP's re-express of a surviving focus
+//     (handle_active_audio_view_toggle, input_handler.cpp). A TRANSLATION IS NOT
+//     A MOVEMENT: the flip maps the same musical instant into the other domain
+//     and this call is the accurate spelling of that map for a focused marker,
+//     the generic double round trip being the inaccurate one. The user has not
+//     turned to other work; the work has changed domain.
+//   * THE COINCIDENCE AUTO-SELECT (auto_select_marker_at_playhead, below), whose
+//     land is a PROVABLE NO-OP — its selection predicate IS the frame half's
+//     equality test — so there is no movement to answer for. Its callers are the
+//     tab and column entries, which are restores and switches and hide nothing
+//     of their own.
+// Named rather than spelled as a flag on the land: a parameter meaning "skip the
+// rule this time" is the hand-listed inventory in disguise.
+void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                               Viewport& viewport, int hit) {
     int64_t src_frame = 0;
     bool valid = true;
     if (app.active_markers_view == 'P') {
@@ -1107,20 +1147,31 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
         if (hit < 0 || hit >= static_cast<int>(mv.size())) valid = false;
         else src_frame = mv[hit].time_frame;
     }
-    if (valid) land_playhead_on_source_frame(app, audio, viewport, src_frame);
+    if (valid) seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
-// The frame-shaped half, above. Its own two decisions:
+// The frame-shaped half, above — the MOVEMENT owner's frame form: the hide, then
+// the seat. Every caller of this one is a command whose subject is the playhead
+// (the `h` mode's Tab cycle, its `c` and its two diff-flag click bodies), so
+// none of them wants the reseat.
 void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame) {
+    clear_region_highlight(app, viewport);
+    seat_playhead_on_source_frame(app, audio, viewport, src_frame);
+}
+
+// The write itself, shared by the two above. Its own two decisions:
+static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
+                                          Viewport& viewport,
+                                          int64_t src_frame) {
     int64_t sample = source_frame_to_active_domain(app, audio, src_frame);
     sample = clamp_playhead_to_live_domain(sample, app, audio);
     // IDEMPOTENCE ONLY, carrying no semantics: a land onto the sample the
     // playhead already holds writes the same value and moves no pixel, so
     // there is nothing to damage. It decides nothing about the region — the
-    // caller's own clear (when the caller is a point command) runs either
-    // way, before or after this call. Compared AFTER the clamp, because the
-    // clamp is what decides where the land actually seats.
+    // hide is the LAND's, one level up, and runs above this return either way.
+    // Compared AFTER the clamp, because the clamp is what decides where the land
+    // actually seats.
     if (sample == app.playhead_cursor_sample) return;
     app.playhead_cursor_sample = sample;
     // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
@@ -1165,12 +1216,15 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // It stays because the marker lane owns the playhead — a route that hands the lane
 // a focus pays the land, and this route paying it in the degenerate case is what
 // keeps the rule exceptionless.
-// NO REGION WORK: every caller has already hidden the trim region overlay
-// before reaching here, which is the whole of the argument. (The "a region
-// rests only beside an EMPTY selection anyway" belt is RETIRED, 2026-08-18: the
-// overlay's visibility is bare `x`'s alone and that key writes no selection, so
-// a shown overlay may rest beside any selection. It was never load-bearing
-// here.)
+// NO REGION WORK, AND THAT IS NOW A RULING RATHER THAN AN OBSERVATION
+// (2026-08-19): the callers are ENTRIES — the A/B tab switch, the `p` column
+// swap, the loads — and an entry is a restore or a switch, neither of which
+// moves the playhead in the music. So this route reseats rather than lands, and
+// the overlay it may find standing is the entering tab's own trim, which is
+// exactly what the reader wants to keep seeing. (The "a region rests only beside
+// an EMPTY selection anyway" belt is RETIRED, 2026-08-18: the overlay's
+// visibility is bare `x`'s alone and that key writes no selection, so a shown
+// overlay may rest beside any selection. It was never load-bearing here.)
 // Read-only allowed (selection and playhead are navigation). Bounds-safe by
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
@@ -1189,7 +1243,15 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
         : scan(app.warpmarkers.markers());
     if (hit < 0) return;
     selection.set_single_selection(hit);
-    land_playhead_on_marker(app, audio, viewport, hit);
+    // THROUGH THE RESEAT, NOT THE LAND (2026-08-19): the land HIDES the trim
+    // region overlay and this route must not, its callers being the tab and
+    // column ENTRIES — restores and switches, not movements. The exemption is
+    // free of judgement here: this land is a PROVABLE NO-OP (the predicate that
+    // selected the marker IS the write's own equality test), so there is no
+    // movement for the rule to answer. The rule and the reseat's two callers
+    // are at clear_region_highlight and reseat_playhead_on_marker,
+    // input_handler.h.
+    reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
 // One scrub ACT: STOP, THEN START ON THE NEXT CLICK (architect 2026-07-27,
@@ -3109,14 +3171,17 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         selection.set_single_selection(hit);
         land_playhead_on_marker(app, audio, viewport, hit);
     }
-    // THE CLICK OWNS ITS CLEAR (architect 2026-07-29): a marker click is a
-    // POINT command — it says "the playhead is HERE, at this point" — so the
-    // trim region overlay is HIDDEN here, unconditionally, on all three arms and
-    // whether or not the land moved anything (the hide-site list is at
-    // clear_region_highlight, input_handler.h). A re-click of the
-    // already-selected marker therefore hides a shown overlay too; that is
-    // the ruling and not an accident, and it discards nothing — the trim
-    // stands and a later `x` re-shows the same overlay.
+    // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND HALF rather than a
+    // leftover call site (architect 2026-08-19: the overlay hides when the
+    // playhead's position in the music changes AND WHEN A MARKER IS TOUCHED —
+    // the rule is at clear_region_highlight, input_handler.h). The land the arms
+    // above run hides already, but it cannot cover this on its own: a
+    // ctrl-toggle that empties the selection lands NOTHING and must still hide,
+    // because touching a flag is an act on the timeline whether or not the
+    // cursor was already sitting on it. Unconditional, on all three arms. A
+    // re-click of the already-selected marker therefore hides a shown overlay
+    // too; that is the ruling and not an accident, and it discards nothing —
+    // the trim stands and a later `x` re-shows the same overlay.
     clear_region_highlight(app, viewport);
     // THE TWO MODIFIED CLICKS END HERE: neither has a double-click meaning,
     // neither has a drag to become, and their click has just committed whole —
@@ -4651,16 +4716,23 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // through handle_history_mode_press — so the raise is written once.
     //
     // IT HID HERE UNTIL 2026-08-19, on the letter of the point-command rule: a
-    // press deselects and seats the playhead, and point commands hide (the
-    // inventory at clear_region_highlight, input_handler.h). That defeated the
-    // rule's purpose once the region became the trim — the sweep hid the big
-    // surface at touch-down and then wrote the trim underneath it, leaving the
-    // 9 px bar as the only display of what the stroke was doing. THE SURFACE
-    // YOU ARE DRAWING ON SHOULD BE VISIBLE WHILE YOU DRAW IT: the overlay
-    // derives from the trim on every frame and the sweep writes the trim per
-    // motion event, so a shown overlay tracks the stroke live. The arm is off
-    // that inventory entirely now; the sweep's own trim writes were already its
-    // one excluded class.
+    // press deselects and seats the playhead, and point commands hide (the rule
+    // at clear_region_highlight, input_handler.h). That defeated the rule's
+    // purpose once the region became the trim — the sweep hid the big surface at
+    // touch-down and then wrote the trim underneath it, leaving the 9 px bar as
+    // the only display of what the stroke was doing. THE SURFACE YOU ARE DRAWING
+    // ON SHOULD BE VISIBLE WHILE YOU DRAW IT: the overlay derives from the trim
+    // on every frame and the sweep writes the trim per motion event, so a shown
+    // overlay tracks the stroke live.
+    //
+    // THE ORDER IS THE WHOLE MECHANISM, and it is why this gesture needs no
+    // suppression anywhere: the live former's press SEATS the playhead first
+    // (place_playhead_and_arm_region -> place_playhead_at_click_column ->
+    // move_playhead_to), which is a real movement and hides through the movement
+    // owner; then this arm raises the overlay again. "SHOWS INSTEAD" is
+    // literally what the code does. The sweep's per-motion trim writes and its
+    // release park never pass an owner at all — they write the cursor direct —
+    // so nothing later in the stroke can put the overlay back down.
     //
     // The raise goes through the ONE show owner, which carries the no-framing
     // rule, the `h` carve-out and the whole call-site inventory
@@ -4758,14 +4830,17 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 // capture, and a session that ended naturally under the hold reads honestly
 // (the drag-modal keyboard gate swallows every chord while the pending
 // stands, so no command can change the state in between).
-//   LIVE arm: deselect-all, HIDE the trim region overlay (a placement is a
-//   point command — the hide-site rule at clear_region_highlight), then the
-//   placement body — playhead to the column, live-session reseek, follow
-//   override (place_playhead_at_click_column). A GUTTER column deselects and
-//   hides but seats nothing, the placement body's own shape.
+//   LIVE arm: deselect-all, then the placement body — playhead to the column,
+//   live-session reseek, follow override (place_playhead_at_click_column).
+//   THE TRIM REGION OVERLAY HIDES INSIDE THAT BODY since 2026-08-19, at the
+//   movement owner move_playhead_to (the rule at clear_region_highlight): a
+//   placement moves the playhead's position in the music, which is the rule
+//   itself. A GUTTER column deselects and seats nothing, so it hides nothing
+//   either — the placement body's own shape carried through honestly.
 //   `h`-VIEW arm: the mode's land — clear the mode focus + selection (the
 //   pair clearer, the deselect's mode analog; store selection untouched),
-//   hide the overlay, then the same placement body. The empty-lane and ruler
+//   then the same placement body, whose seat hides the overlay the same way.
+//   The empty-lane and ruler
 //   stretches take this too since they are the extension: a click anywhere on
 //   the surface moves the playhead, in the view as outside it.
 //   SCRUB arm (2026-08-13, the waveform's LOWER half): ONE scrub act at the
@@ -4792,13 +4867,11 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
             // mode's placement-press shape.
             viewport.invalidate_all();
         }
-        clear_region_highlight(app, viewport);
         place_playhead_at_click_column(press_x - area.x, playback.is_playing(),
                                        app.playhead_cursor_sample);
         return;
     }
     selection.clear_selection();
-    clear_region_highlight(app, viewport);
     place_playhead_at_click_column(press_x - area.x, playback.is_playing(),
                                    app.playhead_cursor_sample);
 }
@@ -4850,6 +4923,12 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     // pan-zone query). The
     // clear runs FIRST, before the shared body's gutter early-return,
     // so an inert-gutter click (no column to seat a playhead) still deselects.
+    // THE SEAT BELOW HIDES THE OVERLAY and the arm at the tail SHOWS IT AGAIN,
+    // in that order and deliberately: the press really does move the playhead,
+    // so the movement owner is right to hide, and the raise is the trim
+    // surface's own answer stated positively rather than as a suppression
+    // (arm_region_drag_at, above). A gutter press seats nothing, hides nothing
+    // and arms nothing.
     selection.clear_selection();
     const int64_t sample = place_playhead_at_click_column(
         click_rel_x, was_playing, playhead_at_entry);
@@ -4877,7 +4956,7 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // press whose placement was
     // undone in between. The standing _at_playhead drops then author at that
     // playhead, taking the full create path (walls, undo, selection, and the
-    // point command's own region collapse at the drop chokepoint) — the
+    // overlay hide the drop's own playhead seat carries) — the
     // phase-reset lead-in additionally offset N/2 before the playhead and landing
     // the playhead per that drop's rule.
     const GuiRect area = waveform_area(app);
@@ -6312,8 +6391,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     the live flag clicks').
 //     It touches NOTHING else: no store selection,
 //     no live focus, no auto-select, no playback stop. It DOES take a resting
-//     region with it (2026-08-06): a click that lands the playhead is a POINT
-//     command, the live hide-site rule's own shape.
+//     overlay with it (2026-08-06), through its LAND: a click that lands the
+//     playhead moves the playhead's position in the music, which is the rule.
 //   * the MARKER LANE's two MODIFIED clicks, on its FLAG BOXES: SHIFT takes
 //     the contiguous range from the focus, CTRL toggles one flag's membership,
 //     and both then focus the clicked flag and land the playhead on it (the live
@@ -6560,23 +6639,21 @@ bool GuiInputHandler::handle_history_mode_press(
 // selection with what it hit, so the focus alone is then a selection of one, and
 // the revert act's subject falls back to that focus with nothing to remember.
 //
-// AND IT HIDES THE TRIM REGION OVERLAY, UNCONDITIONALLY (architect 2026-08-06,
-// from his live pass: sweep a span in the view, then click a diff flag, and the
-// span used to stay). This click lands the playhead, so the live hide-site rule
-// reaches it — a flag click is a POINT command and takes the overlay with it.
-// UNCONDITIONAL is the live marker click's own shape, not a looser reading of
-// it: all three live marker clicks hide whatever the land did or did not move,
-// so the EMPTY-LANE click (`hit` < 0, which lands nothing) hides too, exactly as
-// the live empty-lane press does. It discards nothing either way, the trim
-// standing untouched behind the hidden overlay.
+// AND IT HIDES THE TRIM REGION OVERLAY (architect 2026-08-06, from his live
+// pass: sweep a span in the view, then click a diff flag, and the span used to
+// stay) — THROUGH ITS LAND since 2026-08-19, the land being one of the rule's
+// two movement owners (clear_region_highlight, input_handler.h). Unconditional
+// on the arm that matters, the owner hiding above its own idempotence return, so
+// a re-click of the focused flag still hides. The out-of-range arm (`hit` < 0,
+// tolerance the router cannot produce) lands nothing and so hides nothing, which
+// is the rule read honestly rather than a hole: the empty-lane click the router
+// DOES produce goes to the navigation surface's own act, which places the
+// playhead and hides there.
 // The rest of the minimalism STANDS: no store selection, no live focus, no
 // auto-select, no playback stop.
 void GuiInputHandler::focus_history_diff_flag(int hit) {
     const int was = app.history_mode.focus;
     const bool had_selection = !app.history_mode.selection.empty();
-    // clear_region_highlight owns its own damage and is a no-op with the
-    // overlay already hidden, so this needs no gate of its own.
-    clear_region_highlight(app, viewport);
     // THROUGH THE ONE PAIR CLEARER (2026-08-06, closing the one route that
     // cleared the pair inline): the EMPTY-LANE answer below is a clear of both
     // fields, so it goes through the owner like every other clearer, and the
@@ -6634,12 +6711,10 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // removal did not take back.
 //
 // BOTH ALSO HIDE THE TRIM REGION OVERLAY (architect 2026-08-06), the plain
-// click's own rule at the same strength: a click that lands the playhead takes
-// the overlay with it — discarding nothing, the trim standing behind it — and
-// all three live marker clicks, the single-select and this modified pair, hide
-// unconditionally. PAST THE RANGE GUARD BELOW, so a call that changes nothing
-// hides nothing, which is where the live toggle's own hide sits too (inside its
-// hit gate).
+// click's own rule at the same strength, and since 2026-08-19 through the LAND
+// rather than at a site of their own: a click that lands the playhead takes the
+// overlay with it — discarding nothing, the trim standing behind it. The land is
+// past the range guard below, so a call that changes nothing hides nothing.
 //
 // DAMAGE IS THE FOCUS CLICK'S: full-window, unconditional here, because either
 // arm changes at least one flag's face (ctrl always flips the clicked one's
@@ -6648,7 +6723,6 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (hit < 0 || hit >= n) return;
-    clear_region_highlight(app, viewport);
     std::set<int>& sel = app.history_mode.selection;
     if (extend) {
         const int anchor = (app.history_mode.focus >= 0 &&

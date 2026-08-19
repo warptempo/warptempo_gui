@@ -1,7 +1,7 @@
 #include "undo.h"
 
-#include "input_handler.h"        // land_playhead_on_marker,
-                                  // clear_region_highlight,
+#include "input_handler.h"        // land_playhead_on_marker (which owns the
+                                  // restore's overlay hide),
                                   // clear_touch_zoom_seat — the W/P write's own,
                                   // bring_span_into_view — the restore visual
                                   // tail's group framing (the shared owner
@@ -619,8 +619,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
     // a SINGLETON restore LANDS the playhead on its touched marker (which is its
-    // focus; the land is a PURE playhead write, the tail's own hide below
-    // having already taken the overlay) and its flag BRIGHTENS from the
+    // focus; the land is the movement owner, so it takes the trim region overlay
+    // with it) and its flag BRIGHTENS from the
     // restored selection (no stamp); a GROUP
     // restore re-selects the touched set (done above) and LANDS the playhead on
     // its FOCUS — the EARLIEST touched member, by the focus rule above — the
@@ -643,32 +643,29 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
     //
-    // THE TAIL OPENS WITH A WHOLESALE OVERLAY HIDE (architect 2026-07-29, a
-    // CLEAR until 2026-08-18 and a hide since): an undo is a turn to other work
-    // and takes the overlay with it, like every other membership-wholesale
-    // route. It discards NOTHING now — the overlay is DERIVED from the trim
-    // (RegionState, app_state.h), which the restore does not touch at all, trim
-    // being outside the undo stacks by ruling — where the original argument was
-    // about a stale SPAN: a restore rewrites the world a span was measured
-    // against, and a stale one would have aimed the old `x` at a window the
-    // user never drew. EVERY arm hides, the group arm's extent write
-    // having retired with the SPAN FORM (architect 2026-07-30).
-    // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
-    // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
-    // and rebuilds the target map underneath a shown overlay, and a restore is
-    // exactly the turn-to-other-work every member of the hide inventory answers
-    // to — so it hides too. (The DOMAIN argument that stood here retired with
-    // the stored span on 2026-08-18: the overlay derives from the trim every
-    // frame, so an A-domain span can no longer be left resting under scale B.)
-    // The REST of the 'S' gate stands
-    // exactly: a settings restore still must not select and must not SHOW an
-    // overlay, which is why only this one call sits above the gate and the whole
-    // land/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
+    // THE OVERLAY HIDE IS NO LONGER THE TAIL'S OWN. It discards NOTHING either
+    // way — the overlay is DERIVED from the trim (RegionState, app_state.h),
+    // which the restore does not touch at all, trim being outside the undo
+    // stacks by ruling.
+    //
+    // (THE RESTORE'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
+    // inventory it belonged to.) A MARKER restore still hides, and does it where
+    // the rule says: both marker arms LAND the playhead on the restored focus
+    // below, and the land is one of the rule's two movement owners
+    // (clear_region_highlight, input_handler.h). A SETTINGS-ONLY ('S') restore
+    // lands nothing and hides nothing now — it moves no playhead and touches no
+    // marker, and its old argument (the rebuilt map under a shown overlay) died
+    // on 2026-08-18 when the region became the trim: the span is DERIVED from
+    // source-domain trim bounds every frame, so a rebuilt map re-derives the
+    // overlay rather than stranding it.
+    // The 'S' gate stands
+    // exactly as it did: a settings restore still must not select and must not
+    // SHOW an overlay, and the whole land/framing block stays inside it. The
+    // no-LAND half is EXCEPTIONLESS again:
     // the target-view re-land it briefly allowed — onto a selection
     // surviving the restore — died with the selection clear directly below, which
     // leaves no focus to land on.
-    clear_region_highlight(app, viewport);
-    // THE 'S' ARM CLEARS THE SELECTION TOO (architect 2026-07-29): a
+    // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a
     // settings-only restore rewrites engine_settings and rebuilds the map under
     // every marker INDEX and IMAGE, so no marker keeps the identity a focus
     // named. It is the SYMMETRIC twin of the engine-key
@@ -704,10 +701,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             }
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move — and NO region side effect (the land is a pure playhead
-                // write; the point commands that want the overlay hidden call
-                // clear_region_highlight themselves, and this restore called it
-                // once at the top of the tail for every arm). Playback is already
+                // move — and THE OVERLAY HIDE RIDES IT since 2026-08-19, the land
+                // being one of the rule's two movement owners (the rule at
+                // clear_region_highlight, input_handler.h), which is what
+                // replaced this tail's own call. Playback is already
                 // stopped above, so land's scanner-inactive premise holds.
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
                 // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no

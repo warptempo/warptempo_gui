@@ -3,8 +3,8 @@
 #include "audio.h"
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
-#include "input_handler.h"      // clear_region_highlight (the drop's collapse),
-                                // land_playhead_on_marker (the Ctrl+N collapse)
+#include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse,
+                                // which owns the overlay hide with it)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -91,18 +91,17 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.move_playhead_to(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
     // earlier keep-the-highlight behavior): it seats the playhead on the marker
-    // it creates and single-selects it, so the trim region overlay is HIDDEN
-    // here — unconditionally, exactly as the plain marker click's
-    // collapse, and discarding nothing (the trim stands behind it). THE WARP CHOKEPOINT: both entry routes (bare `s` and the
-    // empty-lane double-click) reach the warp column only through
-    // drop_copy_previous_at_playhead, whose only act is this call, so one clear
-    // here covers both. PAST EVERY REFUSAL by construction: the callers' gates
-    // (read-only, active_column_authoring_allowed, the double-click's own
-    // in-area test) return before calling at all, and this function's own two
-    // refusals — no sample rate, and a drop_frame past the EOF wall — return
-    // above, before the insert. So a refused drop cannot reach this line and no
-    // refusal hides the overlay. clear_region_highlight owns its damage.
-    clear_region_highlight(app, viewport);
+    // it creates and single-selects it, so the trim region overlay goes with it.
+    // SINCE 2026-08-19 THE SEAT ABOVE OWNS THAT — move_playhead_to is one of the
+    // rule's two movement owners (the rule at clear_region_highlight,
+    // input_handler.h) — so this site's own call is deleted with the inventory
+    // it belonged to, and the drop's answer is unchanged. PAST EVERY REFUSAL by
+    // construction, which still matters because the seat is what hides: the
+    // callers' gates (read-only, active_column_authoring_allowed, the
+    // double-click's own in-area test) return before calling at all, and this
+    // function's own two refusals — no sample rate, and a drop_frame past the
+    // EOF wall — return above, before the insert. So a refused drop reaches
+    // neither the insert nor the seat, and hides nothing.
 
     // No synchronous re-warp: warp markers author in their source home view
     // only (the home-view binding, architect 2026-07-22), where the source
@@ -266,11 +265,16 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // as the whole selection, so with 3,4,5 selected, the focus at 5 and the
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
-    // the focus — a PURE playhead write (land_playhead_on_marker), this gesture
-    // adding no overlay hide of its own, and needing none: Ctrl+N is a value
-    // edit over a standing selection, not a turn to other work, so it takes the
-    // same non-member answer the other value edits take (the inventory and its
-    // deliberate non-members are at clear_region_highlight, input_handler.h).
+    // the focus — through land_playhead_on_marker, WHICH HIDES THE TRIM REGION
+    // OVERLAY since 2026-08-19 (the rule at clear_region_highlight,
+    // input_handler.h). That is a membership CHANGE for this gesture and a
+    // deliberate one: the rule reads "the playhead's position in the music
+    // changes, or a marker is touched", and a Ctrl+N collapse does both — it
+    // moves the cursor onto the focus from wherever it stood and it freezes
+    // inheritance on markers. Its old non-member argument ("a value edit is not
+    // a turn to other work") was a call-site judgement, and call-site judgements
+    // are what the rule replaced. It discards nothing, the trim standing behind
+    // the hidden overlay.
     // (The belt that stood here — "a region rests only beside an EMPTY
     // selection, and Ctrl+N needs a focus" — is retired, 2026-08-18: bare `x`
     // shows the overlay and writes no selection, so a shown overlay may rest
@@ -590,7 +594,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         const auto& mv_post = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < static_cast<int>(mv_post.size())) {
-            viewport.move_playhead_to(source_frame_to_active_domain(
+            // THROUGH THE RESEAT, NOT THE MOVER (2026-08-19): move_playhead_to
+            // HIDES the trim region overlay and this write must not. A
+            // TRANSLATION IS NOT A MOVEMENT — the focus did not change and the
+            // playhead did not leave it; the marker's IMAGE moved under a
+            // resting cursor and the cursor follows it, which is the `t` flip's
+            // act in another spelling. reseat_playhead_to is the identical write
+            // without the hide, and it keeps the keep-visible scroll this tail
+            // wants (the rule at clear_region_highlight, input_handler.h).
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
                 app, audio, mv_post[f].time_frame));
         }
     }
@@ -737,7 +749,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         viewport.kick_waveform_sync();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < n) {
-            viewport.move_playhead_to(source_frame_to_active_domain(
+            // THROUGH THE RESEAT, the singleton arm's twin and for its reason:
+            // a map-change re-land is a translation, not a movement, so it must
+            // leave the trim region overlay standing (reseat_playhead_to,
+            // viewport.h; the rule at clear_region_highlight, input_handler.h).
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
         // No selection-driven stem work here either: stems are class-colored
@@ -878,7 +894,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
     // the nudged marker's always-on stem), playhead follow (committed_f is
-    // reorder-independent), the point command's region collapse, and the
+    // reorder-independent, and hiding the overlay through the movement owner
+    // it writes with), and the
     // view-independent target trigger (no synchronous re-warp — source-view warp
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,

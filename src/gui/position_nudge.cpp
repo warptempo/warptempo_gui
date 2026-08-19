@@ -1,9 +1,8 @@
 #include "position_nudge.h"
 
 #include "audio.h"
-#include "input_handler.h"      // clear_region_highlight (the point-command
-                                // collapse), land_playhead_on_marker (the
-                                // collapse's land)
+#include "input_handler.h"      // land_playhead_on_marker (the collapse's
+                                // land, which owns the overlay hide)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // painted_column_of_source_frame,
                                   // authored_frame_at_column,
@@ -120,10 +119,13 @@ void finish_position_nudge(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
     // (f) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,
-    // and discarding nothing — the trim stands behind it. Groups are never
+    // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF
+    // ITS OWN since 2026-08-19: the follow at (e) goes through move_playhead_to
+    // and the prologue's collapse through land_playhead_on_marker, and both are
+    // movement owners that hide (the rule at clear_region_highlight,
+    // input_handler.h). Groups are never
     // moved (the doctrine at the declarations), so there is no extent to
     // maintain here.
-    clear_region_highlight(app, viewport);
     // (g) view-independent target preview.
     target_render.trigger();
 }

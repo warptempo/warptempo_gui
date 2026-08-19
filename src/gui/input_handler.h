@@ -147,7 +147,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // and is a HIDE since, and that is the whole of the change: the region IS the
 // trim now, so there is nothing left to discard.
 //
-// WHAT THE OVERLAY IS, so the hide list reads as one rule: THE TRIM, painted a
+// WHAT THE OVERLAY IS, so the rule below reads as one thing: THE TRIM, painted a
 // second time (architect 2026-08-18). The 9 px bar is right for a mouse and
 // unusable with a fingertip, so trim gained a large waveform surface — one
 // state, two painted surfaces, the span DERIVED from the trim every frame and
@@ -156,129 +156,92 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // playhead paints straight across it and the singleton stem is never
 // suppressed.
 //
-// HIDING IS SAFE BY CONSTRUCTION, which is what lets this list stay as broad as
-// it always was: hiding DISCARDS NOTHING, because the trim persists and
-// bare `x` re-shows an identical overlay. Clicking a marker, or otherwise
-// turning to unrelated work, hides — the DAW instinct that a selection
-// collapses the region, expressed as a hide. It NEVER touches the trim.
+// HIDING IS SAFE BY CONSTRUCTION: it DISCARDS NOTHING, because the trim persists
+// and bare `x` re-shows an identical overlay. That is what lets the rule below
+// be a rule rather than a negotiation — no site has to weigh what a hide costs.
 //
-// EVERYTHING THAT MOVES THE PLAYHEAD OR REPLACES THE SELECTION HIDES IT,
-// unconditionally — never gated on whether the playhead actually moved. CALL
-// SITES, BY CLASS (RE-DERIVED BY GREP 2026-08-19 — 24 calls in 19 functions;
-// other sites state their own class and point here):
-//   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
-//     family plus `c`, through its own clear tail), `c`'s OWN up-front clear
-//     before that jump (run_center_command, input_handler.cpp — the no-focus arm
-//     never reaches the jump's tail, so `c` owns one of its own; both of that
-//     command's recipes clear, and since 2026-08-05 bare `0` AT FULL ZOOM OUT
-//     reaches this clear by running the command), the
-//     bare Left/Right waveform-lane playhead step, HOME/END (the trim-bound
-//     jumps — they MOVE THE PLAYHEAD, and moving the playhead means the user
-//     has turned to other work, which is the whole rule; they are not trim
-//     writes and take no exemption), and the
-//     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
-//     typed navigation-jump twin, no exemptions);
-//   * THE DEFERRED CLICK ACT (run_nav_click_act, input_pointer.cpp — the
-//     plain navigation-surface press's motionless release, live and `h`-view
-//     arms alike, 2026-08-12): the placement is a point command, so the
-//     release that runs it hides the overlay with it. THE PAN NEVER HIDES —
-//     a crossed plain drag is a pure viewport move — and NEITHER DOES THE
-//     SCRUB ARM, which returns above the hide: those two are membership's
-//     only deliberate non-members on this surface. This act is also the
-//     overlay's own escape hatch: a MOTIONLESS press-release on it is not a
-//     manipulation and falls here, which is how a full-window overlay is
-//     dismissed by clicking;
-//   * THE MARKER CLICK ACT (run_marker_click_act, input_pointer.cpp), all
-//     three arms (the plain single-select and both multi-select clicks) at ONE
-//     site since 2026-08-15, UNCONDITIONALLY — the result-size split the
-//     multi-select pair carried died with the extent owner, so every marker
-//     click hides. It runs AT THE PRESS (2026-08-17), so a marker DRAG
-//     hides the overlay too — its arming press hid before the crossing;
-//   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
-//     retarget (flag_editor.cpp);
-//   * the POSITION NUDGES, both columns (finish_position_nudge,
-//     position_nudge.cpp);
-//   * the MARKER DROPS: one clear per column, at the drop chokepoints
-//     drop_marker (warp, warpmarkers_ops.cpp) and drop_phase_reset_at_position
-//     (phase reset, phaseresetmarkers_ops.cpp), which both entry routes (bare
-//     `s`, and the empty-lane double-click — at its second PRESS since
-//     2026-08-17) converge on, placed past every refusal;
-//   * the THREE MEMBERSHIP-WHOLESALE routes: the UNDO/REDO restore's visual tail
-//     (undo.cpp), the `p` W/P swap (toggle_active_markers_view, active_views.cpp)
-//     and the propagate paste's target-view tail (phase_reset_propagate.cpp).
-//     The undo tail's clear runs for
-//     EVERY entry, settings-only ones included — it is the ONE part of the tail
-//     that sits above the 'S' gate (which forbids SELECTING and LANDING) —
-//     because a settings restore rebuilds the map under the overlay exactly as a
-//     marker restore does;
-//   * the SETTINGS ENGINE-COMMIT chokepoint: the one committed
-//     tail every canonical engine key shares (GuiSettingsEditor::commit, past
-//     the unknown-key / invalid-value / collision / unchanged returns), because
-//     the scale among those keys is a warp-map input and the commit rebuilds the
-//     map under the overlay. That tail CLEARS THE SELECTION beside the hide. The
-//     settings editor's TRIM keys never
-//     reach it — they return through commit_gui_setting, whose active-tab arms
-//     are TRIM WRITES and therefore non-members (below);
-//   * THE `h` HISTORY MODE's OWN CURSOR-MOVING ROUTES: the three keyboard arms —
-//     the diff-flag Tab cycle, the absolute Home/End and `c`
-//     (input_key_dispatch.cpp) — and THE MODE'S FLAG CLICKS, BOTH BODIES: the
-//     plain focus click on the flag box (focus_history_diff_flag) and the lane's
-//     shift/ctrl selection pair (select_history_diff_flags_modified), BOTH RUN
-//     AT THE PRESS (2026-08-17, with the live marker clicks: the mode has no
-//     drag for a flag press to become). All of them are the live arms'
-//     regime read against the mode's data;
-//   * BARE ESC, the one route that hides and NOTHING ELSE (architect
-//     2026-07-30, live-test refinement): no playhead move, no selection change,
-//     no trim write. It is ranked under the editors and prompts and over the
-//     render cancel, and a DRAG IN FLIGHT never reaches it — the drag-modal gate
-//     swallows the key first, so Esc hides a shown overlay but cancels no
-//     gesture. The full Esc enumeration lives at its dispatch point in on_key
-//     (input_handler.cpp).
-// DELIBERATELY NOT HIDDEN, the whole list:
-//   * THE SWEEP'S PRESS — WHICH SHOWS INSTEAD (architect 2026-08-19). It was a
-//     member until then, on the letter of the point-command rule and against
-//     its purpose: the press hid the big surface at touch-down and the sweep
-//     then wrote the trim underneath it. arm_region_drag_at (input_pointer.cpp)
-//     raises the bit at every entry but the `h` view's, which writes no trim to
-//     derive an overlay from; the sweep's own trim writes were already excluded
-//     below, so the whole gesture is off this inventory now;
-//   * EVERY TRIM WRITE — THE ONE MEMBERSHIP CHANGE OF 2026-08-18, and the only
-//     one the model needed. The trim writes joined this inventory on 2026-08-05
-//     as one class, through the shared park owner
-//     (park_playhead_at_trim_start, input_trim.cpp), back when a region was
-//     free scratch a playhead-moving command was entitled to dissolve. THE
-//     REGION IS THE TRIM NOW, so hiding there would hide the overlay the
-//     instant the user dragged its own bound. The class is the same one it
-//     always was — the ctrl / ctrl+shift bound-set clicks, the endcap/bridge
-//     drag at its release, the SWEEP (whose per-event writes and whose release
-//     commit are both inside it), the settings editor's active-tab `:trim_*=`
-//     commits, the crossed/coincident resets, and `Shift+X` inside its identity
-//     guard — and its membership is stated once, at the head of input_trim.cpp;
-//   * THE SCRUB — the waveform LOWER-HALF plain press's motionless-release
-//     CLICK ACT, the overlay's PREVIEW gesture (click inside the span to
-//     audition it and it rests, untouched);
-//   * SPACE, which touches no region at all and always plays from the playhead;
-//   * PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps, pans — the plain-drag
-//     grab-pan and the plain wheel's stepped pan included, a crossed pan being a
-//     pure viewport move that pops nothing — and bare `0`'s ZOOM-OUT ARM: its
-//     other arm, taken with the zoom already at full out, IS the `c` command and
-//     hides in the list above; the two arms sit on opposite sides of this line
-//     and the command they share is why);
-//   * THE VIEW SWITCHES — the A/B tab switch and the S/T audio-view switch,
-//     which held IN-PLACE resets of their own until 2026-08-19 and hold none
-//     now (architect: THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
-//     MUTATION CONCERN — it is a view preference about whether the user is
-//     looking at the trim, and the entering tab has a trim of its own to derive
-//     from, the other audio view the same pair in another domain);
-//   * THE `h` HISTORY MODE'S OWN THREE EDGES — its EXIT (close_history_mode),
-//     each `,` / `.` STEP and each WALK-OR-READING SWITCH (set_history_reading)
-//     — members until 2026-08-19 and non-members now, for the same reason plus
-//     one of their own: the mode consumes bare `x` and greys its button, so an
-//     overlay put away in there could not be got back. Its ENTRY never hid. The
-//     mode's PLAYHEAD-MOVING and SELECTION-CHANGING routes are members still.
-// THE ONE SURVIVING IN-PLACE RESET IS THE FILE LOAD's (file_loader.cpp), which
-// pairs the hide with a whole new piece: a stranger's window already lit on the
-// waveform is the wrong greeting.
+// ===================== THE RULE (architect 2026-08-19) =====================
+// THE OVERLAY HIDES WHEN THE PLAYHEAD'S POSITION IN THE MUSIC CHANGES, AND WHEN
+// A MARKER IS TOUCHED. Nothing else hides it, and this comment is the ONE
+// statement of that — there is no call-site inventory any more, because the
+// calls are FIVE, in THREE CLASSES, and the first class is a pair of OWNERS
+// every future caller inherits from (re-derived by grep 2026-08-19). The model
+// is the DAW instinct the architect named: moving the playhead, or touching an
+// event, collapses the region.
+//
+// SPATIALLY, which is how he arrived at it: the TIMELINE is the ruler, the
+// marker lane and the waveform — the part of the GUI a drag pans left and
+// right. Anything in the timeline hides the overlay, EXCEPT touching the trim
+// itself. The trim bar and the overview strip are lanes 5 and 4, ABOVE the
+// timeline, so the carve-out is a different BAND rather than an exception, and
+// the layout needs no special case for it.
+//
+// THREE THINGS THE RULE SAYS THAT A LIST COULD NOT:
+//   * A TRANSLATION IS NOT A MOVEMENT. The `t` flip maps the same musical
+//     instant into the other domain — "the closest thing it can do to not moving
+//     it" — and the tempo cent step's target-view re-land does the same for a
+//     marker whose IMAGE moved under a resting cursor. Both take the RESEAT
+//     entry points (reseat_playhead_on_marker, Viewport::reseat_playhead_to).
+//   * A RESTORE IS NOT A MOVEMENT. The A/B tabs are two virtual playheads over
+//     one piece and a switch brings the other one forward; it writes the entering
+//     tab's stored cursor direct and never reaches an owner.
+//   * THE CAMERA IS NEVER A MOVEMENT. The grab-pan, the wheel pan, every zoom,
+//     the overview strip's whole vocabulary and the `h` view's edges move the
+//     WINDOW, not the cursor. None of them writes a playhead at all.
+// And THE TRIM'S OWN SURFACES ARE EXEMPT BY CONSTRUCTION: touching the thing the
+// overlay depicts cannot be a reason to stop depicting it. That exemption needs
+// no suppression anywhere, because the trim family writes the cursor DIRECT —
+// park_playhead_at_trim_start and the sweep's per-motion carry — and so passes
+// through neither owner.
+//
+// THE THREE CLASSES, five calls:
+//   * THE MOVEMENT OWNERS — two owners in three entry points, which is where the
+//     rule's first half lives and
+//     where every future caller inherits it: Viewport::move_playhead_to (the
+//     cursor's live chokepoint — the Left/Right step, Home/End, the drops, the
+//     nudges, the typed `playhead_cursor=`, the navigation click's placement,
+//     the `h` mode's Home/End) and land_playhead_on_marker /
+//     land_playhead_on_source_frame (the land owner — the whole Tab family, `c`,
+//     the marker click, the editor opens, the undo/redo restore, the propagate
+//     paste, the Ctrl+N collapse, the `h` mode's Tab cycle and diff-flag
+//     clicks — the marker and frame forms each carrying the call, since they
+//     share only the write below them). ALL HIDE UNCONDITIONALLY, never gated on whether the write moved
+//     anything: a Home pressed on the frame the cursor already holds still
+//     hides, which is what the bottom row's ungreyed skip buttons promise
+//     (architect 2026-08-15).
+//   * THE MARKER TOUCH, one site — run_marker_click_act (input_pointer.cpp),
+//     which hides on all three arms even where the arm lands nothing (a
+//     ctrl-toggle that empties the selection). This is the rule's SECOND HALF
+//     and the reason it is not simply "the playhead moved": touching a flag is
+//     an act on the timeline whether or not the cursor was already on it.
+//   * BARE ESC (input_handler.cpp), the one route that hides and NOTHING ELSE:
+//     no playhead move, no selection change, no trim write. It is ranked under
+//     the editors and prompts and over the render cancel, and a DRAG IN FLIGHT
+//     never reaches it — the drag-modal gate swallows the key first, so Esc
+//     hides a shown overlay but cancels no gesture. The full Esc enumeration
+//     lives at its dispatch point in on_key (input_handler.cpp).
+//
+// THE TWO NON-CALLERS WORTH NAMING, because both write the visibility bit
+// themselves rather than through this helper:
+//   * BARE `x` (handle_toggle_trim_region, input_trim.cpp) — the toggle, whose
+//     hide half is the user asking for it outright;
+//   * THE FILE LOAD (file_loader.cpp) — an in-place reset that pairs the hide
+//     with a whole new piece, a stranger's window already lit on the waveform
+//     being the wrong greeting.
+//
+// WHAT THE RULE DELIBERATELY LEAVES STANDING, since a reader will look for
+// each: the grab-pan and the wheel pan; every zoom, bare `0` included; the
+// overview strip's teleport, box pan and bound drags; the A/B tab switch, the
+// S/T flip and the `p` W/P swap; entering, walking and leaving the `h` history
+// view; the scrub, which auditions without moving the cursor; the playback
+// scanner, auditioning being not a cursor move; every trim and region gesture
+// including the ones that PARK the playhead at the new trim start; the settings
+// engine commit and the settings-only ('S') undo/redo entry, both of which
+// rebuild the map the overlay re-derives against and neither of which lands a
+// playhead; the propagate paste's no-created arm; and any
+// chrome that dispatches no playhead command. None of these is an exception
+// written anywhere — each simply never reaches an owner.
+// ==========================================================================
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
 // SHOW THE TRIM REGION OVERLAY — the hide's counterpart and the ONE raise every
@@ -401,23 +364,34 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
-// clamp_playhead_to_live_domain, a direct cursor write). A PURE PLAYHEAD WRITE:
-// it touches no region and no selection — a caller that wants the trim region
-// overlay hidden calls clear_region_highlight itself. Read-only allowed. Definition in
+// clamp_playhead_to_live_domain, a direct cursor write). It touches no
+// selection. IT HIDES THE TRIM REGION OVERLAY (2026-08-19): this is one of the
+// rule's two movement owners, the other being Viewport::move_playhead_to, and
+// the hide is no longer any caller's to spell — the rule and the whole exemption
+// set live at clear_region_highlight above. Read-only allowed. Definition in
 // input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
 // marker-lane-owns-the-playhead rule and the one
 // enumeration of the landing sites — do not restate either here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
+// THE SAME LAND WITHOUT THE HIDE — the non-hiding entry point for the two
+// callers whose write is a RESEAT rather than a movement: the S/T flip's
+// re-express of a surviving focus (a translation) and the coincidence
+// auto-select's provable no-op. Both are argued at the definition
+// (input_pointer.cpp); a third caller needs an argument of its own, and the
+// answer is never a flag on the land.
+void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                               Viewport& viewport, int hit);
+
 // The same land with the store lookup taken off the front: place the playhead on
-// an authored SOURCE frame directly, through the identical two-step basis and
-// the identical damage. It exists for the ONE caller holding a frame that
-// belongs to no store entry — the `h` history mode's focus click, whose removed
-// diff flags name frames the session no longer has — and land_playhead_on_marker
-// is its other caller, so the marker route and the frame route cannot drift.
-// Same contract otherwise: pure playhead write, no region, no selection,
-// read-only allowed.
+// an authored SOURCE frame directly, through the identical two-step basis, the
+// identical damage and the identical hide. It exists for the callers holding a
+// frame that belongs to no store entry — the `h` history mode's focus click,
+// whose removed diff flags name frames the session no longer has — and
+// land_playhead_on_marker shares its write, so the marker route and the frame
+// route cannot drift. Same contract otherwise: playhead write plus the movement
+// owner's hide, no selection, read-only allowed.
 void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame);
 
@@ -2422,10 +2396,11 @@ private:
     // land_playhead_on_marker's placement basis (source frame → active domain →
     // live-domain clamp) with NO viewport move, so a trim start offscreen
     // leaves the view where the user left it. IT DOES NOT HIDE THE TRIM REGION
-    // OVERLAY, the trim writes being that inventory's one excluded class since
-    // 2026-08-18 (the region IS the trim, so hiding here would hide the overlay
-    // the instant its own bound was dragged; the argument is at the definition
-    // and the inventory at clear_region_highlight).
+    // OVERLAY: the region IS the trim, so hiding here would hide the overlay the
+    // instant its own bound was dragged — and since 2026-08-19 that exemption is
+    // structural, this function writing the cursor DIRECT and so reaching
+    // neither of the rule's two movement owners (the rule at
+    // clear_region_highlight; the argument at this function's definition).
     // Callers own the refusals above it: a route that
     // writes no bound must not call this. The full per-route inventory is at
     // the head of input_trim.cpp.

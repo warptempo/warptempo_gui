@@ -237,8 +237,10 @@ int64_t stepped_anchor_frame(
 //     press; either way this tail always runs stopped).
 // (f) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
-//     singleton (the hide-site list is at clear_region_highlight,
-//     input_handler.h), and it discards nothing, the trim standing behind it.
+//     singleton — and it discards nothing, the trim standing behind it. It owes
+//     no call of its own: (e) above and the prologue's collapse land are both
+//     movement owners and hide there (the rule at clear_region_highlight,
+//     input_handler.h).
 //     There is no overlay-preserving arm any more: the extent re-derive died
 //     with the group nudge.
 // (g) target_render.trigger.

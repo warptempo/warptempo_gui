@@ -189,19 +189,20 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Reached only in W + source view — all three open routes gate the marker
     // view to the WARP column and take active_column_authoring_allowed — so `idx`
     // resolves against the warp store the helper reads, in the identity domain.
-    // AND HIDE THE TRIM REGION OVERLAY: an open moves the playhead onto one
-    // marker, so the overlay goes with it — unconditionally, never gated on the
-    // land having moved anything, and discarding nothing (the trim stands and a
-    // later `x` re-shows the same overlay). This one
+    // THE LAND HIDES THE TRIM REGION OVERLAY: an open moves the playhead onto
+    // one marker, so the overlay goes with it — unconditionally, never gated on
+    // the land having moved anything, and discarding nothing (the trim stands
+    // and a later `x` re-shows the same overlay). Since 2026-08-19 that is the
+    // LAND'S own act rather than a second call here (the rule and its two
+    // movement owners are at clear_region_highlight, input_handler.h). This one
     // chokepoint covers every open and retarget (bare Return, the pointer
-    // double-click, `m`, a pointer retarget of the live editor), which is why no
-    // opener carries a clear of its own; `m` re-derives NOTHING after it since
+    // double-click, `m`, a pointer retarget of the live editor); `m` re-derives
+    // NOTHING after it since
     // 2026-07-30 (the extent owner died with the SPAN FORM). The same_target
     // early return above skips both: the
     // playhead is already there from the first open and nothing changed.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
-    clear_region_highlight(app, viewport);
 
     // Discard any prior edit silently before switching targets.
     if (text_editor::is_active(app.top_flag_editor) &&

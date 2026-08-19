@@ -1,6 +1,6 @@
 #include "active_views.h"
 
-#include "input_handler.h"   // auto_select_marker_at_playhead, clear_region_highlight
+#include "input_handler.h"   // auto_select_marker_at_playhead
 
 // Active-views management cluster: the W/P marker-view, A/B tab-view, and
 // S/T audio-view switches plus the live/slot view-state sync, reaching
@@ -44,8 +44,8 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // is parked and nothing is restored.
 // Visible state (viewport / zoom / playhead) is genuinely unaffected here — with
 // the selection emptied this helper owes the marker lane no land at all. Its two
-// callers own what happens next: toggle_active_markers_view (`p`) hides the
-// trim region overlay and runs the coincidence auto-select, while the propagate
+// callers own what happens next: toggle_active_markers_view (`p`) runs the
+// coincidence auto-select, while the propagate
 // paste's target-view tail writes its OWN selection and lands on that.
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
@@ -98,8 +98,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
     // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19. It was
-    // an IN-PLACE reset here and never a member of clear_region_highlight's
-    // inventory. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
+    // an IN-PLACE reset here and never a call of clear_region_highlight's. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
     // MUTATION CONCERN — it is a view preference about whether the user is
     // looking at the trim, and the ENTERING tab has a trim of its own for the
     // overlay to derive from, so a switch has nothing to put away. Hiding
@@ -125,8 +124,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // basis — the basis of the pixels it erases. It also subsumes the
     // shift-range anchor clear this site used to spell out by hand (every
     // Selection mutator dissolves the anchor; the authoritative clear list is at
-    // the field, app_state.h). The region reset above stands on its own — no
-    // selection mutator touches the region any more.
+    // the field, app_state.h). It touches no region: the overlay's visibility is
+    // not a selection concern and no selection mutator writes it.
     selection.clear_selection();
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
@@ -192,20 +191,17 @@ void GuiActiveViews::toggle_active_markers_view() {
     // switch_active_markers_view_to), so `p` owes the marker lane no land: with no
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
     // genuinely untouched across the flip.
-    // THE SWAP HIDES THE TRIM REGION OVERLAY (architect
-    // 2026-07-29, REVERSING "the STORED highlight survives the column flip"): the
-    // user has turned to the other column, which is the whole hide rule, and the
-    // overlay left standing would describe work no longer on screen. (Its
-    // ORIGINAL reading — a scratch span drawn against the column just left —
-    // retired with the stored span on 2026-08-18: the trim belongs to the tab
-    // rather than the column, so the overlay re-derives unchanged across the
-    // flip and the hide is now the turn-to-other-work rule alone. It discards
-    // nothing either way.) So the hide is
-    // wholesale, and it is unconditional because
-    // the swap always commits: this function flips W<->P outright, so the helper's
-    // same-mode early return cannot fire from here, and its two callers (bare `p`
-    // and the settings editor's active_markers_view key, which refuses an
-    // unchanged value before dispatching) reach it only for a real flip.
+    // (THE SWAP'S OVERLAY HIDE IS DELETED, 2026-08-19, with the A/B tab
+    // switch's and the S/T flip's. THE OVERLAY HIDES WHEN THE PLAYHEAD'S
+    // POSITION IN THE MUSIC CHANGES AND WHEN A MARKER IS TOUCHED — the rule at
+    // clear_region_highlight, input_handler.h — and a COLUMN SWITCH does
+    // neither: the swap empties the selection, so there is no focus to
+    // re-express and the playhead is genuinely untouched across the flip, and no
+    // marker is touched by a change of which column is drawn. Its 2026-07-29
+    // argument was "the user has turned to the other column"; the trim belongs
+    // to the TAB rather than the column, so the overlay re-derives unchanged
+    // across the flip and there was nothing to turn away from. It discarded
+    // nothing either way, which is why it bought nothing.)
     //
     // COINCIDENCE AUTO-SELECT, the column-entry chokepoint (the rule, the formula
     // and the authoritative call-site inventory live at
@@ -213,12 +209,10 @@ void GuiActiveViews::toggle_active_markers_view() {
     // the newly-active column is scanned against THIS tab's playhead, so flipping
     // onto a column that has a marker exactly under the cursor arrives with that
     // marker selected — the lane re-entered by coincidence rather than by memory.
-    // It runs AFTER the region hide so the single-select it may make is the only
-    // thing resting here, and it lives HERE rather than in
+    // It lives HERE rather than in
     // switch_active_markers_view_to because that helper's second caller — the
     // propagate paste's target-view tail — writes its own selection one line later
     // and an auto-select there would be overwritten for nothing.
-    clear_region_highlight(app, viewport);
     // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
     // switch_active_markers_view_to above, at codex round 21 — this toggle's own
     // call was one of the three command-wrapper spellings that let the propagate

@@ -1,6 +1,7 @@
 #include "viewport.h"
 
 #include "audio.h"
+#include "input_handler.h"   // clear_region_highlight (the movement owner's hide)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -168,16 +169,46 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-// move_playhead_to: update playhead, keep viewport so playhead stays
+// move_playhead_to: THE MOVEMENT OWNER — the reseat below, with the trim region
+// overlay's HIDE in front of it. Reaching this function means the playhead's
+// POSITION IN THE MUSIC is changing, and that is the whole hide rule; the rule,
+// its second owner and its exemptions are stated once at clear_region_highlight
+// (input_handler.h). UNCONDITIONAL, never gated on whether the write moved
+// anything: a Home pressed on the frame the cursor already holds still hides,
+// which is what the bottom row's ungreyed skip buttons promise (architect
+// 2026-08-15, the record at their case in redesign_button_enabled).
+void Viewport::move_playhead_to(int64_t new_sample) {
+    clear_region_highlight(app, *this);
+    reseat_playhead_to(new_sample);
+}
+
+// reseat_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit
 // outside the trim window.
+//
+// THE WRITE ALONE, WITH NO HIDE IN IT, and the callers who want it that way are
+// the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP —
+// three, in two families:
+//   * THE MAP-CHANGE RE-LANDS: both arms of the Up/Down tempo cent step, in
+//     their target-view re-warp tails (warpmarkers_ops.cpp). The focus does not
+//     change and the playhead does not leave it — the marker's IMAGE moved out
+//     from under the cursor and the cursor follows it into the new domain. That
+//     is the `t` flip's translation in another spelling, and a translation is
+//     not a movement.
+//   * THE SWEEP'S OWN PER-MOTION CARRY is NOT here and never was: it writes
+//     app.playhead_cursor_sample direct, because a keep-visible edge-align would
+//     scroll the viewport out from under a live gesture (input_pointer.cpp). The
+//     whole trim family is exempt the same way — park_playhead_at_trim_start
+//     writes direct too — so the trim's surfaces take no suppression, they
+//     simply do not pass through here.
+// EVERY OTHER CALLER GOES THROUGH move_playhead_to and inherits the hide.
 //
 // The [0, total - 1] live-domain clamp is the shared ruling spelled at
 // clamp_playhead_to_live_domain (app_state.h) — this gesture route funnels
 // through it exactly like every non-gesture sync route, so they can never
 // disagree about the same endpoint.
-void Viewport::move_playhead_to(int64_t new_sample) {
+void Viewport::reseat_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     new_sample = clamp_playhead_to_live_domain(new_sample, app, audio);
 

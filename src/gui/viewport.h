@@ -73,7 +73,9 @@ struct Viewport {
     // a stale plate):
     //  - GENERIC viewport / view jumps: the plate CONTENT is unchanged but the
     //    viewport, zoom, or displayed DOMAIN moved. Viewport's own mutators
-    //    (move_playhead_to's offscreen-follow shift, apply_zoom_change,
+    //    (the offscreen-follow shift inside reseat_playhead_to, which
+    //    move_playhead_to and the cent steps' re-land both reach,
+    //    apply_zoom_change,
     //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
     //    and scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
@@ -169,7 +171,22 @@ struct Viewport {
     }
 
     // Viewport mutators.
+    // THE MOVEMENT OWNER — the cursor's live chokepoint, and since 2026-08-19
+    // one of the TWO sites that HIDE the trim region overlay (the other being
+    // land_playhead_on_source_frame). A command that reaches this function is
+    // moving the playhead's position in the music, which is the whole hide rule;
+    // the rule and its exemptions are stated once at clear_region_highlight
+    // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
+    // frame the cursor already holds still hides, which is the 2026-08-15 ruling
+    // the bottom row's ungreyed skip buttons rest on.
     void move_playhead_to(int64_t new_sample);
+    // THE RESEAT — the identical write with NO hide, for the callers whose write
+    // is not a movement (contract at the definition, viewport.cpp). Named rather
+    // than spelled as a flag on the mover: "skip the rule this time" would be the
+    // old hand-listed inventory in disguise. Its callers are named at the
+    // definition; do not add one without an argument for why the cursor is not
+    // moving in the music.
+    void reseat_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(double new_zoom_level);
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
@@ -347,9 +364,11 @@ struct Viewport {
     // rather than inherited, each member with its own reason:
     //
     //   CLOCK ALONE —
-    //   * Viewport's two CURSOR WRITERS: move_playhead_to (the live
-    //     chokepoint) and clamp_display_state_to_live_domain's playhead
-    //     repair.
+    //   * Viewport's two CURSOR WRITERS: reseat_playhead_to (the live
+    //     chokepoint's write half — move_playhead_to is that same write with
+    //     the trim region overlay's hide in front of it, so both spellings
+    //     damage this cell through the one body) and
+    //     clamp_display_state_to_live_domain's playhead repair.
     //   * Viewport's three ZOOM APPLIERS (apply_zoom_change,
     //     apply_strip_drag_zoom, apply_zoom_to_start): HARMLESS OVER-DAMAGE,
     //     kept as truth-over-churn. All three move the VIEWPORT AND ZOOM
@@ -380,10 +399,13 @@ struct Viewport {
     //     the zoom appliers'; the cursor clamp that CAN move the value
     //     damages the clock itself inside clamp_display_state_to_live_domain).
     //   * input_pointer's two direct cursor writes:
-    //     land_playhead_on_source_frame — the land owner every marker land,
-    //     Tab/`c` jump and history diff-flag click ride — and the region
-    //     sweep's own per-motion cursor write (update_region_drag, the drag
-    //     carrying the playhead on its moving end).
+    //     seat_playhead_on_source_frame — the write every marker land, Tab/`c`
+    //     jump and history diff-flag click rides, whether it arrives through
+    //     land_playhead_on_marker / land_playhead_on_source_frame (which hide
+    //     the trim region overlay) or through reseat_playhead_on_marker (which
+    //     does not) — and the region
+    //     sweep's own per-motion cursor write (apply_region_drag_motion, the
+    //     drag carrying the playhead on its moving end).
     //
     //   BOTH CELLS — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,
@@ -414,7 +436,7 @@ struct Viewport {
     // deliberately unlisted; routes that funnel
     // through a listed owner (the settings editor's active-tab playhead
     // commit through move_playhead_to, every marker land through
-    // land_playhead_on_source_frame, the nudges through their shared tail)
+    // seat_playhead_on_source_frame, the nudges through their shared tail)
     // need no row of their own. THE `p` MARKER-VIEW TOGGLE IS THE NEAR MISS
     // worth naming, since it sits beside the tab switch and answers
     // differently: it damages the READOUT (its coincidence auto-select can

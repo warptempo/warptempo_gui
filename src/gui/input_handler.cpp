@@ -776,9 +776,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
     // playhead_in_marker_lane). And the region hide above drops the overlay
-    // WITHOUT moving the playhead or changing the selection — the standing gap
-    // in the hide-site set (clear_region_highlight, input_handler.h), closed by
-    // giving the user a key for it. IT IS NO LONGER THE ONLY SUCH ROUTE: bare
+    // WITHOUT moving the playhead or changing the selection — which is exactly
+    // why it is a call site of its own rather than something the movement rule
+    // covers (the rule is at clear_region_highlight, input_handler.h). IT IS NO LONGER THE ONLY SUCH ROUTE: bare
     // `x`'s own hide half has been the other since 2026-08-18, and hiding
     // discards nothing either way.
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
@@ -1272,9 +1272,10 @@ void clear_region_highlight(AppState& app, Viewport& viewport) {
     // A HIDE SINCE 2026-08-18, and nothing more: drop the visibility bit and
     // damage the waveform area once, under which the recolored ground repaints
     // away. IT NEVER TOUCHES THE TRIM — the span is derived, so hiding discards
-    // nothing and a later show restores an identical overlay, which is what
-    // makes the broad call-site inventory at the declaration safe. Guarded so a
-    // call on the common hidden path costs nothing.
+    // nothing and a later show restores an identical overlay, which is what lets
+    // the declaration state a RULE instead of keeping a list. Guarded so a call
+    // on the common hidden path costs nothing — and the guard is load-bearing
+    // now that a movement owner calls it on every cursor write.
     if (!app.region.shown) return;
     app.region = RegionState{};
     viewport.invalidate_waveform_area();
@@ -1315,16 +1316,13 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // would scroll the viewport a second time before the centering below.
     // The owner OWNS the damage: full waveform area + the clock cell on a land that
     // MOVES, and an early return on a land onto the sample the playhead already
-    // holds — nothing moved there, so nothing needs erasing. What stays HERE is
-    // exactly what the owner does not provide: the stop above, the region hide,
-    // and the recenter below.
+    // holds — nothing moved there, so nothing needs erasing. IT ALSO OWNS THE
+    // OVERLAY HIDE since 2026-08-19 (the land is one of the rule's two movement
+    // owners; the rule is at clear_region_highlight, input_handler.h) — this
+    // site's own hide is deleted with the inventory it belonged to. What stays
+    // HERE is exactly what the owner does not provide: the stop above and the
+    // recenter below.
     land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
-
-    // Navigation jump: HIDE the trim region overlay — the playhead has left
-    // it, which is the turn-to-other-work rule the whole hide inventory rests
-    // on, and hiding discards nothing (the trim persists). Covers the whole Tab
-    // family and `c` through this one shared tail.
-    clear_region_highlight(app, viewport);
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
@@ -1375,11 +1373,11 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
         // first (idempotent when it is already there, which after a click or a
         // Tab step it is). The live arm's repair_last_selected /
         // jump_playhead_to_focused_marker pair is deliberately NOT run: it walks
-        // the live stores, which the lane is not showing. The region hide is
-        // unconditional and up front, exactly as the live arm does it — the
-        // no-focus path never reaches a land's own tail. (A HIDE since
-        // 2026-08-18, like every other member of that inventory.)
-        clear_region_highlight(app, viewport);
+        // the live stores, which the lane is not showing. THE OVERLAY HIDE IS
+        // THE LAND'S since 2026-08-19, so it happens on the focused path and
+        // NOT on the no-focus one — which is right: `c` with nothing focused is
+        // a zoom and a recenter, camera and nothing else (the rule is at
+        // clear_region_highlight, input_handler.h).
         const int focus = app.history_mode.focus;
         if (focus >= 0 &&
             focus < static_cast<int>(app.history_mode.flags.size())) {
@@ -1408,20 +1406,18 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // last-selected repair — then set that level and center on it; with no
     // focused marker, keep the plain zoom-and-center-on-playhead
     // behavior.
-    // Hide the overlay here, unconditionally and up front: the no-focus arm
-    // never reaches jump_playhead_to_focused_marker's hide tail (that function
-    // early-returns with nothing focused), and the sweep deselects on the trim
-    // setter rule, so sweep-then-`c` is exactly the no-focus path. HELP lists
-    // `c` in the hide set unconditionally. The focused arm then hides twice
-    // via the jump tail — a no-op, since the helper's shown-bit guard returns
-    // immediately on the already-hidden overlay.
+    // NO HIDE OF ITS OWN since 2026-08-19: the focused arm's jump lands the
+    // playhead and the land owner hides, while the NO-FOCUS arm — which is what
+    // sweep-then-`c` takes, the sweep having deselected on the trim setter rule
+    // — only zooms and recenters, and a camera move leaves the overlay standing.
+    // The unconditional hide that stood here belonged to the call-site inventory
+    // and went with it (the rule is at clear_region_highlight, input_handler.h).
     // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
     // collapse-to-focus that stood here is deleted — it existed only to keep a
     // group from resting SPANLESS, a state that no longer exists now the region
     // IS THE TRIM rather than a group's playhead form. The jump below is a
     // jump TO THE FOCUS and accepts a group's focus as-is; the always-visible
     // cursor lands there, the other members keeping their brightened flags.
-    clear_region_highlight(app, viewport);
     selection.repair_last_selected();
     jump_playhead_to_focused_marker();
     viewport.apply_zoom_change(target_zoom_level);
@@ -1481,13 +1477,13 @@ void GuiInputHandler::run_overview_command() {
     // selection standing would rest it SPANLESS, the hybrid third form the
     // architect rejected) retired with the span form itself; the CURRENT reason
     // is the standing one for the whole family — this arm is a PURE VIEWPORT
-    // MOVE, and pure viewport moves are deliberate non-members of the hide
-    // inventory (the list and its non-members are at clear_region_highlight,
-    // input_handler.h, where bare `0`'s zoom-out arm is named).
+    // MOVE, and THE CAMERA IS NEVER A MOVEMENT: it writes no playhead, so it
+    // reaches neither hide owner (the rule is at clear_region_highlight,
+    // input_handler.h).
     // THE SECOND ARM IS `c`, SO IT CARRIES `c`'s REGIME, not this one's: the
-    // region hide, the focus repair, the land onto the focused marker and the
-    // stop that rides inside that land are all the center command's, stated at
-    // its owner. Nothing about them is decided here — this arm only chooses
+    // focus repair, the land onto the focused marker, the overlay hide that
+    // land now owns and the stop that rides inside it are all the center
+    // command's, stated at its owner. Nothing about them is decided here — this arm only chooses
     // between the two commands.
     // Both arms read the RESTING cursor (apply_zoom_change and
     // center_viewport_on_playhead both take the scanner while playing and the
@@ -2213,8 +2209,8 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     app.staged_displayed_valid = false;
 
     // (THE S/T SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
-    // A/B tab switch's twin. It was an IN-PLACE reset here and never a member
-    // of clear_region_highlight's inventory. THE OVERLAY'S VISIBILITY IS NOT A
+    // A/B tab switch's twin. It was an IN-PLACE reset here and never a call of
+    // clear_region_highlight's. THE OVERLAY'S VISIBILITY IS NOT A
     // PLAYHEAD, SELECTION OR MUTATION CONCERN — it is a view preference about
     // whether the user is looking at the trim, and the trim is the same
     // per-tab pair in both audio views, the overlay simply deriving its
@@ -2385,8 +2381,14 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // which is what the anchoring cares about: a column is at least ~27 frames at
     // the deepest zoom the product allows. The frame count is not the premise;
     // the column is.
+    // THROUGH THE RESEAT, NOT THE LAND (2026-08-19): a TRANSLATION IS NOT A
+    // MOVEMENT — the flip maps the same musical instant into the other domain,
+    // the closest it can come to not moving the playhead at all, so it must not
+    // hide the trim region overlay. The land owner hides; reseat_playhead_on_marker
+    // is the identical lookup and write without it (the rule and the whole
+    // exemption set are at clear_region_highlight, input_handler.h).
     if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
-        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+        reseat_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the

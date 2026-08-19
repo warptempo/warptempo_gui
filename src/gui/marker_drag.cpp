@@ -311,10 +311,11 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
     viewport.move_playhead_to(sample);
-    // NO REGION WORK, and none is reachable: the ARMING PRESS's click act
-    // single-selected the marker and HID the trim region overlay, so a marker
-    // drag runs with the overlay down (and with the trim untouched — hiding
-    // discards nothing). The group live-track that used to re-derive an extent span per
+    // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
+    // marker and HID the trim region overlay, so a marker drag runs with the
+    // overlay already down, and the carry above goes through a movement owner
+    // anyway (the rule at clear_region_highlight, input_handler.h) — a guarded
+    // no-op on every motion event. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
     viewport.invalidate_waveform_area();
@@ -495,9 +496,9 @@ void MarkerDragOps::commit_drag() {
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker
     // stems since row 5 — nothing here keys on selection).
-    // NO REGION WORK, and none is reachable: the ARMING PRESS's click act
-    // single-selected the marker and HID the trim region overlay, and nothing
-    // during the drag shows one.
+    // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
+    // marker and HID the trim region overlay, nothing during the drag shows one,
+    // and the commit re-land above goes through a movement owner regardless.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
     // are never moved; the doctrine is at the head of position_nudge.h).
