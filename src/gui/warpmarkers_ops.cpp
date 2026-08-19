@@ -91,9 +91,9 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.move_playhead_to(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
     // earlier keep-the-highlight behavior): it seats the playhead on the marker
-    // it creates and single-selects it, so any resting span ends here —
-    // unconditionally, exactly as the plain marker click's
-    // collapse. THE WARP CHOKEPOINT: both entry routes (bare `s` and the
+    // it creates and single-selects it, so the trim region overlay is HIDDEN
+    // here — unconditionally, exactly as the plain marker click's
+    // collapse, and discarding nothing (the trim stands behind it). THE WARP CHOKEPOINT: both entry routes (bare `s` and the
     // empty-lane double-click) reach the warp column only through
     // drop_copy_previous_at_playhead, whose only act is this call, so one clear
     // here covers both. PAST EVERY REFUSAL by construction: the callers' gates
@@ -101,7 +101,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // in-area test) return before calling at all, and this function's own two
     // refusals — no sample rate, and a drop_frame past the EOF wall — return
     // above, before the insert. So a refused drop cannot reach this line and no
-    // refusal clears a highlight. clear_region_highlight owns its damage.
+    // refusal hides the overlay. clear_region_highlight owns its damage.
     clear_region_highlight(app, viewport);
 
     // No synchronous re-warp: warp markers author in their source home view
@@ -267,11 +267,14 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
     // the focus — a PURE playhead write (land_playhead_on_marker), this gesture
-    // adding no region clear of its own. THERE IS NOTHING TO CLEAR: a region
-    // rests only beside an EMPTY selection (the live former deselects at press,
-    // and the `h` view's spans are view-local, cleared at its edges — the
-    // inventory is at RegionState, app_state.h) and Ctrl+N needs a focus, so no
-    // span can be standing when this runs.
+    // adding no overlay hide of its own, and needing none: Ctrl+N is a value
+    // edit over a standing selection, not a turn to other work, so it takes the
+    // same non-member answer the other value edits take (the inventory and its
+    // deliberate non-members are at clear_region_highlight, input_handler.h).
+    // (The belt that stood here — "a region rests only beside an EMPTY
+    // selection, and Ctrl+N needs a focus" — is retired, 2026-08-18: bare `x`
+    // shows the overlay and writes no selection, so a shown overlay may rest
+    // beside any selection.)
     // The land sits at THIS caller and not inside collapse_to_focused, because the
     // site that hands the lane a new focus is the site that owes it a land — and
     // not every caller does: the singleton tempo step has no focus change to land
@@ -574,12 +577,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // no repaint there; in target view the synchronous re-warp below repaints
     // the waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
-        // NO REGION WORK AT ALL HERE, and none is reachable: a region rests only
-        // beside an EMPTY selection (the live former deselects at press, and the
-        // `h` view's spans are view-local, cleared at its edges — the inventory
-        // is at RegionState, app_state.h) while a tempo step needs a
-        // selection. The #16 trim-highlight re-sync that stood here was deleted
-        // 2026-07-29 and the highlight itself 2026-07-30.
+        // NO REGION WORK AT ALL HERE, and none is needed: the overlay is
+        // DERIVED from the trim every frame (trim_overlay_span, app_state.h),
+        // so a step that re-warps the target re-derives it in the new domain on
+        // the next frame with nothing to maintain. (The belt that stood here —
+        // "a region rests only beside an EMPTY selection, and a tempo step
+        // needs a selection" — is retired, 2026-08-18: bare `x` shows the
+        // overlay and writes no selection.) The #16 trim-highlight re-sync that
+        // stood here was deleted 2026-07-29 and the highlight itself
+        // 2026-07-30.
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -715,13 +721,19 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // (identity domain — the frame never moved).
     if (app.active_audio_view == 'T') {
         // NOTHING TO DO FOR THE REGION HERE (architect 2026-07-30, with the SPAN
-        // FORM retired): the region is trim SCRATCH, not this selection's extent,
+        // FORM retired): the region IS THE TRIM, not this selection's extent,
         // so the group step no longer maintains it — the re-derive that stood
-        // below the kick is deleted with its owner. A region cannot even rest
-        // beside the selection this handler requires: both surviving formers
-        // deselect at press (the inventory is at RegionState, app_state.h). The
-        // kick's live-domain reclamp still wholesale-clears a region whose
-        // endpoint falls outside a shrunken target total, and that stays.
+        // below the kick is deleted with its owner. RE-DERIVED 2026-08-18 and
+        // now true for a stronger reason: the overlay is DERIVED from the trim
+        // every frame (trim_overlay_span, app_state.h), so a step that re-warps
+        // the target simply re-derives it in the new domain on the next frame.
+        // (The old belt — "a region cannot even rest beside this selection
+        // anyway, both formers deselecting at press" — is retired: bare `x`
+        // shows the overlay and writes no selection, so a shown overlay may now
+        // rest beside any selection. And the kick's live-domain reclamp no
+        // longer clears anything of the region's: it had validated the stored
+        // ACTIVE-domain endpoints, which no longer exist, and it is deleted at
+        // its own site, viewport.cpp.)
         viewport.kick_waveform_sync();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < n) {

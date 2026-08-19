@@ -305,9 +305,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     // Bare Escape only: a modified Escape carries no binding anywhere, so it has
-    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the REGION CLEAR
-    // (architect 2026-07-30 — the region is transient display scratch, and a
-    // locked tab may form one by plain drag, so it must be able to drop one) and
+    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the REGION HIDE
+    // (architect 2026-07-30 — a locked tab can raise the trim region overlay,
+    // bare `x` and its button being read-only-legal on the trim band ruling, so
+    // it must be able to put it down again; the hide writes no trim and
+    // discards nothing) and
     // the RENDER / BATCH CANCEL. Neither mutates anything persistent, so both are
     // read-only-safe like every one of Esc's bindings (the authoritative
     // enumeration is at its dispatch point in on_key, input_handler.cpp; no count
@@ -474,13 +476,13 @@ void GuiInputHandler::close_history_mode() {
     // THE VIEW'S REGIONS ARE VIEW-LOCAL (architect 2026-08-05): a span drawn in
     // here marks a passage of the checkpoint being read, so it leaves with the
     // view — the same rule the `,` / `.` step and the compare switch apply to
-    // their own edges. It is also what keeps "a region rests only beside an
-    // EMPTY selection" true for the EDITOR while the view's own press deselects
-    // nothing: nothing formed in here can reach the editor at all. The clear is
-    // unconditional and takes a span formed BEFORE `h` with it — accepted, and
-    // the honest half of a view-local rule, the two being indistinguishable once
-    // inside. Its damage is covered by this function's own full-window
-    // invalidate below.
+    // their own edges. The hide is
+    // unconditional and takes an overlay SHOWN BEFORE `h` with it, which since
+    // 2026-08-18 is the only one it can find: the view has no span state of its
+    // own (the overlay is the trim everywhere) and bare `x` is consumed in
+    // there, so nothing raises one inside. It discards nothing — the trim
+    // stands and a later `x` re-shows it. Its damage is covered by this
+    // function's own full-window invalidate below.
     clear_region_highlight(app, viewport);
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
     // counts VISITS rather than describing one: letting it fall back to zero
@@ -689,7 +691,7 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // the view writes no viewport anywhere: this call comes LAST of the acts that
 // change what the lane should show. In view that is the state write (the walk
 // index, or the source/reading pair), the focus clear, the stash drop and the
-// region clear, THEN this; at the exit it is the whole-struct reset, the stash
+// region hide, THEN this; at the exit it is the whole-struct reset, the stash
 // drop, THEN this. Everything the rebuild reads must already be true —
 // `history_mode.active` decides which arm of the flag cache runs, and the
 // index, focus and compare fields decide what that arm publishes, so a call
@@ -970,7 +972,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // commits" stays true, no cancel semantics appear, and by the time the mode
 // resets the gate's invariant holds again exactly as it does for a key. It runs
 // BEFORE the close so each gesture ends against the state it was made in, and
-// the close's own region clear and band restore then land over the top.
+// the close's own region hide and band restore then land over the top.
 //
 // ONE PRODUCER, and it is narrow: a view opened mid-scan whose run then fails.
 // A run that had already failed refuses at init and never opens a view at all.
@@ -1017,10 +1019,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //     REPUBLISHED IN THIS SAME PRESS (2026-08-07, republish_history_lane_now):
 //     the arriving reading's list, rects and stems are standing before the press
 //     returns, so the swap is atomic and shows no blank frame;
-//   * a resting REGION clears (2026-08-05, the view-local rule — planner-included
-//     on the step's own edge argument, the architect having named the exit and
-//     the step): a span drawn in here marks a passage of the delta being read,
-//     and the arriving reading is a different delta;
+//   * THE TRIM REGION OVERLAY HIDES (2026-08-05, the view-local rule —
+//     planner-included on the step's own edge argument, the architect having
+//     named the exit and the step): the arriving reading is a different delta
+//     from the one the reader was reading, which is the turn-to-other-work
+//     every hide answers to. It discards nothing — this view writes no trim;
 //   * THE VIEWPORT IS NOT TOUCHED — the step's own rule since 2026-08-08, and
 //     it applies here for the step's own reason: the window is the USER'S while
 //     the view stands, so every walk and reading shares one viewport and a
@@ -1318,7 +1321,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // own bit through the same switch owner the walk toggle above uses, so a
     // reading change is
     // the SAME MODE EDGE a walk change is — focus and selection cleared, lane
-    // stash dropped, region cleared, lane republished synchronously, window
+    // stash dropped, region hideed, lane republished synchronously, window
     // damaged — and the two can never come to do different amounts of work.
     //
     // ONE-SHOT, NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare
@@ -1399,10 +1402,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // refill is this press's own (republish_history_lane_now, at the tail),
         // so the emptied state lives only across the handful of lines between.
         drop_lane_stash_across_history_edge();
-        // AND THE REGION GOES WITH THE COMMIT (architect 2026-08-05, the
-        // view-local rule): a span drawn in here marks a passage of the
-        // checkpoint it was drawn against, and the step is leaving that
-        // checkpoint. Same reasoning as the focus clear above, on the same edge.
+        // AND THE OVERLAY GOES WITH THE COMMIT (architect 2026-08-05, the
+        // view-local rule): the step is leaving the checkpoint the reader was
+        // reading, which is the turn-to-other-work every hide answers to. Same
+        // reasoning as the focus clear above, on the same edge, and it discards
+        // nothing — the trim is untouched throughout this view.
         clear_region_highlight(app, viewport);
         // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08,
         // SUPERSEDING the 2026-08-05 per-edge reset to full zoom out): he pans
@@ -1430,10 +1434,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // mode's own data — the diff-flag list and the mode's own focus — never the
     // live-marker machinery, which navigates by markers the lane is not showing.
     // THEY KEEP THE LIVE ARMS' PLAYBACK AND REGION REGIMES: a keyboard command
-    // that commits a new cursor position stops a live audition and dissolves a
-    // resting region (the keyboard stop rule at stop_playback_if_playing, whose
-    // cursor-moving navigation class names Home/End and the Tab family; the
-    // clear-site set at clear_region_highlight). That is where they part from
+    // that commits a new cursor position stops a live audition and HIDES the
+    // trim region overlay (the keyboard stop rule at stop_playback_if_playing,
+    // whose cursor-moving navigation class names Home/End and the Tab family;
+    // the hide-site set at clear_region_highlight). That is where they part from
     // the mode's diff-flag CLICK, which deliberately touches neither — a pointer
     // route with its own recorded regime.
     // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
@@ -1569,7 +1573,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             forks on the mode bit, so the second arm reads the
 //                             diff-flag focus like every other mode-local
 //                             re-expression — 2026-08-05). That arm is not a
-//                             pure viewport move: it is `c`, region clear, stop
+//                             pure viewport move: it is `c`, region hide, stop
 //                             and land included, admitted on exactly the reason
 //                             `c` itself is claimed one line above the gate.
 //   - PageUp/PageDown       → the paged viewport scroll
@@ -1617,7 +1621,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             moves `t` can make (its selection-gated re-land)
 //                             are navigation, which is already this mode's
 //                             vocabulary — its own diff-flag click lands the
-//                             playhead too. The region clear is scratch, the
+//                             playhead too. The region hide is a visibility
+//                             bit that discards nothing, the
 //                             playback stop is running state, and the flag-
 //                             editor teardown is unreachable here (no editor can
 //                             be open while this gate is reached at all — see
@@ -1773,11 +1778,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             bare-Esc inventory is still the six enumerated at
 //                             on_key's dispatch point (input_handler.cpp), and
 //                             this line lets exactly the two that sit BELOW it
-//                             run — the REGION CLEAR (a span formed
-//                             before `h`, or one formed INSIDE the view by its
-//                             own placement press and drag: the clear is
-//                             reachable from within, which is fine — the region
-//                             is scratch and its clear has no side effects) and
+//                             run — the REGION HIDE (an overlay SHOWN before
+//                             `h` — the only one reachable in here since
+//                             2026-08-18, the view having no span state of its
+//                             own and bare `x` being consumed by the mode: the
+//                             hide is reachable from within, which is fine —
+//                             it drops a visibility bit and discards nothing)
+//                             and
 //                             the RENDER / BATCH CANCEL (a render
 //                             launched before `h`, whose progress line the mode's
 //                             corner outranks). Both sit BELOW this gate in
@@ -5068,7 +5075,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // it lands on `owner`, the EARLIEST selected, while the focus that built
         // this span sits wherever the multi-select click left it (those clicks
         // land on their focus — land_playhead_on_marker, input_pointer.cpp), and
-        // it clears any resting scratch region as every point command does. The
+        // it hides the trim region overlay as every point command does. The
         // open also collapsed the selection to {owner} on the way through. The
         // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
         // last_selected_marker alone — so the focus stays `owner`. NOTHING
@@ -5095,9 +5102,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // the home-view binding has nothing to say about it), legal on a LOCKED
     // tab (read_only_key_blocked admits it, where it drops the four marker
     // verbs), and unreachable in the `h` view, whose allowlist consumes it
-    // above this dispatch. It stops no playback and clears no region: turning
+    // above this dispatch. It stops no playback and hides no overlay: turning
     // the mode on IS NOT a selection act — the click that follows is, and that
-    // click runs the marker act's own stop and region clear.
+    // click runs the marker act's own stop and region hide.
     //
     // THE REPAINT IS THE BOTTOM LANE'S — the button's lamp lives there, so
     // this takes the row's own damage fork (invalidate_rect on
@@ -5218,10 +5225,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        // Navigation playhead step: dissolve a resting region (the playhead is
-        // leaving its span). This dispatch site fires once per press;
-        // move_playhead_pixels is its only caller, so the clear cannot leak to a
-        // non-navigation path.
+        // Navigation playhead step: HIDE the trim region overlay (the playhead
+        // is leaving it, and hiding discards nothing). This dispatch site fires
+        // once per press; move_playhead_pixels is its only caller, so the hide
+        // cannot leak to a non-navigation path.
         clear_region_highlight(app, viewport);
         viewport.move_playhead_pixels(-1);
         break;
@@ -5269,7 +5276,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // move_playhead_to would clamp anyway, so nothing about this jump
         // changed. THE THREE STEPS ABOVE RUN ON A NO-OP JUMP TOO and are
         // deliberately not gated on it: the audition stop, the lane exit's
-        // selection clear and the region dissolve are unconditional, so this
+        // selection clear and the overlay hide are unconditional, so this
         // key ACTS even when the cursor already rests on the landing frame.
         // THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY THERE (architect
         // 2026-08-15, taking back the face that did): a grey would promise less
@@ -5281,8 +5288,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        // Navigation jump to the trim-begin bound: dissolve a
-        // resting region (its span is stale now the playhead jumps).
+        // Navigation jump to the trim-begin bound: HIDE the trim region
+        // overlay (the playhead is jumping away from it; the trim it derives
+        // from is untouched).
         clear_region_highlight(app, viewport);
         viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
                                                               false));

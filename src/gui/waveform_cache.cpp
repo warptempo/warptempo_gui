@@ -171,19 +171,22 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
-    // Full dispatch freeze during the DISPLAYED-BASIS DRAGS — THREE since
-    // 2026-08-15, membership re-derived rather than appended to (codex round
-    // 20): a gesture belongs here iff it is an ABSOLUTE drag on a PAINTED
+    // Full dispatch freeze during the DISPLAYED-BASIS DRAGS — TWO since
+    // 2026-08-18, membership RE-DERIVED BY GREP against the gate below rather
+    // than appended to (codex round 20's rule, re-applied): a gesture belongs
+    // here iff it is an ABSOLUTE drag on a PAINTED
     // subject, reading the displayed basis per motion event, so that publishing
     // a new one mid-gesture would move that subject out from under a stationary
-    // hand. The marker drag (the flag it grabbed), the trim drag (the endcaps
-    // and the bar), and THE STANDING REGION'S OWN EDITOR (`region_edit_drag` —
-    // it hits the span on the plate basis through the painter's own
-    // region_columns and, since codex round 20, converts every motion column
-    // back on that same basis, which is exactly the marker and trim drags'
-    // shape). A THIRD gesture was on this gate for its own opposite reason —
+    // hand. The marker drag (the flag it grabbed) and the trim drag (the
+    // endcaps, the bar AND — since the region became the trim — the waveform
+    // overlay's own move and bound drags, which hit the span on the plate basis
+    // through the painter's region_columns and convert every motion column back
+    // on that same basis). It was THREE from 2026-08-15 to 2026-08-18, when the
+    // standing region's own editor (`region_edit_drag`) was a member in its own
+    // right; its drags ARE the trim drags now, so the freeze is unchanged and
+    // one name fewer. A gesture was on this gate for its own opposite reason —
     // the target-view tempo drag — until its 2026-07-29 deletion; see
-    // marker_drag.h. All three
+    // marker_drag.h. Both
     // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
     // DISPATCHED or PUBLISHED mid-gesture: on_waveform_render_done's
@@ -196,7 +199,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // the vp/area fields still differed — wasted full renders all gesture long.
     // Nothing that legitimately re-renders can occur mid-drag anyway: keys and
     // wheels are gesture-gated, the follow chase is paused for any live pointer
-    // gesture (any_pointer_gesture_active, whose members include all three of
+    // gesture (any_pointer_gesture_active, whose members include both of
     // these), and a compositor resize simply catches
     // up at the first post-gesture tick. With no mid-drag dispatch the
     // completion drop fires AT MOST ONCE (the one job in flight at the grab).
@@ -315,8 +318,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 
 void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // Gesture-discard gate, the PUBLICATION half of the dispatch freeze above
-    // and over the SAME three displayed-basis drags — marker, trim, and the
-    // standing region's editor (the membership and its derivation are stated
+    // and over the SAME displayed-basis drags — marker and trim (the membership
+    // and its derivation are stated
     // once at maybe_enqueue_waveform_render; do not re-list them here). Each
     // freezes the displayed paint
     // basis for the whole gesture (the DragState "no per-drag map copy"
@@ -325,8 +328,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // parked in the supersede slot) BEFORE the drag began would still publish
     // its map HERE — the displayed basis would jump under a stationary pointer,
     // and every motion event re-reads it (apply_drag_motion, the trim drags, the
-    // nudges, and apply_region_edit_drag_at's own column conversion, which is
-    // the plainest case: nothing moves, and the span slides). So drop the
+    // nudges, and the trim drags' own column conversions — the waveform
+    // overlay's move drag is the plainest case: nothing moves, and the span
+    // slides). So drop the
     // completed job WHOLESALE: no surface swap, no fp_*
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed

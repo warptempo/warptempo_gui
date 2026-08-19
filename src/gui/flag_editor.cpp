@@ -189,9 +189,10 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Reached only in W + source view — all three open routes gate the marker
     // view to the WARP column and take active_column_authoring_allowed — so `idx`
     // resolves against the warp store the helper reads, in the identity domain.
-    // AND CLEAR ANY RESTING SPAN: an open moves the playhead onto one marker, so
-    // the trim scratch the user drew for some other purpose goes with it —
-    // unconditionally, never gated on the land having moved anything. This one
+    // AND HIDE THE TRIM REGION OVERLAY: an open moves the playhead onto one
+    // marker, so the overlay goes with it — unconditionally, never gated on the
+    // land having moved anything, and discarding nothing (the trim stands and a
+    // later `x` re-shows the same overlay). This one
     // chokepoint covers every open and retarget (bare Return, the pointer
     // double-click, `m`, a pointer retarget of the live editor), which is why no
     // opener carries a clear of its own; `m` re-derives NOTHING after it since

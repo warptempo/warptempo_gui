@@ -158,7 +158,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //
 // HIDING IS SAFE BY CONSTRUCTION, which is what lets this list stay as broad as
 // it always was: hiding DISCARDS NOTHING, because the trim persists and
-// Ctrl+Shift+X re-shows an identical overlay. Clicking a marker, or otherwise
+// bare `x` re-shows an identical overlay. Clicking a marker, or otherwise
 // turning to unrelated work, hides — the DAW instinct that a selection
 // collapses the region, expressed as a hide. It NEVER touches the trim.
 //
@@ -535,8 +535,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 //     the list has read "two in settings_editor.cpp" since 2026-07-30, counting
 //     the keys). JOINED
 //     2026-07-30, architect: "a typed commit is a commit", the sibling
-//     playhead_cursor= key having already cleared selection and region under the
-//     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
+//     playhead_cursor= key having already cleared the selection and hidden the
+//     overlay under the no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
 //     it writes a parked band and changes nothing visible. (settings_editor.cpp's
 //     other two clear_selection calls — the playhead_cursor= navigation jump and
 //     the engine-key commit — write no trim bound and are not members.)
@@ -1063,7 +1063,8 @@ struct GuiInputHandler {
     // finger's DOWN point, forking on the `h` history mode exactly as the
     // shift press does: LIVE = the one placement body
     // (place_playhead_and_arm_region — deselect-all, playhead seated at the
-    // down column, live-session reseek, dissolve-at-arm, the drag arm); the
+    // down column, live-session reseek, the overlay hide at the arm, the drag
+    // arm); the
     // MODE = the view-local former's recipe (clear the mode focus +
     // selection through the pair clearer, the shared placement body, the
     // same arm) — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
@@ -1084,10 +1085,13 @@ struct GuiInputHandler {
     // update_touch_region(x, y): the drag's one motion path — the shared
     // Chebyshev gate from the down point, then the span extension with the
     // playhead riding the moving end. end_touch_region(): the release
-    // path's own body (a moved drag rests the span under the sliver gate; a
-    // MOTIONLESS end rests nothing and leaves the playhead where the begin
-    // seated it — the former's motionless-release rule, which is what makes
-    // a long-press-then-lift a PLACEMENT). Any end commits — finger up,
+    // path's own body (a moved drag has ALREADY written the trim, per motion
+    // event and floored to the minimum width, so its end runs the sweep's
+    // commit tail; a MOTIONLESS end wrote nothing and leaves the playhead where
+    // the begin seated it — the former's motionless-release rule, which is what
+    // makes a long-press-then-lift a PLACEMENT. The release-time sliver
+    // dissolve retired with the free span it protected, 2026-08-18). Any end
+    // commits — finger up,
     // wl_touch.cancel, capability loss; the platform's end split delivers
     // or drops the staged final frame, its record.
     //
@@ -1708,14 +1712,14 @@ struct GuiInputHandler {
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub
-    // (lower half), or deselect (live) / mode-focus clear (`h` view), region
-    // dissolve, then the placement above at the press column, playback state
+    // (lower half), or deselect (live) / mode-focus clear (`h` view), the
+    // overlay hide, then the placement above at the press column, playback state
     // read at the act. The full contract is at the definition
     // (input_pointer.cpp).
     void run_nav_click_act(int press_x, bool history, bool scrub_release);
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the three-way
-    // selection fork, the land, the region clear, the PLAIN shape's
+    // selection fork, the land, the region hide, the PLAIN shape's
     // double-click consume-open (against the press-time candidate snapshot,
     // its three gates read live), and the plain arm of PendingMarkerPress for
     // the drag the press may become and the seed its motionless release owes
@@ -2314,8 +2318,12 @@ private:
     // partner.
     void handle_trim_shift_x();
 
-    // Ctrl+Shift+X SHOWS AND HIDES THE TRIM REGION OVERLAY (architect
-    // 2026-08-16 for the chord, a TOGGLE since 2026-08-18) — the icon row's
+    // BARE `x` SHOWS AND HIDES THE TRIM REGION OVERLAY (architect 2026-08-16
+    // for the act, a TOGGLE and REPOINTED onto this key on 2026-08-18, when the
+    // region became the trim and the set-from-region act `x` had named stopped
+    // existing; Ctrl+Shift+X carried the show act for those two days and is
+    // UNBOUND again, a no-op everywhere under strict modifier validation) —
+    // the icon row's
     // IconShowRegion button and its keyboard twin. ONE ACT, TWO HALVES over the
     // one visibility bit that is the whole region state: SHOW and BRING THE
     // SPAN INTO VIEW through bring_span_into_view, or HIDE. It writes NO TRIM,
@@ -2527,11 +2535,11 @@ private:
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
     // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
-    // Q2): clicking inside a resting scratch span auditions from the clicked
-    // frame and leaves the span standing, which is why Space no longer carries a
-    // region launch of its own. It is also THE HALVES' ONE DIFFERENCE — read
-    // honestly, two: the upper half's act deselects, dissolves the region and
-    // overrides follow, and this one does none of the three.
+    // Q2): clicking inside a SHOWN trim region overlay auditions from the
+    // clicked frame and leaves the overlay standing, which is why Space no
+    // longer carries a region launch of its own. It is also THE HALVES' ONE
+    // DIFFERENCE — read honestly, two: the upper half's act deselects, HIDES
+    // the overlay and overrides follow, and this one does none of the three.
     // Playback stays alive from the press to the act (the press claims nothing
     // and stops nothing, and the drag-modal gate swallows every chord while the
     // pending stands), so the act sees the LIVE session — load-bearing for the

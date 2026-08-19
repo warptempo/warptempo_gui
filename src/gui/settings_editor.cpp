@@ -276,13 +276,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // THE NAVIGATION-JUMP CLASS (architect 2026-07-29, no exemptions):
             // this is a playhead jump to an arbitrary typed position — a
             // non-marker spot — so it LEAVES the marker lane exactly as Home/End
-            // do, and it clears the SELECTION and the REGION the way they do
+            // do, and it clears the SELECTION and HIDES THE OVERLAY the way they do
             // (the precedent and its rationale live at the Home/End arms in
             // input_key_dispatch.cpp: a flag left selected would go on claiming
             // to be the playhead at its own position, and the next bare arrow
             // would tow the playhead back onto the marker, silently discarding
-            // the jump). Collapse is cheap; carrying a span across an arbitrary
-            // jump is worth less than the confusion it buys. The INACTIVE arm
+            // the jump). Collapse is cheap; leaving the overlay standing across
+            // an arbitrary jump is worth less than the confusion it buys, and
+            // hiding it discards nothing. The INACTIVE arm
             // below writes the other tab's stored cursor, moves nothing live,
             // and stays out of this entirely.
             if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
@@ -365,9 +366,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // History-less, like all trim. The timestamp invalidate also rides
             // applied() below; raising it twice costs nothing — the damage list
             // coalesces by containment, so the identical rect is dropped.
-            // THE TAIL ALSO PARKS THE PLAYHEAD at the committed trim start and
-            // clears a resting region (architect 2026-08-05 — every trim write
-            // does, the membership stated at the head of input_trim.cpp). It
+            // THE TAIL ALSO PARKS THE PLAYHEAD at the committed trim start
+            // (architect 2026-08-05 — every trim write does, the membership
+            // stated at the head of input_trim.cpp). IT DOES NOT HIDE THE TRIM
+            // REGION OVERLAY: the trim writes are that inventory's one excluded
+            // class since 2026-08-18, the region being the trim itself. It
             // moves the cursor from inside a modal editor, which is accepted
             // for uniformity: a typed commit is a commit, and the editor lives
             // on the bottom row while the move is out on the waveform. The
@@ -570,8 +573,9 @@ void GuiSettingsEditor::commit() {
     // (title/bpm/notes/url/cover) moves no image and a SOURCE-view commit changes
     // no display domain at all, so the clear is greed rather than repair there,
     // and one rule beats a second view gate to maintain. The trim WINDOW itself
-    // is untouched — the trim bar and its endcaps go on showing it; only the
-    // user's scratch span goes. The helper
+    // is untouched — the trim bar and its endcaps go on showing it, and so
+    // would the overlay if it were re-shown; only the VISIBILITY goes, which
+    // discards nothing. The helper
     // owns its own waveform damage, which the source-view path would otherwise
     // not raise.
     clear_region_highlight(app, viewport);
@@ -586,8 +590,8 @@ void GuiSettingsEditor::commit() {
     // are what let the never-span-less ENFORCEMENT be deleted: this site was one of
     // its two remaining producers, and closing it here means no collapse protocol
     // is needed rather than a collapse being owed. It touches no region — the
-    // clear above already took any scratch span, and a selection mutator writes
-    // no region at all.
+    // hide above already dropped the visibility bit, and a selection mutator
+    // writes no region state at all.
     selection.clear_selection();
     // Full-area damage for the teardown, and it is the site's own: clear_selection
     // damages only on a stem/overlay SUBJECT CHANGE, so an already-empty selection

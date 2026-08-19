@@ -469,9 +469,10 @@ public:
     //     (the drag's one motion path converts to columns itself).
     //   * region_end(): the gesture ended — finger up, wl_touch.cancel or
     //     touch-capability loss. Any end COMMITS (the former's own release
-    //     regime: a moved drag rests the span under the sliver gate, a
-    //     motionless hold-lift rests nothing and leaves the playhead where
-    //     the begin seated it — the placement). Fired UNCONDITIONALLY once
+    //     regime: a moved drag has already written the trim per motion event,
+    //     so its end runs the sweep's commit tail, while a motionless hold-lift
+    //     wrote nothing and leaves the playhead where the begin seated it — the
+    //     placement). Fired UNCONDITIONALLY once
     //     the gesture began — the GUI-side drag holds the drag-modal gate
     //     open and its release path is owed — the refused-begin stream
     //     covered by the same !active guard.
@@ -1507,8 +1508,9 @@ private:
     //   * touch UP, owner, Region — the staged dirty frame DELIVERS first
     //     (the user's own final leg, the nav finger-up's model), then the
     //     region_end hook (any end commits — the former's release regime:
-    //     the span rests under the sliver gate, or a motionless hold-lift
-    //     rests nothing with the playhead where the begin seated it). No
+    //     a moved drag's trim writes are already in and its end runs the
+    //     sweep's commit tail, or a motionless hold-lift wrote nothing with the
+    //     playhead where the begin seated it). No
     //     release and no translation end: nothing pointer-shaped ever
     //     started; -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.

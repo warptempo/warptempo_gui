@@ -44,8 +44,8 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // is parked and nothing is restored.
 // Visible state (viewport / zoom / playhead) is genuinely unaffected here — with
 // the selection emptied this helper owes the marker lane no land at all. Its two
-// callers own what happens next: toggle_active_markers_view (`p`) clears any
-// resting region and runs the coincidence auto-select, while the propagate
+// callers own what happens next: toggle_active_markers_view (`p`) hides the
+// trim region overlay and runs the coincidence auto-select, while the propagate
 // paste's target-view tail writes its OWN selection and lands on that.
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
@@ -191,11 +191,15 @@ void GuiActiveViews::toggle_active_markers_view() {
     // switch_active_markers_view_to), so `p` owes the marker lane no land: with no
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
     // genuinely untouched across the flip.
-    // THE SWAP CLEARS ANY RESTING REGION (architect
+    // THE SWAP HIDES THE TRIM REGION OVERLAY (architect
     // 2026-07-29, REVERSING "the STORED highlight survives the column flip"): the
-    // span is trim SCRATCH drawn against the column the user just left, and the
-    // trim it would aim belongs to the tab, not the column — a span carried
-    // across the flip describes work that is no longer on screen. So the clear is
+    // user has turned to the other column, which is the whole hide rule, and the
+    // overlay left standing would describe work no longer on screen. (Its
+    // ORIGINAL reading — a scratch span drawn against the column just left —
+    // retired with the stored span on 2026-08-18: the trim belongs to the tab
+    // rather than the column, so the overlay re-derives unchanged across the
+    // flip and the hide is now the turn-to-other-work rule alone. It discards
+    // nothing either way.) So the hide is
     // wholesale, and it is unconditional because
     // the swap always commits: this function flips W<->P outright, so the helper's
     // same-mode early return cannot fire from here, and its two callers (bare `p`
@@ -208,7 +212,7 @@ void GuiActiveViews::toggle_active_markers_view() {
     // the newly-active column is scanned against THIS tab's playhead, so flipping
     // onto a column that has a marker exactly under the cursor arrives with that
     // marker selected — the lane re-entered by coincidence rather than by memory.
-    // It runs AFTER the region clear so the single-select it may make is the only
+    // It runs AFTER the region hide so the single-select it may make is the only
     // thing resting here, and it lives HERE rather than in
     // switch_active_markers_view_to because that helper's second caller — the
     // propagate paste's target-view tail — writes its own selection one line later

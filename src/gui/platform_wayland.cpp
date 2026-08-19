@@ -3463,7 +3463,7 @@ void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
             //       - The one codex found: a finger held inside a STANDING
             //         REGION (the region editor's carve-out puts it off the
             //         zone) ran the motionless release's click act — the upper
-            //         half placing the playhead and dissolving the span, the
+            //         half placing the playhead and hiding the overlay, the
             //         lower half firing the scrub and its playback edge.
             //     The abnormal end is the RIGHT spelling rather than a new
             //     suppression because it is the product's existing ruled answer

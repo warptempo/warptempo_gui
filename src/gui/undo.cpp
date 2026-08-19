@@ -579,8 +579,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // none is restored (the parked selections died 2026-07-29, and their restore
     // half here was already dead: the post-restore rules below write the touched
     // set wholesale). clear_selection also takes the shift-range anchor through
-    // the ordinary mutator contract; the visual tail clears any resting region
-    // outright above the 'S' gate. Damage rides this
+    // the ordinary mutator contract; the visual tail hides the trim region
+    // overlay outright above the 'S' gate. Damage rides this
     // function's own unconditional full-waveform invalidate in the tail.
     //
     // Kept inline rather than delegated to
@@ -619,8 +619,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
     // a SINGLETON restore LANDS the playhead on its touched marker (which is its
-    // focus; the land is a PURE playhead write, the tail's own clear below
-    // having already taken any resting span) and its flag BRIGHTENS from the
+    // focus; the land is a PURE playhead write, the tail's own hide below
+    // having already taken the overlay) and its flag BRIGHTENS from the
     // restored selection (no stamp); a GROUP
     // restore re-selects the touched set (done above) and LANDS the playhead on
     // its FOCUS — the EARLIEST touched member, by the focus rule above — the
@@ -634,9 +634,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // sanitize_selection_after_restore so the land sees the final membership,
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
     // render covers the final geometry. The LAND/FRAMING block is gated off 'S', and
-    // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, writes no
-    // region, and lands nothing — it CLEARS both the region and the selection
-    // (below), which is why the narrowing it briefly carried (a
+    // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, shows
+    // no overlay, and lands nothing — it HIDES the overlay and clears the
+    // selection (below), which is why the narrowing it briefly carried (a
     // target-view re-land onto a surviving focus) is gone with the surviving focus
     // itself. It is
     // branches on the POST-sanitize live size, so a defensive edge takes the
@@ -655,11 +655,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // having retired with the SPAN FORM (architect 2026-07-30).
     // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
     // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
-    // and rebuilds the target map underneath a resting highlight — drag a span
-    // under scale A, commit scale B, and Ctrl+Z would otherwise rest an
-    // A-domain span under B — so it clears too. The REST of the 'S' gate stands
-    // exactly: a settings restore still must not select and must not WRITE a
-    // region, which is why only this one call sits above the gate and the whole
+    // and rebuilds the target map underneath a shown overlay, and a restore is
+    // exactly the turn-to-other-work every member of the hide inventory answers
+    // to — so it hides too. (The DOMAIN argument that stood here retired with
+    // the stored span on 2026-08-18: the overlay derives from the trim every
+    // frame, so an A-domain span can no longer be left resting under scale B.)
+    // The REST of the 'S' gate stands
+    // exactly: a settings restore still must not select and must not SHOW an
+    // overlay, which is why only this one call sits above the gate and the whole
     // land/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
     // the target-view re-land it briefly allowed — onto a selection
     // surviving the restore — died with the selection clear directly below, which
@@ -702,7 +705,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
                 // move — and NO region side effect (the land is a pure playhead
-                // write; the point commands that want a collapse call
+                // write; the point commands that want the overlay hidden call
                 // clear_region_highlight themselves, and this restore called it
                 // once at the top of the tail for every arm). Playback is already
                 // stopped above, so land's scanner-inactive premise holds.
@@ -737,8 +740,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // sanitize that pruned the focus still lands somewhere live. The
             // group's visual is the restored members' brightened flags plus the
             // always-visible cursor sitting on the earliest of them — the
-            // extent-region write that used to follow this land is gone, the
-            // region being trim scratch that a restore has no business creating.
+            // extent-region write that used to follow this land is gone: the
+            // region IS THE TRIM, which a restore has no business writing.
             // land_playhead_on_marker is internally bounds-guarded (an
             // impossible out-of-range index no-ops the land) and writes NO
             // viewport, so the three-way offscreen arm below is unaffected;

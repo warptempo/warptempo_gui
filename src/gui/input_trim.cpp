@@ -196,10 +196,11 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // begin == end rather than a crossed pair — which this compare has always
 // caught, so the drag's route to clearing the trim (drag one handle onto the
 // other) is served by the rule exactly as written, with nothing added.
-// Every trim commit site — the x set-from-region, the endcap/bridge drag release,
+// Every trim commit site — the SWEEP's release, the endcap/bridge drag release,
 // the bound-set click and the settings-editor `:trim_*=` commit — calls this
 // after its mutation and before its invalidations, so the repaint shows the
-// reset state.
+// reset state. (The sweep took the retired `x` set-from-region's place in this
+// list on 2026-08-18; the per-route inventory is at the head of this file.)
 //
 // THE ONE-FRAME EXCEPTION: on a one-frame source (load-legal) the canonical
 // full pair is [0, 0], which trips the end <= begin compare. Recognizing the
@@ -458,8 +459,11 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_active,
 // (waveform + status chain) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
 // rule does not reach it, and the gated region re-sync it used to carry died
-// with the trim-window highlight itself (architect 2026-07-30) — a scratch span
-// is the user's, not trim's to dissolve.
+// with the trim-window highlight itself (architect 2026-07-30). It writes NO
+// VISIBILITY BIT either, and needs none: since 2026-08-18 the overlay is
+// DERIVED from the trim, so a
+// shown overlay simply re-derives to the whole song on the next frame, which is
+// the maximize made visible rather than a second act.
 void GuiInputHandler::handle_trim_shift_x() {
     handle_trim_clear_both();
 }
@@ -963,10 +967,13 @@ void GuiInputHandler::commit_trim_drag() {
         // then in the moved case that reaches here — each is stated at every
         // accepted mutation rather than inferred from gesture order). There is
         // nothing to restore from in any case — the drag carries no snapshot at
-        // all since 2026-07-29. A resting region goes with the playhead park in
-        // the tail above, the clear every playhead-moving command takes; the
-        // release still publishes no highlight of its own, that coupling having
-        // retired 2026-07-30.
+        // all since 2026-07-29. THE OVERLAY IS NOT HIDDEN by this release, and
+        // has not been since 2026-08-18: the trim writes are the hide
+        // inventory's one EXCLUDED class (the park's own declaration and the
+        // membership at the head of this file), because the region IS the trim
+        // and a drag of its own bound must not put its surface away. The
+        // release still publishes no highlight of its own either, that coupling
+        // having retired 2026-07-30.
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }

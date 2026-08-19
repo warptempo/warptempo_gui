@@ -259,7 +259,7 @@ struct UndoEntry {
 // THE RELEASE ONLY (a per-frame cursor chase would fight the gesture moving the
 // bounds — the rule and its membership are at the head of input_trim.cpp).
 //
-// THE VISIBILITY BIT'S WRITERS. SHOWN by Ctrl+Shift+X and the icon row's
+// THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `x` and the icon row's
 // IconShowRegion button, one toggle over one act
 // (handle_toggle_trim_region, input_trim.cpp), whose show half also brings the
 // span into view. HIDDEN by that same toggle and by clear_region_highlight,
@@ -604,7 +604,7 @@ struct EditorTextDragState {
 // write. The whole model is at run_marker_click_act, input_pointer.cpp).
 //
 // THE PRESS ACTS AND ARMS. run_marker_click_act runs at the press (stop, the
-// three-way selection fork, the land, the region clear, and the plain arm's
+// three-way selection fork, the land, the region hide, and the plain arm's
 // double-click consume-open); the PLAIN shape then arms this record. SHIFT and
 // CTRL arm nothing — they have no drag to become and their click has already
 // committed — and a CONSUMED double-click open arms nothing either (the editor
@@ -760,7 +760,8 @@ enum class PendingClickKind {
 // the click, then drag that bound live) and only the timing of a motionless
 // click is the lift's. The set's whole tail travels as one unit — the
 // strictly-inside refusal, the playback stop, the commit tail's playhead park
-// and region clear, the setter's deselect — because they are one act
+// (and NOT an overlay hide — the trim writes are that inventory's one excluded
+// class since 2026-08-18), the setter's deselect — because they are one act
 // (set_trim_bound_at_click).
 //
 // Session-only, never serialized. Cleared on the crossing (the trim drag takes
@@ -867,13 +868,13 @@ struct TrimDragState {
 // well, the pan"), so the halves differ in ONE thing — WHICH ACT the motionless
 // release runs — and in nothing else. A plain press anywhere on the surface
 // arms this and DOES NOTHING ELSE — nothing pops at press anywhere now (the
-// deferred-dissolve model, the one-day ruler former's own pattern generalized
+// deferred-hide model, the one-day ruler former's own pattern generalized
 // to the whole surface):
 //   * a MOTIONLESS RELEASE (never crossed kDragMovedThresholdPx) runs THE
 //     CLICK ACT at the press column, forked on the pressed half
 //     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
-//     view), region dissolve, playhead to the column, live-playback reseek,
+//     view), the overlay hide, playhead to the column, live-playback reseek,
 //     follow override. LOWER half — ONE AUDITION SCRUB ACT at the column (stop
 //     a live session, else launch), which touches no selection, no region, no
 //     cursor and no follow state: that pair of omissions is the halves' one
@@ -898,7 +899,7 @@ struct TrimDragState {
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
 //     what suppresses follow for the session (the pan producer class at
 //     follow_overridden_for_session). A PAN IS A PURE VIEWPORT MOVE: it moves
-//     NO playhead, clears NO region and NO selection, seeds nothing.
+//     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
 // IT AT ANY TIME — ctrl playing the second finger's part). THE TWO SURFACES
@@ -1758,10 +1759,8 @@ enum class RedesignButton {
     // panel could set a trim window and never get back out of it.
     //
     // Always enabled, by the settled face policy — there is no refusal to
-    // mirror. The `h` view greys it through the derived partition (bare `x` is
-    // not on the mode's allowlist, so the mode consumes it), nothing
-    // hand-listed, which is where trim's freeze in that view is expressed for
-    // this button.
+    // mirror; the `h` view's grey is the derived partition's and its derivation
+    // is stated once at this button's case in redesign_button_enabled below.
     IconShowRegion,
     // THE ZOOM GROUP (2026-08-12, the grand relayout's roster commit): four
     // navigation chords in their own separator-led group after the trim group —
@@ -2675,10 +2674,13 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 //     `moved` of its own: its crossing RESOLVES the arm outright, running the
 //     set and handing over to the endcap drag above, so there is no moved
 //     phase for it to be in.
-// One derived reader sits outside that list: the region former's SLIVER FLOOR
-// (end_region_drag_min_size_check) measures a rested span against this same
-// constant, so "never became a drag" and "never left the slack" are one
-// number. The TOUCH slop is a separate constant deliberately equal to it
+// (A derived reader sat outside that list until 2026-08-18: the region
+// former's SLIVER FLOOR, end_region_drag_min_size_check, measured a rested span
+// against this same constant so that "never became a drag" and "never left the
+// slack" were one number. It is DELETED with the free span it protected — the
+// sweep writes the trim per motion event under kMinTrimSpanFrames now, and a
+// jitter drag past this threshold widens to that floor rather than dissolving.)
+// The TOUCH slop is a separate constant deliberately equal to it
 // (kTouchSlopPx, platform_wayland.cpp — the platform sits below this header),
 // which is what makes a quick finger drag cross both gates at once.
 // UNIFIED to 8px (architect
@@ -4574,9 +4576,10 @@ struct AppState {
     // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO SEVENTH ESC PLACE.
     // The bare-Esc inventory is still the six enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
-    // so the two bindings that can be live in here run — the REGION CLEAR (a
-    // span formed before `h`, or one formed INSIDE the view by its own placement
-    // press and drag) and the RENDER / BATCH CANCEL (a render launched
+    // so the two bindings that can be live in here run — the REGION HIDE (an
+    // overlay SHOWN BEFORE `h`, which since 2026-08-18 is the only one
+    // reachable in here: the view has no span state of its own and bare `x` is
+    // consumed by the mode) and the RENDER / BATCH CANCEL (a render launched
     // before `h`).
     // Neither touches authored state, which is why admitting it costs the frozen
     // now side nothing. With neither standing, Esc is a consumed nothing.
@@ -6282,8 +6285,8 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // hoisted for the bottom row's two SKIP buttons as well — they greyed where the
 // cursor already rested on the landing frame — and that half was ruled back out
 // the same day: bare Home / End are not pure jumps (each also stops a live
-// audition, clears the marker selection and dissolves a resting region, even
-// when the jump moves nothing), so a greyed skip promised less than its key
+// audition, clears the marker selection and hides the trim region overlay,
+// even when the jump moves nothing), so a greyed skip promised less than its key
 // delivers. The buttons answer a plain `true` now; the full record and the
 // do-not-re-add line are at their case in redesign_button_enabled. This owner
 // survives on the ACT's account alone — three callers, one spelling — which is
@@ -6637,7 +6640,7 @@ inline bool playback_launch_playable(const AppState& a,
 // BACK WITH THEM (architect 2026-08-15) on a DIFFERENT reason, stated in full
 // at their arm below: their honest arm rested on a false premise — that bare
 // Home / End are pure jumps — when in fact both also stop a live audition,
-// clear the marker selection and dissolve a resting region UNCONDITIONALLY, so
+// clear the marker selection and hide the trim region overlay UNCONDITIONALLY, so
 // a greyed skip promised LESS than its key delivers. AND PLAY / STOP WENT LAST,
 // on the reason quoted at the top of this comment: the faces changing bought
 // little and distracted, and the product expects strict user knowledge — the
@@ -6853,10 +6856,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // meaningful on a loaded piece, and the case that would tempt a face
         // (an overlay already fully in view) is a harmless nothing rather than
         // a refusal, the framing owner's first arm simply writing no viewport.
-        // The `h` view greys it through the derived partition above
-        // (Ctrl+Shift+X is off the mode's allowlist, so the mode consumes it),
-        // nothing hand-listed — which is also where trim's freeze in that view
-        // is expressed for this button.
+        // The `h` view greys it through the derived partition above, RE-DERIVED
+        // 2026-08-18 against the chord's repointing and unchanged by it: bare
+        // `x` is neither history_mode_owns_key's own vocabulary nor on
+        // history_mode_key_blocked's allowlist, so the mode consumes it and the
+        // partition finds nothing to keep the face live. Nothing hand-listed —
+        // which is also where trim's freeze in that view is expressed for this
+        // button.
         case RedesignButton::IconShowRegion:
         // THE ZOOM GROUP MIRRORS NOTHING (2026-08-12): four navigation chords
         // that always mean something on a loaded file, and the loading/blank
@@ -7064,12 +7070,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // on, compared against playhead_skip_landing_frame — and THAT ARM WAS
         // BUILT ON A FALSE PREMISE: bare Home / End are not pure jumps. Both
         // also STOP A LIVE AUDITION, CLEAR THE MARKER SELECTION (the marker
-        // lane's exit repair) and DISSOLVE A RESTING REGION, unconditionally
+        // lane's exit repair) and HIDE THE TRIM REGION OVERLAY, unconditionally
         // and even when the jump itself moves nothing (the two live arms and
         // the `h` arm, input_key_dispatch.cpp). So a greyed skip made the FACE
         // PROMISE LESS THAN THE KEY DELIVERS — with the cursor parked on a trim
         // bound the key still stopped the audition, cleared the selection and
-        // dissolved the region while the dead button could do none of it, which
+        // hid the overlay while the dead button could do none of it, which
         // is the exact drift the 2026-08-07 read-only band ruling names and the
         // one thing this predicate exists to prevent.
         // THE ARCHITECT'S OWN SECOND REASON, the one that generalizes: whether
@@ -7306,7 +7312,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconIter:   return a.iteration_mode_enabled;
         // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
         // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
-        // bit Ctrl+Shift+X flips, so the lit face and the surface on screen
+        // bit bare `x` flips, so the lit face and the surface on screen
         // cannot drift. IT IS A TOGGLE AGAIN, where the 2026-08-16 ruling made
         // this button deliberately MOMENTARY and stateless, and the hole that
         // ruling avoided cannot occur under the new model — which is the part
@@ -7953,8 +7959,8 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // label: one line, "Cancel", NO KEY NAMED — deliberately. The act is the
     // button's own (the ruled chord divergence at
     // finish_chrome_press_release's Render arm),
-    // and naming Esc would lie whenever a region rests: bare Esc ranks the
-    // region clear above the render cancel, so the key and the button part
+    // and naming Esc would lie whenever the trim region overlay is shown: bare
+    // Esc ranks the region hide above the render cancel, so the key and the button part
     // company in exactly that state. NO SHIFT LINE either: while the face is
     // Cancel a shift press cancels too — one face, one act — and the hint
     // exists only where shift does something DIFFERENT (the static_assert's

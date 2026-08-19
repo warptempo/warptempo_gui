@@ -299,17 +299,24 @@ struct GuiHistoryCommitDelta {
     // frames (the domain every sidecar line is authored in). Returns false when
     // no entry carries a frame at all, which is both the empty delta and the
     // `scale`-only one: a scale change has no frame, so it contributes no term
-    // and cannot be framed. Both callers read that as "the whole song".
+    // and cannot be framed. Its two GUI readers read that as "the whole song"
+    // while they lived.
     //
-    // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: its
-    // readers describe the CHECKPOINT, not the lane — a span that shrank when
-    // the user pressed `p` would make a view
+    // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: a
+    // reader of it describes the CHECKPOINT, not the lane — a span that shrank
+    // when the user pressed `p` would make a view
     // switch, whose whole purpose is reviewing the OTHER half of this same
-    // delta, move the viewport out from under him. (ITS TWO GUI READERS ARE
-    // GONE since 2026-08-18: the trim bar displayed this span while the view
-    // stood and its double-click zoomed to it, and the architect ruled the bar
-    // shows the real trim window in the view like everywhere else. What still
-    // reads it is the delta's own machinery.) It also reads the delta
+    // delta, move the viewport out from under him.
+    //
+    // IT HAS NO READER AT ALL SINCE 2026-08-18 and is kept deliberately, as a
+    // seed rather than as live machinery: its TWO GUI readers were the trim
+    // bar's in-view span display and that bar's double-click framing, and both
+    // went when the architect ruled the bar shows the real trim window in the
+    // view like everywhere else (frame_viewed_commit_diff_span is deleted with
+    // them). Nothing in the delta's own machinery reads it either — verified by
+    // grep, not remembered. It is a PRODUCER-LESS SURVIVOR awaiting an
+    // architect call; do not wire a caller to it to justify it, and do not
+    // delete it under a comment repair. It also reads the delta
     // directly rather than AppState::HistoryMode::flags, which is paint-cache
     // output on a once-per-tick cadence and deliberately EMPTY for a frame
     // after every mode edge.

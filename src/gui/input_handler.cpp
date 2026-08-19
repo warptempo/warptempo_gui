@@ -427,11 +427,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the overview lane's box drag (overview_drag — the box pan and the two
     // edge drags; an OUTSIDE press is the pan here too, its teleport having
     // already run at the press, so a force-end costs it nothing),
-    // THE STANDING REGION'S OWN EDITOR (region_edit_drag — the move and the two
-    // bound drags, 2026-08-15: it must swallow chords for the same reason the
-    // region former does, its span being live under the pointer, and because an
-    // unmoved press there still owes the deferred click act at its release),
-    // and the
+    // (THE STANDING REGION'S OWN EDITOR was an entry of its own from
+    // 2026-08-15 until 2026-08-18: `region_edit_drag`, the move and the two
+    // bound drags. Its state is DELETED — those drags ARE the trim drags named
+    // above now that the region is the trim — so the gate is unchanged and one
+    // name fewer.)
+    // And the
     // MARKER FLAG'S PENDING PRESS, THE ONE DEFERRED PENDING CLICK ACT
     // (pending_click — the trim bar's two bound sets, the one click still
     // lift-deferred since 2026-08-17) plus the pending trim drag (a press
@@ -553,8 +554,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is the Ctrl+S entry's now, on that entry's
     //                              own reasoning — it publishes what the tab
     //                              already holds)
-    //   - x / Shift+X (no ctrl,  → the trim set-from-region and the maximizer
-    //     no alt)                  (2026-08-07). Trim is BAND, not content
+    //   - x / Shift+X (no ctrl,  → the trim region overlay's show/hide toggle
+    //     no alt)                  and the maximizer (2026-08-07; `x` SET the
+    //                              trim from a region until 2026-08-18, and the
+    //                              repointing only made it easier to admit —
+    //                              the toggle writes no bound at all). Trim is
+    //                              BAND, not content
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
@@ -623,7 +628,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // arrives by construction: the target-view entry validation and its error
     // notice, the domain translation of viewport / playhead / zoom, the flag
     // editor teardown and the iter wipe, the selection clear, the coincidence
-    // auto-select, the region clear, and the synchronous plate rebuild. There is
+    // auto-select, the region hide, and the synchronous plate rebuild. There is
     // no third view-switch route to keep in step with the other two.
     //
     // THE ORDER IS AUDIO FIRST, THEN MARKERS, and it is decided by the
@@ -704,9 +709,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // CLEAR BUT NEVER CANCEL, and that is STRUCTURAL rather than a test here: a
     // drag in flight is swallowed by the DRAG-MODAL GATE far above (which admits
     // only Ctrl+Q), so a mid-drag Esc never reaches this arm at all — the drag
-    // keeps extending under the pointer and its span survives, matching the
-    // no-cancel rule every pointer gesture holds. Only a span the user has
-    // RELEASED can be cleared from here.
+    // keeps extending under the pointer and goes on writing the trim, matching
+    // the no-cancel rule every pointer gesture holds. Only an overlay left
+    // standing by a RELEASED gesture can be hidden from here.
     // BARE-EXACT, like every other Escape reader (strict modifier validation).
     if (key == GuiKeys::Escape && !ctrl && !shift && !alt && app.region.shown) {
         clear_region_highlight(app, viewport);
@@ -750,7 +755,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
-    //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
+    //   (d) THE REGION HIDE — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
     // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) run
@@ -770,10 +775,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // left exactly as found. Leaving the MARKER LANE is
     // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
-    // playhead_in_marker_lane). And the region clear above is now the ONE route
-    // that drops a span WITHOUT moving the playhead or changing the selection —
-    // the standing gap in the clear-site set (clear_region_highlight,
-    // input_handler.h), closed by giving the user a key for it.
+    // playhead_in_marker_lane). And the region hide above drops the overlay
+    // WITHOUT moving the playhead or changing the selection — the standing gap
+    // in the hide-site set (clear_region_highlight, input_handler.h), closed by
+    // giving the user a key for it. IT IS NO LONGER THE ONLY SUCH ROUTE: bare
+    // `x`'s own hide half has been the other since 2026-08-18, and hiding
+    // discards nothing either way.
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
@@ -854,13 +861,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the left edge launch - play issues from playhead OR scrub - user can
         // click scrub region to preview"). The region arm that stood here — a
         // left-bound launch through scrub_launch_at whenever a span rested — is
-        // DELETED with the SPAN FORM: the region is trim scratch, not a launch
+        // DELETED with the SPAN FORM: the region IS THE TRIM (the model is at
+        // RegionState, app_state.h), not a launch
         // point, and the SCRUB is the gesture for previewing it — the waveform
         // lower half's plain click, its one entry (the act runs at the
         // motionless release since 2026-08-13): click inside
-        // the span and it auditions from there, the span resting untouched.
+        // the overlay and it auditions from there, the overlay left standing.
         // Space now touches no region at all, in either
-        // direction: it neither reads one nor clears one.
+        // direction: it neither reads the overlay nor hides it.
         playback_lifecycle.toggle_playback(launch_offset);
         return;
     }
@@ -1166,13 +1174,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is NOT
-    // one — it clears a resting span and nothing else, touching no selection),
+    // one — it hides the trim region overlay and nothing else, touching no
+    // selection),
     // and there is no fallback, so an
     // off-home marker-lane press is a consumed no-op, never a
     // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform
     // lower-half one-shot press — and no arrow key reaches it.)
     // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
-    // waveform-lane body's stop / selection-clear / region-clear, because the two
+    // waveform-lane body's stop / selection-clear / region-hide, because the two
     // lanes carry DIFFERENT playback regimes — the position nudges stop in
     // position_nudge_prologue even when they later refuse, while the
     // W+target refusal below stops nothing at all (a refused press leaves a
@@ -1296,13 +1305,14 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // The owner OWNS the damage: full waveform area + the clock cell on a land that
     // MOVES, and an early return on a land onto the sample the playhead already
     // holds — nothing moved there, so nothing needs erasing. What stays HERE is
-    // exactly what the owner does not provide: the stop above, the region clear,
+    // exactly what the owner does not provide: the stop above, the region hide,
     // and the recenter below.
     land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
 
-    // Navigation jump: dissolve a resting region highlight — its span is stale
-    // now the playhead has left it. Covers the whole Tab family and `c` through
-    // this one shared tail.
+    // Navigation jump: HIDE the trim region overlay — the playhead has left
+    // it, which is the turn-to-other-work rule the whole hide inventory rests
+    // on, and hiding discards nothing (the trim persists). Covers the whole Tab
+    // family and `c` through this one shared tail.
     clear_region_highlight(app, viewport);
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
@@ -1354,9 +1364,10 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
         // first (idempotent when it is already there, which after a click or a
         // Tab step it is). The live arm's repair_last_selected /
         // jump_playhead_to_focused_marker pair is deliberately NOT run: it walks
-        // the live stores, which the lane is not showing. The region clear is
+        // the live stores, which the lane is not showing. The region hide is
         // unconditional and up front, exactly as the live arm does it — the
-        // no-focus path never reaches a land's own tail.
+        // no-focus path never reaches a land's own tail. (A HIDE since
+        // 2026-08-18, like every other member of that inventory.)
         clear_region_highlight(app, viewport);
         const int focus = app.history_mode.focus;
         if (focus >= 0 &&
@@ -1386,17 +1397,17 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // last-selected repair — then set that level and center on it; with no
     // focused marker, keep the plain zoom-and-center-on-playhead
     // behavior.
-    // Clear the region here, unconditionally and up front: the no-focus arm
-    // never reaches jump_playhead_to_focused_marker's clear tail (that function
-    // early-returns with nothing focused), and a region drag clears the marker
-    // selection, so region-drag-then-`c` is exactly the no-focus path. HELP lists
-    // `c` in the clear set unconditionally. The focused arm then double-clears
-    // via the jump tail — a no-op, since the helper's !active guard returns
-    // immediately on the already-cleared region.
+    // Hide the overlay here, unconditionally and up front: the no-focus arm
+    // never reaches jump_playhead_to_focused_marker's hide tail (that function
+    // early-returns with nothing focused), and the sweep deselects on the trim
+    // setter rule, so sweep-then-`c` is exactly the no-focus path. HELP lists
+    // `c` in the hide set unconditionally. The focused arm then hides twice
+    // via the jump tail — a no-op, since the helper's shown-bit guard returns
+    // immediately on the already-hidden overlay.
     // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
     // collapse-to-focus that stood here is deleted — it existed only to keep a
     // group from resting SPANLESS, a state that no longer exists now the region
-    // is trim scratch rather than a group's playhead form. The jump below is a
+    // IS THE TRIM rather than a group's playhead form. The jump below is a
     // jump TO THE FOCUS and accepts a group's focus as-is; the always-visible
     // cursor lands there, the other members keeping their brightened flags.
     clear_region_highlight(app, viewport);
@@ -1452,12 +1463,16 @@ void GuiInputHandler::run_overview_command() {
     // zoom framing on the span-READ side, not with the collapse+land verbs. It does
     // not stop a live audition either — the pure-viewport-move class of the keyboard
     // stop rule (stop_playback_if_playing's declaration, playback_lifecycle.h).
-    // THE REGION CLEAR DIED WITH THE COLLAPSE, NOT SEPARATELY — do not reintroduce
-    // it on this arm: a clear that left a 2+ selection standing would rest it
-    // SPANLESS, the hybrid third form the architect rejected (that state draws no
-    // playhead cue at all), so the two are one decision.
+    // THE REGION HIDE DIED WITH THE COLLAPSE, NOT SEPARATELY — do not
+    // reintroduce it on this arm. Its ORIGINAL argument (a hide that left a 2+
+    // selection standing would rest it SPANLESS, the hybrid third form the
+    // architect rejected) retired with the span form itself; the CURRENT reason
+    // is the standing one for the whole family — this arm is a PURE VIEWPORT
+    // MOVE, and pure viewport moves are deliberate non-members of the hide
+    // inventory (the list and its non-members are at clear_region_highlight,
+    // input_handler.h, where bare `0`'s zoom-out arm is named).
     // THE SECOND ARM IS `c`, SO IT CARRIES `c`'s REGIME, not this one's: the
-    // region clear, the focus repair, the land onto the focused marker and the
+    // region hide, the focus repair, the land onto the focused marker and the
     // stop that rides inside that land are all the center command's, stated at
     // its owner. Nothing about them is decided here — this arm only chooses
     // between the two commands.
@@ -1755,7 +1770,7 @@ void GuiInputHandler::run_span_framing_command() {
 // pivoting on the column under the pointer, and it suppresses follow no more
 // than the keys do, being a zoom that centers ON the scanner. The
 // pointer-anchored pivot is what the ctrl-DRAG is for. Pure viewport move like
-// the keys otherwise: no playhead write, no selection change, no region clear,
+// the keys otherwise: no playhead write, no selection change, no region hide,
 // no playback stop, read-only-legal.
 //
 // Every OTHER combination stays a swallowed no-op (strict modifier validation):
@@ -2171,7 +2186,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // clear_region_highlight). It stays an IN-PLACE reset rather than a call —
     // the full-window invalidate at the tail repaints the waveform on its plain
     // canvas ground, which is a superset of that helper's own damage. Nothing
-    // is discarded: the trim is untouched and Ctrl+Shift+X re-shows an overlay
+    // is discarded: the trim is untouched and bare `x` re-shows an overlay
     // derived from it in the new domain.
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR GOES WITH IT, for the identical reason
@@ -2198,9 +2213,12 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // SPAN FORM retired there is no such state to avoid: the group's cue is its
     // members' brightened flags plus the always-visible cursor, and the
     // selection-gated land below re-expresses the focus EXACTLY, which is what
-    // seats that cursor where the readout says it is. The region clear above is
-    // STRUCTURAL and stays (its endpoints are ACTIVE-DOMAIN frames and the domain
-    // just flipped); nothing re-derives one, the region being trim scratch.
+    // seats that cursor where the readout says it is. The region hide above
+    // stays, on the turn-to-other-work rule alone — the STRUCTURAL reading it
+    // carried until 2026-08-18 (a stored pair of ACTIVE-DOMAIN endpoints the
+    // flip would strand) died with the stored span: the overlay is DERIVED from
+    // the trim every frame, through trim_overlay_span, which re-crosses the
+    // bounds into whichever domain is live. Nothing here re-shows it.
     // ALL THREE CALLERS get this: the bare `t` key, the settings editor's
     // `active_audio_view=` GUI-key twin, and the propagate paste's tail (moot
     // there — its column swap clears the selection immediately after).

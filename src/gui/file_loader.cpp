@@ -58,7 +58,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // stale span.)
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
-    // same line of argument the region clear above makes (codex round 21): the
+    // same line of argument the region hide above makes (codex round 21): the
     // three assignments below REPLACE the active view state wholesale, and this
     // routine is where that write lives — so the clear lives here too and both
     // load-in-places inherit it instead of remembering it. THE SHARP CASE IS THE
@@ -302,12 +302,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // ended it (the two bits share the Selection chokepoint; the contract is
     // at AppState::add_to_selection).
     app.add_to_selection = false;
-    // (The displayed hit map AND the resting selection region are cleared in
+    // (The displayed hit map AND the trim region overlay's visibility are reset in
     // apply_settings_engine_and_prefs, the shared load / load-in-place
     // view-establishment routine, not here. The live-pointer-drag scratch
     // above stays load-only: the load-in-place runs from the modal load
     // editor, where no pointer gesture can be
-    // live, so it needs no drag clears — only the view-domain region clear.)
+    // live, so it needs no drag clears — only the view-domain region hide.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). SEED IT TO THE FULL WINDOW explicitly before
     // the initial-playhead read: the window is always set (2026-07-30), so

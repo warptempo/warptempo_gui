@@ -60,8 +60,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.move_playhead_to(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, drop_marker's twin —
     // see the fuller statement there): it seats the playhead on the reset it
-    // creates and single-selects it, so any resting span ends here,
-    // unconditionally. THE PHASE CHOKEPOINT: both entry
+    // creates and single-selects it, so the trim region overlay is HIDDEN here,
+    // unconditionally (hiding discards nothing — the trim persists). THE PHASE
+    // CHOKEPOINT: both entry
     // routes reach this column only through drop_phase_reset_lead_in_at_playhead,
     // whose only act is to call this, so one clear covers both. PAST EVERY
     // REFUSAL: the callers' read-only / home-view gates and the wrapper's own

@@ -23,9 +23,10 @@ std::pair<int64_t, int64_t> navigation_trim_range(const AppState& app,
                                                   const GuiAudio& audio) {
     if (audio.total_frames() <= 0) return {0, 0};
     if (app.active_audio_view == 'T') {
-        // Target view: trim is authored source-domain (b/e store
-        // whole int64 source frames via inverse-translation in
-        // handle_trim_x's set-from-region) but Home/End needs to land
+        // Target view: trim is authored source-domain (both bounds store
+        // whole int64 source frames, every writer crossing into that domain at
+        // its own site — the inventory is at the head of input_trim.cpp) but
+        // Home/End needs to land
         // the playhead in the active target-frame domain. Build
         // the live warp_frame_map and forward-translate the source-domain
         // trim boundaries.
@@ -79,8 +80,8 @@ int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 // LIVED ONE REVISION and is gone by ruling — the bottom row's two SKIP buttons
 // greyed where the cursor already rested on the landing frame, and the architect
 // took that face back the same day because bare Home / End are not pure jumps
-// (each also stops a live audition, clears the selection and dissolves a
-// region, no-op jump included), so the grey promised less than the key
+// (each also stops a live audition, clears the selection and hides the trim
+// region overlay, no-op jump included), so the grey promised less than the key
 // delivers. Do not re-add a face reader here; the full record is at the skips'
 // case in redesign_button_enabled (app_state.h).
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,

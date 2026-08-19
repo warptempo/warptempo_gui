@@ -25,11 +25,14 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
     // preserves frames (subject-stable), and two resets sharing one frame paint
     // the overlay at the same column, so a focus swap between them is not a
     // subject change.
-    // NO REGION GATE, on either side of the mirror, and none is wanted: the live
-    // former deselects at press and the `h` view's spans are view-local (cleared
-    // at its edges), so a span rests beside an empty selection and an empty
-    // selection has no focused reset to be a subject. The derivation is at the
-    // band (paint_handler.cpp) and the former inventory at RegionState.
+    // NO REGION GATE, on either side of the mirror, and none is wanted: the
+    // overlay is the trim window and this subject is one phase reset's lead-in
+    // ring, so the two annotate different things and neither hides the other.
+    // (The belt that stood here — "a span rests only beside an empty selection"
+    // — is retired, 2026-08-18: bare `x` shows the overlay and writes no
+    // selection, so a shown overlay may rest beside any selection. The
+    // conclusion never needed it.) The derivation is at the band
+    // (paint_handler.cpp) and the shown/hidden model at RegionState.
     if (app.active_markers_view != 'P') return std::nullopt;
     if (app.active_audio_view != 'T') return std::nullopt;
     if (app.selected_markers.size() >= 2) return std::nullopt;

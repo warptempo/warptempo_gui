@@ -145,8 +145,8 @@ struct GuiPlaybackLifecycle {
     // position in the active paint domain, leaving the resting cursor untouched.
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
     // START half of its stop-then-start), which is also the gesture for
-    // previewing a resting region: click inside the span and it auditions from
-    // there. That act has ONE entry since 2026-08-13 (the lower-half plain
+    // previewing a SHOWN trim region overlay: click inside it and it auditions
+    // from there, the overlay left standing. That act has ONE entry since 2026-08-13 (the lower-half plain
     // press's MOTIONLESS RELEASE — its press-time dispatch moved to the lift
     // when the waveform's two halves became one surface, and the bare right
     // full-height entry died 2026-08-12 with the right button's unbinding),

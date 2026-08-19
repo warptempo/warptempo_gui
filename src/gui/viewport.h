@@ -288,7 +288,9 @@ struct Viewport {
     //   and phaseresetmarkers_ops' drop / delete / toggle / tempo-step tails,
     //   marker_drag's commit, position_nudge's shared tail, the flag editor's
     //   commit and its BPM commit, undo's restore tail, active_views' two
-    //   switches, input_trim's four commit / drag sites, and
+    //   switches, input_trim's FIVE commit / drag sites (re-greped 2026-08-18:
+    //   the SWEEP's own per-motion write joined them when the region became the
+    //   trim), and
     //   input_key_dispatch's three load-in-place tails.
     //   ONE READ-ONLY ROUTE — bare `o` (input_handler.cpp), which is on this
     //   lane because it moves the TAB's own face; its padlock BUTTON is the
@@ -379,8 +381,9 @@ struct Viewport {
     //     damages the clock itself inside clamp_display_state_to_live_domain).
     //   * input_pointer's two direct cursor writes:
     //     land_playhead_on_source_frame — the land owner every marker land,
-    //     Tab/`c` jump and history diff-flag click ride — and on_motion's
-    //     sliver release.
+    //     Tab/`c` jump and history diff-flag click ride — and the region
+    //     sweep's own per-motion cursor write (update_region_drag, the drag
+    //     carrying the playhead on its moving end).
     //
     //   BOTH CELLS — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,

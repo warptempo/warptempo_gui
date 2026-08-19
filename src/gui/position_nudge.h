@@ -235,11 +235,12 @@ int64_t stepped_anchor_frame(
 //     only (playback was stopped by the twin, past its wall clamp and ahead of
 //     its first write — and by the prologue's collapse arm before that on a 2+
 //     press; either way this tail always runs stopped).
-// (f) THE REGION: a position nudge CLEARS any resting scratch span,
+// (f) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
-//     singleton (the clear-site list is at clear_region_highlight,
-//     input_handler.h). There is no span-preserving arm any more: the extent
-//     re-derive died with the group nudge.
+//     singleton (the hide-site list is at clear_region_highlight,
+//     input_handler.h), and it discards nothing, the trim standing behind it.
+//     There is no overlay-preserving arm any more: the extent re-derive died
+//     with the group nudge.
 // (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
@@ -257,7 +258,7 @@ int64_t stepped_anchor_frame(
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
 // only — not the cursor), move_playhead_to does not read undo
-// state, and the region clear reads only the region. ONE
+// state, and the region hide reads only the region. ONE
 // knowingly-accepted delta rides the unification, phase-only (the warp twin
 // already had this shape) and harmless, recorded here so the next reader need
 // not re-derive it; a second one dissolved with the coalesce clock and is kept

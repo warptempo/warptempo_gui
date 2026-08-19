@@ -2398,7 +2398,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // arrows and the four history companions first (a glyph blinking on every
 // marker selection restates what the selection already shows), then the two
 // SKIPS (bare Home / End are not pure jumps — each also stops a live audition,
-// clears the selection and dissolves a region, no-op jump included, so a grey
+// clears the selection and hides the trim region overlay, no-op jump included, so a grey
 // promised less than the key delivers), then PLAY and STOP last, on the reason
 // that covers those ten: "there's not a whole lot of value derived from
 // the icon faces changing, and it is a little distracting... the user is
@@ -3991,14 +3991,14 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     //
     // NO REGION GATE HERE, and none is wanted — THE DERIVATION, recorded once at
     // this site with Selection::phase_overlay_subject's mirror pointing here:
-    // the LIVE region former DESELECTS at press (the shift former
-    // and the drag it arms — the inventory is at RegionState, app_state.h) and
-    // the `h` view's own spans are VIEW-LOCAL, cleared at its exit and at every
-    // step and compare switch, so a region rests beside an EMPTY selection out
-    // here and an empty selection carries no focused reset for this band to
-    // annotate. A gate would be DEAD code, which is why there is none — and it
-    // would be the wrong shape besides: a scratch span and a lead-in ring
-    // annotate different things and neither hides the other.
+    // the two annotate DIFFERENT THINGS and neither hides the other — the
+    // overlay is the trim window, this band is one phase reset's lead-in — so
+    // there is nothing for a gate to arbitrate. (The DEAD-CODE argument that
+    // stood here first is retired, 2026-08-18: it rested on the overlay only
+    // ever resting beside an EMPTY selection, which held while both formers
+    // deselected at press and does not hold now that bare `x` shows the overlay
+    // and writes no selection. The conclusion is unchanged, and it never needed
+    // that premise.)
     if (app.selected_markers.size() >= 2) return out;
 
     // Paint sample: the exact expression render.cpp's file-local
@@ -4559,9 +4559,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // and the HEAD paints in the suppressed case too (paint_ruler_row).
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
-    // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
-    // formed by the shift waveform drag, previewed by the lower half's scrub click
-    // act, consumed by `x`), so it dissolves
+    // region is no longer a playhead at all (it IS THE TRIM — a ground recolor
+    // DERIVED from the trim window every frame, written by the shift waveform
+    // sweep, previewed by the lower half's scrub click act, shown and hidden by
+    // bare `x`), so it hides
     // nothing and suppresses nothing, and the split half-triangle renderer is
     // deleted outright. The non-empty-selection suppression is
     // gone too: a cursor resting ON the focused marker is simply hidden behind

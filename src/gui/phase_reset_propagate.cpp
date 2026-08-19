@@ -615,11 +615,11 @@ void PhaseResetPropagate::paste_state_apply() {
 // shared by all three paste actions.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
-// wholesale region clear, then the selection set (the playhead land rides with
+// wholesale region hide, then the selection set (the playhead land rides with
 // it, after the swap):
 //   * handle_active_audio_view_toggle is the SAME chokepoint the `t` key runs
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
-//     the region clear, kick_waveform_sync, and target_render.ensure_ready all
+//     the region hide, kick_waveform_sync, and target_render.ensure_ready all
 //     fire exactly once). It is a TOGGLE, so it is called only when the session
 //     is not already in target view.
 //   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
@@ -640,7 +640,7 @@ void PhaseResetPropagate::paste_state_apply() {
 //     re-express of wherever the cursor happened to be, and the only playhead cue
 //     left, since the swap's clear means no flag claims the position. Running it
 //     first keeps the heavier re-express (and its full-window invalidate) ahead of
-//     the lightweight mode swap and leaves every side effect (region clear, hover
+//     the lightweight mode swap and leaves every side effect (region hide, hover
 //     clear, the selection clear) coherent.
 //
 // Invalidation, and why the tail ends in a SYNCHRONOUS rebuild rather than plain
@@ -678,10 +678,12 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         input->handle_active_audio_view_toggle();
     }
     active_views.switch_active_markers_view_to('P');
-    // CLEAR ANY RESTING REGION (architect 2026-07-29): this tail hands the marker
-    // lane a wholesale new selection in a column the user was not authoring in,
-    // and a trim-scratch span formed against the source-view session describes
-    // nothing here. Unconditional. No damage call of its own is needed —
+    // HIDE THE TRIM REGION OVERLAY (architect 2026-07-29): this tail hands the
+    // marker lane a wholesale new selection in a column the user was not
+    // authoring in, which is the turn-to-other-work the whole hide inventory
+    // answers to. Unconditional, and it discards nothing — the trim stands and
+    // the overlay would re-derive from it unchanged. No damage call of its own
+    // is needed —
     // this tail invalidates the whole waveform area below — but the helper owns
     // one anyway.
     clear_region_highlight(app, viewport);
@@ -701,8 +703,8 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // suppression-repair rationale (a non-empty selection hiding the cursor
         // while playhead_cursor_sample held a stale pre-paste value) went with the
         // suppression itself, and so did the extent-region write that followed
-        // this land, the region being trim scratch a paste has no business
-        // creating (architect 2026-07-30).
+        // this land: the region IS THE TRIM, which a paste has no business
+        // writing (architect 2026-07-30).
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
     // NO CREATED SET — every paste that materialized nothing, not just the state
