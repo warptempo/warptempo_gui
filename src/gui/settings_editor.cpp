@@ -553,11 +553,13 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
-    // WHOLESALE REGION CLEAR at the engine-commit chokepoint (architect
-    // 2026-07-29): the scale is a warp-map input,
-    // so this commit rebuilds the target map underneath any resting highlight,
-    // and a scratch span measured against the old map would aim `x` at a window
-    // the user never drew. This tail is the ONE committed path for
+    // WHOLESALE OVERLAY HIDE at the engine-commit chokepoint (architect
+    // 2026-07-29, a clear until 2026-08-18 and a hide since): the scale is a
+    // warp-map input, so this commit rebuilds the target map underneath the
+    // overlay. It discards nothing — the overlay derives from the trim, which
+    // re-projects into the new map by itself on the next frame — where the
+    // original argument was about a stale SPAN measured against the old map,
+    // which would have aimed the old `x` at a window the user never drew. This tail is the ONE committed path for
     // every canonical engine key — the GUI-kind keys returned through
     // commit_gui_setting far above (the TRIM keys among them, whose active-tab
     // arms take the setter's own deselect and touch no region,

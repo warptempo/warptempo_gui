@@ -215,11 +215,11 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
-    // A DELETE RESTS AN EMPTY SELECTION AND NO REGION (architect 2026-07-30): the
+    // A DELETE RESTS AN EMPTY SELECTION (architect 2026-07-30): the
     // demotion that used to drop a 2+ delete down to a span over the deleted
-    // positions is gone with the SPAN FORM — the region is trim scratch and a
-    // delete has nothing to aim `x` at. The delete leaves whatever span was
-    // already resting exactly as it found it.
+    // positions is gone with the SPAN FORM, and there is no span state left for
+    // one to write into — the region IS the trim. The delete leaves the trim
+    // and the overlay's visibility exactly as it found them.
     selection.clear_selection();
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();

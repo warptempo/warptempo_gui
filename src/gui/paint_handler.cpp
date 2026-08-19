@@ -697,11 +697,13 @@ constexpr IconRowDef kIconRowButtons[] = {
     // plus the group's leader in redesign_button_opens_icon_group
     // (app_state.h) and the roster enum's own order, which the three keep in
     // step. No count, no gap and no width follows a swap.
-    //   Ctrl+Shift+X, show region. The glyph is TOOL-RECT-SELECTION, the
-    //   marching-ants rectangle — the architect's pick, taken at 22px though he
-    //   named the 24px path (same rectangle, and 22 is the set's convention).
-    //   MOMENTARY: no lamp, no state (the ruling and the
-    //   toggle it replaced are at the roster entry, app_state.h).
+    //   bare `x`, the trim region toggle (Ctrl+Shift+X until 2026-08-18). The
+    //   glyph is TOOL-RECT-SELECTION, the marching-ants rectangle — the
+    //   architect's pick, taken at 22px though he named the 24px path (same
+    //   rectangle, and 22 is the set's convention). A TOGGLE with a lamp on the
+    //   overlay's visibility, and NO SECOND GLYPH for the hidden half: every
+    //   eye-shaped alternative collides with ViewHidden, which is already
+    //   IconMarkerDisable (the ruling is at the roster entry, app_state.h).
     // (THE SCISSORS SAT SECOND HERE — bare `x`, set trim from region, wearing
     // Breeze's EDIT-CUT — from 2026-08-11 until the architect retired the
     // BUTTON on 2026-08-18 ("remove the 'set trim from region' icon"). The
@@ -3758,8 +3760,15 @@ GuiPaintHandler::plate_viewport_basis() const {
 
 GuiPaintHandler::RegionColumns
 GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
-    const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-    const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
+    // DERIVED FROM THE TRIM, not from a stored span (2026-08-18 — the region IS
+    // the trim; the model is at RegionState, app_state.h). trim_overlay_span is
+    // the one owner of "where the overlay is": it crosses both bounds into the
+    // active display domain and hands them back ordered, so this pass and the
+    // hit test read the same two numbers on the same frame with nothing cached
+    // between them.
+    const TrimOverlaySpan span = trim_overlay_span(app, audio);
+    const int64_t lo = span.lo;
+    const int64_t hi = span.hi;
     RegionColumns c;
     // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
     // the PLATE basis the caller passed — the endpoints already live in the
@@ -3793,7 +3802,7 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
 // clipped to the CONTENT band so it cannot cover the area's border rows.
 void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
-    if (!app.region.active) return;
+    if (!app.region.shown) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     // Displayed-viewport recipe: the same fp_* fingerprint paint_playheads and
@@ -3853,7 +3862,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // about where the region is; the clip is the CONTENT band, so neither half can
 // reach the area's 2px black border rows.
 void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
-    if (!app.region.active) return;
+    if (!app.region.shown) return;
     if (area.w <= 0 || area.h <= 0) return;
     // The blit's own guard: with no published plate there is no alpha to mask
     // through, and the ground pass's fill is the whole highlight for that frame.

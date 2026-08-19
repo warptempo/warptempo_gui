@@ -41,10 +41,12 @@ struct GuiTargetRender;
 //     selection's SPAN is merely READ: the value edits (Ctrl+D's disable toggle,
 //     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, the
 //     zoom framing, and the undo/redo + paste
-//     restores (which DEFINE a group selection). `x` still READS a span — the
-//     trim-scratch region's, which since 2026-07-30 rests only beside an EMPTY
-//     selection (the record is at RegionState, app_state.h); Space left this list the same day, its left-bound region launch
-//     dropped for an unconditional play-from-the-playhead;
+//     restores (which DEFINE a group selection). (Bare `x` READ a span until
+//     2026-08-18 — the trim-scratch region's — and reads none now: the region
+//     IS the trim and `x` shows and hides its overlay, the record being at
+//     RegionState, app_state.h. Space left this list on 2026-07-30, its
+//     left-bound region launch dropped for an unconditional
+//     play-from-the-playhead;)
 //   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
 //     POSITIONAL: Ctrl+N and all horizontal movement. Ctrl+N is coupled because
 //     the pass -> owner freeze reads the RESOLVED walk — a member's frozen tempo

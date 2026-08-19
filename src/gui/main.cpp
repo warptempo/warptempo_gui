@@ -1707,7 +1707,8 @@ int main(int argc, char** argv) {
     // every writer of any of them: a set nobody could enumerate and keep
     // enumerated, and two review rounds each found a class the previous
     // derivation had missed while whole classes (a keyboard zoom moving the trim
-    // endcaps under a resting pointer, the zoom and navigation keys, `x`, an
+    // endcaps under a resting pointer, the zoom and navigation keys, the trim
+    // keys, an
     // undo restoring trim, `o`, a gui_scale relayout, every keyboard editor open
     // and close, a dropdown item click) had no site to hang a call on at all.
     // A LOOP BOUNDARY IS AFTER EVERY SETTLE BY DEFINITION, so all of them are

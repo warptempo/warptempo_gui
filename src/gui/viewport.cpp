@@ -266,22 +266,15 @@ void Viewport::clamp_display_state_to_live_domain() {
         invalidate_clock_area();
     }
 
-    // REGION: a live region's endpoints are active-domain frames. If the domain
-    // shrank under it and either bound left [0, live_total - 1], CLEAR the
-    // highlight (writing app.region directly has precedent in active_views.cpp's
-    // S/T clear). CLEAR, not clamp, by design — the domain shifted under the
-    // highlight,
-    // so a clamped span would misrepresent what the user selected; this is the
-    // S/T-switch precedent. A mid-drag shrink-then-grow that loses
-    // the region is accepted — the region is session scratch.
-    if (app.region.active) {
-        const int64_t total = live_total_frames(app, audio);
-        if (app.region.a_frame < 0 || app.region.a_frame >= total ||
-            app.region.b_frame < 0 || app.region.b_frame >= total) {
-            app.region = RegionState{};
-            invalidate_waveform_area();
-        }
-    }
+    // (THE REGION'S OWN RECLAMP STOOD HERE until 2026-08-18 and is DELETED with
+    // the state it validated: a region held two ACTIVE-domain endpoints of its
+    // own, which a shrinking domain could strand outside [0, live_total - 1],
+    // and the answer was to clear the highlight. The region IS the trim now —
+    // the overlay is DERIVED from the trim bounds every frame, through
+    // trim_overlay_span, which crosses them into the live domain and clamps
+    // there — so there is no stored endpoint left to validate and nothing this
+    // pass could correct. The TRIM's own bounds are SOURCE frames, walled at
+    // load and at every gesture, and are not this function's subject.)
 }
 
 void Viewport::move_playhead_pixels(int delta_px) {

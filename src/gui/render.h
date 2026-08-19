@@ -1188,8 +1188,10 @@ inline int icon_row_h_px() {
 // for a finger" (the architect offered himself 150 or 200 and picked 150), and
 // his next look at glass and monitors reversed it — "the blue bar looks too
 // big". The bar needs no big finger target any more: the common act is
-// HIGHLIGHTING to set trim, which lives on the RULER's plain drag now (the
-// region former + `x`), so the trim bar's own gestures are the rare case. The
+// HIGHLIGHTING to set trim, which lives on the WAVEFORM now (the SWEEP writes
+// the window in one stroke, and the trim region overlay carries the bar's own
+// bound and bridge drags on a surface hundreds of pixels tall), so the 9 px
+// bar's own gestures are the rare case. The
 // machinery stays because the factor is the lane's one retune knob: it
 // COMPOSES with gui_scale inside trim_lane_h_px (the crop-measured 9 is still
 // the authored value; the factor multiplies it before the one scaled_px

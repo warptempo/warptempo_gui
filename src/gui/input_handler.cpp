@@ -456,7 +456,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.trim_drag.active ||
-        app.region_drag.active || app.region_edit_drag.active ||
+        app.region_drag.active ||
         app.scroll_drag.active || app.overview_drag.active ||
         app.pending_marker_press.active || app.pending_click.active() ||
         app.pending_trim_drag.active) {
@@ -688,16 +688,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // BARE ESC CLEARS A RESTING REGION (architect 2026-07-30, live-test
+    // BARE ESC HIDES THE TRIM REGION OVERLAY (architect 2026-07-30, live-test
     // refinement: "if 'esc' to clear region (but not cancel drag) cheap now? if
-    // so, implement it also"). It is, and this is the whole implementation: a
-    // resting scratch span is display state with no owner but the user, so
-    // dropping it needs no snapshot, no membership work and no playhead move.
+    // so, implement it also"; a CLEAR until 2026-08-18 and a HIDE since, the
+    // region having become the trim). It is, and this is the whole
+    // implementation: the visibility bit is display state with no owner but the
+    // user, so dropping it needs no snapshot, no membership work and no
+    // playhead move — AND NO TRIM WRITE, which is what makes Esc the explicit
+    // hide rather than a destructive key.
     // RANKED HERE, between the editors/prompts above and the render cancel below:
-    // a modal surface still wins the key, and a resting region wins over the
-    // render cancel because it is the more local thing on screen. With no region
-    // resting the press falls straight through and cancels the render exactly as
-    // before.
+    // a modal surface still wins the key, and a shown overlay wins over the
+    // render cancel because it is the more local thing on screen. With the
+    // overlay hidden the press falls straight through and cancels the render
+    // exactly as before.
     // CLEAR BUT NEVER CANCEL, and that is STRUCTURAL rather than a test here: a
     // drag in flight is swallowed by the DRAG-MODAL GATE far above (which admits
     // only Ctrl+Q), so a mid-drag Esc never reaches this arm at all — the drag
@@ -705,7 +708,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // no-cancel rule every pointer gesture holds. Only a span the user has
     // RELEASED can be cleared from here.
     // BARE-EXACT, like every other Escape reader (strict modifier validation).
-    if (key == GuiKeys::Escape && !ctrl && !shift && !alt && app.region.active) {
+    if (key == GuiKeys::Escape && !ctrl && !shift && !alt && app.region.shown) {
         clear_region_highlight(app, viewport);
         return;
     }
@@ -892,8 +895,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // there (run_overview_command — architect 2026-08-05, no longer a toggle;
     // the second arm was a bare center for one day). The trim-bar double-click
     // deliberately
-    // DIVERGES from this (run_span_framing_command — it zooms to the region
-    // / trim / whole-song span); C remains the DIRECT working-zoom-and-center
+    // DIVERGES from this (run_span_framing_command — it zooms to the
+    // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture — `0` reaches it only from full out, and by calling it — while
     // the Tab family changes no zoom at all (2026-08-05), so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2
@@ -1032,7 +1035,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
-        // bound (Shift+X is trim's clear; bare x is set-only).
+        // bound (Shift+X is trim's clear; the sweep and the two drags are its
+        // setters).
         // Deletion authors the active column's store: home view only (the
         // predicate maps W->source, P->target). Off home is a consumed no-op.
         if (!active_column_authoring_allowed(app)) return;
@@ -1073,38 +1077,40 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x SETS the trim; Shift+X MAXIMIZES it to the full window (architect
-    // 2026-07-25 splitting the old x-branch, re-posed 2026-07-30 under
-    // always-set). Bare x is set-only: a live region trims to it (overwriting
-    // the resting window; the span is then CONSUMED and the selection cleared —
-    // architect 2026-07-30 / 2026-07-29; a DEGENERATE inverse-mapped span refuses
-    // instead of writing a pair the crossed-commit reset would throw away), and
-    // and with NO region it is a consumed nothing). Shift+X writes [0, total-1]
-    // (handle_trim_shift_x). CTRL+SHIFT+X SHOWS THE REGION since 2026-08-16
-    // (handle_show_region): make sure a region exists — seeding one at the trim
-    // window if none stands — and bring it into view. It CLEARS nothing and is
-    // NOT a toggle. It is a GENUINELY NEW BINDING and not a widening of either
-    // arm above — the strict-modifier rule made that combination a no-op
-    // everywhere — and it exists because bare `x` had carried the seed for one
-    // day and one key must not mean two unrelated things (show and commit).
-    // The playhead is an OUTPUT of the two trim writes, never an input:
-    // every trim WRITE parks it at the new trim start (architect 2026-08-05 —
-    // the rule and its membership at the head of input_trim.cpp), and a refused
-    // press moves nothing. Trim's pointer routes
-    // are the PLAIN trim-bar press (single via an endcap hit, pair via a bridge
-    // press strictly between the two bound columns); trim is outside the
-    // selection system, so there is no Delete arm. Plain Ctrl+x is cut
-    // (text_editor.cpp) and stays unbound here.
+    // BARE `x` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+X MAXIMIZES
+    // the trim to the full window — the two halves of one trim surface: show
+    // the window, or throw it away.
+    //
+    // `x` WAS REPOINTED, NOT RETIRED (architect 2026-08-18): it SET THE TRIM
+    // FROM A REGION until that day, and setting the region IS setting the trim
+    // now, so the act it named stopped existing and the key fell free — "we can
+    // say the show region is actually `x` now". The show act moved onto it from
+    // Ctrl+Shift+X, which had carried it since 2026-08-16 and is UNBOUND again;
+    // under strict modifier validation that combination is a no-op everywhere,
+    // so nothing consumes it here.
+    //
+    // Shift+X is unchanged in meaning (handle_trim_shift_x → the maximizer) and
+    // is the RECOVERY route, trim having no undo. IT HAS TWO POINTER ROUTES
+    // AGAIN since the repointing: a SHIFT-CLICK or a LONG PRESS on the trim
+    // region button reaches it (redesign_button_shift_admits, app_state.h) —
+    // the admission the deleted trim scissors carried, moved to the button that
+    // survived, which is what keeps the whole song reachable from a keyboardless
+    // rig. A bound dragged onto its partner is the third route.
+    //
+    // The playhead is an OUTPUT of every trim write, never an input: each parks
+    // it at the new trim start (architect 2026-08-05 — the rule and its
+    // membership at the head of input_trim.cpp), and a refused press moves
+    // nothing. Trim's pointer routes are the trim bar's PLAIN press (single via
+    // an endcap hit, pair via a bridge press) and, since 2026-08-18, the SAME
+    // two drags on the waveform overlay plus the SWEEP that writes it in one
+    // stroke; trim is outside the selection system, so there is no Delete arm.
+    // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
-        handle_trim_x();
+        handle_toggle_trim_region();
         return;
     }
     if (!ctrl && shift && !alt && key == GuiKeys::X) {
         handle_trim_shift_x();
-        return;
-    }
-    if (ctrl && shift && !alt && key == GuiKeys::X) {
-        handle_show_region();
         return;
     }
 
@@ -1252,13 +1258,13 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {
-    // The clear+damage shape the existing region-clear sites use (the navigation
-    // jumps, end_region_drag_min_size_check): reset to a blank RegionState and
-    // damage
-    // the waveform area once, under which the recolored ground repaints away.
-    // Guarded so a call on
-    // the common no-region path costs nothing.
-    if (!app.region.active) return;
+    // A HIDE SINCE 2026-08-18, and nothing more: drop the visibility bit and
+    // damage the waveform area once, under which the recolored ground repaints
+    // away. IT NEVER TOUCHES THE TRIM — the span is derived, so hiding discards
+    // nothing and a later show restores an identical overlay, which is what
+    // makes the broad call-site inventory at the declaration safe. Guarded so a
+    // call on the common hidden path costs nothing.
+    if (!app.region.shown) return;
     app.region = RegionState{};
     viewport.invalidate_waveform_area();
 }
@@ -1404,7 +1410,7 @@ void GuiInputHandler::run_overview_command() {
     // fork between the live `c` and the history mode's own lives inside
     // run_center_command, its one owner.
     // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
-    // run_span_framing_command): it zooms to the region / trim / whole-song
+    // run_span_framing_command): it zooms to the trim / whole-song
     // SPAN, where this one command only ever reaches the whole song.
     //
     // THE FIRST ARM IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
@@ -1581,12 +1587,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // IT WRITES ONLY THE VIEWPORT and damages nothing: the caller owns its own
 // damage and its own sync kick, which is what keeps the restore behaviourally
 // unchanged by the hoist (its tail already invalidated and kicked
-// unconditionally) and what lets the SHOW-REGION command pay the same tail
-// once. That command is MOMENTARY AND STATELESS and deliberately not a toggle
-// — a lamp reading the region's EXISTENCE would strand a scrolled-away span
-// behind a lit button whose only press cleared it — so it clears nothing,
-// ever; the architect's own reasoning is at handle_show_region
-// (input_trim.cpp).
+// unconditionally) and what lets the TRIM REGION TOGGLE'S SHOW HALF pay the
+// same tail once. That the show ALWAYS FRAMES is what makes the toggle safe: a
+// lit button means the overlay is on screen or one press away from being
+// re-shown there, so the stuck-toggle hole the 2026-08-16 momentary design was
+// written to avoid cannot arise (the record is at handle_toggle_trim_region,
+// input_trim.cpp).
 // A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put, matching
 // the inline version's own guard.
 void bring_span_into_view(AppState& app, const GuiAudio& audio,
@@ -1621,10 +1627,11 @@ void GuiInputHandler::run_span_framing_command() {
     // The trim-bar double-click ZOOMS TO A SPAN, its own route beside the bare
     // `0` overview (run_overview_command) and `c`'s marker-jump working zoom.
     // It only ever FRAMES a span,
-    // never the fine working zoom. Span priority: a live region wins (over a
-    // trim); else a proper trim SUB-WINDOW; else the whole song
-    // (full zoom-out — which is also where the FULL trim window lands, it being
-    // the whole song). The framing is idempotent — a second double-click with
+    // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
+    // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
+    // FULL trim window lands, it being the whole song). The region arm above
+    // them died with the separate region state, the overlay and the trim window
+    // being one span now. The framing is idempotent — a second double-click with
     // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
     // compare), while any pan/zoom between clicks re-frames.
     if (audio.total_frames() <= 0) return;
@@ -1637,17 +1644,16 @@ void GuiInputHandler::run_span_framing_command() {
     if (total <= 0) return;
 
     // The target span in ACTIVE-domain frames [lo, hi], and whether it takes the
-    // framing margin (region / trim) or none (the whole song already fills the
-    // window at the effective ceiling).
+    // framing margin (the trim window) or none (the whole song already fills
+    // the window at the effective ceiling).
     int64_t lo = 0, hi = total;
     bool    margin = false;
-    if (app.region.active) {
-        // Region endpoints are already active-domain frames; the region wins
-        // over any set trim.
-        lo = std::min(app.region.a_frame, app.region.b_frame);
-        hi = std::max(app.region.a_frame, app.region.b_frame);
-        margin = true;
-    } else if (!trim_is_full_window(app.trim, audio.total_frames())) {
+    // (THE REGION ARM IS GONE, 2026-08-18, and with it the span priority this
+    // body used to carry: a live region won over the trim, which was a real
+    // choice while the two were separate states. The region IS the trim now, so
+    // the overlay and the trim window frame identically and one arm answers
+    // both.)
+    if (!trim_is_full_window(app.trim, audio.total_frames())) {
         // A proper SUB-WINDOW frames itself. A FULL window is the old unset
         // state — nothing to frame beyond the whole song — so it falls through
         // to the whole-song arm exactly as an unset trim always did (the
@@ -1671,8 +1677,8 @@ void GuiInputHandler::run_span_framing_command() {
         margin = true;
     }
 
-    // Frame the span through the shared framer (2.5%-per-side for region / trim,
-    // none for the whole song — already whole-song at the effective ceiling,
+    // Frame the span through the shared framer (2.5%-per-side for the trim
+    // window, none for the whole song — already whole-song at the effective ceiling,
     // start 0). Centering + the wall clamp make the whole-song arm degenerate to
     // the effective ceiling at start 0. The idempotent no-op lives in
     // apply_zoom_to_start inside the framer.
@@ -2118,10 +2124,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     app.staged_displayed_area_w   = 0;
     app.staged_displayed_valid = false;
 
-    // The region-select span is in the ACTIVE display domain, which just
-    // flipped (source <-> target frames). Its endpoints are meaningless in the
-    // new domain, so clear it; the full-window invalidate at the tail repaints
-    // the waveform on its plain canvas ground.
+    // A VIEW SWITCH HIDES THE TRIM REGION OVERLAY: the user has turned to
+    // other work, which is the whole hide rule (the inventory is at
+    // clear_region_highlight). It stays an IN-PLACE reset rather than a call —
+    // the full-window invalidate at the tail repaints the waveform on its plain
+    // canvas ground, which is a superset of that helper's own damage. Nothing
+    // is discarded: the trim is untouched and Ctrl+Shift+X re-shows an overlay
+    // derived from it in the new domain.
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR GOES WITH IT, for the identical reason
     // (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN

@@ -93,10 +93,13 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the window from y=0 through the waveform's bottom, top strip included,
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
-    // The region-select span is view-domain scratch; the entering tab restores
-    // a different viewport (and, under a differing map, a different active
-    // domain), so a resting region cannot carry across. The kick_waveform_sync
-    // below repaints the whole waveform area, restoring the plain canvas ground.
+    // A TAB SWITCH HIDES THE TRIM REGION OVERLAY: the user has turned to other
+    // work, which is the whole hide rule (the inventory is at
+    // clear_region_highlight, input_handler.h). It stays an IN-PLACE reset
+    // rather than a call — the kick_waveform_sync below repaints the whole
+    // waveform area, a superset of that helper's own damage. Nothing is
+    // discarded: the ENTERING tab has its own trim, and bare `x` shows an
+    // overlay derived from it.
     app.region = RegionState{};
     // The SEATED PINCH's anchor goes with it, this function being the A/B
     // WRITER and so a member of the rule in its own right (codex round 20, moved

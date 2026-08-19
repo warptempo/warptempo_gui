@@ -45,13 +45,17 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.staged_displayed_vp_end   = 0;
     app.staged_displayed_area_w   = 0;
     app.staged_displayed_valid = false;
-    // The resting selection region is view-domain scratch: its frame span reads
-    // against whichever view is live. This routine re-establishes the live view
-    // for BOTH the source load and the `'` load-in-place, so the clear lives
-    // here structurally — a per-caller clear leaked on the load-in-place path,
-    // where a
-    // source-view region survived into the forced target view and a later `x`
-    // overwrote the freshly loaded-in-place recipe trim with the stale span.
+    // THE LOAD PATH HIDES THE TRIM REGION OVERLAY. This routine re-establishes
+    // the live view for BOTH the source load and the `'` load-in-place, so the
+    // reset lives here structurally rather than per caller. It discards
+    // nothing — the overlay is DERIVED from the trim (RegionState, app_state.h)
+    // and the load brings its own — but a piece arriving with a stranger's
+    // window already lit on the waveform is the wrong greeting, and hiding is
+    // what every other turn-to-other-work route does. (The defect this
+    // placement was written for is retired with the span it protected: a
+    // source-view region used to survive into the forced target view, where a
+    // later `x` overwrote the freshly loaded-in-place recipe trim with the
+    // stale span.)
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
     // same line of argument the region clear above makes (codex round 21): the
@@ -281,7 +285,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.region_drag = RegionDragState{};
-    app.region_edit_drag = RegionEditDragState{};
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_trim_drag = PendingTrimDrag{};
     app.pending_click = PendingClickAct{};
@@ -559,7 +562,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // 2026-08-02). No gesture can write a crossed pair into a .settings any
     // more: every trim commit route runs auto_clear_crossed_trim before it
     // rests, the bound-set clicks refuse a click on or past the partner
-    // outright, `x` refuses a degenerate result, and since 2026-08-02 the
+    // outright, the SWEEP orders its pair and floors its width, and since
+    // 2026-08-02 the
     // single-bound drag CLAMPS INCLUSIVELY AT ITS PARTNER, so a drag hands the
     // commit tail begin == end and never a crossing. What reaches here is
     // therefore a HAND-EDITED pair only — the shape the load boundary otherwise

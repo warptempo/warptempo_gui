@@ -355,27 +355,23 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
-    // THE TRIM GESTURES (architect 2026-08-07): bare `x` sets the trim window to
-    // the live region and Shift+X maximizes it back to the full window
-    // (Ctrl+Shift+X joined them 2026-08-16 — its own entry below). Trim is
-    // BAND, not content (the header), so both are admitted, and their internal
-    // behavior is untouched — the degenerate-result refusal, Shift+X's identity
-    // guard, the setter's deselect, the playhead park and the trim-mutation
-    // playback stop are all the same code taking the same decisions. A locked
-    // tab could already FORM a region by plain drag (the reason bare Esc is
-    // admitted below), so `x` finally has something to consume in one.
+    // THE TRIM GESTURES (architect 2026-08-07): Shift+X maximizes the trim
+    // window back to the full song, and bare `x` — which SET the trim from a
+    // region until 2026-08-18 and SHOWS AND HIDES THE TRIM REGION OVERLAY since
+    // — is the other half of the same surface. Trim is BAND, not content (the
+    // header), so both are admitted, and their internal behavior is untouched:
+    // Shift+X's identity guard, the setter's deselect, the playhead park and
+    // the trim-mutation playback stop are all the same code taking the same
+    // decisions. The repointing only made `x` EASIER to admit — it now writes
+    // no trim bound at all, only a session visibility bit and then the
+    // viewport, which is strictly less than the write the band ruling was
+    // argued over. (Ctrl+Shift+X carried the show act from 2026-08-16 to
+    // 2026-08-18 and is UNBOUND again; nothing here answers it, the
+    // strict-modifier rule making an unbound combination a no-op everywhere.)
     const bool is_trim_x =
         (!ctrl && !shift && !alt && key == GuiKeys::X);
     const bool is_trim_shift_x =
         (!ctrl && shift && !alt && key == GuiKeys::X);
-    // THE SHOW-REGION BUTTON'S CHORD (architect 2026-08-16), the trim family's
-    // third admitted chord and the EASIEST of the three to admit: it writes no
-    // trim bound at all — only the session's region scratch, and then the
-    // viewport — so it is strictly less than `x` on the very axis the band
-    // ruling turns on. A locked tab could always FORM a region by plain drag
-    // and clear one with bare Esc; this is the same scratch reached by a chord.
-    const bool is_show_region =
-        (ctrl && shift && !alt && key == GuiKeys::X);
     // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
@@ -407,7 +403,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
-             is_trim_x || is_trim_shift_x || is_show_region ||
+             is_trim_x || is_trim_shift_x ||
              is_add_to_selection);
 }
 

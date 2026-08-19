@@ -643,14 +643,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
     //
-    // THE TAIL OPENS WITH A WHOLESALE REGION CLEAR (architect 2026-07-29,
-    // REVERSING the recorded boundary that made undo/redo a route where "a
-    // resting region is display scratch"): a restore rewrites the world the span
-    // was measured against, so any span still standing describes a world that no
-    // longer exists — a scratch span resting stale across a map-changing restore
-    // would aim `x` at a window the user never drew. EVERY arm rests with NO region now, the group arm's extent write
-    // having retired with the SPAN FORM (architect 2026-07-30) — a restore
-    // creates no trim scratch.
+    // THE TAIL OPENS WITH A WHOLESALE OVERLAY HIDE (architect 2026-07-29, a
+    // CLEAR until 2026-08-18 and a hide since): an undo is a turn to other work
+    // and takes the overlay with it, like every other membership-wholesale
+    // route. It discards NOTHING now — the overlay is DERIVED from the trim
+    // (RegionState, app_state.h), which the restore does not touch at all, trim
+    // being outside the undo stacks by ruling — where the original argument was
+    // about a stale SPAN: a restore rewrites the world a span was measured
+    // against, and a stale one would have aimed the old `x` at a window the
+    // user never drew. EVERY arm hides, the group arm's extent write
+    // having retired with the SPAN FORM (architect 2026-07-30).
     // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
     // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
     // and rebuilds the target map underneath a resting highlight — drag a span

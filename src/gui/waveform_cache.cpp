@@ -204,13 +204,14 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // grab-pan drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
     // which drains this worker rather than queuing behind it) and must keep
     // rendering; the OVERVIEW lane's drags act on the whole-song lane rather
-    // than on the plate; and the region FORMER (region_drag) is not the editor
-    // above — it sweeps a NEW span from a fixed anchor to the live pointer,
-    // so there is no grabbed subject for a basis swap to slide, only the
-    // ordinary one-epoch lag every painted overlay carries. (The tempo drag was
-    // a frozen gesture until 2026-07-29, when it was deleted — see
-    // marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active || app.region_edit_drag.active)
+    // than on the plate; and THE SWEEP (region_drag) writes the trim from a
+    // FIXED anchor to the live pointer, so there is no grabbed subject for a
+    // basis swap to slide, only the ordinary one-epoch lag every painted
+    // overlay carries. (The tempo drag was a frozen gesture until 2026-07-29,
+    // when it was deleted — see marker_drag.h. THE REGION EDITOR was a member
+    // from 2026-08-15 until 2026-08-18, when its move and bound drags became
+    // the TRIM drags named just above — the same freeze, one name fewer.)
+    if (app.drag.active || app.trim_drag.active)
         return;
 
     WaveformRenderInputs in = compute_waveform_render_inputs();
@@ -344,8 +345,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // for its own reason — it re-warped synchronously per cent step, so a pre-grab
     // async job publishing here would have painted a stale plate over the
     // step-fresh one — until its 2026-07-29 deletion; see marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active ||
-        app.region_edit_drag.active) {
+    if (app.drag.active || app.trim_drag.active) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
         wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;

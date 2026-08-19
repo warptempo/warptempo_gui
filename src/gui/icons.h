@@ -108,14 +108,17 @@ enum class Icon {
     ChronometerStart,    // Phase reset markers (bare `p`)
     // (THE TRIM SCISSORS' EDIT-CUT IS DELETED with its button, 2026-08-18: the
     // architect retired the "set trim from region" BUTTON in the roster
-    // relayout — the CHORD, bare `x`, is untouched — which left this glyph with
+    // relayout — and the ACT went with it later the same day, when the region
+    // became the trim and its chord `x` was repointed onto the button below —
+    // which left this glyph with
     // no consumer at all, so the enumerator, the table row and
     // assets/icons/breeze/edit-cut.svg went together rather than resting
     // unpainted. It served the trim button from 2026-08-11 and was the
     // architect's own pick from the rendered candidate sheet, over the first
     // cut's planner-picked transform-crop; both are git history now.)
-    // THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
-    // group's ONE member since the scissors left on 2026-08-18: Breeze's
+    // THE TRIM REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
+    // group's ONE member since the scissors left on 2026-08-18 — the button
+    // that inherited their chord, bare `x`, hours later: Breeze's
     // TOOL-RECT-SELECTION, the marching-ants
     // rectangle — a dashed box says "a selected span" everywhere, and the
     // button's whole job is to put one on the waveform. Taken at 22 though the
@@ -125,7 +128,7 @@ enum class Icon {
     // four-number derivation rather than a verbatim copy — stated at the table
     // entry, which also records the two stroke attributes it brought (a
     // non-default width and the dash).
-    ToolRectSelection,   // Show region (Ctrl+Shift+X)
+    ToolRectSelection,   // Trim region toggle (bare `x`)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
     // roster commit — the icon row's zoom group after the trim group).
     // Breeze's own magnifier family, one construction four ways: the bare

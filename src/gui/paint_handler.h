@@ -598,11 +598,14 @@ struct GuiPaintHandler {
     // basis. Endpoints are active-domain frames stored in drag order; normalize
     // to [lo, hi] then map to columns via the plain viewport transform (the
     // endpoints already live in the displayed domain, so no warp map is walked).
+    // THE SPAN IS DERIVED FROM THE TRIM every call (trim_overlay_span,
+    // app_state.h — the region IS the trim since 2026-08-18) and nothing is
+    // stored, so this cannot drift from the 9 px bar either.
     // THREE consumers, and the last is why this is PUBLIC: paint_region_ground
-    // and paint_region_ink draw the highlight's two halves from it — the ground
-    // and the ink cannot disagree about where the region is — and
+    // and paint_region_ink draw the overlay's two halves from it — the ground
+    // and the ink cannot disagree about where it is — and
     // GuiInputHandler::region_manipulation_hit (input_pointer.cpp) HIT-TESTS the
-    // standing span's move zone and its two grab bands from the same call on the
+    // shown overlay's move zone and its two grab bands from the same call on the
     // same PLATE basis — so a grabbed bound is exactly a painted one, by
     // construction rather than by two derivations agreeing. It stays a named
     // helper because the column pair is a rule, not an inline expression.

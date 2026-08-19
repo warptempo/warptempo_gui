@@ -119,10 +119,10 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.phaseresetmarkers.remove_marker(*it);
     }
-    // A DELETE RESTS AN EMPTY SELECTION AND NO REGION (architect 2026-07-30, the
-    // warp delete's twin): the demotion that dropped a 2+ delete down to a span
-    // over the deleted positions is gone with the SPAN FORM — the region is trim
-    // scratch and a delete has nothing to aim `x` at.
+    // A DELETE RESTS AN EMPTY SELECTION (architect 2026-07-30, the warp
+    // delete's twin): the demotion that dropped a 2+ delete down to a span over
+    // the deleted positions is gone with the SPAN FORM, and there is no span
+    // state left for one to write into — the region IS the trim.
     selection.clear_selection();
     undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
