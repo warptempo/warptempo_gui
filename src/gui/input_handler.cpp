@@ -1280,6 +1280,17 @@ void clear_region_highlight(AppState& app, Viewport& viewport) {
     viewport.invalidate_waveform_area();
 }
 
+void show_trim_region_overlay(AppState& app, Viewport& viewport) {
+    // The raise, with the `h` carve-out and the framing omission the
+    // declaration argues. Guarded twice so a call on the already-shown path —
+    // which every trim-bar press after the first takes — costs nothing and
+    // damages nothing.
+    if (app.history_mode.active) return;
+    if (app.region.shown) return;
+    app.region.shown = true;
+    viewport.invalidate_waveform_area();
+}
+
 bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // The walk is markers-only (trim is not a cycle stop). The playhead lands on
     // the focused marker unconditionally, and the viewport always recenters on
@@ -1595,7 +1606,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT (architect 2026-07-25
 // post-labwc, decided on PAINTED COLUMNS). This body was the GROUP undo/redo
 // restore's inline tail from that day until 2026-08-16, when the
-// SHOW-REGION button asked for the identical behaviour in the architect's
+// SHOW TRIM REGION button asked for the identical behaviour in the architect's
 // own words — "like undo in terms of zoom/viewport: if the region can fit at
 // current zoom and is not fully in view, it is brought into view just like undo
 // marker group, without affecting zoom; if it cannot fit, zoom is made to fit"
@@ -2201,16 +2212,16 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     app.staged_displayed_area_w   = 0;
     app.staged_displayed_valid = false;
 
-    // A VIEW SWITCH HIDES THE TRIM REGION OVERLAY: the user has turned to
-    // other work, which is the whole hide rule (the inventory is at
-    // clear_region_highlight). It stays an IN-PLACE reset rather than a call —
-    // the full-window invalidate at the tail repaints the waveform on its plain
-    // canvas ground, which is a superset of that helper's own damage. Nothing
-    // is discarded: the trim is untouched and bare `x` re-shows an overlay
-    // derived from it in the new domain.
-    app.region = RegionState{};
-    // AND THE SEATED PINCH'S ANCHOR GOES WITH IT, for the identical reason
-    // (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
+    // (THE S/T SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
+    // A/B tab switch's twin. It was an IN-PLACE reset here and never a member
+    // of clear_region_highlight's inventory. THE OVERLAY'S VISIBILITY IS NOT A
+    // PLAYHEAD, SELECTION OR MUTATION CONCERN — it is a view preference about
+    // whether the user is looking at the trim, and the trim is the same
+    // per-tab pair in both audio views, the overlay simply deriving its
+    // columns in the new domain. So a domain flip has nothing to put away.)
+    // THE SEATED PINCH'S ANCHOR IS CLEARED HERE, and it survived the overlay
+    // hide's deletion above because it answers a different question — a stale
+    // song frame, not a view preference (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
     // song frame, and nothing about two fingers resting on the glass stops a
     // keyboard `t` or a mouse click on the S/T radio from reaching here — so a
     // pinch held across this flip would go on zooming about a SOURCE frame read

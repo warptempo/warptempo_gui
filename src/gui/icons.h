@@ -116,7 +116,7 @@ enum class Icon {
     // unpainted. It served the trim button from 2026-08-11 and was the
     // architect's own pick from the rendered candidate sheet, over the first
     // cut's planner-picked transform-crop; both are git history now.)
-    // THE TRIM REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
+    // THE SHOW TRIM REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
     // group's ONE member since the scissors left on 2026-08-18 — the button
     // that inherited their chord, bare `x`, hours later: Breeze's
     // TOOL-RECT-SELECTION, the marching-ants
@@ -128,7 +128,7 @@ enum class Icon {
     // four-number derivation rather than a verbatim copy — stated at the table
     // entry, which also records the two stroke attributes it brought (a
     // non-default width and the dash).
-    ToolRectSelection,   // Trim region toggle (bare `x`)
+    ToolRectSelection,   // Show trim region (bare `x`)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
     // roster commit — the icon row's zoom group after the trim group).
     // Breeze's own magnifier family, one construction four ways: the bare
@@ -293,7 +293,7 @@ enum class Icon {
 // deep-history is left painted by nothing for the same span — an unreferenced
 // enumerator costs a latch slot and nothing else, and one asset commit beats
 // three.
-// 45 since 2026-08-16: 44 + tool-rect-selection, the show-region
+// 45 since 2026-08-16: 44 + tool-rect-selection, the Show trim region
 // button's marching-ants rectangle (the icon row's trim group, beside the
 // scissors).
 // 44 since 2026-08-15 (the bottom row's marker-walk group): 41 + bboxprev,

@@ -678,7 +678,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // group's four companions to the BOTTOM ROW, brought the READ-ONLY toggle
     // in from the tabs and put the opener last, which is TWENTY-SIX members in
     // EIGHT groups, all painted, every frame; 2026-08-16 made it TWENTY-SEVEN
-    // by filling the trim group's second slot with the show-region
+    // by filling the trim group's second slot with the Show trim region
     // button, the group count unchanged; and the 2026-08-18 ROSTER RELAYOUT
     // brought it back to TWENTY-SIX in EIGHT — the scissors deleted, the four
     // MARKER VERBS gone to the bottom row with their group, the four HISTORY
@@ -686,7 +686,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // WALK RADIOS made it TWENTY-EIGHT in EIGHT later that day, landing inside
     // the history group between the opener and the cumulative toggle.)
     // THE TRIM GROUP (2026-08-11 for the scissors that opened it, 2026-08-16
-    // for the show-region button that filled and then led it, 2026-08-18 for
+    // for the Show trim region button that filled and then led it, 2026-08-18 for
     // the scissors' deletion that left it one member), a SEPARATOR-LED GROUP
     // after the warp/phase radios — the
     // architect's placement ("place it after the warp/phase radio buttons,
@@ -1952,8 +1952,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members
     // in EIGHT groups since 2026-08-18: the toolbar four (Save / Undo / Redo /
     // Render, the deleted row 2's, leading the row), the S/T and W/P view
-    // radios, THE TRIM GROUP (the show-region button alone — the scissors
-    // opened that group on 2026-08-11, the show-region button filled its second
+    // radios, THE TRIM GROUP (the Show trim region button alone — the scissors
+    // opened that group on 2026-08-11, that button filled its second
     // slot on 2026-08-16 and took the lead later that same day at the
     // architect's reorder, and the scissors were retired whole on 2026-08-18),
     // the ZOOM GROUP (2026-08-12), the phase-reset copy/paste pair with the
@@ -2129,7 +2129,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // statements — that is what earns them the face, a refusal alone never
         // does. Since 2026-08-14 EVERY
         // button in this row the view consumes wears it — Undo / Redo /
-        // Render, the show-region button, the mass-marker five,
+        // Render, the Show trim region button, the mass-marker five,
         // listen, load-in-place, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
         // the walk any more; the S/T + W/P radios, the zoom group and the

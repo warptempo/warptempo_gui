@@ -97,16 +97,17 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the window from y=0 through the waveform's bottom, top strip included,
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
-    // A TAB SWITCH HIDES THE TRIM REGION OVERLAY: the user has turned to other
-    // work, which is the whole hide rule (the inventory is at
-    // clear_region_highlight, input_handler.h). It stays an IN-PLACE reset
-    // rather than a call — the kick_waveform_sync below repaints the whole
-    // waveform area, a superset of that helper's own damage. Nothing is
-    // discarded: the ENTERING tab has its own trim, and bare `x` shows an
-    // overlay derived from it.
-    app.region = RegionState{};
-    // The SEATED PINCH's anchor goes with it, this function being the A/B
-    // WRITER and so a member of the rule in its own right (codex round 20, moved
+    // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19. It was
+    // an IN-PLACE reset here and never a member of clear_region_highlight's
+    // inventory. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
+    // MUTATION CONCERN — it is a view preference about whether the user is
+    // looking at the trim, and the ENTERING tab has a trim of its own for the
+    // overlay to derive from, so a switch has nothing to put away. Hiding
+    // discarded nothing either way, which is exactly why it bought nothing.)
+    // The SEATED PINCH's anchor IS cleared here, this function being the A/B
+    // WRITER and so a member of that rule in its own right — and it outlived
+    // the overlay hide above because it answers a different question, a stale
+    // song frame rather than a view preference (codex round 20, moved
     // onto the writers at round 21; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
     // input_handler.h): the entering tab restores another band entirely, so a

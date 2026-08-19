@@ -756,7 +756,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // ceiling/half-pixel exception to the framer's no-op guard, and the
             // accepted duplicate render) lives at bring_span_into_view's
             // definition, input_handler.cpp; it was hoisted verbatim out of
-            // this spot when the show-region button asked for the same
+            // this spot when the Show trim region button asked for the same
             // behaviour, so this arm is unchanged in effect and only its home
             // moved. WHAT IS THIS SITE'S OWN: it hands the owner an
             // ACTIVE-DOMAIN extent derived just below, and the unconditional

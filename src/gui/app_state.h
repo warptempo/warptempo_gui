@@ -265,7 +265,11 @@ struct UndoEntry {
 // THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `x` and the icon row's
 // IconShowRegion button, one toggle over one act
 // (handle_toggle_trim_region, input_trim.cpp), whose show half also brings the
-// span into view. HIDDEN by that same toggle and by clear_region_highlight,
+// span into view, and — since 2026-08-19 — by EVERY PRESS THAT TOUCHES THE
+// TRIM through the one raise owner show_trim_region_overlay (input_handler.h,
+// which carries its whole call-site inventory, the no-framing rule and the `h`
+// carve-out): the SWEEP'S arm and the 9 px band's three press claims.
+// HIDDEN by that same toggle and by clear_region_highlight,
 // whose whole call-site inventory is at its declaration (input_handler.h):
 // turning to unrelated work hides the overlay, and HIDING DISCARDS NOTHING —
 // the trim persists and re-showing restores an identical overlay, which is what
@@ -295,7 +299,7 @@ struct RegionState {
 // one resets to the full window at every commit), so left/right and begin/end
 // are the same distinction here.
 //
-// THE GRAB BAND is trim_endcap_grab_px() per side — the SAME 5 px the trim
+// THE GRAB BAND is trim_endcap_grab_px() per side — the SAME 10 px the trim
 // endcaps and the overview box edges take, on purpose. OVERLAP resolves
 // NEARER-BOUND-WINS with ties to the LO bound (hit_test_overview_endcap's own
 // rule), which keeps both bounds reachable down to a 1 px span. Inside the span
@@ -535,6 +539,12 @@ struct UndoHistory {
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
 // input_trim.cpp — which owns the minimum-width floor). THE PRESS ITSELF
 // WRITES NO TRIM: a motionless shift click is the placement and nothing else.
+// IT DOES SHOW THE OVERLAY (architect 2026-08-19) through the one raise owner,
+// at every entry but the `h` view's: the surface being drawn on is visible
+// while it is drawn, and since the overlay derives from the trim the sweep
+// writes per motion event it tracks the stroke live. A motionless shift click
+// therefore leaves the overlay standing over an untouched trim — the same thing
+// bare `x` would have shown.
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press frame, the trim holds
@@ -1695,7 +1705,7 @@ enum class RedesignButton {
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
     // living on as the tooltips), the two view radio pairs, the TRIM GROUP
-    // (the show-region button alone since 2026-08-18), the ZOOM GROUP
+    // (the Show trim region button alone since 2026-08-18), the ZOOM GROUP
     // (2026-08-12, the architect's live placement "after the trim"), the
     // phase-reset clipboard pair with the three mode/editor buttons, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
@@ -1712,7 +1722,7 @@ enum class RedesignButton {
     // four HISTORY COMPANIONS came back up from it, and the opener left the
     // render-entry group to lead a separator-led group of its own again. The
     // same ruling deleted the TRIM SCISSORS whole ("remove the 'set trim from
-    // region' icon"), leaving the trim region button alone in the trim group —
+    // region' icon"), leaving the Show trim region button alone in the trim group —
     // and that button INHERITED the scissors' chord (bare `x`) and their shift
     // admission hours later, when the region became the trim.
     //
@@ -1728,8 +1738,9 @@ enum class RedesignButton {
     // the toggle — is answered by construction now rather than by placement.
     Save, Undo, Redo, Render,
     IconS, IconT, IconW, IconP,
-    // THE TRIM REGION BUTTON (architect 2026-08-16 as the show-region button,
-    // renamed and repointed onto BARE `x` on 2026-08-18): THE TRIM GROUP'S ONE
+    // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 as "Show region",
+    // repointed onto BARE `x` on 2026-08-18 and given its settled name on
+    // 2026-08-19 — the one the enumerator carried throughout): THE TRIM GROUP'S ONE
     // MEMBER, the second VIEWPORT-CLASS act the architect's 2026-08-11 slot was
     // opened for, which took the lead later on 2026-08-16 ("reverse the order
     // of the icons — show region first, then the scissors") and is alone in the
@@ -2075,7 +2086,7 @@ enum class RedesignButton {
 // untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
 // the four HISTORY COMPANIONS moved back up to row 4, both CHANGING ROWS rather
 // than leaving the roster, so neither the total nor the split felt them.
-// 48 SINCE 2026-08-16: the SHOW-REGION button joined the trim group in
+// 48 SINCE 2026-08-16: the SHOW TRIM REGION button joined the trim group in
 // row 4 (Ctrl+Shift+X then, bare `x` since 2026-08-18 — the repointing changed
 // no count), a pure chord addition — 47 + 1, split 46 + 2.
 // 47 SINCE 2026-08-15's SECOND ROW-1 RULING: the NAVIGATION ANCHOR left with its
@@ -2318,10 +2329,10 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE EIGHT GROUPS, in painted order: the toolbar four, the S/T radios, the
-// W/P radios, THE TRIM GROUP (the show-region button, alone in it since the
-// scissors were deleted on 2026-08-18 — it was opened by the scissors on
-// 2026-08-11 as the architect's slot for viewport-class acts, filled by the
-// show-region button as the second such act on 2026-08-16 and led by it later
+// W/P radios, THE TRIM GROUP (the Show trim region button, alone in it since
+// the scissors were deleted on 2026-08-18 — it was opened by the scissors on
+// 2026-08-11 as the architect's slot for viewport-class acts, filled by that
+// button as the second such act on 2026-08-16 and led by it later
 // the same day), the zoom four, the mass-marker acts, the render-entry group
 // (listen, load-in-place, the read-only toggle) and THE HISTORY GROUP — the
 // opener, its two WALK RADIOS and its four companions.
@@ -7546,7 +7557,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // pointer route at all, so a keyboardless panel could set a trim window and
 // never get back out of it. The scissors' deletion re-opened that hole for
 // hours; the architect closed it the same day by REPOINTING their chord onto
-// the trim region button (bare `x`) and moving the admission with it, so a
+// the Show trim region button (bare `x`) and moving the admission with it, so a
 // SHIFT-CLICK or a LONG PRESS on that button is Shift+X. The pair is honest
 // here in a way it was not on the scissors: `x` and Shift+X are the two halves
 // of one trim surface — show the window, or throw it away.
@@ -7659,24 +7670,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (t)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
-        // THE TRIM REGION TOGGLE (2026-08-16, renamed and repointed onto bare
-        // `x` on 2026-08-18 when the region became the trim), TWO LINES: its
+        // SHOW TRIM REGION (the architect's own words, 2026-08-19 — the name
+        // the enumerator has carried all along, with "trim" added once the
+        // overlay became the trim itself; it read "Show region" from
+        // 2026-08-16 and "Trim region" for one day in between), TWO LINES: its
         // twin IS Shift+X the maximizer, so the hint says so and the shift
         // admission and the line are the one fact the static_assert below
         // keeps together. The accelerator is a bare letter and so lowercase,
-        // this table's rule. IT IS "TRIM REGION" NOW: the overlay shows the
-        // TRIM and nothing else, so the older name ("Show region", chosen while
-        // a region was free scratch the trim only seeded) would name a thing
-        // the product no longer has. THE FIRST LINE IS CONSTANT WHILE THE LAMP
-        // CARRIES THE STATE — the read-only toggle's own rule, this table's
-        // rows naming a constant act at a constant chord — so it does not swap
-        // to "Hide"; the lit face is what says which press comes next, and
-        // there is no second glyph either (every eye-shaped alternative
-        // collides with ViewHidden, which is already IconMarkerDisable). The
-        // SHIFT LINE is the trim scissors' own words, inherited with their
-        // admission.
+        // this table's rule. THE TOOLTIP NAMES A CONSTANT ACT WHILE THE LAMP
+        // CARRIES THE STATE — the read-only toggle's settled precedent, and
+        // this table's rows name a constant act at a constant chord — so a
+        // show/hide toggle needs no second name any more than the padlock
+        // does: it never swaps to "Hide", the lit face being what says which
+        // press comes next, and there is no second glyph either (every
+        // eye-shaped alternative collides with ViewHidden, which is already
+        // IconMarkerDisable). The SHIFT LINE is the trim scissors' own words,
+        // inherited with their admission.
         case RedesignButton::IconShowRegion:
-            return {"Trim region (x)", "Press Shift for the whole song."};
+            return {"Show trim region (x)", "Press Shift for the whole song."};
         // THE ZOOM GROUP (2026-08-12), all one-line: the names were aligned
         // with the Navigation dropdown's rows for the two they shared ("Zoom
         // in" / "Zoom out") and are kept verbatim now that the menu is deleted

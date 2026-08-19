@@ -21,7 +21,7 @@ namespace {
 // `fill="none" stroke="currentColor"`, so its four open polylines would come
 // out as four filled slivers under the fill arm — not a case the fill arm
 // could have covered by looking the other way — and tool-rect-selection's
-// (2026-08-16, the icon row's show-region button), the marching-ants
+// (2026-08-16, the icon row's Show trim region button), the marching-ants
 // selection rectangle. THE ARM IS RESTORED, NOT NEW: it lived in draw() for
 // part of 2026-08-11 for the set's first stroked file (distortionfx, row 4's
 // Warp radio for those hours), went producer-less when the architect
@@ -721,7 +721,7 @@ constexpr IconPath kGoUpPaths[] = {
 // trim button from 2026-08-11 and was the architect's own pick over the first
 // cut's planner-picked transform-crop; both are git history.)
 
-// THE SHOW-REGION BUTTON'S GLYPH (architect 2026-08-16, the icon row's
+// THE SHOW TRIM REGION BUTTON'S GLYPH (architect 2026-08-16, the icon row's
 // one viewport-class group, alone in it since the scissors left on
 // 2026-08-18): TOOL-RECT-SELECTION, the
 // MARCHING-ANTS rectangle — a dashed box is the universal "here is a selected

@@ -295,32 +295,16 @@ struct GuiHistoryCommitDelta {
                !scale_changed;
     }
 
-    // WHERE THE DELTA LIES — [lo, hi] over ALL SIX entry vectors, in SOURCE
-    // frames (the domain every sidecar line is authored in). Returns false when
-    // no entry carries a frame at all, which is both the empty delta and the
-    // `scale`-only one: a scale change has no frame, so it contributes no term
-    // and cannot be framed. Its two GUI readers read that as "the whole song"
-    // while they lived.
-    //
-    // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: a
-    // reader of it describes the CHECKPOINT, not the lane — a span that shrank
-    // when the user pressed `p` would make a view
-    // switch, whose whole purpose is reviewing the OTHER half of this same
-    // delta, move the viewport out from under him.
-    //
-    // IT HAS NO READER AT ALL SINCE 2026-08-18 and is kept deliberately, as a
-    // seed rather than as live machinery: its TWO GUI readers were the trim
-    // bar's in-view span display and that bar's double-click framing, and both
-    // went when the architect ruled the bar shows the real trim window in the
-    // view like everywhere else (frame_viewed_commit_diff_span is deleted with
-    // them). Nothing in the delta's own machinery reads it either — verified by
-    // grep, not remembered. It is a PRODUCER-LESS SURVIVOR awaiting an
-    // architect call; do not wire a caller to it to justify it, and do not
-    // delete it under a comment repair. It also reads the delta
-    // directly rather than AppState::HistoryMode::flags, which is paint-cache
-    // output on a once-per-tick cadence and deliberately EMPTY for a frame
-    // after every mode edge.
-    bool frame_span(int64_t& lo, int64_t& hi) const;
+    // (frame_span IS DELETED, architect 2026-08-19. It answered WHERE THE DELTA
+    // LIES — [lo, hi] over all six entry vectors, in SOURCE frames, false when
+    // no entry carried a frame at all. Its only readers were the history view's
+    // two GUI consumers, the trim bar's in-view diff-span DISPLAY and that
+    // bar's double-click framing, and both went on 2026-08-18 when the
+    // architect ruled the bar shows the tab's REAL trim window inside the view
+    // like everywhere else — frame_viewed_commit_diff_span with them. It stood
+    // one day as a reader-less seed and is now gone with the display it served:
+    // a delta describes a CHECKPOINT, and nothing left in the product asks a
+    // checkpoint where it lies. The delta's own machinery never read it.)
 };
 
 // The three files' exact current bytes — what Ctrl+S would write at this

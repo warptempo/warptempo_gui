@@ -473,17 +473,17 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // event the user did not cause.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
-    // THE VIEW'S REGIONS ARE VIEW-LOCAL (architect 2026-08-05): a span drawn in
-    // here marks a passage of the checkpoint being read, so it leaves with the
-    // view — the same rule the `,` / `.` step and the compare switch apply to
-    // their own edges. The hide is
-    // unconditional and takes an overlay SHOWN BEFORE `h` with it, which since
-    // 2026-08-18 is the only one it can find: the view has no span state of its
-    // own (the overlay is the trim everywhere) and bare `x` is consumed in
-    // there, so nothing raises one inside. It discards nothing — the trim
-    // stands and a later `x` re-shows it. Its damage is covered by this
-    // function's own full-window invalidate below.
-    clear_region_highlight(app, viewport);
+    // (THE EXIT'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
+    // walk step's and the reading switch's — THE MODE'S THREE OWN EDGES as one
+    // class. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR MUTATION
+    // CONCERN: it is a view preference about whether the user is looking at the
+    // trim, and this view neither touches the trim nor offers a way to raise or
+    // lower the overlay — bare `x` is consumed in the mode and its button greys
+    // — so an overlay shown before `h` must survive the visit intact or the
+    // user gets it back only by pressing a key the mode has taken away. The
+    // 2026-08-05 view-local reading it inherited died with the view-local span
+    // itself on 2026-08-18. The mode's PLAYHEAD-MOVING and SELECTION-CHANGING
+    // routes still hide, exactly as their live twins do.)
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
     // counts VISITS rather than describing one: letting it fall back to zero
     // would let a close-then-open pair reissue a number the flag cache has
@@ -1061,7 +1061,9 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
     app.history_cumulative  = cumulative;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
-    clear_region_highlight(app, viewport);
+    // (NO OVERLAY HIDE, architect 2026-08-19: a walk-or-reading switch is one of
+    // THE MODE'S THREE OWN EDGES, and none of them hides any more — the
+    // argument is at close_history_mode, the mode's exit.)
     republish_history_lane_now();
     viewport.invalidate_all();
 }
@@ -1402,12 +1404,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // refill is this press's own (republish_history_lane_now, at the tail),
         // so the emptied state lives only across the handful of lines between.
         drop_lane_stash_across_history_edge();
-        // AND THE OVERLAY GOES WITH THE COMMIT (architect 2026-08-05, the
-        // view-local rule): the step is leaving the checkpoint the reader was
-        // reading, which is the turn-to-other-work every hide answers to. Same
-        // reasoning as the focus clear above, on the same edge, and it discards
-        // nothing — the trim is untouched throughout this view.
-        clear_region_highlight(app, viewport);
+        // (NO OVERLAY HIDE, architect 2026-08-19: a `,` / `.` step is one of THE
+        // MODE'S THREE OWN EDGES and none of them hides any more — a step
+        // changes which checkpoint is being read and touches neither playhead
+        // nor selection nor trim, so it has no business putting away a view
+        // preference the mode itself offers no way to restore. The argument is
+        // at close_history_mode, the mode's exit.)
         // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08,
         // SUPERSEDING the 2026-08-05 per-edge reset to full zoom out): he pans
         // and zooms once and reads the SAME WINDOW through every step of the

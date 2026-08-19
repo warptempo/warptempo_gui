@@ -164,8 +164,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //
 // EVERYTHING THAT MOVES THE PLAYHEAD OR REPLACES THE SELECTION HIDES IT,
 // unconditionally — never gated on whether the playhead actually moved. CALL
-// SITES, BY CLASS (RE-DERIVED BY GREP 2026-08-18; other sites state their own
-// class and point here):
+// SITES, BY CLASS (RE-DERIVED BY GREP 2026-08-19 — 24 calls in 19 functions;
+// other sites state their own class and point here):
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
 //     family plus `c`, through its own clear tail), `c`'s OWN up-front clear
 //     before that jump (run_center_command, input_handler.cpp — the no-focus arm
@@ -178,11 +178,6 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     writes and take no exemption), and the
 //     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
 //     typed navigation-jump twin, no exemptions);
-//   * THE SWEEP'S PRESS (arm_region_drag_at, input_pointer.cpp — both entries,
-//     the live navigation-surface shift press and the `h` view's own): it hides
-//     at mouse-down, before the gesture is known to be a click or a sweep. THE
-//     SWEEP'S OWN TRIM WRITES DO NOT (below) — the press is a point command
-//     like any other, and what it may become is not;
 //   * THE DEFERRED CLICK ACT (run_nav_click_act, input_pointer.cpp — the
 //     plain navigation-surface press's motionless release, live and `h`-view
 //     arms alike, 2026-08-12): the placement is a point command, so the
@@ -232,10 +227,6 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     AT THE PRESS (2026-08-17, with the live marker clicks: the mode has no
 //     drag for a flag press to become). All of them are the live arms'
 //     regime read against the mode's data;
-//   * THE `h` HISTORY MODE'S OWN EDGES: the mode's EXIT (close_history_mode, the
-//     one exit owner) and each `,` / `.` STEP and each WALK-OR-READING SWITCH
-//     (set_history_reading is the one switch owner behind bare `g` and bare `u`
-//     alike). The ENTRY deliberately hides nothing;
 //   * BARE ESC, the one route that hides and NOTHING ELSE (architect
 //     2026-07-30, live-test refinement): no playhead move, no selection change,
 //     no trim write. It is ranked under the editors and prompts and over the
@@ -244,6 +235,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     gesture. The full Esc enumeration lives at its dispatch point in on_key
 //     (input_handler.cpp).
 // DELIBERATELY NOT HIDDEN, the whole list:
+//   * THE SWEEP'S PRESS — WHICH SHOWS INSTEAD (architect 2026-08-19). It was a
+//     member until then, on the letter of the point-command rule and against
+//     its purpose: the press hid the big surface at touch-down and the sweep
+//     then wrote the trim underneath it. arm_region_drag_at (input_pointer.cpp)
+//     raises the bit at every entry but the `h` view's, which writes no trim to
+//     derive an overlay from; the sweep's own trim writes were already excluded
+//     below, so the whole gesture is off this inventory now;
 //   * EVERY TRIM WRITE — THE ONE MEMBERSHIP CHANGE OF 2026-08-18, and the only
 //     one the model needed. The trim writes joined this inventory on 2026-08-05
 //     as one class, through the shared park owner
@@ -265,11 +263,55 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     pure viewport move that pops nothing — and bare `0`'s ZOOM-OUT ARM: its
 //     other arm, taken with the zoom already at full out, IS the `c` command and
 //     hides in the list above; the two arms sit on opposite sides of this line
-//     and the command they share is why).
-// The remaining pre-existing hides (file load, Ctrl+Tab, and the S/T switch)
-// keep their own in-place resets, pairing them with a domain flip or a
-// full-window repaint rather than this exact damage shape.
+//     and the command they share is why);
+//   * THE VIEW SWITCHES — the A/B tab switch and the S/T audio-view switch,
+//     which held IN-PLACE resets of their own until 2026-08-19 and hold none
+//     now (architect: THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
+//     MUTATION CONCERN — it is a view preference about whether the user is
+//     looking at the trim, and the entering tab has a trim of its own to derive
+//     from, the other audio view the same pair in another domain);
+//   * THE `h` HISTORY MODE'S OWN THREE EDGES — its EXIT (close_history_mode),
+//     each `,` / `.` STEP and each WALK-OR-READING SWITCH (set_history_reading)
+//     — members until 2026-08-19 and non-members now, for the same reason plus
+//     one of their own: the mode consumes bare `x` and greys its button, so an
+//     overlay put away in there could not be got back. Its ENTRY never hid. The
+//     mode's PLAYHEAD-MOVING and SELECTION-CHANGING routes are members still.
+// THE ONE SURVIVING IN-PLACE RESET IS THE FILE LOAD's (file_loader.cpp), which
+// pairs the hide with a whole new piece: a stranger's window already lit on the
+// waveform is the wrong greeting.
 void clear_region_highlight(AppState& app, Viewport& viewport);
+
+// SHOW THE TRIM REGION OVERLAY — the hide's counterpart and the ONE raise every
+// gesture uses (architect 2026-08-19). TOUCHING THE TRIM SHOWS THE TRIM: a
+// gesture that is about to write or grab a trim bound wants the big surface up
+// while it runs, and since the overlay is DERIVED from the trim every frame it
+// then tracks the gesture live. A no-op when it already stands.
+//
+// IT DOES NOT FRAME, which is the one thing that separates it from bare `x`'s
+// show half (handle_toggle_trim_region, input_trim.cpp — the toggle's raise
+// runs bring_span_into_view because the user asked to LOOK at the window). Every
+// caller here is a POINTER PRESS whose gesture is already under the pointer, so
+// moving the viewport out from under a held button would be the wrong answer.
+//
+// CALL SITES, RE-DERIVED BY GREP 2026-08-19 — four, in two families:
+//   * THE SWEEP'S PRESS (arm_region_drag_at, input_pointer.cpp), the one arm
+//     all three of its entries share, so the shift former and the touch region
+//     hold raise it alike;
+//   * THE TRIM BAR'S OWN PRESSES, all three claims on the 9 px band
+//     (on_button_press, input_pointer.cpp): the PLAIN press — which arms the
+//     endcap or bridge drag, or lands on the bare band and arms nothing — and
+//     the CTRL / CTRL+SHIFT bound-set presses. The raise is the BAND'S, not any
+//     one arm's: a press that becomes a drag wants the overlay up exactly as
+//     much as one that does not.
+// The waveform overlay's own three presses need no call — they are reachable
+// only through region_manipulation_hit, which answers None while it is hidden.
+//
+// THE `h` VIEW IS CARVED OUT HERE, once, for every caller: trim is FROZEN in
+// that view, its sweep writes no trim to derive an overlay from and its press
+// router consumes the trim bar's writing claims far above these sites, so a
+// raise in there could only put up a surface no gesture in the view can move.
+// Bare `x` is consumed in the mode besides, so nothing can take it down again.
+void show_trim_region_overlay(AppState& app, Viewport& viewport);
 
 // THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the bare
 // assignments it replaces (2026-08-14, when the pinch became the anchor stem's
@@ -419,7 +461,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 
 // PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT — the three-arm framing
 // the GROUP undo/redo restore has taken since 2026-07-25, HOISTED into its own
-// owner on 2026-08-16 when the show-region button needed the identical
+// owner on 2026-08-16 when the Show trim region button needed the identical
 // behaviour ("like undo in terms of zoom/viewport", architect). It is the
 // framer above's caller, not its sibling: arm three IS
 // frame_span_into_view(margin=true).
@@ -429,7 +471,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // extent through clamp_playhead_to_live_domain(source_frame_to_active_domain
 // (...)) and the region's endpoints ARE active-domain frames by definition. A
 // caller holding SOURCE frames (the trim bounds, say) converts before it calls,
-// which is what the show-region seed does.
+// which is what the Show trim region act does.
 //
 // It writes ONLY the viewport (level and start) and only through the family's
 // clamp chokepoints; it damages nothing and kicks no render, exactly as the
@@ -1563,12 +1605,14 @@ struct GuiInputHandler {
     // RULER arm with its deferred dissolve is deleted). `anchor_frame` is the
     // active-domain frame the press just placed the playhead at and the fixed
     // end of every trim pair the sweep writes; (x, y) is the press position for
-    // the press-becomes-drag threshold. HIDES the trim region overlay at
-    // mouse-down — the press is a point command like any other, and what it may
-    // become is not (the sweep's own trim writes are non-members of that
-    // inventory; the split is at clear_region_highlight). THE PRESS WRITES NO
-    // TRIM: a motionless release is the placement and nothing else.
-    // THREE CALLERS (re-derived 2026-08-18): the LIVE former's press half
+    // the press-becomes-drag threshold. SHOWS the trim region overlay at
+    // mouse-down (2026-08-19, replacing the hide it did until then) — you draw
+    // on a surface you can see, and the overlay derives from the trim the sweep
+    // is about to write, so it tracks the stroke live; the `h` view is carved
+    // out, writing no trim to derive one from. THE PRESS WRITES NO TRIM: a
+    // motionless release is the placement and nothing else — and leaves the
+    // overlay standing over the trim it did not touch.
+    // THREE CALLERS (re-derived 2026-08-19): the LIVE former's press half
     // (place_playhead_and_arm_region — the shift press and the touch begin's
     // live arm both route through it), the `h` history view's own shift
     // former (handle_history_mode_press), and the touch begin's MODE arm
@@ -1643,7 +1687,7 @@ struct GuiInputHandler {
     // (on_button_press) and the touch region begin's live arm
     // (begin_touch_region — the hold's expiry at the down point): clear
     // the marker selection, run the body above, and arm the sweep (which
-    // hides the overlay at mouse-down). The clear runs ahead of
+    // SHOWS the overlay at mouse-down since 2026-08-19). The clear runs ahead of
     // the body's gutter return, so an inert-gutter click still deselects but
     // seats no playhead and arms no drag. (The plain presses that shared this
     // body left it 2026-08-12 for the pending pan — the eighth glass ruling.)

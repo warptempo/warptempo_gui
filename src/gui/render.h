@@ -2152,8 +2152,8 @@ double displayed_trim_ms(int64_t frame,
 // lane `row`. Deliberate asymmetry vs centered marker flags: a bound at frame 0
 // / EOF shows its cap fully onscreen.
 //
-// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (5 since
-// 2026-08-18 — what each retune of it costs the bridge is
+// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side (10 since
+// 2026-08-19 — what each retune of it costs the bridge is
 // recorded at the constant). A 2px target is under any reasonable pointing
 // tolerance, so the drawn cap and the grabbable cap are deliberately NOT the
 // same rect — the one place in this lane where they differ, stated here
@@ -2161,8 +2161,8 @@ double displayed_trim_ms(int64_t frame,
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
-// caps are 2px, so this makes the target 2 + 2*5 = 12px. THREE CONSUMERS read
-// it (re-grepped 2026-08-18): the TRIM BAR's endcaps (hit_test_trim_endcap),
+// caps are 2px, so this makes the target 2 + 2*10 = 22px. THREE CONSUMERS read
+// it (re-grepped 2026-08-19): the TRIM BAR's endcaps (hit_test_trim_endcap),
 // the OVERVIEW BOX's edge handles (hit_test_overview_endcap, the trim model
 // reused verbatim on the box outline) and — since the region became the trim —
 // the WAVEFORM OVERLAY's two bounds (region_manipulation_hit,
@@ -2173,51 +2173,54 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 // needs on one of them it needs on the others, and a second constant here would
 // only be a way for them to drift apart.
 //
-// 5 SINCE 2026-08-18 (architect, from the rig again, narrowing his own
-// 2026-08-15 ruling after driving the unified region/trim). It was 15 from
-// 2026-08-15 (widening the 2026-08-14 ruling once both lanes had been driven on
-// glass), 10 that day (architect: "endcaps are very useful and currently too
-// small", leaning 6 to 10 and ruling 10 — THE TOUCH PANEL IS THE REASON, a
-// fingertip being nothing like a 10px target), and 4 from row 5's landing,
-// chosen to reproduce the retired square chip's width.
+// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE THIRD CONSUMER IS THE
+// REASON IT CAME BACK UP: the waveform overlay's bound bands exist precisely
+// because the 9 px trim bar is unusable with a fingertip, so 5 per side
+// reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
+// built to solve — while 15 was more than the two THIN lanes want. 10 is the
+// value that serves all three. The walk: 4 from row 5's landing, chosen to
+// reproduce the retired square chip's width; 10 on 2026-08-14 (architect:
+// "endcaps are very useful and currently too small", leaning 6 to 10 and ruling
+// 10 — THE TOUCH PANEL IS THE REASON, a fingertip being nothing like a 10px
+// target); 15 on 2026-08-15, once both lanes had been driven on glass; 5 on
+// 2026-08-18, narrowing that after driving the unified region/trim.
 //
 // A NARROWER BAND GIVES BACK EXACTLY WHAT A WIDER ONE TOOK, and on the overview
 // lane that is a COHERENT PAIR rather than a trade: less of the lane resolves as
 // an edge, so more of it resolves as an OUTSIDE press — which teleports the box
 // and then arms its pan (2026-08-18) — and smaller bounds therefore mean more
 // pan. The waveform overlay's answer moves the same way: a narrower band leaves
-// more of the span as its MOVE zone.
+// more of the span as its MOVE zone. Widening spends exactly that, which is
+// what the fingertip is being paid.
 //
 // WHAT THE BAND'S WIDTH DECIDES, checked against every neighbour the endcap
 // claim can overlap, because that claim OUTRANKS everything else in these lanes
 // (the per-grab figures are re-derived from the rules below, not carried):
 //   * THE TRIM BRIDGE is reachable only where the gap survives both inflated
 //     caps, which is a window wider than 3 + 2*grab columns on screen — so the
-//     narrowest window that still has a bridge is 14 columns at 5, against 34
-//     at 15, 24 at 10 and 12 at 4. The band's shrink hands the bridge back
-//     everything the 2026-08-15 widening cost it bar 2px a side, and what
-//     remains lost is zoom-recoverable rather than a lost capability (the
-//     window's drawn width is a zoom state, both bounds stay independently
-//     draggable at every zoom, and the band's framing double-click is tested
-//     ABOVE the router so it is untouched).
+//     narrowest window that still has a bridge is 24 columns at 10, against 14
+//     at 5, 34 at 15 and 12 at 4. What the bridge loses is zoom-recoverable
+//     rather than a lost capability (the window's drawn width is a zoom state,
+//     both bounds stay independently draggable at every zoom, and the band's
+//     framing double-click is tested ABOVE the router so it is untouched).
 //   * THE TWO TRIM CAPS AGAINST EACH OTHER are unaffected in KIND at any width:
 //     the sort's
 //     leftmost-wins/Begin-first arbitration makes End's exclusive reach
 //     (end_col − begin_col − 1 columns to the right of Begin's band, or one
 //     column to its left when the bounds coincide) a function of the BOUNDS
 //     alone — the grab cancels out of both sides — so every verdict a
-//     coincident or near-coincident pair gives is the same at 5 as at 15, just
-//     nearer the column. A pair exactly one column apart is the one
+//     coincident or near-coincident pair gives is the same at 10 as at 5 or 15,
+//     just nearer the column. A pair exactly one column apart is the one
 //     unreachable End, and it is unreachable at every grab.
 //   * THE OVERVIEW BOX'S TWO EDGES against each other are likewise unaffected:
 //     that test arbitrates NEAREST EDGE (Begin on the tie), which is
 //     grab-independent, so both edges stay reachable at any box width and the
 //     grab only sets their outer reach. What the width does decide is the box's
 //     INTERIOR: the box-follows-pointer pan needs a column more than grab from
-//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (13 at 5,
-//     against 33 at 15, 23 at 10 and 11 at 4) is all edge handle. The
-//     click-teleport outside the box faces the same ring, 5px now.
-inline constexpr int kTrimEndcapGrabPx = 5;
+//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (23 at 10,
+//     against 13 at 5, 33 at 15 and 11 at 4) is all edge handle. The
+//     click-teleport outside the box faces the same ring, 10px now.
+inline constexpr int kTrimEndcapGrabPx = 10;
 inline int trim_endcap_grab_px() {
     return scaled_px(kTrimEndcapGrabPx, 0);
 }
