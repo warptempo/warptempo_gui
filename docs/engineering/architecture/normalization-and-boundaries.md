@@ -23,6 +23,10 @@ WHERE IT APPLIES AND WHERE IT DOES NOT, and the distinction is load-bearing. IT 
 
 THE RELEASE-TIME SLIVER DISSOLVE RETIRED WITH IT, and both retirements are kept as seeds at region-scrub-esc.md rather than here: a jitter drag that crosses the 8 px gate used to rest a two-pixel highlight and dissolve it at the release, and it now commits a floor-width TRIM instead. `Shift+X` is the way back.
 
+### Why the Window Exists (architect 2026-08-19)
+
+WHY TRIM EXISTS AT ALL IS NOT RESTATED HERE — it is stated once, in render-pipeline.md's prepost-trim section: the window is there to MAKE A TARGET-VIEW SEGMENT RENDER FAST, so a passage can be iterated on instead of the whole piece being synthesized again for every change. This file owns where the pair may REST and how it COMMITS — always set, ordered, walled, crossed pairs resetting, the setter's deselect and the playhead park — and every one of those rules is about a window whose job is that render. Two of the properties they lean on have their reason there rather than here: trim is BAND rather than authored content (hence read-only-legal), and it sits OUTSIDE UNDO with `Shift+X` as the recovery.
+
 ### Bare `x` Writes No Bound (architect 2026-08-18)
 
 BARE `x` IS THE TRIM REGION OVERLAY'S SHOW / HIDE TOGGLE (`handle_toggle_trim_region`) and is no longer a trim route at all: it writes no bound, no selection and no playhead, so none of this file's trim rules reach it. The act it used to name — SET THE TRIM FROM A REGION — stopped existing when the region BECAME the trim (the overlay is derived from the resting bounds every frame, `trim_overlay_span`), so the key fell free and took the act that needed a home; `Ctrl+Shift+X`, which carried the show act from 2026-08-16, is unbound again. `Shift+X` is untouched — still the maximizer behind its already-full identity guard, still touching no selection — and every other trim route, refusal and clamp in this file is unchanged. The model and its succession live in region-scrub-esc.md.
