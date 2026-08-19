@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -39,7 +40,9 @@ class GuiAudio;
 // (effective_max_zoom_level), where full zoom-out rests at whole-song-visible.
 // There is no fit-file mode and no sentinel level. Bare-digit keys are unbound
 // for zoom: `0` goes to full zoom-out and, pressed once already there, runs the
-// `c` command (it stopped being a two-way toggle 2026-08-05), and `c` jumps to
+// `c` command — at the level it stamped on the way out when its tab has one
+// (ViewState::zoom_recall_level, architect 2026-08-18), at the working zoom
+// when it does not — and `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
 // Tab family, which recenters on its stop, changes no zoom at all. Smaller
 // level = less file per window = more zoomed in. kMinZoom is
@@ -2996,6 +2999,35 @@ struct ViewState {
     int64_t viewport_start_sample      = 0;
     double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
+
+    // BARE `0`'s RETURN LEVEL (architect 2026-08-18): the zoom level the key was
+    // most recently pressed at while still BELOW the effective ceiling. `0`
+    // stamps it on the way out to full zoom-out and spends it when pressed again
+    // already there, so the round trip is overview and then back to the
+    // magnification the user left — the LEVEL only, not the window: the return
+    // trip re-centers the way `c` centers rather than restoring the exact
+    // viewport (architect, asked directly). EMPTY means nothing has been stamped
+    // in this tab yet and the return arm is then the plain `c` command, which is
+    // both the session's opening state and the project that opens ALREADY at
+    // full zoom out. The slot can only be found empty at the ceiling when the
+    // ceiling was reached some other way, since every arrival there by this key
+    // stamps on the way.
+    // run_overview_command (input_handler.cpp) is the ONE writer: a manual
+    // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
+    // touch gesture does, and nothing clears it — that is what makes the round
+    // trip predictable.
+    // SESSION SCRATCH, DELIBERATELY ABSENT FROM kSettingsOrder (settings_io.cpp):
+    // the one member of this struct that is NOT persisted. That table is an
+    // explicit key list wired arm by arm — there is no reflective walk over this
+    // struct — so a member with no key row is simply never written and never
+    // read, which is exactly the ruling's "per tab, per session, not stored on
+    // disk". Do not "fix" the omission by adding a row.
+    // A LOAD IN PLACE DROPS IT with the rest of the band, no separate reset
+    // needed: both `'` paths replace the whole ViewState through
+    // view_state_from_settings_tab, which builds a fresh one, and a source load
+    // seeds both tabs from a fresh ViewState too. A load in place is a
+    // discontinuity (architect) — the stamped level described another piece.
+    std::optional<double> zoom_recall_level;
 
     // Per-tab read-only lock. Toggled by bare `o`. IT PROTECTS THE AUTHORED
     // MUSICAL CONTENT — the two marker stores and the engine settings — AND

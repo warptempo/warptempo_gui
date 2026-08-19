@@ -2013,8 +2013,9 @@ private:
     // playback and move the playhead onto the newly focused marker, recenter —
     // AT THE CURRENT ZOOM LEVEL, which the cycle never changes (architect
     // 2026-08-05, "no zoom on Tab", reverting the same-day working-zoom landing
-    // this carried for one commit; `c` and `0`'s second arm remain the only
-    // routes to kWorkingZoomLevel). The recenter is unconditional — follow mode
+    // this carried for one commit; `c` remains the direct route to
+    // kWorkingZoomLevel, and `0`'s second arm reaches it through `c` when its
+    // tab has stamped no return level). The recenter is unconditional — follow mode
     // does not gate the cycle. A step that focuses nothing does nothing at all.
     // The WHOLE Tab family comes through here: the three bare chords and the
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
@@ -2046,13 +2047,26 @@ private:
     // the three callers (the live `c` arm, the mode's `c` claim, and
     // run_overview_command's already-full-out arm) share one decision instead of
     // spelling it each. Rationale at the definition.
-    void run_center_command();
+    // THE ZOOM IS A PARAMETER since 2026-08-18 and defaults to kWorkingZoomLevel,
+    // which is what `c` itself means — the two key arms pass nothing. `0`'s
+    // already-full-out arm passes the level IT stamped on the way out
+    // (ViewState::zoom_recall_level) when one stands, so the return trip is this
+    // one command with ONE substitution rather than a second recipe: same mode
+    // fork, same land, same centering, and the same clamp (apply_zoom_change
+    // pre-clamps every request, so a stamp read back under a changed width or a
+    // flipped S/T domain lands inside the per-file window).
+    void run_center_command(double target_zoom_level = kWorkingZoomLevel);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
     // (architect 2026-08-05, replacing the working-zoom toggle; the second arm
     // was a bare center for one day). Below the per-file effective ceiling →
-    // jump to it (whole song visible); already at it → run_center_command, so
-    // `0` twice is overview then working zoom on the focus. The FIRST arm is a
+    // STAMP the level being left into the active tab's zoom_recall_level, then
+    // jump to the ceiling (whole song visible); already at it → run_center_command
+    // AT THE STAMPED LEVEL, falling back to the working zoom when nothing has
+    // been stamped — so `0` twice is overview then back to the magnification it
+    // was pressed at (architect 2026-08-18), and overview then the working zoom
+    // on a tab that never stamped. THIS FUNCTION IS THE STAMP'S ONE WRITER (the
+    // field, app_state.h). The FIRST arm is a
     // PURE VIEWPORT MOVE (architect 2026-07-30): it writes neither the selection
     // nor the region nor the playhead; the second carries `c`'s regime, stated
     // at that command. The rationale is at the definition.
