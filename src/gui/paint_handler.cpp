@@ -2281,7 +2281,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   and the no-wiggle cell are all at kClockShape below). It was CENTRED IN
 //   THE LANE from 2026-08-11 until 2026-08-18, when the architect anchored it
 //   to the left block ("move bottom row timestamp to left alignment, place a
-//   separator between transport buttons and timestamp");
+//   separator between transport buttons and timestamp") and then nudged it off
+//   that pen by the two authored offsets at kClockCellOffsetXPx;
 //   THE SINGLE-MARKER VERBS (2026-08-18), the right block's first four — drop
 //   (bare `s`), delete (Delete), disable (Ctrl+D), inherit (Ctrl+N), moved
 //   down from the icon row at the architect's word ("move
@@ -2367,17 +2368,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — ELEVEN of the fifteen, where it used to be one: in the `h` view the
+// rulings — TEN of the fifteen, where it used to be one: in the `h` view the
 // derived partition greys the PLAY/STOP button (Space is consumed there), the
 // FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
-// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, ADD TO
-// SELECTION (bare `k`, consumed in there like the verbs' chords) and WALK BOTH
-// TABS (Ctrl+Shift+Tab, which ran the mode's reverse walk cycle until the walk
-// selector left row 3 and is blocked by the allowlist again); the two
-// SKIPS and the walk's two STEPS stay lit, Home/End being the mode's own
-// absolute jumps and Tab/Shift+Tab its diff-flag cycle (architect-confirmed for
-// the skips). Outside the view the four VERBS grey on a locked tab, their own
+// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS and ADD TO
+// SELECTION (bare `k`, consumed in there like the verbs' chords); the two
+// SKIPS and the MARKER-WALK GROUP'S THREE stay lit, Home/End being the mode's
+// own absolute jumps, Tab/Shift+Tab its diff-flag cycle (architect-confirmed
+// for the skips) and Ctrl+Shift+Tab the march composing that cycle with the A/B
+// switch. Outside the view the four VERBS grey on a locked tab, their own
 // gate, and nothing else on the row greys at all — which is the architect's
 // 2026-08-15 always-on ruling, made about the RESTING face of the ten members
 // it then had. All at redesign_button_enabled; nothing decided here.
@@ -2543,8 +2543,9 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // the CURRENT scaled font, the widest advance wins, and the cell is a specimen
 // built from THAT digit — "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit
 // slots — shaped through the same one-run path the painted clock takes. The
-// cell then starts at the LEFT BLOCK'S separator pen (architect 2026-08-18; it
-// was CENTERED in the lane from 2026-08-11 until then) and the live text starts
+// cell then starts at the LEFT BLOCK'S separator pen plus the authored offset
+// below (architect 2026-08-18; it was CENTERED in the lane from 2026-08-11
+// until then) and the live text starts
 // at its LEFT pen too, so the reserved box does not move at all on a given
 // scale and the glyphs never walk inside it.
 //
@@ -2552,6 +2553,19 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // are at format_timestamp, time_format.h). The cell is that format's width and
 // no wider.
 constexpr const char* kClockShape = "DD:DD.DDD";
+
+// THE CELL'S TWO AUTHORED OFFSETS OFF THAT SEAT (architect 2026-08-18, his own
+// measured numbers from looking at the row): the cell sits FOUR PIXELS RIGHT of
+// the separator's pen and ONE PIXEL DOWN of the band's centred baseline.
+//   * the 4px is a MARGIN MIRROR — the row's last button keeps one lane pad
+//     from the lane's RIGHT edge, and this gives the clock the same air on its
+//     left, so the row's two text-free margins read alike;
+//   * the 1px puts the digits perfectly vertically centred in the lane.
+// THEY ARE AUTHORED, NOT DERIVED — sampled off the painted row exactly as this
+// row's separator trio is, so neither is folded into an expression over the pad
+// or the baseline. They ride gui_scale like every other authored length here.
+constexpr double kClockCellOffsetXPx = 4.0;
+constexpr double kClockCellOffsetYPx = 1.0;
 
 // The clock's cell width, MEMOISED ON THE FONT SIZE — eleven tiny shaping
 // passes (ten digits plus the specimen) that answer the same thing on every
@@ -2706,12 +2720,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // re-derived at every metrics change; anchored to the left block it is at a
     // fixed pen on every window, and only the RIGHT block moves. At 100% the
     // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
-    // gaps = 108, then 5 + 1 + 5 = 119 — and the right block is 424 wide
+    // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
+    // seats it at 123 — and the right block is 424 wide
     // (168 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
     // starts at 208 on the 640px defensive floor, 592 on the Pi's 1024 and
     // 1488 at 1920. The 9-glyph cell measures about 80px at 100% (it narrowed
     // when the clock went to 11pt on 2026-08-14, so that is an upper bound),
-    // which leaves the floor's tightest case some 9px of ground between the
+    // which leaves the floor's tightest case some 5px of ground between the
     // cell and the verbs — the Add to Selection button took 34 of the 40 that
     // stood there before 2026-08-18's second roster ruling, and the PI's own
     // 1024 keeps some 390. THE ROW STILL CARRIES NO COLLISION RULE — none of the
@@ -2774,18 +2789,32 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
         const double cell_w = clock_cell_width_px(font, size_px);
         // THE CELL STARTS AT THE LEFT BLOCK'S SEPARATOR PEN (architect
-        // 2026-08-18, "move bottom row timestamp to left alignment"). The cell
+        // 2026-08-18, "move bottom row timestamp to left alignment"), PLUS THE
+        // AUTHORED MARGIN-MIRROR OFFSET (the same day, at his live look; both
+        // offsets and their reasons are at kClockCellOffset*Px). The cell
         // is still a reserved WIDTH — measured from the widest digit's
         // specimen, so the glyphs never walk inside it — and only its ORIGIN
         // moved: it was `lane.x + nearbyint((lane.w - cell_w) * 0.5)`, the lane
         // midline, from 2026-08-11 until then.
-        const int cell_x = clock_cell_x;
+        const int cell_x = clock_cell_x + scaled_px(kClockCellOffsetXPx);
+        // AND THE BASELINE TAKES THE VERTICAL OFFSET, off the band's centred
+        // one, which is what leaves the digits reading centred in the lane.
+        const double baseline =
+            redesign_baseline(font, static_cast<double>(content_y),
+                              static_cast<double>(content_h)) +
+            scaled_px(kClockCellOffsetYPx);
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
         // on each side: the reserved width is an ADVANCE sum and a glyph's ink
         // may sit a hair outside it, and the band is the row's content height,
         // which contains the baseline's ascent and descent by construction.
+        // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the horizontal
+        // offset above is in `cell_x` and so is in this box, which is what stops
+        // the moved cell leaving a trail. The VERTICAL offset needs no term: the
+        // box is the row's whole content band, which the nudged baseline's ink
+        // stays inside, and the band's bottom IS the window's, so widening it
+        // downward would damage past the surface.
         app.clock_cell_rect = GuiRect{
             cell_x - 1, content_y,
             static_cast<int>(std::ceil(cell_w)) + 2, content_h};
@@ -2808,10 +2837,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                       static_cast<double>(sr);
         }
         if (seconds < 0.0) seconds = 0.0;
-        show_row_text(cr, font, static_cast<double>(cell_x),
-                      redesign_baseline(font,
-                                        static_cast<double>(content_y),
-                                        static_cast<double>(content_h)),
+        show_row_text(cr, font, static_cast<double>(cell_x), baseline,
                       format_timestamp(seconds), kRedesignLabel);
     }
 
@@ -4135,11 +4161,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
 // trim_endcap_rect inside the two renderers, so paint stays column-coherent with
 // hit_test_trim_endcap / route_trim_bar_press, which read exactly that basis
-// (paint == hit by shared owners). The ONE state where paint and hit describe
-// different bounds is the `h` HISTORY VIEW, where this pass substitutes the
-// viewed commit's diff span for the authored pair (the block below owns that
-// ruling): coherence is moot there because the view consumes every press that
-// reaches either hit test, so no gesture can act on the substituted columns.
+// (paint == hit by shared owners) — IN EVERY STATE since 2026-08-18, the `h`
+// history view's display-only diff-span substitution having been deleted with
+// the architect's "trim should not change going into history".
 // Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
@@ -4180,52 +4204,18 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     const std::vector<WarpFrameMapSegment>* map_arg =
         dmap.empty() ? nullptr : &dmap;
 
-    // THE SOURCE-FRAME PAIR THE BAR DISPLAYS. Ordinarily the authored trim
-    // window; while the `h` HISTORY VIEW stands, the VIEWED COMMIT'S DIFF SPAN
-    // instead (architect 2026-08-05 — the view is a viewer, and the bar is the
-    // one lane wide enough to say at a glance where in the piece a checkpoint's
-    // changes lie). An empty delta shows the full window, the span's own
-    // "nothing to frame" answer, which is also what the authored trim rests at
-    // by default.
-    //
-    // DISPLAY-ONLY, AND ONLY HERE: app.trim is not read, not written and not
-    // shadowed — this is one substitution at the one paint site, above the
-    // displayed_trim_ms mapping below, so the substituted frames ride the target
-    // view's display map exactly as the authored pair does. Nothing consumes the
-    // painted pair for BEHAVIOR while the view stands: the trim bar's three
-    // press routes are consumed by the pointer allowlist
-    // (handle_history_mode_press), which is also why pointer_cursor_kind empties
-    // the band's cues in the mode, and the endcap / bridge hit tests are
-    // reachable only from those presses. Its span-framing DOUBLE-CLICK is not
-    // consumed but REPLACED there, framing the diff span — and it reads the
-    // delta directly, never this painted pair, so it adds no consumer either.
-    //
-    // THE INCOHERENCE THIS ONCE CARRIED IS GONE WITH PLAYBACK (2026-08-05): an
-    // audition inside the view used to start and stop at the AUTHORED window
-    // while the bar above it showed the diff span, and the view auditions
-    // nothing now — the substitution has no behavioural reader left at all. The
-    // range's two owners — NAVIGATION only since the same day's ungating
-    // (compute_trim_samples for source view, Viewport::trim_range for target;
-    // playback reads neither) — still read the real trim and are still not
-    // display sites; nothing about that changed.
-    int64_t bar_begin_frame = app.trim.begin_frame;
-    int64_t bar_end_frame   = app.trim.end_frame;
-    if (app.history_mode.active) {
-        // THROUGH THE DISPLAYED-DELTA OWNER (AppState::HistoryMode), so the bar
-        // follows the source axis as it always followed the reading one: on a
-        // Local tab it shows where in the piece that undo step happened.
-        const GuiHistoryCommitDelta* d =
-            app.history_mode.displayed_delta(app.history_compare());
-        int64_t lo = 0, hi = 0;
-        if (d && d->frame_span(lo, hi)) {
-            bar_begin_frame = lo;
-            bar_end_frame   = hi;
-        } else {
-            const TrimState full = full_trim_window(audio.total_frames());
-            bar_begin_frame = full.begin_frame;
-            bar_end_frame   = full.end_frame;
-        }
-    }
+    // THE SOURCE-FRAME PAIR THE BAR DISPLAYS: THE AUTHORED TRIM WINDOW, IN
+    // EVERY STATE (architect 2026-08-18 — "trim should not change going into
+    // history — it no longer should range from first to last diff, but stay
+    // whatever it was in non-history views"). The bar showed the VIEWED
+    // COMMIT'S DIFF SPAN while the `h` view stood from 2026-08-05 until then, a
+    // display-only substitution at this one site; it is deleted, so the window
+    // the user was in is the window the view shows, and the band's
+    // double-click frames that window in here exactly as it does outside.
+    // (Trim never MUTATED in the view either way: the substitution never wrote
+    // app.trim, and the mode consumes every press that could.)
+    const int64_t bar_begin_frame = app.trim.begin_frame;
+    const int64_t bar_end_frame   = app.trim.end_frame;
 
     // Per-bound displayed-domain positions through the shared mapping owner
     // (displayed_trim_ms returns an integral-valued double; the int64 round

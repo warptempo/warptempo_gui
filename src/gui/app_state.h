@@ -289,7 +289,7 @@ struct RegionState {
 // one resets to the full window at every commit), so left/right and begin/end
 // are the same distinction here.
 //
-// THE GRAB BAND is trim_endcap_grab_px() per side — the SAME 15 px the trim
+// THE GRAB BAND is trim_endcap_grab_px() per side — the SAME 5 px the trim
 // endcaps and the overview box edges take, on purpose. OVERLAP resolves
 // NEARER-BOUND-WINS with ties to the LO bound (hit_test_overview_endcap's own
 // rule), which keeps both bounds reachable down to a 1 px span. Inside the span
@@ -1483,11 +1483,11 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // surface's double-click action instead of the single-click action. A drag that
 // MOVED records nothing and clears any candidate. Surfaces:
 //   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
-//                 (run_span_framing_command: a live region, else a proper trim
-//                 sub-window, else the whole song) — and, while the `h` HISTORY
-//                 VIEW stands, the VIEWED CHECKPOINT'S DIFF SPAN instead
-//                 (frame_viewed_commit_diff_span, 2026-08-05: one gesture on one
-//                 band, two commands, each press site running its own).
+//                 (run_span_framing_command: a proper trim sub-window, else the
+//                 whole song), IN EVERY STATE since 2026-08-18 — the `h` history
+//                 view ran the viewed checkpoint's DIFF SPAN on this same
+//                 gesture from 2026-08-05 until the bar stopped displaying that
+//                 span, and one gesture now carries one command everywhere.
 //                 Target unused; both axes'
 //                 slack compared. It REHOMED here from the deleted zoom lane
 //                 (architect 2026-07-31). THE CONSUME ACTS AT THE PRESS
@@ -2038,15 +2038,14 @@ enum class RedesignButton {
     //
     // THEY ARE ALWAYS ENABLED, by the row's settled face policy (the ruling is
     // at redesign_button_enabled), and the `h` view's DERIVED partition needs
-    // no hand entry for them — it just no longer answers the same way for all
-    // three (2026-08-18). TWO STAY LIT AND DO THE MODE'S OWN THING: bare Tab
-    // and Shift+Tab are the diff-flag cycle, the mode's own vocabulary, so
-    // history_mode_owns_key answers for them. WALK BOTH TABS GREYS: its
-    // Ctrl+Shift+Tab was the mode's reverse WALK-SOURCE cycle from 2026-08-07
-    // until the walk moved to the icon row's own radio pair, and the chord is
-    // off the mode's allowlist again — the paired marker march navigates by
-    // LIVE markers, which the lane in there is not showing — so the derived
-    // partition greys it, honestly and with nothing hand-listed.
+    // no hand entry for any of the three: ALL THREE ARE THE MODE'S OWN
+    // VOCABULARY in there (history_mode_owns_key answers for each), so all
+    // three stay lit and do the mode's own thing — bare Tab and Shift+Tab step
+    // the diff-flag cycle, and Ctrl+Shift+Tab marches the pair over that same
+    // cycle (2026-08-18, the architect: the chord "is just short for
+    // 'tab, ctrl+tab, tab'", and only what Tab denotes changes with the
+    // context). WALK BOTH TABS GREYED for the hours between the walk selector
+    // leaving row 3 and that ruling.
     TransportWalkPrev, TransportWalkNext, TransportWalkBoth,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
@@ -2477,10 +2476,12 @@ struct CommandPopupItem {
 // one surface further out. THE RULE HELD ONE RULED EXCEPTION from 2026-08-08
 // until the Navigation menu's deletion, and it is recorded because the argument
 // is the good one and would apply again: "Walk both tabs" greyed INSIDE the `h`
-// HISTORY VIEW, where Ctrl+Shift+Tab is not the A/B walk at all — the mode
-// claims it as the REVERSE cycle of its own walk-selector row — so an item left
+// HISTORY VIEW, where Ctrl+Shift+Tab was not the A/B walk at all — the mode
+// claimed it as the REVERSE cycle of its own walk-selector row — so an item left
 // live would have dispatched a chord doing something else entirely under a label
-// promising the walk. It greyed rather than lying, which is a difference in KIND
+// promising the walk. (The premise is gone since 2026-08-18: the walk selector
+// has its own radio pair and the chord marches the pair in the view too, over
+// the diff flags.) It greyed rather than lying, which is a difference in KIND
 // from every other refusal on a command menu, all of which are "the same
 // command, with nothing to act on". THAT ROW DIED WITH ITS MENU and the
 // predicate that served it (dropdown_item_enabled) is deleted producer-less with
@@ -4570,8 +4571,8 @@ struct AppState {
     // steps claimed by history_mode_owns_key as re-expressions over the diff
     // flags. ONE of its rows greyed instead of dispatching — "Walk both tabs",
     // whose Ctrl+Shift+Tab was then the mode's reverse walk-source cycle rather
-    // than the A/B walk the label promised (it is a consumed no-op in the view
-    // since 2026-08-18) — and that was the menus' only per-item
+    // than the A/B walk the label promised (the chord IS that march in the view
+    // since 2026-08-18, over the diff flags) — and that was the menus' only per-item
     // disabled state ever. The menu is deleted whole as of 2026-08-15 and the
     // predicate with it; File inherited the ruling by construction when it
     // landed 2026-08-13, so what the ruling BUYS is unchanged.)
@@ -4656,9 +4657,13 @@ struct AppState {
     // state Ctrl+Z and Ctrl+Shift+Z can reach plus the live one, newest first
     // since 2026-08-08 (GuiHistoryLocalWalk, history_diff.h, owns the model and
     // the pairing derivation). The lane, the flags, the colours, the corner's `n/N`, the
-    // walk's `,` / `.`, the diff-flag cycle, the trim bar's span and its framing
-    // double-click are all SOURCE-AGNOSTIC — they read the displayed delta and
-    // the active walk's position, never a named walk. THREE surfaces are not,
+    // walk's `,` / `.` and the diff-flag cycle are all SOURCE-AGNOSTIC — they
+    // read the displayed delta and
+    // the active walk's position, never a named walk. (The trim bar's span and
+    // its framing double-click were on that list until 2026-08-18, when the bar
+    // went back to displaying the tab's own trim window in the view and the
+    // double-click went back to framing it: neither reads the delta at all
+    // now.) THREE surfaces are not,
     // and each says why at its own site: the corner's SHA token (an undo entry
     // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS since
     // 2026-08-08 wherever the active walk carries a member and FORKS ON THE
@@ -4907,10 +4912,11 @@ struct AppState {
         // rather than by naming both halves: the reading is a (source, compare)
         // PAIR, and four call sites spelling that fork is four places for a
         // Local tab to keep showing commit flags. Its readers, re-derived by
-        // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp),
-        // frame_viewed_commit_diff_span (input_key_dispatch.cpp),
-        // GuiPaintHandler::paint_trim's diff-span substitution and the bottom
-        // strip's corner line. The ONE reader that deliberately does NOT is
+        // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
+        // and the bottom strip's corner line — it had two more until 2026-08-18,
+        // the mode's diff-span framing and paint_trim's diff-span substitution,
+        // both deleted with the trim bar's return to the ordinary framing. The
+        // ONE reader that deliberately does NOT is
         // head_delta_empty below, which names the COMMIT walk's index 0 and the
         // Cumulative reading explicitly, and says why.
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
@@ -5169,8 +5175,9 @@ struct AppState {
         // through the warp map when a `t` inside the view had flipped the
         // domain, and re-landing a surviving selection on its focus after it.
         // All four fields, the framing call at the entry and the whole restore
-        // are deleted; frame_history_view_whole_song survives with its OTHER
-        // caller, the diff-span framing's empty-delta arm.
+        // are deleted — as, later the same day, are the mode's two framing
+        // owners themselves, the trim bar's double-click having gone back to
+        // the ordinary span framing.
 
         // THE TWO WALKS. `session` is the committed history (git, the strict
         // load gate, the prefetch store); `local` is this session's own STATE
@@ -6435,7 +6442,8 @@ inline bool history_mode_revert_subject_standing(
 // IT HAD EXACTLY ONE PRODUCER FOR ITS WHOLE LIFE (architect 2026-08-08): the
 // Navigation menu's "Walk both tabs" row while the `h` history view stood, where
 // Ctrl+Shift+Tab was then the mode's own reverse walk-source cycle rather than
-// the walk the label promised (the view consumes it outright since 2026-08-18). The SETTINGS menu never had one (it does not open in that
+// the walk the label promised (the chord is that walk in the view too since
+// 2026-08-18, marching the diff flags). The SETTINGS menu never had one (it does not open in that
 // view — its anchor is refused at toggle_dropdown — and outside it its six items
 // keep the never-grey rule, their own refusals answering) and neither did FILE
 // (its one row is Ctrl+Q, admitted everywhere the menu can be opened, the
@@ -6919,13 +6927,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
         // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS, ADD TO SELECTION (bare `k` is consumed
-        // in there like the verbs' four chords) and WALK BOTH TABS
-        // (Ctrl+Shift+Tab, blocked by the allowlist again since the mode's
-        // reverse walk cycle left with the walk selector on 2026-08-18) —
-        // ELEVEN of the fifteen. The two SKIPS and the walk's two STEPS
-        // stay lit, being the mode's own absolute jumps and its diff-flag
-        // cycle.
+        // FOUR SINGLE-MARKER VERBS and ADD TO SELECTION (bare `k` is consumed
+        // in there like the verbs' four chords) — TEN of the fifteen. The two
+        // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, being the mode's
+        // own absolute jumps, its diff-flag cycle and (since 2026-08-18) the
+        // march that composes that cycle with the A/B switch.
         // OUTSIDE THE VIEW: the four VERBS on a locked tab, their own gate,
         // carried down from the icon row and stated at their arm above — and
         // ADD TO SELECTION is NOT with them there, its chord being navigation.
@@ -7053,11 +7059,10 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportPlayStop:
         // THE MARKER-WALK GROUP TAKES THE ROW'S POLICY UNCHANGED (2026-08-15):
         // always-on below the loading/blank guard, with the `h` view's derived
-        // partition the only thing that greys any of them — and since
-        // 2026-08-18 it greys ONE, WALK BOTH TABS: bare Tab and Shift+Tab are
-        // the mode's OWN vocabulary in there (its diff-flag cycle), while
-        // Ctrl+Shift+Tab ran the mode's reverse WALK-SOURCE cycle until the
-        // walk selector left row 3 and the allowlist blocks it again.
+        // partition the only thing that could grey any of them — and it greys
+        // NONE, all three chords being the mode's OWN vocabulary in there (the
+        // diff-flag cycle on bare Tab / Shift+Tab, and the march over that
+        // cycle on Ctrl+Shift+Tab since 2026-08-18).
         // Their refusals outside the view are the keys' own consumed no-ops (an
         // empty marker store, a cycle with nowhere to go), exactly the class
         // the ruling at the head of this body refuses to mirror.

@@ -787,12 +787,14 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // (THE ENTRY PARKS NOTHING AND FRAMES NOTHING — architect 2026-08-18, "this
     // removes machinery". From 2026-08-05 it stashed the live viewport, zoom,
     // playhead and audio view here for close_history_mode to put back, and then
-    // opened the visit at FULL ZOOM OUT through frame_history_view_whole_song —
+    // opened the visit at FULL ZOOM OUT through a framing owner of its own —
     // the whole song in the window, the reading position a checkpoint review
     // starts from, and THE ONLY EDGE THAT FRAMED since 2026-08-08. Both are
     // deleted: the view owns no navigation state at all, so it opens over
-    // whatever window the user is already in and leaves it there. The framer
-    // survives with its OTHER caller, the diff-span framing's empty-delta arm.)
+    // whatever window the user is already in and leaves it there. That framer
+    // outlived the entry by one caller and is deleted with it later the same
+    // day, the trim bar's double-click having gone back to the ordinary span
+    // framing.)
     app.history_mode = std::move(fresh);
     measure_history_head_delta();
     drop_lane_stash_across_history_edge();
@@ -987,112 +989,6 @@ void GuiInputHandler::on_history_prefetch_ready() {
     viewport.invalidate_all();
 }
 
-// FRAME THE VIEWED COMMIT'S DIFF SPAN — AN ON-DEMAND ACT, not an edge effect
-// (architect 2026-08-05, superseding his own per-diff framing of earlier that
-// day). The mode's edges move no viewport at all — the internal ones since
-// 2026-08-08 and the ENTRY since 2026-08-18, the window being the user's from
-// before `h` until after it; this is what the user asks for when he
-// wants the differences filling the window, and its ONE caller is THE TRIM BAR'S
-// PLAIN DOUBLE-CLICK — the regular views' span-framing gesture exactly, on the
-// same band and through the same machinery, with this act as
-// its command; since 2026-08-17 that means the mode router's own consume in
-// handle_history_mode_press, which acts AT THE SECOND PRESS (each press site
-// runs its own command, so no mode fork
-// survives anywhere) (architect 2026-08-05, superseding the single click this shipped
-// with earlier that day: the band behaves like a read-only tab's, where the trim
-// drags refuse and the framing double-click still navigates). The bar is showing
-// the diff span while the view stands (paint_trim's display-only substitution),
-// so the gesture reads as "zoom to what the bar shows".
-//
-// IT IS IDEMPOTENT, which is what makes repeated clicking harmless: the framing
-// ends in apply_zoom_to_start, whose current-vs-target compare no-ops when
-// nothing moves.
-//
-// THE SPAN IS THE DISPLAYED DELTA'S, through the one accessor that forks on the
-// (source, reading) pair, so it follows WHAT THE LANE IS SHOWING like every
-// other reader — the walk from the lit tab, the reading from the session's own
-// bit: two readings of one member generally differ in extent, and so do the two
-// walks, so a click that framed some other pair's span would be showing one
-// answer at another's magnification.
-//
-// THE RECIPE IS THE TRIM-BAR DOUBLE-CLICK'S, through its own framing core
-// frame_span_into_view: the deterministic zoom-TO-span with the 2.5%-per-side
-// margin, NOT the undo/redo restore's scroll-if-it-fits-else-frame variant (that
-// one lives in undo.cpp's group tail and only ever zooms out as a fallback). The
-// EMPTY-DELTA arm falls through to the whole-song owner below, which is the
-// double-click's own whole-song arm — and is where the edges already are, so
-// the click is harmless there rather than special.
-//
-// THE SPAN IS THE WHOLE DELTA'S, in source frames, from the delta itself
-// (GuiHistoryCommitDelta::frame_span owns both of those choices) and converted
-// into the ACTIVE domain through source_frame_to_active_domain — the wrapper
-// whose target-view arm is nearbyint(map_source_to_target(...)), which is
-// frame_to_paint_sample's own formula, so the framed span is exactly the span
-// the lane paints its diff flags across in either view.
-//
-// IT MOVES THE VIEWPORT AND NOTHING ELSE: no playhead, no focus, no selection.
-// The click leaves the playhead where the user put it, and framing is a reading
-// act, not a navigation one.
-//
-// A ONE-FRAME SPAN (a single changed marker — the common case) is not a special
-// case: the framer clamps its degenerate zero-width span to 1.0 before the log2
-// and the fit level saturates at kMinZoom, so it rests at the deepest zoom
-// centred on that frame.
-void GuiInputHandler::frame_viewed_commit_diff_span() {
-    if (!app.history_mode.active) return;
-    if (audio.total_frames() <= 0) return;
-
-    const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta(app.history_compare());
-    int64_t lo = 0, hi = 0;
-    if (!d || !d->frame_span(lo, hi)) {
-        frame_history_view_whole_song();
-        return;
-    }
-    frame_span_into_view(app, audio, viewport,
-                         source_frame_to_active_domain(app, audio, lo),
-                         source_frame_to_active_domain(app, audio, hi),
-                         /*margin=*/true);
-}
-
-// THE WHOLE SONG IN THE WINDOW — the FULL ZOOM OUT the diff-span framing falls
-// back to when the viewed delta has no frames to frame.
-//
-// ONE CALLER SINCE 2026-08-18, re-derived by grep on this name:
-// frame_viewed_commit_diff_span above, which falls through to it as its
-// EMPTY-DELTA arm (the double-click's own whole-song answer, an on-demand act
-// rather than an edge). NO MODE EDGE FRAMES AT ALL any more, and the
-// succession is worth the two dates: each `,` / `.` step and each reading-or-
-// walk switch stopped calling this on 2026-08-08 (architect, SUPERSEDING his
-// own 2026-08-05 "three edges land at full zoom out"), so a pan and a zoom made
-// once are read through every walk step, both walks and both readings — the
-// viewport is UNIFIED across them — and THE ENTRY stopped calling it on
-// 2026-08-18, when the view gave up owning navigation state altogether (the
-// exit's restore went with it). Until then a visit opened over the whole song,
-// which is the reading position a checkpoint review starts from: the delta's
-// flags are laid out across the piece, and where they SIT is as much of the
-// answer as what they say. The trim bar's double-click is how that overview is
-// asked for now, on demand and at the user's own moment.
-//
-// FULL ZOOM OUT IS SPELLED AS THE SPAN FRAMER'S WHOLE-SONG ARM, [0, total] with
-// NO margin, which the framer's centering plus the wall clamp degenerate to the
-// per-file effective ceiling at start 0 — the same rest bare `0` reaches through
-// effective_max_zoom_level, arrived at through the mode's one framing route
-// rather than a second recipe.
-//
-// IT MOVES THE VIEWPORT AND NOTHING ELSE, exactly as the span framing does: the
-// playhead stays where it is, and the entry's own focus clear and stash drop are
-// its caller's.
-//
-// The `!active` guard is the defensive shape the framing above carries, for the
-// same reason: every caller is inside the mode already.
-void GuiInputHandler::frame_history_view_whole_song() {
-    if (!app.history_mode.active) return;
-    if (audio.total_frames() <= 0) return;
-    frame_span_into_view(app, audio, viewport, 0,
-                         live_total_frames(app, audio), /*margin=*/false);
-}
-
 // SWITCH WHAT THE LANE SHOWS — the ONE owner (architect 2026-08-05 for the two
 // compare readings, GENERALIZED 2026-08-07 to the (WALK SOURCE, READING) pair),
 // and its callers, re-derived by grep 2026-08-18: TWO ARMS OF
@@ -1176,11 +1072,15 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
 //     IsoLeftTab exactly as the live cycle is;
+//   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
+//     composed with the A/B switch: the mode's Tab act, the tab switch, the
+//     mode's Tab act again;
 //   * bare Home / End      — the ABSOLUTE ends of the song;
 //   * bare `c`             — working zoom, centered on the mode's own focus.
-// THERE IS NO CTRL SHAPE HERE SINCE 2026-08-18: Ctrl+Tab and Ctrl+Shift+Tab
-// were the walk cycle's two directions from 2026-08-05 / 07 and left with the
-// walk selector. Returns true when the press was consumed.
+// THE MARCH IS THE ONE CTRL SHAPE (2026-08-18). Ctrl+Tab was the walk cycle's
+// forward direction from 2026-08-05 and left with the walk selector; the
+// allowlist admits it as an ordinary A/B switch now. Returns true when the
+// press was consumed.
 //
 // THE ENTRY GATES ARE POSITIONAL, NOT RE-TESTED, and that is the point: this is
 // reached from on_key's main body, BELOW every gate that must refuse an entry,
@@ -1196,14 +1096,13 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 //
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
 // check and every other arm below it, so with the mode down `u`, `g`, `,`, `.`,
-// Tab, Home/End and `c` fall through to the ordinary
+// Tab, Ctrl+Shift+Tab, Home/End and `c` fall through to the ordinary
 // dispatch and behave exactly as they always have. Bare `u` and bare `g` are
 // bound NOWHERE there, so falling through is the unbound key's own consumed
-// nothing. NOTHING CTRL-CARRYING IS CLAIMED AT ALL since 2026-08-18: this
-// predicate claimed Ctrl+Tab from 2026-08-05 and Ctrl+Shift+Tab from
-// 2026-08-07 in both states, which cost neither anything (the claim is a
-// membership test and the arm below it was not reached with the mode down), and
-// both are gone with the walk cycle they served.
+// nothing, and Ctrl+Shift+Tab out there is the LIVE march — the same
+// composition over live markers, reached through its own arm in
+// handle_tab_switch_keys. A claim costs a shape outside the mode nothing: it is
+// a membership test, and the arm below it is not reached with the mode down.
 //
 // THE SHAPE IS ITS OWN PREDICATE (history_mode_owns_key) because it has a SECOND
 // reader: the redesign roster's mode-scoped disabled-face partition
@@ -1233,34 +1132,44 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 //     2026-08-11, and this paragraph claimed the opposite until 2026-08-15;
 //   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
 //     relayout, likewise;
-//   * BARE Tab and SHIFT+TAB — two of the bottom row's MARKER-WALK GROUP since
-//     2026-08-15, answered LIVE in the view by this predicate and doing the
-//     mode's own diff-flag cycle. THE GROUP'S THIRD, Ctrl+Shift+Tab, IS NOT
-//     THIS PREDICATE'S ANY MORE (2026-08-18): the reverse walk cycle it ran in
-//     here died with the walk selector, so the chord falls to the allowlist,
-//     which blocks it — and that button GREYS in the view, honestly, its live
-//     act being the paired marker march this view has no use for.
+//   * BARE Tab, SHIFT+TAB and CTRL+SHIFT+TAB — the bottom row's whole
+//     MARKER-WALK GROUP since 2026-08-15, all three answered LIVE in the view by
+//     this predicate: the first two step the mode's own diff-flag cycle, and the
+//     third (2026-08-18) marches the pair over that same cycle, so none of the
+//     three greys in the view.
 // Which leaves BARE `h` — the history button's own chord, and the one shape
 // here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
-    // CTRL CLAIMS NOTHING AT ALL SINCE 2026-08-18, and the branch stays as a
-    // REFUSAL rather than being deleted: every shape below it is BARE (or
+    // THE ONE CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
+    // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
+    // are available [in the view], and ctrl+shift+tab is just short for
+    // 'tab, ctrl+tab, tab'" — so the chord means one thing everywhere and only
+    // what "Tab" DENOTES changes with the context: live markers outside, the
+    // viewed checkpoint's diff flags in here. Claimed rather than left to the
+    // allowlist because that is how the marker-walk group's other two members
+    // (bare Tab and Shift+Tab) already answer, both for the key and for the
+    // roster face derived from this predicate.
+    //
+    // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift, no
+    // IsoLeftTab arm — because the live arm binds that one shape too; the mode
+    // mirrors what it composes rather than widening it.
+    if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
+    // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stays as a REFUSAL
+    // rather than being deleted: every shape below it is BARE (or
     // shift-carrying, on Tab and the walk), so a ctrl press falling past this
     // line would reach the bare list and be read as its unmodified twin — a
     // Ctrl+H would come out as the mode's own `h` toggle and close the view
     // instead of reverting into it. One line, and strict modifier validation
     // holds.
     //
-    // (WHAT IT CLAIMED: from 2026-08-05 Ctrl+Tab stepped the WALK SOURCE one
-    // tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left — both in the
-    // plain Tab spelling and in the IsoLeftTab one xkb puts on the Tab key's
-    // shift level. The walk is bare `g` below now, so both fall through to the
-    // allowlist, where they part company: Ctrl+Tab is ADMITTED — an A/B tab
-    // switch works normally in the view, the architect's own ruling — while
-    // Ctrl+Shift+Tab, the paired marker march, is BLOCKED, which is exactly the
-    // consumed no-op it was before 2026-08-07 and for the reason the bare cycle
-    // stopped being live: nothing in here navigates by live markers.)
+    // (WHAT IT ALSO CLAIMED: from 2026-08-05 Ctrl+Tab stepped the WALK SOURCE
+    // one tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left — both in
+    // the plain Tab spelling and in the IsoLeftTab one xkb puts on the Tab key's
+    // shift level. The walk is bare `g` below now, so Ctrl+Tab falls through to
+    // the allowlist, which ADMITS it — an A/B tab switch works normally in the
+    // view, the architect's own ruling — while Ctrl+Shift+Tab is claimed above
+    // for the march itself rather than for a walk cycle.)
     if (mods.ctrl) return false;
     // THE CYCLE IS ONE OF TWO SHIFT-CARRYING SHAPES, and it is admitted in the
     // live cycle's own three spellings: bare Tab forward, Shift+Tab back, and
@@ -1281,6 +1190,51 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // claims add no shape.
     return key == GuiKeys::H || key == GuiKeys::U || key == GuiKeys::G ||
            key == GuiKeys::Home || key == GuiKeys::End || key == GuiKeys::C;
+}
+
+// THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, factored out because the
+// mode's Ctrl+Shift+Tab march composes it twice (2026-08-18). Two callers, both
+// in handle_history_mode_key below: its Tab arm and its march arm. Every rule
+// the cycle carries — the no-wrap walls, the empty-list nothing, the
+// focus-replaces-selection rest, the landing and its damage — is stated at the
+// arm that spells it, and this is the one body that runs them.
+void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
+    const int n = static_cast<int>(app.history_mode.flags.size());
+    if (n == 0) return;
+    const int here = app.history_mode.focus;
+    int there = -1;
+    if (here < 0 || here >= n) {
+        there = forward ? 0 : n - 1;
+    } else if (forward) {
+        if (here + 1 >= n) return;   // last already
+        there = here + 1;
+    } else {
+        if (here == 0) return;       // first already
+        there = here - 1;
+    }
+    playback_lifecycle.stop_playback_if_playing();
+    // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
+    // shape: the set clears and the focus alone stands, which is the plain
+    // click's rest too. Ordered so the clearer cannot undo the focus it
+    // writes.
+    clear_history_mode_focus(app.history_mode);
+    app.history_mode.focus = there;
+    clear_region_highlight(app, viewport);
+    land_playhead_on_source_frame(
+        app, audio, viewport,
+        app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
+    // THE LIVE FAMILY'S LANDING, MIRRORED: the live cycle recenters on its
+    // stop AT THE CURRENT ZOOM, follow mode not gating it, and this does the
+    // same over the diff-flag list, reading the flag it just landed on. The
+    // working-zoom snap both families carried for one commit is REVERTED
+    // (architect 2026-08-05, "no zoom on Tab", same day it landed) — a walk
+    // must not re-frame the view under the reader, in here least of all,
+    // where the whole delta is what is being read.
+    viewport.center_viewport_on_playhead();
+    // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
+    // above either returned or picked a different index), so the full-window
+    // damage the mode's focus click emits on a move is unconditional.
+    viewport.invalidate_all();
 }
 
 bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
@@ -1458,8 +1412,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // re-establish after each press. NO EDGE FRAMES AT ALL since
         // 2026-08-18, the entry's own framing having gone with the view's
         // navigation-state ownership: the trim bar's double-click is the view's
-        // one framing gesture, the on-demand "show me this delta's span". So
-        // this edge writes NO viewport at all.
+        // one framing gesture, and it frames the TRIM WINDOW in here exactly as
+        // it does outside. So this edge writes NO viewport at all.
         //
         // THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07, the
         // architect's reported flicker): the drop above emptied the lane and
@@ -1493,6 +1447,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // would inherit the right shape instead of a missing call. The revert act's
     // own stop carries the same note at its site.
 
+    // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the march
+    // that composes the cycle with the A/B switch.
+    //
     // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local. Tab
     // steps to the next flag, Shift+Tab and IsoLeftTab to the previous, in the
     // list's own order: rebuild_history_diff_flags leaves `flags` sorted
@@ -1510,44 +1467,39 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // the cold answer stays this arm's, and it is what a step and a Tab arriving in
     // one key batch would have cycled the leaving commit's flags with
     // (drop_lane_stash_across_history_edge owns the whole argument).
+    //
+    // THE ACT IS ITS OWN MEMBER (cycle_history_diff_flag_focus) because the
+    // march below composes it twice; this arm is its spelling, not its body.
+    //
+    // CTRL+SHIFT+TAB RANKS ABOVE IT and must: the test below reads the KEY
+    // alone, so the march's own Tab would fall into a backward step here.
+    if (mods.ctrl && mods.shift && key == GuiKeys::Tab) {
+        // THE PAIRED MARCH, MODE-LOCAL (architect 2026-08-18): "ctrl+shift+tab
+        // is just short for 'tab, ctrl+tab, tab'", so it is built as exactly
+        // that composition over the view's own vocabulary — the mode's Tab act,
+        // the A/B switch, the mode's Tab act again — the same three lines the
+        // live march is over live markers.
+        //
+        // WHAT IT LEAVES BEHIND is the march's own shape: the mode's focus is
+        // ONE index over one diff-flag list (the two tabs share both marker
+        // stores, so the list is the same on either side), and each step lands
+        // THE THEN-ACTIVE TAB's playhead and recenters THAT tab's viewport at
+        // its own zoom. So the leaving tab is parked on one flag and the
+        // arriving tab on the next, each in its own window — which is what
+        // makes a march a march.
+        //
+        // THE SWITCH IS THE ALLOWLIST'S OWN Ctrl+Tab, spelled here rather than
+        // dispatched: the same active_views call and the same target-render
+        // trigger the live march ends on, so the two compositions differ in the
+        // cycle they name and in nothing else.
+        cycle_history_diff_flag_focus(true);
+        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        cycle_history_diff_flag_focus(true);
+        target_render.trigger();
+        return true;
+    }
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
-        const int n = static_cast<int>(app.history_mode.flags.size());
-        if (n == 0) return true;
-        const bool forward = (key == GuiKeys::Tab && !mods.shift);
-        const int here = app.history_mode.focus;
-        int there = -1;
-        if (here < 0 || here >= n) {
-            there = forward ? 0 : n - 1;
-        } else if (forward) {
-            if (here + 1 >= n) return true;   // last already
-            there = here + 1;
-        } else {
-            if (here == 0) return true;       // first already
-            there = here - 1;
-        }
-        playback_lifecycle.stop_playback_if_playing();
-        // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
-        // shape: the set clears and the focus alone stands, which is the plain
-        // click's rest too. Ordered so the clearer cannot undo the focus it
-        // writes.
-        clear_history_mode_focus(app.history_mode);
-        app.history_mode.focus = there;
-        clear_region_highlight(app, viewport);
-        land_playhead_on_source_frame(
-            app, audio, viewport,
-            app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
-        // THE LIVE FAMILY'S LANDING, MIRRORED: the live cycle recenters on its
-        // stop AT THE CURRENT ZOOM, follow mode not gating it, and this does the
-        // same over the diff-flag list, reading the flag it just landed on. The
-        // working-zoom snap both families carried for one commit is REVERTED
-        // (architect 2026-08-05, "no zoom on Tab", same day it landed) — a walk
-        // must not re-frame the view under the reader, in here least of all,
-        // where the whole delta is what is being read.
-        viewport.center_viewport_on_playhead();
-        // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every arm
-        // above either returned or picked a different index), so the full-window
-        // damage the mode's focus click emits on a move is unconditional.
-        viewport.invalidate_all();
+        cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift);
         return true;
     }
 
@@ -2056,13 +2008,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // same reason. What the switch does move is the WINDOW, which the view has
     // not owned since the entry stopped framing and the exit stopped restoring.
     //
-    // ITS SHIFTED TWIN STAYS OUT — Ctrl+Shift+Tab, the paired marker march,
-    // which is exactly where it stood before 2026-08-07 and for the bare
-    // cycle's own reason: it navigates by LIVE MARKERS, and the lane in here
-    // shows diff flags. It was the mode's REVERSE walk cycle from 2026-08-07
-    // until the walk left row 3 on 2026-08-18; with no cycle to run it is a
-    // consumed no-op again, and the bottom row's third walk button greys
-    // through the derived partition to say so.
+    // ITS SHIFTED TWIN NEVER REACHES THIS LIST — Ctrl+Shift+Tab is the mode's
+    // OWN since 2026-08-18 (history_mode_owns_key claims it and
+    // handle_history_mode_key consumes it one line above this gate), where it
+    // is the paired march built over the diff-flag cycle: the same chord, the
+    // same composition, and only what "Tab" denotes changes with the context.
+    // It was the mode's REVERSE walk cycle from 2026-08-07 until the walk left
+    // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     return !(is_zoom_symbol || is_zero || is_page_updown ||
@@ -2980,12 +2932,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
     // repeating Ctrl chords — the Ctrl+Shift+Tab march plus Ctrl+Z / Ctrl+Shift+Z
     // (undo / redo), each a continuous step gesture like the cycle, not a
-    // one-shot command. The march is the one of the three that is MODE-SCOPED
-    // (2026-08-07): inside the `h` history view it is not the march at all —
-    // the mode's reverse walk cycle from 2026-08-07 to 2026-08-18, and a
-    // consumed no-op at the allowlist since — so there is nothing in there for
-    // a hold to continue. Ctrl+Tab stays one-shot everywhere, in the view as
-    // out of it, a held A/B switch being able only to flap. Every
+    // one-shot command. THE MARCH REPEATS IN EVERY STATE since 2026-08-18, its
+    // mode scope having gone with the reason for it: the chord is the march
+    // inside the `h` history view too, over the diff-flag cycle instead of the
+    // live one, so a hold continues exactly the gesture it continues outside —
+    // the same eligibility the bare cycle already inherits in there. (It was
+    // the mode's reverse walk cycle from 2026-08-07, which a hold could only
+    // flap, and this line excluded the view for that.) Ctrl+Tab stays one-shot
+    // everywhere, in the view as out of it, a held A/B switch being able only
+    // to flap. Every
     // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End,
     // and Delete is one-shot. No MODIFIED arrow repeats at all: the arrows carry
     // no modified binding to repeat.
@@ -3008,16 +2963,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (!mods.ctrl && !mods.alt &&
         (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab))
         return true;
-    // Ctrl+Shift+Tab exactly (the lockstep marker march) repeats too — OUTSIDE
-    // THE `h` HISTORY VIEW ONLY (2026-08-07). The mode-scoped term stands and
-    // its reason has only got plainer: the chord WAS the mode's reverse walk
-    // cycle in there and is a consumed no-op at the allowlist since 2026-08-18,
-    // so a hold has nothing to continue either way. Ctrl+Tab needs no term of
-    // its own — the no-ctrl arms above exclude it in every state — and
-    // ctrl+shift+IsoLeftTab is excluded by those same arms' no-ctrl term. The
-    // march outside the view is untouched by this line.
-    if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab &&
-        !app.history_mode.active)
+    // Ctrl+Shift+Tab exactly (the lockstep march) repeats too, IN EVERY STATE
+    // since 2026-08-18: the mode-scoped term this line carried from 2026-08-07
+    // is deleted with the thing it was about — the chord was the view's reverse
+    // WALK cycle in there, which a hold could only flap, and it is the march
+    // itself in there now, marching the diff-flag cycle instead of the live one.
+    // Ctrl+Tab needs no term of its own — the no-ctrl arms above exclude it in
+    // every state — and ctrl+shift+IsoLeftTab is excluded by those same arms'
+    // no-ctrl term, the march binding the plain Tab spelling alone.
+    if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
         return true;
     // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
     // 2026-07-23): stepping through history is a continuous step gesture

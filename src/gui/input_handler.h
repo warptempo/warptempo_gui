@@ -455,11 +455,13 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // 2026-08-12 collapse rule alone and is deleted with it, 2026-08-14.)
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
-//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle), bare `g`
+//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle),
+//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the ONE
+//     ctrl-carrying claim), bare `g`
 //     (the WALK toggle over the two sources, the icon row's radio pair's chord
 //     since 2026-08-18 — it was Ctrl+Tab and Ctrl+Shift+Tab, forward and
 //     reverse over row 3's repurposed tabs, until then), bare Home / End and
-//     bare `c`. NOTHING CTRL-CARRYING IS CLAIMED. The definition carries the
+//     bare `c`. The definition carries the
 //     derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
 //     this first.
@@ -2943,10 +2945,12 @@ private:
     // AppState::HistoryMode (app_state.h); each body states only its own
     // membership.
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
-    //     the toggle, the walk, the diff-flag cycle, the absolute Home/End and
+    //     the toggle, the walk, the diff-flag cycle, the march that composes
+    //     that cycle with the A/B switch, the absolute Home/End and
     //     `c` — and returns true when it consumed the press. The membership is
     //     re-derived at history_mode_owns_key; its position in on_key IS its
-    //     entry-gate list.
+    //     entry-gate list. Its cycle is a member of its own
+    //     (cycle_history_diff_flag_focus) because the march composes it twice.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
     //     stands. The redesigned buttons and the File menu's one item reach it
@@ -2987,17 +2991,18 @@ private:
     //     view-local REGION clear, the lane-stash drop and the LIVE lane's
     //     republication, the full-window damage, and the deferred prefetch
     //     kick's flush.
-    //   * frame_viewed_commit_diff_span frames the viewed checkpoint's whole
-    //     delta. Since 2026-08-05 it is an ON-DEMAND ACT with ONE caller — the
-    //     trim bar's plain DOUBLE-CLICK, the regular views' span-framing gesture
-    //     with this act as its command — rather than an edge effect. Its own
-    //     comment carries the recipe and the span rule.
-    //   * frame_history_view_whole_song is the whole song in the window, and
-    //     since 2026-08-18 it is ONE CALLER's alone — the framing act above,
-    //     whose empty-delta arm falls through to it. The MODE WRITES NO
-    //     VIEWPORT ANYWHERE now: the `,` / `.` step and the walk-or-reading
-    //     switch stopped calling it on 2026-08-08 and the ENTRY on 2026-08-18,
-    //     the window being the USER'S from before `h` until after it.
+    //   (THE MODE'S TWO FRAMING OWNERS ARE DELETED — 2026-08-18.
+    //     frame_viewed_commit_diff_span framed the viewed checkpoint's whole
+    //     delta, an ON-DEMAND ACT from 2026-08-05 with the trim bar's plain
+    //     DOUBLE-CLICK as its one caller; that gesture runs the ORDINARY span
+    //     framing now (run_span_framing_command), the bar having stopped
+    //     displaying the diff span, so the act went producer-less.
+    //     frame_history_view_whole_song was the full zoom out it fell through
+    //     to on an empty delta, and that empty arm was its last caller — the
+    //     `,` / `.` step and the walk-or-reading switch stopped calling it on
+    //     2026-08-08 and the ENTRY on 2026-08-18. THE MODE WRITES NO VIEWPORT
+    //     ANYWHERE and now has no framing route of its own at all: the window
+    //     is the USER'S from before `h` until after it.)
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
@@ -3054,9 +3059,12 @@ private:
     //     2026-08-08, admitted by that same gate). Its body owns the
     //     per-class inverse, the always-force rule and the one undo entry.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
+    // The mode's Tab act, one step over the viewed checkpoint's diff flags in
+    // the given direction. Two callers, both in handle_history_mode_key: its
+    // Tab arm and its Ctrl+Shift+Tab march, which composes this with the A/B
+    // switch. Every walk rule it obeys is stated at those arms.
+    void cycle_history_diff_flag_focus(bool forward);
     bool open_history_mode_fresh();
-    void frame_viewed_commit_diff_span();
-    void frame_history_view_whole_song();
     void drop_lane_stash_across_history_edge();
     void republish_history_lane_now();
     void set_history_reading(GuiHistoryWalkSource source,

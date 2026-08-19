@@ -433,13 +433,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IsoLeftTab, is deliberately NOT a second row: the dispatch is
     // synthesized, so it goes out in the Tab spelling every reader accepts.
     //
-    // TWO OF THE THREE ARE LIVE INSIDE THE `h` VIEW and the derived partition
-    // says so with nothing hand-listed — history_mode_owns_key claims bare Tab
-    // and Shift+Tab as the diff-flag cycle forward and back. WALK BOTH TABS
-    // GREYS THERE since 2026-08-18: its Ctrl+Shift+Tab was the mode's reverse
-    // WALK-SOURCE cycle until the walk got its own radio pair in the icon row,
-    // and the chord is back off the mode's allowlist — the paired marker march
-    // has no meaning over a lane of diff flags.
+    // ALL THREE ARE LIVE INSIDE THE `h` VIEW and the derived partition says so
+    // with nothing hand-listed — history_mode_owns_key claims bare Tab and
+    // Shift+Tab as the diff-flag cycle forward and back, and Ctrl+Shift+Tab
+    // (2026-08-18) as the march that composes that cycle with the A/B switch.
+    // WALK BOTH TABS greyed there for the hours between the walk selector
+    // leaving row 3 and that ruling.
     {RedesignButton::TransportWalkPrev,
      GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
     {RedesignButton::TransportWalkNext,
@@ -847,11 +846,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   them with nothing hand-listed,
 //   and TWO OF THE BOTTOM ROW'S MARKER-WALK GROUP since 2026-08-15 (bare Tab
 //   and Shift+Tab) — the mode's own vocabulary once more, so both answer LIVE
-//   for free and step the DIFF-FLAG cycle forward and back. THE GROUP'S THIRD
-//   IS IN THE DEAD COLUMN SINCE 2026-08-18: Ctrl+Shift+Tab ran the reverse
-//   WALK-SOURCE cycle in here from 2026-08-07 until the walk moved to the icon
-//   row's own radio pair, and the allowlist blocks it again — the paired marker
-//   march has no meaning over a lane of diff flags,
+//   for free and step the DIFF-FLAG cycle forward and back — WITH THE GROUP'S
+//   THIRD SINCE 2026-08-18 (Ctrl+Shift+Tab, the mode's own vocabulary too now:
+//   it marches the pair over that same diff-flag cycle, "tab, ctrl+tab, tab"
+//   read against the lane in here; it ran the reverse WALK-SOURCE cycle from
+//   2026-08-07 until the walk moved to the icon row's own radio pair, and was
+//   blocked for the hours between),
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
@@ -898,7 +898,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
 //   this walk asks about a chord, never about a lane); ADD TO SELECTION (bare
-//   `k`) and WALK BOTH TABS (Ctrl+Shift+Tab), both since 2026-08-18; and the
+//   `k`, since 2026-08-18); and the
 //   SETTINGS anchor
 //   — the only anchor here
 //   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its
@@ -2190,7 +2190,7 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
 // begin/end are one distinction, which is what lets the press claim map a
 // verdict straight onto that bound's own endcap drag.
 //
-// THE GRAB BAND IS trim_endcap_grab_px() PER SIDE, THE SAME 15 px ON PURPOSE:
+// THE GRAB BAND IS trim_endcap_grab_px() PER SIDE, THE SAME 5 px ON PURPOSE:
 // the trim endcaps and the overview box edges already take it, and this is the
 // SAME GESTURE ON THE SAME SHAPE — a third member of that family, so it takes
 // the family's constant rather than a number of its own.
@@ -2979,10 +2979,11 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 }
 
 // THE TRIM BAR'S DOUBLE-CLICK TEST, hoisted for its SECOND consumer: the live
-// band's span framing (in on_button_press below) and, since 2026-08-05, the
-// history mode's framing of the viewed checkpoint's diff span
-// (handle_history_mode_press). The two run different commands on the same
-// gesture, so the gesture itself is asked in one place — surface tag, window and
+// band's span framing (in on_button_press below) and the `h` history view's own
+// arm over the same band (handle_history_mode_press). Both run the SAME command
+// since 2026-08-18 — the view's used to frame the viewed checkpoint's diff span
+// instead — so what the hoist still buys is one spelling of the GESTURE: surface
+// tag, window and
 // slack on both axes, exactly as the seed records them at the motionless
 // release. It takes the candidate SNAPSHOT rather than reading app.double_click,
 // because the press clears that field at its top: only the snapshot still holds
@@ -5667,10 +5668,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // on the same policy when it landed 2026-08-18, its chord being
         // navigation with no refusal to mirror), so this line fires
         // for them only inside that view, where the derived partition greys
-        // the PLAY/STOP button, the FOUR ARROWS, ADD TO SELECTION and WALK
-        // BOTH TABS (Space, the bare arrows, bare `k` and Ctrl+Shift+Tab are
-        // all consumed there; the two skips are the mode's absolute jumps and
-        // Tab/Shift+Tab its diff-flag cycle, so those four stay lit). The
+        // the PLAY/STOP button, the FOUR ARROWS and ADD TO SELECTION (Space,
+        // the bare arrows and bare `k` are all consumed there; the two skips
+        // are the mode's absolute jumps and the marker-walk THREE its
+        // diff-flag cycle plus the march over it, so those five stay lit). The
         // arrows joined that list on 2026-08-18 by being PAINTED in the view at
         // all — the cluster swap that hid them went with the history
         // companions. Everywhere else their chords do their
@@ -6247,11 +6248,13 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     the playhead" holds in here too: the ruler and the empty lane stretches
 //     take the same pending, so their motionless clicks land the playhead
 //     where the old empty-lane click only cleared the focus.
-//   * a DOUBLE-CLICK anywhere on the TRIM BAR band ZOOMS TO THE VIEWED
-//     CHECKPOINT'S DIFF SPAN — the span that band is already displaying —
-//     through the framing act the mode's edges stopped running in 2026-08-05
-//     (frame_viewed_commit_diff_span, input_key_dispatch.cpp). Since 2026-08-08
-//     it is the ONLY framing gesture a standing view has, the internal edges
+//   * a DOUBLE-CLICK anywhere on the TRIM BAR band FRAMES THE TRIM SPAN — the
+//     span that band is displaying, the tab's own window in here as everywhere
+//     else since 2026-08-18 — through the LIVE band's own framing owner
+//     (run_span_framing_command). It zoomed to the viewed checkpoint's diff
+//     span from 2026-08-05 until that day, when the bar stopped substituting
+//     the delta for the real window. It is still the ONLY framing gesture a
+//     standing view has, the internal edges
 //     writing no viewport at all and the window being the user's for the whole
 //     visit. It moves the viewport and nothing else, and a SINGLE click on that
 //     band stays the consumed nothing a motionless trim-bar click is everywhere.
@@ -6397,20 +6400,22 @@ bool GuiInputHandler::handle_history_mode_press(
             return true;
         }
     }
-    // THE TRIM BAR'S DOUBLE-CLICK ZOOMS TO THE DIFF SPAN (architect 2026-08-05,
-    // SUPERSEDING the single click this act shipped with earlier that day): the
-    // mode's fourth plain act, and it is the REGULAR VIEWS' GESTURE EXACTLY, on
-    // the same band and through the same machinery. So a SINGLE plain click here
+    // THE TRIM BAR'S DOUBLE-CLICK FRAMES THE TRIM SPAN — THE ORDINARY ACT
+    // (architect 2026-08-18, with the diff-span substitution's deletion: the
+    // bar shows the tab's real trim window in here, so the gesture that reads
+    // "zoom to what the bar shows" must frame that window and nothing else).
+    // It ran the VIEWED CHECKPOINT'S DIFF SPAN from 2026-08-05 until then,
+    // which was the same gesture over a different command; there is no mode
+    // command left at all now — the mode's fourth plain act is the LIVE act,
+    // reached through the live band's own owner (run_span_framing_command).
+    // A SINGLE plain click here
     // is the consumed nothing a motionless trim-bar click is everywhere in the
     // product (architect 2026-07-30), and only the second click
     // inside the window frames. (The comparison this used to draw was to a
     // LOCKED TAB, whose trim drags refused while its framing double-click
     // navigated; that model is retired — read-only stopped refusing trim on
-    // 2026-08-07 — and the mode is the only per-zone consumer of the band left.) The band is showing that span already
-    // (paint_trim's display-only substitution while the view stands), which is
-    // what makes the gesture read as "zoom to what the bar shows" — and the
-    // empty-delta case falls to the framer's whole-song arm, which is harmless
-    // where the edges have already left the view. The WHOLE band, endcaps
+    // 2026-08-07 — and the mode is the only per-zone consumer of the band left.)
+    // The WHOLE band, endcaps
     // included: those endcaps are painted geometry with no gesture in here, so
     // splitting the band would be a distinction nothing acts on. Read-only does
     // not refuse it — framing is navigation, exactly as the pan and the zoom
@@ -6425,14 +6430,19 @@ bool GuiInputHandler::handle_history_mode_press(
     // and no trim drag went live" and no trim drag can go live in here at all.
     // A consumed press seeds nothing (the family rule) and, unlike the live
     // band's, falls through to NO cap/bridge arm — the mode has none — so it
-    // frames and is done. Only the COMMAND differs from the live band: the
-    // viewed checkpoint's diff span instead of the
-    // region / trim / whole-song ladder.
+    // frames and is done. NOTHING differs from the live band now but that
+    // fall-through, which is why the framing itself is the live owner's call
+    // rather than a mode arm.
+    //
+    // THE WAY TO SEE A WHOLE DELTA is to zoom out and come back: bare `0` is on
+    // the mode's allowlist and the delta's flags are laid across the whole
+    // piece, so the overview shows all of it — the product's own navigation
+    // rather than a gesture that meant something different in one mode.
     {
         const GuiRect trim_bar = top_trim_row_area(app);
         if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
             if (trim_bar_double_click_at(dc_at_press, x, y)) {
-                frame_viewed_commit_diff_span();
+                run_span_framing_command();
                 return true;
             }
             app.trim_bar_press = TrimBarPressSeed{
@@ -6649,8 +6659,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // Ctrl+Q is on the allowlist. (Navigation's seven rows were answered the
     // same way — the allowlist admitted zoom in / out / overview,
     // history_mode_owns_key claimed center-on-focus and the two marker steps as
-    // re-expressions over the diff flags — with the one row whose chord means
-    // something ELSE in here, "Walk both tabs", greying at the item instead,
+    // re-expressions over the diff flags — with the one row whose chord then
+    // meant something ELSE in here, "Walk both tabs", greying at the item
+    // instead (the chord marches the pair in the view too since 2026-08-18),
     // which is the only thing a chord dispatch cannot answer for: the command
     // runs, it is simply not the one the label names.)
     //

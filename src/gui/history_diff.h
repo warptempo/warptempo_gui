@@ -302,13 +302,14 @@ struct GuiHistoryCommitDelta {
     // and cannot be framed. Both callers read that as "the whole song".
     //
     // IT IS THE WHOLE DELTA, NEVER THE PAINTED HALF, and deliberately so: its
-    // readers describe the CHECKPOINT, not the lane. The history view zooms to
-    // this span on a plain trim-bar DOUBLE-click
-    // (GuiInputHandler::frame_viewed_commit_diff_span), and the trim bar
-    // displays it for as long as the view stands (GuiPaintHandler::paint_trim)
-    // — and a span that shrank when the user pressed `p` would make a view
+    // readers describe the CHECKPOINT, not the lane — a span that shrank when
+    // the user pressed `p` would make a view
     // switch, whose whole purpose is reviewing the OTHER half of this same
-    // delta, move the viewport out from under him. It also reads the delta
+    // delta, move the viewport out from under him. (ITS TWO GUI READERS ARE
+    // GONE since 2026-08-18: the trim bar displayed this span while the view
+    // stood and its double-click zoomed to it, and the architect ruled the bar
+    // shows the real trim window in the view like everywhere else. What still
+    // reads it is the delta's own machinery.) It also reads the delta
     // directly rather than AppState::HistoryMode::flags, which is paint-cache
     // output on a once-per-tick cadence and deliberately EMPTY for a frame
     // after every mode edge.
