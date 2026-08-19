@@ -512,12 +512,14 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // it was claiming for.) Membership RE-DERIVED 2026-08-01 by grepping every
 // `selection.clear_selection()` call site against the live-tab trim-bound writers
 // (app.trim.* / the settings arms' active branch), RE-DERIVED AGAIN 2026-08-18
-// when bare `x` retired and the sweep replaced it — SIX call sites, FIVE in
-// input_trim.cpp and ONE in settings_editor.cpp:
+// when bare `x`'s set-from-region ACT retired and the sweep replaced it — SIX
+// call sites, FIVE in input_trim.cpp and ONE in settings_editor.cpp:
 //   * THE SWEEP (write_trim_from_sweep), which deselects at its first accepted
 //     write, idempotently across the gesture's later events — the drag arms'
-//     own arrangement below. (Bare `x`, this list's first member, is retired
-//     with the free scratch span it committed.);
+//     own arrangement below. (This list's first member was bare `x`'s
+//     set-from-region act, which retired with the free scratch span it
+//     committed; the KEY is live and writes no bound at all now — it toggles
+//     the overlay, at handle_toggle_trim_region.);
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
@@ -2057,8 +2059,11 @@ private:
     // (ViewState::zoom_recall_level) when one stands, so the return trip is this
     // one command with ONE substitution rather than a second recipe: same mode
     // fork, same land, same centering, and the same clamp (apply_zoom_change
-    // pre-clamps every request, so a stamp read back under a changed width or a
-    // flipped S/T domain lands inside the per-file window).
+    // pre-clamps every request, so no caller can drive the level outside the
+    // per-file window). That pre-clamp is a bound, not a rescue: a stamp read
+    // back under a fallen ceiling would clamp onto the level the key is already
+    // standing on, so THAT arm resolves the stamp itself and passes the working
+    // zoom instead when it cannot move — its own comment carries the case.
     void run_center_command(double target_zoom_level = kWorkingZoomLevel);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
@@ -2067,7 +2072,8 @@ private:
     // STAMP the level being left into the active tab's zoom_recall_level, then
     // jump to the ceiling (whole song visible); already at it → run_center_command
     // AT THE STAMPED LEVEL, falling back to the working zoom when nothing has
-    // been stamped — so `0` twice is overview then back to the magnification it
+    // been stamped OR when the stamp can no longer move the zoom (a ceiling that
+    // fell under it) — so `0` twice is overview then back to the magnification it
     // was pressed at (architect 2026-08-18), and overview then the working zoom
     // on a tab that never stamped. THIS FUNCTION IS THE STAMP'S ONE WRITER (the
     // field, app_state.h). The FIRST arm is a
@@ -2291,10 +2297,13 @@ private:
     // Returns whether a bound was actually written, which is the release's
     // commit gate.
     //
-    // (Bare `x` — set the trim from a free scratch span — is RETIRED with the
-    // two-step model it completed: setting the region IS setting the trim now.
-    // Its degenerate-result refusal is retired with it, replaced by the minimum
-    // width floor below. Shift+X survives as the recovery route.)
+    // (SET THE TRIM FROM A FREE SCRATCH SPAN — the act bare `x` used to name —
+    // is RETIRED with the two-step model it completed: setting the region IS
+    // setting the trim now. Its degenerate-result refusal went with it, replaced
+    // by the minimum width floor below. The KEY ITSELF IS LIVE, repointed onto
+    // the overlay's show/hide toggle, handle_toggle_trim_region, which writes no
+    // bound and is not a member of anything on this page. Shift+X survives
+    // unchanged as the recovery route.)
     bool write_trim_from_sweep(int64_t anchor_active, int64_t moving_active);
 
     // (THE MINIMUM TRIM WIDTH is a FLAT COUNT OF SOURCE FRAMES, the same in
@@ -2383,8 +2392,10 @@ private:
     // (auto_clear_crossed_trim, the waveform + status-chain repaints, the
     // target-render trigger, then the playhead park above), and this member is
     // their one spelling. FOUR
-    // CALLERS (re-derived 2026-08-18, when bare `x` retired and the sweep took
-    // its place) — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
+    // CALLERS (re-derived 2026-08-18, when bare `x`'s set-from-region act
+    // retired and the sweep took its place; the key itself is live and calls
+    // none of this — handle_toggle_trim_region writes no trim)
+    // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
     // input_trim.cpp, plus the settings editor's `:trim_*=` active-tab arm

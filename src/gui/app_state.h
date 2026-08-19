@@ -233,8 +233,11 @@ struct UndoEntry {
 // into the ACTIVE-domain frames the painter and the hit test both want.
 // (The a_frame / b_frame pair this carried until 2026-08-18 — active-domain
 // endpoints in drag order, normalized at read time — is deleted with the model
-// that needed it: a free scratch span that bare `x` committed to trim. That key
-// is retired with it, the act it named no longer existing; git is the record.)
+// that needed it: a free scratch span that bare `x` committed to trim. THE ACT
+// went, not the KEY: with setting the region being setting the trim there was
+// nothing left for `x` to commit, so the key was REPOINTED onto this struct's
+// own show/hide toggle — handle_toggle_trim_region, which owns that record and
+// is the one place to read it. Git holds the deleted model.)
 //
 // THE LIVE SWEEP IS THE ONE THING NOT AT REST, and it stores no span either:
 // the former holds its ANCHOR alone (RegionDragState::anchor_frame) and writes
@@ -3013,7 +3016,9 @@ struct ViewState {
     // both the session's opening state and the project that opens ALREADY at
     // full zoom out. The slot can only be found empty at the ceiling when the
     // ceiling was reached some other way, since every arrival there by this key
-    // stamps on the way.
+    // stamps on the way. A stamp STRANDED above a ceiling that has since fallen
+    // spends as an empty slot too, and is left standing rather than cleared —
+    // the reasoning is at the spending arm, which is where the ceiling is known.
     // run_overview_command (input_handler.cpp) is the ONE writer: a manual
     // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
     // touch gesture does, and nothing clears it — that is what makes the round

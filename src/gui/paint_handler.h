@@ -594,13 +594,14 @@ struct GuiPaintHandler {
     };
     PlateViewportBasis plate_viewport_basis() const;
 
-    // The region-select span's on-screen column pair under a given displayed
-    // basis. Endpoints are active-domain frames stored in drag order; normalize
-    // to [lo, hi] then map to columns via the plain viewport transform (the
-    // endpoints already live in the displayed domain, so no warp map is walked).
-    // THE SPAN IS DERIVED FROM THE TRIM every call (trim_overlay_span,
-    // app_state.h — the region IS the trim since 2026-08-18) and nothing is
-    // stored, so this cannot drift from the 9 px bar either.
+    // The trim region overlay's on-screen column pair under a given displayed
+    // basis. THE SPAN IS DERIVED FROM THE TRIM every call (trim_overlay_span,
+    // app_state.h — the region IS the trim since 2026-08-18): that owner crosses
+    // both resting trim bounds into the ACTIVE display domain and returns them
+    // ALREADY ORDERED, so this maps them to columns with the plain viewport
+    // transform and walks no warp map. NOTHING IS STORED and there is no
+    // endpoint pair to normalize — do not reintroduce either; the overlay cannot
+    // drift from the 9 px bar because both read the one trim.
     // THREE consumers, and the last is why this is PUBLIC: paint_region_ground
     // and paint_region_ink draw the overlay's two halves from it — the ground
     // and the ink cannot disagree about where it is — and

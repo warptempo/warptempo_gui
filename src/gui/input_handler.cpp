@@ -1431,7 +1431,9 @@ void GuiInputHandler::run_overview_command() {
     // AND `0` REMEMBERS WHERE IT CAME FROM (architect 2026-08-18): the zoom-out
     // arm STAMPS the level it is leaving into the active tab's
     // zoom_recall_level, and the already-full-out arm spends it — the same `c`
-    // command with the stamped level substituted for the working zoom. So the
+    // command with the stamped level substituted for the working zoom, and the
+    // working zoom back in its place when the stamp can no longer move the zoom
+    // (the fallen-ceiling case, decided at that arm below). So the
     // round trip goes out to the whole song and back to the magnification the
     // user was working at, per tab and per session, rather than always landing
     // on the working zoom. With NOTHING stamped the second arm is `c` itself,
@@ -1490,12 +1492,30 @@ void GuiInputHandler::run_overview_command() {
     ViewState& band = active_view_state(app);
     if (app.zoom_level >= full_out) {
         // THE RETURN TRIP. value_or is the whole of the empty-slot rule: with
-        // nothing stamped this is `c` verbatim. The stamped level needs no clamp
-        // here — apply_zoom_change owns that (clamp_zoom_level), and a level
-        // stamped when it was legal can only be out of range if the window or
-        // the S/T domain changed under it, which is exactly what that clamp is
-        // for.
-        run_center_command(band.zoom_recall_level.value_or(kWorkingZoomLevel));
+        // nothing stamped this is `c` verbatim.
+        // AND A STAMP IS RESOLVED HERE rather than left to apply_zoom_change's
+        // own pre-clamp, because that clamp alone can strand this arm: a level
+        // stamped while it was legal sits ABOVE the ceiling once the ceiling
+        // FALLS (a narrower window, an S/T flip into a shorter domain), the
+        // pre-clamp hands such a request back the ceiling, and the ceiling is
+        // the level this arm is standing on — so the request would equal the
+        // live level, apply_zoom_change's equality early-return would fire, and
+        // the round trip would move no zoom at all while legal magnifications
+        // still exist below. A STAMP THAT CANNOT MOVE THE ZOOM IS WORTH NO MORE
+        // THAN AN EMPTY SLOT, so it spends as one: kWorkingZoomLevel, which is
+        // exactly what an unstamped tab answers with and what a project opened
+        // already zoomed out gets. The genuinely immovable case — a file so
+        // short that its ceiling is at or below the working zoom — answers the
+        // same way it always has, `c` landing and centering with no zoom change.
+        // NOTHING IS CLEARED on this path: this function stays the stamp's ONE
+        // writer (the field's note, app_state.h). An unusable stamp is unusable
+        // only against the CURRENT ceiling — widen the window or flip the domain
+        // back and it is the right answer again — and the next press below the
+        // ceiling overwrites it regardless.
+        const double recall = clamp_zoom_level(
+            app, audio, band.zoom_recall_level.value_or(kWorkingZoomLevel));
+        run_center_command(recall == app.zoom_level ? kWorkingZoomLevel
+                                                    : recall);
     } else {
         // Stamp BEFORE the move, since the move is what makes the level
         // historical. The live app.zoom_level is the value: it is the clamped

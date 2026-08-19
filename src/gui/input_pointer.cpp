@@ -4350,9 +4350,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
             if (in_trim_bar) {
                 // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
-                // (a motionless release then runs that same click action at
-                // on_button_release), IN EITHER TAB since 2026-08-07 — the
-                // band's read-only return is deleted below. Either
+                // and commits nothing at the press: only the threshold crossing
+                // begins it, and a MOTIONLESS release here runs NO act at all —
+                // this surface leaves PendingTrimDrag::waveform_click_act false,
+                // which is exactly the consumed nothing stated in the paragraph
+                // below (the waveform overlay's arms are the ones that set it
+                // and fall to the ordinary click act). Armed IN EITHER TAB since
+                // 2026-08-07 — the band's read-only return is deleted below. Either
                 // way the trim bar CONSUMES the press — it never falls to the
                 // marker handling.
                 // A PLAIN TRIM-BAR CLICK THAT NEVER BECOMES A DRAG IS NOW A
@@ -5289,7 +5293,11 @@ void GuiInputHandler::finalize_active_drags() {
     // bound set that is a real difference from its pre-2026-08-15 press-time
     // model, whose press had already written the bound. Trim is still
     // history-less; there is simply nothing to be history-less about on this
-    // path.
+    // path. WHAT THE ENDCAP/BRIDGE ARM CAN STILL LOSE IS NOT A TRIM WRITE: an
+    // arm taken on the WAVEFORM OVERLAY (waveform_click_act, 2026-08-18) would
+    // have fallen to the ordinary click act at a clean motionless lift — a
+    // playhead placement or a scrub — and a force-end runs neither, the same
+    // abnormal-end rule the marker pending's seed takes above.
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_trim_drag    = PendingTrimDrag{};
     app.pending_click        = PendingClickAct{};
@@ -7636,9 +7644,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.pending_trim_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
             // The motionless endcap/bridge press commits NOTHING (architect
-            // 2026-07-30, the clean-release twin above): its highlight publish is
-            // retired, so the same physical click rests identically whichever
-            // path ended it — as a consumed nothing.
+            // 2026-07-30): its highlight publish is retired, so a press that
+            // never travelled leaves the trim exactly as it found it. A LOST
+            // BUTTON IS NOT A CLICK, which is where this parts from the clean
+            // release: since 2026-08-18 a clean motionless lift of a pending
+            // armed from the WAVEFORM OVERLAY falls to the ordinary click act
+            // (PendingTrimDrag::waveform_click_act, app_state.h), and this path
+            // deliberately runs no act on either surface — the standing
+            // abnormal-end rule, stated at that field.
             app.pending_trim_drag = PendingTrimDrag{};
             // THE TRIM-BAR SEED DIES WITH IT. A button lost mid-press is not a
             // clean click sequence, so it may not leave a seed behind for an
