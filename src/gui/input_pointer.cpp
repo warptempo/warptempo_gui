@@ -3263,7 +3263,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         !active_view_state(app).read_only) {
         if (dc_at_press.span == MarkerClickSpan::Comment) {
             // Every open route opens fully SELECTED (open-selected); the seed
-            // is the marker's OWN comment, never the inherited one.
+            // is the marker's own comment, which is the whole of what a comment
+            // is — nothing inherits.
             flag_editor.enter_comment_edit(app.active_markers_view, hit);
             return;
         }

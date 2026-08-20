@@ -113,25 +113,19 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // inherits its target label_def's disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
-// THE COMMENT A WARP FLAG DISPLAYS: the marker's OWN comment when it has one,
-// else — for a label_ref — the comment on the DEFINITION it cites, else empty.
-// A ref shows the definition's note the way it shows the definition's tempo;
-// its own comment, when it has one, wins outright, and editing a ref edits the
-// ref (the comment editor always seeds the marker's own field).
-//
-// A SECOND DEFINITION-SCAN BESIDE marker_effectively_disabled's, and the
-// duplicate is justified rather than merged (the validation topology's (a)
-// clause — a different QUESTION at a different boundary): that one is a FROZEN
-// parser-domain helper answering a RENDER question over the serialized base,
-// and this is a GUI DISPLAY question that only the flag lane asks. Extending
-// the frozen twin would put a paint-time concern inside the render resolver's
-// own vocabulary; the frozen helpers are untouched.
-//
-// The returned reference aliases the store, so it is valid only until the store
-// mutates. Out-of-range indices answer the empty string, like the disabled face
-// above.
-const std::string& effective_marker_comment(
-    const std::vector<GuiWarpMarker>& markers, int idx);
+// (THERE IS NO EFFECTIVE-COMMENT RESOLVER, and the absence is a RULING rather
+// than a gap — architect 2026-08-20, reversing his own ruling of the day
+// before. A comment displayed here for one day INHERITED down the label
+// cascade: a ref with no note of its own showed the note on the definition it
+// cites, the way it takes that definition's tempo. He drove it and reversed it
+// on what a comment actually SAYS: a definition's note is positional prose —
+// "measure 12", "rit. starts here" — TRUE where the definition sits and FALSE
+// at a reference sitting measures later, so rippling it puts a confident wrong
+// sentence on every copy. EVERY COMMENT IS ITS OWN, hand-annotated, inherited
+// from nothing. The flag painters read the plain field on both columns, which
+// is why the phase column needed no counterpart and the warp one no longer has
+// any. Do not re-derive one from the label cascade; the cascade carries tempo
+// and the disabled bit, and those are values rather than prose.)
 
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)

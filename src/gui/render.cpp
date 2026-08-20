@@ -972,10 +972,16 @@ struct FlagFace {
 // brighter flag — because that is what
 // the redesign's disabled-label rule says ("a fraction of itself over the row's
 // CURRENT ground", render.h) and the label's ground here is the flag, not the
-// lane. The numbers are why it matters: blending the label toward the LANE
-// gives #575757 on a #3f304a flag, a contrast ratio of 1.7 that is not text any
-// more; blending it toward the FLAG gives ~#6e6377 at 2.1, which reads as
-// dimmed-but-present. Neither is a fade — both resolve to an opaque color
+// lane. THE MECHANISM IS UNTOUCHED BY THE 2026-08-20 BLACK RULING and its
+// DIRECTION is inverted: the ink entering the blend is kMarkerFlagLabel
+// (#000000) rather than the old #fcfcfc, so a dimmed label now resolves DARKER
+// than its dimmed flag — ~#2f2438 on a ~#3f304a flag, a ratio of ~1.21 — where
+// it used to resolve LIGHTER at ~#6e6377 and ~2.1. Both are the same one
+// expression; only the endpoint moved, and the lower ratio is the architect's
+// own call, flagged for his glass check rather than pre-corrected. What the
+// argument for blending toward the FLAG rather than the LANE still buys is
+// unchanged: toward the lane the label would ignore which pair produced the
+// flag it sits on. Neither is a fade — both resolve to an opaque color
 // before cairo sees them, which is the point of the no-alpha rule when flags
 // overlap.
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
@@ -1034,7 +1040,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         // darker" would mis-read the direction and try to fix it.
         f.border = mix_color(kMarkerFlagBorder, kRedesignContentGround,
                              kMarkerDisabledMix);
-        f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
+        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledMix);
         f.stem  = f.fill;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
         return f;
@@ -1049,7 +1055,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         // once. The border is still class-INVARIANT across the live ladder — it
         // varies on the disabled axis alone.
         f.border = kMarkerFlagBorder;
-        f.label = kRedesignLabel;
+        f.label = kMarkerFlagLabel;
         f.stem  = kMarkerStemRed;
         f.has_stem = true;
         return f;
@@ -1057,7 +1063,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     f.fill  = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
     f.edge  = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
-    f.label = kRedesignLabel;
+    f.label = kMarkerFlagLabel;
     // The stem reads the CLASS ALONE, never the selection bit: a selected
     // default marker keeps the calm #9b59b6 stem (the architect's explicit
     // rule), so only the flag brightens.
@@ -1085,11 +1091,11 @@ CommentFace resolve_comment_face(bool disabled, bool selected) {
     CommentFace f;
     f.fill  = selected ? kMarkerCommentFillSel : kMarkerCommentFill;
     f.edge  = selected ? kMarkerCommentEdgeSel : kMarkerCommentEdge;
-    f.label = kRedesignLabel;
+    f.label = kMarkerFlagLabel;
     if (disabled) {
         f.fill  = mix_color(f.fill, kRedesignContentGround, kMarkerDisabledMix);
         f.edge  = mix_color(f.edge, kRedesignContentGround, kMarkerDisabledMix);
-        f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
+        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledMix);
     }
     return f;
 }
@@ -1097,8 +1103,9 @@ CommentFace resolve_comment_face(bool disabled, bool selected) {
 // The one body both columns' painters call. `label_of(i)` composes the marker's
 // display text, `disabled_of(i)` answers its column's disabled question (the
 // warp side's label_ref cascade, the phase-reset side's bare bool), and
-// `comment_of(i)` answers its column's DISPLAYED comment (the warp side's
-// effective comment, definition-inherited; the phase-reset side's plain field).
+// `comment_of(i)` answers its column's comment — the PLAIN FIELD on both, a
+// comment inheriting from nothing (architect 2026-08-20); the lambda survives
+// only because the two columns hold different marker types.
 template <typename MarkerVec, typename LabelFn, typename DisabledFn,
           typename CommentFn>
 void render_flag_boxes_impl(
@@ -1175,9 +1182,10 @@ void render_flag_boxes_impl(
         // capped at nothing: charging every marker the 99-byte worst case would
         // drag the whole lane's left cull out by ~99 ems.
         //
-        // THE EFFECTIVE COMMENT IS WHAT IS MEASURED, own or inherited: an
-        // inheriting ref PAINTS a box, so it must be ADMITTED for one, and only
-        // refs with an empty own comment pay the definition scan here.
+        // THE MARKER'S OWN COMMENT IS THE WHOLE TERM, because it is the whole
+        // of what paints: nothing inherits (architect 2026-08-20), so there is
+        // no marker that paints a box the plain field does not account for and
+        // no scan to pay at admission time.
         //
         // ONE EM PER BYTE, the same over-estimate marker_flag_max_width_px
         // makes, and the UTF-8 premise is restated because this is the one
@@ -1441,12 +1449,16 @@ void render_flags(cairo_t* cr,
         },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
-        // And its DISPLAYED comment follows the label_ref inheritance: own
-        // first, else the cited definition's (effective_marker_comment,
-        // warpmarkers.h — a ref shows its definition's note the way it shows
-        // its tempo).
+        // And its comment is the PLAIN FIELD, exactly as the phase column's is
+        // (architect 2026-08-20): a comment is hand-annotated and INHERITS FROM
+        // NOTHING. It followed the label cascade for one day and he reversed it
+        // on what a comment says — a definition's note is positional prose
+        // ("measure 12", "rit. starts here"), true where the definition sits
+        // and FALSE at a reference sitting measures later, so rippling it puts
+        // a confident wrong sentence on every copy. The two columns now read
+        // the same one line, which is why neither has a resolver.
         [&](int i) -> const std::string& {
-            return effective_marker_comment(markers, i);
+            return markers[static_cast<std::size_t>(i)].comment;
         },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
         editing_marker_index, editing_comment_index, iteration_on);
@@ -1662,8 +1674,11 @@ void render_history_diff_flags(
             }
             cairo_restore(cr);
 
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            // THE LANE'S INK, not the redesign's: a diff flag wears this
+            // lane's whole anatomy, so it wears its black text too (the ruling
+            // and the per-class contrast table are at kMarkerFlagLabel).
+            cairo_set_source_rgb(cr, kMarkerFlagLabel.r, kMarkerFlagLabel.g,
+                                 kMarkerFlagLabel.b);
             if (w_removed > 0) {
                 text_shape::show_shaped_run(
                     cr, run_removed, static_cast<double>(bx + pad_l), baseline);
@@ -1938,7 +1953,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // enter_top_flag_edit gates on the store index alone) would flash a
         // bright red box behind a dimmed border.
         face.border = kMarkerFlagBorder;
-        face.label = kRedesignLabel;
+        face.label = kMarkerFlagLabel;
     }
 
     // 1. The box: the 1px left border, the fill, then the 1px top edge — AA
@@ -1997,7 +2012,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // 2. The selection highlight, then 3. the text — the two-tone convention
     //    convention the retired monospace box used: the selected span fills with the label
-    //    colour and its glyphs repaint in the box fill for contrast. Both edges
+    //    colour and its glyphs repaint in the box fill for contrast. THE TWO
+    //    ROLES SWAPPED SIDES ON 2026-08-20 without the rule moving: with the
+    //    lane's ink now black (kMarkerFlagLabel), the band paints BLACK and the
+    //    selected glyphs come back in the flag's own purple or the comment's
+    //    blue, where the band used to be near-white over dark glyphs. The
+    //    expression is unchanged — it names the two colours by role — and the
+    //    contrast is the same pair read the other way round. Both edges
     //    come from byte_x, so the highlight cannot drift off the glyphs it
     //    marks however proportional they are.
     const bool has_sel = text_editor::has_selection(ed);
@@ -2068,7 +2089,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // comment_pad: the outside-press close treats box UNION pad as inside, so a
     // press on it is consumed and neither closes nor acts.
     if (!comment_kind) {
-        const std::string& ctext = effective_marker_comment(mv, idx);
+        const std::string& ctext = mv[static_cast<std::size_t>(idx)].comment;
         if (!ctext.empty()) {
             const text_shape::ShapedRun crun =
                 text_shape::shape_text_run(font, ctext);

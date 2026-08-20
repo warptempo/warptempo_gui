@@ -537,6 +537,41 @@ inline constexpr GuiColor kMarkerCommentEdge     = hex(0x226181);
 inline constexpr GuiColor kMarkerCommentFillSel  = hex(0x73CFFF);
 inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
 
+// THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
+// (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
+// went back to kdenlive itself with a bitmap font on the flag text and read
+// #000000 out of it for every colour and every state — the reference crops are
+// under tmp/screenshots/kdenlive/redesign). It covers the whole lane: the warp
+// and phase-reset flag LABELS on all three live classes, the COMMENT BOX's
+// text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
+// they share its ink), and the flag editor's unrolled text, its caret and its
+// selection band, all of which resolve through the same face.
+//
+// IT IS ITS OWN CONSTANT AND NOT A RETUNE OF kRedesignLabel, which stays
+// #fcfcfc: that value is the whole redesign's label ink — the menu row, the
+// icon row, the bottom row, the tooltips, the dropdowns, the clock, the ruler's
+// emphasized labels — and this ruling is about the marker lane alone, whose
+// surfaces are the only SATURATED FILLS the product paints text on. Two facts,
+// two constants.
+//
+// WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
+// replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
+// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
+// 7.68 vs 2.64, the comment blue 8.43 vs 2.41 (the case that prompted the
+// ruling: light ink on #3daee9 was illegible), selected comment blue 12.1 vs
+// 1.66, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
+// one class that does not gain does not lose either, which is what makes a
+// single ink honest across the ladder.
+//
+// THE DISABLED FACE KEEPS ITS MECHANISM AND CHANGES DIRECTION. The label still
+// blends toward the surface it sits on, through the one mix_color owner at the
+// one kMarkerDisabledMix fraction — but from BLACK now, so a dimmed label
+// resolves DARKER than its dimmed flag (~#2f2438 on ~#3f304a) where it used to
+// resolve lighter (~#6e6377). The dimming still reads, at a lower ratio (~1.21
+// against the old ~2.1); it is the architect's own call and is flagged for his
+// glass check rather than pre-corrected here.
+inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
+
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
 // row_5_lane_3_marker_green_{unselected,selected}.png and
 // row_5_lane_3_marker_red_{unselected,selected}.png (all four 56x17). They paint
@@ -2647,7 +2682,9 @@ struct HistoryDiffFlag {
 // THE ANATOMY IS THE LIVE FLAG'S, one class ladder narrower: the 1px left
 // border outside the fill (kMarkerFlagBorder, class-invariant here as there), a
 // full-lane-height fill, a 1px top edge, and the label on the redesign's sans at
-// the lane baseline. A CHANGED pair is that same box at double width — the
+// the lane baseline IN THE LANE'S OWN BLACK INK (kMarkerFlagLabel, 2026-08-20 —
+// the anatomy is shared, so the ink is too; the ruling covers every colour and
+// every state, this mode's green and red included). A CHANGED pair is that same box at double width — the
 // halves' own fills and top edges side by side with NO border column at the seam
 // (the fill boundary is the seam) and ONE border column wrapping the whole, at
 // its left. The top edge splits with the halves because it is part of each

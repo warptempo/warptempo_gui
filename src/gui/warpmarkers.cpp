@@ -109,24 +109,3 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;
     return marker_effectively_disabled(markers, static_cast<size_t>(idx));
 }
-
-const std::string& effective_marker_comment(
-    const std::vector<GuiWarpMarker>& markers, int idx) {
-    static const std::string kNone;
-    if (idx < 0 || idx >= static_cast<int>(markers.size())) return kNone;
-    const GuiWarpMarker& m = markers[static_cast<size_t>(idx)];
-    // Own first — a ref that carries its own note shows that note, and the
-    // definition is never consulted.
-    if (!m.comment.empty()) return m.comment;
-    if (m.label_ref.empty()) return kNone;
-    // The cited definition. A DANGLING ref finds nothing and shows nothing,
-    // which is the same silent answer the render resolver gives it (a dangling
-    // ref normalizes to a plain owner) — no diagnostic belongs at paint time.
-    // Linear because the store is small and this runs only for refs with no own
-    // comment; the contract at the declaration says why it is not the frozen
-    // cascade helper.
-    for (const GuiWarpMarker& d : markers) {
-        if (d.label_def == m.label_ref) return d.comment;
-    }
-    return kNone;
-}

@@ -51,8 +51,8 @@ struct GuiFlagEditor {
     // NOT enter_text_edit: that helper is warp-payload-only by recorded
     // invariant (it bounds-checks the warp store and its comment says why), and
     // the comment editor resolves its index against whichever store the column
-    // names. The seed is the marker's OWN comment field, never the inherited
-    // one — editing a ref edits the ref.
+    // names. The seed is the marker's own comment field, which is the whole of
+    // what a comment is — nothing inherits (architect 2026-08-20).
     void enter_comment_edit(char column, int idx);
     // Commit the open comment session: an EMPTY buffer REMOVES the comment, a
     // non-empty one stores it verbatim. One undo entry when the field actually

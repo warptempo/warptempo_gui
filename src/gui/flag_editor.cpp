@@ -306,10 +306,14 @@ void GuiFlagEditor::enter_comment_edit(char column, int idx) {
     if (text_editor::is_active(app.top_flag_editor)) {
         text_editor::deactivate(app.top_flag_editor);
     }
-    // THE SEED IS THE MARKER'S OWN COMMENT, never the effective one: a ref that
-    // shows its definition's note opens EMPTY, because committing text here
-    // writes the ref's own field and seeding the inherited text would silently
-    // copy the definition's note onto the ref at the first Enter.
+    // THE SEED IS THE MARKER'S OWN COMMENT — the only comment there is. A
+    // display-time inheritance down the label cascade existed for one day and
+    // the architect reversed it on 2026-08-20 (a definition's note is
+    // positional prose, wrong at a reference measures later), so what a flag
+    // paints and what this editor opens with are the same one field on both
+    // columns. That the seed is the marker's OWN is now trivially true and is
+    // still spelled here, because it is what makes an empty commit a REMOVAL of
+    // this marker's note and nothing else's.
     const std::string seed = phase
         ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].comment
         : app.warpmarkers.markers()[static_cast<size_t>(idx)].comment;
