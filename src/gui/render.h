@@ -572,6 +572,30 @@ inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
 // glass check rather than pre-corrected here.
 inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 
+// THE FLAG EDITOR'S SELECTION BAND IS WHITE, AND IT IS NOT THE INK (architect
+// 2026-08-20, hours after the ruling above). The band had never been a colour
+// of its own: it filled in `face.label` and the selected glyphs repainted in
+// the box fill, which read as the intended near-white field under dark glyphs
+// for as long as the ink was #fcfcfc — and INVERTED the moment the ink went
+// black, giving a black band under purple glyphs. The ruling restores the old
+// look and names the reason: kdenlive's own text inputs are a WHITE FIELD WITH
+// BLACK TEXT, which is the same pairing this editor wants and the same pairing
+// the flag itself now has.
+//
+// THE VALUE IS THE OLD ONE EXACTLY — #fcfcfc, what `face.label` resolved to on
+// every live class before the flip — so the band moves no pixel from the look
+// it had; only its SOURCE moved, off the ink and onto its own constant. It is
+// spelled here rather than borrowed from kRedesignLabel for the reason that
+// constant's own neighbours are: this is a marker-lane fact that happens to
+// coincide with the redesign's label white, not a reference to it.
+//
+// THE CARET IS DELIBERATELY NOT ON THIS CONSTANT and stays `face.label`: the
+// blinking caret is INK, not field, so it is black with the text it sits in.
+// The three parts of a selected span therefore resolve from three different
+// places on purpose — white band from here, fill-coloured glyphs from
+// `face.fill`, black caret from `face.label`.
+inline constexpr GuiColor kMarkerEditorSelectionBand = hex(0xFCFCFC);
+
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
 // row_5_lane_3_marker_green_{unselected,selected}.png and
 // row_5_lane_3_marker_red_{unselected,selected}.png (all four 56x17). They paint
@@ -652,7 +676,39 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // order — so a selected disabled marker takes the same relative lift a live one
 // does, border included, and red takes none on either side. One blend, one
 // ladder: there is no separate disabled brightness rule to drift.
+//
+// THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on both the
+// flag and the comment box. The LABEL took it too until 2026-08-20 and takes
+// its own now (the constant directly below); the surfaces are untouched by that
+// split and every shape a disabled marker paints still damps at exactly 25%.
 inline constexpr double kMarkerDisabledMix = 0.25;
+
+// THE DISABLED LABEL'S OWN FRACTION (architect 2026-08-20), split off from the
+// surfaces' above on the day the lane's ink went black. The MECHANISM is
+// untouched — the label blends toward the surface it sits on, through the one
+// mix_color owner — and only the fraction differs, because the two values were
+// calibrated against opposite problems.
+//
+// THE OLD 0.25 WAS WHITE-SUPPRESSION. With #fcfcfc ink the dimmed label's
+// danger was standing OUT: near-white on a dimmed flag shouts, and keeping only
+// a quarter of it pulled a disabled label back to ~#6e6377 (~2.1:1), which was
+// the intended "dimmed but present". BLACK NEEDS THE OPPOSITE CORRECTION.
+// Blending black toward the fill makes the label DARKER, so the same quarter
+// pulled it almost into the flag (~#2f2438, ~1.21:1) — the fraction was
+// suppressing something that was no longer sticking out.
+//
+// 0.75 IS THE FIRST GUESS, and it is deliberately near a CEILING rather than at
+// a target. A darker-than-fill ink cannot reach 2:1 on the calm purple's dimmed
+// fill at all: that fill is #3f304a (relative luminance 0.0367), so even PURE
+// BLACK tops out at (0.0367 + 0.05) / 0.05 = 1.73:1. The curve is flat near
+// that ceiling — 0.25 gives 1.21, 0.50 gives 1.42, 0.75 gives 1.60, 1.00 gives
+// 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
+// label visibly inside the disabled face rather than painting it at full live
+// strength. On the brighter dimmed pairs it lands where the ruling asked: the
+// selected flag 1.80, the red flag 1.81, and THE COMMENT BOX 1.90 against its
+// own #274557 (whose ceiling is 2.10 — a lighter fill has the headroom the calm
+// purple does not). ONE fraction for both surfaces, glass retunes.
+inline constexpr double kMarkerDisabledLabelMix = 0.75;
 
 // -- ROW 6: THE WAVEFORM ITSELF ---------------------------------------------
 //

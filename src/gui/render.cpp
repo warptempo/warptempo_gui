@@ -965,25 +965,27 @@ struct FlagFace {
 // (architect 2026-08-01) and red refuses the lift on both sides alike.
 //
 // THE DISABLED FACE'S LABEL DIMS AGAINST THE FLAG, NOT AGAINST THE LANE. Every
-// SHAPE surface takes 25% of itself over the lane ground, as ruled. The LABEL
-// takes the same 25%-of-itself through the same mix_color owner but toward the
-// surface it actually sits on — the already-blended fill, whichever pair
-// produced it, so a selected disabled marker's label dims against ITS OWN
+// SHAPE surface takes its fraction of itself over the lane ground, as ruled.
+// The LABEL takes a fraction of itself through the same mix_color owner but
+// toward the surface it actually sits on — the already-blended fill, whichever
+// pair produced it, so a selected disabled marker's label dims against ITS OWN
 // brighter flag — because that is what
 // the redesign's disabled-label rule says ("a fraction of itself over the row's
 // CURRENT ground", render.h) and the label's ground here is the flag, not the
-// lane. THE MECHANISM IS UNTOUCHED BY THE 2026-08-20 BLACK RULING and its
-// DIRECTION is inverted: the ink entering the blend is kMarkerFlagLabel
-// (#000000) rather than the old #fcfcfc, so a dimmed label now resolves DARKER
-// than its dimmed flag — ~#2f2438 on a ~#3f304a flag, a ratio of ~1.21 — where
-// it used to resolve LIGHTER at ~#6e6377 and ~2.1. Both are the same one
-// expression; only the endpoint moved, and the lower ratio is the architect's
-// own call, flagged for his glass check rather than pre-corrected. What the
-// argument for blending toward the FLAG rather than the LANE still buys is
-// unchanged: toward the lane the label would ignore which pair produced the
-// flag it sits on. Neither is a fade — both resolve to an opaque color
-// before cairo sees them, which is the point of the no-alpha rule when flags
-// overlap.
+// lane. THE MECHANISM IS UNTOUCHED BY THE 2026-08-20 BLACK RULING; what changed
+// twice that day is the ENDPOINT and then the FRACTION. The ink entering the
+// blend is kMarkerFlagLabel (#000000) rather than the old #fcfcfc, so a dimmed
+// label resolves DARKER than its dimmed flag where it used to resolve lighter —
+// and the surfaces' 25% was calibrated to hold a near-WHITE label back, which
+// is the opposite correction, so at that fraction the black label sank almost
+// into the flag (~#2f2438, ~1.21:1). The LABEL NOW TAKES ITS OWN FRACTION,
+// kMarkerDisabledLabelMix, while the shapes keep kMarkerDisabledMix untouched;
+// both constants and the ceiling arithmetic behind the new value live at their
+// declarations. What the argument for blending toward the FLAG rather than the
+// LANE buys is unchanged by any of it: toward the lane the label would ignore
+// which pair produced the flag it sits on. Neither is a fade — both resolve to
+// an opaque color before cairo sees them, which is the point of the no-alpha
+// rule when flags overlap.
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     FlagFace f;
     if (disabled) {
@@ -1040,7 +1042,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         // darker" would mis-read the direction and try to fix it.
         f.border = mix_color(kMarkerFlagBorder, kRedesignContentGround,
                              kMarkerDisabledMix);
-        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledMix);
+        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledLabelMix);
         f.stem  = f.fill;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
         return f;
@@ -1079,8 +1081,14 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
 // marker). Red is the flag's normalization cue and says nothing about a note;
 // giving the note a red face would claim the text itself was suspect.
 //
-// The label ink follows the flag's own disabled-label rule — a fraction of
-// itself over the surface it actually sits on, which here is the comment fill.
+// The label ink follows the flag's own disabled-label rule EXACTLY, both halves
+// of it: a fraction of itself over the surface it actually sits on — which here
+// is the comment fill — and that fraction is the LABEL's own
+// (kMarkerDisabledLabelMix) rather than the surfaces' beside it. This box is
+// where the split reads best, its fill being the lighter of the two: a disabled
+// comment lands at ~1.90:1 against its own #274557, near the 2.10 ceiling that
+// fill allows, where the calm purple flag's darker #3f304a caps at 1.73 whatever
+// fraction is chosen.
 struct CommentFace {
     GuiColor fill;
     GuiColor edge;
@@ -1095,7 +1103,7 @@ CommentFace resolve_comment_face(bool disabled, bool selected) {
     if (disabled) {
         f.fill  = mix_color(f.fill, kRedesignContentGround, kMarkerDisabledMix);
         f.edge  = mix_color(f.edge, kRedesignContentGround, kMarkerDisabledMix);
-        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledMix);
+        f.label = mix_color(kMarkerFlagLabel, f.fill, kMarkerDisabledLabelMix);
     }
     return f;
 }
@@ -2011,16 +2019,25 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_clip(cr);
 
     // 2. The selection highlight, then 3. the text — the two-tone convention
-    //    convention the retired monospace box used: the selected span fills with the label
-    //    colour and its glyphs repaint in the box fill for contrast. THE TWO
-    //    ROLES SWAPPED SIDES ON 2026-08-20 without the rule moving: with the
-    //    lane's ink now black (kMarkerFlagLabel), the band paints BLACK and the
-    //    selected glyphs come back in the flag's own purple or the comment's
-    //    blue, where the band used to be near-white over dark glyphs. The
-    //    expression is unchanged — it names the two colours by role — and the
-    //    contrast is the same pair read the other way round. Both edges
-    //    come from byte_x, so the highlight cannot drift off the glyphs it
-    //    marks however proportional they are.
+    //    the retired monospace box used: the selected span fills with a WHITE
+    //    FIELD and its glyphs repaint in the box fill for contrast.
+    //
+    //    THE BAND HAS ITS OWN COLOUR SINCE 2026-08-20 and no longer rides the
+    //    ink. It filled in `face.label` for as long as that ink was #fcfcfc,
+    //    where the two happened to coincide; when the lane's ink went black the
+    //    band inverted with it — a black field under purple glyphs — and the
+    //    architect ruled it back to white on kdenlive's own text-input
+    //    precedent (white field, black text). kMarkerEditorSelectionBand holds
+    //    exactly the value `face.label` used to resolve to, so the look is the
+    //    one that stood before the flip; only the SOURCE moved.
+    //
+    //    THE THREE PARTS OF A SELECTED SPAN NOW COME FROM THREE PLACES, each
+    //    deliberately: the BAND from that constant, the GLYPHS inside it from
+    //    `face.fill` (below), and the CARET from `face.label` — black, because a
+    //    caret is ink rather than field and belongs with the text it sits in.
+    //
+    //    Both edges come from byte_x, so the highlight cannot drift off the
+    //    glyphs it marks however proportional they are.
     const bool has_sel = text_editor::has_selection(ed);
     if (has_sel) {
         const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
@@ -2031,7 +2048,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         const int ix1 = static_cast<int>(std::nearbyint(hx1));
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+        cairo_set_source_rgb(cr, kMarkerEditorSelectionBand.r,
+                             kMarkerEditorSelectionBand.g,
+                             kMarkerEditorSelectionBand.b);
         cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
