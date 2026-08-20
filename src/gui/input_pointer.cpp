@@ -5958,8 +5958,9 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // hold, and the carried bit is what the lift dispatches with. THE
         // PRESS'S CLOCK IS STAMPED HERE, unconditionally: the lift measures the
         // hold against kChromeShiftHoldMs to decide the SHIFT LONG PRESS, and
-        // the stamp is taken for every button rather than for the four that can
-        // use it, a press having a time whatever it landed on.
+        // the stamp is taken for every button rather than for the
+        // shift-admitting ones alone (redesign_button_shift_admits owns that
+        // membership), a press having a time whatever it landed on.
         const int64_t now = monotonic_ms();
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,

@@ -962,21 +962,29 @@ GuiRect clock_invalidate_rect(const AppState& a) {
 int main(int argc, char** argv) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
-    // Auto-reap the fire-and-forget external audio players the `l`
-    // ("Listen to renders") command spawns. Ignoring SIGCHLD makes the kernel
-    // discard child exit status so the detached players never linger as zombies;
-    // set once here, never per-press.
+    // Auto-reap the fire-and-forget children the GUI launches. Ignoring SIGCHLD
+    // makes the kernel discard child exit status so a detached child never
+    // lingers as a zombie; set once here, never per-launch.
     //
-    // TWO SUBSYSTEMS FORK NOW, and both are written to this disposition rather
-    // than against it. The players are the fire-and-forget half. THE HISTORY MODE
-    // (src/gui/history_diff.cpp) is the other: it runs git synchronously through
-    // two fenced entry points — reads for the diff and the walk, and the commit
-    // act's `add`/`commit`/`push` — and because this disposition makes waitpid
-    // return ECHILD, it decides nothing from child status. A read reports whether
-    // it RAN (an exec self-pipe) and what it said; the commit act's verdicts are
-    // observations of the repository afterwards. Both helpers' comments own the
-    // reasoning; what matters here is that neither depends on the default
-    // disposition being restored.
+    // THE WHOLE ROSTER OF FORKING SUBSYSTEMS, and every one of them is written
+    // TO this disposition rather than against it:
+    //   * THE EXTERNAL AUDIO PLAYERS the `l` ("Listen to renders") command
+    //     spawns (spawn_audio_player, input_key_dispatch.cpp) — fire and
+    //     forget, nothing waited on, nothing decided from a status.
+    //   * THE SCORE VIDEO's mpv (spawn_mpv, score_video.cpp), the same shape:
+    //     one detached player per socket, launched and let go.
+    //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
+    //     through two fenced entry points — reads for the diff and the walk,
+    //     and the commit act's `add`/`commit`/`push` — and, because this
+    //     disposition makes waitpid return ECHILD, decides nothing from child
+    //     status: a read reports whether it RAN (an exec self-pipe) and what it
+    //     said, and the commit act's verdicts are observations of the
+    //     repository afterwards.
+    //   * THE TRASHED DELETION's `gio trash` (trash_directory,
+    //     input_key_dispatch.cpp), whose verdict is likewise an observation of
+    //     the filesystem rather than an exit code.
+    // Each helper's own comment owns its reasoning; what matters here is that
+    // none of them depends on the default disposition being restored.
     std::signal(SIGCHLD, SIG_IGN);
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
@@ -988,10 +996,15 @@ int main(int argc, char** argv) {
     // ignored that loop sees the short/failed write it is already written for
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own. The spawned external player
-    // does NOT inherit this: the `l` launch resets SIGPIPE to default alongside
-    // SIGCHLD (spawn_audio_player, input_key_dispatch.cpp), since an ignored
-    // disposition survives exec and would change the child's own semantics.
+    // no SIGPIPE-dependent behaviour of its own. A SECOND PRODUCER JOINED IT
+    // 2026-08-20: the score video's IPC write (send_mpv_command,
+    // score_video.cpp) writes one line into a socket a player owns, and a peer
+    // that goes away mid-line is exactly this shape — with the signal ignored
+    // that write returns EPIPE into a path already written for it. THE SPAWNED
+    // PLAYERS DO NOT INHERIT THIS: both launchers reset SIGPIPE to default
+    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp, and
+    // spawn_mpv, score_video.cpp), since an ignored disposition survives exec
+    // and would change the child's own semantics.
     std::signal(SIGPIPE, SIG_IGN);
 
     // A source is loaded only from the command line: the GUI has no

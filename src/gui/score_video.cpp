@@ -10,10 +10,10 @@
 #include "warpmarkers.h"
 
 #include <fcntl.h>
+#include <poll.h>
 #include <spawn.h>
 #include <signal.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -38,6 +38,22 @@
 extern char** environ;
 
 namespace {
+
+// THE ACCEPTED TIME DOMAIN, one bound for every second this file handles: the
+// header's window start, every anchor, and the seek that comes out of them.
+// 10^7 seconds is about 115 days — no recording approaches it, so the bound
+// refuses nothing real — and it is what makes the arithmetic downstream honest
+// rather than merely finite. TWO THINGS REST ON IT: window_start + t cannot
+// leave the domain by adding two in-domain values, and `%.3f` of an in-domain
+// value spells at most twelve characters, so the fixed buffer it is formatted
+// into can never truncate a number into a DIFFERENT number. A finite double
+// that is merely enormous would pass a plain isfinite check and do both.
+constexpr double kScoreVideoMaxSeconds = 1e7;
+
+bool score_video_time_in_domain(double seconds) {
+    return std::isfinite(seconds) && seconds >= 0.0 &&
+           seconds <= kScoreVideoMaxSeconds;
+}
 
 // ---------------------------------------------------------------------------
 // THE MAP'S NUMBER READERS.
@@ -238,33 +254,89 @@ std::string json_escape(const std::string& s) {
     return out;
 }
 
+// THE WHOLE IPC BUDGET, connect and write together. This runs ON THE GUI
+// THREAD, so the bound is not a nicety: it is what keeps Shift+`/` from
+// freezing the window on a peer that owns the socket and is not servicing it.
+constexpr int kScoreVideoIpcMs = 200;
+
+// Wait for `fd` to become writable, or for the deadline. Returns 1 ready,
+// 0 timed out, -1 error. EINTR re-polls against the same deadline rather than
+// restarting the budget, so the total stays bounded however many signals land.
+int wait_writable(int fd, int64_t deadline_ms) {
+    for (;;) {
+        const int64_t remaining = deadline_ms - monotonic_ms();
+        if (remaining <= 0) return 0;
+        pollfd pfd{};
+        pfd.fd     = fd;
+        pfd.events = POLLOUT;
+        const int rc = ::poll(&pfd, 1, static_cast<int>(remaining));
+        if (rc > 0) return 1;
+        if (rc == 0) return 0;
+        if (errno == EINTR) continue;
+        return -1;
+    }
+}
+
 // Send ONE command line to a standing mpv. Returns false when nothing was
 // listening (the ordinary "no instance yet" answer, which the caller turns into
-// a spawn) and sets `wrote_failed` when a CONNECTED socket then refused the
-// write — a different fact, and the one the caller reports.
+// a spawn) and sets `write_failed` when the socket WAS reached and the line
+// still could not be delivered — a different fact, and the one the caller
+// reports.
+//
+// NOTHING HERE BLOCKS WITHOUT A BOUND. The socket is NONBLOCKING FROM BIRTH,
+// which is the point: a blocking AF_UNIX connect can wait on a listener whose
+// accept queue is full — a stopped or wedged mpv still owning the socket — and
+// no send timeout applies to it, because the connect has not returned yet to be
+// timed. So connect and write both run under one `monotonic_ms` deadline
+// (kScoreVideoIpcMs), and the worst case for the GUI thread is that budget.
+//
+// THE TIMEOUT IS NOT A "NOT LISTENING" ANSWER, and the distinction decides
+// whether a second mpv gets launched: an immediate connect error (no socket
+// file, nothing bound, a stale file refusing) means there is no instance, so
+// the caller spawns one; an EINPROGRESS that then times out means SOMETHING IS
+// THERE and is not answering, so this reports instead — spawning a rival that
+// could not bind the occupied path would be a silent nothing.
 //
 // No reply is read: mpv answers every command with a JSON line, and this act
-// has nothing to do with the answer. The write timeout keeps a wedged mpv from
-// stalling the GUI thread; SIGPIPE is SIG_IGN process-wide (main.cpp), so a
-// dead peer returns EPIPE here rather than killing the process.
+// has nothing to do with the answer — which is exactly why the caller's
+// diagnostic says the WRITE failed and never that mpv refused anything.
+// SIGPIPE is SIG_IGN process-wide (main.cpp), so a peer that goes away mid-line
+// returns EPIPE here rather than killing the process.
 bool send_mpv_command(const std::string& socket_path, const std::string& line,
                       bool& write_failed) {
     write_failed = false;
     sockaddr_un addr{};
     if (socket_path.size() + 1 > sizeof(addr.sun_path)) return false;
-    const int fd = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    const int fd =
+        ::socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
     if (fd < 0) return false;
     addr.sun_family = AF_UNIX;
     std::memcpy(addr.sun_path, socket_path.c_str(), socket_path.size());
+
+    const int64_t deadline = monotonic_ms() + kScoreVideoIpcMs;
     if (::connect(fd, reinterpret_cast<const sockaddr*>(&addr),
                   sizeof(addr)) != 0) {
-        ::close(fd);
-        return false;
+        if (errno != EINPROGRESS) {
+            ::close(fd);  // nothing is listening: the caller's spawn answer
+            return false;
+        }
+        const int ready = wait_writable(fd, deadline);
+        if (ready <= 0) {
+            // Timed out or poll failed on a connect that HAD been accepted for
+            // processing: reached, unusable, reported rather than respawned.
+            ::close(fd);
+            write_failed = true;
+            return false;
+        }
+        int       err = 0;
+        socklen_t len = sizeof(err);
+        if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) != 0 ||
+            err != 0) {
+            ::close(fd);  // the connect completed as a refusal: not listening
+            return false;
+        }
     }
-    timeval tv{};
-    tv.tv_sec  = 0;
-    tv.tv_usec = 200000;
-    ::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
     size_t off = 0;
     while (off < line.size()) {
         const ssize_t n = ::write(fd, line.data() + off, line.size() - off);
@@ -273,6 +345,9 @@ bool send_mpv_command(const std::string& socket_path, const std::string& line,
             continue;
         }
         if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            if (wait_writable(fd, deadline) == 1) continue;
+        }
         write_failed = true;
         break;
     }
@@ -392,7 +467,7 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
                 if (!parse_full_double(std::string_view(rest).substr(0, sp),
                                        start))
                     return {};
-                if (start < 0.0) return {};
+                if (!score_video_time_in_domain(start)) return {};
                 const std::string_view end_field =
                     std::string_view(rest).substr(sp + 1);
                 double end_seconds = 0.0;
@@ -412,7 +487,7 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
             return {};
         if (!parse_full_int(std::string_view(line).substr(bar + 1), measure))
             return {};
-        if (seconds < 0.0 || measure < 1) return {};
+        if (!score_video_time_in_domain(seconds) || measure < 1) return {};
         // STRICTLY INCREASING IN BOTH FIELDS, which is what makes the lookup's
         // bracketing walk and its non-zero span safe rather than checked again.
         if (have_previous && (seconds <= prev_seconds || measure <= prev_measure))
@@ -471,8 +546,16 @@ void run_score_video_jump(const AppState& app) {
         seek = map.window_start + t;
     }
 
-    char seek_text[64];
-    std::snprintf(seek_text, sizeof seek_text, "%.3f", seek);
+    // THE SEEK IS RE-JUDGED AFTER THE SUM, not trusted from its parts: the
+    // domain bound above makes an out-of-domain result unreachable, and this
+    // asks anyway, because the number is about to be handed to another process
+    // as text and a wrong seek is indistinguishable from a right one there.
+    // The FORMATTING is judged too — a truncated `%.3f` is a different number,
+    // not a shorter one — so a refused spelling is the usual silent no-op.
+    if (!score_video_time_in_domain(seek)) return;
+    char      seek_text[64];
+    const int spelled = std::snprintf(seek_text, sizeof seek_text, "%.3f", seek);
+    if (spelled <= 0 || static_cast<size_t>(spelled) >= sizeof seek_text) return;
     const std::string video_path = video.string();
     const std::string socket_path = mpv_socket_path();
 
@@ -486,11 +569,17 @@ void run_score_video_jump(const AppState& app) {
                                 json_escape(video_path) +
                                 "\",\"replace\",-1,\"start=" + seek_text +
                                 "\"]}\n";
+    // THE TWO DIAGNOSTICS SAY WHAT WAS OBSERVED AND NOTHING MORE. No reply is
+    // ever read from mpv, so this side cannot know what mpv made of the line —
+    // only whether the line left the process. "The write failed" and "the spawn
+    // failed" are the two facts in hand, and neither is dressed up as a verdict
+    // from the player.
     bool write_failed = false;
     if (send_mpv_command(socket_path, command, write_failed)) return;
     if (write_failed) {
-        std::fprintf(stderr,
-                     "warptempo_gui: score video: mpv did not take the seek\n");
+        std::fprintf(
+            stderr,
+            "warptempo_gui: score video: could not write to the mpv socket\n");
         return;
     }
     // NOTHING WAS LISTENING, so this jump is the one that starts the window.

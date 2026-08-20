@@ -2806,7 +2806,9 @@ constexpr int     kDoubleClickSlackPx = 8;
 // constants carry for their own reason — they model the hand, not the pixels).
 //
 // The beat is DELIBERATELY LONG relative to a click. A shifted act is the rarer
-// one on all four buttons, so the cost of an accidental hold must land on the
+// one on every button that admits shift (the membership is
+// redesign_button_shift_admits, never a count restated here), so the cost of an
+// accidental hold must land on the
 // rare act rather than on the common one; the beat is well past any ordinary
 // click-and-lift and just short of the point where a user would assume the
 // press was lost.

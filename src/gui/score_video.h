@@ -15,16 +15,31 @@ struct AppState;
 // IT IS PURE NAVIGATION AND IT PAINTS NOTHING. No store write, no undo entry,
 // no record_gesture, no damage, no view switch, no playback change — the GUI
 // reads three things (the focused marker's measure, the map beside the source,
-// the mpv socket) and writes one line to another process. Every refusal on the
-// way is a CONSUMED SILENT NO-OP: nothing focused, no measure, an unresolved
-// `+` chain, no map, no video, or an mpv that could neither be reached nor
-// started. That taxonomy is the act's whole error vocabulary; the only thing it
-// ever prints is one stderr line where an mpv it TRIED to drive refused.
+// the mpv socket) and writes one line to another process.
+//
+// THE REFUSALS SPLIT IN TWO, on whether an mpv was involved at all. EVERYTHING
+// UP TO THE TRANSPORT IS A CONSUMED SILENT NO-OP — nothing focused, no measure,
+// an unresolved `+` chain, no map, no video, a seek outside the accepted time
+// domain — because each of those is an ordinary state of the piece and the GUI
+// has nothing to report about it. THE TRANSPORT'S TWO FAILURES EACH PRINT ONE
+// STDERR LINE: a socket that was REACHED but could not be written to, and an
+// mpv that could not be SPAWNED. Both name what was observed and stop there,
+// which is the only honest register available — no reply is ever read from
+// mpv, so this side never learns what mpv thought of the command and must
+// never claim to. Nothing reaches the GUI either way: no chip, no prompt, no
+// pixel (the wind-down rule for a rare non-silent fault outside the product's
+// own state).
 //
 // NO LIVE SYNC, NO FOLLOW, NO SPEED SYNC (architect 2026-08-20): the act is a
 // JUMP. mpv is not driven again until the next press, and the GUI never reads
 // mpv's position back — there is no second channel, no poll and no state on
 // this side beyond the socket path, which is derived per act rather than held.
+//
+// IT RUNS ON THE GUI THREAD AND ITS COST IS BOUNDED, which is a contract and
+// not an implementation detail: the socket work is nonblocking under one
+// deadline (kScoreVideoIpcMs, score_video.cpp), so the very worst a press can
+// cost the window is that budget even against a peer that owns the socket and
+// never services it. The spawn is fire-and-forget and waits on nothing.
 //
 // ------------------------------------------------------------------------
 // THE MAP is <project>/sheet/sheet.map, where <project> is the SOURCE FILE'S

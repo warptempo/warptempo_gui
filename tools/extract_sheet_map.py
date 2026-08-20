@@ -67,6 +67,14 @@ MERGE_GAP = 60        # px: merge barline column clusters (double bars, repeats)
 DIFF_W, DIFF_H = 480, 270
 
 def scan_diffs(video, wstart=0.0, wdur=None):
+    """Per-frame mean absolute difference over the window. Returns
+    (diffs, nframes, ok). ok is False for a decode that did not finish
+    cleanly, and the caller must then refuse: a HALF-DECODED stream looks
+    exactly like a shorter video, so its tail pages simply vanish and the
+    remaining prefix can still pass every self-consistent check below
+    (the bar counts and the OCR chain read the same truncated set). A
+    partial trailing frame is the same fault: `read` on a pipe returns
+    short only at EOF, so a non-empty short read is a stream cut mid-frame."""
     cmd = ["ffmpeg", "-v", "error"]
     if wstart:
         cmd += ["-ss", f"{wstart:.3f}"]
@@ -77,16 +85,22 @@ def scan_diffs(video, wstart=0.0, wdur=None):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     nbytes = DIFF_W * DIFF_H
     prev, diffs, n = None, [], 0
+    truncated = False
     while True:
         buf = proc.stdout.read(nbytes)
         if len(buf) < nbytes:
+            truncated = len(buf) > 0
             break
         cur = np.frombuffer(buf, dtype=np.uint8).astype(np.int16)
         if prev is not None:
             diffs.append(float(np.abs(cur - prev).mean()))
         prev = cur; n += 1
-    proc.wait()
-    return np.array(diffs, dtype=np.float32), n
+    status = proc.wait()
+    ok = status == 0 and not truncated and n > 0
+    if not ok:
+        print(f"decode failed: ffmpeg exit {status}, {n} frames"
+              f"{', truncated final frame' if truncated else ''}")
+    return np.array(diffs, dtype=np.float32), n, ok
 
 def video_fps(video):
     out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
@@ -206,15 +220,27 @@ def main():
             wdur = float(wend_arg) - wstart
     os.makedirs(workdir, exist_ok=True)
     fps = video_fps(video)
-    # The frame-diff scan is cached, and the cache is STAMPED with the video
-    # and the window it was taken over: a workdir reused across two different
-    # slices would otherwise emit a map for the wrong music, silently. A stamp
-    # that does not match the current invocation rescans AND drops the cached
-    # page frames with it, since those are keyed by page index alone and are
-    # exactly as slice-specific as the diffs are.
+    # The frame-diff scan is cached, and the cache is STAMPED with the exact
+    # input it was taken from: a workdir reused across two different slices —
+    # or against a video that has since been replaced in place — would
+    # otherwise emit a map for the wrong music, silently. The stamp is a
+    # RESOLVED IDENTITY plus a CHANGE WITNESS: the realpath (so two files that
+    # share a basename in different folders are two inputs), the device and
+    # inode (so a different file at the same path is a different input), and
+    # the size and mtime (so the same path re-encoded in place is a different
+    # input). Deliberately NOT a content digest: these are 400 MB rips and a
+    # digest would cost more than the scan it guards.
+    #
+    # A stamp that does not match the current invocation rescans AND drops the
+    # cached page frames with it, since those are keyed by page index alone and
+    # are exactly as input-specific as the diffs are. A FAILED SCAN ACQUIRES NO
+    # STAMP: the cache is written only after the decode is known clean, so a
+    # refusal cannot leave a half-stream behind for the next run to trust.
+    st = os.stat(video)
     diffs_npy = os.path.join(workdir, "diffs.npy")
     diffs_meta = os.path.join(workdir, "diffs.meta")
-    stamp = f"{os.path.basename(video)}|{wstart:.3f}|{wend_arg}\n"
+    stamp = (f"{os.path.realpath(video)}|{st.st_dev}|{st.st_ino}|"
+             f"{st.st_size}|{st.st_mtime_ns}|{wstart:.3f}|{wend_arg}\n")
     cached = False
     if os.path.exists(diffs_npy) and os.path.exists(diffs_meta):
         with open(diffs_meta) as f:
@@ -225,7 +251,11 @@ def main():
         for stale in sorted(p for p in os.listdir(workdir)
                             if p.startswith("page") and p.endswith(".png")):
             os.remove(os.path.join(workdir, stale))
-        d, nframes = scan_diffs(video, wstart, wdur)
+        if os.path.exists(diffs_meta):
+            os.remove(diffs_meta)
+        d, nframes, ok = scan_diffs(video, wstart, wdur)
+        if not ok:
+            print("REFUSE: the frame scan did not complete"); return 1
         np.save(diffs_npy, d)
         with open(diffs_meta, "w") as f:
             f.write(stamp)
@@ -299,12 +329,27 @@ def main():
         # pend: (first_page_count, base) when a section-first page still
         # awaits its pickup resolution; None otherwise.
         if i == n:
+            # RUNNING OUT OF PAGES CLOSES NO OBLIGATION. A standing `pend`
+            # means a section-first page never had its pickup resolved, and a
+            # standing bridge_open means an unreadable page's assumed value was
+            # never confirmed by a later one; either way the interpretation
+            # rests on nothing but itself, which is exactly what this solver
+            # refuses everywhere else. Both are backtrack points, so a chain
+            # that can close its obligations another way is still found.
+            if pend is not None or bridge_open:
+                return None
             return (starts, trail)
         if origin[i] is not None:
             j = origin[i]
             if starts[j] is None:
                 return None
-            return solve(i + 1, base, next_local, pend, False, max_local,
+            # A REPLAY CONFIRMS NOTHING — it re-shows a page already read, and
+            # skips OCR by construction — so it carries the bridge obligation
+            # forward untouched rather than clearing it. Clearing it here would
+            # let a replay stand in for the confirmation the one-bridge-in-a-row
+            # rule demands, and a second bridge could open behind it. `pend`
+            # rides through for the same reason and always has.
+            return solve(i + 1, base, next_local, pend, bridge_open, max_local,
                          starts + [starts[j]], trail)
         c = counts[i]
         # candidate expected section-local starts, in preference order
@@ -322,7 +367,7 @@ def main():
                 if r: return r
         # volta re-crop: the page re-shows the last reached region
         if max_local is not None and confirmed(i, max_local):
-            r = solve_reseed(i, base, max_local, starts, trail)
+            r = solve_reseed(i, base, max_local, bridge_open, starts, trail)
             if r: return r
         # BRIDGE: number unreadable (or read too weakly); assume the chain
         # value, the next new page must then confirm the accumulated sum
@@ -332,21 +377,34 @@ def main():
                       starts + [base + next_local], trail + [(i, next_local, "bridged")])
             if r: return r
         # RESTART: a section-first page opens a new printed-numbering
-        # section (tried last; the final-bar check gates misfires)
+        # section (tried last; the final-bar check gates misfires). IT
+        # DISCHARGES NO BRIDGE: a new section says nothing about the value an
+        # unreadable earlier page was assumed to carry, so the obligation rides
+        # through and only a CONFIRMING new page can close it.
         if pend is None and next_local is not None:
             nb = base + next_local - 1
-            r = solve(i + 1, nb, None, (c, nb), False, None,
+            r = solve(i + 1, nb, None, (c, nb), bridge_open, None,
                       starts + [nb + 1], trail + [(i, 1, "section-restart")])
             if r: return r
         return None
 
-    def solve_reseed(i, base, vmax, starts, trail):
+    def solve_reseed(i, base, vmax, bridge_open, starts, trail):
         # page i re-shows from vmax; successor's start lies in (vmax, vmax+c_i]
+        #
+        # IT CARRIES THE BRIDGE OBLIGATION LIKE EVERY OTHER ARM. Confirming
+        # `vmax` here is not the confirmation a bridge is owed — that one is of
+        # the ACCUMULATED sum, a different value — so an open bridge survives
+        # into this path and its EOF arm refuses on it exactly as solve()'s
+        # does. The `reseed` continuation below closes it honestly instead: the
+        # successor page is CONFIRMED, which is what discharges a bridge
+        # everywhere in this solver.
         c = counts[i]
         st = starts + [base + vmax]
         tr = trail + [(i, vmax, "volta-recrop")]
         j = i + 1
         if j == n:
+            if bridge_open:
+                return None
             return (st, tr)
         if origin[j] is not None:
             return None  # replay directly after a re-crop: ambiguous, refuse
@@ -373,8 +431,17 @@ def main():
     print(f"CHECK PASSED: pickup={pickup} pages={n} final_bar={final_bar}")
     if expect_final is not None and final_bar != expect_final:
         print(f"REFUSE: final bar {final_bar} != expected {expect_final}"); return 1
+    # PUBLISH ATOMICALLY, because "no partial map" is the whole refuse-or-emit
+    # contract and a direct write can break it after every check has passed: a
+    # full filesystem or an I/O error mid-write leaves a TRUNCATED map at the
+    # canonical path, and a truncated map is syntactically valid — a prefix of
+    # monotonic anchors — so the GUI would read it and jump confidently to the
+    # wrong bar past the cut. The temporary lands in the SAME directory (a
+    # rename is only atomic within one filesystem), is flushed and fsync'd
+    # before it is named, and os.replace does the rest.
     map_path = os.path.join(workdir, "sheet.map")
-    with open(map_path, "w") as f:
+    tmp_path = map_path + ".tmp"
+    with open(tmp_path, "w") as f:
         if wend_arg is not None:
             f.write(f"# src {os.path.basename(video)}\n")
             f.write(f"# window {wstart:.3f} {wend_arg}\n")
@@ -384,6 +451,9 @@ def main():
             if starts[i] > top:
                 f.write(f"{kept[i][0]:.3f}|{starts[i]}\n")
                 top = starts[i]
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, map_path)
     print(f"wrote {map_path} (monotonic first-pass anchors)")
     return 0
 
