@@ -1703,8 +1703,9 @@ enum class RedesignButton {
     // untouched everywhere. Nothing else moved: File takes exactly Quit's slot,
     // so the painted order was File, Navigation, Settings and the roster's total
     // was unchanged — the split moved, 43 chords + 2 anchors becoming 42 + 3.
-    // (The painted order is File, Settings since the Navigation anchor's
-    // deletion on 2026-08-15, and the split is back to two anchors.)
+    // (The painted order was File, Settings from the Navigation anchor's
+    // deletion on 2026-08-15 until 2026-08-20, and the split was back to two
+    // anchors for those five days.)
     //
     // THE EDIT MENU IS THE THIRD ANCHOR SINCE 2026-08-20 (architect), painted
     // between File and Settings — the standard order, kdenlive's own. It is a
@@ -4310,10 +4311,12 @@ struct AppState {
     // was set_history_reading rather than a chord, and went with that
     // repurposing on 2026-08-18: row 3 is the A/B pair in every state, so a
     // press on a tab arms as Roster and dispatches Ctrl+Tab like any other.)
-    // (The TWO dropdown ANCHORS — File and Settings, a third having left with
-    // the Navigation menu on 2026-08-15 — are deliberately NOT armed: their
-    // toggle is the recorded press-time exception, and the reasoning is at
-    // their press claim in on_button_press.)
+    // (The THREE dropdown ANCHORS — File, Edit and Settings, a Navigation
+    // anchor having left 2026-08-15 and Edit having arrived 2026-08-20 — are
+    // deliberately NOT armed: their toggle is the recorded press-time
+    // exception, and the reasoning is at their press claim in on_button_press.
+    // The claim walks kDropdownMenus, so neither of those two changes touched
+    // it or this note's membership.)
     //
     // `shift` is THE PRESS-TIME MODIFIER, carried with the arm because the
     // release deliberately does not re-read modifiers (the modal release's own
@@ -4544,10 +4547,12 @@ struct AppState {
     };
     RedesignTooltip redesign_tooltip;
 
-    // THE MENU ROW'S DROPDOWN — ONE popup state for BOTH menus (Settings
-    // since 2026-07-31, File since 2026-08-13; Navigation was a third from
-    // 2026-08-02 until its deletion 2026-08-15, and neither its arrival nor its
-    // departure needed a line in here — which is the shape's whole point),
+    // THE MENU ROW'S DROPDOWN — ONE popup state for EVERY menu (Settings
+    // since 2026-07-31, File since 2026-08-13, Edit since 2026-08-20;
+    // Navigation was a third from
+    // 2026-08-02 until its deletion 2026-08-15, and not one of those arrivals
+    // or that departure needed a line in here — which is the shape's whole
+    // point),
     // hanging under whichever button
     // emits it. `menu` is the whole modality AND the whole "never two at once"
     // rule: while it is not None the popup owns the keyboard (on_key's popup
@@ -4594,7 +4599,7 @@ struct AppState {
     // arm cannot answer either question now that it moves — it reads -1 both
     // before any press and while a live press stands over a separator.
     // TWO PRODUCERS, ONE MEANING: the popup's own ITEM press, and (architect
-    // 2026-08-03) the ANCHOR press that OPENS a menu — press File or Settings,
+    // 2026-08-03) the ANCHOR press that OPENS a menu — press any of the three,
     // hold, drag down into the menu that came up, and releasing on
     // an item fires it, the desktop menu bar's one continuous gesture. The name
     // predates the second producer and is kept: both are the same fact, "the
@@ -6723,10 +6728,12 @@ inline bool history_mode_revert_subject_standing(
 // the buttons the view refuses, false for the ones that still work in it.
 // DERIVED FROM THE GATES, never hand-listed — the definition (input_pointer.cpp,
 // beside the chord table it walks) asks history_mode_key_blocked about each
-// button's own chord and hand-answers the TWO ANCHORS, which have none —
-// Settings dead on the toggle_dropdown lockout, File live since 2026-08-13, its
+// button's own chord and hand-answers the THREE ANCHORS, which have none —
+// Settings dead on the toggle_dropdown lockout, EDIT dead beside it since
+// 2026-08-20 (every one of its five propagate rows is a chord the mode drops,
+// so its menu would open onto nothing), File live since 2026-08-13, its
 // menu opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION
-// INVENTORY. (It hand-answered a third, Navigation, live from 2026-08-08 until
+// INVENTORY. (It hand-answered a fourth, Navigation, live from 2026-08-08 until
 // that anchor's deletion 2026-08-15.) Read
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
@@ -6949,7 +6956,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     decides. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's two anchors and row 3's tabs answer true HERE: row 1 keeps its
+//   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
 //     two faces by ruling, and a tab has no disabled face of its own. Their
 //     entries exist
 //     so the vector is total over the roster and the comparator needs no

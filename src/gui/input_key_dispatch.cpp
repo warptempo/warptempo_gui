@@ -1890,9 +1890,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the two anchors alone, which have no chord to ask about: Settings dead
-// on the toggle_dropdown lockout, File live since 2026-08-13 — a third,
-// Navigation, was live from 2026-08-08 until its 2026-08-15 deletion), never
+// for the three anchors alone, which have no chord to ask about: Settings and,
+// since 2026-08-20, Edit both dead on the toggle_dropdown lockout, File live
+// since 2026-08-13 — another, Navigation, was live from 2026-08-08 until its
+// 2026-08-15 deletion), never
 // hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
@@ -3070,9 +3071,10 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// THE OPEN DROPDOWN'S keyboard gate — ONE gate for BOTH menus, because there is
+// THE OPEN DROPDOWN'S keyboard gate — ONE gate for EVERY menu, because there is
 // one popup state and a dropdown is a dropdown (the Navigation menu joined
-// 2026-08-02 and the File one 2026-08-13, each needing nothing here, and the
+// 2026-08-02, the File one 2026-08-13 and the Edit one 2026-08-20, each needing
+// nothing here, and the
 // Navigation menu's 2026-08-15 deletion needed nothing either: bare Esc is the
 // SIXTH bare-Esc binding through all of it, never a seventh and never a fifth). Returns true when the press is SWALLOWED (the
 // popup consumed it, or it was inert); false only for Ctrl+Q, which closes the

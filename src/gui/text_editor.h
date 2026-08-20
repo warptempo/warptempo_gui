@@ -154,8 +154,10 @@ enum class Kind {
 // IT IS HOMED HERE because five of the product's six modal surfaces are text
 // editors and `enter` below is their one activation route, which is what makes
 // the stamping STRUCTURAL rather than disciplinary: no opener can forget to
-// take an id, and a fifth dialog editor inherits the identity for free. The
-// PROMPT — the fifth surface, and not an editor — takes its id from this same
+// take an id, and each new dialog editor has inherited the identity for free —
+// the fourth in 2026-08-07 and the fifth, the measure paste-offset editor, in
+// 2026-08-20, neither one touching this counter. The
+// PROMPT — the SIXTH surface, and not an editor — takes its id from this same
 // counter at its own one raise route (PromptState::present, app_state.h), so
 // the ids never collide across the two classes and one integer compare answers
 // "is this published geometry the surface that owns input right now" (the

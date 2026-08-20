@@ -1171,7 +1171,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — File or Settings, whichever emitted the open
+        // well as on hover — whichever of the three anchors emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the
@@ -3086,7 +3086,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 }
 
 void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
-    // THE MENU ROW'S DROPDOWN — ONE painter for BOTH menus, hanging flush under
+    // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
     // the button that emits it at ZERO margin: its top edge is the BUTTON's
     // bottom edge (not the lane's: row 1's 1px margin-bottom puts those one pixel
     // apart, and the architect ruled the button; the full argument is at the
@@ -3103,8 +3103,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
     // and the accelerator's right margin.
     //
-    // THE TWO MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
-    // accelerator COLUMN, which File has and Settings does not. The width
+    // THE MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
+    // accelerator COLUMN, which the two COMMAND menus (File, and Edit since
+    // 2026-08-20) have and Settings does not. The width
     // FOLLOWS from it — one expression with an optional term — rather than being
     // a second difference of its own, and everything else (chrome, item height,
     // insets, separator, faces, baseline, and now the label indent and right

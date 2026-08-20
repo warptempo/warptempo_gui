@@ -1213,7 +1213,7 @@ struct GuiInputHandler {
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of BOTH non-chord buttons, File and Settings: it closes the
+    // action of EVERY non-chord button — File, Edit and Settings: it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
     // than a rule. Its ONE refusal is the `h` history view's, and it is
@@ -1286,7 +1286,7 @@ struct GuiInputHandler {
     void update_menu_row_exit(int mouse_x, int mouse_y);
     void disarm_menu_row();
     // Which item is at (x, y), or -1 — the painter's published boxes. PURE
-    // GEOMETRY, and since 2026-08-15 the whole answer: no item on either menu
+    // GEOMETRY, and since 2026-08-15 the whole answer: no item on any menu
     // can grey (the retired per-item disabled state's record is at the
     // definition, input_pointer.cpp).
     int  dropdown_item_at(int x, int y) const;
@@ -1365,8 +1365,8 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled / radio refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). The two buttons
-    // outside it are row 1's File and Settings, whose action is a
+    // being a consumed nothing). The three buttons
+    // outside it are row 1's File, Edit and Settings, whose action is a
     // dropdown
     // toggle — the recorded press-time exception, stated at their claim (row 1
     // had a chord button, Quit, inside it until 2026-08-13, when its act became

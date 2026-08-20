@@ -52,12 +52,13 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. TWO roster entries are absent — row 1's FILE and SETTINGS
-// anchors, each of whose action is a POPUP TOGGLE, not a chord at all, since no
-// keyboard chord opens or closes a dropdown. Both are spelled at their own claim.
+// the same ids. THREE roster entries are absent — row 1's FILE, EDIT and
+// SETTINGS anchors, each of whose action is a POPUP TOGGLE, not a chord at all,
+// since no keyboard chord opens or closes a dropdown. All three are spelled at
+// their own claim, which walks kDropdownMenus rather than naming them.
 // THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
-// table, which is what makes "the table's length plus those two IS the roster"
-// a build-time fact rather than a remembered pair of names.
+// table, which is what makes "the table's length plus those three IS the
+// roster" a build-time fact rather than a remembered list of names.
 //
 // The `shift` column is each button's OWN chord — THREE rows set it: Redo's
 // Ctrl+Shift+Z and, since 2026-08-15, the marker walk's Shift+Tab (previous
@@ -125,13 +126,15 @@ struct ToolbarChord {
 // body (arm_redesign_press / finish_chrome_press_release) instead of
 // accumulating a special case per row.
 //
-// ROW 1'S TWO MENU BUTTONS ARE THE ABSENTEES, and the membership changed
-// hands four times: Quit joined the table when Ctrl+Q was recognised as its
+// ROW 1'S THREE MENU BUTTONS ARE THE ABSENTEES, and the membership changed
+// hands five times: Quit joined the table when Ctrl+Q was recognised as its
 // chord, Settings left it when its action became a DROPDOWN TOGGLE (a popup
 // open/close is not a chord at all — the bare `;` keyboard route still opens the
 // editor directly, untouched), Navigation arrived a menu button 2026-08-02 and
 // left with its whole menu 2026-08-15 (deleted: every one of its seven rows had
-// grown a button), and
+// grown a button), EDIT arrived a menu button 2026-08-20 with the propagate
+// relocation (which deleted two chord rows from this table in the same act,
+// IconCopy's and IconPaste's), and
 // on 2026-08-13 QUIT LEFT THE TABLE WITH ITS BUTTON: row 1 paints no held face,
 // so a button acting at the lift gave no feedback while it was down, and the
 // architect moved the act into a THIRD MENU — File, one item, "Quit", dispatched
@@ -484,8 +487,11 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here — 49
-// rows against the roster's 51 since 2026-08-19, when the MARKER MEASURE
+// every RedesignButton but the three menu anchors carries a chord here — 47
+// rows against the roster's 50 since 2026-08-20, when the EDIT anchor joined
+// row 1 and IconCopy and IconPaste were deleted from row 4 in one act (one
+// non-chord entry gained, two chord rows lost). It was 49 against 51 from
+// 2026-08-19, when the MARKER MEASURE
 // arrived on bare `/` (a chord, so the pair moved together). It was 48 against
 // 50 from 2026-08-18's THIRD ruling, when the two
 // WALK RADIOS arrived on bare `g` (two chords, so the pairs moved together;
@@ -990,7 +996,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
         return history_mode_key_blocked(tc.key, chord, app);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
-    // (the table plus the two anchors is the whole roster) and stated rather
+    // (the table plus the three anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
@@ -4059,7 +4065,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // keep in step — and letting them through here is what keeps that single
     // coverage true. ONE PRESS ROUTE IN THESE ROWS DISPATCHES NO CHORD
     // (re-derived 2026-08-06, again 2026-08-15 when the Navigation anchor left,
-    // and again 2026-08-18 when the walk selector did): the two menu anchors,
+    // again 2026-08-18 when the walk selector did, and again 2026-08-20 when
+    // the EDIT anchor arrived): the three menu anchors,
     // which have none and are
     // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
     // THIS MODE STOOD, from 2026-08-05 to 2026-08-18: the tab row's band claim
@@ -5828,7 +5835,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // down is the popup's own bit.
 //
 // THAT SECOND TERM WAS THE SCOPE LINE AND THE SCOPE WIDENED (architect
-// 2026-08-03): a press on an ANCHOR button (File or Settings) followed by
+// 2026-08-03): a press on ANY ANCHOR button (File, Edit or Settings) followed by
 // a drag into the popup is the other half of the standard menu gesture, and it
 // now works — the anchor press that OPENS a menu records the same claim an item
 // press does, so this walk serves both halves with nothing added here. The bit
@@ -7102,7 +7109,7 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 }
 
 // THE MENU ROW'S MODE, OPEN HALF (architect 2026-08-03): once a menu has been
-// opened from row 1, the two anchors open on the POINTER ALONE — the menu-bar
+// opened from row 1, the anchors open on the POINTER ALONE — the menu-bar
 // behaviour every desktop has, and the completion of the row-1 hover close,
 // which puts a menu away and now leaves the row able to bring one back. The bit
 // and its whole contract are at AppState::Dropdown::menu_row_armed.
