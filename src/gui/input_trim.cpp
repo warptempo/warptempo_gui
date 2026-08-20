@@ -1,6 +1,5 @@
 #include "input_handler.h"
 
-#include "engine/engine_geometry.h"  // kN, the floor's own derivation
 #include "gui_display_context.h"
 #include "render.h"
 #include "warp_frame_map_view.h"
@@ -52,10 +51,12 @@
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
 //     because a clamp is only meaningful where a bound is being pushed.
 //   THE SWEEP HAS NO PARTNER TO CLAMP AT — it writes BOTH bounds from one
-//     anchor and one moving column — and takes a MINIMUM WIDTH FLOOR instead
-//     (write_trim_from_sweep): a pair narrower than the floor is WIDENED to it
-//     rather than refused. The floor is deliberately NOT applied to the two
-//     drags above, which is stated in full at the floor itself.
+//     anchor and one moving column — and needs none: it authors ANY span its
+//     two ends describe, down to nothing at all, and a COINCIDENT release
+//     falls into auto_clear_crossed_trim exactly as the single-bound drag's
+//     does (the shared escape, below). The MINIMUM WIDTH FLOOR it carried
+//     from 2026-08-18 to 2026-08-19 is retired — the record is at
+//     write_trim_from_sweep.
 // EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
 // 2026-08-05, generalizing bare `x`'s own 2026-07-30 land to the whole family —
 // the one authoritative statement of the rule; other sites state their own class
@@ -127,8 +128,9 @@
 // full ruling is at read_only_key_blocked (input_key_dispatch.cpp), the model's
 // one authoritative home.
 //
-// The zero floor is subsumed by the walls but remains the reason the floor
-// exists at all: a negative position is unrepresentable in the authored
+// THE ZERO FLOOR (frame 0 — not a span rule, and unrelated to the retired
+// sweep width floor) is subsumed by the walls but remains the reason a lower
+// clamp exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
 // negatives as malformed) — a format-representability floor, not a spacing
 // or validity rule. Past-EOF bounds are unreachable: the gesture walls
@@ -197,6 +199,15 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // begin == end rather than a crossed pair — which this compare has always
 // caught, so the drag's route to clearing the trim (drag one handle onto the
 // other) is served by the rule exactly as written, with nothing added.
+//
+// AND SINCE 2026-08-19 THAT ESCAPE IS GLOBAL, still with nothing added (the
+// architect, retiring the sweep's minimum width floor): the SWEEP can now
+// author any span its two ends describe, including a coincident pair, and its
+// release runs this same tail through commit_trim_mutation — so a stroke that
+// ends where it began resets to the whole song exactly as a handle dragged
+// onto its twin does. ONE OWNER, this compare, for every former: the endcap
+// drag, the sweep, the bridge and the typed routes all reach the whole-song
+// reset here rather than each spelling an escape of its own.
 // Every trim commit site — the SWEEP's release, the endcap/bridge drag release,
 // the bound-set click and the settings-editor `:trim_*=` commit — calls this
 // after its mutation and before its invalidations, so the repaint shows the
@@ -319,70 +330,44 @@ void GuiInputHandler::handle_trim_clear_both() {
 // active_domain_to_source_frame (the identity in source view, the target-view
 // inverse the trim gestures already use, funnelling through snap_authored_frame
 // once). The map is MONOTONE, so lo/hi order survives it — equality is the only
-// collapse it can produce, which is exactly what the floor below answers.
+// collapse it can produce, and an equal pair is a legal thing to write here:
+// the release's commit tail turns it into the whole song (below).
 //
 // Returns whether a bound was actually written, which is the caller's commit
 // gate: a refused write leaves the release owing no tail at all.
 //
-// THE MINIMUM TRIM WIDTH (architect 2026-08-18) — the floor that REPLACED the
-// degenerate-result refusal bare `x` carried, on his reading that the refusal
-// was the wrong shape for what is really a look-and-feel problem: "in extreme
-// degenerate cases of 16x stretch the 8px drag thresh should still give a min
-// width trim region even with the most minute of drags... we should make the
-// floor as small as we can without making degenerate output".
+// THE SWEEP AUTHORS ANY SPAN, and its degenerate cases have no backstop of
+// their own (architect 2026-08-19, RETIRING the MINIMUM WIDTH FLOOR that stood
+// here for one day). The floor — kMinTrimSpanFrames, 65536 whole source frames,
+// derived as the resolved tempo-scale ceiling (16) times the engine window kN
+// so that a swept window's TARGET span could never fall below one analysis
+// window at either end of the value bracket — widened any narrow stroke instead
+// of refusing it. It is deleted whole: the architect found the enforced minimum
+// distracting in the hand, and too short a span to be worth the machinery that
+// held it. Nothing replaced it and nothing should — a floor here is exactly the
+// rare-fault backstop the product removes rather than patches.
 //
-// IT IS A FLAT COUNT OF SOURCE FRAMES, THE SAME IN BOTH VIEWS, and that is the
-// whole reason for its shape. A floor expressed as a DURATION of source (the
-// 100 ms form, rejected the same day) paints a variable width in TARGET view,
-// where the same source window is stretched or squeezed by the resolved
-// tempo-scale product — so it would be two rules wearing one number. A flat
-// source-frame count is one rule, and the derivation below is what makes it
-// safe at BOTH ends of the bracket rather than only at the near one.
+// SO A DEGENERATE SPAN IS LEGAL, and there are two of them, answered in two
+// different places:
+//   * A COINCIDENT PAIR (begin == end) is answered by the ENDCAP DRAG'S OWN
+//     ESCAPE, now global: the release runs the shared commit tail, whose
+//     auto_clear_crossed_trim resets the pair to the WHOLE SONG on the same
+//     `end <= begin` compare that has always caught a handle dragged onto its
+//     twin. One owner for every former; no arm was added here for the sweep,
+//     and none is wanted.
+//   * A TINY BUT NON-EMPTY PAIR simply rests and renders. It is the RENDER
+//     boundary that owns whether such a window is honorable — validate_trim_frames
+//     (trimmer.h) refuses only a pair whose TARGET span rounds below one output
+//     sample, and a refusal there means "render untrimmed" (the orchestrators'
+//     fallback), never a failed render. That is the honest backstop: the stage
+//     that actually knows the geometry decides, at the moment it has the map,
+//     instead of a gesture-time constant guessing on its behalf.
 //
-// THE DERIVATION, from constants the product already owns:
-//   * THE RESOLVED TEMPO-SCALE PRODUCT IS BOUNDED BY [1/16, 16]. value_format.h
-//     names the floor in its own words — "Scale's floor, together with tempo's
-//     floor, bounds the resolved tempo-scale product below by
-//     0.25 * 0.5 * 0.5 = 1/16" — and both brackets are multiplicatively
-//     symmetric, so the CEILING is 4.00 * 2.0 * 2.0 = 16: marker tempo
-//     [kTempoMinCents, kTempoMaxCents] = [0.25, 4.00], and marker scale and the
-//     global settings scale [kScaleMin, kScaleMax] = [0.50, 2.0] each.
-//   * THE ENGINE WINDOW IS kN = 4096 SAMPLES (engine_geometry.h, and not
-//     authoring-tunable).
-//   * TRIM IS A PREPOST STAGE ON THE SOURCE, and the rendered output of a
-//     trimmed window is that window transformed by the product. THE DIRECTION,
-//     verified at the builder rather than assumed: build_warp_frame_map emits
-//     `target_delta = source_delta / (tempo * marker_scale * settings_scale)`
-//     (warp_frame_map_build.cpp), so the output is SHORTEST at the product's
-//     CEILING — a 16x squeeze. A source window therefore survives as at least
-//     ONE FULL ANALYSIS WINDOW of output when source >= 16 * kN.
-// So the floor is 16 * 4096 = 65536 whole source frames, about 1.49 s at
-// 44100 Hz — the lowest sample rate the product accepts. At the product's other
-// extreme (1/16) the same window renders SIXTEEN TIMES LONGER than its source,
-// which is why one number serves both views: its TARGET-domain span never falls
-// below kN whatever the stretch. The floor is derived from engine geometry and
-// the authored value brackets rather than invented, and it can never produce a
-// window the engine cannot render.
-//
-// WHERE IT APPLIES AND WHERE IT DOES NOT, and the distinction is load-bearing:
-// IT APPLIES TO THE SWEEP — a sweep whose inverse-mapped pair comes out
-// narrower than the floor is WIDENED to it rather than refused, preserving the
-// gesture's ANCHOR (the end the user did not move) and pushing the MOVING end
-// away from it, or the other way when that would cross a song wall. IT DOES NOT
-// APPLY TO THE BOUND DRAGS: they keep their collapse-to-coincident escape into
-// auto_clear_crossed_trim, which resets to the full window — the only route
-// back to the whole song by pointer or by finger, which a floor there would
-// make unreachable. That is the first question a reader has here, so both
-// halves are stated at the floor rather than one of them inferred.
-//
-// (constexpr at file scope: internal linkage, and it belongs beside the
-// derivation above rather than in the partner clamp's namespace block. The
-// arithmetic is exact in double — 400/100 = 4.0, 2.0 * 2.0 = 4.0, 4.0 * 4.0 =
-// 16.0, 16.0 * 4096.0 = 65536.0 — so the cast truncates nothing.)
-constexpr double kMaxTempoScaleProduct =
-    (static_cast<double>(kTempoMaxCents) / 100.0) * kScaleMax * kScaleMax;
-constexpr int64_t kMinTrimSpanFrames =
-    static_cast<int64_t>(kMaxTempoScaleProduct * static_cast<double>(kN));
+// (The floor's own retired argument for a FLAT COUNT OF SOURCE FRAMES rather
+// than a duration — a duration paints a variable width in target view, where
+// the resolved tempo-scale product stretches the same source window — is worth
+// keeping only as a note to whoever proposes the next span rule here: any such
+// rule must be one number in both views or it is two rules wearing one name.)
 
 bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_active,
                                             int64_t moving_active) {
@@ -398,31 +383,11 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_active,
     anchor = clamp_wall(anchor);
     moving = clamp_wall(moving);
 
-    // THE FLOOR, applied on the ANCHOR-relative pair so the end the user is not
-    // holding stays exactly where it was seated. Push the moving end away; if
-    // that runs it past a song wall, push the other way instead, and clamp on
-    // the shared inclusive [0, total-1] domain either way — walls win, as they
-    // win everywhere. A source SHORTER than the floor cannot satisfy it in
-    // either direction and simply comes out wall-to-wall, which is the full
-    // window: the honest answer on a piece with no room for a trim.
-    const int64_t floor_frames = kMinTrimSpanFrames;
-    if (moving >= anchor) {
-        if (moving - anchor < floor_frames) {
-            moving = anchor + floor_frames;
-            if (moving > wall) {
-                moving = wall;
-                anchor = clamp_wall(moving - floor_frames);
-            }
-        }
-    } else {
-        if (anchor - moving < floor_frames) {
-            moving = anchor - floor_frames;
-            if (moving < 0) {
-                moving = 0;
-                anchor = clamp_wall(moving + floor_frames);
-            }
-        }
-    }
+    // THE WALLS ARE THE WHOLE OF THIS FUNCTION'S GEOMETRY since 2026-08-19: the
+    // pair is ordered and written as the two ends describe it, with no width
+    // rule of any kind between them (the retired floor's record is at the head
+    // of this function). A coincident pair is written like any other and the
+    // RELEASE turns it into the whole song through the shared escape.
     const int64_t begin = std::min(anchor, moving);
     const int64_t end   = std::max(anchor, moving);
     if (app.trim.begin_frame == begin && app.trim.end_frame == end)
@@ -1007,9 +972,10 @@ void GuiInputHandler::commit_trim_drag() {
 // produce a crossed pair and never reach the crossed-commit reset with one:
 // commit_trim_mutation below carries the shared commit tail every setter runs
 // (auto_clear_crossed_trim first), kept
-// for that shape and not because this route can fire it (the SWEEP's
-// arrangement exactly — it orders and floors its pair, so it cannot hand the
-// tail a crossed one either). The reset rule itself is UNTOUCHED everywhere else — the drag
+// for that shape and not because this route can fire it. THE SWEEP IS THE
+// CONTRAST, not the twin: it orders its pair but floors nothing since
+// 2026-08-19, so a coincident stroke reaches that tail deliberately and clears
+// the trim there. The reset rule itself is UNTOUCHED everywhere else — the drag
 // release and the settings commit still reset a crossed pair to the song edges.
 // The refusal is where it is — past the clamps, ahead of every write — because
 // silently resetting the whole window on a mis-click is the outcome trim cannot

@@ -1104,11 +1104,13 @@ struct GuiInputHandler {
     // Chebyshev gate from the down point, then the span extension with the
     // playhead riding the moving end. end_touch_region(): the release
     // path's own body (a moved drag has ALREADY written the trim, per motion
-    // event and floored to the minimum width, so its end runs the sweep's
-    // commit tail; a MOTIONLESS end wrote nothing and leaves the playhead where
+    // event and under no width rule at all, so its end runs the sweep's
+    // commit tail — where a coincident stroke resets to the whole song; a
+    // MOTIONLESS end wrote nothing and leaves the playhead where
     // the begin seated it — the former's motionless-release rule, which is what
     // makes a long-press-then-lift a PLACEMENT. The release-time sliver
-    // dissolve retired with the free span it protected, 2026-08-18). Any end
+    // dissolve retired with the free span it protected, 2026-08-18, and the
+    // minimum width floor with the architect's 2026-08-19 ruling). Any end
     // commits — finger up,
     // wl_touch.cancel, capability loss; the platform's end split delivers
     // or drops the staged final frame, its record.
@@ -2310,28 +2312,31 @@ private:
     // overlay first. It takes the setter's regime at the first accepted change
     // — the trim-mutation playback stop and the deselect — and leaves the
     // PLAYHEAD PARK and the shared commit tail to the release
-    // (commit_region_sweep), the endcap drag's own timing. It also applies the
-    // MINIMUM TRIM WIDTH floor (kMinTrimSpanFrames, at the definition).
+    // (commit_region_sweep), the endcap drag's own timing. IT ENFORCES NO
+    // WIDTH: the ordered pair is written as the two ends describe it, walls
+    // apart, and a COINCIDENT stroke is cleared to the whole song by the
+    // release's auto_clear_crossed_trim — the endcap drag's escape, shared
+    // rather than copied.
     // Returns whether a bound was actually written, which is the release's
     // commit gate.
     //
     // (SET THE TRIM FROM A FREE SCRATCH SPAN — the act bare `x` used to name —
     // is RETIRED with the two-step model it completed: setting the region IS
-    // setting the trim now. Its degenerate-result refusal went with it, replaced
-    // by the minimum width floor below. The KEY ITSELF IS LIVE, repointed onto
+    // setting the trim now. The KEY ITSELF IS LIVE, repointed onto
     // the overlay's show/hide toggle, handle_toggle_trim_region, which writes no
     // bound and is not a member of anything on this page. Shift+X survives
     // unchanged as the recovery route.)
     bool write_trim_from_sweep(int64_t anchor_active, int64_t moving_active);
 
-    // (THE MINIMUM TRIM WIDTH is a FLAT COUNT OF SOURCE FRAMES, the same in
-    // both views — kMinTrimSpanFrames, a file-scope constant beside
-    // write_trim_from_sweep in input_trim.cpp, where its derivation from the
-    // engine window and the authored value brackets lives, along with the
-    // load-bearing statement of where it applies (the sweep) and where it
-    // deliberately does not (the bound drags, whose collapse-to-coincident IS
-    // the route back to the whole song). It has one reader and needs no member
-    // here.)
+    // (THE MINIMUM TRIM WIDTH FLOOR — kMinTrimSpanFrames, a flat count of
+    // source frames derived from the engine window and the authored value
+    // brackets — lived one day, 2026-08-18..19, and is DELETED: the architect
+    // found the enforced minimum distracting and too short to be worth its
+    // machinery, and ruled the degenerate cases get the no-backstop treatment.
+    // The retirement record, including what now answers each degenerate shape,
+    // is at write_trim_from_sweep in input_trim.cpp. Do not reinstate a span
+    // floor at a gesture: the render boundary owns whether a window is
+    // honorable, and it answers with an untrimmed render, not a refusal.)
 
     // Shift+X MAXIMIZES the trim to the full window [0, total-1] (architect
     // 2026-07-25 for the binding, re-posed 2026-07-30 under always-set: the full

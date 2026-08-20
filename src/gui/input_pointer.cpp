@@ -4763,7 +4763,18 @@ void GuiInputHandler::commit_region_sweep() {
     // auto_clear_crossed_trim, the repaints, the target-render trigger, and the
     // PLAYHEAD PARKED AT THE COMMITTED TRIM START — at the end only, a
     // per-frame cursor chase being a cursor fighting the gesture that is moving
-    // the bounds. A sweep that WROTE NOTHING owes none of it: a motionless
+    // the bounds.
+    //
+    // AND THAT TAIL IS WHERE THE SWEEP'S DEGENERATE CASE IS ANSWERED (architect
+    // 2026-08-19, retiring the sweep's minimum width floor): a stroke that ends
+    // where it began rests begin == end, which auto_clear_crossed_trim's
+    // `end <= begin` compare resets to the WHOLE SONG — the endcap drag's own
+    // escape, made global by pointing the sweep at it rather than by copying it
+    // (the rule at auto_clear_crossed_trim, input_trim.cpp). So the shared tail
+    // is not merely convenient here; it is the sweep's whole answer to a
+    // collapsed span, and nothing in this function tests a width.
+    //
+    // A sweep that WROTE NOTHING owes none of it, unchanged: a motionless
     // press-release, a stroke refused by degenerate geometry, and the `h`
     // view's carved-out former all end here with the trim exactly as they found
     // it, so no playhead parks and no render triggers behind them.
@@ -7221,9 +7232,12 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     const int64_t far_frame = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, rel), app, audio);
     // THE TRIM WRITE — the sweep IS a trim write (architect 2026-08-18): from
-    // the drag's fixed ANCHOR to the pointer's column, ordered, floored to the
-    // minimum width, through the one owner that carries all of that
-    // (write_trim_from_sweep, input_trim.cpp). It owns its own same-pair
+    // the drag's fixed ANCHOR to the pointer's column, ordered and clamped to
+    // the song walls, through the one owner that carries all of that
+    // (write_trim_from_sweep, input_trim.cpp). NO WIDTH RULE stands between the
+    // two ends since 2026-08-19 (the retired floor's record is at that owner),
+    // so a stroke authors whatever span it draws — including none at all, which
+    // the release turns into the whole song. It owns its own same-pair
     // short-circuit, so a sub-pixel jitter event inside one column writes and
     // repaints nothing; `wrote_trim` latches for the release's commit gate.
     //
@@ -7270,9 +7284,10 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // TIMESTAMP invalidate is owed
     // separately because the bottom-strip readout shows this cursor whenever
     // no scanner is active, and it lives outside the waveform area.
-    // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check:
-    // a jitter drag no longer dissolves anything, the floor having widened
-    // whatever it wrote to a usable window.)
+    // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check
+    // (2026-08-18) and stayed retired when the minimum width floor went the
+    // same way (2026-08-19): a jitter drag dissolves nothing and is widened to
+    // nothing — it commits the sliver it drew, and Shift+X is the way back.)
     app.playhead_cursor_sample = far_frame;
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();

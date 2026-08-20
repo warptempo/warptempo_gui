@@ -251,12 +251,14 @@ struct UndoEntry {
 //   * a BOUND drag IS the single-bound endcap drag — it clamps INCLUSIVELY at
 //     its partner, and a coincident release resets to the full window through
 //     auto_clear_crossed_trim, which is the drag's own route to clearing the
-//     trim and now the finger's only one;
+//     trim and, since 2026-08-19, EVERY former's: the sweep's coincident
+//     release lands on the same compare;
 //   * a drag INSIDE is the BRIDGE drag (rigid delta, invariant gap, no partner
 //     wall);
 //   * a SWEEP — the shift+drag former and the touch region hold — is a direct
-//     trim write under a MINIMUM WIDTH floor (write_trim_from_sweep,
-//     input_trim.cpp).
+//     trim write under no width rule at all (write_trim_from_sweep,
+//     input_trim.cpp), whose own coincident release reaches that same
+//     whole-song reset.
 // All three take the trim-write class whole: the setter's deselect, the
 // trim-mutation playback stop, and the playhead parked at the new trim start AT
 // THE RELEASE ONLY (a per-frame cursor chase would fight the gesture moving the
@@ -537,7 +539,7 @@ struct UndoHistory {
 // drag; motion past the shared press-becomes-drag threshold
 // (kDragMovedThresholdPx) writes the trim from the press frame to the pointer
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
-// input_trim.cpp — which owns the minimum-width floor). THE PRESS ITSELF
+// input_trim.cpp — which enforces no width, only the song walls). THE PRESS ITSELF
 // WRITES NO TRIM: a motionless shift click is the placement and nothing else.
 // IT DOES SHOW THE OVERLAY (architect 2026-08-19) through the one raise owner,
 // at every entry but the `h` view's: the surface being drawn on is visible
@@ -573,10 +575,12 @@ struct UndoHistory {
 //
 // THE RELEASE-TIME SLIVER DISSOLVE IS RETIRED with the free span it protected
 // (2026-08-18): a jitter drag that crosses the gate and rests a two-pixel span
-// no longer leaves a sliver highlight — it commits a trim, widened to the
-// minimum width floor, which is exactly what the architect asked the floor for
-// ("the 8px drag thresh should still give a min width trim region even with the
-// most minute of drags"). Shift+X is the way back.
+// no longer leaves a sliver highlight — it COMMITS a two-pixel trim, exactly as
+// drawn. The minimum width floor that briefly widened such a stroke is retired
+// too (architect 2026-08-19: the enforced minimum was distracting and too short
+// to be worth its machinery), so the sweep has no width rule of any kind left —
+// a stroke that collapses onto its own anchor clears the trim to the whole song
+// at the release, and Shift+X is the way back from anything else.
 //
 // ESC DOES NOTHING TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a
 // mid-drag Esc is swallowed by the drag-modal gate and the sweep keeps writing
@@ -2692,8 +2696,10 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // former's SLIVER FLOOR, end_region_drag_min_size_check, measured a rested span
 // against this same constant so that "never became a drag" and "never left the
 // slack" were one number. It is DELETED with the free span it protected — the
-// sweep writes the trim per motion event under kMinTrimSpanFrames now, and a
-// jitter drag past this threshold widens to that floor rather than dissolving.)
+// sweep writes the trim per motion event, so this threshold is once again only
+// what it says it is: the line between a click and a drag. A jitter drag that
+// crosses it commits the sliver it drew, nothing dissolving it and — since the
+// minimum width floor's retirement, 2026-08-19 — nothing widening it either.)
 // The TOUCH slop is a separate constant deliberately equal to it
 // (kTouchSlopPx, platform_wayland.cpp — the platform sits below this header),
 // which is what makes a quick finger drag cross both gates at once.
@@ -5456,7 +5462,7 @@ struct AppState {
     // the 9 px bar and, since 2026-08-18, on the waveform OVERLAY that is this
     // same window painted a second time — the ctrl / ctrl+shift bound-set
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
-    // pair in one stroke under a minimum-width floor; it replaced the bare-`x`
+    // pair in one stroke under no width rule at all; it replaced the bare-`x`
     // set-from-region arm when the region became the trim, and `x` now shows
     // and hides the overlay and writes no trim at all), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's
