@@ -412,8 +412,8 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_frame = std::clamp<int64_t>(snap_authored_frame(
                 dst_start + p.fractional_position * dst_dur), 0, reset_wall);
             nm.disabled     = p.disabled;
-            // NO COMMENT IS CARRIED, and that is by construction rather than by
-            // omission: `nm` is a FRESH marker, so its comment field rests
+            // NO MEASURE IS CARRIED, and that is by construction rather than by
+            // omission: `nm` is a FRESH marker, so its measure field rests
             // empty. A paste materializes new resets rather than duplicating
             // the captured ones, and a note about one marker is not a fact
             // about the copies its section produced elsewhere in the piece.

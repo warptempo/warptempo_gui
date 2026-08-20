@@ -1,6 +1,6 @@
 #pragma once
 
-#include "marker_comment.h"
+#include "marker_measure.h"
 
 #include <cstdint>
 #include <expected>
@@ -11,7 +11,7 @@
 // One warp marker's serialized form — the eight fields the .warpmarkers
 // file round-trips, and the only fields the parser domain and the
 // engine-bound render path read. Three independent state axes (the eighth
-// field, the comment, is free text and not a state axis):
+// field, the measure, is a score reference and not a state axis):
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
 //      (`tempo_cents` is the numeric value). `tempo_inherits == true` (a
@@ -56,19 +56,19 @@ struct WarpMarker {
 
     bool disabled      = false;
 
-    // FREE-TEXT COMMENT (architect approval 2026-08-19), serialized as the
-    // ` //<comment>` suffix past the canonical line — grammar, byte class and
-    // byte bound in marker_comment.h. Empty means no comment; the writer emits
-    // no suffix for it and the bare suffix is load-fatal.
+    // MEASURE REFERENCE (architect approval 2026-08-20), serialized as the
+    // ` //<measure>` suffix past the canonical line — grammar, canonical
+    // spelling and byte bound in marker_measure.h. Empty means no measure; the
+    // writer emits no suffix for it and the bare suffix is load-fatal.
     //
     // IT IS HOMED ON THE BASE rather than on the GUI's derived marker because
     // the field must round-trip through the file, and both readers are shared:
     // the CLI parses it (and never re-serializes anything), while the GUI store
     // upcasts this base whole. It reaches no further: MarkerForRender never
-    // carries a comment, and the render fingerprint serializes resolved fields
-    // only — so a comment cannot move a render key, and editing one can never
+    // carries a measure, and the render fingerprint serializes resolved fields
+    // only — so a measure cannot move a render key, and editing one can never
     // invalidate a completed render.
-    std::string comment;
+    std::string measure;
 };
 
 // Parse a .warpmarkers file in the canonical GUI-authored format. Never
@@ -78,10 +78,10 @@ struct WarpMarker {
 // missing frame-0 tempo owner is NOT a load rule — the render resolver
 // (resolve_warp_markers_for_render) normalizes it, silently seeding a plain
 // enabled 1.00 owner at frame 0, so any state the GUI can save loads back and
-// renders. Every line may carry the free-text ` //<comment>` suffix
-// (marker_comment.h); a malformed one — past the byte bound, malformed UTF-8,
-// a control byte, or the bare separator with nothing after it — is
-// GUI-unproducible and load-fatal like any other adversarial line. This is the
+// renders. Every line may carry the ` //<measure>` suffix
+// (marker_measure.h); a malformed one — off the measure grammar, past the byte
+// bound, or the bare separator with nothing after it — is GUI-unproducible and
+// load-fatal like any other adversarial line. This is the
 // canonical .warpmarkers reader for both the GUI store and the headless CLI.
 std::expected<std::vector<WarpMarker>, std::string>
 parse_warpmarkers_file(const std::string& path);
@@ -97,22 +97,22 @@ namespace warpmarkers_internal {
 // populated with inert defaults (100 / nullopt). Returns the marker on
 // success, or a one-line diagnostic on failure.
 //
-// `accept_comment` selects whether the line may carry the ` //<comment>`
-// suffix (marker_comment.h). When true the suffix is split off first, its
-// byte class validated, and the comment attached; when false the suffix is
+// `accept_measure` selects whether the line may carry the ` //<measure>`
+// suffix (marker_measure.h). When true the suffix is split off first, its
+// grammar validated, and the measure attached; when false the suffix is
 // not a concept and the no-whitespace refusal below rejects the line whole.
 // The four callers and their answers:
 //
-//   - the whole-file loop below (TRUE) — the on-disk grammar carries comments.
+//   - the whole-file loop below (TRUE) — the on-disk grammar carries measures.
 //   - the Ctrl+H revert's warp reconstitution (TRUE, input_key_dispatch.cpp) —
-//     the delta token carries the comment, so the rebuilt line does too.
+//     the delta token carries the measure, so the rebuilt line does too.
 //   - extract_warp_entry (TRUE, history_diff.cpp) — the history delta reads
-//     the same on-disk lines; false there would refuse every commented marker
+//     the same on-disk lines; false there would refuse every measured marker
 //     on the whitespace loop and vanish it from the diff lane.
 //   - the flag editor's candidate parse (FALSE, the default) — the payload
-//     buffer never holds a comment, so a ` //` typed into it is a grammar
-//     error that red-flashes at commit. The comment has its own editor.
+//     buffer never holds a measure, so a ` //` typed into it is a grammar
+//     error that red-flashes at commit. The measure has its own editor.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
-    const std::string& raw_line, bool accept_comment = false);
+    const std::string& raw_line, bool accept_measure = false);
 
 } // namespace warpmarkers_internal

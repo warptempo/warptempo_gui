@@ -2290,12 +2290,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   ROW'S ONLY RESTING GREYS: their two mode gates — the `h` view and
 //   a locked tab — are the BUTTONS' own and came down with them, which is why
 //   the always-on sentence above counts eleven and not sixteen — the MARKER
-//   COMMENT below joins them in that grey on a locked tab, though not in their
+//   MEASURE below joins them in that grey on a locked tab, though not in their
 //   home-view refusal;
-//   THE MARKER COMMENT (2026-08-19), seated between Toggle inherit and Add to
+//   THE MARKER MEASURE (2026-08-19), seated between Toggle inherit and Add to
 //   Selection — bare `/`, the speech balloon, an act with no lamp. It greys
 //   with the four verbs in the `h` view and on a locked tab, and unlike them it
-//   is NOT home-view gated (comments are the fourth ruled exception);
+//   is NOT home-view gated (measures are the fourth ruled exception);
 //   ADD TO SELECTION (2026-08-18), closing the verb group
 //   at the architect's own placement — bare `k`, the STICKY CTRL, and the
 //   row's ONE LIT FACE: it wears the selected fill while the mode stands. Its
@@ -2379,7 +2379,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
 // since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, THE MARKER
-// COMMENT and ADD TO SELECTION (bare `/` and bare `k`, consumed in there like
+// MEASURE and ADD TO SELECTION (bare `/` and bare `k`, consumed in there like
 // the verbs' chords); the two
 // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, Home/End being the mode's
 // own absolute jumps, Tab/Shift+Tab its diff-flag cycle (architect-confirmed
@@ -2481,11 +2481,11 @@ constexpr TransportRowDef kTransportGroup[] = {
 // member of this table that ever wears the lit fill; the four verbs above are
 // acts that complete.
 //
-// THE GROUP IS SIX since 2026-08-19, the MARKER COMMENT seated between Toggle
+// THE GROUP IS SIX since 2026-08-19, the MARKER MEASURE seated between Toggle
 // inherit and Add to Selection (bare `/`, edit-comment: Breeze's speech
 // balloon). It is an act like the four above it, not a mode, so it wears no
 // lamp — the editor's own open session is its state. It is the group's one
-// member that is NOT home-view gated: comments are the fourth ruled exception
+// member that is NOT home-view gated: measures are the fourth ruled exception
 // to the home-view binding, so it works on both columns in both audio views,
 // while the read-only lock greys it with the four verbs.
 constexpr TransportRowDef kMarkerVerbGroup[] = {
@@ -2493,7 +2493,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
-    {RedesignButton::IconMarkerComment,    icons::Icon::EditComment},
+    {RedesignButton::IconMarkerMeasure,    icons::Icon::EditComment},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three
@@ -2724,12 +2724,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // bottom row timestamp to left alignment, place a separator between
     // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
     // margin as FIVE + SEPARATOR + THREE + SEPARATOR + FOUR — the MARKER
-    // VERBS with the MARKER COMMENT and ADD TO SELECTION behind them, the
+    // VERBS with the MARKER MEASURE and ADD TO SELECTION behind them, the
     // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
     // architect's order since 2026-08-14). The span between the cell and the
     // right block is BARE GROUND since 2026-08-13, the status
     // chain that right-aligned in it having moved to the tab row. THE VERB
-    // GROUP IS SIX since 2026-08-19, the MARKER COMMENT joining it.
+    // GROUP IS SIX since 2026-08-19, the MARKER MEASURE joining it.
     //
     // THE TWO ENDS CANNOT CRAWL INTO EACH OTHER FROM THE CLOCK'S SIDE ANY MORE
     // (2026-08-18). The cell was CENTRED IN THE LANE until then, so it TRAVELLED
@@ -2748,7 +2748,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // block's origin lands left of the cell's ~203px right edge — and that is
     // ACCEPTED under the crop-at-the-floor allowance recorded at
     // kMinWindowWidthPx rather than answered: 640 is a floor no real host of
-    // this product uses (the rig is 1024, the laptop 1920). The Marker Comment
+    // this product uses (the rig is 1024, the laptop 1920). The Marker Measure
     // button took 34 of the 40 that Add to Selection left on 2026-08-18. THE
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
@@ -4902,7 +4902,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
 // YIELDS WHOLE: all SIXTEEN buttons — the transport three, the four
-// single-marker verbs with the Marker Comment and Add to Selection behind
+// single-marker verbs with the Marker Measure and Add to Selection behind
 // them, the marker-walk three and the four arrows — plus the clock and the row's three separators stand
 // down, nothing negotiates
 // for space,

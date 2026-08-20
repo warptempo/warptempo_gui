@@ -641,7 +641,9 @@ constexpr IconPath kEditSelectPaths[] = {
      "19 10.900391 14.300781 17 14 7 6"},
 };
 
-// THE MARKER COMMENT ACT'S GLYPH (2026-08-19): edit-comment, Breeze's speech
+// THE MARKER MEASURE ACT'S GLYPH (2026-08-19; the act was the marker comment
+// for one day and was rebranded 2026-08-20 — the Breeze FILE NAME stays, the
+// theme-provenance rule): edit-comment, Breeze's speech
 // balloon with its tail. THE FILE IS A SYMLINK in the installed theme —
 // actions/22/edit-comment.svg points at dialog-messages.svg — so what is
 // committed under assets/icons/breeze/edit-comment.svg is the RESOLVED file's

@@ -259,7 +259,7 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
         /*iter_grammar=*/iter_on);
 }
 
-// THE COMMENT EDITOR'S OPEN. The contract is at the declaration; this is the
+// THE MEASURE EDITOR'S OPEN. The contract is at the declaration; this is the
 // mechanics, and they are enter_text_edit's shape written for TWO stores
 // instead of one.
 //
@@ -268,7 +268,7 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
 // is, so a live audition survives the open. The decision table is at
 // GuiPlaybackLifecycle::stop_playback_for_modal_open, which this surface — like
 // its sibling — deliberately does not call.
-void GuiFlagEditor::enter_comment_edit(char column, int idx) {
+void GuiFlagEditor::enter_measure_edit(char column, int idx) {
     if (idx < 0) return;
     const bool phase = (column == 'P');
     const int  n = phase
@@ -277,7 +277,7 @@ void GuiFlagEditor::enter_comment_edit(char column, int idx) {
     if (idx >= n) return;
 
     if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::CommentText &&
+        app.top_flag_editor.kind == text_editor::Kind::MeasureText &&
         app.top_flag_editor.target == idx) {
         // Re-open on the live session's own target: preserve the pending text
         // and any in-progress state, just repaint (the payload editor's rule).
@@ -306,20 +306,20 @@ void GuiFlagEditor::enter_comment_edit(char column, int idx) {
     if (text_editor::is_active(app.top_flag_editor)) {
         text_editor::deactivate(app.top_flag_editor);
     }
-    // THE SEED IS THE MARKER'S OWN COMMENT — the only comment there is. A
+    // THE SEED IS THE MARKER'S OWN MEASURE — the only measure there is. A
     // display-time inheritance down the label cascade existed for one day and
-    // the architect reversed it on 2026-08-20 (a definition's note is
-    // positional prose, wrong at a reference measures later), so what a flag
-    // paints and what this editor opens with are the same one field on both
-    // columns. That the seed is the marker's OWN is now trivially true and is
-    // still spelled here, because it is what makes an empty commit a REMOVAL of
-    // this marker's note and nothing else's.
+    // the architect reversed it on 2026-08-20 (the field is a POSITION in the
+    // score, wrong at a reference sitting bars later), so what a flag paints
+    // and what this editor opens with are the same one field on both columns.
+    // That the seed is the marker's OWN is now trivially true and is still
+    // spelled here, because it is what makes an empty commit a REMOVAL of this
+    // marker's measure and nothing else's.
     const std::string seed = phase
-        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].comment
-        : app.warpmarkers.markers()[static_cast<size_t>(idx)].comment;
+        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].measure
+        : app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
     text_editor::enter(app.top_flag_editor, idx,
                        /*locked_prefix=*/std::string(), seed,
-                       text_editor::Kind::CommentText);
+                       text_editor::Kind::MeasureText);
 
     // Open-selected, the family's rule: the seeded text is fully selected so
     // the first keystroke replaces it wholesale; a blank seed selects nothing
@@ -336,21 +336,44 @@ void GuiFlagEditor::enter_comment_edit(char column, int idx) {
     viewport.invalidate_top_strip();
 }
 
-// THE COMMENT COMMIT. There is NO validator arm here and that is structural
-// rather than an omission: the editor's own type-time filters are the whole
-// grammar — replace_selection drops control bytes and malformed UTF-8, the
-// typed path admits only character-bearing codepoints, and the per-Kind cap is
-// kMaxMarkerCommentBytes itself — so every buffer that reaches this function is
-// already exactly what the two file parsers accept. "Loadable iff it commits"
-// therefore holds by construction and needs no second check to keep it.
+// THE MEASURE COMMIT, and it HAS a validator arm (2026-08-20, with the field's
+// rebrand from the free-text comment): the measure is a GRAMMAR, so the buffer
+// is judged HERE against validate_marker_measure — the same one judge the two
+// file parsers and both history delta extractors use, which is what keeps
+// "loadable iff it commits" exact rather than merely likely. The type-time
+// filters cannot carry the grammar the way they carried the old byte class: a
+// half-typed `12 4` is a legal prefix of a legal token, so refusal belongs at
+// the commit and nowhere earlier. There is deliberately NO Kind-dependent
+// keystroke filter; typing stays free and the commit decides.
 //
-// AN EMPTY BUFFER REMOVES THE COMMENT, which is what makes the bare ` //`
-// suffix a state the GUI can never write (and so load-fatal at the readers).
-void GuiFlagEditor::commit_comment_edit() {
+// THE REFUSAL IS THIS EDITOR'S OWN SHAPE, not a dialog's: `red = true`, a
+// top-strip repaint, one stderr line, and RETURN WITHOUT DEACTIVATING, so the
+// session stands with the offending text in place for correction. The damage
+// is the top strip alone — the stem flash that the FlagPayload refusal drives
+// is gated on that Kind at the painter, so a MeasureText red never reaches a
+// waveform pixel and there is no waveform-area edge to invalidate.
+//
+// AN EMPTY BUFFER REMOVES THE MEASURE and is exempt from the grammar (the
+// validator has no "empty is fine" reading — an empty tail on disk is
+// load-fatal), which is what makes the bare ` //` suffix a state the GUI can
+// never write.
+void GuiFlagEditor::commit_measure_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (app.top_flag_editor.kind != text_editor::Kind::CommentText) return;
+    if (app.top_flag_editor.kind != text_editor::Kind::MeasureText) return;
     const int idx = app.top_flag_editor.target;
     const std::string next = app.top_flag_editor.pending;
+
+    if (!next.empty()) {
+        std::string measure_err;
+        if (!validate_marker_measure(next, measure_err)) {
+            app.top_flag_editor.red = true;
+            viewport.invalidate_top_strip();
+            std::fprintf(stderr,
+                "warptempo_gui: Measure rejected: %s: %s\n",
+                measure_err.c_str(), next.c_str());
+            return;
+        }
+    }
     // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN, because the view
     // CANNOT MOVE under an open session: every column-switching key (`p`, `t`,
     // the 1/2/3 selectors, Ctrl+Tab) is dropped at the keyboard-modal gate
@@ -373,31 +396,31 @@ void GuiFlagEditor::commit_comment_edit() {
     // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no dirty
     // bit, no store bump — the shape every no-op commit in the product takes.
     const std::string& before = phase
-        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].comment
-        : app.warpmarkers.markers()[static_cast<size_t>(idx)].comment;
+        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].measure
+        : app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
     if (before == next) {
         this->exit_top_flag_edit_no_commit();
         return;
     }
 
-    // ONE UNDO ENTRY, affects_persistence TRUE: a comment is serialized content
+    // ONE UNDO ENTRY, affects_persistence TRUE: a measure is serialized content
     // and its edit dirties the tab like any other authored change. The snapshot
     // is taken before the write, the store's own convention.
     if (phase) {
         std::vector<GuiPhaseResetMarker> pre = app.phaseresetmarkers.markers();
         GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
-        if (m) m->comment = next;
+        if (m) m->measure = next;
         undo.push_undo_phase_reset(std::move(pre));
     } else {
         std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (m) m->comment = next;
+        if (m) m->measure = next;
         undo.push_undo_warp(std::move(pre));
     }
     undo.recompute_dirty();
 
-    // NO RE-RENDER AND NO MAP REBUILD: a comment reaches neither the engine nor
-    // the render fingerprint (the field's own contract at WarpMarker::comment),
+    // NO RE-RENDER AND NO MAP REBUILD: a measure reaches neither the engine nor
+    // the render fingerprint (the field's own contract at WarpMarker::measure),
     // so the box is the only thing that moved and the strip is the only damage.
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
@@ -574,12 +597,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // disabled lives in the locked prefix — parse_single_canonical_line
     // populated it; reapply.
     m.disabled      = parsed.disabled;
-    // THE COMMENT IS NOT THIS EDITOR'S and is preserved by construction: `m`
+    // THE MEASURE IS NOT THIS EDITOR'S and is preserved by construction: `m`
     // is the live marker copied whole, and no line above writes the field. The
-    // candidate parsed at accept_comment = false, so `parsed.comment` is
+    // candidate parsed at accept_measure = false, so `parsed.measure` is
     // always empty and must never be assigned from — a ` //` typed into the
     // payload buffer is a grammar error the parse already red-flashed. The
-    // comment has its own editor (Kind::CommentText).
+    // measure has its own editor (Kind::MeasureText).
 
     // Cascade rename: if label_def changed to another NON-EMPTY name,
     // every other marker that referenced old_def gets its ref updated to

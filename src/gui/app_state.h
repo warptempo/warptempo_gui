@@ -613,15 +613,15 @@ struct EditorTextDragState {
 };
 
 // WHICH HALF OF A MARKER'S BOX A PRESS LANDED ON (2026-08-19). The flag and its
-// blue COMMENT box are one clickable surface for press, drag and select — one
+// blue MEASURE box are one clickable surface for press, drag and select — one
 // marker, one rect — and this distinction exists for the DOUBLE-CLICK ALONE,
 // which opens a different editor on each half: the flag span opens the PAYLOAD
-// editor (warp only, its own gates), the comment span the COMMENT editor (both
+// editor (warp only, its own gates), the measure span the MEASURE editor (both
 // columns, both views). It is resolved from the painter's own published
-// boundary (FlagHitRect::comment_boundary_x) and never re-derived, and it is
+// boundary (FlagHitRect::measure_boundary_x) and never re-derived, and it is
 // stamped at the FIRST press so the pair of clicks agrees about what it is
 // opening even if the box has since been repainted at a different width.
-enum class MarkerClickSpan { Flag, Comment };
+enum class MarkerClickSpan { Flag, Measure };
 
 // THE MARKER FLAG'S PENDING PRESS — armed by the PLAIN flag-box press ALONE,
 // AFTER the click has already acted (architect 2026-08-17: CONTENT ACTS THE
@@ -1639,7 +1639,7 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
 // FOUR COMPANIONS close them since 2026-08-18), then the bottom row's SIXTEEN — the transport
-// three, the FOUR SINGLE-MARKER VERBS with the MARKER COMMENT (2026-08-19) and
+// three, the FOUR SINGLE-MARKER VERBS with the MARKER MEASURE (2026-08-19) and
 // ADD TO SELECTION (2026-08-18) behind them, the MARKER-WALK three
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
@@ -2031,9 +2031,9 @@ enum class RedesignButton {
     // 2026-08-15). They keep their Icon* names: a roster id names the button,
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
-    // THE MARKER COMMENT — the verb group's fifth member since 2026-08-19,
+    // THE MARKER MEASURE — the verb group's fifth member since 2026-08-19,
     // seated after Toggle inherit and ahead of Add to Selection. Bare `/`, the
-    // Breeze speech balloon, and it opens the COMMENT EDITOR on the focused
+    // Breeze speech balloon, and it opens the MEASURE EDITOR on the focused
     // marker of the active markers view.
     //
     // ITS ENABLED ARM IS READ-ONLY ALONE — no focus term, deliberately. The
@@ -2043,14 +2043,14 @@ enum class RedesignButton {
     // cardinal arrows and the revert button always-on (the 2026-08-15
     // no-blink ruling). NO LAMP: it is an act, not a mode.
     //
-    // IT IS NOT HOME-VIEW GATED, unlike the four verbs above it: comments are
+    // IT IS NOT HOME-VIEW GATED, unlike the four verbs above it: measures are
     // the FOURTH ruled exception to the home-view binding (the inventory is at
     // active_column_authoring_allowed), so the button works on both columns in
-    // both audio views. The READ-ONLY LOCK still greys it — a comment is
+    // both audio views. The READ-ONLY LOCK still greys it — a measure is
     // serialized content — and the `h` view greys it through the derived
     // partition, bare `/` being neither the mode's vocabulary nor on its
     // allowlist.
-    IconMarkerComment,
+    IconMarkerMeasure,
     // ADD TO SELECTION — the verb group's SIXTH member, seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
@@ -2118,7 +2118,7 @@ enum class RedesignButton {
 // (File and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
-// 51 SINCE 2026-08-19: the MARKER COMMENT button joined the bottom row's
+// 51 SINCE 2026-08-19: the MARKER MEASURE button joined the bottom row's
 // marker-verb group on bare `/`, a pure chord addition — 50 + 1, split
 // 48 + 2 to 49 + 2.
 // 50 AT 2026-08-18'S THIRD ROSTER RULING: the two WALK RADIOS joined the
@@ -2246,7 +2246,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconMarkerComment:
+        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
@@ -2262,7 +2262,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 
 // WHICH BUTTONS ARE THE BOTTOM ROW'S — SIXTEEN since 2026-08-19: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18 with the MARKER COMMENT and ADD TO SELECTION landing
+// row on 2026-08-18 with the MARKER MEASURE and ADD TO SELECTION landing
 // behind them, the MARKER-WALK GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -2294,7 +2294,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconMarkerComment:
+        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
@@ -5531,8 +5531,8 @@ struct AppState {
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other three dialog editors (2026-08-13), and the marker COMMENT editor
-    // (Kind::CommentText, since 2026-08-19), which paints in the top strip
+    // other three dialog editors (2026-08-13), and the marker MEASURE editor
+    // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
     // like the flag editor and carries no red-flash edge of its own. The
     // editor owns the keyboard while active.
     text_editor::State top_flag_editor;
@@ -6043,15 +6043,16 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // affects_persistence=false, so the write reaches neither disk nor a render —
 // the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
 // LIST: it moves MODE STATE, not authored content, and simply gates on the warp
-// column in either view. (4) THE MARKER COMMENT (architect 2026-08-19), the
-// widest of the four and the only one that is BOTH COLUMNS AND BOTH VIEWS: a
-// comment is a note ABOUT a marker rather than an authored musical value —
-// nothing in it reaches the engine, the frame map or the render fingerprint —
-// so it is editable wherever the flag paints. Its three entry routes (bare `/`,
+// column in either view. (4) THE MARKER MEASURE (architect 2026-08-19, the
+// field rebranded from the marker comment 2026-08-20), the widest of the four
+// and the only one that is BOTH COLUMNS AND BOTH VIEWS: a measure names where
+// a marker sits IN THE SCORE rather than authoring a musical value — nothing
+// in it reaches the engine, the frame map or the render fingerprint — so it is
+// editable wherever the flag paints. Its three entry routes (bare `/`,
 // the bottom-row button, the double-click on the blue box) consult this
 // predicate nowhere; their one gate is READ-ONLY, which still refuses, a
-// comment being serialized content. The phase column's comment double-click is
-// therefore that column's FIRST pointer authoring gesture, comment-scoped and
+// measure being serialized content. The phase column's measure double-click is
+// therefore that column's FIRST pointer authoring gesture, measure-scoped and
 // nothing wider (recorded at the router arm, run_marker_click_act). The list
 // SHRANK to two on 2026-07-29, grew back to three on 2026-08-07 and to four on
 // 2026-08-19: the
@@ -6980,7 +6981,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // so the lock now LOOKS the way the history view already looks, which
         // is what the architect asked for. IT IS NO LONGER ONE ROW'S: since the
         // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — the
-        // MARKER COMMENT joining them there 2026-08-19 — and they carry this
+        // MARKER MEASURE joining them there 2026-08-19 — and they carry this
         // term with them: a button's gates are the BUTTON's, and the bottom
         // row's always-on policy is what the other ELEVEN of its members take,
         // not a property of the lane. THE TERM IS THE BIT AND NOTHING
@@ -7009,12 +7010,12 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // THE MARKER COMMENT joins the lock's set and NOTHING ELSE: its enabled
-        // arm is this term alone. It has no HOME-VIEW gate to add (comments are
+        // THE MARKER MEASURE joins the lock's set and NOTHING ELSE: its enabled
+        // arm is this term alone. It has no HOME-VIEW gate to add (measures are
         // the fourth ruled exception to the home-view binding) and no focus
         // term either — with nothing focused the act is a consumed no-op and
         // the face stays lit, the no-blink ruling this body's head states.
-        case RedesignButton::IconMarkerComment:
+        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -7052,7 +7053,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
         // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS, THE MARKER COMMENT and ADD TO SELECTION
+        // FOUR SINGLE-MARKER VERBS, THE MARKER MEASURE and ADD TO SELECTION
         // (bare `k` and bare `/` are consumed in there like the verbs' four
         // chords) — ELEVEN of the sixteen. The two
         // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, being the mode's
@@ -7337,7 +7338,7 @@ inline bool redesign_button_enabled(const AppState& a,
             // nothing else to say (each of the four pairs held an honest arm
             // for a revision or two; the ruling and the three separate reasons
             // they were taken back are at that block). The row's other five —
-            // the single-marker verbs and the MARKER COMMENT — return from the
+            // the single-marker verbs and the MARKER MEASURE — return from the
             // read-only arm above like the six icon-row members they came down
             // with. Every other id returned above, from one switch or the
             // other.
@@ -7489,9 +7490,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // THE MARKER COMMENT IS MOMENTARY TOO: it opens an editor and the
+        // THE MARKER MEASURE IS MOMENTARY TOO: it opens an editor and the
         // editor's own session is the state; there is no bit for a lamp.
-        case RedesignButton::IconMarkerComment:
+        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -7878,7 +7879,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
         // RULING REACHES THEM HERE (architect 2026-08-07): these four and the
-        // MARKER COMMENT below them are the one part of this row that greys —
+        // MARKER MEASURE below them are the one part of this row that greys —
         // in the `h` view and on a locked tab, both the buttons' own gates —
         // and a dead icon still explains itself.
         case RedesignButton::IconMarkerDrop:
@@ -7889,13 +7890,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
-        // THE MARKER COMMENT (2026-08-19), the verb group's fifth. One line, no
+        // THE MARKER MEASURE (2026-08-19), the verb group's fifth. One line, no
         // shift line (it admits no shift press) and NO GESTURE HINT: the words
         // name the act and stop, the product's standing rule about UI text.
         // It greys on a locked tab and in the `h` view and still explains
         // itself in both, the tooltips-on-disabled ruling above.
-        case RedesignButton::IconMarkerComment:
-            return {"Comment (/)", nullptr};
+        case RedesignButton::IconMarkerMeasure:
+            return {"Measure (/)", nullptr};
         // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and a MODE
         // rather than an act — the hint names it in the architect's own words
         // and stops there. ONE LINE, no shift line (it admits no shift press)
@@ -8202,7 +8203,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // colour swap now, so there is no second pass. Works in both 'W' and 'P'
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
-// SINCE 2026-08-19 THE BOX MAY INCLUDE A COMMENT BOX past the flag's own right
+// SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
 // edge (the flag continued in blue), and it is part of the same rect: one
 // marker, one clickable surface for press, drag and select.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,

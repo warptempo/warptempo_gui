@@ -41,23 +41,26 @@ struct GuiFlagEditor {
     void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
 
-    // THE COMMENT EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is
+    // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is
     // 'P' for the phase-reset store and anything else for the warp store, and
-    // it is the ACTIVE markers view at every call site — comments are the
+    // it is the ACTIVE markers view at every call site — measures are the
     // FOURTH ruled exception to the home-view binding, so this opens wherever
     // the flag paints, on either column and in either audio view, and the
     // callers' gates are read-only alone.
     //
     // NOT enter_text_edit: that helper is warp-payload-only by recorded
     // invariant (it bounds-checks the warp store and its comment says why), and
-    // the comment editor resolves its index against whichever store the column
-    // names. The seed is the marker's own comment field, which is the whole of
-    // what a comment is — nothing inherits (architect 2026-08-20).
-    void enter_comment_edit(char column, int idx);
-    // Commit the open comment session: an EMPTY buffer REMOVES the comment, a
-    // non-empty one stores it verbatim. One undo entry when the field actually
-    // changed, and the editor closes either way.
-    void commit_comment_edit();
+    // the measure editor resolves its index against whichever store the column
+    // names. The seed is the marker's own measure field, which is the whole of
+    // what a measure is — nothing inherits down the label cascade (architect
+    // 2026-08-20).
+    void enter_measure_edit(char column, int idx);
+    // Commit the open measure session: an EMPTY buffer REMOVES the measure, a
+    // non-empty one is JUDGED against the measure grammar (marker_measure.h)
+    // and either stored verbatim or REFUSED with the editor left standing and
+    // red. One undo entry when the field actually changed; the editor closes on
+    // every path except the refusal.
+    void commit_measure_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
     // closed). False on parse failure (editor stays open, red) or an

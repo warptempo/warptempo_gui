@@ -449,10 +449,10 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 || a.tempo_scale    != b.tempo_scale
                 || a.label_def      != b.label_def
                 || a.label_ref      != b.label_ref
-                // The free-text comment is a serialized field like the rest: a
-                // comment-only undo mutates nothing else, so omitting it would
+                // The measure is a serialized field like the rest: a
+                // measure-only undo mutates nothing else, so omitting it would
                 // strand the selection exactly as an omitted bracket would.
-                || a.comment        != b.comment
+                || a.measure        != b.measure
                 // Session-only iter/bpm fields ride undo snapshots too, and row
                 // identity means the WHOLE struct: an iteration-bracket-only or
                 // bpm-only undo mutates only these, so omitting them would leave
@@ -478,10 +478,10 @@ void Undo::apply_post_restore_rules_phase_reset(
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
             return a.time_frame != b.time_frame
                 || a.disabled   != b.disabled
-                // The free-text comment, for the warp column's reason: a
-                // comment-only undo mutates nothing else, and row identity
+                // The measure, for the warp column's reason: a
+                // measure-only undo mutates nothing else, and row identity
                 // means the whole struct.
-                || a.comment    != b.comment;
+                || a.measure    != b.measure;
         });
 }
 

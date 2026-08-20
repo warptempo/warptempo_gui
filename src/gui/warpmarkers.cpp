@@ -41,7 +41,7 @@ std::string format_warpmarkers_text(
         const auto& m = markers_[i];
         // Canonical new format, no whitespace anywhere in the canonical
         // prefix:
-        //   [#]?<frame position>|PAYLOAD[ //<comment>]
+        //   [#]?<frame position>|PAYLOAD[ //<measure>]
         if (m.disabled) out << '#';
         out << format_authored_frame(m.time_frame) << '|';
 
@@ -75,13 +75,13 @@ std::string format_warpmarkers_text(
             }
         }
 
-        // The free-text comment suffix (marker_comment.h), and the one place a
-        // space may appear on a marker line. An EMPTY comment emits nothing at
+        // The measure suffix (marker_measure.h), and the one place a
+        // space may appear on a marker line. An EMPTY measure emits nothing at
         // all — the bare ` //` separator is load-fatal precisely because this
         // writer never produces it, which is what keeps the removal path (an
-        // empty commit in the comment editor) and the load rules in agreement.
-        if (!m.comment.empty()) {
-            out << " //" << m.comment;
+        // empty commit in the measure editor) and the load rules in agreement.
+        if (!m.measure.empty()) {
+            out << " //" << m.measure;
         }
 
         out << '\n';

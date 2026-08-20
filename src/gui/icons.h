@@ -280,18 +280,25 @@ enum class Icon {
     BboxPrev,            // Previous marker (Shift+Tab)
     BboxNext,            // Next marker (Tab)
     Boost,               // Walk both tabs (Ctrl+Shift+Tab)
-    // THE MARKER COMMENT BUTTON'S GLYPH (2026-08-19), the bottom row's verb
+    // THE MARKER MEASURE BUTTON'S GLYPH (2026-08-19), the bottom row's verb
     // group between Toggle inherit and Add to Selection: edit-comment, the
     // speech balloon with its tail. Breeze ships that name as a SYMLINK to
     // dialog-messages.svg, so the committed asset carries the resolved file's
     // content under the edit-comment name — recorded at the table entry too.
-    EditComment,         // Comment (bare `/`)
+    //
+    // THE ENUMERATOR AND THE ASSET KEEP THE BREEZE NAME while the product act
+    // they face is the MARKER MEASURE (the field was the marker comment for one
+    // day and was rebranded 2026-08-20). Icon ids name their PROVENANCE, not the
+    // product verb — the theme-provenance rule — so renaming this to
+    // EditMeasure would break the trail back to the shipped Breeze file for a
+    // glyph that is unchanged.
+    EditComment,         // Measure (bare `/`)
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 48 since 2026-08-19: 47 + edit-comment, the Marker Comment button's speech
+// 48 since 2026-08-19: 47 + edit-comment, the Marker Measure button's speech
 // balloon (the bottom row's verb group).
 // 47 since 2026-08-18, the roster relayout: 45 − edit-cut (the trim scissors,
 // deleted with its button — the chord survives, the glyph had no other

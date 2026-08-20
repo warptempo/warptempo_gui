@@ -306,11 +306,11 @@ MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
     (void)audio;
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     // THE PAINTER'S OWN BOUNDARY, never a re-derivation: it is the flag box's
-    // right edge, and it equals the rect's right edge whenever no comment box
-    // painted — so an uncommented flag answers Flag everywhere by construction.
+    // right edge, and it equals the rect's right edge whenever no measure box
+    // painted — so a measureless flag answers Flag everywhere by construction.
     if (!r) return MarkerClickSpan::Flag;
-    return (static_cast<double>(mouse_x) >= r->comment_boundary_x)
-        ? MarkerClickSpan::Comment : MarkerClickSpan::Flag;
+    return (static_cast<double>(mouse_x) >= r->measure_boundary_x)
+        ? MarkerClickSpan::Measure : MarkerClickSpan::Flag;
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
@@ -339,9 +339,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // earlier ones, so the topmost box under a point is the LAST containing
     // rect. Walk backwards and take the first hit (topmost_flag_rect above).
     // Selection no longer lifts anything (it is a colour swap, not a z-rule),
-    // so this is the whole arbitration — one pass, no class split. The comment
+    // so this is the whole arbitration — one pass, no class split. The measure
     // box needs no rule of its own here either: it is part of the same rect, so
-    // a later flag covering an earlier comment's tail resolves to the later
+    // a later flag covering an earlier measure's tail resolves to the later
     // marker exactly as the pixels say.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;

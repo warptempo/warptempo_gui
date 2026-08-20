@@ -787,7 +787,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed_text = history_diff_label("[-]", c.then_disabled, {});
             f.added_text   = history_diff_label("[+]", c.now_disabled, {});
             f.then_disabled = c.then_disabled;
-            f.then_comment  = c.then_comment;
+            f.then_measure  = c.then_measure;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
@@ -796,7 +796,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed      = true;
             f.removed_text = history_diff_label("[-]", e.disabled, {});
             f.then_disabled = e.disabled;
-            f.then_comment  = e.comment;
+            f.then_measure  = e.measure;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
@@ -894,17 +894,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
             ? app.top_flag_editor.target : -1;
-    // THE MARKER WHOSE COMMENT EDITOR IS OPEN (or -1), resolved with the same
-    // two gates the CommentText paint arm opens on. A SECOND field rather than
+    // THE MARKER WHOSE MEASURE EDITOR IS OPEN (or -1), resolved with the same
+    // two gates the MeasureText paint arm opens on. A SECOND field rather than
     // a kind flag beside the one above, and that is what makes the fingerprint
     // distinguish KIND AND TARGET at once: a payload session on i reads
-    // (i, -1), a comment session on i reads (-1, i), and the two suppressions
+    // (i, -1), a measure session on i reads (-1, i), and the two suppressions
     // this pass applies are exactly these two numbers. The COLUMN is already a
     // fingerprint field (fp_active_markers_view), which is what makes one index
     // enough for a suppression both columns take.
-    const int editing_comment_target =
+    const int editing_measure_target =
         (text_editor::is_active(app.top_flag_editor) &&
-         app.top_flag_editor.kind == text_editor::Kind::CommentText)
+         app.top_flag_editor.kind == text_editor::Kind::MeasureText)
             ? app.top_flag_editor.target : -1;
 
     // THE HISTORY MODE'S EIGHT INPUTS (contract at the FlagCache fields). The
@@ -962,7 +962,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_iteration_mode          == iter_on &&
         flag_cache.fp_editing_flag_target     == editing_flag_target &&
-        flag_cache.fp_editing_comment_target  == editing_comment_target &&
+        flag_cache.fp_editing_measure_target  == editing_measure_target &&
         flag_cache.fp_history_active          == history_active &&
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
@@ -1103,12 +1103,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             &app.marker_stems,
             tmap_arg,
             drag_overlay,
-            editing_comment_target);
+            editing_measure_target);
     } else {
         const std::set<int>& warp_red = warp_red_flag_set_cached(
             app, sr, static_cast<long>(audio.total_frames())).red;
         // (The two editing targets reach this call as its last two arguments —
-        // the edited marker's box, and the commented marker's comment box, are
+        // the edited marker's box, and the measured marker's measure box, are
         // the open editor's to paint, not this pass's.)
         render_flags(ccr, local_top_strip, flag_lanes, wave_w,
                      app.warpmarkers.markers(),
@@ -1121,7 +1121,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      tmap_arg,
                      drag_overlay,
                      editing_flag_target,
-                     editing_comment_target);
+                     editing_measure_target);
     }
 
     cairo_destroy(ccr);
@@ -1139,7 +1139,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_iteration_mode          = iter_on;
     flag_cache.fp_editing_flag_target     = editing_flag_target;
-    flag_cache.fp_editing_comment_target  = editing_comment_target;
+    flag_cache.fp_editing_measure_target  = editing_measure_target;
     flag_cache.fp_history_active          = history_active;
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;

@@ -899,14 +899,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `/` opens the COMMENT editor on the focused marker — the Return
-    // arm's sibling, one exception wider. COMMENTS ARE THE FOURTH RULED
+    // Bare `/` opens the MEASURE editor on the focused marker — the Return
+    // arm's sibling, one exception wider. MEASURES ARE THE FOURTH RULED
     // EXCEPTION TO THE HOME-VIEW BINDING (architect 2026-08-19; the inventory
-    // is at active_column_authoring_allowed, app_state.h): a comment is a note
-    // about a marker rather than an authored musical value, so it is editable
-    // wherever the flag paints — BOTH COLUMNS, BOTH audio views — and this arm
+    // is at active_column_authoring_allowed, app_state.h): a measure names
+    // where a marker sits in the SCORE rather than authoring a musical value,
+    // so it is editable wherever the flag paints — BOTH COLUMNS, BOTH views —
+    // and this arm
     // deliberately asks neither the P-view refusal nor
-    // active_column_authoring_allowed. Read-only still refuses: a comment IS
+    // active_column_authoring_allowed. Read-only still refuses: a measure IS
     // serialized content, and `/` is absent from read_only_key_blocked's
     // allowlist, so a locked tab drops the press before it reaches here. The
     // `h` view drops it at its own allowlist too.
@@ -916,10 +917,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-08-15 no-blink ruling — a face that tracked the selection would
     // blink at interaction cadence).
     // Modifier-strict: only the plain, unmodified press binds.
+    //
+    // SHIFT+`/` IS A RESERVED SEAT AND NOTHING MORE. It is intended for the
+    // score-video act — open or seek the architect's mpv to the focused
+    // marker's RESOLVED measure over a single-instance IPC socket — and until
+    // that act exists the chord stays UNBOUND, which strict modifier validation
+    // already makes a silent no-op with no arm to write. The measure icon's
+    // SHIFT ADMISSION (the IconShowRegion machinery: shift-click or a
+    // kChromeShiftHoldMs long press dispatching the Shift chord) lands WITH the
+    // act rather than ahead of it, because an admission's tooltip second line
+    // is compile-forced non-null and must never promise a command that does
+    // nothing. Bind nothing here until the act is real.
     if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
         if (app.last_selected_marker >= 0) {
-            flag_editor.enter_comment_edit(app.active_markers_view,
+            flag_editor.enter_measure_edit(app.active_markers_view,
                                            app.last_selected_marker);
         }
         return;

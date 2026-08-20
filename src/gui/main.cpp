@@ -152,7 +152,7 @@ namespace {
 // UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
-// pad and, flush right, the four single-marker verbs with the Marker Comment
+// pad and, flush right, the four single-marker verbs with the Marker Measure
 // and Add to Selection behind them, the marker-walk three and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
@@ -1946,7 +1946,7 @@ int main(int argc, char** argv) {
             // one hangs ABOVE its lane, the painter's own flip — and that
             // second arm covers both of the row's surfaces, its sixteen roster
             // buttons (the transport three, and the right block's four marker
-            // verbs with the Marker Comment and Add to Selection behind them,
+            // verbs with the Marker Measure and Add to Selection behind them,
             // three walk steps and four cardinal arrows since
             // 2026-08-18) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the

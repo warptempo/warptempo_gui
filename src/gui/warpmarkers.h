@@ -113,19 +113,26 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // inherits its target label_def's disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
-// (THERE IS NO EFFECTIVE-COMMENT RESOLVER, and the absence is a RULING rather
-// than a gap — architect 2026-08-20, reversing his own ruling of the day
-// before. A comment displayed here for one day INHERITED down the label
-// cascade: a ref with no note of its own showed the note on the definition it
-// cites, the way it takes that definition's tempo. He drove it and reversed it
-// on what a comment actually SAYS: a definition's note is positional prose —
-// "measure 12", "rit. starts here" — TRUE where the definition sits and FALSE
-// at a reference sitting measures later, so rippling it puts a confident wrong
-// sentence on every copy. EVERY COMMENT IS ITS OWN, hand-annotated, inherited
-// from nothing. The flag painters read the plain field on both columns, which
-// is why the phase column needed no counterpart and the warp one no longer has
-// any. Do not re-derive one from the label cascade; the cascade carries tempo
-// and the disabled bit, and those are values rather than prose.)
+// (THERE IS NO LABEL-CASCADE RESOLVER FOR THE MEASURE FIELD, and the absence
+// is a RULING rather than a gap — architect 2026-08-20, reversing his own
+// ruling of the day before. The field INHERITED down the label cascade for one
+// day: a ref carrying no value of its own displayed the definition's, the way
+// it takes that definition's tempo. He drove it and reversed it on what the
+// field SAYS: it is a POSITION IN THE SCORE, true where the definition sits and
+// FALSE at a reference sitting bars later, so rippling it puts a confident
+// wrong bar number on every copy. EVERY MEASURE IS ITS OWN, hand-authored,
+// inherited from nothing down this axis. The flag painters read the plain field
+// on both columns, which is why the phase column needed no counterpart and the
+// warp one no longer has any. Do not re-derive one from the label cascade; the
+// cascade carries tempo and the disabled bit, and those are values that a copy
+// genuinely shares.
+//
+// THIS RULING IS ABOUT THE CASCADE AXIS ALONE and says nothing about the
+// measure grammar's own '+' OFFSET FORM, which is a different axis entirely:
+// it runs PREDECESSOR TO SUCCESSOR down the store, never definition to ref, it
+// is owned by marker_measure.h where its semantics are stated once, and it is
+// resolved at ACT time by the consumer rather than at display time here. A
+// resolver for it is not the resolver this ruling forbids.)
 
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)

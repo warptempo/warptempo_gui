@@ -514,10 +514,12 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
-// THE COMMENT BOX'S TWO PAIRS (2026-08-19). A marker carrying a free-text
-// comment extends its flag RIGHTWARD with a second box in Breeze's own
+// THE MEASURE BOX'S TWO PAIRS (2026-08-19). A marker carrying a measure
+// reference extends its flag RIGHTWARD with a second box in Breeze's own
 // selection blue — the whole point being that the blue reads instantly as "not
-// the flag" beside the purple.
+// the flag" beside the purple. (The box was the marker COMMENT's for one day;
+// the field became the MEASURE on 2026-08-20 and the four values are unchanged
+// by that rebrand — a rename, never a retune.)
 //
 // PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one sampled
 // value here; the other three are RECORDED DERIVATIONS off it in exactly the
@@ -536,20 +538,20 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // one column left of every flag and reads as a drop shadow there. IT IS AN
 // EXPERIMENT AND REVERTIBLE WHOLE; if it survives the glass the borderless
 // record hardens the other way. Everything else is unchanged: the flag's own
-// 1px left border stands where it always did, the comment box has no right
+// 1px left border stands where it always did, the measure box has no right
 // border (matching the flag's own open right edge), and the top edge anatomy
 // is the flag's — a 1px edge over the fill, across the whole box.
-inline constexpr GuiColor kMarkerCommentFill     = hex(0x3DAEE9);
-inline constexpr GuiColor kMarkerCommentEdge     = hex(0x226181);
-inline constexpr GuiColor kMarkerCommentFillSel  = hex(0x73CFFF);
-inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
+inline constexpr GuiColor kMarkerMeasureFill     = hex(0x3DAEE9);
+inline constexpr GuiColor kMarkerMeasureEdge     = hex(0x226181);
+inline constexpr GuiColor kMarkerMeasureFillSel  = hex(0x73CFFF);
+inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
 // (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
 // went back to kdenlive itself with a bitmap font on the flag text and read
 // #000000 out of it for every colour and every state — the reference crops are
 // under tmp/screenshots/kdenlive/redesign). It covers the whole lane: the warp
-// and phase-reset flag LABELS on all three live classes, the COMMENT BOX's
+// and phase-reset flag LABELS on all three live classes, the MEASURE BOX's
 // text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
 // they share its ink), and the flag editor's unrolled text, its caret and its
 // selection band, all of which resolve through the same face.
@@ -564,8 +566,8 @@ inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
 // replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
 // gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
-// 7.68 vs 2.64, the comment blue 8.43 vs 2.41 (the case that prompted the
-// ruling: light ink on #3daee9 was illegible), selected comment blue 12.1 vs
+// 7.68 vs 2.64, the measure blue 8.43 vs 2.41 (the case that prompted the
+// ruling: light ink on #3daee9 was illegible), selected measure blue 12.1 vs
 // 1.66, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
 // one class that does not gain does not lose either, which is what makes a
 // single ink honest across the ladder.
@@ -691,7 +693,7 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // ladder: there is no separate disabled brightness rule to drift.
 //
 // THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on both the
-// flag and the comment box. The LABEL took it too until 2026-08-20 and takes
+// flag and the measure box. The LABEL took it too until 2026-08-20 and takes
 // its own now (the constant directly below); the surfaces are untouched by that
 // split and every shape a disabled marker paints still damps at exactly 25%.
 inline constexpr double kMarkerDisabledMix = 0.25;
@@ -718,7 +720,7 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
 // label visibly inside the disabled face rather than painting it at full live
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
-// selected flag 1.80, the red flag 1.81, and THE COMMENT BOX 1.90 against its
+// selected flag 1.80, the red flag 1.81, and THE MEASURE BOX 1.90 against its
 // own #274557 (whose ceiling is 2.10 — a lighter fill has the headroom the calm
 // purple does not). ONE fraction for both surfaces, glass retunes.
 inline constexpr double kMarkerDisabledLabelMix = 0.75;
@@ -1649,13 +1651,14 @@ inline int waveform_border_px() {
 // lowercase-ASCII label grammar, the numeric serializers, the locked iter
 // bracket), and with the ellipsis gone the truncation marker is ASCII too — a
 // label byte is a label glyph, which is what makes this a byte walk. THAT
-// PREMISE IS SCOPED TO THE LABEL SPAN and no wider: since 2026-08-19 the marker
-// COMMENT BOX paints free UTF-8 beside the label, the product's first non-ASCII
-// painted surface. It is a separate box with a separate run, budgeted by
-// nothing and truncated by nothing, so it never enters this walk. AN UNMAPPED
-// CODEPOINT THERE DRAWS .notdef — the sans face's empty box — because the
-// product has ONE face and no font fallback by standing ruling; that is the
-// honest answer, recorded rather than guarded against. DISPLAY ONLY: the store,
+// PREMISE IS SCOPED TO THE LABEL SPAN and no wider: the marker MEASURE BOX
+// paints its own run beside the label, a separate box budgeted by nothing and
+// truncated by nothing, so it never enters this walk. ITS TEXT IS PRINTABLE
+// ASCII TOO (the measure grammar, marker_measure.h), so the product paints NO
+// non-ASCII surface — the box was free UTF-8 for one day, 2026-08-19 to
+// 2026-08-20, and that carve-out RETIRED with the field's rebrand to the
+// measure. The product has ONE face and no font fallback by standing ruling,
+// and nothing painted now needs one. DISPLAY ONLY: the store,
 // the sidecars, the editor seed and the copy payload never see the dots.
 //
 // WHAT IT COVERS is the LABEL, and only the label — the iter bracket is exempt
@@ -1937,22 +1940,22 @@ inline int playhead_half_px() {
 // marker's frame column (marker_flag_border_px) — because this stash has always
 // been the painted extent and a click on the border is a click on the flag.
 //
-// IT SPANS THE COMMENT BOX TOO where one paints (2026-08-19): the blue box is
+// IT SPANS THE MEASURE BOX TOO where one paints: the blue box is
 // the flag continued, so it is ordinary flag surface for press, drag and select
-// and the rect covers both. `comment_boundary_x` is the window x where the flag
-// ends and the comment begins — the PAINTER'S own number, published rather than
+// and the rect covers both. `measure_boundary_x` is the window x where the flag
+// ends and the measure begins — the PAINTER'S own number, published rather than
 // re-derived, because a second shaping pass could disagree with the pixels. It
 // has ONE reader, the double-click's span fork (flag span = the payload
-// editor's act, comment span = the comment editor's), and it equals the rect's
-// own right edge whenever no comment box painted, so "past the boundary" is
-// false for an uncommented flag by construction.
+// editor's act, measure span = the measure editor's), and it equals the rect's
+// own right edge whenever no measure box painted, so "past the boundary" is
+// false for a measureless flag by construction.
 struct FlagHitRect {
     int    marker_index;
     double x;
     double y;
     double w;
     double h;
-    double comment_boundary_x = 0.0;
+    double measure_boundary_x = 0.0;
 };
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
@@ -2540,14 +2543,14 @@ struct MarkerStem {
 // single owner of both — the same painter-stash contract the redesigned rows'
 // buttons already use. Either pointer may be null.
 //
-// `editing_comment_index` is the marker whose COMMENT EDITOR is open, or -1 —
+// `editing_measure_index` is the marker whose MEASURE EDITOR is open, or -1 —
 // a SECOND index and not a reuse of the one below, because the two suppress
-// different things: only that marker's COMMENT BOX is skipped (the live field
-// paints in its place, render_flag_editor_box's CommentText arm) while its flag
+// different things: only that marker's MEASURE BOX is skipped (the live field
+// paints in its place, render_flag_editor_box's MeasureText arm) while its flag
 // keeps painting normally, and its published hit width shrinks back to the flag
-// span with the boundary following. BOTH COLUMNS take it — comments are the
+// span with the boundary following. BOTH COLUMNS take it — measures are the
 // fourth ruled exception to the home-view binding, so a phase-reset flag can be
-// the commented one; the payload suppression below stays warp-only.
+// the measured one; the payload suppression below stays warp-only.
 //
 // `editing_marker_index` is the marker whose FLAG EDITOR IS OPEN, or -1. Its
 // BOX, LABEL AND HIT RECT ARE ALL SKIPPED — the open editor paints that flag
@@ -2582,25 +2585,25 @@ void render_flags(cairo_t* cr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
                   int editing_marker_index = -1,
-                  int editing_comment_index = -1);
+                  int editing_measure_index = -1);
 
 // THE OPEN MARKER-LANE EDITOR'S RESOLVED GEOMETRY, published by
 // render_flag_editor_box and consumed by the pointer path. Every field is
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
 // pixels. TWO EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the flag
-// unrolled) and the COMMENT editor (the blue box as the field) — and the
+// unrolled) and the MEASURE editor (the blue box as the field) — and the
 // pointer path reads it identically for both, which is why the consumers test
 // the published rect and never the kind.
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
-//                   untruncated pending plus caret room; for the comment editor
-//                   the blue comment box in the same role, anchored past the
+//                   untruncated pending plus caret room; for the measure editor
+//                   the blue measure box in the same role, anchored past the
 //                   committed flag. CLAMPED fully on-window either way. The
 //                   payload box spans the 1px LEFT BORDER too (the flag's,
 //                   which it also wears), so its x is one column left of the
-//                   fill and its w one wider; the comment box wears no border,
+//                   fill and its w one wider; the measure box wears no border,
 //                   so its rect is its fill exactly.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
@@ -2610,14 +2613,14 @@ void render_flags(cairo_t* cr,
 //                   The caret, both selection edges and click-to-byte all index
 //                   it, so what is drawn and what is grabbed are one vector.
 //
-//   `comment_pad`   the marker's COMMENT BOX, painted at the unrolled box's
+//   `measure_pad`   the marker's MEASURE BOX, painted at the unrolled box's
 //                   right edge while the PAYLOAD editor stands (zero-sized
-//                   otherwise, and always zero-sized under the comment editor,
+//                   otherwise, and always zero-sized under the measure editor,
 //                   whose field IS that box). It is a SECOND rect and is
 //                   deliberately not folded into `box`: the caret / text-drag
 //                   claim seats a caret for any press inside `box` and the
 //                   cursor map shows the I-beam over exactly that rect, so a
-//                   folded pad would map presses on comment ink to payload
+//                   folded pad would map presses on measure ink to payload
 //                   bytes and promise editing where none is. ITS ONE READER is
 //                   the outside-press close, which treats box UNION pad as
 //                   INSIDE — a press on the pad is consumed and neither closes
@@ -2637,7 +2640,7 @@ void render_flags(cairo_t* cr,
 struct FlagEditorBox {
     bool                valid         = false;
     GuiRect             box{0, 0, 0, 0};
-    GuiRect             comment_pad{0, 0, 0, 0};
+    GuiRect             measure_pad{0, 0, 0, 0};
     double              text_origin_x = 0.0;
     std::vector<double> byte_x;
 };
@@ -2699,11 +2702,11 @@ void render_phase_reset_flags(cairo_t* cr,
                             std::vector<MarkerStem>* out_stems = nullptr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr,
-                            // The marker whose COMMENT editor is open, or -1 —
+                            // The marker whose MEASURE editor is open, or -1 —
                             // the one suppression this column takes (contract
                             // at render_flags above). It has no payload-editor
                             // twin: that editor is warp-only.
-                            int editing_comment_index = -1);
+                            int editing_measure_index = -1);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
@@ -2735,11 +2738,11 @@ struct HistoryDiffFlag {
     std::string added_text;
     std::string then_token;
     bool        then_disabled = false;
-    // THE PHASE COLUMN'S THEN-SIDE COMMENT, for the revert. The warp column
+    // THE PHASE COLUMN'S THEN-SIDE MEASURE, for the revert. The warp column
     // needs no twin: its then side travels as `then_token`, which is
-    // rest-of-line and so already carries the comment suffix into the line the
+    // rest-of-line and so already carries the measure suffix into the line the
     // revert reconstitutes. This column has no token to ride on.
-    std::string then_comment;
+    std::string then_measure;
 };
 
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
