@@ -1202,11 +1202,18 @@ void render_flag_boxes_impl(
         // OVER-admits — never under-states — which is exactly what a cull bound
         // must do. Suppression is deliberately not read here: an admitted
         // marker that paints nothing costs one shaped run.
+        //
+        // THE SEAM DIVIDER IS IN THE TERM (2026-08-20's experiment): the box
+        // grew by that column, and the one-em-per-byte slack is a bound on the
+        // SHAPED RUN rather than a spare pixel — an ASCII glyph advancing a
+        // full em would spend all of it — so the column is charged explicitly
+        // instead of being assumed absorbed. It costs one pixel of
+        // over-admission per commented marker and keeps the bound a bound.
         [&](int i) {
             const std::string& c = comment_of(i);
             if (c.empty()) return 0.0;
             return static_cast<double>(c.size()) * redesign_font_size_px() +
-                   static_cast<double>(pad_l + pad_r);
+                   static_cast<double>(pad_l + pad_r + border_w);
         },
         [&](int i, double left_x) {
             // label_of returns the composed text WITH its exempt span (see
@@ -1235,6 +1242,12 @@ void render_flag_boxes_impl(
                 comment_w = pad_l + pad_r +
                     static_cast<int>(std::nearbyint(comment_run.width_px));
             }
+            // The comment box's WHOLE painted extent: the seam divider plus the
+            // fill it stands outside of (2026-08-20's experiment). Zero when no
+            // comment paints, which is what keeps the published rect and the
+            // boundary below correct on an uncommented flag with no arm of
+            // their own.
+            const int comment_span_w = paint_comment ? border_w + comment_w : 0;
 
             // RED IS COMPUTED INDEPENDENTLY OF DISABLED, unlike the old
             // three-pair ladder where `red` tested `!dis` because disabled had
@@ -1320,12 +1333,27 @@ void render_flag_boxes_impl(
                     cr, run, static_cast<double>(bx + pad_l), baseline);
             }
 
-            // THE COMMENT BOX: the flag CONTINUED rightward, butted directly
-            // against its fill with NO BORDER COLUMN AT THE SEAM (the architect's
-            // own instruction — the colour change is the boundary cue, and the
-            // flag's own left border is untouched by it). Same lane y and
+            // THE COMMENT BOX: the flag CONTINUED rightward. Same lane y and
             // height, same 1px top edge over the fill, same aliased rectangles,
             // and no right border, exactly as the flag has none.
+            //
+            // THE SEAM CARRIES A DIVIDER — AN EXPERIMENT, 2026-08-20, and it is
+            // REVERTIBLE WHOLE. The box was butted directly against the flag's
+            // fill from 2026-08-19 ("run the blue right next to the purple
+            // base" — the colour change IS the boundary cue), and the architect
+            // then found the two fields reading at different DEPTHS on the
+            // glass: adjacent saturated hues produce chromostereopsis, the
+            // purple appearing to stand in front of the blue. The mitigation
+            // under trial is the flag's OWN left-border column — the same 1px
+            // kMarkerFlagBorder line that already sits one column left of every
+            // stem and reads as a drop shadow there — laid on this seam too, so
+            // the two fields are separated by a dark rule instead of meeting
+            // edge to edge. It rides `face.border`, so it damps with the rest
+            // of a disabled marker's face exactly as the flag's own border
+            // does, and it sits OUTSIDE the comment fill on its left, which is
+            // that border's own geometry. If it survives the glass the
+            // borderless record hardens the other way; until then this comment
+            // is the whole of the change.
             //
             // OCCLUSION IS UNCHANGED AND THE COMMENT RIDES IT: the walk is
             // later-over-earlier with no z arbitration at all, so a later
@@ -1336,13 +1364,19 @@ void render_flag_boxes_impl(
                 const CommentFace cface = resolve_comment_face(dis, sel);
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, face.border.r, face.border.g,
+                                     face.border.b);
+                cairo_rectangle(cr, bx + bw, lane.y, border_w, lane.h);
+                cairo_fill(cr);
                 cairo_set_source_rgb(cr, cface.fill.r, cface.fill.g,
                                      cface.fill.b);
-                cairo_rectangle(cr, bx + bw, lane.y, comment_w, lane.h);
+                cairo_rectangle(cr, bx + bw + border_w, lane.y, comment_w,
+                                lane.h);
                 cairo_fill(cr);
                 cairo_set_source_rgb(cr, cface.edge.r, cface.edge.g,
                                      cface.edge.b);
-                cairo_rectangle(cr, bx + bw, lane.y, comment_w, edge_h);
+                cairo_rectangle(cr, bx + bw + border_w, lane.y, comment_w,
+                                edge_h);
                 cairo_fill(cr);
                 cairo_restore(cr);
 
@@ -1355,7 +1389,7 @@ void render_flag_boxes_impl(
                                      cface.label.b);
                 text_shape::show_shaped_run(
                     cr, comment_run,
-                    static_cast<double>(bx + bw + pad_l), baseline);
+                    static_cast<double>(bx + bw + border_w + pad_l), baseline);
             }
 
             // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (codex 2026-08-02,
@@ -1393,19 +1427,28 @@ void render_flag_boxes_impl(
                 // column wider than the fill.
                 //
                 // AND THE COMMENT BOX IS PART OF THAT EXTENT: the rect widens
-                // over it, so the comment span is ORDINARY FLAG SURFACE for
-                // press, drag and select — one marker, one clickable box. Only
-                // the DOUBLE-CLICK forks on which span was hit, and it forks on
-                // the boundary published beside the rect rather than on a
-                // re-derivation, so paint and hit cannot drift. A suppressed
-                // comment contributes nothing and the boundary falls back to the
-                // flag's own right edge, which is what shrinks the claim back to
-                // the flag span while its field is open.
+                // over it, SEAM DIVIDER INCLUDED, so the comment span is
+                // ORDINARY FLAG SURFACE for press, drag and select — one marker,
+                // one clickable box. Only the DOUBLE-CLICK forks on which span
+                // was hit, and it forks on the boundary published beside the
+                // rect rather than on a re-derivation, so paint and hit cannot
+                // drift. A suppressed comment contributes nothing and the
+                // boundary falls back to the flag's own right edge, which is
+                // what shrinks the claim back to the flag span while its field
+                // is open.
+                //
+                // THE BOUNDARY NEEDED NO SHIFT FOR THE DIVIDER and lands on it
+                // exactly: it has always been the flag fill's right edge, which
+                // is precisely the column the divider now occupies, so a press
+                // ON the divider reads as COMMENT — the divider belongs to the
+                // box it introduces, which is what the experiment wants. On an
+                // uncommented flag the boundary still equals the rect's own
+                // right edge, so no point can fall past it.
                 FlagHitRect r;
                 r.marker_index = i;
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
-                r.w = static_cast<double>(bw + border_w + comment_w);
+                r.w = static_cast<double>(bw + border_w + comment_span_w);
                 r.h = static_cast<double>(lane.h);
                 r.comment_boundary_x = static_cast<double>(bx + bw);
                 out_hit_rects->push_back(r);
@@ -1587,7 +1630,11 @@ void render_history_diff_flags(
     const double cull_width_px =
         widest_bytes * redesign_font_size_px() +
         2.0 * static_cast<double>(pad_l + pad_r) +
-        static_cast<double>(border_w);
+        // TWO border columns since 2026-08-20: the box's own at its left, and
+        // the SEAM DIVIDER a changed pair now carries between its halves. A
+        // bound must never under-state, and the widest flag in a commit may be
+        // a pair.
+        2.0 * static_cast<double>(border_w);
 
     iterate_visible_flags_impl(
         top_strip_area, waveform_width, flags,
@@ -1625,7 +1672,12 @@ void render_history_diff_flags(
                 w_added = pad_l + pad_r +
                     static_cast<int>(std::nearbyint(run_added.width_px));
             }
-            const int bw = w_removed + w_added;
+            // THE SEAM DIVIDER between the two halves, and ONLY when there
+            // ARE two: a purely removed or purely added flag is one field with
+            // no seam to rule (2026-08-20's experiment; the rationale is at the
+            // paint below).
+            const int seam_w = (w_removed > 0 && w_added > 0) ? border_w : 0;
+            const int bw = w_removed + seam_w + w_added;
             // A flag with neither half is not constructible by the resolver
             // above; the guard keeps a degenerate one from publishing a
             // zero-width claim.
@@ -1644,13 +1696,16 @@ void render_history_diff_flags(
 
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            // ONE BORDER COLUMN FOR THE WHOLE BOX, outside the fill at its left
-            // — the live lane's own geometry, and the reason a changed pair
-            // carries NO column at the seam: the border marks where the flag
-            // starts, and a changed pair is one flag. Its colour is
-            // kMarkerFlagBorder undamped: the disabled blend is a LIVE-marker
-            // face and this lane paints no live markers, so there is nothing
-            // here for a class ladder to choose between.
+            // ONE BORDER COLUMN AT THE BOX'S LEFT, outside the fill — the
+            // live lane's own geometry. It marks where the FLAG starts, and a
+            // changed pair is one flag, which is why the seam between the
+            // halves carried nothing until 2026-08-20; the column now standing
+            // there is a different statement in the same ink (the experiment,
+            // at the halves' paint below) and does not make the pair two flags:
+            // one rect, one focus, one revert. Its colour is kMarkerFlagBorder
+            // undamped: the disabled blend is a LIVE-marker face and this lane
+            // paints no live markers, so there is nothing here for a class
+            // ladder to choose between.
             cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
                                  kMarkerFlagBorder.b);
             cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
@@ -1658,8 +1713,22 @@ void render_history_diff_flags(
             // The halves, left (removed / red) then right (added / green). Each
             // takes its own fill for the lane's full height and its own 1px top
             // edge over its own width: the edge runs HORIZONTALLY and so is
-            // never the divider the seam must not have — the fills meeting is
-            // the seam, and nothing is drawn on it.
+            // never a divider — it cannot separate two things standing side by
+            // side.
+            //
+            // THE SEAM CARRIES A DIVIDER — AN EXPERIMENT, 2026-08-20, and it is
+            // REVERTIBLE WHOLE. The halves met fill-to-fill from this lane's
+            // first day, on the reading that a changed pair is ONE flag and the
+            // border marks where a flag starts. The architect then found the
+            // pair reading at two DEPTHS on the glass: adjacent saturated hues
+            // produce chromostereopsis, and red against green is the strongest
+            // case of it in this palette (as purple against the comment box's
+            // blue is in the live lane, where the same experiment lands). The
+            // mitigation under trial is the same 1px kMarkerFlagBorder column
+            // the flag's own left border is — a dark rule between the fields
+            // instead of a hue boundary doing the work alone. UNDAMPED like the
+            // border beside it, and for the same recorded reason: the disabled
+            // blend is a LIVE-marker face and this lane paints none.
             if (w_removed > 0) {
                 cairo_set_source_rgb(cr, removed_fill.r, removed_fill.g,
                                      removed_fill.b);
@@ -1670,14 +1739,22 @@ void render_history_diff_flags(
                 cairo_rectangle(cr, bx, lane.y, w_removed, edge_h);
                 cairo_fill(cr);
             }
+            if (seam_w > 0) {
+                cairo_set_source_rgb(cr, kMarkerFlagBorder.r,
+                                     kMarkerFlagBorder.g, kMarkerFlagBorder.b);
+                cairo_rectangle(cr, bx + w_removed, lane.y, seam_w, lane.h);
+                cairo_fill(cr);
+            }
             if (w_added > 0) {
                 cairo_set_source_rgb(cr, added_fill.r, added_fill.g,
                                      added_fill.b);
-                cairo_rectangle(cr, bx + w_removed, lane.y, w_added, lane.h);
+                cairo_rectangle(cr, bx + w_removed + seam_w, lane.y, w_added,
+                                lane.h);
                 cairo_fill(cr);
                 cairo_set_source_rgb(cr, added_edge.r, added_edge.g,
                                      added_edge.b);
-                cairo_rectangle(cr, bx + w_removed, lane.y, w_added, edge_h);
+                cairo_rectangle(cr, bx + w_removed + seam_w, lane.y, w_added,
+                                edge_h);
                 cairo_fill(cr);
             }
             cairo_restore(cr);
@@ -1694,7 +1771,8 @@ void render_history_diff_flags(
             if (w_added > 0) {
                 text_shape::show_shaped_run(
                     cr, run_added,
-                    static_cast<double>(bx + w_removed + pad_l), baseline);
+                    static_cast<double>(bx + w_removed + seam_w + pad_l),
+                    baseline);
             }
 
             if (out_hit_rects) {
@@ -1869,10 +1947,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // under the same bit the flag pass paints under.
     const bool iteration_on = app.iteration_mode_enabled;
     // THE COMMENT FIELD OPENS WHERE THE COMMENT BOX SITS — past the committed
-    // flag, butted against its fill exactly as the resting box is. The payload
+    // flag AND past the seam divider standing on its right edge, so the field's
+    // fill begins on exactly the column the resting box's fill begins on
+    // (2026-08-20's experiment; the divider itself is painted below, outside
+    // this fill on its left, which is that border's own geometry). The payload
     // field opens on the marker's own column, the flag unrolling from itself.
     const int anchor_off = comment_kind
-        ? committed_flag_box_w(app, font, phase, idx, iteration_on) : 0;
+        ? committed_flag_box_w(app, font, phase, idx, iteration_on) + border_w
+        : 0;
 
     const double min_left = static_cast<double>(lane.x);
     const double max_left = static_cast<double>(lane.x + lane.w - box_w);
@@ -1942,7 +2024,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     FlagFace face = resolve_flag_face(dis, red_class, sel);
     // The border column the box wears: the flag's for the payload editor, none
     // at all for the comment field.
-    const int left_border_w = comment_kind ? 0 : border_w;
+    // The border column the box wears: the flag's own for the payload editor,
+    // and since 2026-08-20 the SEAM DIVIDER for the comment field — the same
+    // constant, the same width, the same face.border, standing on the same
+    // column the resting box's divider stands on. Both are "the border outside
+    // the fill on its left"; only which seam it marks differs. (The field wore
+    // none at all for the one day the seam was borderless.)
+    const int left_border_w = border_w;
     if (comment_kind) {
         const CommentFace cface = resolve_comment_face(dis, sel);
         face.fill  = cface.fill;
@@ -2117,18 +2205,34 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const CommentFace cface = resolve_comment_face(dis, sel);
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            // THE SEAM DIVIDER TRAVELS WITH THE BOX (2026-08-20's experiment,
+            // revertible whole): this pad is the resting comment box painted at
+            // the unrolled field's right edge instead of the flag's, so it
+            // wears the same anatomy — the border column outside the fill on its
+            // left, in the same face.border the flag's own border takes.
+            // Without it the seam would lose its rule for exactly as long as
+            // the payload editor stood, which is the one thing the unroll
+            // promises never to change.
+            cairo_set_source_rgb(cr, face.border.r, face.border.g,
+                                 face.border.b);
+            cairo_rectangle(cr, bx + box_w, lane.y, border_w, lane.h);
+            cairo_fill(cr);
             cairo_set_source_rgb(cr, cface.fill.r, cface.fill.g, cface.fill.b);
-            cairo_rectangle(cr, bx + box_w, lane.y, cw, lane.h);
+            cairo_rectangle(cr, bx + box_w + border_w, lane.y, cw, lane.h);
             cairo_fill(cr);
             cairo_set_source_rgb(cr, cface.edge.r, cface.edge.g, cface.edge.b);
-            cairo_rectangle(cr, bx + box_w, lane.y, cw, edge_h);
+            cairo_rectangle(cr, bx + box_w + border_w, lane.y, cw, edge_h);
             cairo_fill(cr);
             cairo_restore(cr);
             cairo_set_source_rgb(cr, cface.label.r, cface.label.g,
                                  cface.label.b);
             text_shape::show_shaped_run(
-                cr, crun, static_cast<double>(bx + box_w + pad_l), baseline);
-            out.comment_pad = GuiRect{bx + box_w, lane.y, cw, lane.h};
+                cr, crun,
+                static_cast<double>(bx + box_w + border_w + pad_l), baseline);
+            // The pad's rect is its whole painted extent, divider included —
+            // the same paint-equals-claim rule the flag rects take.
+            out.comment_pad =
+                GuiRect{bx + box_w, lane.y, border_w + cw, lane.h};
         }
     }
 
@@ -2139,7 +2243,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // flags' hit rects take: a press on the border is a press on this editor,
     // and it maps to byte 0 through the nearest-boundary search exactly as a
     // press on the left pad does (the box-is-the-claim clause at FlagEditorBox).
-    // The comment field wears no border, so its box is its fill exactly.
+    // The comment field's border is the SEAM DIVIDER and is published with it,
+    // so a press on that column seats the caret at byte 0 — which agrees with
+    // the resting box, where the same column reads as COMMENT rather than as
+    // flag.
     out.box           = GuiRect{bx - left_border_w, lane.y,
                                 box_w + left_border_w, lane.h};
     out.text_origin_x = text_origin_x;

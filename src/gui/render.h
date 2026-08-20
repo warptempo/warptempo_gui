@@ -526,12 +526,19 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // mid-darkness edge. They are FIRST GUESSES on the glass and a retune is a
 // recompile like every other value in this block.
 //
-// THE SEAM CARRIES NO BORDER (architect: "run the blue right next to the
-// purple base"). The flag's own 1px left border stands where it always did, at
-// the flag's left; the comment box has NO left border — the fill-colour change
-// IS the boundary — and no right border either, matching the flag's own
-// open right edge. The top edge anatomy is the flag's: a 1px edge over the
-// fill, across the whole box.
+// THE SEAM CARRIED NO BORDER FROM 2026-08-19 (architect: "run the blue right
+// next to the purple base") AND CARRIES ONE UNDER TRIAL FROM 2026-08-20. The
+// borderless reading was that the fill-colour change IS the boundary; the
+// architect then found the two fields reading at different DEPTHS on the glass
+// — adjacent saturated hues produce chromostereopsis, the purple appearing to
+// stand in front of the blue — and the mitigation being tried is a 1px
+// kMarkerFlagBorder column on the seam, the same dark rule that already sits
+// one column left of every flag and reads as a drop shadow there. IT IS AN
+// EXPERIMENT AND REVERTIBLE WHOLE; if it survives the glass the borderless
+// record hardens the other way. Everything else is unchanged: the flag's own
+// 1px left border stands where it always did, the comment box has no right
+// border (matching the flag's own open right edge), and the top edge anatomy
+// is the flag's — a 1px edge over the fill, across the whole box.
 inline constexpr GuiColor kMarkerCommentFill     = hex(0x3DAEE9);
 inline constexpr GuiColor kMarkerCommentEdge     = hex(0x226181);
 inline constexpr GuiColor kMarkerCommentFillSel  = hex(0x73CFFF);
@@ -2741,9 +2748,12 @@ struct HistoryDiffFlag {
 // the lane baseline IN THE LANE'S OWN BLACK INK (kMarkerFlagLabel, 2026-08-20 —
 // the anatomy is shared, so the ink is too; the ruling covers every colour and
 // every state, this mode's green and red included). A CHANGED pair is that same box at double width — the
-// halves' own fills and top edges side by side with NO border column at the seam
-// (the fill boundary is the seam) and ONE border column wrapping the whole, at
-// its left. The top edge splits with the halves because it is part of each
+// halves' own fills and top edges side by side, ONE border column wrapping the
+// whole at its left, and — SINCE 2026-08-20, an EXPERIMENT that may be reverted
+// whole — a SECOND column of that same border ink ON THE SEAM between them,
+// against the depth illusion two adjacent saturated hues produce (the ruling
+// and the rationale are at the paint site and in marker-ui.md). The pair is
+// still ONE flag: one rect, one focus, one claim. The top edge splits with the halves because it is part of each
 // half's face; it runs horizontally and so is never a divider.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
