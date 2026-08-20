@@ -2106,23 +2106,34 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                     view_w, static_cast<double>(lane.h));
     cairo_clip(cr);
 
-    // 2. The selection highlight, then 3. the text — the two-tone convention
-    //    the retired monospace box used: the selected span fills with a WHITE
-    //    FIELD and its glyphs repaint in the box fill for contrast.
+    // 2. The selection highlight, then 3. the text — WHITE FIELD, BLACK TEXT,
+    //    which is what a word processor's selection looks like and is the whole
+    //    of the convention now.
     //
     //    THE BAND HAS ITS OWN COLOUR SINCE 2026-08-20 and no longer rides the
     //    ink. It filled in `face.label` for as long as that ink was #fcfcfc,
     //    where the two happened to coincide; when the lane's ink went black the
     //    band inverted with it — a black field under purple glyphs — and the
     //    architect ruled it back to white on kdenlive's own text-input
-    //    precedent (white field, black text). kMarkerEditorSelectionBand holds
-    //    exactly the value `face.label` used to resolve to, so the look is the
-    //    one that stood before the flip; only the SOURCE moved.
+    //    precedent. kMarkerEditorSelectionBand holds exactly the value
+    //    `face.label` used to resolve to, so the look is the one that stood
+    //    before the flip; only the SOURCE moved.
     //
-    //    THE THREE PARTS OF A SELECTED SPAN NOW COME FROM THREE PLACES, each
-    //    deliberately: the BAND from that constant, the GLYPHS inside it from
-    //    `face.fill` (below), and the CARET from `face.label` — black, because a
-    //    caret is ink rather than field and belongs with the text it sits in.
+    //    THE TEXT DOES NOT CHANGE COLOUR UNDER THE BAND (architect the same
+    //    day, "I'm certain about that"). A fourth pass used to re-show the
+    //    SELECTED SUBSTRING in `face.fill`, the old two-tone convention the
+    //    retired monospace box carried, so a selected run read as purple or
+    //    blue glyphs on white. It is DELETED, and the reason is a defect he
+    //    could see in his own screenshots: those glyphs were ANTIALIASED
+    //    AGAINST THE WHITE BAND, and blending a saturated fill into white
+    //    leaves a pale off-white fringe on every edge — the text looked washed
+    //    rather than coloured. Black on white has no such fringe to produce,
+    //    and it is what every ordinary text field does. Do not reinstate the
+    //    re-show to "restore" the two-tone look; the look was the bug.
+    //
+    //    SO A SELECTED SPAN NOW RESOLVES FROM TWO PLACES, not three: the FIELD
+    //    from that constant and the INK from `face.label` — which is also the
+    //    CARET's source, a caret being ink rather than field.
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.
@@ -2144,25 +2155,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         cairo_restore(cr);
     }
 
+    // ONE SHOW FOR THE WHOLE RUN, selected and unselected alike — the band is
+    // painted under it and the ink is the same black on both sides of the
+    // selection edge, so there is nothing to clip and nothing to repaint.
     cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
     text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
-    if (has_sel) {
-        // The selected substring repainted in the FILL colour, clipped to the
-        // highlight's own span. Re-showing the whole run under a clip keeps the
-        // glyph positions bit-identical to the pass above — shaping the
-        // substring separately could kern its first glyph differently.
-        const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
-        const size_t s1 = static_cast<size_t>(text_editor::selection_end(ed));
-        cairo_save(cr);
-        cairo_rectangle(cr, text_origin_x + byte_x[s0],
-                        static_cast<double>(lane.y),
-                        byte_x[s1] - byte_x[s0],
-                        static_cast<double>(lane.h));
-        cairo_clip(cr);
-        cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
-        text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
-        cairo_restore(cr);
-    }
 
     // 4. The caret: a blink-gated filled integer column at the cursor's own
     //    byte boundary, AA off — the same crisp-column convention the

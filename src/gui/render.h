@@ -598,9 +598,15 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 //
 // THE CARET IS DELIBERATELY NOT ON THIS CONSTANT and stays `face.label`: the
 // blinking caret is INK, not field, so it is black with the text it sits in.
-// The three parts of a selected span therefore resolve from three different
-// places on purpose — white band from here, fill-coloured glyphs from
-// `face.fill`, black caret from `face.label`.
+// A selected span therefore resolves from exactly TWO places — the FIELD from
+// here and the INK (glyphs and caret alike) from `face.label`.
+//
+// THE TEXT DOES NOT CHANGE COLOUR UNDER THIS BAND, and the pass that made it
+// do so is deleted rather than merely unused: a re-show of the selected
+// substring in `face.fill` painted saturated glyphs ANTIALIASED AGAINST WHITE,
+// which fringes every edge pale and read as washed-out. Black on white is what
+// an ordinary text field does and what the flag itself already does. The whole
+// mechanism is at the paint site (render_flag_editor_box).
 inline constexpr GuiColor kMarkerEditorSelectionBand = hex(0xFCFCFC);
 
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
