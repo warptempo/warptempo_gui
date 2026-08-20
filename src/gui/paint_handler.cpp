@@ -4935,6 +4935,10 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
         prefix = kCommitTitleEditorPrefix;
         return &app.commit_title_editor;
     }
+    if (text_editor::is_active(app.measure_offset_editor)) {
+        prefix = kMeasureOffsetEditorPrefix;
+        return &app.measure_offset_editor;
+    }
     if (text_editor::is_active(app.settings_editor)) {
         prefix = kSettingsEditorPrefix;
         return &app.settings_editor;
@@ -5107,7 +5111,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE MODAL SURFACE — THE BOTTOM ROW (architect 2026-08-13, scrapping the
 // centered box he ratified the day before: "it looks sloppy — no compositor
 // drop shadow, and faking one wouldn't work"). It hosts the PROMPTS and the
-// FOUR modal editors (settings / load / commit-title / BPM); the top-strip
+// FIVE modal editors (settings / load / commit-title / measure paste-offset /
+// BPM); the top-strip
 // FLAG editor is deliberately NOT a dialog — it is positional, editing the
 // marker where it stands, and stays the pointer-transparent unrolled flag
 // (render_flag_editor_box).
@@ -5632,7 +5637,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // a caret resting mid-string) and must die with the edit. enter() and
         // deactivate() already zero it, so it RESETS when a dialog opens and
         // when it closes, with no reset site of its own to keep in step — and
-        // since each of the four dialog editors owns its own State, a change
+        // since each of the five dialog editors owns its own State, a change
         // of the stash's owner is structurally a change of offset too. A
         // prompt has no field and writes none.
         //
@@ -6049,7 +6054,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  12. the flag editor's box, then the dropdown — the floating
         //      surfaces, after every pass above and outside this branch — then
         //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
-        //      row the prompts and the four modal editors paint in since
+        //      row the prompts and the five modal editors paint in since
         //      2026-08-13), and LAST the TOOLTIP, which reads that stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and

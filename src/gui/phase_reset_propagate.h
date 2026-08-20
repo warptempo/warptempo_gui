@@ -6,10 +6,32 @@
 #include "viewport.h"
 
 #include <set>
+#include <string>
 
 struct GuiTargetRender;
 struct GuiActiveViews;
 struct GuiInputHandler;
+
+// THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP, shared by BOTH propagates
+// since 2026-08-20 (it was file-local to phase_reset_propagate.cpp until the
+// measure propagate became a second caller). Formats a stop message's timestamp
+// in whichever audio domain the user is currently in. The input is a
+// SOURCE-frame value (warp markers, clipboard blocks and dest blocks all live
+// in whole source frames, widened into this double parameter); the timestamp is
+// the display rendering, format_timestamp(frame / sr). In source view:
+// identity, labeled " source time". In target view: forward-translate to the
+// active domain via source_frame_to_active_domain, labeled " target time". A
+// degenerate (empty / failed-build) target-view map translates as identity, so
+// the timestamp reads through unchanged but stays labeled " target time",
+// consistent with the identity fallback the rest of the target-view paint uses
+// on an empty map.
+//
+// ONE SPELLING IS THE POINT: both propagates report a lockstep divergence in
+// the same register ("Stopped at <timestamp> (label name diverged)"), and a
+// second implementation would let the two drift in the one place the user
+// compares them.
+std::string format_domain_timestamp(double source_frame, const AppState& app,
+                                    const GuiAudio& audio);
 
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate

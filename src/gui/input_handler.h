@@ -791,7 +791,7 @@ struct GuiInputHandler {
     // synthesize chords through this same body so every gate applies to them
     // identically — the chrome lift, the dropdown item, and the arrow
     // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
-    // live at their own homes: the six editors' modality
+    // live at their own homes: the seven editors' modality
     // (route_modal_editor_key), strict modifier validation (an unbound
     // modifier combination is a consumed no-op; conventions.md), the Super
     // press drop (deliver_key, platform_wayland.cpp), the modal Enter/Space
@@ -1090,7 +1090,7 @@ struct GuiInputHandler {
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
     // view, which ADMITS this former as its own view-local vocabulary):
-    // prompt, the six editors via keyboard_modal_editor_active (the flag
+    // prompt, the seven editors via keyboard_modal_editor_active (the flag
     // editor deliberately included though pointer-transparent — every
     // pointer press CLOSES an open flag editor before any claim runs, and
     // this begin, which skips the press path, must not become the first
@@ -1794,9 +1794,10 @@ struct GuiInputHandler {
     // True when ANY text editor is consuming printable keys — the settings
     // editor, the load editor, the commit-title editor, or the top-strip flag
     // editor in ANY of its three kinds (unlike modal_dialog_editor_active,
-    // which names the four DIALOG-hosted surfaces — those first three plus the
-    // flag editor's BpmBracket kind — and omits the FlagPayload and MeasureText
-    // kinds, both of which paint in the marker lane). The platform's
+    // which names the five DIALOG-hosted surfaces — those first three plus the
+    // measure paste-offset editor and the flag editor's BpmBracket kind — and
+    // omits the FlagPayload and MeasureText kinds, both of which paint in the
+    // marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -2137,10 +2138,13 @@ private:
     // preconditions and its own refusals are stated at the definition.
     void run_iteration_sweep_render();
 
-    // P / I / M / K / L letter-key handlers: Ctrl+P-family phase-reset
-    // clipboard ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `k`
-    // ADD TO SELECTION (the sticky ctrl, 2026-08-18) and `l` listen-to-
-    // renders launcher. Returns true if key+mods matched one (on_key then
+    // P / I / M / K / L letter-key handlers plus the MEASURE PROPAGATE'S TWO
+    // SLASH CHORDS: Ctrl+P-family phase-reset clipboard ops, `p` view toggle,
+    // `i` iteration mode, `m` bpm mode, `k` ADD TO SELECTION (the sticky ctrl,
+    // 2026-08-18), `l` listen-to-renders launcher, and Ctrl+/ / Ctrl+Alt+/
+    // (the measure copy and paste, 2026-08-20 — they live here beside their
+    // phase-reset twins rather than with bare `/`, which on_key claims well
+    // above this dispatch). Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
 
@@ -2171,7 +2175,7 @@ private:
     // Tab never arrives at all, the on_key gate swallowing it before this route
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
-    // editor's own damage for a text change — the four dialog surfaces
+    // editor's own damage for a text change — the five dialog surfaces
     // pass the modal's own owner (the bottom row's lane,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
@@ -2267,6 +2271,48 @@ private:
     void commit_title_editor_commit();
     void commit_title_editor_exit_no_commit();
     bool handle_commit_title_editor_key(GuiKey key, GuiInputState mods);
+
+    // THE MEASURE PROPAGATE (architect 2026-08-20) — the phase reset
+    // propagate's shape for the marker MEASURE field, and the second member of
+    // that family. It lives HERE rather than in a module of its own, unlike
+    // PhaseResetPropagate: that one needs a target render, an active-views
+    // handle and an end-of-paste view switch, while this one writes a string
+    // field on markers already on screen, and its whole modal surface is a
+    // dialog editor whose four bodies are handler methods anyway.
+    //
+    // copy_measures_from_selection: Ctrl+/. Caller has verified W-mode + a
+    // CONTIGUOUS run of warp markers selected — the SAME contiguity gate
+    // Ctrl+P takes, and for the same reason: the paste matches label sequences
+    // in strict lockstep, so a gap would misalign them. Replaces the clipboard
+    // with one entry per selected marker that PROPAGATES (labeled and
+    // effectively enabled, `warp_marker_propagates`). Non-mutating — no undo
+    // entry, no dirty bit, no marker changes.
+    //
+    // open_measure_paste_editor: Ctrl+Alt+/. Caller has verified W-mode + a
+    // non-empty measure clipboard + exactly one selected warp marker. Stops
+    // playback, seats that marker as the editor's subject and raises the
+    // paste-offset dialog seeded with `0`, open-selected.
+    //
+    // measure_offset_editor_commit: Enter — parse the buffer as one canonical
+    // signed integer, run the paste, close on success; red-flash and STAY OPEN
+    // on either refusal (a malformed offset, or an offset that would carry a
+    // pasted measure out of the [1, 99999] bracket).
+    // measure_offset_editor_exit_no_commit: Esc / Ctrl+Q teardown; the anchor
+    // dies with the session.
+    // handle_measure_offset_editor_key: the key router, through
+    // route_modal_editor_key like the four editors before it. NO autocomplete
+    // hook — an integer has no vocabulary to complete against — so bare Tab
+    // walks the dialog's focus ring from the first press.
+    //
+    // apply_measure_paste: the act, called ONLY from the commit above. Returns
+    // false having written NOTHING when any pasted measure would leave the
+    // bracket; the contract is stated in full at the definition.
+    void copy_measures_from_selection();
+    void open_measure_paste_editor();
+    void measure_offset_editor_commit();
+    void measure_offset_editor_exit_no_commit();
+    bool handle_measure_offset_editor_key(GuiKey key, GuiInputState mods);
+    bool apply_measure_paste(int64_t offset_measures);
 
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
@@ -2722,7 +2768,7 @@ private:
     //   a scrub still acts under an open one and the cursor must not lie about
     //   that. Its own BOX is the exception and not a refusal: that rect takes
     //   the caret press, so it answers Text (above) while everything around it
-    //   answers whatever the surface under the editor would. The four DIALOG
+    //   answers whatever the surface under the editor would. The five DIALOG
     //   modal editors DO refuse, because their veil really
     //   does swallow the press (modal_dialog_editor_active) — with the FIELD
     //   the one rect inside that veil which takes an act, and so the one thing
@@ -2845,8 +2891,9 @@ private:
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
-    // EVERY editor does — the three single-State dialog ones (settings, load,
-    // commit title), the bpm bracket, the marker MEASURE editor, and the
+    // EVERY editor does — the four single-State dialog ones (settings, load,
+    // commit title, measure paste-offset), the bpm bracket, the marker MEASURE
+    // editor, and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
@@ -2888,7 +2935,7 @@ private:
     //   wheel_context's swallow (input_handler.cpp), because the wheel's
     //     stepped pan is NAVIGATION, not a chord, so it still punches through
     //     an open top-strip flag editor;
-    //   pointer_cursor_kind (2026-08-03), because these four editors are
+    //   pointer_cursor_kind (2026-08-03), because these five editors are
     //     exactly the ones whose veil SWALLOWS a pointer press, so they are
     //     exactly the ones over which no cursor may promise a gesture;
     //   the dialog button claim's RELEASE MIRROR in on_button_release
@@ -2926,7 +2973,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all six editors, top strip included.
+    // Ctrl+Q). It serves all seven editors, top strip included.
     bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 

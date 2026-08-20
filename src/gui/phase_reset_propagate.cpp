@@ -100,11 +100,13 @@ std::vector<DestBlock> walk_named_blocks(
     if (from_idx < 0)        from_idx = 0;
     if (to_idx_exclusive > n) to_idx_exclusive = n;
     for (int i = from_idx; i < to_idx_exclusive; ++i) {
+        // The propagate family's ONE membership predicate
+        // (warp_marker_propagates, phase_reset_clipboard.h): labeled AND
+        // effectively enabled. An effective-disabled labeled marker is not a
+        // block owner, and not a boundary either — section_end_frame walks
+        // past it (see head comment).
+        if (!warp_marker_propagates(mv, i)) continue;
         const std::string& name = warp_marker_label_name(mv[i]);
-        if (name.empty()) continue;
-        // Effective-disabled labeled marker: not a block owner, and not a
-        // boundary either — section_end_frame walks past it (see head comment).
-        if (effective_disabled(mv, i)) continue;
         const int64_t start = mv[i].time_frame;
         const int64_t end   = section_end_frame(mv, i, song_end_frame);
         out.push_back(DestBlock{name, start, end});
@@ -112,17 +114,12 @@ std::vector<DestBlock> walk_named_blocks(
     return out;
 }
 
-// Format a stop-message timestamp in whichever audio domain the user is
-// currently in. The input is a source-frame value (warp markers,
-// clipboard blocks, and dest_blocks all live in whole source frames,
-// widened into this double parameter); the
-// timestamp is the display rendering, format_timestamp(frame / sr).
-// In source view: identity, labeled " source time". In target view:
-// forward-translate to the active domain via source_frame_to_active_domain,
-// labeled " target time". A degenerate (empty / failed-build) target-view map
-// translates as identity, so the timestamp reads through unchanged but stays
-// labeled " target time", consistent with the identity fallback the rest of
-// the target-view paint uses on an empty map.
+}  // namespace
+
+// The propagate family's stop-message timestamp; the contract is at the
+// declaration in phase_reset_propagate.h. It left this file's anonymous
+// namespace on 2026-08-20, when the MEASURE propagate became a second caller —
+// one spelling of the message register rather than two.
 std::string format_domain_timestamp(double source_frame,
                                     const AppState& app,
                                     const GuiAudio& audio) {
@@ -143,8 +140,6 @@ std::string format_domain_timestamp(double source_frame,
     const double dom_seconds = static_cast<double>(dom_frame) / sr_d;
     return format_timestamp(dom_seconds) + " target time";
 }
-
-}  // namespace
 
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
@@ -178,13 +173,14 @@ void PhaseResetPropagate::copy_from_selection() {
     std::vector<DestBlock> src_blocks;
     for (int i : app.selected_markers) {
         if (i < 0 || i >= n) continue;
-        // EFFECTIVE-enabled: unlike the bpm owner predicate (which tests a
-        // raw owning marker, where raw == effective), a copy-eligible marker
-        // may be a labeled DEF whose enabled state the cascade can reach, so
-        // the effective_disabled cascade matters here.
-        if (effective_disabled(mv, i)) continue;
+        // The same membership the destination walk takes, through the one
+        // predicate rather than a second spelling of it: labeled AND
+        // EFFECTIVE-enabled. Unlike the bpm owner predicate (which tests a raw
+        // owning marker, where raw == effective), a copy-eligible marker may be
+        // a labeled DEF whose enabled state the cascade can reach, so the
+        // effective_disabled cascade inside that predicate matters here.
+        if (!warp_marker_propagates(mv, i)) continue;
         const std::string& name = warp_marker_label_name(mv[i]);
-        if (name.empty()) continue;
         const int64_t start = mv[i].time_frame;
         const int64_t end   = section_end_frame(mv, i, song_end_frame);
         src_blocks.push_back(DestBlock{name, start, end});
@@ -615,9 +611,16 @@ void PhaseResetPropagate::paste_state_apply() {
 }
 
 // The architect inspects a propagate paste by eye instead of the old
-// Ctrl+Z/Ctrl+Shift+Z round-trip: propagate is the ONE authoring action that
-// starts in the warp (source) view and ends in target view. This tail is
-// shared by all three paste actions.
+// Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate is the one
+// authoring action that starts in the warp (source) view and ends in target
+// view. This tail is shared by its three paste actions.
+//
+// THE CLAIM IS SCOPED TO THIS PROPAGATE (2026-08-20): the MEASURE propagate
+// that joined the family that day switches NO view and has no analogue of this
+// tail. It has none because it has nowhere to land — a measure is edited
+// wherever the flag paints (the home-view binding's fourth ruled exception), so
+// there is no home column to carry the reader to and nothing new to select; its
+// paste writes a field on markers that are already on screen.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // wholesale region hide, then the selection set (the playhead land rides with

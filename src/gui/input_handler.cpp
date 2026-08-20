@@ -346,6 +346,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_commit_title_editor_key(key, mods)) return;
     }
 
+    // Measure paste-offset editor (Ctrl+Alt+/ over one selected warp marker).
+    // The same modal shape as the three blocks above, and mutually exclusive
+    // with them by construction: its opener is a chord the keyboard-modal gate
+    // drops while any editor is open.
+    if (text_editor::is_active(app.measure_offset_editor)) {
+        if (handle_measure_offset_editor_key(key, mods)) return;
+    }
+
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
     // pasteable "base" / "base*scale" form the flag editor accepts — onto the
     // SYSTEM clipboard, so the implied value of a pass or label ref pastes into
@@ -732,10 +740,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
-    //       since it can only fire while one of the six editors owns the
+    //       since it can only fire while one of the seven editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all six, through route_modal_editor_key: Esc closes /
+    //   (b) THE EDITORS — all seven, through route_modal_editor_key: Esc closes /
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
     //       place of its own, which is the point of there being one route;
@@ -751,7 +759,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the four dialog editors' veil swallows the press that would open
+    //       — the five dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
@@ -969,8 +977,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / I / M / K / L letter keys (phase-reset clipboard, view toggle,
-    // iteration, bpm mode, add-to-selection, listen).
+    // P / I / M / K / L letter keys plus the MEASURE PROPAGATE'S TWO SLASH
+    // CHORDS (phase-reset clipboard, view toggle, iteration, bpm mode,
+    // add-to-selection, listen, and Ctrl+/ / Ctrl+Alt+/). Bare `/` never
+    // reaches here — its own arm above claims it — so the two chords fall
+    // through to this dispatch exactly as Ctrl+P does.
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the

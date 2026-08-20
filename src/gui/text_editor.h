@@ -81,7 +81,7 @@ constexpr int kMaxPendingCharsBpm = 60;
 // grow any pending past the cap.
 //
 // HORIZONTAL SCROLLING EXISTS ON EVERY EDITOR (the flag editor from row 5,
-// 2026-08-01; the four DIALOG editors' field from 2026-08-13, architect at his
+// 2026-08-01; the DIALOG editors' field from 2026-08-13, architect at his
 // live test — a recalled `notes=` value is longer than the field and "the
 // viewport in the text field is always stuck on the left edge of the text").
 // This note used to record "running off the right edge while typing — no
@@ -110,6 +110,14 @@ constexpr int kMaxPendingCharsCommitTitle = 256;
 // in this module is an int, which is what the cap tests read.
 constexpr int kMaxPendingCharsMeasure =
     static_cast<int>(kMaxMarkerMeasureBytes);
+// The MEASURE PROPAGATE's paste-offset editor (Ctrl+Alt+/). Holds one SIGNED
+// decimal integer — the number of measures to add to every DIRECT measure the
+// paste writes. 6 is exactly the longest legal spelling, `-99999`: the offset
+// is applied to a measure number bracketed at 99999 (marker_measure.h), so an
+// offset outside +/-99999 could not produce an in-bracket result from any
+// in-bracket source and there is nothing longer to type. A tight bound rather
+// than a policy cap, the measure field's own arrangement.
+constexpr int kMaxPendingCharsMeasureOffset = 6;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -123,8 +131,12 @@ constexpr int kMaxPendingCharsMeasure =
 // the checkpoint commit carries); the MARKER MEASURE editor uses MeasureText
 // (the ` //<measure>` suffix a marker line may carry — an ASCII GRAMMAR since
 // the field's 2026-08-20 rebrand, judged at the commit by marker_measure.h and
-// not at all on the keyboard, architect-blessed 2026-08-19 as the SIXTH
-// editor).
+// not at all on the keyboard); and the MEASURE PROPAGATE's paste-offset editor
+// uses MeasureOffset (one signed decimal integer, likewise judged at its commit
+// and not on the keyboard). THERE ARE SEVEN KINDS AND FIVE OF THEM ARE DIALOG
+// EDITORS — the sixth Kind was architect-blessed 2026-08-19 and the seventh
+// arrived with the measure propagate on 2026-08-20; the roster that matters for
+// modality is AppState::dialog_editor_session, which NAMES the five.
 enum class Kind {
     FlagPayload,
     BpmBracket,
@@ -132,13 +144,14 @@ enum class Kind {
     LoadInPlace,
     CommitTitle,
     MeasureText,
+    MeasureOffset,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
 // handing out an id that names exactly ONE raise of exactly ONE modal surface
 // for the life of the process (it starts at 1, so 0 is reliably "no session").
 //
-// IT IS HOMED HERE because four of the product's five modal surfaces are text
+// IT IS HOMED HERE because five of the product's six modal surfaces are text
 // editors and `enter` below is their one activation route, which is what makes
 // the stamping STRUCTURAL rather than disciplinary: no opener can forget to
 // take an id, and a fifth dialog editor inherits the identity for free. The
@@ -161,7 +174,7 @@ struct State {
     // it alone — `target` is what says "not editing", and a dead session's id
     // must not be reusable). The TOP-STRIP FLAG editor takes one too and
     // nothing ever reads it: it publishes no dialog, so it has no geometry to
-    // validate. What the four DIALOG editors' ids are for is at
+    // validate. What the five DIALOG editors' ids are for is at
     // AppState::ModalDialogGeometry.
     uint64_t session = 0;
 

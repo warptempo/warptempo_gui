@@ -2143,6 +2143,16 @@ int main(int argc, char** argv) {
                 invalidate_modal_dialog_area();
             }
         }
+        // And for the measure propagate's paste-offset editor.
+        if (text_editor::is_active(app.measure_offset_editor)) {
+            const bool now_visible =
+                dialog_field_focused &&
+                text_editor::cursor_visible_now(app.measure_offset_editor);
+            if (now_visible != app.measure_offset_editor_blink_last) {
+                app.measure_offset_editor_blink_last = now_visible;
+                invalidate_modal_dialog_area();
+            }
+        }
 
         // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until
         // 2026-08-09, when the architect replaced the acknowledge modal with the

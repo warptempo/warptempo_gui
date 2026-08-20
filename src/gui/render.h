@@ -2656,7 +2656,7 @@ struct FlagEditorBox {
 // swap, all through the one ladder; the border class-invariant), so opening an
 // editor changes the flag's SIZE and nothing else about how it reads. An
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
+// kMarkerFlagEdgeRed. The five DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
 // paint_modal_dialog), so there is one

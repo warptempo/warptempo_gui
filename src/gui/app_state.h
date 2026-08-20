@@ -8,6 +8,7 @@
 #include "render.h"
 #include "settings_file.h"
 #include "text_editor.h"
+#include "measure_clipboard.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map_view.h"
@@ -2908,7 +2909,7 @@ struct PromptState {
     bool                     active = false;
     bool                     painted = false;   // see the block above
     // THIS QUESTION'S SESSION ID, from the one modal session counter
-    // (text_editor::next_session_id — homed there because four of the five
+    // (text_editor::next_session_id — homed there because five of the six
     // modal surfaces are editors; the whole contract is at its declaration).
     // A prompt REPLACING a prompt is a new raise and takes a new id, so the
     // stash comparison alone tells a stale publication from a live one and
@@ -3820,7 +3821,7 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the four dialog
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the five dialog
     // editors paint ON THE BOTTOM ROW since 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
     // shadow, and faking one wouldn't work"): while one stands the row's
@@ -3913,13 +3914,15 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the four DIALOG-HOSTED editors (the
-    // settings editor, the load editor, the commit-title editor and the bpm
-    // bracket editor; the top-strip flag editor in its FlagPayload kind is
-    // deliberately not one of them). The predicate
+    // THE AUTHORITATIVE MEMBERSHIP of the FIVE DIALOG-HOSTED editors (the
+    // settings editor, the load editor, the commit-title editor, the measure
+    // paste-offset editor since 2026-08-20, and the bpm bracket editor; the
+    // top-strip flag editor is deliberately not one of them in EITHER of its
+    // non-bracket kinds — FlagPayload or MeasureText, both of which paint in
+    // the top strip). The predicate
     // GuiInputHandler::modal_dialog_editor_active is this id being non-zero,
     // and ITS declaration is the authoritative statement of what that
-    // predicate is FOR and who calls it; this is where the four are NAMED, so
+    // predicate is FOR and who calls it; this is where the five are NAMED, so
     // the set cannot drift between the two. At most one can be active at a
     // time (every opener refuses while another owns the keyboard), so the
     // order below is free.
@@ -3930,6 +3933,8 @@ struct AppState {
             return load_editor.session;
         if (text_editor::is_active(commit_title_editor))
             return commit_title_editor.session;
+        if (text_editor::is_active(measure_offset_editor))
+            return measure_offset_editor.session;
         if (text_editor::is_active(top_flag_editor) &&
             top_flag_editor.kind == text_editor::Kind::BpmBracket)
             return top_flag_editor.session;
@@ -4615,7 +4620,7 @@ struct AppState {
     // open is a consumed no-op with one stderr line while
     // history_checkpoint_in_flight stands. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
-    // refusal for free — a prompt, any of the six editors, an open dropdown,
+    // refusal for free — a prompt, any of the seven editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
@@ -5531,7 +5536,7 @@ struct AppState {
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other three dialog editors (2026-08-13), and the marker MEASURE editor
+    // other four dialog editors (2026-08-13), and the marker MEASURE editor
     // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
     // like the flag editor and carries no red-flash edge of its own. The
     // editor owns the keyboard while active.
@@ -5574,6 +5579,28 @@ struct AppState {
     // stands, which is what keeps it out of every other surface's way.
     text_editor::State commit_title_editor;
     bool commit_title_editor_blink_last = false;
+
+    // THE MEASURE PASTE-OFFSET EDITOR (architect 2026-08-20), the FIFTH dialog
+    // modal and the measure propagate's own: Ctrl+Alt+/ over exactly one
+    // selected warp marker opens it seeded with `0`, and Enter applies the
+    // clipboard onto the destination run with that many measures added to every
+    // DIRECT measure it writes. It stands where the phase paste's CONFIRMATION
+    // PROMPT stands in its own family, and for the commit-title editor's
+    // reason: the pause is the same pause, and asking for the offset carries
+    // information a bare yes/no does not — a bare Enter over the `0` seed IS
+    // that prompt's `y`, pasting the repeat unshifted.
+    //
+    // ITS SUBJECT SLOT CARRIES THE PASTE ANCHOR (`State::target`, the
+    // commit-title precedent, which parks a 0 there): the destination warp
+    // marker index, seated at the open and read once at the commit.
+    // Esc abandons with nothing written, and a buffer that is not one canonical
+    // signed integer red-flashes rather than pasting — as does an offset that
+    // would carry any pasted measure out of the [1, 99999] bracket, which
+    // refuses the paste WHOLE rather than clamping or partially applying.
+    // A dialog modal like the three above, with its own State so the paint
+    // regions stay independent.
+    text_editor::State measure_offset_editor;
+    bool measure_offset_editor_blink_last = false;
 
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two
@@ -5730,6 +5757,16 @@ struct AppState {
     // confirmation prompt opens; consumed by the prompt response.
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
+
+    // Measure propagate (W-mode Ctrl+/ copy, Ctrl+Alt+/ paste; architect
+    // 2026-08-20). Single-slot session-only clipboard cleared on app exit, the
+    // sibling above's shape and lifetime; the header carries what an entry
+    // holds and why the feature is warp-column only. IT NEEDS NO ANCHOR FIELD
+    // BESIDE IT, unlike the phase pair: the paste's destination anchor rides in
+    // its own editor's subject slot (`text_editor::State::target`, the
+    // commit-title precedent) for the one modal's lifetime, so there is no
+    // second place for it to go stale.
+    MeasureClipboard   measure_clipboard;
 
     // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
     // `text_clipboard` string is DELETED with the system clipboard's arrival:
@@ -6051,7 +6088,15 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // editable wherever the flag paints. Its three entry routes (bare `/`,
 // the bottom-row button, the double-click on the blue box) consult this
 // predicate nowhere; their one gate is READ-ONLY, which still refuses, a
-// measure being serialized content. The phase column's measure double-click is
+// measure being serialized content. THE MEASURE PROPAGATE RIDES UNDER THIS
+// SAME EXCEPTION (Ctrl+/ and Ctrl+Alt+/, 2026-08-20): it writes the same field
+// through the same store path, so it is legal in both audio views and consults
+// this predicate nowhere either — the phase reset propagate's own precedent,
+// which likewise asks the mode and the selection and never this. It is
+// WARP-COLUMN ONLY for a reason of its own, unrelated to the home-view binding
+// (propagate matches destinations by LABEL, and only the warp column has
+// labels — the ruling is at measure_clipboard.h). The phase column's measure
+// double-click is
 // therefore that column's FIRST pointer authoring gesture, measure-scoped and
 // nothing wider (recorded at the router arm, run_marker_click_act). The list
 // SHRANK to two on 2026-07-29, grew back to three on 2026-08-07 and to four on

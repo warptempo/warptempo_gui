@@ -105,6 +105,13 @@ constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
 // message the checkpoint commit will carry. One trailing space, like the two
 // prefixes above that name a subject rather than a path.
 constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
+// The MEASURE PROPAGATE's paste-offset editor (2026-08-20), whose buffer is the
+// signed number of measures to add to every direct measure the paste writes.
+// It names its SUBJECT and its UNIT rather than a bare noun, because `0` in a
+// field labeled "Offset" says nothing about what is being offset: this dialog
+// stands where the phase paste's confirmation prompt stands, so the label has
+// to carry the act as well as the question.
+constexpr const char* kMeasureOffsetEditorPrefix = "Paste measures, offset: ";
 
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
@@ -890,7 +897,8 @@ private:
     // definition.
     void paint_overview_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the BOTTOM ROW, hosting the prompts and the
-    // four modal editors (settings / load / commit-title / BPM) while one
+    // five modal editors (settings / load / commit-title / measure paste-offset /
+    // BPM) while one
     // stands — the row's own painter yields the lane to it. Painted LAST from
     // on_redraw's tail, unconditionally: it publishes AppState::modal_dialog
     // and AppState::dialog_editor_text, the geometry the pointer path's veil,

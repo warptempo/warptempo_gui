@@ -323,11 +323,11 @@ struct Viewport {
     void invalidate_status_chain_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole). Its callers
-    // are the four DIALOG EDITORS' repaint sites, which is the population the
+    // are the five DIALOG EDITORS' repaint sites, which is the population the
     // status chain's move up to the tab row left behind on this row:
     //
     //   * TYPING and the autocompletes — route_modal_editor_key's `repaint`
-    //     argument, passed by all four editor key handlers
+    //     argument, passed by all five editor key handlers
     //     (input_key_dispatch), plus the settings editor's own prefill and
     //     value-recall writes (settings_editor) and the load editor's
     //     completion (input_key_dispatch).
