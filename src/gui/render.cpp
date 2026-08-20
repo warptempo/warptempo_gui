@@ -1077,7 +1077,7 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
 // THE COMMENT BOX'S FACE — a two-pair ladder beside the flag's three-pair one,
 // and the difference is the whole ruling: SELECTION swaps the pair, DISABLED
 // damps it through the same mix owner at the same fraction toward the same lane
-// ground, and RED DOES NOT REACH IT AT ALL (the comment box keeps its own hue on a red
+// ground, and RED DOES NOT REACH IT AT ALL (the comment box stays blue on a red
 // marker). Red is the flag's normalization cue and says nothing about a note;
 // giving the note a red face would claim the text itself was suspect.
 //
@@ -1340,12 +1340,10 @@ void render_flag_boxes_impl(
             // THE SEAM CARRIES A DIVIDER — AN EXPERIMENT, 2026-08-20, and it is
             // REVERTIBLE WHOLE. The box was butted directly against the flag's
             // fill from 2026-08-19 ("run the blue right next to the purple
-            // base" — the colour change IS the boundary cue; the box WAS Breeze
-            // blue then and is a neutral grey since 2026-08-20, which does not
-            // disturb this record), and the architect then found the two fields
-            // reading at different DEPTHS on the glass: adjacent saturated hues
-            // produce chromostereopsis, the purple appearing to stand in front
-            // of the blue. The mitigation
+            // base" — the colour change IS the boundary cue), and the architect
+            // then found the two fields reading at different DEPTHS on the
+            // glass: adjacent saturated hues produce chromostereopsis, the
+            // purple appearing to stand in front of the blue. The mitigation
             // under trial is the flag's OWN left-border column — the same 1px
             // kMarkerFlagBorder line that already sits one column left of every
             // stem and reads as a drop shadow there — laid on this seam too, so
@@ -1725,7 +1723,7 @@ void render_history_diff_flags(
             // pair reading at two DEPTHS on the glass: adjacent saturated hues
             // produce chromostereopsis, and red against green is the strongest
             // case of it in this palette (as purple against the comment box's
-            // comment box is in the live lane, where the same experiment lands). The
+            // blue is in the live lane, where the same experiment lands). The
             // mitigation under trial is the same 1px kMarkerFlagBorder column
             // the flag's own left border is — a dark rule between the fields
             // instead of a hue boundary doing the work alone. UNDAMPED like the
@@ -2010,7 +2008,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // THE COMMENT FIELD TAKES THE COMMENT BOX'S FACE by the same argument, one
     // ladder narrower (resolve_comment_face: selection swaps, disabled damps,
-    // red does not reach it) — the open field IS the comment box, only wider — and
+    // red does not reach it) — the open field IS the blue box, only wider — and
     // it carries NO LEFT BORDER, because the resting box has none: the seam
     // against the flag is a colour change and nothing else. The red flash is
     // still this box's own state and still overrides the pair; on this kind its
@@ -2125,7 +2123,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    day, "I'm certain about that"). A fourth pass used to re-show the
     //    SELECTED SUBSTRING in `face.fill`, the old two-tone convention the
     //    retired monospace box carried, so a selected run read as purple or
-    //    comment-box glyphs on white. It is DELETED, and the reason is a defect he
+    //    blue glyphs on white. It is DELETED, and the reason is a defect he
     //    could see in his own screenshots: those glyphs were ANTIALIASED
     //    AGAINST THE WHITE BAND, and blending a saturated fill into white
     //    leaves a pale off-white fringe on every edge — the text looked washed

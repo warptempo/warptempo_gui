@@ -613,7 +613,7 @@ struct EditorTextDragState {
 };
 
 // WHICH HALF OF A MARKER'S BOX A PRESS LANDED ON (2026-08-19). The flag and its
-// its COMMENT box are one clickable surface for press, drag and select — one
+// blue COMMENT box are one clickable surface for press, drag and select — one
 // marker, one rect — and this distinction exists for the DOUBLE-CLICK ALONE,
 // which opens a different editor on each half: the flag span opens the PAYLOAD
 // editor (warp only, its own gates), the comment span the COMMENT editor (both
@@ -6048,7 +6048,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // comment is a note ABOUT a marker rather than an authored musical value —
 // nothing in it reaches the engine, the frame map or the render fingerprint —
 // so it is editable wherever the flag paints. Its three entry routes (bare `/`,
-// the bottom-row button, the double-click on the comment box) consult this
+// the bottom-row button, the double-click on the blue box) consult this
 // predicate nowhere; their one gate is READ-ONLY, which still refuses, a
 // comment being serialized content. The phase column's comment double-click is
 // therefore that column's FIRST pointer authoring gesture, comment-scoped and
@@ -8203,7 +8203,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
 // SINCE 2026-08-19 THE BOX MAY INCLUDE A COMMENT BOX past the flag's own right
-// edge (the flag continued in its own hue), and it is part of the same rect: one
+// edge (the flag continued in blue), and it is part of the same rect: one
 // marker, one clickable surface for press, drag and select.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
