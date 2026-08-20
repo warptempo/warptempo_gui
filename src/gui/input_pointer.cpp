@@ -2701,11 +2701,12 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // of these): a prompt or modal editor owns the input, an open dropdown
     // owns the pointer, unloaded audio has no columns to span, and a live
     // pointer gesture must not be torn by a second writer. THE EDITOR GATE
-    // IS THE FIVE-EDITOR PREDICATE, the flag editor deliberately included
-    // though it is pointer-transparent: every pointer press CLOSES an open
-    // flag editor before any claim runs, so no region gesture can begin
-    // under one — and this begin, which skips the press path, must not
-    // become the first (the declaration carries the full argument). The `h`
+    // IS THE SIX-EDITOR PREDICATE, the flag editor and the comment editor
+    // deliberately included though both are pointer-transparent: every
+    // pointer press CLOSES an open flag or comment editor before any claim
+    // runs, so no region gesture can begin under one — and this begin, which
+    // skips the press path, must not become the first (the declaration
+    // carries the full argument). The `h`
     // HISTORY VIEW IS DELIBERATELY NOT REFUSED — unlike the dead trim-move
     // begin's list — because the view ADMITS the region former as its own
     // view-local vocabulary (its shift former), so the begin FORKS on the

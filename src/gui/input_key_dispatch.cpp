@@ -2818,9 +2818,10 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 
 // Any text editor consuming printable keys — the THREE single-State dialog
 // editors (the settings prompt, the load prompt and the commit-title editor)
-// plus the top-strip flag editor in EITHER kind (the FlagPayload editor takes
-// typed letters too). The platform layer's kLeftClickKey probe: while this is
-// true that key types a normal letter rather than emulating the left button.
+// plus the top-strip flag editor in ANY of its three kinds (the FlagPayload
+// editor takes typed letters too). The platform layer's kLeftClickKey probe:
+// while this is true that key types a normal letter rather than emulating
+// the left button.
 bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.load_editor) ||

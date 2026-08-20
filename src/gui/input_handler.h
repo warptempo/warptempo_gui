@@ -2187,11 +2187,12 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. BOTH kinds now take route_modal_editor_key: the bpm
-    // bracket editor as ever, and the FlagPayload flag editor since it became
-    // keyboard-modal — the two differ only in their commit/cancel bodies and in
-    // which area they repaint. There is no longer a tail that cancels an edit to
-    // let an unmatched key through: the gate means no unmatched key arrives.
+    // close routing. ALL THREE kinds now take route_modal_editor_key: the bpm
+    // bracket editor as ever, the FlagPayload flag editor since it became
+    // keyboard-modal, and the CommentText comment editor since 2026-08-19 —
+    // the three differ only in their commit/cancel bodies and in which area
+    // they repaint. There is no longer a tail that cancels an edit to let an
+    // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor through

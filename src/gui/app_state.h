@@ -5525,14 +5525,16 @@ struct AppState {
     // re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
-    // Shared text-editor state for two editors distinguished by Kind: the
+    // Shared text-editor state for THREE editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
-    // marker's own box, which the flag pass therefore skips) and the BPM editor
+    // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other three dialog editors (2026-08-13). The editor
-    // owns the keyboard while active.
+    // other three dialog editors (2026-08-13), and the marker COMMENT editor
+    // (Kind::CommentText, since 2026-08-19), which paints in the top strip
+    // like the flag editor and carries no red-flash edge of its own. The
+    // editor owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
     // invalidate the top strip without redundant repaints.
