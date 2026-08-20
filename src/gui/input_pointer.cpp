@@ -3495,7 +3495,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             } else {
                 // THE MARKER LANE'S FIELD: the editable text lives IN THE
                 // PUBLISHED BOX — the unrolled flag under the payload editor,
-                // the blue comment box under the comment editor, one rect from
+                // the comment box under the comment editor, one rect from
                 // one painter either way.
                 // The claim is the whole published BOX, pads included, not just
                 // the glyph run's extent — the box is the field, and clicking

@@ -514,24 +514,95 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
-// THE COMMENT BOX'S TWO PAIRS (2026-08-19). A marker carrying a free-text
-// comment extends its flag RIGHTWARD with a second box in Breeze's own
-// selection blue — the whole point being that the blue reads instantly as "not
-// the flag" beside the purple.
+// THE COMMENT BOX'S TWO PAIRS. A marker carrying a free-text comment extends
+// its flag RIGHTWARD with a second box, and since 2026-08-20 that box is a
+// SUPPORTING NEUTRAL GREY — AN EXPERIMENT, revertible whole, landed as its own
+// commit.
 //
-// PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one sampled
-// value here; the other three are RECORDED DERIVATIONS off it in exactly the
-// relationships the marker crops show between their own four — the edge a
-// darkened shade of the fill, the selected pair a lifted fill over a
-// mid-darkness edge. They are FIRST GUESSES on the glass and a retune is a
-// recompile like every other value in this block.
+// WHY IT LEFT THE BLUE, in the architect's own terms: the Breeze blue is one of
+// this design's TWO ICONIC COLOURS, and on the glass it OVERTOOK the marker it
+// was meant to annotate. A comment's job is to SUPPORT the flag, not compete
+// with it. The comparison he drew is exact — in kdenlive the blue would carry
+// its own STEM, which is what earns a colour that much presence, and the
+// comment box deliberately has none: it is an appendage of the flag, so it must
+// read as one.
+//
+// THE FAMILY IS THE REDESIGN'S OWN NEUTRAL LADDER, the greys the chrome is
+// already built from, and he pointed at "the background used for the File and
+// Settings header" — the menu row's ground, kRedesignRowGround #292c30. That
+// value itself is TOO DARK to be a box here: this lane's ground is
+// kRedesignContentGround #202326 and #292c30 sits 1.13:1 against it, which is
+// not a box but a smudge. So the pick steps UP the same ladder. THE CANDIDATES
+// WEIGHED, each against the lane ground and against the BLACK ink the lane now
+// carries (kMarkerFlagLabel):
+//
+//   #1b1d20 kRedesignTabRest        box 1.07   black 1.24   (darker than lane)
+//   #1c1f22 kRedesignPopupGround    box 1.05   black 1.27   (darker than lane)
+//   #292c30 kRedesignRowGround      box 1.13   black 1.50   <- his pointer
+//   #3c3f41 kRedesignSelectedFill   box 1.49   black 1.98
+//   #4c4e51 kRedesignTabLine        box 1.89   black 2.52
+//   #535659 kRedesignLine           box 2.14   black 2.84   <- THE PICK
+//
+// The two below the lane's own value read as HOLES rather than boxes and are
+// out on sight. Of the three above it, #535659 is the only step that carries
+// black text at all comfortably while still sitting well under the flag beside
+// it — the purple reads 3.38 against the lane and 4.50 under black, so the grey
+// is subordinate on BOTH axes in the resting state, which is the whole ruling
+// expressed as numbers. It is the LIGHTEST step this ladder carries; nothing
+// lighter was invented, the hard-coded rule preferring a step that already
+// exists. THE VALUE COINCIDES with kRedesignLine's separator grey and is spelled
+// out here rather than borrowed: two facts that agree, not one referenced twice,
+// exactly as #202326 stands three times and #4c4e51 three times in this file.
+// IT WILL NOT MATCH THE PURPLE and is not meant to.
+//
+// THE OTHER THREE ARE DERIVED BY THE FLAG'S OWN TRANSFORMS, per-channel, so the
+// comment box's ladder is the marker ladder's shape in a different hue. TWO
+// MODELS WERE TESTED against the purple pair and PER-CHANNEL RATIO WINS
+// OUTRIGHT — it reproduces every one of the flag's four values to the byte,
+// where scaling in LINEAR LIGHT by the luminance ratio (1.7737) misses
+// (0, +1, -2). That fidelity is itself evidence: the Breeze pair was generated
+// by a per-channel lighten, and these ratios are its fingerprint.
+//
+//   SELECTED = fill x 1.2995, from #9b59b6 -> #c974ed
+//     per-channel: 201/155 = 1.29677, 116/89 = 1.30337, 237/182 = 1.30220
+//     one k reproduces all three: 155*1.2995 = 201.42 -> 201
+//                                  89*1.2995 = 115.66 -> 116
+//                                 182*1.2995 = 236.51 -> 237
+//     applied:  83*1.2995 = 107.86 -> 108
+//               86*1.2995 = 111.76 -> 112
+//               89*1.2995 = 115.66 -> 116        = #6c7074
+//
+//   EDGE = fill x 0.5548, from #9b59b6 -> #563165 — and the SAME k carries the
+//   selected pair, #c974ed -> #704083, which is what makes it the flag's edge
+//   RELATIONSHIP rather than one sampled edge:
+//     per-channel: 86/155 = 0.55484, 49/89 = 0.55056, 101/182 = 0.55495
+//     155*0.5548 =  85.99 ->  86   201*0.5548 = 111.51 -> 112
+//      89*0.5548 =  49.38 ->  49   116*0.5548 =  64.36 ->  64
+//     182*0.5548 = 100.97 -> 101   237*0.5548 = 131.49 -> 131   (all exact)
+//     applied:  83*0.5548 = 46.05 -> 46    108*0.5548 = 59.92 -> 60
+//               86*0.5548 = 47.71 -> 48    112*0.5548 = 62.14 -> 62
+//               89*0.5548 = 49.38 -> 49    116*0.5548 = 64.36 -> 64
+//                                = #2e3031              = #3c3e40
+//
+// WHERE IT LANDS: resting box 2.14 against the lane and 2.84 under black;
+// SELECTED 3.16 and 4.21, so the box brightens with the flag exactly as the
+// purple pair does. Against the flag's own 3.38 / 4.50 resting and 5.42 / 7.20
+// selected, the comment stays the quieter surface in every state.
+//
+// THE SUPERSEDED BLUE, PRESERVED FOR A REVERT (2026-08-19..20). It was Breeze's
+// highlight blue #3daee9 as the one sampled value with the other three derived
+// off it, and the four were:
+//     fill #3daee9   edge #226181   fillSel #73cfff   edgeSel #40738e
+// Putting those four back is the whole of the revert; nothing else in the
+// product reads these constants' hue.
 //
 // THE SEAM CARRIED NO BORDER FROM 2026-08-19 (architect: "run the blue right
-// next to the purple base") AND CARRIES ONE UNDER TRIAL FROM 2026-08-20. The
-// borderless reading was that the fill-colour change IS the boundary; the
-// architect then found the two fields reading at different DEPTHS on the glass
-// — adjacent saturated hues produce chromostereopsis, the purple appearing to
-// stand in front of the blue — and the mitigation being tried is a 1px
+// next to the purple base" — the box WAS Breeze blue then) AND CARRIES ONE
+// UNDER TRIAL FROM 2026-08-20. The borderless reading was that the fill-colour
+// change IS the boundary; the architect then found the two fields reading at
+// different DEPTHS on the glass — adjacent saturated hues produce
+// chromostereopsis, the purple appearing to stand in front of the blue — and
+// the mitigation being tried is a 1px
 // kMarkerFlagBorder column on the seam, the same dark rule that already sits
 // one column left of every flag and reads as a drop shadow there. IT IS AN
 // EXPERIMENT AND REVERTIBLE WHOLE; if it survives the glass the borderless
@@ -539,10 +610,10 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // 1px left border stands where it always did, the comment box has no right
 // border (matching the flag's own open right edge), and the top edge anatomy
 // is the flag's — a 1px edge over the fill, across the whole box.
-inline constexpr GuiColor kMarkerCommentFill     = hex(0x3DAEE9);
-inline constexpr GuiColor kMarkerCommentEdge     = hex(0x226181);
-inline constexpr GuiColor kMarkerCommentFillSel  = hex(0x73CFFF);
-inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
+inline constexpr GuiColor kMarkerCommentFill     = hex(0x535659);
+inline constexpr GuiColor kMarkerCommentEdge     = hex(0x2E3031);
+inline constexpr GuiColor kMarkerCommentFillSel  = hex(0x6C7074);
+inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x3C3E40);
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
 // (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
@@ -562,13 +633,19 @@ inline constexpr GuiColor kMarkerCommentEdgeSel  = hex(0x40738E);
 // two constants.
 //
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
-// replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
-// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
-// 7.68 vs 2.64, the comment blue 8.43 vs 2.41 (the case that prompted the
-// ruling: light ink on #3daee9 was illegible), selected comment blue 12.1 vs
-// 1.66, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
-// one class that does not gain does not lose either, which is what makes a
-// single ink honest across the ladder.
+// replaces): the calm purple is a wash (4.50 vs 4.51) and the flag classes are
+// gains, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
+// 7.68 vs 2.64 — as is the diff lane, green 8.72 vs 2.33 and red 4.93 vs 4.11.
+// THE COMMENT BOX WAS THE LARGEST GAIN OF ALL AND IS NOW THE ONE LOSS, because
+// its fill moved under this ruling rather than the other way round: on the
+// Breeze blue it prompted the ruling (8.43 vs 2.41, light ink on #3daee9 being
+// illegible), and on the NEUTRAL GREY that replaced it on 2026-08-20 the
+// numbers invert — 2.84 against white's 7.20 resting, 4.21 against 4.86
+// selected. THE INK DOES NOT FORK FOR IT, deliberately: this ruling is
+// "every class and every state", the comment box is an APPENDAGE of the flag
+// and must read as one, and a lane with two inks would be a worse answer than a
+// lane with one at a lower ratio. Flagged at the grey's own block for the glass
+// check; if it reads badly there the GREY is the knob, not the ink.
 //
 // THE DISABLED FACE KEEPS ITS MECHANISM AND CHANGES DIRECTION. The label still
 // blends toward the surface it sits on, through the one mix_color owner at the
@@ -1937,7 +2014,7 @@ inline int playhead_half_px() {
 // marker's frame column (marker_flag_border_px) — because this stash has always
 // been the painted extent and a click on the border is a click on the flag.
 //
-// IT SPANS THE COMMENT BOX TOO where one paints (2026-08-19): the blue box is
+// IT SPANS THE COMMENT BOX TOO where one paints (2026-08-19): the comment box is
 // the flag continued, so it is ordinary flag surface for press, drag and select
 // and the rect covers both. `comment_boundary_x` is the window x where the flag
 // ends and the comment begins — the PAINTER'S own number, published rather than
@@ -2589,14 +2666,14 @@ void render_flags(cairo_t* cr,
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
 // pixels. TWO EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the flag
-// unrolled) and the COMMENT editor (the blue box as the field) — and the
+// unrolled) and the COMMENT editor (the comment box as the field) — and the
 // pointer path reads it identically for both, which is why the consumers test
 // the published rect and never the kind.
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
 //                   untruncated pending plus caret room; for the comment editor
-//                   the blue comment box in the same role, anchored past the
+//                   the comment box in the same role, anchored past the
 //                   committed flag. CLAMPED fully on-window either way. The
 //                   payload box spans the 1px LEFT BORDER too (the flag's,
 //                   which it also wears), so its x is one column left of the
