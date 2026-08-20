@@ -954,8 +954,9 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // the table and in redesign_button_shift_admits alike.) (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, and it applies inside the view exactly as outside it.
-// SINCE 2026-08-15 THE LOCK GREYS ITS OWN TEN (redesign_button_enabled's
-// read-only arm — the architect's second MODE statement), so the two greys can
+// SINCE 2026-08-15 THE LOCK GREYS ITS OWN SET (redesign_button_enabled's
+// read-only arm — the architect's second MODE statement, which owns that
+// membership; no count is restated here), so the two greys can
 // now land on the same button and simply agree; but they are still two facts
 // with two owners, and neither reaches into the other. (The clause this
 // paragraph used to end on — "the `'` button stays lit on a locked tab, in the

@@ -913,8 +913,10 @@ constexpr double kTooltipPadXPx      = 5.0;
 //
 // EVERY BUTTON BUT ROW 1'S HAS ONE (architect 2026-07-31, stated as the ROW's
 // property at the table): the one-line form is the whole story for most, and the
-// two shift-admitting buttons add the hint line below it — Render only while
-// iteration mode is OFF, where its shift press has a twin to reach.
+// shift-admitting buttons add the hint line below it (the membership is
+// redesign_button_shift_admits, app_state.h, never a count restated here) —
+// Render only while iteration mode is OFF, where its shift press has a twin to
+// reach.
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
 

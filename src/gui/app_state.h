@@ -2073,6 +2073,14 @@ enum class RedesignButton {
     // serialized content — and the `h` view greys it through the derived
     // partition, bare `/` being neither the mode's vocabulary nor on its
     // allowlist.
+    //
+    // IT ADMITS SHIFT SINCE 2026-08-20 (redesign_button_shift_admits): a
+    // shift-click or a kChromeShiftHoldMs long press reaches Shift+`/`, THE
+    // SCORE-VIDEO JUMP — the other half of the field, and the half a
+    // keyboardless panel would otherwise have no route to at all. The two
+    // greys above swallow the shift press with the plain one, so on a locked
+    // tab and in the `h` view the jump is the keyboard's alone; the read-only
+    // half of that is recorded at the admission predicate.
     IconMarkerMeasure,
     // ADD TO SELECTION — the verb group's SIXTH member, seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
@@ -2778,7 +2786,8 @@ constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
 
 // THE CHROME ROSTER'S SHIFT LONG-PRESS BEAT (architect 2026-08-13) — how long a
-// press must be HELD on one of the four shift-admitting buttons before its lift
+// press must be HELD on a shift-admitting button (the membership is
+// redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
 // half of each shifted pair. Read at exactly one site, the lift's chord build
@@ -7130,8 +7139,12 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconHistory:
             return true;
         // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the roster's
-        // one grey that is not the `h` view's: these ELEVEN are exactly what
-        // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab,
+        // one grey that is not the `h` view's: THE ARMS BELOW ARE EXACTLY WHAT
+        // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab
+        // (a membership, deliberately not a count — it was eleven until the
+        // 2026-08-20 propagate relocation deleted the copy/paste pair, and the
+        // shifted `/` the same day admitted a SPELLING without moving a face,
+        // the Measure button's grey answering its base chord alone),
         // so the lock now LOOKS the way the history view already looks, which
         // is what the architect asked for. IT IS NO LONGER ONE ROW'S: since the
         // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — the
@@ -7811,12 +7824,24 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
 // as a row of its own — a menu item names its command outright, so the shifted
 // twin needs no admission to be reachable and the long-press half has nothing
-// left to serve either. The membership is four again.)
+// left to serve either.)
+// THE MARKER MEASURE JOINED IT THE SAME DAY, and for the hole the trim
+// maximizer's admission was created to close: its twin is Shift+`/`, THE
+// SCORE-VIDEO JUMP (score_video.h), and the road rig has no keyboard — without
+// the admission a finger could open a measure editor and never jump to the
+// measure it names. The pair is as honest here as `x`'s: one button, the two
+// halves of one field — write down where this marker sits in the score, or go
+// and look at it. ONE SCOPE NOTE, recorded rather than fixed: this button GREYS
+// on a locked tab (its base chord is authoring, redesign_button_enabled below),
+// and a greyed button consumes the shift press with the plain one, so the jump
+// is the KEYBOARD's alone there while the key itself is read-only-legal
+// (read_only_key_blocked, input_key_dispatch.cpp).
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer;
+           b == RedesignButton::HistoryNewer ||
+           b == RedesignButton::IconMarkerMeasure;
 }
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
@@ -7889,8 +7914,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE SHIFT LINE NAMES THE OTHER FUNCTION (architect 2026-07-31), not
         // "for more": a hint that does not say what it gets you is not a hint.
         // It is also the standing no-gesture-hints preference's ONE ruled
-        // exception, scoped to exactly the shift-admitting buttons — this one,
-        // Paste, and the walk's two arrows since 2026-08-07.
+        // exception, scoped to exactly the shift-admitting buttons —
+        // redesign_button_shift_admits owns that membership and this comment
+        // does not restate it (Paste was named here until its button left with
+        // the 2026-08-20 propagate relocation, which is what a restated list
+        // costs).
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
         // THE TABS CARRY NO LOCK ANY MORE (2026-08-14): the padlock is the
@@ -8009,9 +8037,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the two do not meet.
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
-        // marker-walk group, 2026-08-18 for the four MARKER VERBS below), all
-        // one-line forms: no button on it admits
-        // shift. The names are the ratified sentence-case labels, the
+        // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
+        // ONE-LINE FORMS EXCEPT THE MEASURE, which took the row's first shift
+        // admission on 2026-08-20 (the score-video jump) and carries the
+        // two-line form at its own case below; the rest of the row admits no
+        // shift press. The names are the ratified sentence-case labels, the
         // accelerators the table's own convention (non-letter keys are
         // themselves, and a CHORD keeps its capital and its spelled-out
         // modifiers).
@@ -8044,13 +8074,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
-        // THE MARKER MEASURE (2026-08-19), the verb group's fifth. One line, no
-        // shift line (it admits no shift press) and NO GESTURE HINT: the words
-        // name the act and stop, the product's standing rule about UI text.
-        // It greys on a locked tab and in the `h` view and still explains
-        // itself in both, the tooltips-on-disabled ruling above.
+        // THE MARKER MEASURE (2026-08-19), the verb group's fifth, and TWO
+        // LINES since 2026-08-20: its twin is Shift+`/`, the SCORE-VIDEO JUMP,
+        // so the hint says so — the shift line naming the other FUNCTION, this
+        // table's rule, and the shift admission and the line staying one fact
+        // through the static_assert below. It is the standing no-gesture-hints
+        // preference's ruled exception exactly as the other four are, and
+        // nothing else here hints a gesture: the first line names the act and
+        // stops. It greys on a locked tab and in the `h` view and still
+        // explains itself in both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
-            return {"Measure (/)", nullptr};
+            return {"Measure (/)", "Press Shift for the score video."};
         // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and a MODE
         // rather than an act — the hint names it in the architect's own words
         // and stops there. ONE LINE, no shift line (it admits no shift press)
@@ -8264,6 +8298,9 @@ static_assert(
     (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
      nullptr) ==
         redesign_button_shift_admits(RedesignButton::HistoryNewer) &&
+    (redesign_button_tooltip(RedesignButton::IconMarkerMeasure).line2 !=
+     nullptr) ==
+        redesign_button_shift_admits(RedesignButton::IconMarkerMeasure) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
     // each side of the equivalence and cannot pass vacuously if the members

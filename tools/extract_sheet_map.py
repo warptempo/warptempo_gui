@@ -206,12 +206,29 @@ def main():
             wdur = float(wend_arg) - wstart
     os.makedirs(workdir, exist_ok=True)
     fps = video_fps(video)
+    # The frame-diff scan is cached, and the cache is STAMPED with the video
+    # and the window it was taken over: a workdir reused across two different
+    # slices would otherwise emit a map for the wrong music, silently. A stamp
+    # that does not match the current invocation rescans AND drops the cached
+    # page frames with it, since those are keyed by page index alone and are
+    # exactly as slice-specific as the diffs are.
     diffs_npy = os.path.join(workdir, "diffs.npy")
-    if os.path.exists(diffs_npy):
+    diffs_meta = os.path.join(workdir, "diffs.meta")
+    stamp = f"{os.path.basename(video)}|{wstart:.3f}|{wend_arg}\n"
+    cached = False
+    if os.path.exists(diffs_npy) and os.path.exists(diffs_meta):
+        with open(diffs_meta) as f:
+            cached = f.read() == stamp
+    if cached:
         d = np.load(diffs_npy); nframes = len(d) + 1
     else:
+        for stale in sorted(p for p in os.listdir(workdir)
+                            if p.startswith("page") and p.endswith(".png")):
+            os.remove(os.path.join(workdir, stale))
         d, nframes = scan_diffs(video, wstart, wdur)
         np.save(diffs_npy, d)
+        with open(diffs_meta, "w") as f:
+            f.write(stamp)
     duration = nframes / fps
     flip_ts = [(i + 1) / fps for i in np.where(d > FLIP_THR)[0]]
     edges = [0.0] + flip_ts + [duration]
@@ -273,7 +290,6 @@ def main():
         return reads[i].get(str(value), 0) >= 2
 
     n = len(kept)
-    notes = []
 
     # Chain solver over CONTINUOUS numbering. Section-local numbering is
     # continuous minus the section base (print restarts at each section).
@@ -283,14 +299,13 @@ def main():
         # pend: (first_page_count, base) when a section-first page still
         # awaits its pickup resolution; None otherwise.
         if i == n:
-            return (starts, trail) if not pend or True else None
+            return (starts, trail)
         if origin[i] is not None:
             j = origin[i]
             if starts[j] is None:
                 return None
             return solve(i + 1, base, next_local, pend, False, max_local,
                          starts + [starts[j]], trail)
-        rd = reads[i]
         c = counts[i]
         # candidate expected section-local starts, in preference order
         if pend is not None:

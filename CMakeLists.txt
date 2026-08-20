@@ -179,6 +179,10 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/flag_editor.cpp
         src/gui/renders_dir.cpp
         src/gui/save_ops.cpp
+        # GUI-ONLY: the score-video act drives an external mpv over a unix
+        # socket and reads a local, gitignored map beside the source. Nothing
+        # in it touches audio, and warptempo_cli must never carry it.
+        src/gui/score_video.cpp
         # GUI-ONLY: the GitHub recheck's history model reads the repo's own
         # projects/ corpus through git subprocesses AND owns the product's one
         # mutating git route (the commit act's add/commit/push, behind a separate
