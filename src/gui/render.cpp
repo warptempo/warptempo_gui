@@ -813,7 +813,7 @@ namespace {
 // standing on that same column). The painter fills from it, the hit rect is
 // published from it, and the stem is published at it, so all three are one
 // number by construction.
-template <typename MarkerVec, typename Emit>
+template <typename MarkerVec, typename ExtraCullFn, typename Emit>
 void iterate_visible_flags_impl(
     GuiRect top_strip_area,
     int waveform_width,
@@ -832,6 +832,12 @@ void iterate_visible_flags_impl(
     // frame and never drops a visible one, so the only requirement is that it
     // not UNDER-state.
     double cull_width_px,
+    // A PER-MARKER ADDITION to that bound, in pixels — 0 for the marker
+    // columns' uncommented flags and for the whole history lane. The constant
+    // above bounds what every box of the family can be; this covers the one
+    // term that is per marker and unbounded by any budget (the comment box's
+    // shaped potential). Same requirement: it must not UNDER-state.
+    ExtraCullFn&& extra_cull_width_of,
     Emit&& emit) {
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -871,7 +877,13 @@ void iterate_visible_flags_impl(
             : m.time_frame;
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);
-        if (ms < cull_lo) continue;
+        // The left bound, widened by this marker's own extra reach. Asked only
+        // when the constant bound already failed, so an uncommented lane pays
+        // one compare per culled marker and nothing per visible one.
+        if (ms < cull_lo) {
+            const double extra = extra_cull_width_of(static_cast<int>(i));
+            if (ms < cull_lo - extra * samples_per_pixel) continue;
+        }
         if (ms >= cull_hi) continue;   // exclusive — see the cull note above
 
         const double x_raw =
@@ -1054,10 +1066,41 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     return f;
 }
 
+// THE COMMENT BOX'S FACE — a two-pair ladder beside the flag's three-pair one,
+// and the difference is the whole ruling: SELECTION swaps the pair, DISABLED
+// damps it through the same mix owner at the same fraction toward the same lane
+// ground, and RED DOES NOT REACH IT AT ALL (the comment box stays blue on a red
+// marker). Red is the flag's normalization cue and says nothing about a note;
+// giving the note a red face would claim the text itself was suspect.
+//
+// The label ink follows the flag's own disabled-label rule — a fraction of
+// itself over the surface it actually sits on, which here is the comment fill.
+struct CommentFace {
+    GuiColor fill;
+    GuiColor edge;
+    GuiColor label;
+};
+
+CommentFace resolve_comment_face(bool disabled, bool selected) {
+    CommentFace f;
+    f.fill  = selected ? kMarkerCommentFillSel : kMarkerCommentFill;
+    f.edge  = selected ? kMarkerCommentEdgeSel : kMarkerCommentEdge;
+    f.label = kRedesignLabel;
+    if (disabled) {
+        f.fill  = mix_color(f.fill, kRedesignContentGround, kMarkerDisabledMix);
+        f.edge  = mix_color(f.edge, kRedesignContentGround, kMarkerDisabledMix);
+        f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
+    }
+    return f;
+}
+
 // The one body both columns' painters call. `label_of(i)` composes the marker's
-// display text and `disabled_of(i)` answers its column's disabled question (the
-// warp side's label_ref cascade, the phase-reset side's bare bool).
-template <typename MarkerVec, typename LabelFn, typename DisabledFn>
+// display text, `disabled_of(i)` answers its column's disabled question (the
+// warp side's label_ref cascade, the phase-reset side's bare bool), and
+// `comment_of(i)` answers its column's DISPLAYED comment (the warp side's
+// effective comment, definition-inherited; the phase-reset side's plain field).
+template <typename MarkerVec, typename LabelFn, typename DisabledFn,
+          typename CommentFn>
 void render_flag_boxes_impl(
     cairo_t* cr,
     GuiRect top_strip_area,
@@ -1071,11 +1114,20 @@ void render_flag_boxes_impl(
     const std::set<int>& red_set,
     LabelFn&& label_of,
     DisabledFn&& disabled_of,
+    CommentFn&& comment_of,
     std::vector<FlagHitRect>* out_hit_rects,
     std::vector<MarkerStem>* out_stems,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     int suppress_box_index,
+    // THE COMMENT BOX'S OWN SUPPRESSION, deliberately a SECOND index rather
+    // than a reuse of the one above: while the COMMENT editor is open on marker
+    // i, that marker's flag must keep painting normally and only its comment
+    // box yields to the live field (render_flag_editor_box's CommentText arm).
+    // suppress_box_index stays the PAYLOAD editor's alone — it takes the whole
+    // box, border, label and hit rect together — and the two can never both be
+    // set, the two editor kinds being one State.
+    int suppress_comment_index,
     // Reaches the LEFT CULL only — it widens the width bound by the iter
     // bracket's glyphs. The composed text is the label lambda's business, so
     // this body never asks whether a given flag is bracketed.
@@ -1115,6 +1167,31 @@ void render_flag_boxes_impl(
                                // bracket's own glyphs, which the label budget
                                // does not cover; the reasoning is at the bound.
                                marker_flag_max_width_px(iteration_on),
+        // THE COMMENT'S PER-MARKER ADMISSION. The constant bound above is the
+        // FLAG's and stays exactly what it was; a commented marker's box runs
+        // further right by its comment box's width, so its admission widens by
+        // that much or the bound would UNDER-state — the one thing a cull bound
+        // may never do. It is per marker because a comment is per marker and
+        // capped at nothing: charging every marker the 99-byte worst case would
+        // drag the whole lane's left cull out by ~99 ems.
+        //
+        // THE EFFECTIVE COMMENT IS WHAT IS MEASURED, own or inherited: an
+        // inheriting ref PAINTS a box, so it must be ADMITTED for one, and only
+        // refs with an empty own comment pay the definition scan here.
+        //
+        // ONE EM PER BYTE, the same over-estimate marker_flag_max_width_px
+        // makes, and the UTF-8 premise is restated because this is the one
+        // surface that carries multi-byte text: a multi-byte codepoint is ONE
+        // glyph spending two to four bytes, so a byte-derived bound
+        // OVER-admits — never under-states — which is exactly what a cull bound
+        // must do. Suppression is deliberately not read here: an admitted
+        // marker that paints nothing costs one shaped run.
+        [&](int i) {
+            const std::string& c = comment_of(i);
+            if (c.empty()) return 0.0;
+            return static_cast<double>(c.size()) * redesign_font_size_px() +
+                   static_cast<double>(pad_l + pad_r);
+        },
         [&](int i, double left_x) {
             // label_of returns the composed text WITH its exempt span (see
             // FlagLabelText); the cap spends the budget on the rest.
@@ -1125,6 +1202,23 @@ void render_flag_boxes_impl(
             const int bx = static_cast<int>(std::nearbyint(left_x));
             const int bw = pad_l + pad_r +
                 static_cast<int>(std::nearbyint(run.width_px));
+
+            // THE COMMENT BOX, when the marker displays one and neither
+            // suppression covers it. The PAYLOAD editor's suppression takes it
+            // too: that editor unrolls over this marker's whole column, so the
+            // comment travels with it and paints at the unrolled box's right
+            // edge instead (render_flag_editor_box's comment_pad).
+            const std::string& comment_text = comment_of(i);
+            const bool paint_comment = !comment_text.empty() &&
+                                       i != suppress_box_index &&
+                                       i != suppress_comment_index;
+            text_shape::ShapedRun comment_run;
+            int comment_w = 0;
+            if (paint_comment) {
+                comment_run = text_shape::shape_text_run(font, comment_text);
+                comment_w = pad_l + pad_r +
+                    static_cast<int>(std::nearbyint(comment_run.width_px));
+            }
 
             // RED IS COMPUTED INDEPENDENTLY OF DISABLED, unlike the old
             // three-pair ladder where `red` tested `!dis` because disabled had
@@ -1210,6 +1304,44 @@ void render_flag_boxes_impl(
                     cr, run, static_cast<double>(bx + pad_l), baseline);
             }
 
+            // THE COMMENT BOX: the flag CONTINUED rightward, butted directly
+            // against its fill with NO BORDER COLUMN AT THE SEAM (the architect's
+            // own instruction — the colour change is the boundary cue, and the
+            // flag's own left border is untouched by it). Same lane y and
+            // height, same 1px top edge over the fill, same aliased rectangles,
+            // and no right border, exactly as the flag has none.
+            //
+            // OCCLUSION IS UNCHANGED AND THE COMMENT RIDES IT: the walk is
+            // later-over-earlier with no z arbitration at all, so a later
+            // marker's BORDER covers an earlier marker's comment tail exactly as
+            // it covers an over-long label — the note is simply longer ink on
+            // the same box, and it needs no rule of its own.
+            if (paint_comment) {
+                const CommentFace cface = resolve_comment_face(dis, sel);
+                cairo_save(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, cface.fill.r, cface.fill.g,
+                                     cface.fill.b);
+                cairo_rectangle(cr, bx + bw, lane.y, comment_w, lane.h);
+                cairo_fill(cr);
+                cairo_set_source_rgb(cr, cface.edge.r, cface.edge.g,
+                                     cface.edge.b);
+                cairo_rectangle(cr, bx + bw, lane.y, comment_w, edge_h);
+                cairo_fill(cr);
+                cairo_restore(cr);
+
+                // FREE UTF-8, shaped on the same one face as every label. There
+                // is no budget and no truncation here: a comment is what the
+                // user wrote and the box grows to hold it (the nine-glyph budget
+                // is a LABEL rule, kMarkerLabelGlyphBudget). An uncovered
+                // codepoint draws .notdef — one face, no fallback.
+                cairo_set_source_rgb(cr, cface.label.r, cface.label.g,
+                                     cface.label.b);
+                text_shape::show_shaped_run(
+                    cr, comment_run,
+                    static_cast<double>(bx + bw + pad_l), baseline);
+            }
+
             // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (codex 2026-08-02,
             // correcting this pass's first suppression): the rect must match the
             // pixels, which is this stash's whole doctrine, and a box that is not
@@ -1243,12 +1375,23 @@ void render_flag_boxes_impl(
                 // border is a click on the flag. It is the painted extent, as
                 // this stash always was; the border merely made the extent one
                 // column wider than the fill.
+                //
+                // AND THE COMMENT BOX IS PART OF THAT EXTENT: the rect widens
+                // over it, so the comment span is ORDINARY FLAG SURFACE for
+                // press, drag and select — one marker, one clickable box. Only
+                // the DOUBLE-CLICK forks on which span was hit, and it forks on
+                // the boundary published beside the rect rather than on a
+                // re-derivation, so paint and hit cannot drift. A suppressed
+                // comment contributes nothing and the boundary falls back to the
+                // flag's own right edge, which is what shrinks the claim back to
+                // the flag span while its field is open.
                 FlagHitRect r;
                 r.marker_index = i;
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
-                r.w = static_cast<double>(bw + border_w);
+                r.w = static_cast<double>(bw + border_w + comment_w);
                 r.h = static_cast<double>(lane.h);
+                r.comment_boundary_x = static_cast<double>(bx + bw);
                 out_hit_rects->push_back(r);
             }
             if (out_stems && face.has_stem) {
@@ -1281,7 +1424,8 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay,
-                  int editing_marker_index) {
+                  int editing_marker_index,
+                  int editing_comment_index) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
@@ -1297,8 +1441,15 @@ void render_flags(cairo_t* cr,
         },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
+        // And its DISPLAYED comment follows the label_ref inheritance: own
+        // first, else the cited definition's (effective_marker_comment,
+        // warpmarkers.h — a ref shows its definition's note the way it shows
+        // its tempo).
+        [&](int i) -> const std::string& {
+            return effective_marker_comment(markers, i);
+        },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        editing_marker_index, iteration_on);
+        editing_marker_index, editing_comment_index, iteration_on);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -1314,7 +1465,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             std::vector<FlagHitRect>* out_hit_rects,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                            const DragOverlay* drag_overlay) {
+                            const DragOverlay* drag_overlay,
+                            int editing_comment_index) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, phase_resets,
         viewport_start_sample, viewport_end_sample, sample_rate,
@@ -1331,15 +1483,25 @@ void render_phase_reset_flags(cairo_t* cr,
         },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
+        // NO INHERITANCE ON THIS COLUMN — the plain field is the whole answer.
+        // Labels are a warp-column form, so there is no definition to cite and
+        // nothing to resolve; the asymmetry is the label model's, not a gap.
+        [&](int i) -> const std::string& {
+            return phase_resets[static_cast<size_t>(i)].comment;
+        },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        // NO SUPPRESSION ON THIS COLUMN, and the asymmetry is real rather than
-        // an oversight (the warp/phase-reset symmetry rule, conventions.md):
-        // the flag editor is a WARP-column surface by its own open gates —
-        // render_flag_editor_box returns early on anything but a FlagPayload
-        // editor and reads app.warpmarkers — so no phase-reset flag can ever be
-        // the edited one. If a phase-reset payload editor is ever added, this
-        // is the line it changes.
+        // NO PAYLOAD-BOX SUPPRESSION ON THIS COLUMN, and the asymmetry is real
+        // rather than an oversight (the warp/phase-reset symmetry rule,
+        // conventions.md): the PAYLOAD editor is a WARP-column surface by its
+        // own open gates — render_flag_editor_box's FlagPayload arm reads
+        // app.warpmarkers — so no phase-reset flag can ever be the edited one.
+        // If a phase-reset payload editor is ever added, this is the line it
+        // changes.
         /*suppress_box_index=*/-1,
+        // THE COMMENT EDITOR IS BOTH COLUMNS' (comments are the fourth ruled
+        // exception to the home-view binding), so this column DOES suppress —
+        // the one place the two arguments differ.
+        editing_comment_index,
         // No bracket on this column, so the cull's bound needs no widening.
         /*iteration_on=*/false);
 }
@@ -1416,6 +1578,9 @@ void render_history_diff_flags(
         // not a marker in any store, so nothing could index it anyway.
         /*drag_overlay=*/nullptr,
         cull_width_px,
+        // NO PER-MARKER WIDENING: this lane paints no comment box, and the
+        // bound above already follows this commit's own longest label.
+        [](int) { return 0.0; },
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
@@ -1519,6 +1684,12 @@ void render_history_diff_flags(
                 r.y = static_cast<double>(lane.y);
                 r.w = static_cast<double>(bw + border_w);
                 r.h = static_cast<double>(lane.h);
+                // NO COMMENT BOX IN THIS MODE, so the boundary is the rect's own
+                // right edge and no point can fall past it: the view paints the
+                // delta's own two-tone flag and nothing else, and a warp token
+                // that happens to carry comment text shows it inline in the
+                // label (accepted).
+                r.comment_boundary_x = r.x + r.w;
                 out_hit_rects->push_back(r);
             }
             if (out_stems) {
@@ -1564,6 +1735,28 @@ double gui_scale_factor()  {
 
 // -- The flag editor's unrolled box ---------------------------------------
 
+// The committed FLAG box's width for `idx` — the flag as the cached pass would
+// paint it, measured on the same font. It exists for the comment surfaces,
+// which both anchor at the flag's RIGHT EDGE and so need the number the flag
+// pass computes: the composed label, capped at the nine-glyph budget, shaped,
+// plus the two pads. Measured rather than published because the flag pass and
+// this one run on different surfaces at different times; the inputs are the
+// same store, the same composer and the same scaled font, so the two agree.
+static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
+                                bool phase, int idx, bool iteration_on) {
+    FlagLabelText lt;
+    if (phase) {
+        lt.text = std::string(kPhaseResetLaneToken);
+    } else {
+        lt.text = flag_text_iter(app.warpmarkers.markers(), idx, iteration_on,
+                                 &lt.exempt_pos, &lt.exempt_len);
+    }
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, cap_marker_label(lt));
+    return marker_flag_pad_left_px() + marker_flag_pad_right_px() +
+           static_cast<int>(std::nearbyint(run.width_px));
+}
+
 // The contract (the face, the clamp, the view truncation, the non-const
 // AppState) is at the declaration in render.h. What follows is the mechanics.
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
@@ -1575,15 +1768,28 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     text_editor::State& ed = app.top_flag_editor;
     if (!text_editor::is_active(ed)) return;
-    if (ed.kind != text_editor::Kind::FlagPayload) return;
+    // TWO KINDS PAINT IN THE MARKER LANE. FlagPayload unrolls the flag ITSELF
+    // to hold the payload; CommentText opens the BLUE COMMENT BOX as the field,
+    // leaving the flag standing beside it. The BpmBracket kind paints in the
+    // bottom row's modal instead and returns here.
+    const bool comment_kind = (ed.kind == text_editor::Kind::CommentText);
+    if (ed.kind != text_editor::Kind::FlagPayload && !comment_kind) return;
 
-    // The flag editor is a WARP-column, source-home surface by its own open
-    // gates, so the marker is a warp marker and its class ladder is the warp
-    // one. A target index the store has since shrunk past is the only failure
-    // shape, and it simply paints nothing.
-    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    // The PAYLOAD editor is a WARP-column, source-home surface by its own open
+    // gates. The COMMENT editor is BOTH columns' (comments are the fourth ruled
+    // exception to the home-view binding), so its store is the ACTIVE column's
+    // — the column its open route resolved the index against. A target index
+    // the store has since shrunk past is the only failure shape, and it simply
+    // paints nothing.
+    const bool phase = comment_kind && app.active_markers_view == 'P';
+    const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();
     const int idx = ed.target;
-    if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+    const int store_n = phase ? static_cast<int>(pmv.size())
+                              : static_cast<int>(mv.size());
+    if (idx < 0 || idx >= store_n) return;
+    const int64_t marker_frame = phase ? pmv[static_cast<size_t>(idx)].time_frame
+                                       : mv[static_cast<size_t>(idx)].time_frame;
 
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1632,13 +1838,22 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         displayed_or_live_target_map(app, audio);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
-        app, audio, static_cast<double>(mv[idx].time_frame),
+        app, audio, static_cast<double>(marker_frame),
         map, basis.vp_start, basis.spp);
     const GuiRect area = waveform_area(app);
 
+    // ITERATION MODE WIDENS THE COMMITTED FLAG, so the anchor below must ask
+    // under the same bit the flag pass paints under.
+    const bool iteration_on = app.iteration_mode_enabled;
+    // THE COMMENT FIELD OPENS WHERE THE COMMENT BOX SITS — past the committed
+    // flag, butted against its fill exactly as the resting box is. The payload
+    // field opens on the marker's own column, the flag unrolling from itself.
+    const int anchor_off = comment_kind
+        ? committed_flag_box_w(app, font, phase, idx, iteration_on) : 0;
+
     const double min_left = static_cast<double>(lane.x);
     const double max_left = static_cast<double>(lane.x + lane.w - box_w);
-    double box_left = static_cast<double>(area.x + col);
+    double box_left = static_cast<double>(area.x + col + anchor_off);
     if (max_left <= min_left) box_left = min_left;
     else if (box_left < min_left) box_left = min_left;
     else if (box_left > max_left) box_left = max_left;
@@ -1685,13 +1900,32 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // second red to contrast against (see the declaration). It overrides the
     // whole pair because a failed commit must read as a state of THIS box and
     // not as a marker that suddenly normalized.
-    const bool dis = effective_disabled(mv, idx);
+    //
+    // THE COMMENT FIELD TAKES THE COMMENT BOX'S FACE by the same argument, one
+    // ladder narrower (resolve_comment_face: selection swaps, disabled damps,
+    // red does not reach it) — the open field IS the blue box, only wider — and
+    // it carries NO LEFT BORDER, because the resting box has none: the seam
+    // against the flag is a colour change and nothing else. The red flash is
+    // still this box's own state and still overrides the pair; on this kind its
+    // one producer is the editor's byte-cap refusal.
+    const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
+                           : effective_disabled(mv, idx);
     const bool red_class =
+        !phase &&
         warp_red_flag_set_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).red.count(idx) > 0;
     const bool sel = app.selected_markers.count(idx) > 0;
     FlagFace face = resolve_flag_face(dis, red_class, sel);
+    // The border column the box wears: the flag's for the payload editor, none
+    // at all for the comment field.
+    const int left_border_w = comment_kind ? 0 : border_w;
+    if (comment_kind) {
+        const CommentFace cface = resolve_comment_face(dis, sel);
+        face.fill  = cface.fill;
+        face.edge  = cface.edge;
+        face.label = cface.label;
+    }
     if (ed.red) {
         face.fill  = kMarkerFlagFillRed;
         face.edge  = kMarkerFlagEdgeRed;
@@ -1733,9 +1967,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // defensive one.
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
-    cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
-    cairo_fill(cr);
+    if (left_border_w > 0) {
+        cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
+        cairo_rectangle(cr, bx - left_border_w, lane.y, left_border_w, lane.h);
+        cairo_fill(cr);
+    }
     cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
     cairo_rectangle(cr, bx, lane.y, box_w, lane.h);
     cairo_fill(cr);
@@ -1815,6 +2051,47 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     cairo_restore(cr);   // the text-viewport clip
+
+    // THE COMMENT BOX RIDES THE UNROLLED PAYLOAD BOX. While the payload editor
+    // stands, the cached pass skips this marker's comment box with its flag
+    // (one suppression, whole box), so the comment would simply vanish for the
+    // length of the edit — and it must not: the note is what the user is often
+    // reading while retyping a tempo. It paints HERE instead, at the unrolled
+    // box's right edge, so it slides with the field as the field grows and
+    // shrinks.
+    //
+    // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`. The caret /
+    // text-drag claim seats a caret for ANY press inside `box` and the cursor
+    // map shows the I-beam over exactly that rect, so a pad folded in would
+    // map presses on painted comment ink to payload bytes and promise text
+    // editing where none is. What the pad IS for is at FlagEditorBox::
+    // comment_pad: the outside-press close treats box UNION pad as inside, so a
+    // press on it is consumed and neither closes nor acts.
+    if (!comment_kind) {
+        const std::string& ctext = effective_marker_comment(mv, idx);
+        if (!ctext.empty()) {
+            const text_shape::ShapedRun crun =
+                text_shape::shape_text_run(font, ctext);
+            const int cw = pad_l + pad_r +
+                static_cast<int>(std::nearbyint(crun.width_px));
+            const CommentFace cface = resolve_comment_face(dis, sel);
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, cface.fill.r, cface.fill.g, cface.fill.b);
+            cairo_rectangle(cr, bx + box_w, lane.y, cw, lane.h);
+            cairo_fill(cr);
+            cairo_set_source_rgb(cr, cface.edge.r, cface.edge.g, cface.edge.b);
+            cairo_rectangle(cr, bx + box_w, lane.y, cw, edge_h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+            cairo_set_source_rgb(cr, cface.label.r, cface.label.g,
+                                 cface.label.b);
+            text_shape::show_shaped_run(
+                cr, crun, static_cast<double>(bx + box_w + pad_l), baseline);
+            out.comment_pad = GuiRect{bx + box_w, lane.y, cw, lane.h};
+        }
+    }
+
     cairo_restore(cr);   // the font state
 
     out.valid         = true;
@@ -1822,7 +2099,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // flags' hit rects take: a press on the border is a press on this editor,
     // and it maps to byte 0 through the nearest-boundary search exactly as a
     // press on the left pad does (the box-is-the-claim clause at FlagEditorBox).
-    out.box           = GuiRect{bx - border_w, lane.y, box_w + border_w, lane.h};
+    // The comment field wears no border, so its box is its fill exactly.
+    out.box           = GuiRect{bx - left_border_w, lane.y,
+                                box_w + left_border_w, lane.h};
     out.text_origin_x = text_origin_x;
     out.byte_x        = std::move(byte_x);
 }

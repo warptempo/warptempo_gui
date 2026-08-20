@@ -285,6 +285,34 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
            click_rel_x >= gap.lo && click_rel_x < gap.hi;
 }
 
+// The topmost published flag rect under the point, or nullptr — the ONE walk
+// both public answers below take, so "which box" and "which half of it" cannot
+// disagree.
+static const FlagHitRect* topmost_flag_rect(const AppState& app,
+                                            int mouse_x, int mouse_y) {
+    for (auto it = app.flag_hit_rects.rbegin();
+         it != app.flag_hit_rects.rend(); ++it) {
+        const FlagHitRect& r = *it;
+        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
+            mouse_y >= r.y && mouse_y < r.y + r.h) {
+            return &r;
+        }
+    }
+    return nullptr;
+}
+
+MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
+                                   int mouse_x, int mouse_y) {
+    (void)audio;
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
+    // THE PAINTER'S OWN BOUNDARY, never a re-derivation: it is the flag box's
+    // right edge, and it equals the rect's right edge whenever no comment box
+    // painted — so an uncommented flag answers Flag everywhere by construction.
+    if (!r) return MarkerClickSpan::Flag;
+    return (static_cast<double>(mouse_x) >= r->comment_boundary_x)
+        ? MarkerClickSpan::Comment : MarkerClickSpan::Flag;
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;
@@ -309,18 +337,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     //
     // Z-ORDER: the painter walks the store FORWARD and later boxes cover
     // earlier ones, so the topmost box under a point is the LAST containing
-    // rect. Walk backwards and take the first hit. Selection no longer lifts
-    // anything (it is a colour swap, not a z-rule), so this is the whole
-    // arbitration — one pass, no class split.
-    for (auto it = app.flag_hit_rects.rbegin();
-         it != app.flag_hit_rects.rend(); ++it) {
-        const FlagHitRect& r = *it;
-        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
-            mouse_y >= r.y && mouse_y < r.y + r.h) {
-            return r.marker_index;
-        }
-    }
-    return -1;
+    // rect. Walk backwards and take the first hit (topmost_flag_rect above).
+    // Selection no longer lifts anything (it is a colour swap, not a z-rule),
+    // so this is the whole arbitration — one pass, no class split. The comment
+    // box needs no rule of its own here either: it is part of the same rect, so
+    // a later flag covering an earlier comment's tail resolves to the later
+    // marker exactly as the pixels say.
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
+    return r ? r->marker_index : -1;
 }
 
 // (hit_test_marker_stem IS DELETED — architect 2026-08-12, the seventh glass

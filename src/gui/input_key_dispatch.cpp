@@ -2540,8 +2540,10 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // parse_single_canonical_line, the loader's own per-line entry point. That is
 // what keeps pass markers, label definitions, label references and typed scales
 // working with no vocabulary of their own here: whatever the file could hold,
-// the line holds, and the ONE grammar that reads it is the parser's. The phase
-// reset column needs no such trip — frame plus the disable bit IS its line.
+// the line holds, and the ONE grammar that reads it is the parser's — a
+// comment suffix included, since the token is rest-of-line. The phase reset
+// column needs no such trip: frame, the disable bit and the comment IS its
+// line, and all three travel typed on the flag.
 void GuiInputHandler::run_history_revert() {
     if (!app.history_mode.active) return;
 
@@ -2641,6 +2643,11 @@ void GuiInputHandler::run_history_revert() {
             GuiPhaseResetMarker nm;
             nm.time_frame = f.time_frame;
             nm.disabled   = f.then_disabled;
+            // The then side's comment travels with the flag and is restored
+            // with the rest of the line. Dropping it would make the compare
+            // below report every commented marker as changed and then
+            // overwrite the comment away.
+            nm.comment    = f.then_comment;
             if (at >= 0) {
                 ++sk;
                 // IDENTICAL IS NOT A CHANGE — the canonical line the occupant
@@ -2648,8 +2655,9 @@ void GuiInputHandler::run_history_revert() {
                 // serializer, which is the same line vocabulary the delta itself
                 // is computed in (history_diff.h). The frames are equal by
                 // construction, so for this column the compare is the disable
-                // bit; it is spelled as the line anyway, symmetrically with the
-                // warp arm below, whose payload has no such shortcut.
+                // bit and the comment; it is spelled as the line anyway,
+                // symmetrically with the warp arm below, whose payload has no
+                // such shortcut.
                 const auto& live = mv[static_cast<std::size_t>(at)];
                 if (format_phaseresetmarkers_text({live}) ==
                     format_phaseresetmarkers_text({nm})) {
@@ -2677,13 +2685,18 @@ void GuiInputHandler::run_history_revert() {
         }
         // The sidecar line this flag's then side came off, rebuilt: the disable
         // prefix, the canonical frame spelling (format_authored_frame, the one
-        // serializer), the '|' and the verbatim payload token.
+        // serializer), the '|' and the verbatim payload token. The token is
+        // rest-of-line, so a ` //<comment>` suffix is already inside it and the
+        // rebuilt line is the sidecar's line byte for byte — which is why the
+        // parse accepts comments here; refusing them would fire the
+        // "unreachable" arm below on every commented marker.
         std::string line;
         if (f.then_disabled) line += '#';
         line += format_authored_frame(f.time_frame);
         line += '|';
         line += f.then_token;
-        auto parsed = warpmarkers_internal::parse_single_canonical_line(line);
+        auto parsed = warpmarkers_internal::parse_single_canonical_line(
+            line, /*accept_comment=*/true);
         if (!parsed) {
             // UNREACHABLE BY CONSTRUCTION and stated loudly rather than
             // recovered from: every walk member is strict-load clean, so the
@@ -2707,7 +2720,8 @@ void GuiInputHandler::run_history_revert() {
             // IDENTICAL IS NOT A CHANGE, the phase arm's rule in the column that
             // needs it: the occupant's canonical line against the then side's,
             // both through format_warpmarkers_text, so the compare reads exactly
-            // the seven serialized fields and IGNORES the session-only iter/bpm
+            // the eight serialized fields — the comment included, which is
+            // content — and IGNORES the session-only iter/bpm
             // scratch — which is also why a no-op replace leaves that scratch
             // standing instead of resetting it to a fresh marker's defaults.
             const auto& live = mv[static_cast<std::size_t>(at)];
@@ -3000,10 +3014,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL FIVE editors — the settings and load prompts,
-// the commit-title editor (2026-08-07), the bpm bracket, and (architect
-// 2026-07-28) the top-strip flag editor, which
-// this ruling brought under the same contract. While one is open the user can
+// dropped. It serves ALL SIX editors — the settings and load prompts,
+// the commit-title editor (2026-08-07), the bpm bracket, the MARKER COMMENT
+// editor (2026-08-19) and (architect 2026-07-28) the top-strip flag editor,
+// which this ruling brought under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
 // open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
 // mode toggles, tab switches, undo/redo, the marker / trim chords, and the
@@ -5318,17 +5332,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
-// contract. BOTH kinds take the shared modal route (architect 2026-07-28) and
-// differ only in their commit / cancel bodies and their repaint area: the bpm
-// bracket editor draws in the MODAL DIALOG on the bottom row (like the settings
-// editor; its damage is that row's own lane owner) and
-// commits into a render sweep, the FlagPayload editor draws in the TOP strip
-// and commits the flag's own payload. Neither passes a bare-Tab hook, having no
+// contract. ALL THREE kinds take the shared modal route (architect 2026-07-28)
+// and differ only in their commit / cancel bodies and their repaint area: the
+// bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
+// settings editor; its damage is that row's own lane owner) and commits into a
+// render sweep, the FlagPayload editor draws in the TOP strip and commits the
+// flag's own payload, and the CommentText editor draws in the TOP strip too and
+// commits the marker's free-text comment. None passes a bare-Tab hook, having no
 // vocabulary to complete: in the BPM editor, a DIALOG, bare Tab walks the
-// modal's focus ring from the first press, while for the top-strip FLAG editor
-// it never reaches this route at all — the on_key gate swallows it, a flag
-// editor publishing no dialog and so no ring (route_modal_editor_key).
-// For both, Ctrl+S saves with the editor left open and Esc / Enter are the
+// modal's focus ring from the first press, while for the two top-strip kinds it
+// never reaches this route at all — the on_key gate swallows it, a flag editor
+// publishing no dialog and so no ring (route_modal_editor_key).
+// For all three, Ctrl+S saves with the editor left open and Esc / Enter are the
 // session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
@@ -5380,6 +5395,24 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 flag_editor.exit_bpm_mode();
             },
             [this] { viewport.invalidate_modal_dialog_area(); });
+    }
+    if (app.top_flag_editor.kind == text_editor::Kind::CommentText) {
+        // The COMMENT editor: the same modal route, the same top-strip repaint
+        // as the payload editor's — but NO waveform red-flash edge, because
+        // this kind has no commit-time refusal to flash. Its type-time filters
+        // are its whole grammar (commit_comment_edit says why), so the only
+        // producer of `red` here is the byte-cap refusal, whose surface is the
+        // box in the strip and never a stem.
+        return route_modal_editor_key(
+            app.top_flag_editor, key, mods,
+            /*autocomplete=*/nullptr,
+            [this] { flag_editor.commit_comment_edit(); },
+            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
+            [this] {
+                // Ctrl+Q discards the edit, then on_key runs the close routing.
+                flag_editor.exit_top_flag_edit_no_commit();
+            },
+            [this] { viewport.invalidate_top_strip(); });
     }
     // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
     // on a red-flash EDGE. The invalid-commit flash reaches the marker's STEM

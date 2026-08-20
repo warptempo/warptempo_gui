@@ -1,6 +1,7 @@
 #include "phaseresetmarkers_parse.h"
 
 #include "frame_format.h"
+#include "marker_comment.h"
 #include "parse_text_util.h"
 
 #include <expected>
@@ -9,9 +10,10 @@
 namespace {
 
 // Parse "[#]<frame position>" into a PhaseResetMarker. Returns the marker on
-// success; on failure, returns a one-line diagnostic. The caller has
-// already rejected any whitespace on the line, so the token reaching here is
-// non-empty and whitespace-free. The canonical grammar is an optional
+// success; on failure, returns a one-line diagnostic. The caller has already
+// split off any ` //<comment>` suffix and rejected whitespace in what remains,
+// so the token reaching here is whitespace-free and carries no comment
+// concept — it stays anonymous. The canonical grammar is an optional
 // leading '#' meaning disabled, then an authored source-frame position
 // (frame_format.h: a whole frame, finite, non-negative, whole field
 // consumed) and nothing else; anything else — a fractional value, the old
@@ -66,21 +68,41 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // strips a leading '#', flags the marker disabled, and parses the
         // remainder as a frame position; a '#' line whose remainder is not a
         // valid position is a parse error like any other malformed line —
-        // adversarial, load-fatal, first error only. Comment lines are not
-        // part of the grammar.
+        // adversarial, load-fatal, first error only. A comment is a SUFFIX on
+        // a marker line (below); comment LINES are not part of the grammar.
+
+        // The ` //<comment>` suffix (marker_comment.h) comes off FIRST, so the
+        // canonical prefix below keeps its byte-exact discipline untouched and
+        // parse_line stays comment-unaware. The comment's own byte class is
+        // validated just as strictly — a CR landing inside a comment is still
+        // fatal, so the CRLF corruption tripwire survives the relaxation.
+        // (Architect approval 2026-08-19.)
+        std::string_view canonical = raw;
+        std::string      comment;
+        {
+            const MarkerCommentSplit split = split_marker_comment(raw);
+            if (split.had_comment) {
+                std::string comment_err;
+                if (!validate_marker_comment(split.comment, comment_err))
+                    return fail(line_number, std::move(comment_err));
+                comment.assign(split.comment);
+                canonical = split.prefix;
+            }
+        }
 
         // Marker lines are byte-exact canonical: no BOM, blank, or whitespace
-        // tolerance (the writer emits none). Any space, tab, or CR anywhere on
-        // the line is a hard, line-numbered parse error, and a byte-empty line
-        // fails parse_line's own empty-token refusal below.
-        if (raw.find_first_of(" \t\r") != std::string::npos) {
+        // tolerance in the canonical prefix (the writer emits none). Any space,
+        // tab, or CR there is a hard, line-numbered parse error, and a
+        // byte-empty line fails parse_line's own empty-token refusal below.
+        if (canonical.find_first_of(" \t\r") != std::string_view::npos) {
             return fail(line_number, "no whitespace allowed in canonical line");
         }
 
-        auto parsed = parse_line(raw);
+        auto parsed = parse_line(std::string(canonical));
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
         PhaseResetMarker m = std::move(*parsed);
+        m.comment = std::move(comment);
         const int64_t eff = m.time_frame;
         // A reset at time zero parses, loads, and derives; it lands on the
         // engine's first analysis frame, where synthesis phase is seeded from

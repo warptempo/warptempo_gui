@@ -268,7 +268,9 @@ struct WaveformCache {
 // of the two — so the cached pass omits that marker's box, label and hit rect
 // outright and the editor owns the flag whole. The editing target is a
 // fingerprint field (fp_editing_flag_target) precisely so open, close and
-// retarget rebuild this surface.
+// retarget rebuild this surface. THE COMMENT EDITOR HAS THE SAME SHAPE ONE BOX
+// SMALLER: its target's COMMENT box alone is skipped here (the flag keeps
+// painting) and it has its own fingerprint field, fp_editing_comment_target.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -309,6 +311,14 @@ struct FlagCache {
     // suppressed frame after the editor closed — and keep the drawn box while it
     // opened. Contract at render_flags' editing_marker_index (render.h).
     int       fp_editing_flag_target      = -1;
+    // THE MARKER WHOSE COMMENT EDITOR IS OPEN, or -1 — the sibling of the field
+    // above, for the sibling suppression: that marker's COMMENT BOX alone is
+    // skipped in the cached pass (its flag keeps painting), the live field
+    // taking its place after the blit. A SECOND field rather than a kind flag
+    // beside the first, which is what lets the two together distinguish KIND
+    // AND TARGET: a payload session reads (i, -1) and a comment session
+    // (-1, i). Contract at render_flags' editing_comment_index (render.h).
+    int       fp_editing_comment_target   = -1;
     // THE HISTORY MODE'S SIX INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
@@ -493,7 +503,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (20 fields, RE-DERIVED 2026-08-07 off the compare in
+    // (21 fields, RE-DERIVED 2026-08-19 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -503,9 +513,10 @@ struct GuiPaintHandler {
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash, fp_selection_hash,
     //     fp_active_markers_view;
-    //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
-    //     and fp_editing_flag_target (the open editor's marker, whose box this
-    //     pass SKIPS);
+    //   - CONTENT, three more: fp_iteration_mode (it changes what the flags
+    //     SAY), fp_editing_flag_target (the payload editor's marker, whose box
+    //     this pass SKIPS whole) and fp_editing_comment_target (the comment
+    //     editor's marker, whose COMMENT BOX alone this pass skips);
     //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
     //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
     //     fp_history_active, fp_history_index, fp_history_focus,

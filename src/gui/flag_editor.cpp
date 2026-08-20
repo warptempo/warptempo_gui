@@ -259,6 +259,146 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
         /*iter_grammar=*/iter_on);
 }
 
+// THE COMMENT EDITOR'S OPEN. The contract is at the declaration; this is the
+// mechanics, and they are enter_text_edit's shape written for TWO stores
+// instead of one.
+//
+// NO PLAYBACK STOP, the top-strip family's recorded exemption: this editor is
+// keyboard-modal and pointer/wheel-transparent exactly as the payload editor
+// is, so a live audition survives the open. The decision table is at
+// GuiPlaybackLifecycle::stop_playback_for_modal_open, which this surface — like
+// its sibling — deliberately does not call.
+void GuiFlagEditor::enter_comment_edit(char column, int idx) {
+    if (idx < 0) return;
+    const bool phase = (column == 'P');
+    const int  n = phase
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
+    if (idx >= n) return;
+
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::CommentText &&
+        app.top_flag_editor.target == idx) {
+        // Re-open on the live session's own target: preserve the pending text
+        // and any in-progress state, just repaint (the payload editor's rule).
+        viewport.invalidate_top_strip();
+        return;
+    }
+
+    // THE FOCUS IS REPAIRED FIRST, the bare-Return arm's twin (input_handler.cpp
+    // — a stale focus outside the selection moves to the largest remaining
+    // member before anything reads it). The key ROUTE repairs before resolving
+    // `idx` from the focus; this second call is the pointer route's, where the
+    // index came from a hit test, and it is idempotent on an already-consistent
+    // focus.
+    selection.repair_last_selected();
+
+    // Target-switching: single-select the new target so the marker column's
+    // outline follows it, and LAND the playhead on it — the marker lane owns
+    // the playhead, and an editor open hands the lane a new focus (the rule is
+    // at land_playhead_on_marker, input_pointer.cpp). Both are column-agnostic:
+    // selection indices and the land alike resolve against the ACTIVE column's
+    // store, which is the column this open was called with.
+    selection.set_single_selection(idx);
+    land_playhead_on_marker(app, audio, viewport, idx);
+
+    // Discard any prior edit silently before switching surfaces.
+    if (text_editor::is_active(app.top_flag_editor)) {
+        text_editor::deactivate(app.top_flag_editor);
+    }
+    // THE SEED IS THE MARKER'S OWN COMMENT, never the effective one: a ref that
+    // shows its definition's note opens EMPTY, because committing text here
+    // writes the ref's own field and seeding the inherited text would silently
+    // copy the definition's note onto the ref at the first Enter.
+    const std::string seed = phase
+        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].comment
+        : app.warpmarkers.markers()[static_cast<size_t>(idx)].comment;
+    text_editor::enter(app.top_flag_editor, idx,
+                       /*locked_prefix=*/std::string(), seed,
+                       text_editor::Kind::CommentText);
+
+    // Open-selected, the family's rule: the seeded text is fully selected so
+    // the first keystroke replaces it wholesale; a blank seed selects nothing
+    // and rests at caret 0.
+    if (!app.top_flag_editor.pending.empty()) {
+        app.top_flag_editor.selection_anchor = 0;
+        app.top_flag_editor.cursor_pos =
+            static_cast<int>(app.top_flag_editor.pending.size());
+    } else {
+        app.top_flag_editor.selection_anchor = -1;
+        app.top_flag_editor.cursor_pos = 0;
+    }
+
+    viewport.invalidate_top_strip();
+}
+
+// THE COMMENT COMMIT. There is NO validator arm here and that is structural
+// rather than an omission: the editor's own type-time filters are the whole
+// grammar — replace_selection drops control bytes and malformed UTF-8, the
+// typed path admits only character-bearing codepoints, and the per-Kind cap is
+// kMaxMarkerCommentBytes itself — so every buffer that reaches this function is
+// already exactly what the two file parsers accept. "Loadable iff it commits"
+// therefore holds by construction and needs no second check to keep it.
+//
+// AN EMPTY BUFFER REMOVES THE COMMENT, which is what makes the bare ` //`
+// suffix a state the GUI can never write (and so load-fatal at the readers).
+void GuiFlagEditor::commit_comment_edit() {
+    if (!text_editor::is_active(app.top_flag_editor)) return;
+    if (app.top_flag_editor.kind != text_editor::Kind::CommentText) return;
+    const int idx = app.top_flag_editor.target;
+    const std::string next = app.top_flag_editor.pending;
+    // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN, because the view
+    // CANNOT MOVE under an open session: every column-switching key (`p`, `t`,
+    // the 1/2/3 selectors, Ctrl+Tab) is dropped at the keyboard-modal gate
+    // while any editor stands, and every column-switching BUTTON acts at the
+    // LIFT whose own PRESS already closed this editor
+    // (close_top_flag_editor_for_outside_press). So the session needs no stored
+    // column of its own.
+    const bool phase = (app.active_markers_view == 'P');
+
+    // The target may have gone out from under the editor (an undo or a delete
+    // while it stood): drop the edit, exactly as the payload commit does.
+    const int n = phase
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
+    if (idx < 0 || idx >= n) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+
+    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no dirty
+    // bit, no store bump — the shape every no-op commit in the product takes.
+    const std::string& before = phase
+        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].comment
+        : app.warpmarkers.markers()[static_cast<size_t>(idx)].comment;
+    if (before == next) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+
+    // ONE UNDO ENTRY, affects_persistence TRUE: a comment is serialized content
+    // and its edit dirties the tab like any other authored change. The snapshot
+    // is taken before the write, the store's own convention.
+    if (phase) {
+        std::vector<GuiPhaseResetMarker> pre = app.phaseresetmarkers.markers();
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
+        if (m) m->comment = next;
+        undo.push_undo_phase_reset(std::move(pre));
+    } else {
+        std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
+        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
+        if (m) m->comment = next;
+        undo.push_undo_warp(std::move(pre));
+    }
+    undo.recompute_dirty();
+
+    // NO RE-RENDER AND NO MAP REBUILD: a comment reaches neither the engine nor
+    // the render fingerprint (the field's own contract at WarpMarker::comment),
+    // so the box is the only thing that moved and the strip is the only damage.
+    text_editor::deactivate(app.top_flag_editor);
+    viewport.invalidate_top_strip();
+}
+
 // Validate `pending` as a single canonical line and, on success, write
 // the parsed marker's fields back onto markers_[idx]. Cascade-renames
 // label_def changes onto every other marker that referenced the old
@@ -430,6 +570,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // disabled lives in the locked prefix — parse_single_canonical_line
     // populated it; reapply.
     m.disabled      = parsed.disabled;
+    // THE COMMENT IS NOT THIS EDITOR'S and is preserved by construction: `m`
+    // is the live marker copied whole, and no line above writes the field. The
+    // candidate parsed at accept_comment = false, so `parsed.comment` is
+    // always empty and must never be assigned from — a ` //` typed into the
+    // payload buffer is a grammar error the parse already red-flashed. The
+    // comment has its own editor (Kind::CommentText).
 
     // Cascade rename: if label_def changed to another NON-EMPTY name,
     // every other marker that referenced old_def gets its ref updated to

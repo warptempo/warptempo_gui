@@ -39,12 +39,23 @@ std::string format_phaseresetmarkers_text(
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
-        // `[#]<frame position>` only. The `#` disable prefix composes ahead
-        // of the position, exactly as the parser strips it. No mode suffix —
-        // heap is the sole engine, so there is no peak/heap/pass mode to
-        // record.
+        // `[#]<frame position>[ //<comment>]`. The `#` disable prefix composes
+        // ahead of the position, exactly as the parser strips it. No mode
+        // suffix — heap is the sole engine, so there is no peak/heap/pass mode
+        // to record.
         if (m.disabled) out << '#';
-        out << format_authored_frame(m.time_frame) << '\n';
+        out << format_authored_frame(m.time_frame);
+
+        // The free-text comment suffix (marker_comment.h), and the one place a
+        // space may appear on a marker line. An EMPTY comment emits nothing at
+        // all — the bare ` //` separator is load-fatal precisely because this
+        // writer never produces it, which is what keeps the removal path (an
+        // empty commit in the comment editor) and the load rules in agreement.
+        if (!m.comment.empty()) {
+            out << " //" << m.comment;
+        }
+
+        out << '\n';
     }
     return out.str();
 }

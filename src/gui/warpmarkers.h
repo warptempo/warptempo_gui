@@ -113,6 +113,26 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // inherits its target label_def's disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
+// THE COMMENT A WARP FLAG DISPLAYS: the marker's OWN comment when it has one,
+// else — for a label_ref — the comment on the DEFINITION it cites, else empty.
+// A ref shows the definition's note the way it shows the definition's tempo;
+// its own comment, when it has one, wins outright, and editing a ref edits the
+// ref (the comment editor always seeds the marker's own field).
+//
+// A SECOND DEFINITION-SCAN BESIDE marker_effectively_disabled's, and the
+// duplicate is justified rather than merged (the validation topology's (a)
+// clause — a different QUESTION at a different boundary): that one is a FROZEN
+// parser-domain helper answering a RENDER question over the serialized base,
+// and this is a GUI DISPLAY question that only the flag lane asks. Extending
+// the frozen twin would put a paint-time concern inside the render resolver's
+// own vocabulary; the frozen helpers are untouched.
+//
+// The returned reference aliases the store, so it is valid only until the store
+// mutates. Out-of-range indices answer the empty string, like the disabled face
+// above.
+const std::string& effective_marker_comment(
+    const std::vector<GuiWarpMarker>& markers, int idx);
+
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 

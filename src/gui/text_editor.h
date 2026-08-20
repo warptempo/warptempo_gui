@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui_input.h"
+#include "marker_comment.h"
 
 #include <algorithm>
 #include <chrono>
@@ -101,6 +102,14 @@ constexpr int kMaxPendingCharsLoadInPlace = 256;
 // ceiling the load prompt takes, and it is well past the ~50-character summary
 // line a commit title is written to be.
 constexpr int kMaxPendingCharsCommitTitle = 256;
+// The marker COMMENT editor (bare `/`, its bottom-row button, the double-click
+// on the blue box). The cap IS the load bound, taken from its one owner rather
+// than re-spelled: kMaxMarkerCommentBytes (marker_comment.h) is what both file
+// parsers refuse past, and the two must be the same number for "a comment that
+// commits here loads back" to hold exactly. Only the type changes — every cap
+// in this module is an int, which is what the cap tests read.
+constexpr int kMaxPendingCharsComment =
+    static_cast<int>(kMaxMarkerCommentBytes);
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -111,13 +120,16 @@ constexpr int kMaxPendingCharsCommitTitle = 256;
 // load prompt uses LoadInPlace (a render entry's relative-path
 // identifier, resolved against the renders/ listing at commit); the history
 // mode's commit-title editor uses CommitTitle (free one-line text, the message
-// the checkpoint commit carries).
+// the checkpoint commit carries); the MARKER COMMENT editor uses CommentText
+// (free UTF-8 text, the ` //<comment>` suffix a marker line may carry —
+// architect-blessed 2026-08-19 as the SIXTH editor).
 enum class Kind {
     FlagPayload,
     BpmBracket,
     SettingsAssignment,
     LoadInPlace,
     CommitTitle,
+    CommentText,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

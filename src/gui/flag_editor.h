@@ -40,6 +40,24 @@ struct GuiFlagEditor {
     void exit_top_flag_edit_no_commit();
     void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
+
+    // THE COMMENT EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is
+    // 'P' for the phase-reset store and anything else for the warp store, and
+    // it is the ACTIVE markers view at every call site — comments are the
+    // FOURTH ruled exception to the home-view binding, so this opens wherever
+    // the flag paints, on either column and in either audio view, and the
+    // callers' gates are read-only alone.
+    //
+    // NOT enter_text_edit: that helper is warp-payload-only by recorded
+    // invariant (it bounds-checks the warp store and its comment says why), and
+    // the comment editor resolves its index against whichever store the column
+    // names. The seed is the marker's OWN comment field, never the inherited
+    // one — editing a ref edits the ref.
+    void enter_comment_edit(char column, int idx);
+    // Commit the open comment session: an EMPTY buffer REMOVES the comment, a
+    // non-empty one stores it verbatim. One undo entry when the field actually
+    // changed, and the editor closes either way.
+    void commit_comment_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
     // closed). False on parse failure (editor stays open, red) or an

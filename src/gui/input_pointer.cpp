@@ -112,7 +112,7 @@ struct ToolbarChord {
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
-    // suppresses the lift's own act. Defaulted, so the forty-four rows that do
+    // suppresses the lift's own act. Defaulted, so the forty-five rows that do
     // not repeat need no eighth column.
     bool           repeats = false;
 };
@@ -329,8 +329,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
-    // ADD TO SELECTION landed behind them later that day).
-    // FIFTEEN
+    // ADD TO SELECTION landed behind them later that day; the MARKER COMMENT
+    // joined the verb group 2026-08-19).
+    // SIXTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -401,7 +402,23 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's fifth and the
+    // THE MARKER COMMENT (architect 2026-08-19), the verb group's fifth: BARE
+    // `/`, which was free. It opens the comment editor on the focused marker,
+    // and button-is-its-chord holds literally — the press dispatches bare `/`
+    // through on_key at the LIFT like every other chrome button, while the KEY
+    // acts at the press like every other hotkey.
+    //
+    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), and it does
+    // NOT repeat: an editor opener, and openers never repeat.
+    //
+    // ITS GATES: the `h` view consumes bare `/` and greys it with the four
+    // verbs above, and so does the READ-ONLY lock (a comment is serialized
+    // content). It differs from those four in the one place that matters — no
+    // HOME-VIEW gate, comments being the fourth ruled exception to the
+    // home-view binding — but that refusal was never a face anyway.
+    {RedesignButton::IconMarkerComment,
+     GuiKeys::Slash,  false, false, false, false, true},                             // bare /
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's sixth and the
     // roster's newest chord: BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key
@@ -460,8 +477,10 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the two menu anchors carries a chord here — 48
-// rows against the roster's 50 since 2026-08-18's THIRD ruling, when the two
+// every RedesignButton but the two menu anchors carries a chord here — 49
+// rows against the roster's 51 since 2026-08-19, when the MARKER COMMENT
+// arrived on bare `/` (a chord, so the pair moved together). It was 48 against
+// 50 from 2026-08-18's THIRD ruling, when the two
 // WALK RADIOS arrived on bare `g` (two chords, so the pairs moved together;
 // the same ruling took the walk selector off row 3, which moved neither number
 // — the tabs were always two rows here and still are, on Ctrl+Tab). It was 46
@@ -681,13 +700,16 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         g.valid        = true;
         return g;
     } else if (text_editor::is_active(app.top_flag_editor)) {
-        // FlagPayload — the UNROLLED FLAG BOX. Its geometry is the painter's,
-        // published at app.flag_editor_box (contract at FlagEditorBox,
-        // render.h): the origin already carries the view offset and the
-        // boundaries are the shaped run's own pen, so there is nothing to
-        // re-derive and nothing that could disagree with the pixels. An invalid
-        // publication (no box painted yet, or a target the store shrank past)
-        // simply leaves this invalid — the same answer the old -1 origin gave.
+        // THE MARKER LANE'S OWN FIELD — the UNROLLED FLAG BOX under the payload
+        // editor, the BLUE COMMENT BOX under the comment editor. KIND-BLIND
+        // deliberately: both publish through the one painter into the one
+        // stash, so this reads the published geometry and never asks which kind
+        // made it (contract at FlagEditorBox, render.h). The origin already
+        // carries the view offset and the boundaries are the shaped run's own
+        // pen, so there is nothing to re-derive and nothing that could disagree
+        // with the pixels. An invalid publication (no box painted yet, or a
+        // target the store shrank past) simply leaves this invalid — the same
+        // answer the old -1 origin gave.
         const FlagEditorBox& fb = app.flag_editor_box;
         if (!fb.valid) return g;
         g.ed        = &app.top_flag_editor;
@@ -1487,7 +1509,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // still places a caret and the cue must say so. The editor's
     // pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
     // the box reaches, and outside is exactly where this arm stops. A cold or
-    // closed editor publishes a zero rect, which contains no point.
+    // closed editor publishes a zero rect, which contains no point. It covers
+    // the COMMENT editor's field too, which publishes the same rect through the
+    // same painter — and covers the comment PAD deliberately NOT: that rect is
+    // painted ink beside the field, not editable text, so an I-beam over it
+    // would promise a caret the press does not seat.
     if (rect_contains(app.flag_editor_box.box, x, y))
         return GuiCursorKind::Text;
 
@@ -2751,6 +2777,16 @@ void GuiInputHandler::end_touch_region() {
 void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (rect_contains(app.flag_editor_box.box, x, y)) return;
+    // AND THE COMMENT PAD COUNTS AS INSIDE — the marker's comment box, painted
+    // by the same publisher at the unrolled box's right edge while the payload
+    // editor stands (contract at FlagEditorBox::comment_pad, render.h). It is
+    // the editor's OWN painted surface, so a press on it is not an outside
+    // press. THE CONSUME IS THE CALLER'S, one line past this call: this owner
+    // only refuses to close, and on_button_press returns on the same test so
+    // the press acts on nothing at all (it is not the FIELD either, so no caret
+    // is seated). Empty under the comment editor and when the marker carries no
+    // comment, and an empty rect contains no point.
+    if (rect_contains(app.flag_editor_box.comment_pad, x, y)) return;
     flag_editor.exit_top_flag_edit_no_commit();
 }
 
@@ -3208,19 +3244,36 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // A CONSUMED OPEN ARMS NOTHING AND SEEDS NOTHING: the editor owns input,
     // and the return ahead of the arm below is what makes "nothing arms a
     // marker drag after a consumed open" structural rather than policed.
+    //
+    // AND THE SPAN DECIDES WHICH EDITOR (2026-08-19). The seed carries which
+    // half of the box the FIRST press landed on (MarkerClickSpan), so the two
+    // halves of one box open two different editors and a pair straddling the
+    // seam opens the one the first click named. The gates differ with them:
+    // the PAYLOAD editor keeps its three (read-only, the P view, the off-home
+    // column), while the COMMENT editor asks read-only ALONE — comments are
+    // the fourth ruled exception to the home-view binding, so the phase
+    // column's comment double-click is that column's FIRST pointer authoring
+    // gesture, comment-scoped and nothing wider.
     if (dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
         std::abs(x - dc_at_press.press_x) <= kDoubleClickSlackPx &&
         std::abs(y - dc_at_press.press_y) <= kDoubleClickSlackPx &&
-        app.active_markers_view != 'P' &&
-        !active_view_state(app).read_only &&
-        active_column_authoring_allowed(app)) {
-        // Every open route opens fully SELECTED (open-selected), so there is no
-        // clicked-glyph caret to seat. A specific caret spot is a click inside
-        // the already-open editor (the F2.1 path).
-        flag_editor.enter_top_flag_edit(hit);
-        return;
+        !active_view_state(app).read_only) {
+        if (dc_at_press.span == MarkerClickSpan::Comment) {
+            // Every open route opens fully SELECTED (open-selected); the seed
+            // is the marker's OWN comment, never the inherited one.
+            flag_editor.enter_comment_edit(app.active_markers_view, hit);
+            return;
+        }
+        if (app.active_markers_view != 'P' &&
+            active_column_authoring_allowed(app)) {
+            // Every open route opens fully SELECTED (open-selected), so there
+            // is no clicked-glyph caret to seat. A specific caret spot is a
+            // click inside the already-open editor (the F2.1 path).
+            flag_editor.enter_top_flag_edit(hit);
+            return;
+        }
     }
     // ARM THE PENDING — the drag the plain press may become (the crossing
     // begins it, the two authoring gates there) and the SEED its motionless
@@ -3233,6 +3286,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     app.pending_marker_press.marker  = hit;
     app.pending_marker_press.press_x = x;
     app.pending_marker_press.press_y = y;
+    // WHICH HALF OF THE BOX THIS PRESS LANDED ON, stamped now from the
+    // painter's published boundary and carried to the seed at the motionless
+    // release. Only the double-click reads it; the drag this may become is the
+    // same gesture from either half.
+    app.pending_marker_press.span = hit_test_flag_span(app, audio, x, y);
 }
 
 // ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (BEGIN) /
@@ -3433,7 +3491,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // chrome press to an editor byte.
                 in_region = rect_contains(app.modal_dialog.field, x, y);
             } else {
-                // FlagPayload: the editable text lives IN THE UNROLLED FLAG BOX.
+                // THE MARKER LANE'S FIELD: the editable text lives IN THE
+                // PUBLISHED BOX — the unrolled flag under the payload editor,
+                // the blue comment box under the comment editor, one rect from
+                // one painter either way.
                 // The claim is the whole published BOX, pads included, not just
                 // the glyph run's extent — the box is the field, and clicking
                 // its padding should place the caret at the nearest end exactly
@@ -4024,7 +4085,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // consumes into a fresh open at that press (2026-08-17). That IS the
         // documented "double-click opens the
         // editor"; there is no own-marker special case.
+        //
+        // THE COMMENT PAD IS THE ONE PRESS THIS OWNER LEAVES STANDING AND THE
+        // ONE THIS FRAME CONSUMES OUTRIGHT: the marker's comment box, painted
+        // by the editor's own publisher at the unrolled box's right edge while
+        // the payload editor stands (FlagEditorBox::comment_pad, render.h). It
+        // is the editor's own painted surface, so it is not an "outside" press
+        // and must not close the session — and it is not the FIELD either, so
+        // it must not seat a caret. A press there therefore does NOTHING and
+        // ends here, rather than falling through to arm a nav press on lane
+        // pixels the editor is currently occupying. Empty under the comment
+        // editor and on an uncommented marker, and an empty rect contains no
+        // point.
+        const bool on_comment_pad =
+            text_editor::is_active(app.top_flag_editor) &&
+            rect_contains(app.flag_editor_box.comment_pad, x, y);
         close_top_flag_editor_for_outside_press(x, y);
+        if (on_comment_pad) return;
 
         // The marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item and that item is now its FLAG BOX alone
@@ -5299,11 +5376,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // moved-drag rule.)
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
+        // THE SPAN IS THE PRESS'S TOO, for the position's own reason: the seed
+        // describes the press, and the box may be repainted at a different
+        // width before the second click arrives.
         app.double_click = DoubleClickCandidate{
             .surface = DoubleClickSurface::Marker,
             .time_ms = monotonic_ms(),
             .press_x = press.press_x, .press_y = press.press_y,
-            .target  = press.marker};
+            .target  = press.marker,
+            .span    = press.span};
         return;
     }
     if (!app.drag.active) return;
@@ -5435,7 +5516,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's File / Settings and the view bar's three, row 3's two
 // tabs, row 4's twenty-eight — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// fifteen: 50, the enum's
+// sixteen: 51, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

@@ -210,7 +210,11 @@ enum class GuiHistoryWalkSource {
 
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
-// spelling, never a re-derivation through the typed value and back.
+// spelling, never a re-derivation through the typed value and back. That slice
+// is rest-of-line, so a ` //<comment>` suffix RIDES INSIDE the token — which is
+// what carries a comment through the revert's line reconstitution unchanged,
+// and why the h view's warp labels may show comment text inline (accepted; the
+// mode paints no comment boxes).
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
     std::string tempo_token;
@@ -228,11 +232,17 @@ struct GuiHistoryWarpChange {
     bool        now_disabled  = false;
 };
 
-// One phase reset line. The grammar is `[#]<frame position>` — the frame plus
-// the disable prefix, and nothing else.
+// One phase reset line. The grammar is `[#]<frame position>[ //<comment>]` —
+// the frame, the disable prefix, and the free-text comment suffix.
 struct GuiHistoryPhaseResetEntry {
-    int64_t frame    = 0;
-    bool    disabled = false;
+    int64_t     frame    = 0;
+    bool        disabled = false;
+    // The comment bytes, without the ` //` separator. Empty means the line
+    // carried none. It exists for the REVERT act, which restores the whole
+    // line: the column's compare is the serialized line, so a then side that
+    // dropped its comment would report every commented marker as changed and
+    // overwrite the comment away.
+    std::string comment;
 };
 
 // A phase reset line present at the same frame on both sides with a different
@@ -244,6 +254,12 @@ struct GuiHistoryPhaseResetChange {
     int64_t frame         = 0;
     bool    then_disabled = false;
     bool    now_disabled  = false;
+    // The then side's comment, for the revert. A RECORDED ASYMMETRY with the
+    // warp change above, which keeps both sides' tokens: the now side's token
+    // is painted there ([+] carries the file's spelling), while this column
+    // paints no token at all, so a `now_comment` would have no reader — the
+    // revert restores the then side and nothing else asks.
+    std::string then_comment;
 };
 
 // One commit's whole answer. Every commit that gets one is a walk member, and

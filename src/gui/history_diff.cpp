@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "frame_format.h"
 #include "history_prefetch.h"
+#include "marker_comment.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
 #include "warpmarkers.h"
@@ -799,12 +800,19 @@ std::string scale_token_of(const std::string& settings_text) {
 // the flag can show the file's own spelling rather than a round trip through
 // the typed value.
 bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
-    auto parsed = warpmarkers_internal::parse_single_canonical_line(line);
+    // COMMENTS ARE PART OF THE GRAMMAR HERE: these are the same on-disk lines
+    // the loader accepts, so the comment suffix is accepted too. Refusing it
+    // would drop every commented marker on the whitespace refusal and vanish
+    // it from the diff lane entirely.
+    auto parsed = warpmarkers_internal::parse_single_canonical_line(
+        line, /*accept_comment=*/true);
     if (!parsed) return false;
     out.frame    = parsed->time_frame;
     out.disabled = parsed->disabled;
     const std::size_t pipe = line.find('|');
-    // The parse succeeded, so the '|' is there; the guard is defensive.
+    // The parse succeeded, so the '|' is there; the guard is defensive. The
+    // slice is rest-of-line, so any comment suffix rides inside the token —
+    // deliberately: the revert rebuilds its line out of exactly this text.
     out.tempo_token =
         (pipe == std::string::npos) ? std::string() : line.substr(pipe + 1);
     return true;
@@ -812,15 +820,28 @@ bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
 
 // The phase reset column has NO callable per-line entry point — its parser's
 // parse_line lives in an anonymous namespace, whole-file only — so this
-// mirrors it exactly rather than relaxing anything: no whitespace anywhere on
-// the line, an optional leading '#' meaning disabled, then the CANONICAL
-// authored frame spelling (parse_authored_frame, frame_format.h) and nothing
-// else. A byte-empty line has no frame and is refused here just as it is at
-// load; there is no blank-line or comment concept in the grammar.
+// mirrors it exactly rather than relaxing anything: the ` //<comment>` suffix
+// off first, then no whitespace anywhere in what remains, an optional leading
+// '#' meaning disabled, then the CANONICAL authored frame spelling
+// (parse_authored_frame, frame_format.h) and nothing else. A byte-empty line
+// has no frame and is refused here just as it is at load; comment LINES are
+// not in the grammar.
+//
+// THE SPLIT IS NOT MIRRORED — it comes from marker_comment.h, the shared
+// header written so exactly one spelling of it exists. The frame parse below
+// remains this module's own hand-mirror of the loader's, the standing recorded
+// wart; the split deliberately does not join it.
 bool extract_phase_reset_entry(const std::string&         line,
                                GuiHistoryPhaseResetEntry& out) {
-    if (line.find_first_of(" \t\r") != std::string::npos) return false;
-    std::string_view t(line);
+    const MarkerCommentSplit split = split_marker_comment(line);
+    std::string_view t = split.prefix;
+    out.comment.clear();
+    if (split.had_comment) {
+        std::string comment_err;
+        if (!validate_marker_comment(split.comment, comment_err)) return false;
+        out.comment.assign(split.comment);
+    }
+    if (t.find_first_of(" \t\r") != std::string_view::npos) return false;
     out.disabled = false;
     if (!t.empty() && t.front() == '#') {
         out.disabled = true;
@@ -2466,6 +2487,7 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
             c.frame         = r.frame;
             c.then_disabled = r.disabled;
             c.now_disabled  = a.disabled;
+            c.then_comment  = r.comment;
             return c;
         });
 

@@ -2289,8 +2289,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   drop/delete/disable/toggle inherit to bottom right row"). THEY ARE THE
 //   ROW'S ONLY RESTING GREYS: their two mode gates — the `h` view and
 //   a locked tab — are the BUTTONS' own and came down with them, which is why
-//   the always-on sentence above counts eleven and not fifteen;
-//   ADD TO SELECTION (2026-08-18, later the same day), closing the verb group
+//   the always-on sentence above counts eleven and not sixteen — the MARKER
+//   COMMENT below joins them in that grey on a locked tab, though not in their
+//   home-view refusal;
+//   THE MARKER COMMENT (2026-08-19), seated between Toggle inherit and Add to
+//   Selection — bare `/`, the speech balloon, an act with no lamp. It greys
+//   with the four verbs in the `h` view and on a locked tab, and unlike them it
+//   is NOT home-view gated (comments are the fourth ruled exception);
+//   ADD TO SELECTION (2026-08-18), closing the verb group
 //   at the architect's own placement — bare `k`, the STICKY CTRL, and the
 //   row's ONE LIT FACE: it wears the selected fill while the mode stands. Its
 //   gates are its own and are NOT the verbs': the `h` view greys it with them,
@@ -2368,12 +2374,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — TEN of the fifteen, where it used to be one: in the `h` view the
-// derived partition greys the PLAY/STOP button (Space is consumed there), the
-// FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
+// rulings — ELEVEN of the sixteen, where it used to be one: in the `h` view
+// the derived partition greys the PLAY/STOP button (Space is consumed there),
+// the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
-// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS and ADD TO
-// SELECTION (bare `k`, consumed in there like the verbs' chords); the two
+// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, THE MARKER
+// COMMENT and ADD TO SELECTION (bare `/` and bare `k`, consumed in there like
+// the verbs' chords); the two
 // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, Home/End being the mode's
 // own absolute jumps, Tab/Shift+Tab its diff-flag cycle (architect-confirmed
 // for the skips) and Ctrl+Shift+Tab the march composing that cycle with the A/B
@@ -2473,11 +2480,20 @@ constexpr TransportRowDef kTransportGroup[] = {
 // edit-select: the pointer arrow over a marquee corner) and therefore the only
 // member of this table that ever wears the lit fill; the four verbs above are
 // acts that complete.
+//
+// THE GROUP IS SIX since 2026-08-19, the MARKER COMMENT seated between Toggle
+// inherit and Add to Selection (bare `/`, edit-comment: Breeze's speech
+// balloon). It is an act like the four above it, not a mode, so it wears no
+// lamp — the editor's own open session is its state. It is the group's one
+// member that is NOT home-view gated: comments are the fourth ruled exception
+// to the home-view binding, so it works on both columns in both audio views,
+// while the read-only lock greys it with the four verbs.
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
+    {RedesignButton::IconMarkerComment,    icons::Icon::EditComment},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three
@@ -2708,11 +2724,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // bottom row timestamp to left alignment, place a separator between
     // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
     // margin as FIVE + SEPARATOR + THREE + SEPARATOR + FOUR — the MARKER
-    // VERBS with ADD TO SELECTION behind them, the MARKER-WALK GROUP, and the
-    // CARDINAL ARROWS (↓ ↑ ← →, the
+    // VERBS with the MARKER COMMENT and ADD TO SELECTION behind them, the
+    // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
     // architect's order since 2026-08-14). The span between the cell and the
     // right block is BARE GROUND since 2026-08-13, the status
-    // chain that right-aligned in it having moved to the tab row.
+    // chain that right-aligned in it having moved to the tab row. THE VERB
+    // GROUP IS SIX since 2026-08-19, the MARKER COMMENT joining it.
     //
     // THE TWO ENDS CANNOT CRAWL INTO EACH OTHER FROM THE CLOCK'S SIDE ANY MORE
     // (2026-08-18). The cell was CENTRED IN THE LANE until then, so it TRAVELLED
@@ -2721,15 +2738,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // fixed pen on every window, and only the RIGHT block moves. At 100% the
     // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
     // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
-    // seats it at 123 — and the right block is 424 wide
-    // (168 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
-    // starts at 208 on the 640px defensive floor, 592 on the Pi's 1024 and
-    // 1488 at 1920. The 9-glyph cell measures about 80px at 100% (it narrowed
+    // seats it at 123 — and the right block is 458 wide
+    // (202 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
+    // starts at 182 on the 640px defensive floor, 558 on the Pi's 1024 and
+    // 1454 at 1920. The 9-glyph cell measures about 80px at 100% (it narrowed
     // when the clock went to 11pt on 2026-08-14, so that is an upper bound),
-    // which leaves the floor's tightest case some 5px of ground between the
-    // cell and the verbs — the Add to Selection button took 34 of the 40 that
-    // stood there before 2026-08-18's second roster ruling, and the PI's own
-    // 1024 keeps some 390. THE ROW STILL CARRIES NO COLLISION RULE — none of the
+    // which leaves the PI's own 1024 some 355px of ground between the cell and
+    // the verbs. THE 640px DEFENSIVE FLOOR NOW CROPS INTO THE CLOCK — the
+    // block's origin lands left of the cell's ~203px right edge — and that is
+    // ACCEPTED under the crop-at-the-floor allowance recorded at
+    // kMinWindowWidthPx rather than answered: 640 is a floor no real host of
+    // this product uses (the rig is 1024, the laptop 1920). The Marker Comment
+    // button took 34 of the 40 that Add to Selection left on 2026-08-18. THE
+    // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
     // toward the 200 ceiling.
@@ -2756,7 +2777,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // deleted rather than kept: every button on this row publishes a real rect
     // on every frame now, except under a modal, where the row yields whole.
     {
-        const int verbs_w  = 5 * btn + 4 * btn_gap;
+        const int verbs_w  = 6 * btn + 5 * btn_gap;
         const int walk_w   = 3 * btn + 2 * btn_gap;
         const int arrows_w = 4 * btn + 3 * btn_gap;
         const int sep_span = sep_gap + sep_w + sep_gap;
@@ -2984,7 +3005,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // B (it was the blank foot's own band before, zero on a short window):
     // there is nothing below them at all, so the hint hangs upward there, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's fifteen roster buttons and, since 2026-08-13, the modal's own,
+    // the row's sixteen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -4880,9 +4901,9 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all FIFTEEN buttons — the transport three, the four
-// single-marker verbs with Add to Selection behind them, the marker-walk three
-// and the four arrows — plus the clock and the row's three separators stand
+// YIELDS WHOLE: all SIXTEEN buttons — the transport three, the four
+// single-marker verbs with the Marker Comment and Add to Selection behind
+// them, the marker-walk three and the four arrows — plus the clock and the row's three separators stand
 // down, nothing negotiates
 // for space,
 // and paint_modal_dialog paints the modal into the lane they left.
@@ -5012,7 +5033,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // here: paint_modal_dialog owns the lane from this frame until the
     // dialog's closer.
     //
-    // THE FIFTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
+    // THE SIXTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
     // point), so nothing can hit an unpainted button and no consumer of those
     // rects can read a phantom bound. Their THREE FACE BITS ARE

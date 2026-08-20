@@ -791,7 +791,7 @@ struct GuiInputHandler {
     // synthesize chords through this same body so every gate applies to them
     // identically — the chrome lift, the dropdown item, and the arrow
     // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
-    // live at their own homes: the five editors' modality
+    // live at their own homes: the six editors' modality
     // (route_modal_editor_key), strict modifier validation (an unbound
     // modifier combination is a consumed no-op; conventions.md), the Super
     // press drop (deliver_key, platform_wayland.cpp), the modal Enter/Space
@@ -1090,7 +1090,7 @@ struct GuiInputHandler {
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
     // view, which ADMITS this former as its own view-local vocabulary):
-    // prompt, the five editors via keyboard_modal_editor_active (the flag
+    // prompt, the six editors via keyboard_modal_editor_active (the flag
     // editor deliberately included though pointer-transparent — every
     // pointer press CLOSES an open flag editor before any claim runs, and
     // this begin, which skips the press path, must not become the first
@@ -1183,9 +1183,9 @@ struct GuiInputHandler {
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
     // the four companions) and the bottom
-    // row's fifteen — the transport three, then the right block's four marker
-    // verbs with ADD TO SELECTION behind them (2026-08-18), three walk steps
-    // and four cardinal arrows. EVERY ONE OF THEM
+    // row's sixteen — the transport three, then the right block's four marker
+    // verbs with the MARKER COMMENT (2026-08-19) and ADD TO SELECTION
+    // (2026-08-18) behind them, three walk steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
@@ -1793,9 +1793,10 @@ struct GuiInputHandler {
 
     // True when ANY text editor is consuming printable keys — the settings
     // editor, the load editor, the commit-title editor, or the top-strip flag
-    // editor in EITHER kind (unlike modal_dialog_editor_active, which names the
-    // four DIALOG-hosted surfaces — those first three plus the flag editor's
-    // BpmBracket kind — and omits the FlagPayload kind). The platform's
+    // editor in ANY of its three kinds (unlike modal_dialog_editor_active,
+    // which names the four DIALOG-hosted surfaces — those first three plus the
+    // flag editor's BpmBracket kind — and omits the FlagPayload and CommentText
+    // kinds, both of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -2844,7 +2845,7 @@ private:
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
     // EVERY editor does — the three single-State dialog ones (settings, load,
-    // commit title), the bpm bracket, and the
+    // commit title), the bpm bracket, the marker COMMENT editor, and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
@@ -2924,7 +2925,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all five editors, top strip included.
+    // Ctrl+Q). It serves all six editors, top strip included.
     bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 

@@ -39,8 +39,9 @@ std::string format_warpmarkers_text(
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
-        // Canonical new format, no whitespace anywhere on the line:
-        //   [#]?<frame position>|PAYLOAD
+        // Canonical new format, no whitespace anywhere in the canonical
+        // prefix:
+        //   [#]?<frame position>|PAYLOAD[ //<comment>]
         if (m.disabled) out << '#';
         out << format_authored_frame(m.time_frame) << '|';
 
@@ -74,6 +75,15 @@ std::string format_warpmarkers_text(
             }
         }
 
+        // The free-text comment suffix (marker_comment.h), and the one place a
+        // space may appear on a marker line. An EMPTY comment emits nothing at
+        // all — the bare ` //` separator is load-fatal precisely because this
+        // writer never produces it, which is what keeps the removal path (an
+        // empty commit in the comment editor) and the load rules in agreement.
+        if (!m.comment.empty()) {
+            out << " //" << m.comment;
+        }
+
         out << '\n';
     }
     return out.str();
@@ -98,4 +108,25 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;
     return marker_effectively_disabled(markers, static_cast<size_t>(idx));
+}
+
+const std::string& effective_marker_comment(
+    const std::vector<GuiWarpMarker>& markers, int idx) {
+    static const std::string kNone;
+    if (idx < 0 || idx >= static_cast<int>(markers.size())) return kNone;
+    const GuiWarpMarker& m = markers[static_cast<size_t>(idx)];
+    // Own first — a ref that carries its own note shows that note, and the
+    // definition is never consulted.
+    if (!m.comment.empty()) return m.comment;
+    if (m.label_ref.empty()) return kNone;
+    // The cited definition. A DANGLING ref finds nothing and shows nothing,
+    // which is the same silent answer the render resolver gives it (a dangling
+    // ref normalizes to a plain owner) — no diagnostic belongs at paint time.
+    // Linear because the store is small and this runs only for refs with no own
+    // comment; the contract at the declaration says why it is not the frozen
+    // cascade helper.
+    for (const GuiWarpMarker& d : markers) {
+        if (d.label_def == m.label_ref) return d.comment;
+    }
+    return kNone;
 }

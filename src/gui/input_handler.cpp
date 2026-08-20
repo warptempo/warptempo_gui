@@ -732,10 +732,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
-    //       since it can only fire while one of the five editors owns the
+    //       since it can only fire while one of the six editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all five, through route_modal_editor_key: Esc closes /
+    //   (b) THE EDITORS — all six, through route_modal_editor_key: Esc closes /
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
     //       place of its own, which is the point of there being one route;
@@ -895,6 +895,32 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.last_selected_marker >= 0 && app.active_markers_view != 'P' &&
             active_column_authoring_allowed(app)) {
             flag_editor.enter_top_flag_edit(app.last_selected_marker);
+        }
+        return;
+    }
+
+    // Bare `/` opens the COMMENT editor on the focused marker — the Return
+    // arm's sibling, one exception wider. COMMENTS ARE THE FOURTH RULED
+    // EXCEPTION TO THE HOME-VIEW BINDING (architect 2026-08-19; the inventory
+    // is at active_column_authoring_allowed, app_state.h): a comment is a note
+    // about a marker rather than an authored musical value, so it is editable
+    // wherever the flag paints — BOTH COLUMNS, BOTH audio views — and this arm
+    // deliberately asks neither the P-view refusal nor
+    // active_column_authoring_allowed. Read-only still refuses: a comment IS
+    // serialized content, and `/` is absent from read_only_key_blocked's
+    // allowlist, so a locked tab drops the press before it reaches here. The
+    // `h` view drops it at its own allowlist too.
+    // NOTHING FOCUSED IS A CONSUMED NO-OP, and the refusal lives HERE rather
+    // than in the button's face: the bottom-row button is lit whenever the tab
+    // is writable and its click simply does nothing when there is no focus (the
+    // 2026-08-15 no-blink ruling — a face that tracked the selection would
+    // blink at interaction cadence).
+    // Modifier-strict: only the plain, unmodified press binds.
+    if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
+        selection.repair_last_selected();
+        if (app.last_selected_marker >= 0) {
+            flag_editor.enter_comment_edit(app.active_markers_view,
+                                           app.last_selected_marker);
         }
         return;
     }

@@ -641,6 +641,29 @@ constexpr IconPath kEditSelectPaths[] = {
      "19 10.900391 14.300781 17 14 7 6"},
 };
 
+// THE MARKER COMMENT ACT'S GLYPH (2026-08-19): edit-comment, Breeze's speech
+// balloon with its tail. THE FILE IS A SYMLINK in the installed theme —
+// actions/22/edit-comment.svg points at dialog-messages.svg — so what is
+// committed under assets/icons/breeze/edit-comment.svg is the RESOLVED file's
+// content, and a diff between this table and that asset is still a
+// transcription bug and nothing else.
+//
+// IT NEEDS A TRANSLATE, the third committed file that does (dialog-ok-apply and
+// dialog-cancel are the others): its author drew the balloon at document
+// coordinates and translated it back into the viewBox, and `translate(-326
+// -534.3622)` is the glued-negative form the SVG grammar admits, spelled here
+// through the one producer, icon_translate.
+//
+// Command coverage: relative `m` with `v`, `h` and `z` plus implicit
+// repetition, and leading-dot decimals chained without separators
+// ("-.00002-3" is two numbers) — every one of them long-standing in the parser.
+constexpr IconPath kEditCommentPaths[] = {
+    {kIconText,
+     "m328.99998 538.3622v10l3.00002 4-.00002-3 .00002-1h12.99998v-10zm1 "
+     "1h14.00002v8h-14z",
+     icon_translate(-326.0, -534.3622)},
+};
+
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
 //
 // Same rules as every entry above: `d` verbatim from the committed file, the
@@ -960,6 +983,7 @@ constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
+constexpr IconDef kEditComment        {22.0, kEditCommentPaths,         1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1009,6 +1033,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DeepHistory:         return kDeepHistory;
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
+        case Icon::EditComment:         return kEditComment;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
