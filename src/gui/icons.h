@@ -155,8 +155,13 @@ enum class Icon {
     ListRemove,          // Delete markers (`Delete`)
     ViewHidden,          // Disable markers (`Ctrl+D`)
     InsertLink,          // Inherit tempo (`Ctrl+N`)
-    EditCopy,            // Copy phase resets
-    EditPaste,           // Paste phase resets
+    // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:
+    // the architect's propagate relocation gave all five propagate commands the
+    // EDIT MENU as their one pointer home, and neither glyph had a second
+    // consumer. Breeze's edit-copy and edit-paste, the two-sheets and the
+    // clipboard, transcribed from the shipped SVGs; the provenance files went
+    // with them, the trim scissors' own precedent. A menu ROW carries text and
+    // an accelerator, never a glyph, so nothing replaced them.)
     MusicNote16th,       // BPM editor
     // THE SUMMATION SIGMA, ON THE CUMULATIVE READING SINCE 2026-08-18
     // (architect): a cumulative delta is a SUM over the walk's members, read
@@ -298,6 +303,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 46 since 2026-08-20, the propagate relocation: 48 − edit-copy and edit-paste,
+// deleted with the two icon-row buttons the EDIT MENU replaced. The five
+// commands survive whole on their chords and as menu rows; the glyphs had no
+// other consumer, exactly as edit-cut had none when the scissors went.
 // 48 since 2026-08-19: 47 + edit-comment, the Marker Measure button's speech
 // balloon (the bottom row's verb group).
 // 47 since 2026-08-18, the roster relayout: 45 − edit-cut (the trim scissors,
@@ -319,7 +328,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 48;
+inline constexpr int kIconCount = 46;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

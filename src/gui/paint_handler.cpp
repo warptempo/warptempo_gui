@@ -247,6 +247,16 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // else moved — the label is shorter, so the float is 3px narrower at 100%
     // (the measurement is in the right float's collision note below).
     {RedesignButton::File,       "File"},
+    // THE EDIT MENU (architect 2026-08-20) — the row's THIRD dropdown again,
+    // painted between File and Settings, the standard order and kdenlive's own.
+    // A COMMAND MENU of FIVE rows, the propagate family whole, and a
+    // RELOCATION: IconCopy and IconPaste were deleted from the icon row in the
+    // same ruling, so this menu is those commands' one pointer home rather than
+    // a second road to them. Nothing here needed a width or pad term — the row
+    // is one left-to-right accumulation over this table — but the LABEL'S WIDTH
+    // does re-enter the right float's collision corner, which is recorded (and
+    // deliberately not acted on) in that note below.
+    {RedesignButton::Edit,       "Edit"},
     // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
     // of the zoom and stepping commands — painted between these two from that
     // day until 2026-08-15, when the architect deleted it whole: every one of
@@ -728,11 +738,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
     // bottom row's own table below.)
-    // THE MASS-MARKER CATEGORY — the phase-reset clipboard pair and the three
-    // mode/editor buttons. It was the one group the `h` view dropped whole
+    // THE MASS-MARKER CATEGORY — three mode/editor buttons, and the group's
+    // LEADER since 2026-08-20. It was the one group the `h` view dropped whole
     // (2026-08-13); it greys in there like everything else now.
-    {RedesignButton::IconCopy,   icons::Icon::EditCopy},
-    {RedesignButton::IconPaste,  icons::Icon::EditPaste},
+    // (THE PHASE-RESET CLIPBOARD PAIR OPENED THIS GROUP UNTIL 2026-08-20, when
+    // the architect's propagate relocation deleted both buttons: all five
+    // propagate commands took the new EDIT MENU as their one pointer home, and
+    // edit-copy and edit-paste went with them — the glyphs had no second
+    // consumer, the trim scissors' own precedent. The separator now falls in
+    // front of the BPM opener.)
     {RedesignButton::IconBpm,    icons::Icon::MusicNote16th},
     // ITERATION MODE WEARS MATHMODE since 2026-08-18 (architect): the slot
     // keeps a MATH SYMBOL and f(x) names the operation — a render as a function
@@ -1258,23 +1272,34 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // FLUSH AT THE WINDOW'S RIGHT EDGE (no margin stated, so none exists).
         //
         // THERE IS STILL NO COLLISION RULE, and the measurement that used to
-        // justify one has changed twice — recorded rather than acted on, since an
-        // overlap layout is the architect's to specify. RE-DERIVED FOR THE
-        // TWO-BUTTON FLOAT from the face's own advance widths (Liberation Sans at
-        // this row's 16px; the method reproduces the three numbers the 2026-08-02
-        // shaped-run walk recorded — Quit 29, Navigation 76, Settings 58 —
-        // exactly, which is what makes File's 26 comparable to them): the
-        // left float is 124px at 100% (shaped labels File 26 + Settings 58, each
+        // justify one has now changed three times — recorded rather than acted
+        // on, since an overlap layout is the architect's to specify. RE-DERIVED
+        // FOR THE TWO-BUTTON FLOAT from the face's own advance widths (Liberation
+        // Sans at this row's 16px; the method reproduces the three numbers the
+        // 2026-08-02 shaped-run walk recorded — Quit 29, Navigation 76,
+        // Settings 58 — exactly, which is what makes File's 26 comparable to
+        // them): the
+        // left float was 124px at 100% (shaped labels File 26 + Settings 58, each
         // plus its two 10px pads — 46 + 78) and the div 183 — 307 of the 1920px
         // deployment width, 1613px of slack, and 333 of the 640px floor. AT 200%
-        // IT IS THE RECORDED THREE-BUTTON 439 LESS NAVIGATION'S OWN DOUBLED SLOT
+        // IT WAS THE RECORDED THREE-BUTTON 439 LESS NAVIGATION'S OWN DOUBLED SLOT
         // (~192), i.e. ~247, and the exact pixel is deliberately left unstated:
         // the 2026-08-02 walk recorded only the TOTAL at that scale, and a
         // shaped run's width is not exactly twice its 100% value — which is why
-        // that total reads 439 rather than 440. It does not matter which way
-        // that one pixel falls: against the div's 366 the pair comes to ~613 on
-        // the 640px floor THAT DOES NOT SCALE, so the floats CLEAR IT BY ~26-27
-        // and the overlap is gone outright rather than narrowed.
+        // that total reads 439 rather than 440. It did not matter which way
+        // that one pixel fell: against the div's 366 the pair came to ~613 on
+        // the 640px floor THAT DOES NOT SCALE, so the floats CLEARED IT BY ~26-27
+        // and the overlap was gone outright rather than narrowed.
+        //
+        // THE CORNER IS RE-ENTERED SINCE 2026-08-20, and the old answer returns
+        // with it. The EDIT ANCHOR adds a shaped "Edit" (~26px at 100%, the same
+        // four-glyph order as File) plus its two 10px pads — ~46px at 100%, ~92
+        // at 200% — so the three-button float is ~170 at 100% and ~339 at 200%.
+        // At 100% nothing is close: 170 + 183 = 353 of the 640px floor. AT 200%
+        // it is ~339 + 366 = ~705 ON THAT SAME 640 FLOOR, which OVERLAPS THE DIV
+        // BY ~65px — narrower than the Navigation era's 165 and the same KIND of
+        // corner. NO RULE IS BUILT FOR IT, deliberately and for the reason the
+        // record below already gives: the painters answer it themselves.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -1282,9 +1307,13 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // cleared it by 19. What happened there is what the painters already do:
         // the div fills its background last and covered the tail of the left
         // float's labels — nothing clickable, nothing else changed, and the
-        // deployment geometry was nowhere near it. That is the record of a
-        // corner this row no longer has, kept because the SHAPE of the answer
-        // ("the div covers the tail") is what a future third button inherits.
+        // deployment geometry was nowhere near it. THAT IS THE ANSWER AGAIN, and
+        // it is why this stayed a record rather than becoming a rule: the SHAPE
+        // of the answer ("the div covers the tail") was kept precisely for the
+        // third button this row has now, and it needed no code when it arrived.
+        // NEITHER DEPLOYMENT IS ANYWHERE NEAR IT — 1920 on the laptop, 1024 on
+        // the rig, both at 100% — so the overlap is a ceiling-scale, floor-width
+        // corner and nothing a real window reaches.
         // Defensive only, and it takes the whole float: a lane so short that the
         // two margins eat the button leaves nothing to paint and nothing to
         // click, which is the same early-out the row's own content_h guard above

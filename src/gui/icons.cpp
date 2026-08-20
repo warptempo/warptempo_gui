@@ -189,21 +189,6 @@ constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 // would have to move independently if a crop ever disagreed with a scheme.
 constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
 
-constexpr IconPath kEditCopyPaths[] = {
-    {kIconText,
-     "M 3 3 L 3 17 L 7 17 L 7 19 L 17 19 L 17 10 L 13 6 L 12 6 L 9 3 L 3 3 Z M "
-     "4 4 L 8 4 L 8 6 L 7 6 L 7 16 L 4 16 L 4 4 Z M 8 7 L 12 7 L 12 11 L 16 11 "
-     "L 16 18 L 8 18 L 8 7 Z"},
-};
-
-constexpr IconPath kEditPastePaths[] = {
-    {kIconText,
-     "M 7 3 L 7 5 L 5 5 L 4 5 L 4 19 L 5 19 L 18 19 L 18 18 L 18 5 L 17 5 L 15 "
-     "5 L 15 3 L 7 3 z M 5 6 L 6 6 L 6 8 L 16 8 L 16 6 L 17 6 L 17 18 L 5 18 L "
-     "5 6 z M 7 9 L 7 10 L 15 10 L 15 9 L 7 9 z M 7 12 L 7 13 L 13 13 L 13 12 L "
-     "7 12 z M 7 15 L 7 16 L 10 16 L 10 15 L 7 15 z "},
-};
-
 constexpr IconPath kMusicNote16thPaths[] = {
     {kIconText,
      "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
@@ -965,8 +950,6 @@ constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
 constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
 constexpr IconDef kSpeedometer        {22.0, kSpeedometerPaths,         1};
 constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
-constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
-constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
@@ -1016,8 +999,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DocumentImport:      return kDocumentImport;
         case Icon::Speedometer:         return kSpeedometer;
         case Icon::ChronometerStart:    return kChronometerStart;
-        case Icon::EditCopy:            return kEditCopy;
-        case Icon::EditPaste:           return kEditPaste;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::BlackSum:            return kBlackSum;
         case Icon::Mathmode:            return kMathmode;

@@ -230,10 +230,17 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconZoomOut,      GuiKeys::Minus,  false, false, false, false, true}, // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // THE MASS-MARKER CATEGORY — five chords the `h` view consumes outright,
-    // all five greyed in there.
-    {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, true},   // Ctrl+P
-    {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  false, true},   // Ctrl+Alt+P (+Shift)
+    // THE MASS-MARKER CATEGORY — three chords the `h` view consumes outright,
+    // all three greyed in there.
+    // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
+    // the architect's propagate relocation gave all FIVE propagate commands the
+    // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
+    // the pointer as MENU ITEMS now. Their chords did not die with the rows —
+    // a menu item dispatches through on_key exactly as a button's chord does,
+    // which is why the relocation needed no second body anywhere. The shift
+    // admission IconPaste carried for Ctrl+Alt+Shift+P went too, that chord
+    // being a menu row of its own now; the trim scissors' deletion above is the
+    // same shape.)
     // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
     // otherwise (the arm is at handle_mode_keys, input_key_dispatch.cpp). The
     // button is its chord, so it takes the chord the keyboard actually has.
@@ -505,10 +512,10 @@ constexpr ToolbarChord kToolbarChords[] = {
 // drift a build error instead. (It was + 2 until 2026-08-13, when the Quit
 // button became the File menu's one item: the roster's total did not move, the
 // split did.)
-static_assert(std::size(kToolbarChords) + 2 ==
+static_assert(std::size(kToolbarChords) + 3 ==
                   static_cast<std::size_t>(kRedesignButtonCount),
               "kToolbarChords must cover every RedesignButton except the "
-              "File and Settings anchors");
+              "File, Edit and Settings anchors");
 
 // (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
 // drop the Save reach through". From 2026-08-11 a plain left press on a roster
@@ -962,6 +969,16 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // every state.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     if (b == RedesignButton::Settings) return true;
+    // THE EDIT ANCHOR IS DEAD IN THE VIEW (2026-08-20), on the Settings
+    // pattern and for a different reason: Settings is named here because its
+    // items reach the settings editor by a DIRECT call that meets no gate,
+    // while EVERY Edit item is a CHORD the mode's allowlist already drops — so
+    // the menu would open, and every row in it would do nothing. That is the
+    // face promising more than the keys deliver, which is what this partition
+    // exists to prevent. It is HAND-NAMED rather than derived because an anchor
+    // carries no chord for the walk below to ask about, and the walk's default
+    // for an unlisted button is LIVE.
+    if (b == RedesignButton::Edit) return true;
     if (b == RedesignButton::File) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
@@ -3724,19 +3741,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (rect_contains(menu_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
-                // FILE AND SETTINGS ARE THE ROSTER'S TWO
+                // FILE, EDIT AND SETTINGS ARE THE ROSTER'S THREE
                 // NON-CHORD BUTTONS, so they are spelled here rather than in the
                 // table: each action is a POPUP TOGGLE, which no keyboard chord
                 // performs. Their menus lead to routes the keyboard already has
-                // — the bare `;` still opens the settings editor DIRECTLY and
-                // File's one item is Ctrl+Q — so a
+                // — the bare `;` still opens the settings editor DIRECTLY,
+                // File's one item is Ctrl+Q, and Edit's five are the propagate
+                // chords — so a
                 // dropdown is a pointer affordance for an existing road, never a
                 // second one. (A THIRD anchor, Navigation, was spelled here from
                 // 2026-08-02 until 2026-08-15, and its deletion is what makes
                 // that principle load-bearing rather than decorative: every one
                 // of its items was a key you could press instead, and once every
                 // one of those keys had a BUTTON too the menu was a third road
-                // to the same place and went.) Shift-exact is refused like every
+                // to the same place and went. THE EDIT MENU OF 2026-08-20 IS
+                // THAT RUN IN REVERSE and satisfies the same doctrine: its five
+                // propagate rows would have been a second road beside IconCopy
+                // and IconPaste, so those two BUTTONS were deleted with the
+                // menu's arrival rather than left standing beside it — the
+                // architect choosing which road survives, never keeping both.)
+                // Shift-exact is refused like every
                 // other non-admitting button.
                 //
                 // THE ANCHORS ARE WALKED rather than spelled one by one — the
@@ -6905,7 +6929,21 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // what makes it a nothing — it neither puts File away nor opens
     // Settings, so the pointer crossing a dead anchor leaves the standing menu
     // exactly as it was.
-    if (app.history_mode.active && menu == DropdownMenu::Settings) return;
+    //
+    // THE EDIT MENU JOINED THE LOCKOUT ON 2026-08-20, and the scope re-derived
+    // above admits it on its own terms rather than by widening back to the
+    // whole row: Edit is a COMMAND menu, so it has no direct call to shut —
+    // but unlike File, whose Ctrl+Q the mode ADMITS, every one of Edit's five
+    // rows is a chord the mode's allowlist drops. The per-item answer that
+    // makes a command menu safe in here is "the command runs and its own gate
+    // refuses", and when that is the answer for EVERY row the menu is a box
+    // that opens onto nothing. Refusing it is the same criterion the narrowing
+    // used, read the other way: the face must not promise more than the keys
+    // deliver. Its anchor greys beside this (history_mode_disables_button).
+    if (app.history_mode.active &&
+        (menu == DropdownMenu::Settings || menu == DropdownMenu::Edit)) {
+        return;
+    }
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
     // button switches — the close below runs first, damaging the box that is
