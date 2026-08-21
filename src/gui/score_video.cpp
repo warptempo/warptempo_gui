@@ -1,6 +1,8 @@
 // The score-video act's whole implementation: the map read, the measure
-// resolution walk, the time lookup, and the one line written to mpv. The act's
-// contract, its refusal taxonomy and the folder law are at score_video.h.
+// resolution walk, the time lookup, and the command batch written to mpv (the
+// jump, the audition's speed, and pitch correction off — three newline-
+// delimited commands on one connection). The act's contract, its refusal
+// taxonomy and the folder law are at score_video.h.
 
 #include "score_video.h"
 
@@ -319,11 +321,13 @@ int wait_writable(int fd, int64_t deadline_ms) {
     }
 }
 
-// Send ONE command line to a standing mpv. Returns false when nothing was
-// listening (the ordinary "no instance yet" answer, which the caller turns into
-// a spawn) and sets `write_failed` when the socket WAS reached and the line
-// still could not be delivered — a different fact, and the one the caller
-// reports.
+// Send one COMMAND BATCH to a standing mpv — `payload` is one or more
+// newline-terminated JSON commands, written whole on one connection (mpv's IPC
+// is line-delimited, so the batch costs one connect, one deadline and one write
+// loop rather than three). Returns false when nothing was listening (the
+// ordinary "no instance yet" answer, which the caller turns into a spawn) and
+// sets `write_failed` when the socket WAS reached and the payload still could
+// not be delivered — a different fact, and the one the caller reports.
 //
 // NOTHING HERE BLOCKS WITHOUT A BOUND. The socket is NONBLOCKING FROM BIRTH,
 // which is the point: a blocking AF_UNIX connect can wait on a listener whose
@@ -335,17 +339,26 @@ int wait_writable(int fd, int64_t deadline_ms) {
 // THE TIMEOUT IS NOT A "NOT LISTENING" ANSWER, and the distinction decides
 // whether a second mpv gets launched: an immediate connect error (no socket
 // file, nothing bound, a stale file refusing) means there is no instance, so
-// the caller spawns one; an EINPROGRESS that then times out means SOMETHING IS
-// THERE and is not answering, so this reports instead — spawning a rival that
-// could not bind the occupied path would be a silent nothing.
+// the caller spawns one; a connect that could not COMPLETE and then times out
+// means SOMETHING IS THERE and is not answering, so this reports instead —
+// spawning a rival that could not bind the occupied path would be a silent
+// nothing.
+//
+// AF_UNIX SAYS EAGAIN WHERE TCP SAYS EINPROGRESS, and both mean the same thing
+// here: the listener exists but its ACCEPT QUEUE IS FULL — a stopped or wedged
+// mpv still owning the socket — so the connection is pending rather than
+// refused. Reading only EINPROGRESS sent exactly the case this contract was
+// written for down the "nothing is listening" path and launched a rival mpv
+// against an occupied socket. Both codes now enter the poll + SO_ERROR wait
+// below, under the one deadline.
 //
 // No reply is read: mpv answers every command with a JSON line, and this act
 // has nothing to do with the answer — which is exactly why the caller's
 // diagnostic says the WRITE failed and never that mpv refused anything.
 // SIGPIPE is SIG_IGN process-wide (main.cpp), so a peer that goes away mid-line
 // returns EPIPE here rather than killing the process.
-bool send_mpv_command(const std::string& socket_path, const std::string& line,
-                      bool& write_failed) {
+bool send_mpv_command(const std::string& socket_path,
+                      const std::string& payload, bool& write_failed) {
     write_failed = false;
     sockaddr_un addr{};
     if (socket_path.size() + 1 > sizeof(addr.sun_path)) return false;
@@ -358,14 +371,14 @@ bool send_mpv_command(const std::string& socket_path, const std::string& line,
     const int64_t deadline = monotonic_ms() + kScoreVideoIpcMs;
     if (::connect(fd, reinterpret_cast<const sockaddr*>(&addr),
                   sizeof(addr)) != 0) {
-        if (errno != EINPROGRESS) {
+        if (errno != EINPROGRESS && errno != EAGAIN && errno != EWOULDBLOCK) {
             ::close(fd);  // nothing is listening: the caller's spawn answer
             return false;
         }
         const int ready = wait_writable(fd, deadline);
         if (ready <= 0) {
-            // Timed out or poll failed on a connect that HAD been accepted for
-            // processing: reached, unusable, reported rather than respawned.
+            // Timed out or poll failed on a connect that was PENDING rather
+            // than refused: reached, unusable, reported rather than respawned.
             ::close(fd);
             write_failed = true;
             return false;
@@ -380,8 +393,9 @@ bool send_mpv_command(const std::string& socket_path, const std::string& line,
     }
 
     size_t off = 0;
-    while (off < line.size()) {
-        const ssize_t n = ::write(fd, line.data() + off, line.size() - off);
+    while (off < payload.size()) {
+        const ssize_t n =
+            ::write(fd, payload.data() + off, payload.size() - off);
         if (n > 0) {
             off += static_cast<size_t>(n);
             continue;

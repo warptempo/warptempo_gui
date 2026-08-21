@@ -15,7 +15,9 @@ struct AppState;
 // IT IS PURE NAVIGATION AND IT PAINTS NOTHING. No store write, no undo entry,
 // no record_gesture, no damage, no view switch, no playback change — the GUI
 // reads three things (the focused marker's measure, the map beside the source,
-// the mpv socket) and writes one line to another process.
+// the mpv socket) and writes one COMMAND BATCH to another process — the jump
+// itself, the audition's speed, and pitch correction off, three newline-
+// delimited JSON commands sent whole on one connection.
 //
 // THE REFUSALS SPLIT IN TWO, on whether an mpv was involved at all. EVERYTHING
 // UP TO THE TRANSPORT IS A CONSUMED SILENT NO-OP — nothing focused, no measure,

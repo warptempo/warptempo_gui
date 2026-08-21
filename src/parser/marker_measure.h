@@ -31,11 +31,26 @@
 //
 // This header is header-only and shared by both binaries — the frame_format.h
 // precedent — so the split, the grammar and the canonical spelling have
-// exactly one home. The consumers are the two file parsers
-// (warpmarkers_parse.cpp, phaseresetmarkers_parse.cpp), the GitHub recheck's
-// two delta extractors (history_diff.cpp), the revert arms' reconstitution
-// (through the parser's own per-line entry point) and the measure editor's
-// commit (flag_editor.cpp); none mirrors the split or the grammar.
+// exactly one home. THE CONSUMERS, re-derived by grep 2026-08-20 rather than
+// edited in place (COMMENT ONLY, architect approval 2026-08-20 — the same
+// same-day grant the grammar block below carries; no code in this file's
+// consumers changed for it):
+//   * THE TWO FILE PARSERS — warpmarkers_parse.cpp,
+//     phaseresetmarkers_parse.cpp: split, then validate.
+//   * THE GITHUB RECHECK'S TWO DELTA EXTRACTORS — history_diff.cpp: the same
+//     pair. The revert arms reconstitute through the parser's own per-line
+//     entry point and so consume this header only through it.
+//   * THE MEASURE EDITOR — flag_editor.cpp validates at the commit, and
+//     text_editor.h takes its character cap from kMaxMarkerMeasureBytes rather
+//     than re-spelling a number.
+//   * THE MEASURE PROPAGATE — input_key_dispatch.cpp: it PARSES each clipboard
+//     measure, shifts the printed number against kMeasureMaxWhole, and
+//     re-spells through format_marker_measure, which is what keeps one
+//     spelling on disk and rides the section through untouched.
+//   * THE SCORE-VIDEO ACT — score_video.cpp: it parses down a '+' chain for
+//     the resolution walk, and reads kMeasureMaxSection when judging a map
+//     anchor's qualifier, so the map format and this grammar cannot drift.
+// None of them mirrors the split, the grammar or the spelling.
 //
 // ------------------------------------------------------------------------
 // THE GRAMMAR — ASCII only, two forms, one canonical spelling per value.

@@ -6937,12 +6937,20 @@ inline bool playback_launch_playable(const AppState& a,
 //     no view term, no wall term — because this is a MODE statement and not the
 //     truthfulness sweep: any interaction-cadence term added here would
 //     reintroduce the blink the same ruling removed from the arrows. THE
-//     MEMBERSHIP'S OWNER IS read_only_key_blocked (input_key_dispatch.cpp) and
-//     the ten are its answer over the chord table: bare `s`, Delete, Ctrl+D,
-//     Ctrl+N, Ctrl+P, Ctrl+Alt+P, bare `m`, bare `i`, bare `l` and bare `'`.
-//     IT IS HAND-LISTED RATHER THAN DERIVED, and the reason is that the
-//     allowlist alone is not the truth — three of its answers do not survive
-//     the walk (below).
+//     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
+//     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare `m`, bare `i`, bare `l` and bare
+//     `'` — EIGHT as of 2026-08-20. IT IS HAND-LISTED RATHER THAN DERIVED, and
+//     the reason is that the allowlist alone is not the truth: some of its
+//     answers do not survive the walk (below), and TWO CHANGES THE SAME DAY
+//     made the point twice over. Ctrl+P and Ctrl+Alt+P left this list with
+//     their BUTTONS (the Edit-menu relocation) though the lock still eats the
+//     chords — blocked, with no face to grey. And THE MEASURE (bare `/`) left
+//     it while its chord stayed blocked: its SHIFT half is the lock-legal
+//     score-video jump and a chrome face cannot split, so the button is LIT on
+//     a locked tab and the gate refuses the plain click, the Edit menu's own
+//     shape. The mirror is a membership, never an equivalence, in both
+//     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
@@ -6960,17 +6968,20 @@ inline bool playback_launch_playable(const AppState& a,
 //   * WHY THE TEN ARE NOT DERIVED BY WALKING kToolbarChords THROUGH
 //     read_only_key_blocked, the way history_mode_disables_button walks it
 //     through the mode's gates — checked and rejected 2026-08-15, and recorded
-//     so it is not tried again as an obvious cleanup. The walk diverges on NINE
-//     buttons, in two classes. (1) FOUR CHORDS NEVER REACH THAT GATE: bare `h`,
+//     so it is not tried again as an obvious cleanup. The walk diverges on the
+//     buttons below, in two classes (the count is deliberately not restated —
+//     it moved twice on 2026-08-20 alone). (1) FOUR CHORDS NEVER REACH THAT GATE: bare `h`,
 //     bare `u`, bare `,` and bare `.` are claimed by handle_history_mode_key,
 //     which returns from on_key ABOVE the read-only gate, so the allowlist's
 //     "blocked" for them is VACUOUS rather than a refusal — and knowing that
 //     means knowing on_key's dispatch ORDER, which no table holds. (2) FIVE ARE
 //     THE RULING'S OWN EXCLUSIONS: the four cardinal arrows (Up and Down are
 //     blocked outright, Left and Right blocked only while a selection stands —
-//     the exact per-selection blink this ruling removes) and Revert, whose
-//     Ctrl+H the lock really does eat but whose face the companions' own arm
-//     decides. A derivation would therefore need an override list on top
+//     the exact per-selection blink this ruling removes), Revert, whose Ctrl+H
+//     the lock really does eat but whose face the companions' own arm decides,
+//     and since 2026-08-20 THE MEASURE, whose base chord the lock eats while
+//     its shifted twin is admitted — one key, two answers, and a face that can
+//     only give one. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
 //   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
@@ -6997,8 +7008,11 @@ inline bool playback_launch_playable(const AppState& a,
 // second switch can take a `default` because the first has already returned for
 // every id whose answer does not sit below the loading/blank guard: the
 // toolbar four (Save / Undo / Redo / Render — icon-row members since the
-// 2026-08-12 relayout, keeping their mirrored derivations), the TEN the
-// read-only lock blocks, and, since 2026-08-15, the BOTTOM ROW'S TEN (every
+// 2026-08-12 relayout, keeping their mirrored derivations), THE SET THE
+// READ-ONLY LOCK GREYS (its membership is the read-only arm of the switch
+// below, which owns it and is not counted here — it moved twice on 2026-08-20,
+// losing the propagate pair with their buttons and the MEASURE to its
+// lock-legal shift half), and, since 2026-08-15, the BOTTOM ROW'S TEN (every
 // chord on that row drops at on_key's loading/blank return, so their faces grey
 // there too — and that guard is now the ONLY thing all ten have to say; it was
 // EIGHT for the hours between the row's face ruling and the same day's
@@ -7147,18 +7161,26 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconHistory:
             return true;
         // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the roster's
-        // one grey that is not the `h` view's: THE ARMS BELOW ARE EXACTLY WHAT
-        // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab
-        // (a membership, deliberately not a count — it was eleven until the
-        // 2026-08-20 propagate relocation deleted the copy/paste pair, and the
-        // shifted `/` the same day admitted a SPELLING without moving a face,
-        // the Measure button's grey answering its base chord alone),
-        // so the lock now LOOKS the way the history view already looks, which
-        // is what the architect asked for. IT IS NO LONGER ONE ROW'S: since the
-        // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — the
-        // MARKER MEASURE joining them there 2026-08-19 — and they carry this
-        // term with them: a button's gates are the BUTTON's, and the bottom
-        // row's always-on policy is what the other ELEVEN of its members take,
+        // one grey that is not the `h` view's: EVERY ARM BELOW IS A CHORD
+        // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab,
+        // so the lock LOOKS the way the history view already looks, which is
+        // what the architect asked for.
+        //
+        // THE MIRROR IS A MEMBERSHIP AND NOT AN EQUIVALENCE, and 2026-08-20
+        // gave it a member on each side, which is why no count is stated here.
+        // The PROPAGATE PAIR (Ctrl+P, Ctrl+Alt+P) is still blocked by the gate
+        // and is no longer here, its two buttons having left with the Edit-menu
+        // relocation: blocked, with no face left to grey. THE MEASURE (bare
+        // `/`) is also still blocked by the gate and is no longer here either,
+        // for the opposite reason: its SHIFT half is the lock-legal score-video
+        // jump, a chrome face cannot split, so the button stays LIT and the
+        // gate refuses the plain click exactly as it refuses the plain key (the
+        // ruling is at that button's own arm further down).
+        //
+        // IT IS NO LONGER ONE ROW'S: since the
+        // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — and
+        // they carry this term with them: a button's gates are the BUTTON's,
+        // and the bottom row's always-on policy is what its other members take,
         // not a property of the lane. THE TERM IS THE BIT AND NOTHING
         // ELSE, deliberately: every one of these chords has further refusals of
         // its own (home view, an empty selection, an occupied frame, an empty

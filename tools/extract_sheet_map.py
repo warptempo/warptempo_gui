@@ -78,6 +78,7 @@ into section 1 adds nothing after section 2's anchors.
 # other three movements print one continuous section each and their finals are
 # the kern totals unchanged (299 / 123 / 308).
 
+import math
 import os
 import subprocess
 import sys
@@ -101,6 +102,15 @@ FLIP_THR = 5.0        # mean abs frame diff (0-255 scale); slideshow noise is ~0
 # observed bleed, but it leaves only a 1.09x margin under that 5.47s page, and a
 # floor that close to a real page is one slow flip away from eating one.
 MIN_PAGE_S = 2.0
+# THE SECTION CEILING, and it is the GRAMMAR'S rather than this tool's: the
+# marker measure's qualifier brackets at 99 (kMeasureMaxSection,
+# src/parser/marker_measure.h), and load_score_video_map refuses a map anchor
+# past it. THE PRODUCER MUST NOT SPELL WHAT THE CONSUMER MUST REJECT — a map
+# this tool published and the GUI then refused whole would be a silent dead
+# jump — so a restart that would open section 100 is refused during the solve,
+# where it is still a backtrack point, rather than at the emit where it could
+# only be a crash. Keep this equal to kMeasureMaxSection.
+MAX_SECTION = 99
 MIN_BARLINE_RUN = 260 # px vertical dark run to count as a barline (4K frames)
 BINARIZE = 170        # gray threshold for ink
 CLOSE_GAP = 6         # heal vertical scan breaks up to this many px
@@ -114,20 +124,40 @@ def parse_window_time(text):
 
     IT EXISTS BECAUSE THE WINDOWS ARE TYPED BY HAND off a video player's own
     readout, and that readout is MM:SS. Converting in the head is the one step
-    of this tool's use that was pure clerical error waiting to happen."""
+    of this tool's use that was pure clerical error waiting to happen.
+
+    THE SUBFIELDS ARE RANGE-CHECKED, so the advertised grammar is the accepted
+    one: in a clock spelling every field BELOW the highest is a real clock
+    field and must be under 60, which makes `1:60` and `1:60:00` refusals
+    rather than second spellings of 120 and 3600. A BARE SECONDS-ONLY value
+    stays unbounded — `--window 0 900` is seconds, not a malformed clock, and
+    a rip is allowed to be long.
+
+    NON-FINITE IS REFUSED: `float()` happily reads `nan` and `inf`, and either
+    one poisons every comparison downstream — an infinite floor keeps no page
+    at all, a NaN floor makes the keep and drop tests BOTH false and leaves an
+    empty page set for the solver to index."""
     parts = text.split(":")
     if not 1 <= len(parts) <= 3:
         return None
     try:
         seconds = float(parts[-1])
-        if seconds < 0.0:
-            return None
-        for i, field in enumerate(reversed(parts[:-1]), start=1):
-            if not field.isdigit():
-                return None
-            seconds += int(field) * (60 ** i)
     except ValueError:
         return None
+    if not math.isfinite(seconds) or seconds < 0.0:
+        return None
+    # The seconds field is a clock field too once anything sits above it.
+    if len(parts) > 1 and seconds >= 60.0:
+        return None
+    for i, field in enumerate(reversed(parts[:-1]), start=1):
+        if not field.isdigit():
+            return None
+        value = int(field)
+        # Every field below the highest is bounded; the highest is not (a
+        # window may legitimately open at 100 minutes into a long rip).
+        if i < len(parts) - 1 and value >= 60:
+            return None
+        seconds += value * (60 ** i)
     return seconds
 
 def spell_seconds(value):
@@ -278,27 +308,61 @@ def ocr_reads(gray, dark, x0, workdir):
                         reads[s] = reads.get(s, 0) + 1
     return reads
 
-def main():
-    video, workdir = sys.argv[1], sys.argv[2]
-    expect_final = None
-    if "--expect-final" in sys.argv:
-        expect_final = int(sys.argv[sys.argv.index("--expect-final") + 1])
-    expect_sections = None
-    if "--expect-sections" in sys.argv:
-        expect_sections = int(sys.argv[sys.argv.index("--expect-sections") + 1])
+class OptionError(Exception):
+    """One bad option, carrying the line the user should read. EVERY option
+    fault lands here and comes out as the tool's own REFUSE protocol — a
+    message and exit 1 — rather than as a traceback: a Python stack trace over
+    a mistyped flag is not a refusal, it is a crash that happens to stop the
+    run, and it says nothing about what to type instead."""
+
+def option_values(flag, count):
+    """The `count` arguments after `flag`, or an OptionError naming what is
+    missing. ARITY IS CHECKED BEFORE CONVERSION so a truncated command line
+    (`--window 6:00` with no end) refuses by name instead of raising
+    IndexError somewhere later."""
+    k = sys.argv.index(flag)
+    if k + count >= len(sys.argv):
+        raise OptionError(f"{flag} takes {count} argument"
+                          f"{'' if count == 1 else 's'}")
+    return sys.argv[k + 1:k + 1 + count]
+
+def option_int(flag):
+    (raw,) = option_values(flag, 1)
+    try:
+        return int(raw)
+    except ValueError:
+        raise OptionError(f"{flag} takes a whole number, not {raw!r}") from None
+
+def read_options():
+    """Every command-line decision, made BEFORE any scan or cache work touches
+    the disk: a run that is going to refuse must refuse having done nothing.
+    Returns the parsed settings; raises OptionError with the line to print."""
+    expect_final = option_int("--expect-final") if "--expect-final" in sys.argv \
+        else None
+    expect_sections = option_int("--expect-sections") \
+        if "--expect-sections" in sys.argv else None
+
     min_page_s = MIN_PAGE_S
     if "--min-page" in sys.argv:
-        min_page_s = float(sys.argv[sys.argv.index("--min-page") + 1])
-        if min_page_s <= 0.0:
-            print("REFUSE: --min-page must be positive"); return 1
+        (raw,) = option_values("--min-page", 1)
+        try:
+            min_page_s = float(raw)
+        except ValueError:
+            raise OptionError(f"--min-page takes seconds, not {raw!r}") from None
+        # FINITE AND POSITIVE, both. `float()` reads `nan` and `inf` happily and
+        # either one silently empties the page set — an infinite floor keeps no
+        # span, and a NaN floor makes the keep and the drop tests BOTH false, so
+        # every page vanishes and the solver indexes an empty list.
+        if not math.isfinite(min_page_s) or min_page_s <= 0.0:
+            raise OptionError("--min-page must be a positive number of seconds")
+
     wstart, wend_arg, wdur = 0.0, None, None
     if "--window" in sys.argv:
-        k = sys.argv.index("--window")
-        wstart = parse_window_time(sys.argv[k + 1])
+        raw_start, raw_end = option_values("--window", 2)
+        wstart = parse_window_time(raw_start)
         if wstart is None:
-            print(f"REFUSE: unreadable window start {sys.argv[k + 1]!r} "
-                  "(SS, MM:SS or HH:MM:SS)"); return 1
-        raw_end = sys.argv[k + 2]
+            raise OptionError(f"unreadable window start {raw_start!r} "
+                              "(SS, MM:SS or HH:MM:SS)")
         if raw_end == "eof":
             # "eof" is kept LITERAL all the way to the header: the end is not a
             # number this tool knows, and writing one it guessed would be worse
@@ -307,15 +371,30 @@ def main():
         else:
             wend = parse_window_time(raw_end)
             if wend is None:
-                print(f"REFUSE: unreadable window end {raw_end!r} "
-                      "(SS, MM:SS, HH:MM:SS or eof)"); return 1
+                raise OptionError(f"unreadable window end {raw_end!r} "
+                                  "(SS, MM:SS, HH:MM:SS or eof)")
             if wend <= wstart:
-                print("REFUSE: window end is not after its start"); return 1
+                raise OptionError("window end is not after its start")
             # The HEADER SPELLS THE NORMALIZED VALUE, not what was typed, so a
             # window is one number in the map however it was written at the
             # shell — and two spellings of one window share a cache stamp.
             wend_arg = spell_seconds(wend)
             wdur = wend - wstart
+    return expect_final, expect_sections, min_page_s, wstart, wend_arg, wdur
+
+def main():
+    if len(sys.argv) < 3:
+        print("REFUSE: usage: extract_sheet_map.py <video> <workdir> "
+              "[--window START END|eof] [--min-page SECONDS] "
+              "[--expect-final N] [--expect-sections N]")
+        return 1
+    video, workdir = sys.argv[1], sys.argv[2]
+    try:
+        (expect_final, expect_sections, min_page_s,
+         wstart, wend_arg, wdur) = read_options()
+    except OptionError as err:
+        print(f"REFUSE: {err}")
+        return 1
     os.makedirs(workdir, exist_ok=True)
     fps = video_fps(video)
     # The frame-diff scan is cached, and the cache is STAMPED with the exact
@@ -341,12 +420,20 @@ def main():
     # would then be a different page than the one on disk. Rescanning the diffs
     # to re-cut the pages is wasted work and is accepted whole — one stamp, one
     # answer, no second cache to keep in step.
+    #
+    # IT IS STAMPED LOSSLESSLY (`repr`, 2026-08-20) and not at three decimals,
+    # because the value is USED at full precision: two floors that round to the
+    # same three-decimal text can still fall on opposite sides of one
+    # frame-quantized span, keeping a page under one and dropping it under the
+    # other. A stamp that could not tell them apart would hand the second run
+    # the first run's page numbering — the exact staleness this term exists to
+    # stop. The number that decides is the number that is stamped.
     st = os.stat(video)
     diffs_npy = os.path.join(workdir, "diffs.npy")
     diffs_meta = os.path.join(workdir, "diffs.meta")
     stamp = (f"{os.path.realpath(video)}|{st.st_dev}|{st.st_ino}|"
              f"{st.st_size}|{st.st_mtime_ns}|{wstart:.3f}|{wend_arg}|"
-             f"{min_page_s:.3f}\n")
+             f"{min_page_s!r}\n")
     cached = False
     if os.path.exists(diffs_npy) and os.path.exists(diffs_meta):
         with open(diffs_meta) as f:
@@ -438,20 +525,31 @@ def main():
     # re-derivation would have to guess which base a page resolved under.
     # Backtracking handles the ambiguous no-read pages (unreadable number
     # -> BRIDGE, vs unnumbered section-first page -> RESTART).
-    def solve(i, base, next_local, pend, bridge_open, max_local, sect,
+    def solve(i, base, next_local, pend, owed, max_local, sect,
               starts, sects, locs, trail):
         # pend: (first_page_count, base) when a section-first page still
         # awaits its pickup resolution; None otherwise.
         # sect: the section index in force, 1 at the movement's start.
+        #
+        # owed: THE BRIDGE OBLIGATION, AND IT IS A VALUE RATHER THAN A FLAG
+        # (2026-08-20). A bridged page assumed a number nobody could read, and
+        # what discharges that assumption is not "some later page was legible"
+        # but "the next new page confirmed EXACTLY the value the assumption
+        # implies". So the obligation travels as `(base, local)` — the section
+        # base it was taken under and the local start its continuation demands —
+        # and only a confirmation of that pair closes it. A boolean could be
+        # cleared by any confirmation at all, which is how a restart's pickup
+        # read or a volta re-crop's successor could stand in for a
+        # confirmation of something else entirely.
         if i == n:
             # RUNNING OUT OF PAGES CLOSES NO OBLIGATION. A standing `pend`
             # means a section-first page never had its pickup resolved, and a
-            # standing bridge_open means an unreadable page's assumed value was
+            # standing `owed` means an unreadable page's assumed value was
             # never confirmed by a later one; either way the interpretation
             # rests on nothing but itself, which is exactly what this solver
             # refuses everywhere else. Both are backtrack points, so a chain
             # that can close its obligations another way is still found.
-            if pend is not None or bridge_open:
+            if pend is not None or owed is not None:
                 return None
             return (starts, sects, locs, trail)
         if origin[i] is not None:
@@ -460,14 +558,12 @@ def main():
                 return None
             # A REPLAY CONFIRMS NOTHING — it re-shows a page already read, and
             # skips OCR by construction — so it carries the bridge obligation
-            # forward untouched rather than clearing it. Clearing it here would
-            # let a replay stand in for the confirmation the one-bridge-in-a-row
-            # rule demands, and a second bridge could open behind it. `pend`
-            # rides through for the same reason and always has.
+            # forward untouched rather than clearing it. `pend` rides through
+            # for the same reason and always has.
             # The replayed page shows page j, so it takes page j's SECTION and
             # printed start along with its continuous one — a da capo re-shows
             # section 1's pages while the section counter stands still.
-            return solve(i + 1, base, next_local, pend, bridge_open, max_local,
+            return solve(i + 1, base, next_local, pend, owed, max_local,
                          sect, starts + [starts[j]], sects + [sects[j]],
                          locs + [locs[j]], trail)
         c = counts[i]
@@ -480,51 +576,74 @@ def main():
             cands = []
         for e, why in cands:
             if confirmed(i, e):
+                # THE DISCHARGE IS AN EXACT MATCH, base and value both: this
+                # page closes the obligation only if what it confirmed IS the
+                # bridged assumption's continuation, in the very section that
+                # assumption was made in. Anything else leaves it standing, so
+                # the chain runs on still owing a confirmation and must find one
+                # or refuse at EOF.
+                nxt = None if (owed is None or (base, e) == owed) else owed
                 nm = e if max_local is None else max(max_local, e)
-                r = solve(i + 1, base, e + c, None, False, nm, sect,
+                r = solve(i + 1, base, e + c, None, nxt, nm, sect,
                           starts + [base + e], sects + [sect], locs + [e],
                           trail + [(i, e, why)])
                 if r: return r
-        # volta re-crop: the page re-shows the last reached region
-        if max_local is not None and confirmed(i, max_local):
-            r = solve_reseed(i, base, max_local, bridge_open, sect,
+        # VOLTA RE-CROP: the page re-shows the last reached region. IT IS NOT
+        # TRIED WHILE AN OBLIGATION STANDS, and that is the same rule as the
+        # restart's below: this path's own confirmations are of `vmax` and of a
+        # reseed value in (vmax, vmax + c], neither of which is ever the
+        # bridged continuation, so entering it could only carry the obligation
+        # to an end that cannot close it.
+        if owed is None and max_local is not None and confirmed(i, max_local):
+            r = solve_reseed(i, base, max_local, owed, sect,
                              starts, sects, locs, trail)
             if r: return r
         # BRIDGE: number unreadable (or read too weakly); assume the chain
-        # value, the next new page must then confirm the accumulated sum
-        if pend is None and next_local is not None and not bridge_open:
+        # value, and OWE the next new page a confirmation of exactly what that
+        # assumption implies — `next_local + c` under this same base.
+        if pend is None and next_local is not None and owed is None:
             nm = next_local if max_local is None else max(max_local, next_local)
-            r = solve(i + 1, base, next_local + c, None, True, nm, sect,
+            r = solve(i + 1, base, next_local + c, None,
+                      (base, next_local + c), nm, sect,
                       starts + [base + next_local], sects + [sect],
                       locs + [next_local], trail + [(i, next_local, "bridged")])
             if r: return r
         # RESTART: a section-first page opens a new printed-numbering
-        # section (tried last; the final-bar check gates misfires). IT
-        # DISCHARGES NO BRIDGE: a new section says nothing about the value an
-        # unreadable earlier page was assumed to carry, so the obligation rides
-        # through and only a CONFIRMING new page can close it.
-        if pend is None and next_local is not None:
+        # section (tried last; the final-bar check gates misfires). IT IS
+        # REFUSED WHILE AN OBLIGATION STANDS: a new section restarts the
+        # numbering, so no page after it can ever confirm a value owed under the
+        # OLD base — carrying the obligation across would guarantee a refusal at
+        # EOF, and clearing it would let a fresh numbering vouch for a bar it
+        # never printed.
+        #
+        # THE SECTION CEILING IS THE GRAMMAR'S (kMeasureMaxSection, 99): this is
+        # the PRODUCER of a field a consumer must accept, so a restart that
+        # would open section 100 is refused here rather than published as a map
+        # `load_score_video_map` is obliged to reject. Ninety-nine printed
+        # restarts in one movement is far past any real score; the bound exists
+        # so the two ends of the format cannot disagree.
+        if (pend is None and next_local is not None and owed is None
+                and sect + 1 <= MAX_SECTION):
             nb = base + next_local - 1
             # THE SECTION INDEX STEPS HERE and nowhere else, so it counts
             # accepted restarts in VIDEO ORDER: this page prints 1 again, and
             # every page after it is section sect + 1 until the next restart.
-            r = solve(i + 1, nb, None, (c, nb), bridge_open, None, sect + 1,
+            r = solve(i + 1, nb, None, (c, nb), owed, None, sect + 1,
                       starts + [nb + 1], sects + [sect + 1], locs + [1],
                       trail + [(i, 1, "section-restart")])
             if r: return r
         return None
 
-    def solve_reseed(i, base, vmax, bridge_open, sect, starts, sects, locs,
-                     trail):
+    def solve_reseed(i, base, vmax, owed, sect, starts, sects, locs, trail):
         # page i re-shows from vmax; successor's start lies in (vmax, vmax+c_i]
         #
-        # IT CARRIES THE BRIDGE OBLIGATION LIKE EVERY OTHER ARM. Confirming
-        # `vmax` here is not the confirmation a bridge is owed — that one is of
-        # the ACCUMULATED sum, a different value — so an open bridge survives
-        # into this path and its EOF arm refuses on it exactly as solve()'s
-        # does. The `reseed` continuation below closes it honestly instead: the
-        # successor page is CONFIRMED, which is what discharges a bridge
-        # everywhere in this solver.
+        # IT IS NEVER ENTERED WITH A BRIDGE OBLIGATION STANDING — the caller
+        # gates on that — and the check is repeated here because the REASON is
+        # local to this path: nothing it can confirm is the bridged
+        # continuation, so a future caller that let one through would be
+        # discharging an assumption with an unrelated number.
+        if owed is not None:
+            return None
         c = counts[i]
         st = starts + [base + vmax]
         sc = sects + [sect]
@@ -532,20 +651,18 @@ def main():
         tr = trail + [(i, vmax, "volta-recrop")]
         j = i + 1
         if j == n:
-            if bridge_open:
-                return None
             return (st, sc, lc, tr)
         if origin[j] is not None:
             return None  # replay directly after a re-crop: ambiguous, refuse
         hits = [e for e in range(vmax + 1, vmax + c + 1) if confirmed(j, e)]
         if len(hits) == 1:
             e = hits[0]
-            return solve(j + 1, base, e + counts[j], None, False, e, sect,
+            return solve(j + 1, base, e + counts[j], None, None, e, sect,
                          st + [base + e], sc + [sect], lc + [e],
                          tr + [(j, e, "reseed")])
         return None
 
-    solution = solve(1, 0, None, (counts[0], 0), False, None, 1,
+    solution = solve(1, 0, None, (counts[0], 0), None, None, 1,
                      [1], [1], [1], [])
     if solution is None:
         print("REFUSE: no consistent chain interpretation; per-page reads:")
