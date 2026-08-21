@@ -29,13 +29,21 @@ projects/*/*.peaks
 projects/*/*.wav
 projects/*/peaks/
 projects/*/renders/
-# THE SHEET TREE STAYS LOCAL EXCEPT THE MAP (2026-08-20). The rip, the
-# trimmed clip and the extraction workdir are big, private and
-# regenerable; sheet.map is small, hand-verified and the one thing a
-# checkpoint must carry, so the score jump survives a fresh clone.
-# The pattern ignores the folder's CHILDREN rather than the folder
-# itself: git does not descend into an excluded DIRECTORY, so a
-# `projects/*/sheet/` line would make the negation below unreachable.
-projects/*/sheet/*
-!projects/*/sheet/sheet.map
+# THE SHEET TREE STAYS LOCAL EXCEPT THE MAP (2026-08-20). The video is
+# big and private; sheet.map is small, hand-verified and the one thing a
+# checkpoint carries, so a clone keeps the map and the jump works again
+# as soon as that clone's own copy of the video is in place. (A trimmed
+# `sheet.webm` and a `sheet/src/` original were listed here until
+# 2026-08-20; nothing is trimmed any more and the layout is flat.)
+#
+# TWO THINGS ABOUT THE PATTERN. It ignores the folder's CHILDREN rather
+# than the folder itself, because git does not descend into an excluded
+# DIRECTORY and a `sheet/` line would make the negation unreachable. And
+# it is RECURSIVE (`**`) because a piece may sit anywhere below
+# `projects/` — `projects/category/piece/` is a supported shape, and it
+# is the same recursive domain the history walk's own
+# `:(glob)projects/**/<base>.<ext>` pathspecs use, so the privacy rule
+# and the walk agree about where a project can be.
+projects/**/sheet/*
+!projects/**/sheet/sheet.map
 projects/*test

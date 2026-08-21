@@ -484,10 +484,13 @@ bool spawn_mpv(const std::string& socket_path, const std::string& video,
 // ADVERSARIAL CLASS AND THE TWO-CATEGORY RULE DOES NOT REACH IT (architect
 // 2026-08-20). That rule is about the SIDECARS — a state the GUI can commit
 // always loads, a state it can never produce hard-fails the load — and it rests
-// on the GUI being the writer. sheet.map has no GUI writer at all: it is a
-// local, gitignored artifact of tools/extract_sheet_map.py, it is never saved,
-// never committed, never rendered from, and it carries no authored musical
-// content. So a malformed map is not an attack on the product's data model; it
+// on the GUI being the writer. sheet.map HAS NO GUI WRITER AT ALL: it is an
+// artifact of tools/extract_sheet_map.py, the GUI never saves it, never renders
+// from it, and it carries no authored musical content. (It IS committed since
+// 2026-08-20 — the one member of `sheet/` that is — and the premises above are
+// deliberately narrowed to drop that: being in the repository says nothing
+// about who WRITES the file, and the writer is the whole of the argument.) So a
+// malformed map is not an attack on the product's data model; it
 // is an ENVIRONMENT PRECONDITION that failed (the out-of-topology label in
 // validation_topology.md — guards the launch, not the data), and the whole act
 // refuses SILENTLY, exactly as a missing map does. There is deliberately no
@@ -517,12 +520,27 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
             // `# src <name>` takes the REST of the line verbatim: a rip's file
             // name carries spaces, so it is not a token. It is a BASENAME by
             // definition (the tool writes os.path.basename) and it is held to
-            // that here — a value carrying a separator or naming a directory
-            // entry would let the header point the act outside the piece's own
-            // `sheet/` folder, which the format never means.
+            // that here.
+            //
+            // WHAT THE CHECK IS FOR, precisely, because the neighbouring fact
+            // makes it easy to over-read: it stops the HEADER from doing path
+            // traversal. A `# src` carrying a separator or naming `.`/`..`
+            // would let a hand-edited map address a file outside the piece's
+            // own `sheet/` folder, and the format never means that. IT IS NOT A
+            // CONTAINMENT CLAIM ABOUT THE FILE ITSELF: the directory entry may
+            // legitimately be a SYMLINK pointing anywhere the user keeps the
+            // real video — the deployed layout does exactly this, one real rip
+            // with the other movements' folders holding relative symlinks to it
+            // — so the open below follows symlinks on purpose and must keep
+            // doing so.
+            //
+            // `sheet.map` IS REFUSED BY NAME: the map's own file name is
+            // reserved, so a header naming it is damage rather than a video,
+            // and without this line the act would hand mpv the map to play.
             if (line.rfind("# src ", 0) == 0) {
                 map.src = line.substr(6);
                 if (map.src.empty() || map.src == "." || map.src == ".." ||
+                    map.src == "sheet.map" ||
                     map.src.find('/') != std::string::npos)
                     return {};
                 continue;
@@ -656,6 +674,14 @@ void run_score_video_jump(const AppState& app) {
     //
     // The seek is window_start + t with window_start 0 when the map carries no
     // `# window` — not a fallback but the truth for a whole-video map.
+    //
+    // SYMLINKS ARE FOLLOWED ON PURPOSE (`is_regular_file`, not the symlink
+    // status): the architect's own layout keeps ONE real rip and gives the
+    // other movements' `sheet/` folders relative symlinks to it, so refusing to
+    // follow would break three pieces out of four. The header's basename guard
+    // is what keeps the MAP from naming a path; where that name then points is
+    // the user's arrangement of his own disk. A symlink loop fails safely here
+    // through the error_code rather than the predicate.
     std::error_code       ec;
     const std::filesystem::path video = project / "sheet" / map.src;
     const double                seek  = map.window_start + t;

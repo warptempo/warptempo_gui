@@ -3224,8 +3224,12 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // `<project>/sheet/sheet.map` is the one thing under `sheet/` that is
     // committed — .gitignore ignores that folder's children and negates this one
     // file — because it is small, hand-verified and unreproducible without the
-    // rip, so a fresh clone must find the score jump already working. The rest of
-    // the tree (the rip, the trimmed clip, the extraction workdir) stays local.
+    // video, so a CLONE RETAINS THE MAP AND THE JUMP WORKS AS SOON AS THAT
+    // CLONE'S OWN COPY OF THE VIDEO IS IN PLACE. It cannot work before that: the
+    // map names its video and the act opens exactly that file. The VIDEO stays
+    // local, and it is the only other thing in the folder — a trimmed clip and a
+    // `sheet/src/` original were there until 2026-08-20, when the trimming that
+    // gave them a reason was retired.
     //
     // IT IS SCOPED TO THIS PIECE AND NOTHING WIDER: the path is derived from
     // `project_directory`, the SOURCE'S OWN parent folder, and it is a

@@ -193,7 +193,7 @@ def spell_seconds(value):
     text = f"{value:.3f}".rstrip("0").rstrip(".")
     return text if text else "0"
 
-def scan_diffs(video, wstart=0.0, wdur=None):
+def scan_diffs(video, ss_text=None, t_text=None):
     """Per-frame mean absolute difference over the window. Returns
     (diffs, nframes, ok). ok is False for a decode that did not finish
     cleanly, and the caller must then refuse: a HALF-DECODED stream looks
@@ -201,12 +201,18 @@ def scan_diffs(video, wstart=0.0, wdur=None):
     remaining prefix can still pass every self-consistent check below
     (the bar counts and the OCR chain read the same truncated set). A
     partial trailing frame is the same fault: `read` on a pipe returns
-    short only at EOF, so a non-empty short read is a stream cut mid-frame."""
+    short only at EOF, so a non-empty short read is a stream cut mid-frame.
+
+    THE SEEK AND DURATION ARRIVE PRE-FORMATTED, and that is what makes the cache
+    stamp honest: the caller derives these two strings ONCE and stamps the very
+    strings it passes here, so "the cache matches this invocation" is a
+    comparison of the invocation rather than of the numbers behind it. `None`
+    omits the flag."""
     cmd = ["ffmpeg", "-v", "error"]
-    if wstart:
-        cmd += ["-ss", f"{wstart:.3f}"]
-    if wdur is not None:
-        cmd += ["-t", f"{wdur:.3f}"]
+    if ss_text is not None:
+        cmd += ["-ss", ss_text]
+    if t_text is not None:
+        cmd += ["-t", t_text]
     cmd += ["-i", video, "-vf", f"scale={DIFF_W}:{DIFF_H}",
             "-pix_fmt", "gray", "-f", "rawvideo", "-"]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -340,36 +346,71 @@ class OptionError(Exception):
     a mistyped flag is not a refusal, it is a crash that happens to stop the
     run, and it says nothing about what to type instead."""
 
-def option_values(flag, count):
-    """The `count` arguments after `flag`, or an OptionError naming what is
-    missing. ARITY IS CHECKED BEFORE CONVERSION so a truncated command line
-    (`--window 6:00` with no end) refuses by name instead of raising
-    IndexError somewhere later."""
-    k = sys.argv.index(flag)
-    if k + count >= len(sys.argv):
-        raise OptionError(f"{flag} takes {count} argument"
-                          f"{'' if count == 1 else 's'}")
-    return sys.argv[k + 1:k + 1 + count]
+# THE OPTION PROTOCOL, and it is a WHOLE-TAIL parse rather than a search
+# (2026-08-20). Every supported flag with its exact arity; anything else in the
+# tail is a refusal.
+#
+# SEARCHING FOR KNOWN STRINGS WAS THE DEFECT: `--expect-finl 299` simply went
+# unnoticed, so a run that asked to be checked was not, and published a map on
+# the strength of a check that never ran. A repeated flag silently used its
+# first spelling, and `--url --window 0 10` took `--window` as the URL and then
+# parsed it AGAIN as an option. A tail that is consumed token by token cannot do
+# any of those: what is not claimed by a flag is named and refused.
+KNOWN_OPTIONS = {
+    "--window":          2,
+    "--min-page":        1,
+    "--url":             1,
+    "--expect-final":    1,
+    "--expect-sections": 1,
+}
 
-def option_int(flag):
-    (raw,) = option_values(flag, 1)
+def parse_argv_tail(tail):
+    """`tail` -> {flag: [values]}, or an OptionError naming the first fault.
+    Each flag at most ONCE, exact arity, and A FLAG NAME IS NEVER A VALUE — the
+    check that turns `--url --window 0 10` from a silently-swallowed option into
+    a refusal."""
+    claimed = {}
+    i = 0
+    while i < len(tail):
+        flag = tail[i]
+        if flag not in KNOWN_OPTIONS:
+            raise OptionError(f"unknown argument {flag!r}")
+        if flag in claimed:
+            raise OptionError(f"{flag} given more than once")
+        arity  = KNOWN_OPTIONS[flag]
+        values = tail[i + 1:i + 1 + arity]
+        if len(values) != arity:
+            raise OptionError(f"{flag} takes {arity} argument"
+                              f"{'' if arity == 1 else 's'}")
+        for value in values:
+            if value in KNOWN_OPTIONS:
+                raise OptionError(f"{flag} is missing a value "
+                                  f"({value!r} is an option)")
+        claimed[flag] = values
+        i += 1 + arity
+    return claimed
+
+def option_int(claimed, flag):
+    (raw,) = claimed[flag]
     try:
         return int(raw)
     except ValueError:
         raise OptionError(f"{flag} takes a whole number, not {raw!r}") from None
 
-def read_options():
+def read_options(tail):
     """Every command-line decision, made BEFORE any scan or cache work touches
     the disk: a run that is going to refuse must refuse having done nothing.
     Returns the parsed settings; raises OptionError with the line to print."""
-    expect_final = option_int("--expect-final") if "--expect-final" in sys.argv \
-        else None
-    expect_sections = option_int("--expect-sections") \
-        if "--expect-sections" in sys.argv else None
+    claimed = parse_argv_tail(tail)
+
+    expect_final = option_int(claimed, "--expect-final") \
+        if "--expect-final" in claimed else None
+    expect_sections = option_int(claimed, "--expect-sections") \
+        if "--expect-sections" in claimed else None
 
     min_page_s = MIN_PAGE_S
-    if "--min-page" in sys.argv:
-        (raw,) = option_values("--min-page", 1)
+    if "--min-page" in claimed:
+        (raw,) = claimed["--min-page"]
         try:
             min_page_s = float(raw)
         except ValueError:
@@ -377,13 +418,15 @@ def read_options():
         # FINITE AND POSITIVE, both. `float()` reads `nan` and `inf` happily and
         # either one silently empties the page set — an infinite floor keeps no
         # span, and a NaN floor makes the keep and the drop tests BOTH false, so
-        # every page vanishes and the solver indexes an empty list.
+        # every page vanishes. (A merely TOO-LARGE floor empties it too and is
+        # caught where the pages are cut, not here: that one is arithmetic about
+        # the video rather than about the option.)
         if not math.isfinite(min_page_s) or min_page_s <= 0.0:
             raise OptionError("--min-page must be a positive number of seconds")
 
     url = None
-    if "--url" in sys.argv:
-        (url,) = option_values("--url", 1)
+    if "--url" in claimed:
+        (url,) = claimed["--url"]
         # VALIDATED AS A FIELD, NOT AS A URL. What the header owes is one
         # unambiguous token on one line, so the checks are exactly non-empty and
         # whitespace-free — anything else would be this tool deciding what a
@@ -394,8 +437,8 @@ def read_options():
             raise OptionError("--url takes one link with no whitespace in it")
 
     wstart, wend_arg, wdur = 0.0, None, None
-    if "--window" in sys.argv:
-        raw_start, raw_end = option_values("--window", 2)
+    if "--window" in claimed:
+        raw_start, raw_end = claimed["--window"]
         wstart = parse_window_time(raw_start)
         if wstart is None:
             raise OptionError(f"unreadable window start {raw_start!r} "
@@ -423,13 +466,13 @@ def read_options():
 def main():
     if len(sys.argv) < 3:
         print("REFUSE: usage: extract_sheet_map.py <video> <workdir> "
-              "[--window START END|eof] [--min-page SECONDS] "
+              "[--window START END|eof] [--min-page SECONDS] [--url LINK] "
               "[--expect-final N] [--expect-sections N]")
         return 1
     video, workdir = sys.argv[1], sys.argv[2]
     try:
         (expect_final, expect_sections, min_page_s, url,
-         wstart, wend_arg, wdur) = read_options()
+         wstart, wend_arg, wdur) = read_options(sys.argv[3:])
     except OptionError as err:
         print(f"REFUSE: {err}")
         return 1
@@ -466,12 +509,21 @@ def main():
     # other. A stamp that could not tell them apart would hand the second run
     # the first run's page numbering — the exact staleness this term exists to
     # stop. The number that decides is the number that is stamped.
+    # THE FFMPEG WINDOW, DERIVED ONCE AND STAMPED AS DERIVED. These are the
+    # exact two strings the scan hands ffmpeg, so the stamp compares the
+    # INVOCATION and not the floats behind it: two windows a millisecond apart
+    # can format to the same `-ss` and DIFFERENT `-t`, and a stamp built from
+    # the endpoints instead would call those one cache. `wstart` rides in its
+    # lossless form beside them because the PAGE FRAMES are grabbed from the raw
+    # value, not the formatted one.
+    ss_text = f"{wstart:.3f}" if wstart else None
+    t_text  = f"{wdur:.3f}" if wdur is not None else None
     st = os.stat(video)
     diffs_npy = os.path.join(workdir, "diffs.npy")
     diffs_meta = os.path.join(workdir, "diffs.meta")
     stamp = (f"{os.path.realpath(video)}|{st.st_dev}|{st.st_ino}|"
-             f"{st.st_size}|{st.st_mtime_ns}|{wstart:.3f}|{wend_arg}|"
-             f"{min_page_s!r}\n")
+             f"{st.st_size}|{st.st_mtime_ns}|{ss_text}|{t_text}|"
+             f"{wstart!r}|{wend_arg}|{min_page_s!r}\n")
     cached = False
     if os.path.exists(diffs_npy) and os.path.exists(diffs_meta):
         with open(diffs_meta) as f:
@@ -484,7 +536,7 @@ def main():
             os.remove(os.path.join(workdir, stale))
         if os.path.exists(diffs_meta):
             os.remove(diffs_meta)
-        d, nframes, ok = scan_diffs(video, wstart, wdur)
+        d, nframes, ok = scan_diffs(video, ss_text, t_text)
         if not ok:
             print("REFUSE: the frame scan did not complete"); return 1
         np.save(diffs_npy, d)
@@ -499,6 +551,17 @@ def main():
     print(f"fps={fps:.3f} duration={duration:.3f}s flips={len(flip_ts)} "
           f"min_page={min_page_s:g}s pages={len(kept)} "
           f"dropped_bleed={[(round(a,3), round(b,3)) for a, b in dropped]}")
+
+    # NO PAGES IS A REFUSAL, not an exception. The floor is a positive finite
+    # number by the time it gets here, but it can still be larger than every
+    # span the flip detector found — a floor raised past the real pages, or a
+    # window so short it holds none — and pass 1 below would then seed the
+    # solver from `counts[0]` on an empty list. That is the tool's own
+    # refuse-or-emit contract, so it says so in one line instead.
+    if not kept:
+        print(f"REFUSE: no pages survive the {min_page_s:g}s min-page floor "
+              f"({len(spans)} span(s) found)")
+        return 1
 
     # pass 1: frames + bar counts
     counts = []

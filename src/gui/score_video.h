@@ -76,7 +76,10 @@ struct AppState;
 // either; tools/extract_sheet_map.py is the map's one producer, and the video is
 // whatever the architect downloaded. THE MAP IS THE ONLY PART THAT IS COMMITTED
 // — .gitignore ignores this folder's children and negates `sheet.map` alone, so
-// a fresh clone finds the jump already working while the rip stays local.
+// A CLONE RETAINS THE MAP AND THE JUMP WORKS ONCE THAT CLONE'S OWN COPY OF THE
+// VIDEO IS SUPPLIED. Not before: a clone has the map and not the file the map
+// NAMES, so every jump there is a silent no-op at the open below until the
+// video is put beside it.
 //
 // THE SEEK IS window_start + t, always: map times are window-relative, so four
 // movements' maps address one stable rip by carrying four different windows,
