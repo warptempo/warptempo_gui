@@ -561,9 +561,10 @@ void GuiSettingsEditor::commit() {
     text_editor::deactivate(app.settings_editor);
     // (THE ENGINE COMMIT'S WHOLESALE OVERLAY HIDE IS DELETED, 2026-08-19, with
     // the call-site inventory it belonged to. THE OVERLAY HIDES WHEN THE
-    // PLAYHEAD'S POSITION IN THE MUSIC CHANGES AND WHEN A MARKER IS TOUCHED —
+    // PLAYHEAD'S POSITION IN THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND
+    // WHEN THE SWEEP ENDS —
     // the rule at clear_region_highlight, input_handler.h — and a typed engine
-    // key does neither. It stood here from 2026-07-29 on the argument that the
+    // key does none of the three. It stood here from 2026-07-29 on the argument that the
     // scale is a warp-map input, so the commit rebuilds the target map
     // underneath a span measured against the OLD map; that argument died on
     // 2026-08-18 when the region became the trim, the span being DERIVED from

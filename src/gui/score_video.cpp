@@ -430,6 +430,21 @@ bool send_mpv_command(const std::string& socket_path,
 // are the command-line twins of the two properties the IPC path sets, and the
 // varispeed reasoning for turning correction off is at that site.
 //
+// IT OPENS FULLSCREEN, and that is product intent (architect 2026-08-20): the
+// score is a READING SURFACE on both hosts — a page of music in a windowed
+// player on the rig's 1024x600 glass is unreadable, and on the laptop the
+// window one glances at while authoring is the one filling the screen.
+//
+// A REUSED INSTANCE IS NEVER RE-FULLSCREENED, deliberately: `--fullscreen` is a
+// SPAWN option and the IPC path sends nothing of the kind, so if the user
+// un-fullscreens a standing window every later jump respects that. The spawn
+// sets the OPENING state; it does not police it.
+//
+// AND NOTHING HERE STYLES THE PLAYER — no OSD, subtitle, volume or profile
+// options. mpv reads the user's own ~/.config/mpv, which is where per-user look
+// belongs; hardcoding a taste here would override the config silently and give
+// the architect no way back.
+//
 // argv exec, NEVER a shell (the project's standing rule): a project folder's
 // name carries spaces and reaches mpv as one argv element with no quoting rules
 // in between. `--` guards a dash-leading path.
@@ -444,6 +459,7 @@ bool spawn_mpv(const std::string& socket_path, const std::string& video,
                     const_cast<char*>(start_arg.c_str()),
                     const_cast<char*>(speed_arg.c_str()),
                     const_cast<char*>("--audio-pitch-correction=no"),
+                    const_cast<char*>("--fullscreen"),
                     const_cast<char*>("--"),
                     const_cast<char*>(video.c_str()),
                     nullptr};

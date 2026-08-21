@@ -3238,8 +3238,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         selection.set_single_selection(hit);
         land_playhead_on_marker(app, audio, viewport, hit);
     }
-    // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND HALF rather than a
-    // leftover call site (architect 2026-08-19: the overlay hides when the
+    // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND CLAUSE rather than
+    // a leftover call site (architect 2026-08-19: the overlay hides when the
     // playhead's position in the music changes AND WHEN A MARKER IS TOUCHED —
     // the rule is at clear_region_highlight, input_handler.h). The land the arms
     // above run hides already, but it cannot cover this on its own: a
@@ -4361,12 +4361,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // stop to protect. The stop lives INSIDE
                     // set_trim_bound_at_click, past every refusal and
                     // immediately ahead of the bound write.
-                    // THE OVERLAY RISES AT THIS PRESS, the band's own rule
-                    // rather than this arm's (show_trim_region_overlay,
-                    // input_handler.h): the raise is not part of the deferred
-                    // act and does not wait for the lift, because it promises
-                    // nothing about which act the lift will run.
-                    show_trim_region_overlay(app, viewport);
+                    // NO OVERLAY RAISE HERE: the band's press claims stopped
+                    // showing the waveform overlay on 2026-08-20, and the
+                    // family's record sits at the plain trim-bar press below.
                     arm_pending_click_act(x, y, /*is_begin=*/true);
                     return;
                 }
@@ -4403,8 +4400,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // NO stop here either: like the BEGIN set, the stop sits
                 // inside set_trim_bound_at_click past that act's refusals, so a
                 // refused END set leaves a live audition alone.
-                // AND THE OVERLAY RISES AT THIS PRESS, the band's rule again.
-                show_trim_region_overlay(app, viewport);
+                // AND NO OVERLAY RAISE HERE EITHER, the band's rule again (the
+                // record is at the plain trim-bar press below).
                 arm_pending_click_act(x, y, /*is_begin=*/false);
                 return;
             }
@@ -4541,15 +4538,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const bool in_trim_bar =
                 (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
             if (in_trim_bar) {
-                // TOUCHING THE TRIM SHOWS THE TRIM (architect 2026-08-19,
-                // "that is normal DAW behavior"): a plain press ANYWHERE on the
-                // band raises the waveform overlay, at the PRESS and for the
-                // whole band rather than for the motionless click alone — a
-                // press that goes on to become an endcap or bridge drag wants
-                // the big surface up quite as much as one that does not. The
-                // owner carries the `h` carve-out and does not frame
-                // (show_trim_region_overlay, input_handler.h).
-                show_trim_region_overlay(app, viewport);
+                // THE BAND RAISES NO OVERLAY, and this is the family's one
+                // record (architect 2026-08-20, partly reversing his own
+                // 2026-08-19 "touching the trim shows the trim"): "touching the
+                // tiny lane means I'm on the laptop, and the region exists
+                // mostly for the touchscreen." A 9 px band under a POINTER is
+                // already its own display of the trim window, and the big
+                // waveform surface exists for glass, where that lane is
+                // unusable. So all three of the band's press claims — this
+                // plain one and the two Ctrl / Ctrl+Shift bound sets above —
+                // left show_trim_region_overlay's call-site inventory that day,
+                // leaving THE SWEEP'S ARM its one caller (input_handler.h).
+                // Bare `x` and its Show trim region button still raise the
+                // overlay on demand, which is how a laptop press gets the big
+                // surface when it wants one.
                 // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
                 // and commits nothing at the press: only the threshold crossing
                 // begins it, and a MOTIONLESS release here runs NO act at all —
@@ -4851,12 +4853,20 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // owner; then this arm raises the overlay again. "SHOWS INSTEAD" is
     // literally what the code does. The sweep's per-motion trim writes and its
     // release park never pass an owner at all — they write the cursor direct —
-    // so nothing later in the stroke can put the overlay back down.
+    // so nothing WITHIN the stroke can put the overlay back down. The stroke's
+    // END does, by its own ruling below.
+    //
+    // AND THE RAISE IS BRACKETED (architect 2026-08-20): it is scoped to the
+    // STROKE, shown here at the arm and collapsed at the other end by
+    // commit_region_sweep, which hides unconditionally at every end path. The
+    // overlay is up for exactly as long as there is a stroke to watch.
     //
     // The raise goes through the ONE show owner, which carries the no-framing
     // rule, the `h` carve-out and the whole call-site inventory
-    // (show_trim_region_overlay, input_handler.h) — the trim bar's own presses
-    // are its other family. The lamp needs nothing: the button reads
+    // (show_trim_region_overlay, input_handler.h) — and this arm is now that
+    // owner's ONE caller, the trim bar's three band presses having left the
+    // inventory on 2026-08-20 (the record is at the plain trim-bar press,
+    // on_button_press). The lamp needs nothing: the button reads
     // app.region.shown. The write's `h` carve-out is separate and sits at the
     // site all three arms share (apply_region_drag_motion).
     //
@@ -4878,6 +4888,28 @@ void GuiInputHandler::commit_region_sweep() {
     if (!app.region_drag.active) return;
     const bool wrote = app.region_drag.wrote_trim;
     app.region_drag = RegionDragState{};
+    // THE STROKE'S END COLLAPSES THE OVERLAY (architect 2026-08-20): "shift+drag
+    // or longpress+drag on the waveform should collapse the region as soon as it
+    // is set — this method usually indicates 'this exact region'." The arm's
+    // raise is therefore BRACKETED rather than sticky: the big surface is up
+    // while the stroke draws on it and put away the moment the span is settled,
+    // where it would only be noise over a window the user has just declared.
+    // BARE `x` (and its Show trim region button) IS THE RECALL — hiding
+    // discards nothing, the trim persisting and re-showing identical.
+    //
+    // UNCONDITIONAL, at every end path this one owner serves, and each case is
+    // wanted: the written stroke, the request's own; the DEGENERATE stroke
+    // collapsed onto its anchor, whose trim resets to the whole song below (a
+    // whole-song overlay is semantically the old unset state and owed no
+    // surface); the motionless shift press-release that wrote nothing, whose
+    // own arm put the overlay up and whose end symmetrically puts it back down;
+    // the touch region hold and the force-end finalizer, which share this owner;
+    // and the `h` VIEW'S CARVED-OUT PLAYHEAD SWEEP, whose end now collapses an
+    // overlay the user carried into the view. That last one is DELIBERATE: the
+    // sweep moves the playhead's position in the music, which is exactly what
+    // the hide rule hides for (clear_region_highlight, input_handler.h) — the
+    // former escaped the rule only by writing the cursor direct.
+    clear_region_highlight(app, viewport);
     // THE COMMIT TAIL IS THE ENDCAP DRAG'S, verbatim and for its own reason:
     // auto_clear_crossed_trim, the repaints, the target-render trigger, and the
     // PLAYHEAD PARKED AT THE COMMITTED TRIM START — at the end only, a
@@ -4893,7 +4925,8 @@ void GuiInputHandler::commit_region_sweep() {
     // is not merely convenient here; it is the sweep's whole answer to a
     // collapsed span, and nothing in this function tests a width.
     //
-    // A sweep that WROTE NOTHING owes none of it, unchanged: a motionless
+    // A sweep that WROTE NOTHING owes none of THAT TAIL, unchanged (the hide
+    // above is outside this gate and runs for it too): a motionless
     // press-release, a stroke refused by degenerate geometry, and the `h`
     // view's carved-out former all end here with the trim exactly as they found
     // it, so no playhead parks and no render triggers behind them.
@@ -7335,8 +7368,9 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // Chebyshev gate nothing extra happens — the press already did the click
     // and raised the overlay at mouse-down, and NO TRIM IS WRITTEN until the
     // gate is crossed, which is what keeps a motionless shift click a pure
-    // placement (it leaves the overlay SHOWN over the trim it did not touch —
-    // the same thing bare `x` would have shown). Once a drag, always a drag
+    // placement (the overlay this press raised comes back down at its release,
+    // commit_region_sweep's own bracket — up while there might be a stroke to
+    // watch, away when there turns out not to be). Once a drag, always a drag
     // (moved never re-engages). (The
     // one-day RULER arm's crossing act — the deferred dissolve + deselect —
     // died 2026-08-12 with the ruler former, superseded by pan-primary.)

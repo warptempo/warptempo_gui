@@ -193,9 +193,10 @@ void GuiActiveViews::toggle_active_markers_view() {
     // genuinely untouched across the flip.
     // (THE SWAP'S OVERLAY HIDE IS DELETED, 2026-08-19, with the A/B tab
     // switch's and the S/T flip's. THE OVERLAY HIDES WHEN THE PLAYHEAD'S
-    // POSITION IN THE MUSIC CHANGES AND WHEN A MARKER IS TOUCHED — the rule at
-    // clear_region_highlight, input_handler.h — and a COLUMN SWITCH does
-    // neither: the swap empties the selection, so there is no focus to
+    // POSITION IN THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND WHEN THE
+    // SWEEP ENDS — the rule at
+    // clear_region_highlight, input_handler.h — and a COLUMN SWITCH does none
+    // of the three: the swap empties the selection, so there is no focus to
     // re-express and the playhead is genuinely untouched across the flip, and no
     // marker is touched by a change of which column is drawn. Its 2026-07-29
     // argument was "the user has turned to the other column"; the trim belongs

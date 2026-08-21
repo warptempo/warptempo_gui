@@ -266,19 +266,24 @@ struct UndoEntry {
 // bounds — the rule and its membership are at the head of input_trim.cpp).
 //
 // THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `x` and the icon row's
-// IconShowRegion button, one toggle over one act
-// (handle_toggle_trim_region, input_trim.cpp), whose show half also brings the
-// span into view, and — since 2026-08-19 — by EVERY PRESS THAT TOUCHES THE
-// TRIM through the one raise owner show_trim_region_overlay (input_handler.h,
-// which carries its whole call-site inventory, the no-framing rule and the `h`
-// carve-out): the SWEEP'S arm and the 9 px band's three press claims.
-// HIDDEN by that same toggle and by clear_region_highlight, whose declaration
-// (input_handler.h) states THE RULE: the overlay hides when the playhead's
-// position in the music changes and when a marker is touched, and at no other
-// time. HIDING DISCARDS NOTHING — the trim persists and re-showing restores an
-// identical overlay, which is what makes the rule safe to state as a rule. The
-// trim's own gestures never hide, and need no exclusion to say so: they write
-// the cursor direct and so reach neither movement owner.
+// IconShowRegion button, one toggle over one act (handle_toggle_trim_region,
+// input_trim.cpp), whose show half also brings the span into view; by THE
+// SWEEP'S ARM through the one raise owner show_trim_region_overlay
+// (input_handler.h, which carries its whole call-site inventory, the no-framing
+// rule and the `h` carve-out) — its ONE caller since the 9 px band's three
+// press claims left that inventory on 2026-08-20, a lane touched by a pointer
+// being its own display of the trim while the big surface exists for glass; and
+// by the FILE LOAD, which resets this struct so a new piece starts hidden.
+// HIDDEN by that same toggle, by THE SWEEP'S COMMIT (commit_region_sweep,
+// input_pointer.cpp — unconditional at every end path, so the arm's raise is
+// bracketed by the stroke it was raised for), and by clear_region_highlight,
+// whose declaration (input_handler.h) states THE RULE: the overlay hides when
+// the playhead's position in the music changes, when a marker is touched and
+// when the sweep ends, and at no other time. HIDING DISCARDS NOTHING — the trim
+// persists and re-showing restores an identical overlay, which is what makes
+// the rule safe to state as a rule. The trim's other gestures never hide, and
+// need no exclusion to say so: they write the cursor direct and so reach
+// neither movement owner.
 //
 // ONLY THE WAVEFORM ANSWERS, by the architect's ruling: the RULER and the
 // MARKER LANE stay plain navigation surface throughout, which is what keeps a
@@ -545,9 +550,10 @@ struct UndoHistory {
 // IT DOES SHOW THE OVERLAY (architect 2026-08-19) through the one raise owner,
 // at every entry but the `h` view's: the surface being drawn on is visible
 // while it is drawn, and since the overlay derives from the trim the sweep
-// writes per motion event it tracks the stroke live. A motionless shift click
-// therefore leaves the overlay standing over an untouched trim — the same thing
-// bare `x` would have shown.
+// writes per motion event it tracks the stroke live. THE SHOW IS BRACKETED BY
+// THE STROKE (architect 2026-08-20): commit_region_sweep collapses it again at
+// every end path, so a motionless shift click puts away what its own press put
+// up, and a stroke that draws a window leaves that window on the bar alone.
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press frame, the trim holds
@@ -3742,8 +3748,9 @@ struct AppState {
     // THE TRIM REGION OVERLAY'S VISIBILITY — the whole of the region state
     // since 2026-08-18, the span itself being DERIVED from the trim every frame
     // (the model is at RegionState). IT HIDES WHEN THE PLAYHEAD'S POSITION IN
-    // THE MUSIC CHANGES AND WHEN A MARKER IS TOUCHED, and at no other time — the
-    // rule, its two movement owners, its three call sites and everything it
+    // THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND WHEN THE SWEEP ENDS, and
+    // at no other time — the rule, its two movement owners, its other call
+    // sites and everything it
     // deliberately leaves standing are stated once at clear_region_highlight
     // (input_handler.h). BARE ESC is the one route that hides and does nothing
     // else, and one of the six bare-Esc bindings. The one hide that stays IN
