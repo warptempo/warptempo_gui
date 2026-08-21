@@ -3759,9 +3759,10 @@ struct AppState {
     // at no other time — the rule, its two movement owners, its other call
     // sites and everything it
     // deliberately leaves standing are stated once at clear_region_highlight
-    // (input_handler.h). BARE ESC is the one route that hides and does nothing
-    // else, and one of the six bare-Esc bindings. The one hide that stays IN
-    // PLACE rather than going through the helper is the FILE LOAD's, which
+    // (input_handler.h). BARE `x` IS THE ONE MANUAL ROAD onto and off it, its
+    // durable show and its durable hide (bare Esc hid it too until 2026-08-21,
+    // when the second road was retired). The hides that stay IN PLACE rather
+    // than going through the helper are `x`'s own and the FILE LOAD's, which
     // pairs it with a whole new piece.
     RegionState region;
 
@@ -4780,16 +4781,14 @@ struct AppState {
     // does NOT close it: the delta is re-laid-out against the new geometry by
     // the flag cache's own rebuild, exactly as live flags are.
     //
-    // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO SEVENTH ESC PLACE.
-    // The bare-Esc inventory is still the six enumerated at its dispatch point
+    // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO ESC PLACE OF ITS
+    // OWN. The bare-Esc inventory is the one enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
-    // so the two bindings that can be live in here run — the REGION HIDE (an
-    // overlay SHOWN BEFORE `h`, which since 2026-08-18 is the only one
-    // reachable in here: the view has no span state of its own and bare `x` is
-    // consumed by the mode) and the RENDER / BATCH CANCEL (a render launched
-    // before `h`).
-    // Neither touches authored state, which is why admitting it costs the frozen
-    // now side nothing. With neither standing, Esc is a consumed nothing.
+    // so the binding that can be live in here runs — the RENDER / BATCH CANCEL
+    // (a render launched before `h`). The REGION HIDE was the other one until
+    // 2026-08-21, when it retired.
+    // It touches no authored state, which is why admitting it costs the frozen
+    // now side nothing. With no render standing, Esc is a consumed nothing.
     //
     // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
     // while it stands, through TWO gates and no scattered ifs — history_mode_-
@@ -8331,10 +8330,11 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // RENDER'S MID-RENDER HINT, ranked above its iteration form like the
     // label: one line, "Cancel", NO KEY NAMED — deliberately. The act is the
     // button's own (the ruled chord divergence at
-    // finish_chrome_press_release's Render arm),
-    // and naming Esc would lie whenever the trim region overlay is shown: bare
-    // Esc ranks the region hide above the render cancel, so the key and the button part
-    // company in exactly that state. NO SHIFT LINE either: while the face is
+    // finish_chrome_press_release's Render arm), which runs the cancel BODY
+    // rather than dispatching any key. (Naming Esc would also have LIED
+    // whenever the trim region overlay was shown, the hide having ranked above
+    // the cancel until 2026-08-21; that retirement removes the lie but not the
+    // reason — the button is not a chord.) NO SHIFT LINE either: while the face is
     // Cancel a shift press cancels too — one face, one act — and the hint
     // exists only where shift does something DIFFERENT (the static_assert's
     // rule, met here by the stateful form exactly as iteration mode's already

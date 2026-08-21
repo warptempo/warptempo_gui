@@ -6128,9 +6128,13 @@ void GuiInputHandler::finish_chrome_press_release(
         // semantics unchanged (a dispatch kills the running render and starts
         // a new one — the render-dispatch rule), while the BUTTON "doesn't
         // need to exist while nothing's rendering" and so becomes the cancel;
-        // and the dispatched chord could not be bare Esc either, because Esc
-        // ranks the region hide ABOVE the render cancel — a Cancel button
-        // that hid the trim region overlay instead of cancelling would be a lie.
+        // and it dispatches no Esc either: the act body is what the button
+        // owes, not a key. (Until 2026-08-21 that was also a correctness
+        // requirement — Esc ranked the region hide ABOVE the render cancel, so
+        // a dispatched Esc would have hidden the trim region overlay instead of
+        // cancelling. With the hide retired the key reaches the cancel in one
+        // press whatever the overlay is doing, and running the act directly is
+        // simply what the exception has always meant.)
         // A SHIFT press cancels too: one face, one act — while the button IS
         // Cancel, letting shift slip through to the miscellaneous render would
         // start a render from a button that says Cancel. THE SHIFT LONG PRESS

@@ -164,9 +164,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // THE OVERLAY HIDES WHEN THE PLAYHEAD'S POSITION IN THE MUSIC CHANGES, WHEN A
 // MARKER IS TOUCHED, AND WHEN THE SWEEP ENDS. Nothing else hides it, and this
 // comment is the ONE statement of that — there is no call-site inventory any
-// more, because the calls are SIX, in FOUR CLASSES, and the first class is a
+// more, because the calls are FIVE, in THREE CLASSES, and the first class is a
 // pair of OWNERS every future caller inherits from (re-derived by grep
-// 2026-08-20). The model is the DAW instinct the architect named: moving the
+// 2026-08-21). The three clauses are now EXACTLY the surviving hides: the bare
+// Esc hide that used to sit outside them retired 2026-08-21, so the rule needs
+// no fourth clause and no exception.
+// The model is the DAW instinct the architect named: moving the
 // playhead, or touching an event, collapses the region — and the third clause
 // is the same instinct read forward, a stroke that has just said "this exact
 // region" having nothing left to look at.
@@ -199,7 +202,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // thing is touching the trim, and a stroke that has ENDED is no longer touching
 // it.
 //
-// THE FOUR CLASSES, six calls:
+// THE THREE CLASSES, five calls:
 //   * THE MOVEMENT OWNERS — two owners in three entry points, which is where the
 //     rule's first half lives and
 //     where every future caller inherits it: Viewport::move_playhead_to (the
@@ -232,17 +235,18 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     which collapses an overlay carried into the view precisely because that
 //     former moves the playhead in the music and only ever escaped the rule by
 //     writing the cursor direct.
-//   * BARE ESC (input_handler.cpp), the one route that hides and NOTHING ELSE:
-//     no playhead move, no selection change, no trim write. It is ranked under
-//     the editors and prompts and over the render cancel, and a DRAG IN FLIGHT
-//     never reaches it — the drag-modal gate swallows the key first, so Esc
-//     hides a shown overlay but cancels no gesture. The full Esc enumeration
-//     lives at its dispatch point in on_key (input_handler.cpp).
+// A FOURTH CLASS STOOD HERE AND IS RETIRED: BARE ESC, the one route that hid
+// and did nothing else (joined 2026-07-30 as a clear, a hide from 2026-08-18,
+// retired 2026-08-21). The durable show's twin is the durable hide, so a second
+// key aimed at the same surface was a second road; bare `x` is that road now,
+// both ways. Esc's own enumeration lives at its dispatch point in on_key
+// (input_handler.cpp).
 //
 // THE TWO NON-CALLERS WORTH NAMING, because both write the visibility bit
 // themselves rather than through this helper:
-//   * BARE `x` (handle_toggle_trim_region, input_trim.cpp) — the toggle, whose
-//     hide half is the user asking for it outright;
+//   * BARE `x` (handle_toggle_trim_region, input_trim.cpp) — the toggle, and
+//     since 2026-08-21 the ONE MANUAL ROAD onto and off the overlay, its hide
+//     half being the user asking for it outright;
 //   * THE FILE LOAD (file_loader.cpp) — an in-place reset that pairs the hide
 //     with a whole new piece, a stranger's window already lit on the waveform
 //     being the wrong greeting.

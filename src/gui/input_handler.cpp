@@ -192,13 +192,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // popup that let `s` drop a marker underneath it would be a trap.
     //
     // It admits exactly two keys, and both DISMISS:
-    //   - bare Esc CLOSES it, and that is THE SIXTH BARE-ESC BINDING (the
-    //     enumeration further down carries the full list and this rank). ONE
+    //   - bare Esc CLOSES it, and that is ONE OF THE BARE-ESC BINDINGS (the
+    //     enumeration further down carries the full list, the count and this
+    //     rank). ONE
     //     BINDING FOR EVERY MENU: the gate reads the shared popup state, so the
     //     Navigation dropdown (2026-08-02) and the File one (2026-08-13) joined
     //     the existing binding rather
-    //     than adding a seventh — a dropdown is a dropdown — and the Navigation
-    //     one's deletion (2026-08-15) took none away for the same reason;
+    //     than adding a place of their own — a dropdown is a dropdown — and the
+    //     Navigation one's deletion (2026-08-15) took none away for the same
+    //     reason;
     //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
     //     below, matching every other modal's Ctrl+Q hatch.
     // A popup and an editor CANNOT be open together, so this gate can never
@@ -708,41 +710,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // BARE ESC HIDES THE TRIM REGION OVERLAY (architect 2026-07-30, live-test
-    // refinement: "if 'esc' to clear region (but not cancel drag) cheap now? if
-    // so, implement it also"; a CLEAR until 2026-08-18 and a HIDE since, the
-    // region having become the trim). It is, and this is the whole
-    // implementation: the visibility bit is display state with no owner but the
-    // user, so dropping it needs no snapshot, no membership work and no
-    // playhead move — AND NO TRIM WRITE, which is what makes Esc the explicit
-    // hide rather than a destructive key.
-    // RANKED HERE, between the editors/prompts above and the render cancel below:
-    // a modal surface still wins the key, and a shown overlay wins over the
-    // render cancel because it is the more local thing on screen. With the
-    // overlay hidden the press falls straight through and cancels the render
-    // exactly as before.
-    // CLEAR BUT NEVER CANCEL, and that is STRUCTURAL rather than a test here: a
-    // drag in flight is swallowed by the DRAG-MODAL GATE far above (which admits
-    // only Ctrl+Q), so a mid-drag Esc never reaches this arm at all — the drag
-    // keeps extending under the pointer and goes on writing the trim, matching
-    // the no-cancel rule every pointer gesture holds. Only an overlay left
-    // standing by a RELEASED gesture can be hidden from here.
-    // BARE-EXACT, like every other Escape reader (strict modifier validation).
-    if (key == GuiKeys::Escape && !ctrl && !shift && !alt && app.region.shown) {
-        clear_region_highlight(app, viewport);
-        return;
-    }
+    // THE TRIM REGION OVERLAY'S ESC HIDE STOOD HERE AND IS RETIRED (joined
+    // 2026-07-30 as a clear, a hide from 2026-08-18, retired 2026-08-21). BARE
+    // `x` IS THE ONE MANUAL ROAD ONTO AND OFF THE OVERLAY: the durable show's
+    // twin is the durable hide, so a second key aimed at the same surface was a
+    // second road. Only the MANUAL hide goes — the rule's automatic hides (the
+    // playhead's movement in the music, a marker touched, the sweep's end) all
+    // stand, being the rule rather than a gesture (the rule is at
+    // clear_region_highlight, input_handler.h).
+    // THE CONSEQUENCE, where the old rank reasoning stood: the hide ranked ABOVE
+    // the render cancel below, so a shown overlay ABSORBED the press and a
+    // cancel under one took two presses. It now takes ONE, whatever the overlay
+    // is doing — the intended behavior, not a loss to mitigate.
 
     // Bare Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key, mods)) return;
 
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
-    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN SIX
-    // PLACES AND NOWHERE ELSE (re-derived 2026-07-31 — the drag-modal gate above
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FIVE
+    // PLACES AND NOWHERE ELSE (re-derived 2026-08-21 — the drag-modal gate above
     // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
-    // other key while a gesture is in flight; it is NOT one of the six), each of
-    // the six earlier in this function than this point, so reaching here means
+    // other key while a gesture is in flight; it is NOT one of the five), each of
+    // the five earlier in this function than this point, so reaching here means
     // the press has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
@@ -757,13 +747,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
-    //       under the prompt gate; architect 2026-07-31, the SIXTH binding).
-    //       EVERY menu — Settings, File and Edit — is this ONE
+    //       under the prompt gate; architect 2026-07-31, joining as the sixth of
+    //       the six the count then stood at). EVERY menu — Settings, File and
+    //       Edit — is this ONE
     //       binding: they
     //       share one popup state and one gate, so the second dropdown
     //       (Navigation, 2026-08-02), the third (File, 2026-08-13) and the
     //       fourth-then-third (Edit, 2026-08-20) added no
-    //       seventh place and the Navigation one's deletion (2026-08-15) took
+    //       place of their own and the Navigation one's deletion (2026-08-15) took
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
@@ -771,11 +762,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
-    //   (d) THE REGION HIDE — the arm just above (architect 2026-07-30);
-    //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
+    // (joined 2026-07-30, retired 2026-08-21 — bare `x` is the one manual road
+    // onto and off the overlay; the retirement is argued at the site it stood at,
+    // just above the cancel).
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
-    // MOVE: its allowlist stopped dropping the key, which lets (d) and (e) run
-    // inside the view. Those two are what the ADMISSION buys, not the only rungs
+    // MOVE: its allowlist stopped dropping the key, which lets (d) run
+    // inside the view. That rung is what the ADMISSION buys, not the only rung
     // reachable in there (re-derived 2026-08-07): the view also opens the load
     // editor on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a) and (b) run
     // in it too — and (c) with them, the checkpoint's own failure notice being a
@@ -791,12 +785,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // left exactly as found. Leaving the MARKER LANE is
     // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
-    // playhead_in_marker_lane). And the region hide above drops the overlay
-    // WITHOUT moving the playhead or changing the selection — which is exactly
-    // why it is a call site of its own rather than something the movement rule
-    // covers (the rule is at clear_region_highlight, input_handler.h). IT IS NO LONGER THE ONLY SUCH ROUTE: bare
-    // `x`'s own hide half has been the other since 2026-08-18, and hiding
-    // discards nothing either way.
+    // playhead_in_marker_lane). NOR IS THE TRIM REGION OVERLAY AN ESC ACT ANY
+    // MORE (2026-08-21): the manual hide is bare `x`'s alone, the twin of its own
+    // durable show, and every remaining hide is the rule's — a playhead moved in
+    // the music, a marker touched, a sweep ended (the rule is at
+    // clear_region_highlight, input_handler.h).
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
@@ -1258,8 +1251,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is NOT
-    // one — it hides the trim region overlay and nothing else, touching no
-    // selection),
+    // one — it touches no selection, and since 2026-08-21 it touches the trim
+    // region overlay no more either),
     // and there is no fallback, so an
     // off-home marker-lane press is a consumed no-op, never a
     // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform

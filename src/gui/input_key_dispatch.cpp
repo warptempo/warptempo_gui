@@ -317,15 +317,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     // Bare Escape only: a modified Escape carries no binding anywhere, so it has
-    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the REGION HIDE
-    // (architect 2026-07-30 — a locked tab can raise the trim region overlay,
-    // bare `x` and its button being read-only-legal on the trim band ruling, so
-    // it must be able to put it down again; the hide writes no trim and
-    // discards nothing) and
-    // the RENDER / BATCH CANCEL. Neither mutates anything persistent, so both are
-    // read-only-safe like every one of Esc's bindings (the authoritative
-    // enumeration is at its dispatch point in on_key, input_handler.cpp; no count
-    // belongs here), and dropping Esc at this gate would break both.
+    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the RENDER /
+    // BATCH CANCEL, which is what reaches this gate. It mutates nothing
+    // persistent, so it is read-only-safe like every one of Esc's bindings (the
+    // authoritative enumeration is at its dispatch point in on_key,
+    // input_handler.cpp; no count belongs here), and dropping Esc at this gate
+    // would break it. THE REGION HIDE WAS THE OTHER ADMISSION UNTIL 2026-08-21
+    // (a locked tab can raise the trim region overlay, bare `x` and its button
+    // being read-only-legal on the trim band ruling, so Esc had to be able to
+    // put it down again) — with the hide retired, `x` itself is that road both
+    // ways and is admitted on its own arm.
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
@@ -1812,23 +1813,20 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //   - Ctrl+Q                → the close routing.
 //   - Esc (bare)            → ITS EXISTING BINDINGS, AND NOT ONE OF ITS OWN
 //                             (architect 2026-08-04, closing the arc's recorded
-//                             cost). Admitting it adds NO seventh Esc place: the
-//                             bare-Esc inventory is still the six enumerated at
+//                             cost). Admitting it adds NO Esc place of its own:
+//                             the bare-Esc inventory is the one enumerated at
 //                             on_key's dispatch point (input_handler.cpp), and
-//                             this line lets exactly the two that sit BELOW it
-//                             run — the REGION HIDE (an overlay SHOWN before
-//                             `h` — the only one reachable in here since
-//                             2026-08-18, the view having no span state of its
-//                             own and bare `x` being consumed by the mode: the
-//                             hide is reachable from within, which is fine —
-//                             it drops a visibility bit and discards nothing)
-//                             and
-//                             the RENDER / BATCH CANCEL (a render
+//                             this line lets exactly the binding that sits BELOW
+//                             it run — the RENDER / BATCH CANCEL (a render
 //                             launched before `h`, whose progress line the mode's
-//                             corner outranks). Both sit BELOW this gate in
-//                             on_key and neither mutates authored state, so the
+//                             corner outranks). It sits BELOW this gate in
+//                             on_key and mutates no authored state, so the
 //                             frozen now side is untouched — the same argument
-//                             the read-only allowlist admits Esc on.
+//                             the read-only allowlist admits Esc on. (The REGION
+//                             HIDE was the other one the admission bought until
+//                             2026-08-21, when it retired: an overlay carried in
+//                             from before `h` now leaves by the rule or by bare
+//                             `x` outside the view.)
 //                             IT CANNOT CLOSE THE VIEW, structurally rather than
 //                             by refusal: the toggle is handle_history_mode_key's,
 //                             and that function's whole vocabulary
@@ -1836,9 +1834,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             enumerates it) carries no Esc shape in any modifier
 //                             combination, so no Esc reaches it. The
 //                             view's exits are unchanged, and `h` is still the
-//                             key that leaves. With no region resting and no
-//                             render running a bare Esc is a consumed nothing,
-//                             which is what it is everywhere else too.
+//                             key that leaves. With no render running a bare
+//                             Esc is a consumed nothing, which is what it is
+//                             everywhere else too.
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
@@ -3112,8 +3110,8 @@ void GuiInputHandler::run_history_revert() {
 // one popup state and a dropdown is a dropdown (the Navigation menu joined
 // 2026-08-02, the File one 2026-08-13 and the Edit one 2026-08-20, each needing
 // nothing here, and the
-// Navigation menu's 2026-08-15 deletion needed nothing either: bare Esc is the
-// SIXTH bare-Esc binding through all of it, never a seventh and never a fifth). Returns true when the press is SWALLOWED (the
+// Navigation menu's 2026-08-15 deletion needed nothing either: the popup's bare
+// Esc is ONE bare-Esc binding through all of it, never two). Returns true when the press is SWALLOWED (the
 // popup consumed it, or it was inert); false only for Ctrl+Q, which closes the
 // popup and then lets on_key run the close route.
 //
