@@ -2452,6 +2452,14 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
             resolved[k] = e.measure_text;
             continue;
         }
+        // THE OFFSET SHIFTS THE PRINTED NUMBER AND NOTHING ELSE (architect
+        // 2026-08-20, with the section qualifier): `2:12` pasted at +5 is
+        // `2:17`, the section riding through in the parsed value and re-spelled
+        // by the one writer without this arithmetic ever naming it. That is the
+        // never-crosses-sections ruling falling out of the shape rather than
+        // being enforced here — there is no term that could move a measure into
+        // a different printed numbering, and the bracket below stays what it
+        // always was, a check on the NUMBER.
         const int64_t shifted = v.whole + offset_measures;
         if (shifted < 1 || shifted > kMeasureMaxWhole) return false;
         v.whole     = shifted;

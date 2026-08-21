@@ -325,10 +325,14 @@ parse_warpmarkers_file(const std::string& path) {
         // line — is a hard, line-numbered parse error via
         // parse_single_canonical_line below. The one relaxation is the
         // ` //<measure>` SUFFIX (marker_measure.h): the split comes off before
-        // the prefix is judged, and the measure's own ASCII grammar (at most
-        // 12 bytes, one canonical spelling per value) is judged just as
-        // strictly — a CR landing inside a measure stays fatal, so the CRLF
-        // corruption tripwire survives the relaxation intact.
+        // the prefix is judged, and the measure's own ASCII grammar (bounded at
+        // kMaxMarkerMeasureBytes, one canonical spelling per value) is judged
+        // just as strictly — a CR landing inside a measure stays fatal, so the
+        // CRLF corruption tripwire survives the relaxation intact. (COMMENT
+        // ONLY, architect approval 2026-08-20: the bound was spelled `12` here
+        // until the section qualifier raised it, so it now names its owner
+        // instead of restating a number. No code in this frozen file changed —
+        // it consumes the helpers and never re-reads the grammar.)
         std::string t = raw_lines[idx];
 
         // '#' marks a disabled marker and nothing else. The strict parser

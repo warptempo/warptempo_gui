@@ -76,27 +76,37 @@ bool parse_full_double(std::string_view text, double& out) {
     return true;
 }
 
-bool parse_full_int(std::string_view text, int64_t& out) {
-    if (text.empty()) return false;
-    const std::string s(text);
-    errno = 0;
-    char*         end = nullptr;
-    const long long v = std::strtoll(s.c_str(), &end, 10);
-    if (errno == ERANGE) return false;
-    if (end != s.c_str() + s.size()) return false;
-    out = static_cast<int64_t>(v);
+// One CANONICAL unsigned decimal field of a map line — digits only, no sign, no
+// leading zero on a multi-digit value, at most `max_digits` of them. The
+// measure and its section are held to the MEASURE GRAMMAR's own spelling rules
+// (marker_measure.h) rather than to strtoll's, so `+12`, `012` and `-2` are
+// refused here exactly as they are in a marker's own field: one spelling per
+// value, on both sides of the same idea.
+bool parse_canonical_field(std::string_view text, size_t max_digits,
+                           int64_t& out) {
+    if (text.empty() || text.size() > max_digits) return false;
+    if (text.size() > 1 && text.front() == '0') return false;
+    int64_t v = 0;
+    for (const char c : text) {
+        if (c < '0' || c > '9') return false;
+        v = v * 10 + (c - '0');
+    }
+    out = v;
     return true;
 }
 
 // ---------------------------------------------------------------------------
-// THE RESOLVED SCORE POSITION — a measure number plus a proper fraction of the
-// way through it, in EXACT rational arithmetic. It is the measure grammar's own
-// value domain (marker_measure.h), summed down a '+' chain; nothing rounds
-// until the time lookup, which is approximate by design and says so.
+// THE RESOLVED SCORE POSITION — a (SECTION, RATIONAL) pair since 2026-08-20:
+// the printed measure number plus a proper fraction of the way through it, and
+// the printed NUMBERING it belongs to. It is the measure grammar's own value
+// domain (marker_measure.h, which owns both halves), summed down a '+' chain;
+// nothing rounds until the time lookup, which is approximate by design and says
+// so. `section` rests at 1, the value a bare spelling carries.
 struct ScorePosition {
-    int64_t whole = 0;
-    int64_t num   = 0;  // 0 <= num < den
-    int64_t den   = 1;
+    int64_t section = 1;
+    int64_t whole   = 0;
+    int64_t num     = 0;  // 0 <= num < den
+    int64_t den     = 1;
 };
 
 // Add one parsed measure token's magnitude to a running position. False on
@@ -169,7 +179,13 @@ bool resolve_measure_position(const std::vector<MarkerT>& mv, int idx,
         chain.push_back(v);
         if (!v.is_offset) break;
     }
+    // THE CHAIN'S SECTION IS ITS DIRECT ANCHOR'S, and taking it here — from
+    // chain.back(), the one direct token the walk bottomed out on — is the
+    // never-crosses-sections ruling in code: no offset above it carries a
+    // section of its own (the grammar refuses `+2:1`), and none of the
+    // arithmetic below can move a number out of one printed numbering.
     ScorePosition p;
+    p.section = chain.back().section;
     for (size_t k = chain.size(); k-- > 0;) {
         if (!add_measure_value(p, chain[k])) return false;
     }
@@ -183,29 +199,55 @@ bool resolve_measure_position(const std::vector<MarkerT>& mv, int idx,
 // architect-accepted as such: the map anchors whole measures at page starts, so
 // a fraction of a measure is interpolated across the anchor interval rather
 // than measured. Nothing is stored; the answer is a seek.
+//
+// IT WORKS WITHIN ONE SECTION AND NEVER ACROSS TWO (2026-08-20, with the
+// printed-number ruling). The anchors of OTHER sections are not merely skipped
+// as unmatched — they are excluded from the bracketing entirely, because
+// measure numbers are only comparable inside the numbering that printed them:
+// with a trio restarting at 1, bar 12 of section 2 sits AFTER bar 40 of section
+// 1 in time while being a smaller number, and a walk that mixed them would
+// interpolate between two unrelated bars and land confidently in the wrong
+// music. So the walk takes this section's anchors in map order and clamps at
+// THIS SECTION'S first and last — which is also what makes a position past a
+// section's end land on that section's last page rather than sliding into the
+// next section's opening.
+//
+// A SECTION THE MAP DOES NOT CARRY IS A REFUSAL, the act's usual silent no-op:
+// a measure naming section 3 of a two-section map names a place this video has
+// no page for, and guessing one would be the confident wrong answer this whole
+// file refuses to give.
 bool score_video_time_for(const GuiScoreVideoMap& map, const ScorePosition& pos,
                           double& out) {
-    if (map.anchors.empty()) return false;
     const double p = static_cast<double>(pos.whole) +
                      (pos.num > 0 ? static_cast<double>(pos.num) /
                                         static_cast<double>(pos.den)
                                   : 0.0);
-    if (p <= static_cast<double>(map.anchors.front().measure)) {
-        out = map.anchors.front().seconds;
-        return true;
+    const GuiScoreVideoAnchor* prev = nullptr;
+    const GuiScoreVideoAnchor* first = nullptr;
+    for (const GuiScoreVideoAnchor& a : map.anchors) {
+        if (a.section != pos.section) continue;
+        if (first == nullptr) {
+            first = &a;
+            // BEFORE THIS SECTION'S FIRST ANCHOR: clamp onto it.
+            if (p <= static_cast<double>(a.measure)) {
+                out = a.seconds;
+                return true;
+            }
+        }
+        if (prev != nullptr && p < static_cast<double>(a.measure)) {
+            // Strictly increasing measures WITHIN a section are the parser's
+            // own guarantee, so the span below is never zero.
+            const double span =
+                static_cast<double>(a.measure - prev->measure);
+            out = prev->seconds +
+                  (p - static_cast<double>(prev->measure)) / span *
+                      (a.seconds - prev->seconds);
+            return true;
+        }
+        prev = &a;
     }
-    for (size_t i = 0; i + 1 < map.anchors.size(); ++i) {
-        const GuiScoreVideoAnchor& a = map.anchors[i];
-        const GuiScoreVideoAnchor& b = map.anchors[i + 1];
-        if (p >= static_cast<double>(b.measure)) continue;
-        // Strictly increasing measures are the parser's own guarantee, so the
-        // span below is never zero.
-        const double span = static_cast<double>(b.measure - a.measure);
-        out = a.seconds +
-              (p - static_cast<double>(a.measure)) / span * (b.seconds - a.seconds);
-        return true;
-    }
-    out = map.anchors.back().seconds;
+    if (prev == nullptr) return false;  // the map carries no such section
+    out = prev->seconds;                // past this section's last anchor
     return true;
 }
 
@@ -367,16 +409,27 @@ bool send_mpv_command(const std::string& socket_path, const std::string& line,
 // and its stdin would compete for the launching terminal), and it takes a
 // SESSION of its own where the platform offers one.
 //
+// THE FIRST JUMP CARRIES THE SPEED TOO, as OPTIONS rather than as commands:
+// the instance this starts must open at the same rate a running one would be
+// sent to, or the very first jump of a session would play at 1.0 and every
+// later one at the audition's rate. `--speed` and `--audio-pitch-correction=no`
+// are the command-line twins of the two properties the IPC path sets, and the
+// varispeed reasoning for turning correction off is at that site.
+//
 // argv exec, NEVER a shell (the project's standing rule): a project folder's
 // name carries spaces and reaches mpv as one argv element with no quoting rules
 // in between. `--` guards a dash-leading path.
 bool spawn_mpv(const std::string& socket_path, const std::string& video,
-               const std::string& start_seconds) {
+               const std::string& start_seconds,
+               const std::string& speed) {
     const std::string ipc_arg   = "--input-ipc-server=" + socket_path;
     const std::string start_arg = "--start=" + start_seconds;
+    const std::string speed_arg = "--speed=" + speed;
     char* argv[] = {const_cast<char*>("mpv"),
                     const_cast<char*>(ipc_arg.c_str()),
                     const_cast<char*>(start_arg.c_str()),
+                    const_cast<char*>(speed_arg.c_str()),
+                    const_cast<char*>("--audio-pitch-correction=no"),
                     const_cast<char*>("--"),
                     const_cast<char*>(video.c_str()),
                     nullptr};
@@ -440,6 +493,7 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
 
     bool    have_previous = false;
     double  prev_seconds  = 0.0;
+    int64_t prev_section  = 1;
     int64_t prev_measure  = 0;
     std::string line;
     while (std::getline(in, line)) {
@@ -485,15 +539,40 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
         int64_t measure = 0;
         if (!parse_full_double(std::string_view(line).substr(0, bar), seconds))
             return {};
-        if (!parse_full_int(std::string_view(line).substr(bar + 1), measure))
-            return {};
+        // THE OPTIONAL `<S>:` QUALIFIER, the measure grammar's own spelling
+        // rules applied to a map line (marker_measure.h is the authority):
+        // S in [kMeasureMinSection, kMeasureMaxSection], no leading zeros, and
+        // `1:` REFUSED because a bare number is section 1's one spelling. A map
+        // written before the qualifier existed carries none and reads as one
+        // section throughout, which is exactly what it was.
+        std::string_view measure_field =
+            std::string_view(line).substr(bar + 1);
+        int64_t      section = 1;
+        const size_t colon   = measure_field.find(':');
+        if (colon != std::string_view::npos) {
+            if (!parse_canonical_field(measure_field.substr(0, colon), 2,
+                                       section) ||
+                section < kMeasureMinSection || section > kMeasureMaxSection)
+                return {};
+            measure_field.remove_prefix(colon + 1);
+        }
+        if (!parse_canonical_field(measure_field, 5, measure)) return {};
         if (!score_video_time_in_domain(seconds) || measure < 1) return {};
-        // STRICTLY INCREASING IN BOTH FIELDS, which is what makes the lookup's
-        // bracketing walk and its non-zero span safe rather than checked again.
-        if (have_previous && (seconds <= prev_seconds || measure <= prev_measure))
+        // TIME RISES STRICTLY ACROSS THE WHOLE MAP; THE MEASURE ONLY WITHIN A
+        // SECTION. That split is the printed-number ruling's one structural
+        // consequence here, and it is what the lookup's per-section bracketing
+        // walk rests on — a new section restarts the measure test rather than
+        // failing it, while the time test never restarts. A section may not be
+        // re-entered after it is left (the tool emits each section's anchors in
+        // one contiguous run), so the previous measure is compared only inside
+        // the section that set it.
+        if (have_previous && seconds <= prev_seconds) return {};
+        if (have_previous && section == prev_section && measure <= prev_measure)
             return {};
-        map.anchors.push_back({seconds, measure});
+        if (have_previous && section < prev_section) return {};
+        map.anchors.push_back({seconds, section, measure});
         prev_seconds  = seconds;
+        prev_section  = section;
         prev_measure  = measure;
         have_previous = true;
     }
@@ -559,16 +638,55 @@ void run_score_video_jump(const AppState& app) {
     const std::string video_path = video.string();
     const std::string socket_path = mpv_socket_path();
 
-    // ONE COMMAND, and `loadfile` is the whole of it: it loads the file,
-    // REPLACES whatever is showing and applies the start option in the same
-    // act, so a jump within the same video and a jump into a fresh one are one
-    // code path. A same-file jump reloads rather than seeks — accepted, mpv
+    // THE SPEED RIDES THE JUMP (architect ruling 2026-08-20): the score video
+    // rolls at the app's own audition rate, so the page you are looking at and
+    // the sound you are hearing move together instead of drifting apart within
+    // a bar.
+    //
+    // WHICH RATE IS A VIEW QUESTION. SOURCE view auditions the file itself at
+    // `playback_speed`, so that is what mpv takes; TARGET view auditions the
+    // rendered preview, which is always played at natural rate — the warp is
+    // already baked into those samples — so mpv takes 1.0 there. Reading it
+    // here means every jump carries the speed of the MOMENT it was pressed,
+    // which is the standing no-live-sync ruling working as intended: nothing
+    // follows a later speed change until the next jump.
+    //
+    // AND PITCH CORRECTION GOES OFF, which is the part that must not be
+    // "improved" later. The app's audition is VARISPEED — GuiPlayback fills
+    // from a fractional cursor by linear interpolation, so pitch falls with
+    // speed exactly as a tape machine's does — and mpv's default is the
+    // opposite, holding pitch while it stretches time. Left on, the video would
+    // sing a different note than the app at every speed but 1.0. Matching the
+    // app means turning the correction OFF, not tuning it.
+    const double speed =
+        (app.active_audio_view == 'T')
+            ? 1.0
+            : static_cast<double>(app.playback_speed);
+    char      speed_text[64];
+    const int speed_spelled =
+        std::snprintf(speed_text, sizeof speed_text, "%.6f", speed);
+    if (speed_spelled <= 0 ||
+        static_cast<size_t>(speed_spelled) >= sizeof speed_text)
+        return;
+
+    // THREE COMMAND LINES ON ONE CONNECTION, written in a single go: mpv's IPC
+    // is line-delimited, so this is one write and one round of the bounded
+    // transport rather than three. `loadfile` is the jump itself — it loads the
+    // file, REPLACES whatever is showing and applies the start option in the
+    // same act, so a jump within the same video and a jump into a fresh one are
+    // one code path (a same-file jump reloads rather than seeks — accepted, mpv
     // being fast at it and the alternative being a second command shape and a
-    // reply to parse.
+    // reply to parse). The two PROPERTIES behind it persist in the single
+    // instance and are re-sent at every jump anyway, which costs nothing and
+    // means the window can never be left holding a stale rate.
     const std::string command = "{\"command\":[\"loadfile\",\"" +
                                 json_escape(video_path) +
                                 "\",\"replace\",-1,\"start=" + seek_text +
-                                "\"]}\n";
+                                "\"]}\n"
+                                "{\"command\":[\"set_property\",\"speed\"," +
+                                speed_text + "]}\n"
+                                "{\"command\":[\"set_property\","
+                                "\"audio-pitch-correction\",false]}\n";
     // THE TWO DIAGNOSTICS SAY WHAT WAS OBSERVED AND NOTHING MORE. No reply is
     // ever read from mpv, so this side cannot know what mpv made of the line —
     // only whether the line left the process. "The write failed" and "the spawn
@@ -583,7 +701,7 @@ void run_score_video_jump(const AppState& app) {
         return;
     }
     // NOTHING WAS LISTENING, so this jump is the one that starts the window.
-    if (!spawn_mpv(socket_path, video_path, seek_text)) {
+    if (!spawn_mpv(socket_path, video_path, seek_text, speed_text)) {
         std::fprintf(stderr,
                      "warptempo_gui: score video: could not start mpv\n");
     }

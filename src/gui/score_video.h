@@ -30,10 +30,28 @@ struct AppState;
 // pixel (the wind-down rule for a rare non-silent fault outside the product's
 // own state).
 //
-// NO LIVE SYNC, NO FOLLOW, NO SPEED SYNC (architect 2026-08-20): the act is a
-// JUMP. mpv is not driven again until the next press, and the GUI never reads
-// mpv's position back — there is no second channel, no poll and no state on
-// this side beyond the socket path, which is derived per act rather than held.
+// NO LIVE SYNC AND NO FOLLOW (architect 2026-08-20): the act is a JUMP. mpv is
+// not driven again until the next press, and the GUI never reads mpv's position
+// back — there is no second channel, no poll and no state on this side beyond
+// the socket path, which is derived per act rather than held.
+//
+// THE SPEED RIDES THE JUMP THOUGH, and that is not a sync (architect ruling
+// 2026-08-20): each jump SENDS the audition's current rate, and nothing follows
+// a later change until the next jump. SOURCE view sends `playback_speed`;
+// TARGET view sends 1.0, the rendered preview always playing at natural rate.
+// PITCH CORRECTION IS TURNED OFF with it, deliberately and permanently: the
+// app's audition is VARISPEED (a fractional-cursor linear-interp fill — pitch
+// falls with speed like a tape machine), so matching it means letting mpv's
+// pitch fall too. The reasoning lives at the send site; do not "fix" it.
+
+// A MEASURE IS A (SECTION, MEASURE) PLACE, not just a number (2026-08-20). Maps
+// record the PRINTED bar numbers, so a score whose numbering restarts mid-way
+// has two bars called 12 and the SECTION says which — 1 for the opening
+// numbering, +1 at each printed restart in video order. The act resolves the
+// marker's measure to a (section, rational) pair and interpolates WITHIN that
+// section's own anchors, clamping at the section's first and last, because
+// measure numbers are only comparable inside the numbering that printed them.
+// A measure naming a section the map does not carry is one more silent no-op.
 //
 // IT RUNS ON THE GUI THREAD AND ITS COST IS BOUNDED, which is a contract and
 // not an implementation detail: the socket work is nonblocking under one
@@ -55,10 +73,18 @@ struct AppState;
 // a no-op like every other refusal.
 
 // One map anchor: a time in the video (SECONDS, relative to the map's window
-// start) and the measure whose downbeat sits there. Anchors are the tool's
-// monotonic first-pass page starts, strictly increasing in both fields.
+// start), the PRINTED measure whose downbeat sits there, and the SECTION that
+// number is printed in. Anchors are the tool's monotonic first-pass page
+// starts: time increases strictly across the whole map, while the MEASURE only
+// increases within a section — a printed restart takes it back to 1, which is
+// the whole reason the section is here.
+//
+// A map line spells `<seconds>|<measure>` in section 1 and
+// `<seconds>|<S>:<measure>` above it, the measure grammar's own qualifier, so a
+// map line and a marker's measure field read alike (marker_measure.h).
 struct GuiScoreVideoAnchor {
     double  seconds = 0.0;
+    int64_t section = 1;
     int64_t measure = 0;
 };
 

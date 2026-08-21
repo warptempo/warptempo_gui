@@ -39,8 +39,21 @@
 //
 // ------------------------------------------------------------------------
 // THE GRAMMAR — ASCII only, two forms, one canonical spelling per value.
+// (SECOND FROZEN REOPEN, architect approval 2026-08-20: the SECTION QUALIFIER
+// below, landed with the printed-number ruling. Every helper this grant
+// changed records it at its own site.)
 //
-//   DIRECT   <M>  or  <M> <n>/<d>
+// WHAT A MEASURE NAMES, decided 2026-08-20 and the reason the qualifier exists
+// at all: it is THE NUMBER THE PAGE PRINTS, never a continuous count derived
+// by cross-referencing an edition. A movement whose printed numbering RESTARTS
+// mid-way — the K.550 menuetto's trio going back to 1 — would otherwise have
+// two bars called `12` and no way to say which. The SECTION is that
+// disambiguator: 1 for the movement's opening numbering and +1 at each printed
+// restart IN VIDEO ORDER, which is exactly what the map's own sections are
+// (tools/extract_sheet_map.py emits the same qualifier on its anchors, so a
+// marker's measure and a map line read alike).
+//
+//   DIRECT   <M>  or  <M> <n>/<d>, either optionally prefixed <S>:
 //     M is a decimal integer in [1, kMeasureMaxWhole], no leading zeros, no
 //     sign. The optional fraction follows exactly ONE space: n/d with
 //     1 <= n < d <= kMeasureMaxDenominator, neither carrying leading zeros,
@@ -48,12 +61,24 @@
 //     `12 1/2`. Meaning: measure M, n/d of the way through it. `10` is the
 //     downbeat of measure 10; `12 7/8` is seven eighths through measure 12.
 //
+//     THE SECTION QUALIFIER is `<S>:` immediately before that spelling, with
+//     no space anywhere in it: `2:12`, `2:12 7/8`. S is a decimal integer in
+//     [2, kMeasureMaxSection], no leading zeros. A BARE SPELLING IS SECTION 1
+//     AND IS ITS ONLY SPELLING — `1:12` is REFUSED as non-canonical, the
+//     one-spelling-per-value rule this whole grammar is built on, and `0:` is
+//     refused with it (there is no section 0). Almost every piece has one
+//     section and spells nothing.
+//
 //   OFFSET   +<W>  or  +<n>/<d>  or  +<W> <n>/<d>
 //     No space after the '+'. W obeys the M rules (so `+0` is refused —
 //     offsets are strictly positive), the fraction obeys the fraction rules,
 //     and a sub-measure offset's one spelling is the BARE fraction (`+1/2`,
 //     never `+0 1/2`). Meaning: this marker's measure is its predecessor's
 //     resolved measure plus the offset, in exact rational arithmetic.
+//
+//     AN OFFSET CARRIES NO SECTION AND CANNOT BE GIVEN ONE (`+2:1` is
+//     refused). It is a distance, not a place, and it takes the section of
+//     whatever it is measured from — the never-crosses-sections ruling below.
 //
 // Anything else is refused: at the measure editor's commit by red flash, at
 // load as ADVERSARIAL (load-fatal, first error only, identically in both
@@ -70,6 +95,12 @@
 // ------------------------------------------------------------------------
 // '+' RESOLUTION SEMANTICS — stated once, here, the authoritative site.
 //
+// A RESOLVED MEASURE IS A (SECTION, RATIONAL) PAIR since 2026-08-20 — the
+// printed number plus its fraction, and the section they are printed in. Both
+// halves are needed to name a place in a score whose numbering restarts, and
+// consumers must carry both (score_video.h's act interpolates WITHIN a
+// section's own anchors for exactly this reason).
+//
 // A '+' measure resolves against the IMMEDIATE PREDECESSOR marker in the
 // SAME column, and only that one — there is no fallback scan to an earlier
 // marker. It adds to the predecessor's RESOLVED measure, so CHAINS RESOLVE:
@@ -77,6 +108,15 @@
 // followed by `+1/4` resolves to `13 1/8`. A chain must bottom out in a
 // direct measure; a BROKEN LINK — a predecessor carrying no measure, or a
 // predecessor that is itself unresolvable — leaves this marker UNRESOLVED.
+//
+// AN OFFSET NEVER CROSSES A SECTION (architect 2026-08-20). A chain's section
+// is its DIRECT ANCHOR'S, carried forward unchanged through every '+' on top
+// of it: `2:12` followed by `+1` resolves to section 2, measure 13, and there
+// is no arithmetic anywhere that could carry a number out of one section and
+// into the next. That is a RULING about what the field means rather than a
+// limitation — a section is a fresh printed numbering, not a continuation, so
+// "one bar past the end of section 1" is not a place the score has a name for.
+// To address the next section, spell a direct measure in it.
 //
 // AN UNRESOLVED '+' IS STILL VALID. It commits, saves, loads and paints;
 // resolution gates the CONSUMERS alone (the score-video act no-ops silently
@@ -93,12 +133,22 @@
 inline constexpr int64_t kMeasureMaxWhole       = 99999;
 inline constexpr int64_t kMeasureMaxDenominator = 99;
 
+// THE SECTION BRACKET (architect approval 2026-08-20, this header's second
+// frozen reopen). The QUALIFIER spells 2..99; section 1 is the bare spelling
+// and has no qualifier at all, so the written domain starts at 2 while the
+// VALUE domain is [1, 99]. Ninety-nine printed restarts in one movement is far
+// past anything a score does — the K.550 menuetto, the case this exists for,
+// has two — and the two-digit cap is what keeps the byte bound tight.
+inline constexpr int64_t kMeasureMinSection = 2;
+inline constexpr int64_t kMeasureMaxSection = 99;
+
 // Maximum measure length in BYTES, shared by both binaries. The grammar is
 // ASCII, so bytes and characters agree. The longest canonical token is the
-// full mixed offset `+99999 98/99` at 12 bytes (the longest DIRECT form,
-// `99999 98/99`, is 11); nothing longer can be spelled, so this is a tight
-// bound rather than a policy cap.
-inline constexpr size_t kMaxMarkerMeasureBytes = 12;
+// full qualified direct form `99:99999 98/99` at 14 bytes — 2 + 1 for the
+// qualifier over the 11-byte `99999 98/99` — which overtook the longest OFFSET
+// (`+99999 98/99`, 12) when the qualifier landed 2026-08-20. Nothing longer
+// can be spelled, so this is a tight bound rather than a policy cap.
+inline constexpr size_t kMaxMarkerMeasureBytes = 14;
 
 // The result of splitting one raw marker line. `prefix` is the canonical
 // line the position/payload parsers see; `measure` is the raw measure bytes
@@ -131,10 +181,17 @@ inline MarkerMeasureSplit split_marker_measure(std::string_view line) {
 // A parsed measure token. `is_offset` selects the form; `whole` is the
 // measure number (direct) or the offset's whole part, ZERO meaning the bare
 // fraction form that only an offset may take; `num` is zero when no fraction
-// is present, and `den` is then 1. Together the three fields spell exactly
-// one token, which format_marker_measure below reproduces byte for byte.
+// is present, and `den` is then 1. Together the fields spell exactly one
+// token, which format_marker_measure below reproduces byte for byte.
+//
+// `section` (2026-08-20, under the grant) is meaningful on DIRECT forms only
+// and rests at 1, which is both the default and the value the bare spelling
+// carries — so a reader that never heard of sections sees exactly the old
+// meaning. It is left at 1 on an offset and MUST NOT be read there: an offset
+// takes its section from what it resolves against, never from itself.
 struct MarkerMeasureValue {
     bool    is_offset = false;
+    int64_t section   = 1;
     int64_t whole     = 0;
     int64_t num       = 0;
     int64_t den       = 1;
@@ -227,6 +284,44 @@ inline bool parse_marker_measure(std::string_view text,
         }
     }
 
+    // THE SECTION QUALIFIER (architect approval 2026-08-20), taken off the
+    // FRONT before the forms below see anything, which is what keeps their
+    // arithmetic untouched by the grant: past this block `body` is exactly the
+    // token the grammar has always parsed.
+    //
+    // IT IS DIRECT-ONLY, and the refusal is spelled rather than left to fall
+    // through the number readers: an offset carrying `:` would otherwise fail
+    // with "measure offset must be 1..99999", which names the wrong problem in
+    // a field the editor red-flashes on.
+    const size_t colon = body.find(':');
+    if (colon != std::string_view::npos) {
+        if (v.is_offset) {
+            error_out = "measure offset must not name a section";
+            return false;
+        }
+        int64_t section = 0;
+        if (!marker_measure_detail::parse_canonical_uint(
+                body.substr(0, colon), kMeasureMaxSection, 2, section)) {
+            error_out = "measure section must be " +
+                        std::to_string(kMeasureMinSection) + ".." +
+                        std::to_string(kMeasureMaxSection);
+            return false;
+        }
+        // SECTION 1 HAS ONE SPELLING AND IT IS THE BARE ONE. `1:` parses as a
+        // number perfectly well and is refused HERE, on the canonical-spelling
+        // rule the whole grammar rests on, not on the bracket.
+        if (section < kMeasureMinSection) {
+            error_out = "section 1 is spelled without a qualifier";
+            return false;
+        }
+        v.section = section;
+        body.remove_prefix(colon + 1);
+        if (body.empty()) {
+            error_out = "malformed measure reference";
+            return false;
+        }
+    }
+
     const size_t space = body.find(' ');
     if (space == std::string_view::npos) {
         // One token: a whole number in either form, or — offsets only — a
@@ -276,9 +371,19 @@ inline bool parse_marker_measure(std::string_view text,
 // so a value that round-trips through parse_marker_measure comes back byte
 // for byte. The measure propagate re-spells through here after shifting a
 // direct measure's whole part, which is what keeps ONE spelling on disk.
+//
+// THE SECTION IS EMITTED HERE (2026-08-20, under the grant) and only above 1,
+// the bare spelling being section 1's one canonical form. That single rule is
+// also what makes the PROPAGATE section-safe for free: it shifts `whole` and
+// re-spells, so the section rides through in the struct without the paste ever
+// naming it.
 inline std::string format_marker_measure(const MarkerMeasureValue& v) {
     std::string out;
     if (v.is_offset) out += '+';
+    if (!v.is_offset && v.section >= kMeasureMinSection) {
+        out += std::to_string(v.section);
+        out += ':';
+    }
     if (v.whole > 0) {
         out += std::to_string(v.whole);
         if (v.num > 0) out += ' ';

@@ -8,15 +8,18 @@ whole; there is no partial map.
 
 Usage:
     extract_sheet_map.py <video> <workdir> [--window START END|eof]
+                                           [--min-page SECONDS]
                                            [--expect-final N]
+                                           [--expect-sections N]
 
 The map is written to <workdir>/sheet.map; copy it to the piece's
 <project>/sheet/sheet.map, which is where the GUI looks for it.
 
---window runs on a time slice of a full (untrimmed) video; END may be the
-literal "eof". Map timestamps stay window-relative and the window is recorded
-in the map header, so the map can be recreated from the stable full video
-without a trimmed copy.
+--window runs on a time slice of a full (untrimmed) video. Either end may be
+written as SS, MM:SS or HH:MM:SS (the seconds field integer or fractional), and
+END may instead be the literal "eof". Map timestamps stay window-relative and
+the window is recorded in the map header, so the map can be recreated from the
+stable full video without a trimmed copy.
 
 MAP FORMAT. Header lines (window mode only, since only a window has a source
 offset to record):
@@ -24,17 +27,29 @@ offset to record):
     # src <basename of the video>
     # window <start seconds> <end seconds|eof>
 
-then data lines, one per anchor:
+The header spells NORMALIZED SECONDS, trailing-zero-free — `# window 820 1093`
+for `--window 13:40 18:13` — while "eof" is kept literal. Then data lines, one
+per anchor:
 
     <seconds>|<measure>
 
-Seconds are relative to the WINDOW START (not the video start). Anchors are
-the FIRST-PASS page starts and are MONOTONIC in both fields: a page the
-performance re-shows (a repeat, a da capo, a volta re-crop) inherits its
-original's start measure and emits no anchor. Measure numbers are CONTINUOUS
-across the whole window even where the printed score restarts its numbering at
-a new section — the printed restart is solved for and folded into a single
-continuous count.
+Seconds are relative to the WINDOW START (not the video start).
+
+THE MEASURE IS THE PRINTED BAR NUMBER, exactly what the page shows (architect
+2026-08-20, replacing a continuous count cross-referenced against the score).
+A movement whose printed numbering RESTARTS mid-way — the K.550 menuetto's trio
+— opens a SECTION, numbered 1 at the movement's start and +1 at each restart in
+video order, and an anchor in section S >= 2 carries the qualifier:
+
+    <seconds>|<local>        section 1
+    <seconds>|<S>:<local>    section S >= 2
+
+MONOTONICITY IS PER SECTION now, which is what the restart forces: time is
+strictly increasing across the whole map, while the measure only has to
+increase WITHIN a section. The drop rules are unchanged and simply apply per
+section — a page the performance re-shows (a repeat, a da capo, a volta
+re-crop) inherits its original's start and emits no anchor, so a da capo back
+into section 1 adds nothing after section 2's anchors.
 """
 # DEPENDENCIES (all standalone — none of this touches the product binaries;
 # the tool has no link path from the GUI or CLI and is not built by any
@@ -43,12 +58,25 @@ continuous count.
 #
 # VALIDATED INVOCATIONS. Every constant below is measured, not guessed, and
 # the whole chain is validated end to end against the four K.550 movements of
-# the architect's rip (kern ground truth 299 / 123 / 84 / 308 bars):
+# the architect's rip:
 #
-#   extract_sheet_map.py <rip> <workdir> --window 0.0      359.008  --expect-final 299
-#   extract_sheet_map.py <rip> <workdir> --window 362.667  816.0    --expect-final 123
-#   extract_sheet_map.py <rip> <workdir> --window 821.333  1093.333 --expect-final 84
-#   extract_sheet_map.py <rip> <workdir> --window 1098.667 eof      --expect-final 308
+#   extract_sheet_map.py <rip> <workdir> --window 0     5:59  --expect-final 299
+#   extract_sheet_map.py <rip> <workdir> --window 6:00 13:37  --expect-final 123
+#   extract_sheet_map.py <rip> <workdir> --window 13:40 18:13 --expect-final 42 \
+#                                                             --expect-sections 2
+#   extract_sheet_map.py <rip> <workdir> --window 18:15 eof   --expect-final 308
+#
+# THE WINDOWS ARE WHOLE SECONDS (2026-08-20) — 5:59 is 359, 13:40 is 820 — and
+# they are deliberately loose at both ends: a window that opens a fraction early
+# catches a transition flash, which the --min-page floor drops as bleed, so a
+# hand-typed MM:SS boundary needs no frame accuracy at all.
+#
+# THE KERN CROSS-CHECK IS PER SECTION FOR MOVEMENT 3, and that is the printed
+# rule working rather than an exception: the kern ground truth counts the
+# menuetto and its trio as one continuous 84 bars, while the video PRINTS the
+# trio restarting at 1, so section 2's final printed bar is 42 == 84 - 42. The
+# other three movements print one continuous section each and their finals are
+# the kern totals unchanged (299 / 123 / 308).
 
 import os
 import subprocess
@@ -59,12 +87,56 @@ from PIL import Image
 from scipy import ndimage
 
 FLIP_THR = 5.0        # mean abs frame diff (0-255 scale); slideshow noise is ~0
-MIN_PAGE_S = 2.0      # spans shorter than this are boundary bleed -> dropped
+# THE PAGE FLOOR, in seconds: a span shorter than this is boundary bleed — a
+# transition flash at a window edge, or a frame of crossfade between pages — and
+# is dropped rather than counted as a page. IT IS THE DEFAULT FOR --min-page,
+# not a fixed constant, because the right floor is a property of the rip.
+#
+# THE MARGINS ARE MEASURED ON THE K.550 RIP AND BOTH ARE WIDE. Observed bleed
+# tops out at 0.2s (the movement-2 transition flash), while the shortest REAL
+# page is 5.47s (movement 4) and the shortest real VOLTA PARTIAL — the tightest
+# thing that must survive — is 6.03s (movement 3). So 2.0 sits 10x above the
+# largest bleed and 2.7x under the shortest page worth keeping. 5.0 WAS
+# CONSIDERED AND REJECTED on exactly this data: it would still clear every
+# observed bleed, but it leaves only a 1.09x margin under that 5.47s page, and a
+# floor that close to a real page is one slow flip away from eating one.
+MIN_PAGE_S = 2.0
 MIN_BARLINE_RUN = 260 # px vertical dark run to count as a barline (4K frames)
 BINARIZE = 170        # gray threshold for ink
 CLOSE_GAP = 6         # heal vertical scan breaks up to this many px
 MERGE_GAP = 60        # px: merge barline column clusters (double bars, repeats)
 DIFF_W, DIFF_H = 480, 270
+
+def parse_window_time(text):
+    """`SS`, `MM:SS` or `HH:MM:SS` -> seconds. The SECONDS field may be
+    fractional; the minute and hour fields are whole. Returns None for
+    anything else, which the caller refuses.
+
+    IT EXISTS BECAUSE THE WINDOWS ARE TYPED BY HAND off a video player's own
+    readout, and that readout is MM:SS. Converting in the head is the one step
+    of this tool's use that was pure clerical error waiting to happen."""
+    parts = text.split(":")
+    if not 1 <= len(parts) <= 3:
+        return None
+    try:
+        seconds = float(parts[-1])
+        if seconds < 0.0:
+            return None
+        for i, field in enumerate(reversed(parts[:-1]), start=1):
+            if not field.isdigit():
+                return None
+            seconds += int(field) * (60 ** i)
+    except ValueError:
+        return None
+    return seconds
+
+def spell_seconds(value):
+    """The header's spelling: normalized seconds, trailing-zero-free, so a
+    window typed `13:40` is recorded as `820` and one typed `359.008` keeps its
+    fraction. Three decimals is the whole precision this tool has — it is what
+    the ffmpeg seeks are spelled at — so nothing is lost by stopping there."""
+    text = f"{value:.3f}".rstrip("0").rstrip(".")
+    return text if text else "0"
 
 def scan_diffs(video, wstart=0.0, wdur=None):
     """Per-frame mean absolute difference over the window. Returns
@@ -211,13 +283,39 @@ def main():
     expect_final = None
     if "--expect-final" in sys.argv:
         expect_final = int(sys.argv[sys.argv.index("--expect-final") + 1])
+    expect_sections = None
+    if "--expect-sections" in sys.argv:
+        expect_sections = int(sys.argv[sys.argv.index("--expect-sections") + 1])
+    min_page_s = MIN_PAGE_S
+    if "--min-page" in sys.argv:
+        min_page_s = float(sys.argv[sys.argv.index("--min-page") + 1])
+        if min_page_s <= 0.0:
+            print("REFUSE: --min-page must be positive"); return 1
     wstart, wend_arg, wdur = 0.0, None, None
     if "--window" in sys.argv:
         k = sys.argv.index("--window")
-        wstart = float(sys.argv[k + 1])
-        wend_arg = sys.argv[k + 2]
-        if wend_arg != "eof":
-            wdur = float(wend_arg) - wstart
+        wstart = parse_window_time(sys.argv[k + 1])
+        if wstart is None:
+            print(f"REFUSE: unreadable window start {sys.argv[k + 1]!r} "
+                  "(SS, MM:SS or HH:MM:SS)"); return 1
+        raw_end = sys.argv[k + 2]
+        if raw_end == "eof":
+            # "eof" is kept LITERAL all the way to the header: the end is not a
+            # number this tool knows, and writing one it guessed would be worse
+            # than saying so.
+            wend_arg = "eof"
+        else:
+            wend = parse_window_time(raw_end)
+            if wend is None:
+                print(f"REFUSE: unreadable window end {raw_end!r} "
+                      "(SS, MM:SS, HH:MM:SS or eof)"); return 1
+            if wend <= wstart:
+                print("REFUSE: window end is not after its start"); return 1
+            # The HEADER SPELLS THE NORMALIZED VALUE, not what was typed, so a
+            # window is one number in the map however it was written at the
+            # shell — and two spellings of one window share a cache stamp.
+            wend_arg = spell_seconds(wend)
+            wdur = wend - wstart
     os.makedirs(workdir, exist_ok=True)
     fps = video_fps(video)
     # The frame-diff scan is cached, and the cache is STAMPED with the exact
@@ -236,11 +334,19 @@ def main():
     # are exactly as input-specific as the diffs are. A FAILED SCAN ACQUIRES NO
     # STAMP: the cache is written only after the decode is known clean, so a
     # refusal cannot leave a half-stream behind for the next run to trust.
+    #
+    # --min-page IS IN THE STAMP THOUGH IT CANNOT CHANGE A DIFF, and that is the
+    # page cache's doing rather than the scan's: the floor decides which spans
+    # survive as pages, so a different floor RENUMBERS them, and page007.png
+    # would then be a different page than the one on disk. Rescanning the diffs
+    # to re-cut the pages is wasted work and is accepted whole — one stamp, one
+    # answer, no second cache to keep in step.
     st = os.stat(video)
     diffs_npy = os.path.join(workdir, "diffs.npy")
     diffs_meta = os.path.join(workdir, "diffs.meta")
     stamp = (f"{os.path.realpath(video)}|{st.st_dev}|{st.st_ino}|"
-             f"{st.st_size}|{st.st_mtime_ns}|{wstart:.3f}|{wend_arg}\n")
+             f"{st.st_size}|{st.st_mtime_ns}|{wstart:.3f}|{wend_arg}|"
+             f"{min_page_s:.3f}\n")
     cached = False
     if os.path.exists(diffs_npy) and os.path.exists(diffs_meta):
         with open(diffs_meta) as f:
@@ -263,10 +369,11 @@ def main():
     flip_ts = [(i + 1) / fps for i in np.where(d > FLIP_THR)[0]]
     edges = [0.0] + flip_ts + [duration]
     spans = [(edges[i], edges[i + 1]) for i in range(len(edges) - 1)]
-    kept = [s for s in spans if s[1] - s[0] >= MIN_PAGE_S]
-    dropped = [s for s in spans if s[1] - s[0] < MIN_PAGE_S]
+    kept = [s for s in spans if s[1] - s[0] >= min_page_s]
+    dropped = [s for s in spans if s[1] - s[0] < min_page_s]
     print(f"fps={fps:.3f} duration={duration:.3f}s flips={len(flip_ts)} "
-          f"pages={len(kept)} dropped_bleed={[(round(a,3), round(b,3)) for a, b in dropped]}")
+          f"min_page={min_page_s:g}s pages={len(kept)} "
+          f"dropped_bleed={[(round(a,3), round(b,3)) for a, b in dropped]}")
 
     # pass 1: frames + bar counts
     counts = []
@@ -321,13 +428,21 @@ def main():
 
     n = len(kept)
 
-    # Chain solver over CONTINUOUS numbering. Section-local numbering is
-    # continuous minus the section base (print restarts at each section).
+    # Chain solver over CONTINUOUS numbering, EMITTING PRINTED NUMBERS. The
+    # continuous count is the solver's own arithmetic — it is what makes a
+    # chain, a bridge and a restart comparable — while what the map records is
+    # the LOCAL (printed) start plus the SECTION it belongs to, which the walk
+    # already knows: local = continuous - base, and the section index steps at
+    # each accepted restart. Both ride alongside `starts` as parallel
+    # accumulators rather than being re-derived afterwards, because a
+    # re-derivation would have to guess which base a page resolved under.
     # Backtracking handles the ambiguous no-read pages (unreadable number
     # -> BRIDGE, vs unnumbered section-first page -> RESTART).
-    def solve(i, base, next_local, pend, bridge_open, max_local, starts, trail):
+    def solve(i, base, next_local, pend, bridge_open, max_local, sect,
+              starts, sects, locs, trail):
         # pend: (first_page_count, base) when a section-first page still
         # awaits its pickup resolution; None otherwise.
+        # sect: the section index in force, 1 at the movement's start.
         if i == n:
             # RUNNING OUT OF PAGES CLOSES NO OBLIGATION. A standing `pend`
             # means a section-first page never had its pickup resolved, and a
@@ -338,7 +453,7 @@ def main():
             # that can close its obligations another way is still found.
             if pend is not None or bridge_open:
                 return None
-            return (starts, trail)
+            return (starts, sects, locs, trail)
         if origin[i] is not None:
             j = origin[i]
             if starts[j] is None:
@@ -349,8 +464,12 @@ def main():
             # let a replay stand in for the confirmation the one-bridge-in-a-row
             # rule demands, and a second bridge could open behind it. `pend`
             # rides through for the same reason and always has.
+            # The replayed page shows page j, so it takes page j's SECTION and
+            # printed start along with its continuous one — a da capo re-shows
+            # section 1's pages while the section counter stands still.
             return solve(i + 1, base, next_local, pend, bridge_open, max_local,
-                         starts + [starts[j]], trail)
+                         sect, starts + [starts[j]], sects + [sects[j]],
+                         locs + [locs[j]], trail)
         c = counts[i]
         # candidate expected section-local starts, in preference order
         if pend is not None:
@@ -362,19 +481,22 @@ def main():
         for e, why in cands:
             if confirmed(i, e):
                 nm = e if max_local is None else max(max_local, e)
-                r = solve(i + 1, base, e + c, None, False, nm,
-                          starts + [base + e], trail + [(i, e, why)])
+                r = solve(i + 1, base, e + c, None, False, nm, sect,
+                          starts + [base + e], sects + [sect], locs + [e],
+                          trail + [(i, e, why)])
                 if r: return r
         # volta re-crop: the page re-shows the last reached region
         if max_local is not None and confirmed(i, max_local):
-            r = solve_reseed(i, base, max_local, bridge_open, starts, trail)
+            r = solve_reseed(i, base, max_local, bridge_open, sect,
+                             starts, sects, locs, trail)
             if r: return r
         # BRIDGE: number unreadable (or read too weakly); assume the chain
         # value, the next new page must then confirm the accumulated sum
         if pend is None and next_local is not None and not bridge_open:
             nm = next_local if max_local is None else max(max_local, next_local)
-            r = solve(i + 1, base, next_local + c, None, True, nm,
-                      starts + [base + next_local], trail + [(i, next_local, "bridged")])
+            r = solve(i + 1, base, next_local + c, None, True, nm, sect,
+                      starts + [base + next_local], sects + [sect],
+                      locs + [next_local], trail + [(i, next_local, "bridged")])
             if r: return r
         # RESTART: a section-first page opens a new printed-numbering
         # section (tried last; the final-bar check gates misfires). IT
@@ -383,12 +505,17 @@ def main():
         # through and only a CONFIRMING new page can close it.
         if pend is None and next_local is not None:
             nb = base + next_local - 1
-            r = solve(i + 1, nb, None, (c, nb), bridge_open, None,
-                      starts + [nb + 1], trail + [(i, 1, "section-restart")])
+            # THE SECTION INDEX STEPS HERE and nowhere else, so it counts
+            # accepted restarts in VIDEO ORDER: this page prints 1 again, and
+            # every page after it is section sect + 1 until the next restart.
+            r = solve(i + 1, nb, None, (c, nb), bridge_open, None, sect + 1,
+                      starts + [nb + 1], sects + [sect + 1], locs + [1],
+                      trail + [(i, 1, "section-restart")])
             if r: return r
         return None
 
-    def solve_reseed(i, base, vmax, bridge_open, starts, trail):
+    def solve_reseed(i, base, vmax, bridge_open, sect, starts, sects, locs,
+                     trail):
         # page i re-shows from vmax; successor's start lies in (vmax, vmax+c_i]
         #
         # IT CARRIES THE BRIDGE OBLIGATION LIKE EVERY OTHER ARM. Confirming
@@ -400,37 +527,59 @@ def main():
         # everywhere in this solver.
         c = counts[i]
         st = starts + [base + vmax]
+        sc = sects + [sect]
+        lc = locs + [vmax]
         tr = trail + [(i, vmax, "volta-recrop")]
         j = i + 1
         if j == n:
             if bridge_open:
                 return None
-            return (st, tr)
+            return (st, sc, lc, tr)
         if origin[j] is not None:
             return None  # replay directly after a re-crop: ambiguous, refuse
         hits = [e for e in range(vmax + 1, vmax + c + 1) if confirmed(j, e)]
         if len(hits) == 1:
             e = hits[0]
-            return solve(j + 1, base, e + counts[j], None, False, e,
-                         st + [base + e], tr + [(j, e, "reseed")])
+            return solve(j + 1, base, e + counts[j], None, False, e, sect,
+                         st + [base + e], sc + [sect], lc + [e],
+                         tr + [(j, e, "reseed")])
         return None
 
-    solution = solve(1, 0, None, (counts[0], 0), False, None, [1], [])
+    solution = solve(1, 0, None, (counts[0], 0), False, None, 1,
+                     [1], [1], [1], [])
     if solution is None:
         print("REFUSE: no consistent chain interpretation; per-page reads:")
         for i in sorted(reads):
             print(f"   page {i}: {dict(sorted(reads[i].items(), key=lambda kv: -kv[1]))}")
         return 1
-    starts, trail = solution
+    starts, sects, locs, trail = solution
     pickup = any(why == "pickup" for _, _, why in trail)
     for i, e, why in trail:
         if why != "chain":
             print(f"page {i}: {why} (local start {e})")
 
-    final_bar = max(starts[i] + counts[i] - 1 for i in range(n))
-    print(f"CHECK PASSED: pickup={pickup} pages={n} final_bar={final_bar}")
+    # THE FINAL BAR IS THE LAST SECTION'S LAST PRINTED ONE (2026-08-20, with
+    # the printed-number ruling): the check is against what the score SHOWS, so
+    # a movement that restarts its numbering is checked on the restarted count.
+    # THE LAST SECTION IS THE HIGHEST INDEX, not the last page's, and the
+    # difference is a real case rather than pedantry: the index only ever steps
+    # UP, but a da capo re-shows section 1's pages after section 2's, so the
+    # final PAGE can belong to an earlier section than the one the movement
+    # reached. What is being checked is how far the printing got.
+    section_count = max(sects)
+    finals = {}
+    for i in range(n):
+        end = locs[i] + counts[i] - 1
+        finals[sects[i]] = max(finals.get(sects[i], 0), end)
+    final_bar = finals[section_count]
+    print(f"CHECK PASSED: pickup={pickup} pages={n} sections={section_count} "
+          f"finals={{{', '.join(f'{s}: {finals[s]}' for s in sorted(finals))}}} "
+          f"final_bar={final_bar}")
     if expect_final is not None and final_bar != expect_final:
         print(f"REFUSE: final bar {final_bar} != expected {expect_final}"); return 1
+    if expect_sections is not None and section_count != expect_sections:
+        print(f"REFUSE: {section_count} sections != expected "
+              f"{expect_sections}"); return 1
     # PUBLISH ATOMICALLY, because "no partial map" is the whole refuse-or-emit
     # contract and a direct write can break it after every check has passed: a
     # full filesystem or an I/O error mid-write leaves a TRUNCATED map at the
@@ -439,22 +588,41 @@ def main():
     # wrong bar past the cut. The temporary lands in the SAME directory (a
     # rename is only atomic within one filesystem), is flushed and fsync'd
     # before it is named, and os.replace does the rest.
+    #
+    # THE ANCHOR SPELLING is the printed number for section 1 and `<S>:<local>`
+    # for section 2 and up — the measure grammar's own qualifier, so a map line
+    # and a marker's measure field read alike. Section 1 is spelled BARE and
+    # never `1:`, which is the grammar's one canonical spelling for it.
+    #
+    # MONOTONIC PER SECTION, which is the printed rule's one structural
+    # consequence: time still rises strictly across the whole map, but a
+    # restart takes the measure back to 1, so the drop test is against the top
+    # reached IN THAT SECTION. Every existing drop keeps working unchanged
+    # under it — a replay, a volta re-crop and a second pass all re-show numbers
+    # their own section already reached — and a da capo back into section 1 is
+    # dropped by section 1's own top rather than accidentally by section 2's.
+    def spell(section, local):
+        return f"{local}" if section <= 1 else f"{section}:{local}"
+
     map_path = os.path.join(workdir, "sheet.map")
     tmp_path = map_path + ".tmp"
     with open(tmp_path, "w") as f:
         if wend_arg is not None:
             f.write(f"# src {os.path.basename(video)}\n")
-            f.write(f"# window {wstart:.3f} {wend_arg}\n")
-        f.write(f"0.000|{starts[0]}\n")
-        top = starts[0]
+            f.write(f"# window {spell_seconds(wstart)} {wend_arg}\n")
+        f.write(f"0.000|{spell(sects[0], locs[0])}\n")
+        tops = {sects[0]: locs[0]}
         for i in range(1, n):
-            if starts[i] > top:
-                f.write(f"{kept[i][0]:.3f}|{starts[i]}\n")
-                top = starts[i]
+            s = sects[i]
+            if s in tops and locs[i] <= tops[s]:
+                continue
+            f.write(f"{kept[i][0]:.3f}|{spell(s, locs[i])}\n")
+            tops[s] = locs[i]
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp_path, map_path)
-    print(f"wrote {map_path} (monotonic first-pass anchors)")
+    print(f"wrote {map_path} (monotonic first-pass anchors, "
+          f"{section_count} section{'' if section_count == 1 else 's'})")
     return 0
 
 if __name__ == "__main__":

@@ -1383,9 +1383,11 @@ void render_flag_boxes_impl(
 
                 // ASCII, shaped on the same one face as every label. There is
                 // no budget and no truncation here: the measure grammar caps
-                // the token at 12 bytes and the box grows to hold it (the
-                // nine-glyph budget is a LABEL rule,
-                // kMarkerLabelGlyphBudget).
+                // the token at kMaxMarkerMeasureBytes (marker_measure.h owns
+                // the number — it went 12 to 14 with the 2026-08-20 section
+                // qualifier, which is why this says the name and not a digit)
+                // and the box grows to hold it (the nine-glyph budget is a
+                // LABEL rule, kMarkerLabelGlyphBudget).
                 cairo_set_source_rgb(cr, cface.label.r, cface.label.g,
                                      cface.label.b);
                 text_shape::show_shaped_run(
