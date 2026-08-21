@@ -963,12 +963,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // process with it, which is the family Ctrl+S and both render chords are
     // already in, while bare `/` opens an editor over serialized content. So
     // read_only_key_blocked admits this ONE spelling of the key and drops the
-    // other (its is_score_video entry carries the ruling). THE BUTTON PATH DOES
-    // NOT INHERIT THAT on a locked tab: the Measure button greys with the lock,
-    // its base chord being blocked, and a greyed button consumes the shift
-    // press with the plain one — so on a locked tab the jump is the keyboard's
-    // alone. Recorded rather than worked around: lighting the button there
-    // would advertise its PLAIN act, which the lock does refuse.
+    // other (its is_score_video entry carries the ruling). THE BUTTON PATH
+    // REACHES IT TOO: the Measure button is LIT on a locked tab (architect
+    // 2026-08-20 — a chrome face cannot split, so it keeps the legal half and
+    // lets the gate refuse the other, the Edit menu's own shape), so a
+    // shift-click or a long press gets the jump on a rig with no keyboard.
     //
     // The `h` view drops the chord at its own allowlist (it is not on
     // history_mode_key_blocked's admitted list), so it is a consumed no-op in

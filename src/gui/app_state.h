@@ -2055,11 +2055,13 @@ enum class RedesignButton {
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // THE MARKER MEASURE — the verb group's fifth member since 2026-08-19,
-    // seated after Toggle inherit and ahead of Add to Selection. Bare `/`, the
-    // Breeze speech balloon, and it opens the MEASURE EDITOR on the focused
-    // marker of the active markers view.
+    // seated after Toggle inherit and ahead of Add to Selection. Bare `/`,
+    // minuet-scales (notes climbing a staff — the speech balloon it wore for
+    // the field's one free-text day was swapped with the grammar on
+    // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
+    // active markers view.
     //
-    // ITS ENABLED ARM IS READ-ONLY ALONE — no focus term, deliberately. The
+    // ITS ENABLED ARM HAS NO FOCUS TERM, deliberately. The
     // act refuses INTERNALLY when nothing is focused (a consumed no-op), and
     // the face stays lit: a grey that tracked the selection would blink at
     // interaction cadence, which is exactly the reasoning that took the four
@@ -2069,18 +2071,22 @@ enum class RedesignButton {
     // IT IS NOT HOME-VIEW GATED, unlike the four verbs above it: measures are
     // the FOURTH ruled exception to the home-view binding (the inventory is at
     // active_column_authoring_allowed), so the button works on both columns in
-    // both audio views. The READ-ONLY LOCK still greys it — a measure is
-    // serialized content — and the `h` view greys it through the derived
-    // partition, bare `/` being neither the mode's vocabulary nor on its
-    // allowlist.
+    // both audio views. The `h` view greys it through the derived partition,
+    // bare `/` being neither the mode's vocabulary nor on its allowlist.
     //
     // IT ADMITS SHIFT SINCE 2026-08-20 (redesign_button_shift_admits): a
     // shift-click or a kChromeShiftHoldMs long press reaches Shift+`/`, THE
     // SCORE-VIDEO JUMP — the other half of the field, and the half a
-    // keyboardless panel would otherwise have no route to at all. The two
-    // greys above swallow the shift press with the plain one, so on a locked
-    // tab and in the `h` view the jump is the keyboard's alone; the read-only
-    // half of that is recorded at the admission predicate.
+    // keyboardless panel would otherwise have no route to at all.
+    //
+    // AND THAT IS WHY THE READ-ONLY LOCK DOES NOT GREY IT (architect
+    // 2026-08-20, moving it out of the lock's set the day it joined): the plain
+    // half opens an editor over serialized content and the lock refuses it, but
+    // the SHIFT half is navigation the lock allows, and a chrome face cannot
+    // split. So the face keeps the legal half, a plain click on a locked tab
+    // dispatches bare `/` into read_only_key_blocked and drops there like the
+    // key, and the score jump stays reachable by finger. The full argument is
+    // at this button's arm in redesign_button_enabled.
     IconMarkerMeasure,
     // ADD TO SELECTION — the verb group's SIXTH member, seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
@@ -7179,12 +7185,6 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // THE MARKER MEASURE joins the lock's set and NOTHING ELSE: its enabled
-        // arm is this term alone. It has no HOME-VIEW gate to add (measures are
-        // the fourth ruled exception to the home-view binding) and no focus
-        // term either — with nothing focused the act is a consumed no-op and
-        // the face stays lit, the no-blink ruling this body's head states.
-        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
         case RedesignButton::IconListen:
@@ -7228,7 +7228,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // march that composes that cycle with the A/B switch.
         // OUTSIDE THE VIEW: the four VERBS on a locked tab, their own gate,
         // carried down from the icon row and stated at their arm above — and
-        // ADD TO SELECTION is NOT with them there, its chord being navigation.
+        // NEITHER of the two buttons seated behind them is with them there:
+        // ADD TO SELECTION because its chord is navigation, and THE MARKER
+        // MEASURE because its SHIFT half is (architect 2026-08-20; the ruling
+        // is at its own arm below).
         // Nothing else on the row has a resting grey, which is what this ruling
         // is about — the set that breaks out below.
         //
@@ -7363,9 +7366,35 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
-        // ADD TO SELECTION TAKES THE ROW'S POLICY TOO (2026-08-18), and it is
-        // the one member of the verbs' group that does: its chord authors
-        // nothing, so the READ-ONLY arm above deliberately does not carry it —
+        // THE MARKER MEASURE TAKES THE ROW'S POLICY (architect 2026-08-20,
+        // moving it OUT of the read-only arm above where it sat for a day) —
+        // THE ONE MARKER-FAMILY BUTTON LIT UNDER THE LOCK, and it is lit for a
+        // reason its four neighbours have no version of: A CHROME FACE CANNOT
+        // SPLIT, and this button's two halves answer the lock differently. Its
+        // plain half opens the measure editor, which a locked tab refuses; its
+        // SHIFT half is the SCORE-VIDEO JUMP, which a locked tab allows —
+        // navigation that reads the piece and drives another process, the
+        // family Ctrl+S and the render chords are in (the carve-out is
+        // read_only_key_blocked's shift-exact is_score_video entry). One face
+        // has to answer for both, and greying it would take the LEGAL half away
+        // to advertise the refused one — which on the glass rig means the score
+        // jump is simply unreachable on a locked tab, the whole reason this
+        // ruling exists.
+        //
+        // SO THE FACE STAYS LIT AND THE GATE ANSWERS, which is not a new shape
+        // at all: it is the EDIT MENU'S exactly (its items are never greyed —
+        // the menu closes and the chord refuses at its own owner), and it is
+        // this row's own standing doctrine — do not invent refusal-predicting
+        // grey states, the ruling at the head of this body. A plain click on a
+        // locked tab dispatches bare `/` and drops at the gate like the key; a
+        // shift-click or a kChromeShiftHoldMs hold dispatches Shift+`/` and
+        // acts. NOTHING ABOUT THE `h` VIEW CHANGES: the derived partition still
+        // greys and consumes it in there, bare `/` being neither the mode's
+        // vocabulary nor on its allowlist.
+        case RedesignButton::IconMarkerMeasure:
+        // ADD TO SELECTION TAKES THE ROW'S POLICY TOO (2026-08-18): its chord
+        // authors nothing, so the READ-ONLY arm above deliberately does not
+        // carry it —
         // a selection is navigation, the same ruling that keeps the trim
         // gestures legal on a locked tab. There is no refusal to mirror
         // either: bare `k` flips a session bit on any loaded piece, in either
@@ -7833,11 +7862,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the admission a finger could open a measure editor and never jump to the
 // measure it names. The pair is as honest here as `x`'s: one button, the two
 // halves of one field — write down where this marker sits in the score, or go
-// and look at it. ONE SCOPE NOTE, recorded rather than fixed: this button GREYS
-// on a locked tab (its base chord is authoring, redesign_button_enabled below),
-// and a greyed button consumes the shift press with the plain one, so the jump
-// is the KEYBOARD's alone there while the key itself is read-only-legal
-// (read_only_key_blocked, input_key_dispatch.cpp).
+// and look at it. THIS ADMISSION IS ALSO WHY THAT BUTTON IS LIT ON A LOCKED TAB
+// while its four neighbours grey (architect 2026-08-20, the ruling at its arm
+// in redesign_button_enabled below): a greyed button swallows the shift press
+// with the plain one, which would have put the jump out of a keyboardless rig's
+// reach on exactly the tabs a finished section gets locked on.
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
@@ -8064,10 +8093,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
-        // RULING REACHES THEM HERE (architect 2026-08-07): these four and the
-        // MARKER MEASURE below them are the one part of this row that greys —
-        // in the `h` view and on a locked tab, both the buttons' own gates —
-        // and a dead icon still explains itself.
+        // RULING REACHES THEM HERE (architect 2026-08-07): these four are the
+        // row's resting greys — in the `h` view and on a locked tab, both the
+        // buttons' own gates — and a dead icon still explains itself. (The
+        // MARKER MEASURE below them greys in the `h` view alone since
+        // 2026-08-20; its own row says why.)
         case RedesignButton::IconMarkerDrop:
             return {"Drop marker (s)", nullptr};
         case RedesignButton::IconMarkerDelete:
@@ -8083,8 +8113,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // through the static_assert below. It is the standing no-gesture-hints
         // preference's ruled exception exactly as the other four are, and
         // nothing else here hints a gesture: the first line names the act and
-        // stops. It greys on a locked tab and in the `h` view and still
-        // explains itself in both, the tooltips-on-disabled ruling above.
+        // stops. It greys in the `h` view alone — a locked tab leaves it LIT
+        // since 2026-08-20, its shift half being lock-legal — and it still
+        // explains itself in there, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
             return {"Measure (/)", "Press Shift for the score video."};
         // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and a MODE

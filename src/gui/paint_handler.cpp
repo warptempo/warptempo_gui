@@ -2318,15 +2318,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   (bare `s`), delete (Delete), disable (Ctrl+D), inherit (Ctrl+N), moved
 //   down from the icon row at the architect's word ("move
 //   drop/delete/disable/toggle inherit to bottom right row"). THEY ARE THE
-//   ROW'S ONLY RESTING GREYS: their two mode gates — the `h` view and
-//   a locked tab — are the BUTTONS' own and came down with them, which is why
-//   the always-on sentence above counts eleven and not sixteen — the MARKER
-//   MEASURE below joins them in that grey on a locked tab, though not in their
-//   home-view refusal;
+//   ROW'S ONLY RESTING GREYS ON A LOCKED TAB: their two mode gates — the `h`
+//   view and a locked tab — are the BUTTONS' own and came down with them;
 //   THE MARKER MEASURE (2026-08-19), seated between Toggle inherit and Add to
-//   Selection — bare `/`, the speech balloon, an act with no lamp. It greys
-//   with the four verbs in the `h` view and on a locked tab, and unlike them it
-//   is NOT home-view gated (measures are the fourth ruled exception);
+//   Selection — bare `/`, minuet-scales' staff and notes, an act with no lamp
+//   (it wore edit-comment's balloon until 2026-08-20). It greys
+//   with the four verbs in the `h` view but NOT on a locked tab (architect
+//   2026-08-20): its SHIFT half is the score-video jump, which the lock allows,
+//   and a face cannot split — the ruling is at its arm in
+//   redesign_button_enabled. It is not home-view gated either (measures are the
+//   fourth ruled exception);
 //   ADD TO SELECTION (2026-08-18), closing the verb group
 //   at the architect's own placement — bare `k`, the STICKY CTRL, and the
 //   row's ONE LIT FACE: it wears the selected fill while the mode stands. Its
@@ -2513,18 +2514,21 @@ constexpr TransportRowDef kTransportGroup[] = {
 // acts that complete.
 //
 // THE GROUP IS SIX since 2026-08-19, the MARKER MEASURE seated between Toggle
-// inherit and Add to Selection (bare `/`, edit-comment: Breeze's speech
-// balloon). It is an act like the four above it, not a mode, so it wears no
-// lamp — the editor's own open session is its state. It is the group's one
-// member that is NOT home-view gated: measures are the fourth ruled exception
-// to the home-view binding, so it works on both columns in both audio views,
-// while the read-only lock greys it with the four verbs.
+// inherit and Add to Selection (bare `/`, minuet-scales: notes climbing a staff
+// — it wore edit-comment's speech balloon for the one day the field was a free
+// text comment, and the architect swapped the glyph with the grammar on
+// 2026-08-20). It is an act like the four above it, not a mode, so it wears no
+// lamp — the editor's own open session is its state. TWO THINGS SET IT APART
+// FROM THE FOUR VERBS: it is not home-view gated (measures are the fourth ruled
+// exception, so it works on both columns in both audio views), and the
+// READ-ONLY LOCK LEAVES IT LIT while it greys them, its shift half being the
+// lock-legal score-video jump.
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
-    {RedesignButton::IconMarkerMeasure,    icons::Icon::EditComment},
+    {RedesignButton::IconMarkerMeasure,    icons::Icon::MinuetScales},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three

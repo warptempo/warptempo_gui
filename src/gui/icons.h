@@ -285,24 +285,34 @@ enum class Icon {
     BboxPrev,            // Previous marker (Shift+Tab)
     BboxNext,            // Next marker (Tab)
     Boost,               // Walk both tabs (Ctrl+Shift+Tab)
-    // THE MARKER MEASURE BUTTON'S GLYPH (2026-08-19), the bottom row's verb
-    // group between Toggle inherit and Add to Selection: edit-comment, the
-    // speech balloon with its tail. Breeze ships that name as a SYMLINK to
-    // dialog-messages.svg, so the committed asset carries the resolved file's
-    // content under the edit-comment name — recorded at the table entry too.
+    // THE MARKER MEASURE BUTTON'S GLYPH, the bottom row's verb group between
+    // Toggle inherit and Add to Selection: minuet-scales, KDE Minuet's own
+    // icon — three note heads climbing a five-line staff.
     //
-    // THE ENUMERATOR AND THE ASSET KEEP THE BREEZE NAME while the product act
-    // they face is the MARKER MEASURE (the field was the marker comment for one
-    // day and was rebranded 2026-08-20). Icon ids name their PROVENANCE, not the
-    // product verb — the theme-provenance rule — so renaming this to
-    // EditMeasure would break the trail back to the shipped Breeze file for a
-    // glyph that is unchanged.
-    EditComment,         // Measure (bare `/`)
+    // IT REPLACED edit-comment ON 2026-08-20 (architect), and the swap is about
+    // what the field IS rather than about taste: the balloon was picked on
+    // 2026-08-19 for a FREE-TEXT COMMENT and stopped being true the next day,
+    // when the field was rebranded into a strict measure grammar. A button that
+    // names a place in the SCORE wants staff lines, not speech. edit-comment's
+    // enumerator, its def and its committed asset all went with the swap, no
+    // button being left that wore it.
+    //
+    // THE ENUMERATOR KEEPS THE BREEZE FILE NAME while the product act it faces
+    // is the MARKER MEASURE: icon ids name their PROVENANCE, not the product
+    // verb (the theme-provenance rule), so this is MinuetScales and not
+    // IconMeasure. Unlike its predecessor the file is a REAL one rather than a
+    // symlink, so the committed asset is the installed breeze-dark bytes
+    // verbatim — the table entry carries that record.
+    MinuetScales,        // Measure (bare `/`)
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 46 STILL, LATER ON 2026-08-20: the Marker Measure button's glyph changed from
+// edit-comment to minuet-scales (the architect's pick, once the field became a
+// measure grammar) — one out, one in, so the count is unmoved. edit-comment's
+// def and asset are deleted with it, no button being left that wears them.
 // 46 since 2026-08-20, the propagate relocation: 48 − edit-copy and edit-paste,
 // deleted with the two icon-row buttons the EDIT MENU replaced. The five
 // commands survive whole on their chords and as menu rows; the glyphs had no

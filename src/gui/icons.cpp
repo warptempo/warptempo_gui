@@ -626,29 +626,62 @@ constexpr IconPath kEditSelectPaths[] = {
      "19 10.900391 14.300781 17 14 7 6"},
 };
 
-// THE MARKER MEASURE ACT'S GLYPH (2026-08-19; the act was the marker comment
-// for one day and was rebranded 2026-08-20 — the Breeze FILE NAME stays, the
-// theme-provenance rule): edit-comment, Breeze's speech
-// balloon with its tail. THE FILE IS A SYMLINK in the installed theme —
-// actions/22/edit-comment.svg points at dialog-messages.svg — so what is
-// committed under assets/icons/breeze/edit-comment.svg is the RESOLVED file's
-// content, and a diff between this table and that asset is still a
-// transcription bug and nothing else.
+// THE MARKER MEASURE ACT'S GLYPH: minuet-scales, KDE Minuet's own icon —
+// three note heads climbing a five-line staff. THE ARCHITECT PICKED IT
+// 2026-08-20, replacing edit-comment's speech balloon, which had been right for
+// the ONE DAY the field was a free-text comment and read wrong the moment it
+// became a strict measure grammar: the button names a place in the SCORE now,
+// so its glyph says notes on staff lines rather than something somebody said.
+// edit-comment's def and its committed asset are DELETED with the swap, no
+// button being left that wears it.
 //
-// IT NEEDS A TRANSLATE, the third committed file that does (dialog-ok-apply and
-// dialog-cancel are the others): its author drew the balloon at document
-// coordinates and translated it back into the viewBox, and `translate(-326
-// -534.3622)` is the glued-negative form the SVG grammar admits, spelled here
-// through the one producer, icon_translate.
+// PROVENANCE, per the theme-provenance rule: breeze-dark's
+// actions/22/minuet-scales.svg, a REAL FILE and not a symlink (unlike
+// edit-comment, which pointed at dialog-messages.svg — the resolution note that
+// stood here belonged to that file and goes with it). The committed
+// assets/icons/breeze/minuet-scales.svg is that install's bytes verbatim, the
+// edit-select precedent, so a diff between this table and that asset is a
+// transcription bug and nothing else. Breeze LIGHT carries the identical `d`
+// under #232629 ink; the dark one is the source because #fcfcfc is what this
+// roster's kIconText already is.
 //
-// Command coverage: relative `m` with `v`, `h` and `z` plus implicit
-// repetition, and leading-dot decimals chained without separators
-// ("-.00002-3" is two numbers) — every one of them long-standing in the parser.
-constexpr IconPath kEditCommentPaths[] = {
+// IT NEEDS NO TRANSLATE, AND THAT IS WORTH SAYING because the file appears to
+// carry two: the `<g>` wraps everything in `translate(0 -1030.4)` and the path
+// answers with `translate(0,1030.4)`, which cancel EXACTLY. The geometry is
+// already in viewBox coordinates, so transcribing either one alone would move
+// the glyph a thousand units off the tile. The three files that genuinely need
+// the field are unchanged (dialog-ok-apply, dialog-cancel, and — until today —
+// edit-comment).
+//
+// Command coverage: relative `m` with `h`, `v`, `a` and `z` plus implicit
+// repetition, glued arc flags ("0 0 0-0.365" is three flags and an x), and
+// EXPONENT NOTATION — `8e-3`, `2e-3`, `4e-3` — which is this file's own
+// contribution to the subset (parse_number carries the record; the alternative
+// was re-spelling six numbers by hand and losing the verbatim invariant).
+constexpr IconPath kMinuetScalesPaths[] = {
     {kIconText,
-     "m328.99998 538.3622v10l3.00002 4-.00002-3 .00002-1h12.99998v-10zm1 "
-     "1h14.00002v8h-14z",
-     icon_translate(-326.0, -534.3622)},
+     "m16 3v2h-13v1h13v1.6523a1.9977 1.9977 0 0 0-0.365-0.1523l-8e-3 "
+     "-2e-3a1.9977 1.9977 0 0 0-2.488 1.334 1.9977 1.9977 0 0 0-0.041 "
+     "0.168h-0.098v-2h-1v2h-9v1h9v1.652a1.9977 1.9977 0 0 0-0.365-0.152l-8e-3 "
+     "-2e-3a1.9977 1.9977 0 0 0-2.4883 1.334 1.9977 1.9977 0 0 0-0.041 "
+     "0.168h-0.0977v-2h-1v2h-5v1h5v1.654a1.9977 1.9977 0 0 "
+     "0-0.3652-0.154l-0.0078-2e-3a1.9977 1.9977 0 0 0-2.4883 1.334 1.9977 "
+     "1.9977 0 0 0-0.041 0.168h-2.0977v1h2.1445a1.9977 1.9977 0 0 0 1.3262 "
+     "1.322 1.9977 1.9977 0 0 0 2.4902-1.322h10.0391v-1h-9.9961a1.9977 1.9977 "
+     "0 0 0-0.0039-0.018v-2.982h0.1445a1.9977 1.9977 0 0 0 1.3285 1.322 1.9977 "
+     "1.9977 0 0 0 2.488-1.322h6.039v-1h-5.996a1.9977 1.9977 0 0 0-4e-3 "
+     "-0.018v-2.982h0.145a1.9977 1.9977 0 0 0 1.328 1.322 1.9977 1.9977 0 0 0 "
+     "2.488-1.322h2.039v-1h-1.996a1.9977 1.9977 0 0 0-4e-3 "
+     "-0.0176v-2.9824h2v-1h-2v-2h-1zm-0.943 5.457a0.97972 0.97972 0 0 1 "
+     "0.255 0.0352l0.026 0.0078a0.97972 0.97972 0 0 1 0.652 1.2168 0.97972 "
+     "0.97972 0 0 1-1.213 0.6602 0.97972 0.97972 0 0 1-0.668-1.209 0.97972 "
+     "0.97972 0 0 1 0.948-0.711zm-4 4a0.97972 0.97972 0 0 1 0.255 "
+     "0.035l0.026 8e-3a0.97972 0.97972 0 0 1 0.652 1.217 0.97972 0.97972 0 0 "
+     "1-1.213 0.66 0.97972 0.97972 0 0 1-0.668-1.209 0.97972 0.97972 0 0 1 "
+     "0.948-0.711zm-4.0004 4a0.97972 0.97972 0 0 1 0.2559 0.035l0.0254 "
+     "8e-3a0.97972 0.97972 0 0 1 0.6523 1.217 0.97972 0.97972 0 0 1-1.2129 "
+     "0.66 0.97972 0.97972 0 0 1-0.6679-1.209 0.97972 0.97972 0 0 1 "
+     "0.9472-0.711z"},
 };
 
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
@@ -968,7 +1001,7 @@ constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
-constexpr IconDef kEditComment        {22.0, kEditCommentPaths,         1};
+constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1016,7 +1049,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DeepHistory:         return kDeepHistory;
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
-        case Icon::EditComment:         return kEditComment;
+        case Icon::MinuetScales:        return kMinuetScales;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
@@ -1052,9 +1085,11 @@ const IconDef& icon_def(Icon icon) {
 // ends the first). S/s JOINED 2026-08-05 WITH ITS FIRST PRODUCER,
 // document-revert.svg, whose arrow lobes are smooth cubics; the alternative was
 // to flatten them into plain `c` in the table by hand, which would have put
-// numbers there that appear in no file. No exponent notation, no Q/q, T/t:
-// absent from every committed file, so they have no producer here and the
-// parser refuses them loudly rather than guessing. Elliptical 'a' is implemented
+// numbers there that appear in no file. EXPONENT NOTATION JOINED 2026-08-20 THE
+// SAME WAY, with minuet-scales.svg's `8e-3` / `2e-3` offsets (the scanner's own
+// comment at parse_number carries the record). No Q/q, T/t: absent from every
+// committed file, so they have no producer here and the parser refuses them
+// loudly rather than guessing. Elliptical 'a' is implemented
 // GENERALLY (endpoint->center conversion plus a quarter-arc bezier split) even
 // though media-record's four arcs are circular: arcs recur in this icon set and
 // a circle-only shortcut would be a trap for the next icon.
@@ -1081,8 +1116,24 @@ void skip_separators(PathCursor& c) {
     }
 }
 
-// One SVG number: optional sign, digits, at most ONE decimal point. The
-// single-point rule is what splits ".207031.207031" into two numbers.
+// One SVG number: optional sign, digits, at most ONE decimal point, and an
+// optional EXPONENT. The single-point rule is what splits ".207031.207031" into
+// two numbers.
+//
+// THE EXPONENT JOINED 2026-08-20 WITH ITS FIRST PRODUCER, minuet-scales.svg,
+// whose author's editor wrote small offsets as `8e-3` and `2e-3` — the S/s
+// precedent exactly (a grammar feature enters this subset when a committed file
+// spells it, never ahead of one). The alternative was to re-spell those six
+// numbers as decimals in the table, which would have put numbers there that
+// appear in no file and broken the one invariant this whole table rests on: the
+// `d` string is the committed asset's, byte for byte, so a diff between them is
+// a transcription bug and nothing else.
+//
+// IT IS SCANNED STRICTLY: the `e` is consumed only when an optional sign and at
+// least ONE digit follow it, so a trailing `e` ends the number instead of
+// swallowing the next command letter. std::from_chars reads the whole span
+// either way — its default `general` format already includes exponents — so
+// only the SPAN scanner below had to learn the syntax.
 bool parse_number(PathCursor& c, double& out) {
     skip_separators(c);
     const char* start = c.p;
@@ -1096,6 +1147,19 @@ bool parse_number(PathCursor& c, double& out) {
         break;
     }
     if (!saw_digit) { c.p = start; return false; }
+    if (!at_end(c) && (*c.p == 'e' || *c.p == 'E')) {
+        const char* mantissa_end = c.p;
+        ++c.p;
+        if (!at_end(c) && (*c.p == '-' || *c.p == '+')) ++c.p;
+        bool saw_exp_digit = false;
+        while (!at_end(c) && *c.p >= '0' && *c.p <= '9') {
+            saw_exp_digit = true;
+            ++c.p;
+        }
+        // No digits after the `e`: it was not an exponent at all. Give the
+        // whole tail back and keep the mantissa as the number.
+        if (!saw_exp_digit) c.p = mantissa_end;
+    }
     // std::from_chars: no locale, no allocation, and it consumes exactly the
     // span already delimited above. A leading '+' is not part of its grammar,
     // so skip it.

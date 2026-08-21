@@ -219,20 +219,20 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // typed trim arm (settings_editor.cpp) were all deleted the same day, so the
 // whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
 // rule with no site left to disagree with it.
-// THE LOCK NOW HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
-// 2026-08-15): the roster buttons whose chords this allowlist drops wear the
-// disabled face while the active tab is locked — four in the icon row and,
-// since the 2026-08-18 relayout moved them, FIVE on the BOTTOM one (the
-// membership is the read-only arm of redesign_button_enabled and is not counted
-// here, the icon row's pair having left it with the 2026-08-20 propagate
-// relocation) — so the toggle looks the way the `h` history
-// view already looks
-// — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N) with the MEASURE
-// (bare `/`) beside them, the BPM and iteration openers, listen and the
-// load-in-place, which is exactly what this allowlist drops. (The propagate
-// copy/paste pair stood in this list until its two BUTTONS left with the
-// 2026-08-20 relocation; the chords are blocked exactly as before and simply
-// have no face left to grey.) THE MIRROR IS HAND-LISTED at
+// THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
+// 2026-08-15): the roster buttons wearing the disabled face while the active
+// tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N) on
+// the bottom row, and the BPM and iteration openers, listen and the
+// load-in-place in the icon row — are chords this allowlist drops, so the
+// toggle looks the way the `h` history view already looks.
+// THE MIRROR IS NOT AN EQUIVALENCE, and both directions have a member: the
+// propagate copy/paste pair is BLOCKED here with no face left to grey (its two
+// buttons left with the 2026-08-20 relocation), and THE MARKER MEASURE is LIT
+// on a locked tab although bare `/` drops here (architect 2026-08-20) — its
+// SHIFT half is the score-video jump, admitted below, and a chrome face cannot
+// split, so the face keeps the legal half and this gate refuses the other. The
+// ruling is at that button's arm in redesign_button_enabled. THE MIRROR IS
+// HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
 // chord table through this predicate, and the two classes that walk gets wrong
 // are recorded there — chords claimed ABOVE this gate, whose "blocked" here is
@@ -408,12 +408,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // So the two halves of one key part company at this line, which is the
     // whole reason the entry is shift-exact rather than keyed on GuiKeys::Slash.
     //
-    // THE FACE MIRROR IS UNMOVED BY IT (redesign_button_enabled, app_state.h):
-    // the Measure button's grey answers its BASE chord, bare `/`, which this
-    // gate still drops — so the hand-listed set is still exactly what a locked
-    // tab refuses of the roster's own chords, and the button's shift admission
-    // simply goes with its greyed face. On a locked tab the jump is the
-    // keyboard's alone, recorded at the arm (input_handler.cpp).
+    // THE FACE FOLLOWED THE LEGAL HALF (architect 2026-08-20, the same day):
+    // the Measure button LEFT the read-only grey set, so it is LIT on a locked
+    // tab and its plain click dispatches bare `/` straight into this gate,
+    // which refuses it exactly as the key does. That is the EDIT MENU's shape —
+    // lit face, the gate answers — and it is what gives the keyboardless rig
+    // the jump, a greyed button having swallowed the shift press with the plain
+    // one. The ruling lives at that button's arm in redesign_button_enabled
+    // (app_state.h); this gate is unchanged by it.
     const bool is_score_video =
         (!ctrl && shift && !alt && key == GuiKeys::Slash);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
