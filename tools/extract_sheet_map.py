@@ -136,10 +136,28 @@ MIN_PAGE_S = 2.0
 # where it is still a backtrack point, rather than at the emit where it could
 # only be a crash. Keep this equal to kMeasureMaxSection.
 MAX_SECTION = 99
-MIN_BARLINE_RUN = 260 # px vertical dark run to count as a barline (4K frames)
+# THE BARLINE RUN FLOOR, in px of the canonical 1080-line frame.
+#
+# The value it replaced, 260, was measured on 2160-line frames, so at the
+# canonical height it means about 130. 160 keeps that meaning with a margin
+# rather than restoring it exactly, and both validated engravings clear it
+# comfortably: the K.550 rip's barlines run about 380 px at canonical height and
+# the Jupiter rip's about 500 px, while the notation debris a lower floor would
+# admit sits well under 100.
+#
+# THE FLOOR IS CHECKED BY ARITHMETIC, not by eye: at 200 the Jupiter engraving
+# UNDERCOUNTS two pages (2 and 1 events where the chain needs 6 and 7), and an
+# undercount does not refuse locally — it desynchronizes the continuous count,
+# so the solve walks on with wrong arithmetic until a printed number contradicts
+# it and refuses there instead. At 160 the counts 6/6/6/7/7/6/8/6/5/6/6/6/8/7
+# run the total 1, 7, 13, 19, 26, 33, 39, 47, 53, 58, 64, 70, 76, 84 and eleven
+# printed numbers confirm exactly those values. Agreement between two unrelated
+# readings — counted barlines and printed numbers — is what pins the floor.
+MIN_BARLINE_RUN = 160 # px vertical dark run to count as a barline (1080 lines)
 BINARIZE = 170        # gray threshold for ink
 CLOSE_GAP = 6         # heal vertical scan breaks up to this many px
-MERGE_GAP = 60        # px: merge barline column clusters (double bars, repeats)
+MERGE_GAP = 30        # px: merge barline column clusters (double bars, repeats)
+MIN_BARLINE_W = 1     # a barline spans at least two columns; see barline_events
 DIFF_W, DIFF_H = 480, 270
 
 def parse_window_time(text):
@@ -274,8 +292,14 @@ def column_max_run(dark):
 def barline_events(dark):
     """Barline x-centers. A thick cluster (repeat sign) near the system head
     is a START-REPEAT: it closes no numbered bar, and a trailing event within
-    200px of it closes only the unnumbered upbeat partial that follows a
-    mid-bar repeat — both are dropped."""
+    100px of it closes only the unnumbered upbeat partial that follows a
+    mid-bar repeat — both are dropped.
+
+    EVERY DISTANCE HERE IS A CANONICAL 1080-LINE PIXEL, and each was restated
+    from the 2160-line spelling it was first measured in. The restatement is not
+    cosmetic: a start-repeat's width is HALF what it was, so the old `>= 15`
+    stopped recognising it and the drop silently never fired, handing the solver
+    two extra bars on exactly the pages that open a repeated section."""
     runs = column_max_run(dark)
     cols = np.where(runs >= MIN_BARLINE_RUN)[0]
     if len(cols) == 0:
@@ -286,32 +310,102 @@ def barline_events(dark):
             clusters.append((start, prev)); start = c
         prev = c
     clusters.append((start, prev))
+    # A BARLINE IS A DRAWN LINE AND HAS THICKNESS. A cluster one column wide is
+    # not a thin barline but a stem, a slur end or a beam edge that the vertical
+    # closing healed into a long enough run to pass the length floor — and at
+    # this height every real barline measured spans at least two columns, the
+    # thinnest of them three. It is the one discriminator that separates the two
+    # validated engravings' needs: without it the length floor would have to
+    # rise past what the smaller engraving's barlines can clear.
+    clusters = [(s, e) for s, e in clusters if e - s >= MIN_BARLINE_W]
+    if not clusters:
+        return []
     events = [(s + e) // 2 for s, e in clusters]
     widths = [e - s for s, e in clusters]
-    if len(events) >= 2 and widths[1] >= 15 and events[1] - events[0] < 400:
+    if len(events) >= 2 and widths[1] >= 7 and events[1] - events[0] < 200:
         drop = {1}
-        if len(events) >= 3 and events[2] - events[1] < 200:
+        if len(events) >= 3 and events[2] - events[1] < 100:
             drop.add(2)
         events = [e for i, e in enumerate(events) if i not in drop]
     return events
 
-def ocr_reads(gray, dark, x0, workdir):
+def staff_line_row(ink, x0):
+    """Row of the system's TOP STAFF LINE, as the topmost full-length vertical
+    run in the first barline's own columns. None when the column carries no such
+    run, which leaves the page's number unread rather than guessed.
+
+    IT IS THE ONE THING BOTH ENGRAVINGS AGREE ON. A bar number is printed just
+    above the top-left corner of its SYSTEM, and where that corner falls in the
+    FRAME is a property of the rip, not of the music: the K.550 video fills the
+    frame edge to edge and puts its systems within 100 px of the top, while the
+    Jupiter video is letterboxed and inset, its systems starting near row 200.
+    An absolute crop band cannot serve both — the two windows do not even
+    overlap — so the band below is measured from this row instead."""
+    best = None
+    for x in range(max(0, x0 - 3), min(ink.shape[1], x0 + 4)):
+        col = ink[:, x].astype(np.int8)
+        edges = np.diff(np.concatenate(([0], col, [0])))
+        starts = np.flatnonzero(edges == 1)
+        ends = np.flatnonzero(edges == -1)
+        long_runs = starts[(ends - starts) >= MIN_BARLINE_RUN]
+        if len(long_runs) and (best is None or long_runs[0] < best):
+            best = int(long_runs[0])
+    return best
+
+def ocr_reads(gray, dark, x0, staff_row, workdir):
     """All variant OCR reads of the printed top-left bar number, as a
-    string -> hit-count dict. Empty dict = no printed number found."""
-    ry0, ry1, rx0, rx1 = 10, 210, x0 + 35, x0 + 285
+    string -> hit-count dict. Empty dict = no printed number found.
+
+    THE WINDOW IS THE SYSTEM'S OWN CORNER, not a place on the page: `x0` is the
+    first barline's column and `staff_row` the top staff line, so the crop rides
+    the music wherever the rip puts it. Every number below is measured on the
+    two validated engravings at the canonical 1080-line height."""
+    if staff_row is None:
+        return {}
+    # THE BAND REACHES 80 PX ABOVE THE STAFF LINE AND 4 PX BELOW IT. Measured
+    # number bottoms sit between 50 px above the line and 2 px below it (a
+    # number's baseline can graze the line), and their tops reach 68 px above,
+    # so 80 clears the tallest placement while stopping short of the page number
+    # that some pages print higher still. The 4 px below is what admits a
+    # grazing baseline without admitting the staff.
+    #
+    # THE X WINDOW RUNS +14 TO +200 PAST THE BARLINE. The number is printed
+    # above the first NUMBERED bar, so how far right it sits depends on how much
+    # clef and key signature precedes it: measured starts run +18 to +165. +14
+    # clears the barline's own column, and +200 covers the widest prefix seen.
+    ry0, ry1 = max(0, staff_row - 80), staff_row + 4
+    rx0, rx1 = x0 + 14, x0 + 200
     reg = dark[ry0:ry1, rx0:rx1]
     lab, _ = ndimage.label(reg)
     digs = []
+    # THE SIZE GATES ARE ONE DIGIT'S BOX: 13 to 26 px tall, 5 to 20 px wide.
+    # The two engravings print at different sizes — 17 to 20 px tall and 10 to
+    # 17 wide in one, 13 to 15 tall and 6 to 11 wide in the other — and the
+    # bracket spans both. The WIDTH CEILING is the load-bearing half: a ledger-
+    # lined note head sitting on the staff line measures about 29 px wide and 13
+    # tall, which passes every other gate and, sitting lower than the number,
+    # would win the lowest-cluster choice outright. No digit is that wide; a
+    # merged pair that is falls out of the cluster box, where the OCR padding
+    # still covers it.
+    #
+    # A blob must also END at or above the staff line (+3 for a grazing
+    # baseline), which is what holds out the clef: measured clefs stop 5 to 6 px
+    # below the line, every measured number at +2 or higher.
+    #
+    # The false candidates that remain are carried by the same four checks as
+    # before: only the LOWEST cluster is taken, tesseract runs under a digit
+    # whitelist, a value counts only on >= 2 independent variant hits, and the
+    # solver confirms nothing but the exact value its chain expects.
     for sl in ndimage.find_objects(lab):
         yh = sl[0].stop - sl[0].start; xw = sl[1].stop - sl[1].start
-        if 28 <= yh <= 50 and 10 <= xw <= 150 and ry0 + sl[0].stop <= 205:
+        if 13 <= yh <= 26 and 5 <= xw <= 20 and ry0 + sl[0].stop <= staff_row + 3:
             digs.append(sl)
     if not digs:
         return {}
     digs.sort(key=lambda s: s[0].start)
     clusters = [[digs[0]]]
     for s in digs[1:]:
-        if s[0].start - clusters[-1][-1][0].start > 25:
+        if s[0].start - clusters[-1][-1][0].start > 12:
             clusters.append([s])
         else:
             clusters[-1].append(s)
@@ -320,8 +414,14 @@ def ocr_reads(gray, dark, x0, workdir):
     ux0 = min(s[1].start for s in cl); ux1 = max(s[1].stop for s in cl)
     reads = {}
     tmp = os.path.join(workdir, "_ocr.png")
-    for dl, dr in ((8, 12), (58, 12), (8, 80), (58, 80)):
-        sub = gray[max(0, ry0 + uy0 - 8):ry0 + uy1 + 8,
+    # THE PADDINGS ARE HALF THEIR FORMER SPELLING because they were measured on
+    # 2160-line frames and the analysis frame is now 1080: at the old numbers
+    # each crop reached twice as far as intended and pulled the neighbouring
+    # glyph in, which is how a printed 87 came back as "817" and a 101 as
+    # "1101". The wide right variant still reaches far enough to recover a digit
+    # whose own blob was too fragmented to join the cluster.
+    for dl, dr in ((4, 6), (29, 6), (4, 40), (29, 40)):
+        sub = gray[max(0, ry0 + uy0 - 4):ry0 + uy1 + 4,
                    max(0, rx0 + ux0 - dl):rx0 + ux1 + dr]
         for scale in (3, 4):
             im = Image.fromarray(sub).resize((sub.shape[1] * scale, sub.shape[0] * scale), Image.LANCZOS)
@@ -570,7 +670,36 @@ def main():
         png = os.path.join(workdir, f"page{i:03d}.png")
         if not os.path.exists(png):
             grab_frame(video, wstart + a + min(1.0, (b - a) / 2), png)
-        gray = np.asarray(Image.open(png).convert("L"))
+        page = Image.open(png).convert("L")
+        # THE CANONICAL ANALYSIS HEIGHT IS 1080 LINES. Every pixel constant
+        # below the frame load speaks that frame — deskew's quarter-resolution
+        # profile, BINARIZE and CLOSE_GAP, barline_events' MIN_BARLINE_RUN and
+        # cluster geometry, ocr_reads' band, digit gates and crop paddings. A
+        # source at any other height (both validated rips are 2160-line) is
+        # normalized ONCE here so those constants keep one meaning, instead of
+        # every one of them growing a scale factor.
+        #
+        # THE CONSTANTS BELOW WERE FIRST MEASURED ON 2160-LINE FRAMES and have
+        # been restated for this height; where one still carried its 2160-line
+        # spelling it reached twice as far as it read, which is the fault this
+        # normalization exists to make impossible rather than one it introduced.
+        #
+        # IT IS A NO-OP AT 1080 BY CONSTRUCTION: no resize call is made at all
+        # when the height already matches, since a same-size LANCZOS pass is not
+        # guaranteed to be the identity.
+        #
+        # THE PAGE PNG ON DISK STAYS NATIVE — grab_frame writes the frame the
+        # video actually has, so the cache keeps full fidelity and this
+        # normalization is analysis-side only.
+        #
+        # The replay detector downstream is unaffected: its `quarter`
+        # downsampling and `origin` matching compare pages to each other, and
+        # both sides are normalized frames.
+        if page.height != 1080:
+            page = page.resize(
+                (int(round(page.width * 1080 / page.height)), 1080),
+                Image.LANCZOS)
+        gray = np.asarray(page)
         gray, angle = deskew(gray)
         dark = gray < 128
         healed = ndimage.binary_closing(gray < BINARIZE, structure=np.ones((CLOSE_GAP + 1, 1), bool))
@@ -578,7 +707,10 @@ def main():
         if len(ev) < 2:
             print(f"REFUSE: page {i} has {len(ev)} barline events"); return 1
         counts.append(len(ev) - 1)
-        geo.append((gray, dark, ev[0]))
+        # The staff row rides in `geo` because it is measured from the SAME
+        # healed map the barlines come from; recomputing it at the OCR would
+        # mean rebuilding that map per page for one number.
+        geo.append((gray, dark, ev[0], staff_line_row(healed, ev[0])))
         print(f"page {i:3d} span {a:8.3f}-{b:8.3f} bars={len(ev)-1} skew={angle:+.2f}")
 
     # pass 2: pickup hypothesis + OCR cross-check
@@ -591,7 +723,7 @@ def main():
     # re-shows earlier pages verbatim. A replayed page inherits the
     # original's start measure, skips OCR, and leaves the continuation
     # counter untouched.
-    quarter = [g[::4, ::4].astype(np.int16) for g, _, _ in geo]
+    quarter = [g[::4, ::4].astype(np.int16) for g, _, _, _ in geo]
     origin = [None] * len(kept)
     for i in range(1, len(kept)):
         for j in range(i):
@@ -608,8 +740,8 @@ def main():
     reads = {}
     for i in range(1, len(kept)):
         if origin[i] is None:
-            g, dk, x0 = geo[i]
-            reads[i] = ocr_reads(g, dk, x0, workdir)
+            g, dk, x0, srow = geo[i]
+            reads[i] = ocr_reads(g, dk, x0, srow, workdir)
 
     def confirmed(i, value):
         return reads[i].get(str(value), 0) >= 2
