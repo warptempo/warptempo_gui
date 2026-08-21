@@ -5945,18 +5945,23 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
         // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW'S
-        // ELEVEN ALWAYS-ON MEMBERS HAVE NO RESTING CONSUMER HERE since
+        // TWELVE ALWAYS-ON MEMBERS HAVE NO RESTING CONSUMER HERE since
         // 2026-08-15: they are lit outside the `h` view by the architect's
         // scoped-truth ruling (the arrows for the per-selection blink, the two
         // skips because their key acts even on a no-op jump, PLAY / STOP last —
         // "the user is expected to know that with the playhead outside trim
         // it's not going to play in target view" — the marker-walk three
-        // on the row's settled policy when they landed, and ADD TO SELECTION
+        // on the row's settled policy when they landed, ADD TO SELECTION
         // on the same policy when it landed 2026-08-18, its chord being
-        // navigation with no refusal to mirror), so this line fires
+        // navigation with no refusal to mirror, and THE MARKER MEASURE on that
+        // same policy since 2026-08-20, when the architect moved it out of the
+        // read-only arm because its SHIFT half is the lock-legal score-video
+        // jump and a chrome face cannot split), so this line fires
         // for them only inside that view, where the derived partition greys
-        // the PLAY/STOP button, the FOUR ARROWS and ADD TO SELECTION (Space,
-        // the bare arrows and bare `k` are all consumed there; the two skips
+        // the PLAY/STOP button, the FOUR ARROWS, THE MARKER MEASURE and ADD TO
+        // SELECTION (Space,
+        // the bare arrows, bare `/` and bare `k` are all consumed there; the
+        // two skips
         // are the mode's absolute jumps and the marker-walk THREE its
         // diff-flag cycle plus the march over it, so those five stay lit). The
         // arrows joined that list on 2026-08-18 by being PAINTED in the view at
@@ -5967,8 +5972,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // (2026-08-18, when they moved down from the icon row): they keep the
         // BUTTONS' own two greys — the `h` view and a locked tab — so this line
         // consumes their press in both, exactly as it did while they sat in
-        // row 4. ADD TO SELECTION IS NOT ONE OF THEM despite sitting in their
-        // group: the lock does not carry it, a selection being navigation.
+        // row 4. NEITHER OF THE TWO BUTTONS SEATED BEHIND THEM IS ONE OF THEM
+        // despite sitting in their group: the lock does not carry ADD TO
+        // SELECTION, a selection being navigation, and since 2026-08-20 it does
+        // not carry THE MARKER MEASURE either, whose shift half it admits.
         if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a

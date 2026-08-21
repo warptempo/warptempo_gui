@@ -1720,8 +1720,11 @@ struct GuiInputHandler {
     // half (2026-08-12): the shift-exact press on the navigation surface
     // (on_button_press) and the touch region begin's live arm
     // (begin_touch_region — the hold's expiry at the down point): clear
-    // the marker selection, run the body above, and arm the sweep (which
-    // SHOWS the overlay at mouse-down since 2026-08-19). The clear runs ahead of
+    // the marker selection, run the body above, and arm the sweep. THE ARM
+    // RAISES NOTHING since 2026-08-21: the overlay's one raise sits inside
+    // apply_region_drag_motion's accepted-write branch, so a motionless shift
+    // press shows nothing at all and the press's own hide (through the movement
+    // owner in the body above) simply stands. The clear runs ahead of
     // the body's gutter return, so an inert-gutter click still deselects but
     // seats no playhead and arms no drag. (The plain presses that shared this
     // body left it 2026-08-12 for the pending pan — the eighth glass ruling.)

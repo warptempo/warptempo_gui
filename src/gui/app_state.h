@@ -275,9 +275,10 @@ struct UndoEntry {
 // from the RESTING trim and a press-time raise could only show the window the
 // stroke was replacing (the 9 px band's three press claims had left that
 // inventory on 2026-08-20, a lane touched by a pointer being its own display of
-// the trim while the big surface exists for glass); and
-// by the FILE LOAD, which resets this struct so a new piece starts hidden.
-// HIDDEN by that same toggle, by THE SWEEP'S COMMIT (commit_region_sweep,
+// the trim while the big surface exists for glass).
+// HIDDEN by that same toggle, by the FILE LOAD (which resets this struct in
+// place, so a new piece starts hidden rather than greeting the user with a
+// stranger's window already lit), by THE SWEEP'S COMMIT (commit_region_sweep,
 // input_pointer.cpp — unconditional at every end path, so the raise is
 // bracketed by the stroke that earned it), and by clear_region_highlight,
 // whose declaration (input_handler.h) states THE RULE: the overlay hides when
@@ -2131,7 +2132,10 @@ enum class RedesignButton {
     // LOCK LEAVES IT LIT — a selection is navigation, not authored content,
     // the same reasoning that keeps the trim gestures legal on a locked tab,
     // so bare `k` is on read_only_key_blocked's allowlist and this button is
-    // not one of the lock's ten. It keeps the group's Icon* naming: a roster
+    // not one of the ones the lock greys (that membership's one authoritative
+    // statement is the read-only arm's own case list in
+    // redesign_button_enabled, which is why no count of it is restated here).
+    // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
@@ -7542,14 +7546,18 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW'S ELEVEN ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL
+        // THE BOTTOM ROW'S ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL
         // since
-        // 2026-08-15 — they return a plain `true` from the `default` below, and
+        // 2026-08-15 — they return a plain `true` from the `default` below,
+        // which is where their enumeration and the only count of them live, and
         // the ruling, the architect's reasoning and the three reversals that
         // got there are at the first switch's transport block above. (Its four
         // MARKER VERBS are not among them: their read-only term is in the arm
         // above, carried down from the icon row with the buttons on
-        // 2026-08-18.) Nothing
+        // 2026-08-18. THE MARKER MEASURE came down in that same group and IS
+        // among the always-on since 2026-08-20 — a chrome face cannot split and
+        // its shift half is lock-legal, the ruling at its own arm above.)
+        // Nothing
         // on that row is to be given a face term again without a new ruling:
         // the pattern each attempt fell into was mirroring a refusal that
         // changes at INTERACTION cadence, which makes a glyph blink to restate
@@ -7576,18 +7584,20 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:
-            // REACHED BY EXACTLY ELEVEN IDS, re-derived after the 2026-08-18
-            // roster rulings — the bottom row's ALWAYS-ON members (the
-            // transport three, the marker-walk three, the four arrows and ADD
-            // TO SELECTION), which break
+            // REACHED BY EXACTLY TWELVE IDS, re-derived 2026-08-21 after the
+            // MARKER MEASURE left the read-only arm for the row's own policy on
+            // 2026-08-20 — the bottom row's ALWAYS-ON members (the transport
+            // three, the marker-walk three, the four arrows, the MARKER MEASURE
+            // and ADD TO SELECTION), which break
             // out of the first switch to take the loading/blank guard and have
             // nothing else to say (each of the four pairs held an honest arm
             // for a revision or two; the ruling and the three separate reasons
-            // they were taken back are at that block). The row's other five —
-            // the single-marker verbs and the MARKER MEASURE — return from the
-            // read-only arm above like the six icon-row members they came down
-            // with. Every other id returned above, from one switch or the
-            // other.
+            // they were taken back are at that block). The row's remaining
+            // members are the four SINGLE-MARKER VERBS, which return from the
+            // read-only arm above — that arm's own case list is the one
+            // authoritative statement of who takes the lock's grey, so no count
+            // of it is restated here. Every other id returned above, from one
+            // switch or the other.
             break;
     }
     return true;

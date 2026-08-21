@@ -1,8 +1,8 @@
 // The score-video act's whole implementation: the map read, the measure
 // resolution walk, the time lookup, and the command batch written to mpv (the
-// jump, the audition's speed, and pitch correction off — three newline-
-// delimited commands on one connection). The act's contract, its refusal
-// taxonomy and the folder law are at score_video.h.
+// jump, the audition's speed, pitch correction off and fullscreen — four
+// newline-delimited commands on one connection). The act's contract, its
+// refusal taxonomy and the folder law are at score_video.h.
 
 #include "score_video.h"
 

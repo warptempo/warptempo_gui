@@ -2296,9 +2296,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   the reason this row's paint goes through redesign_button_icon; it was TWO
 //   buttons over that one chord until 2026-08-15, most recently as a radio
 //   pair) and skip-forward (bare
-//   End). THE ROW'S OTHER ELEVEN BUTTONS ARE LIT UNCONDITIONALLY, apart from what
+//   End). THE ROW'S OTHER BUTTONS ARE LIT UNCONDITIONALLY, apart from what
 //   the `h`
-//   history view's derived partition greys, and that is a RULING rather than
+//   history view's derived partition greys and the four marker verbs' own lock
+//   grey (below), and that is a RULING rather than
 //   an unfinished sweep (architect 2026-08-15, reversing his own whole-row
 //   honesty ruling of that morning in three steps — the arrows, then the
 //   skips, then play and stop): "there's not a whole lot of value derived from
