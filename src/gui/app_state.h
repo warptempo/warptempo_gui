@@ -6919,9 +6919,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     which is the truth the keys have — the term lives in the per-button
 //     switch below rather than as a blanket line, because it is no longer a
 //     blanket fact. (It was one until this ruling, when "a locked tab greys the
-//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES TEN
-//     MORE BUTTONS since 2026-08-15, the whole authoring vocabulary it blocks
-//     on the icon row — its own entry is below.
+//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES EIGHT
+//     MORE BUTTONS since 2026-08-15 — the authoring chords it blocks that
+//     still have a face to grey, spread across the icon row and the bottom one
+//     since the 2026-08-18 relayout — and its own entry is below.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
@@ -6936,8 +6937,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     chords are off the allowlist (2026-08-08), so the mode line at the top of
 //     this body answers for it through the derived partition, exactly as it does
 //     for Undo, Redo and the rest of the consumed roster.
-//   * THE READ-ONLY MODE STATEMENT (architect 2026-08-15): the ten icon-row
-//     buttons the per-tab lock BLOCKS wear the dead face while it stands, so
+//   * THE READ-ONLY MODE STATEMENT (architect 2026-08-15): the buttons the
+//     per-tab lock BLOCKS wear the dead face while it stands, so
 //     the toggle makes the buttons it eats look the way the `h` view already
 //     makes its own consumed buttons look. Their term is
 //     `!active_view_state(a).read_only` AND NOTHING ELSE — no selection term,
@@ -6962,9 +6963,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the S/T and
-//     W/P radios, the zoom four, follow, the
-//     read-only toggle, the history opener, its two walk radios and its four
-//     companions. (THE TRIM
+//     W/P radios, the zoom four, follow and the
+//     read-only toggle, each one an allowlist entry in read_only_key_blocked.
+//     (THE TRIM
 //     SCISSORS were on this list, bare `x` being read-only-legal like every
 //     trim gesture, until their button was deleted on 2026-08-18; the KEY is
 //     still admitted and still on this button, which took it over the same
@@ -6972,16 +6973,30 @@ inline bool playback_launch_playable(const AppState& a,
 //     the face promise LESS than the key delivers, which is the 2026-08-07 band
 //     ruling's own line: read-only protects the AUTHORED MUSICAL CONTENT and
 //     nothing else.
-//   * WHY THE TEN ARE NOT DERIVED BY WALKING kToolbarChords THROUGH
+//   * THE HISTORY FAMILY IS NOT ON THAT LIST and never was read-only-legal,
+//     which is worth stating because the faces can look alike: none of its
+//     chords is admitted by the allowlist. Bare `h`, `g`, `u`, `,` and `.` are
+//     blocked VACUOUSLY — nothing the lock protects is behind any of them
+//     (class (1) below) — and Ctrl+H the lock really does eat. The OPENER is
+//     lit anyway on its own arm's terms; the two WALK RADIOS and the four
+//     COMPANIONS are greyed at rest all the same, by `a.history_mode.active`
+//     at their own arm below, which is a MODE fact and not the lock's.
+//   * WHY THE READ-ONLY SET IS NOT DERIVED BY WALKING kToolbarChords THROUGH
 //     read_only_key_blocked, the way history_mode_disables_button walks it
 //     through the mode's gates — checked and rejected 2026-08-15, and recorded
 //     so it is not tried again as an obvious cleanup. The walk diverges on the
-//     buttons below, in two classes (the count is deliberately not restated —
-//     it moved twice on 2026-08-20 alone). (1) FOUR CHORDS NEVER REACH THAT GATE: bare `h`,
-//     bare `u`, bare `,` and bare `.` are claimed by handle_history_mode_key,
-//     which returns from on_key ABOVE the read-only gate, so the allowlist's
-//     "blocked" for them is VACUOUS rather than a refusal — and knowing that
-//     means knowing on_key's dispatch ORDER, which no table holds. (2) FIVE ARE
+//     buttons below, in two classes, and no total is stated for either — the
+//     set moved twice on 2026-08-20 alone and both classes name their members
+//     right here. (1) THE HISTORY FAMILY'S CHORDS ARE BLOCKED VACUOUSLY: bare
+//     `h`, bare `g` (which BOTH walk radios carry), bare `u`, bare `,` and
+//     bare `.` sit on no allowlist entry, so the walk reads a grey for six
+//     buttons the lock has no say over. Bare `h` never reaches the gate at all
+//     — handle_history_mode_key claims the toggle and returns from on_key
+//     ABOVE it — while the other four DO reach it on every press outside the
+//     view and bind nothing below it (handle_history_mode_key returns false
+//     while the mode is down), so their "blocked" refuses nothing either way.
+//     Knowing that means knowing on_key's dispatch ORDER, which no table
+//     holds. (2) THE REST ARE
 //     THE RULING'S OWN EXCLUSIONS: the four cardinal arrows (Up and Down are
 //     blocked outright, Left and Right blocked only while a selection stands —
 //     the exact per-selection blink this ruling removes), Revert, whose Ctrl+H
@@ -7019,11 +7034,11 @@ inline bool playback_launch_playable(const AppState& a,
 // READ-ONLY LOCK GREYS (its membership is the read-only arm of the switch
 // below, which owns it and is not counted here — it moved twice on 2026-08-20,
 // losing the propagate pair with their buttons and the MEASURE to its
-// lock-legal shift half), and, since 2026-08-15, the BOTTOM ROW'S TEN (every
-// chord on that row drops at on_key's loading/blank return, so their faces grey
-// there too — and that guard is now the ONLY thing all ten have to say; it was
-// EIGHT for the hours between the row's face ruling and the same day's
-// marker-walk group, which added three and collapsed play/stop into one).
+// lock-legal shift half), and, since 2026-08-15, THE BOTTOM ROW'S ALWAYS-ON
+// MEMBERS (every chord on that row drops at on_key's loading/blank return, so
+// their faces grey there too — and that guard is now the ONLY thing they all
+// have to say; the set is the one that breaks out of the switch below, which
+// owns it and is not counted here either).
 // TWO PARAMETERS CAME AND WENT ON 2026-08-15 and the pattern is worth stating
 // once, because it is the same one twice: a face arm was added, the object it
 // needed was threaded in for it, the architect reversed the arm, and THE
@@ -7206,7 +7221,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // ruling did not make and would be the row's third policy.
         //
         // THE MEMBERSHIP IS HAND-LISTED AND ITS OWNER IS NAMED, not derived —
-        // the walk that would derive it, and the nine buttons it gets wrong,
+        // the walk that would derive it, and the buttons it gets wrong,
         // are recorded at the head of this body. A change to the allowlist must
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
@@ -7221,7 +7236,7 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only;
         // THE BOTTOM ROW IS ALWAYS-ON EXCEPT FOR ITS OWN TWO GREYS (architect
         // 2026-08-15, his final ruling on this row after it moved three times
-        // that day): its ELEVEN always-on members break out of this switch
+        // that day): its ALWAYS-ON MEMBERS break out of this switch
         // to take the loading/blank guard — every chord on the row drops at
         // on_key's `app.loading || total <= 0` return — and then answer a plain
         // `true`. HIS REASONING, kept in his own words because it is the whole
@@ -7273,8 +7288,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // last frame), so the two skips stay LIT exactly as they are outside
         // it — as do the MARKER-WALK THREE, whose chords are the mode's
         // vocabulary too. All derived from the mode's gates, nothing
-        // hand-listed — and it is why these ten break DOWNWARD to a shared
-        // `true` instead of returning one here.
+        // hand-listed — and it is why the row's always-on members break
+        // DOWNWARD to a shared `true` instead of returning one here.
         //
         // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS, and what they lost
         // is the ENABLED split alone: no grey while an audition runs, none
@@ -7573,9 +7588,10 @@ inline bool redesign_button_enabled(const AppState& a,
 }
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
-// buttons, row 3's tabs and row 4's SIX radios and FIVE toggles (the two view
+// buttons, row 3's tabs and row 4's SIX radios and SIX toggles (the two view
 // pairs and the WALK PAIR that joined them on 2026-08-18; follow, iteration,
-// read-only, history, and the CUMULATIVE reading,
+// the TRIM REGION toggle — a toggle again since 2026-08-18, its lamp reading
+// the overlay's visibility — read-only, history, and the CUMULATIVE reading,
 // which came back to this row with the history group the same day). THE
 // BOTTOM ROW HAS EXACTLY ONE SUBJECT — ADD TO SELECTION, which landed there
 // later the same day, hours after the relayout had left the row lampless: the
