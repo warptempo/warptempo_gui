@@ -46,10 +46,11 @@ struct AppState;
 // falls with speed like a tape machine), so matching it means letting mpv's
 // pitch fall too. The reasoning lives at the send site; do not "fix" it.
 //
-// A SPAWNED mpv OPENS FULLSCREEN (architect 2026-08-20) — the score is a
-// reading surface, and it is a SPAWN option rather than a sent one, so a
-// standing window the user has un-fullscreened stays that way across later
-// jumps (spawn_mpv, score_video.cpp).
+// mpv IS ALWAYS FULLSCREEN for this act (architect 2026-08-20, always-on since
+// 2026-08-21) — the score is a reading surface, so the spawn passes
+// `--fullscreen` and every jump's batch re-asserts the property, which means a
+// window someone un-fullscreened by hand is fullscreen again at the next jump
+// (score_video.cpp).
 
 // A MEASURE IS A (SECTION, MEASURE) PLACE, not just a number (2026-08-20). Maps
 // record the PRINTED bar numbers, so a score whose numbering restarts mid-way

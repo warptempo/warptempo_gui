@@ -268,15 +268,18 @@ struct UndoEntry {
 // THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `x` and the icon row's
 // IconShowRegion button, one toggle over one act (handle_toggle_trim_region,
 // input_trim.cpp), whose show half also brings the span into view; by THE
-// SWEEP'S ARM through the one raise owner show_trim_region_overlay
-// (input_handler.h, which carries its whole call-site inventory, the no-framing
-// rule and the `h` carve-out) — its ONE caller since the 9 px band's three
-// press claims left that inventory on 2026-08-20, a lane touched by a pointer
-// being its own display of the trim while the big surface exists for glass; and
+// SWEEP'S FIRST ACCEPTED TRIM WRITE through the one raise owner
+// show_trim_region_overlay (input_handler.h, which carries its whole call-site
+// inventory, the no-framing rule and the `h` carve-out) — its ONE caller, at
+// the write since 2026-08-21 rather than at the arm, since the overlay derives
+// from the RESTING trim and a press-time raise could only show the window the
+// stroke was replacing (the 9 px band's three press claims had left that
+// inventory on 2026-08-20, a lane touched by a pointer being its own display of
+// the trim while the big surface exists for glass); and
 // by the FILE LOAD, which resets this struct so a new piece starts hidden.
 // HIDDEN by that same toggle, by THE SWEEP'S COMMIT (commit_region_sweep,
-// input_pointer.cpp — unconditional at every end path, so the arm's raise is
-// bracketed by the stroke it was raised for), and by clear_region_highlight,
+// input_pointer.cpp — unconditional at every end path, so the raise is
+// bracketed by the stroke that earned it), and by clear_region_highlight,
 // whose declaration (input_handler.h) states THE RULE: the overlay hides when
 // the playhead's position in the music changes, when a marker is touched and
 // when the sweep ends, and at no other time. HIDING DISCARDS NOTHING — the trim
@@ -547,13 +550,17 @@ struct UndoHistory {
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
 // input_trim.cpp — which enforces no width, only the song walls). THE PRESS ITSELF
 // WRITES NO TRIM: a motionless shift click is the placement and nothing else.
-// IT DOES SHOW THE OVERLAY (architect 2026-08-19) through the one raise owner,
-// at every entry but the `h` view's: the surface being drawn on is visible
-// while it is drawn, and since the overlay derives from the trim the sweep
-// writes per motion event it tracks the stroke live. THE SHOW IS BRACKETED BY
-// THE STROKE (architect 2026-08-20): commit_region_sweep collapses it again at
-// every end path, so a motionless shift click puts away what its own press put
-// up, and a stroke that draws a window leaves that window on the bar alone.
+// THE STROKE'S FIRST ACCEPTED TRIM WRITE SHOWS THE OVERLAY (architect
+// 2026-08-19 for the raise, moved off the press 2026-08-21) through the one
+// raise owner, at every entry but the `h` view's, which writes no trim: the
+// surface being drawn on is visible while it is drawn, and since the overlay
+// derives from the trim the sweep writes per motion event it tracks the rest of
+// the stroke live. RAISING AT THE PRESS SHOWED THE WRONG REGION — the resting
+// one the stroke was about to replace — which is why the raise sits at the
+// write. THE SHOW IS BRACKETED BY THE STROKE (architect 2026-08-20):
+// commit_region_sweep collapses it again at every end path, so a motionless
+// shift click shows nothing at all and a stroke that draws a window leaves that
+// window on the bar alone.
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press frame, the trim holds

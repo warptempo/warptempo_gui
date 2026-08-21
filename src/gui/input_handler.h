@@ -225,8 +225,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     and the force-end finalizer) and whatever the stroke wrote. This is the
 //     rule's THIRD CLAUSE (architect 2026-08-20): "shift+drag or longpress+drag
 //     on the waveform should collapse the region as soon as it is set — this
-//     method usually indicates 'this exact region'." The arm's raise is
-//     therefore bracketed by the stroke, and the definition carries the reading
+//     method usually indicates 'this exact region'." The sweep's raise is
+//     therefore bracketed by the stroke — up at its first accepted trim write,
+//     down here — and the definition carries the reading
 //     of each end case — the `h` view's carved-out playhead sweep included,
 //     which collapses an overlay carried into the view precisely because that
 //     former moves the playhead in the music and only ever escaped the rule by
@@ -264,20 +265,31 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 
 // SHOW THE TRIM REGION OVERLAY — the hide's counterpart and the ONE raise every
 // gesture uses (architect 2026-08-19). THE SURFACE YOU ARE DRAWING ON SHOULD BE
-// VISIBLE WHILE YOU DRAW IT: the sweep is about to write the trim under it, and
+// VISIBLE WHILE YOU DRAW IT: the sweep has just written the trim under it, and
 // since the overlay is DERIVED from the trim every frame it then tracks the
-// stroke live. A no-op when it already stands.
+// rest of the stroke live. A no-op when it already stands, which is what lets
+// its one caller sit on a per-motion path.
 //
 // IT DOES NOT FRAME, which is the one thing that separates it from bare `x`'s
 // show half (handle_toggle_trim_region, input_trim.cpp — the toggle's raise
 // runs bring_span_into_view because the user asked to LOOK at the window). The
-// caller here is a POINTER PRESS whose gesture is already under the pointer, so
-// moving the viewport out from under a held button would be the wrong answer.
+// caller here is a LIVE POINTER GESTURE, already under the pointer or the
+// finger, so moving the viewport out from under it would be the wrong answer —
+// the argument is about the gesture, not about the event's phase, which is why
+// it survived the raise moving off the press.
 //
-// CALL SITES, RE-DERIVED BY GREP 2026-08-20 — ONE, and it is one FAMILY:
-//   * THE SWEEP'S PRESS (arm_region_drag_at, input_pointer.cpp), the one arm
-//     all three of its entries share, so the shift former and the touch region
-//     hold raise it alike.
+// CALL SITES, RE-DERIVED BY GREP 2026-08-21 — ONE, and it is a MOTION BODY:
+//   * THE SWEEP'S FIRST ACCEPTED TRIM WRITE (apply_region_drag_motion,
+//     input_pointer.cpp), the one motion path all three of its arms share, so
+//     the shift former and the touch region hold raise it alike.
+//
+// IT MOVED THERE FROM THE ARM ON 2026-08-21 (architect, on his first drive):
+// "on shift+click on empty waveform, current region is highlighted ... the
+// first part is incorrect." The overlay is DERIVED from the RESTING trim, so a
+// press-time raise necessarily showed the OLD window until the stroke wrote its
+// own. Raising inside the accepted-write branch means the surface that comes up
+// is always a span the stroke itself authored — and a motionless shift click,
+// which writes nothing, now shows nothing at all.
 //
 // THE TRIM BAR'S THREE PRESSES LEFT THIS INVENTORY ON 2026-08-20 (architect,
 // partly reversing his own 2026-08-19 "touching the trim shows the trim"):
@@ -288,10 +300,11 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // Ctrl / Ctrl+Shift bound-set presses raise nothing at all now, and a laptop
 // press that does want the big surface asks for it with bare `x`.
 //
-// AND THE ONE RAISE LEFT IS STROKE-SCOPED, which is this owner's new
-// counterpart (architect 2026-08-20): commit_region_sweep collapses the overlay
-// unconditionally at every end path, so the arm shows it for exactly the
-// duration of the stroke. Bare `x` is the recall, and hiding discards nothing.
+// AND THE ONE RAISE LEFT IS STROKE-SCOPED, which is this owner's counterpart
+// (architect 2026-08-20): commit_region_sweep collapses the overlay
+// unconditionally at every end path, so the overlay stands for exactly as long
+// as the stroke is drawing a region of its own.
+// Bare `x` is the recall, and hiding discards nothing.
 // The waveform overlay's own three presses need no call — they are reachable
 // only through region_manipulation_hit, which answers None while it is hidden.
 //
@@ -300,6 +313,10 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // overlay from, so a raise in there could only put up a surface no gesture in
 // the view can move.
 // Bare `x` is consumed in the mode besides, so nothing can take it down again.
+// The carve-out is BELT AND BRACES since the raise moved into the write branch
+// — that view's former is excluded from the write itself and so never reaches
+// this owner at all — and it stays, being the owner's own promise rather than
+// the caller's.
 void show_trim_region_overlay(AppState& app, Viewport& viewport);
 
 // THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the bare
@@ -1607,15 +1624,13 @@ struct GuiInputHandler {
     // RULER arm with its deferred dissolve is deleted). `anchor_frame` is the
     // active-domain frame the press just placed the playhead at and the fixed
     // end of every trim pair the sweep writes; (x, y) is the press position for
-    // the press-becomes-drag threshold. SHOWS the trim region overlay at
-    // mouse-down (2026-08-19, replacing the hide it did until then) — you draw
-    // on a surface you can see, and the overlay derives from the trim the sweep
-    // is about to write, so it tracks the stroke live; the `h` view is carved
-    // out, writing no trim to derive one from. THE RAISE IS STROKE-SCOPED since
-    // 2026-08-20: commit_region_sweep collapses it again at every end path, so
-    // this arm shows the surface for exactly as long as it is being drawn on.
-    // THE PRESS WRITES NO TRIM: a motionless release is the placement and
-    // nothing else — and its end puts away what this arm put up.
+    // the press-becomes-drag threshold. IT RAISES NO OVERLAY (2026-08-21): the
+    // raise stood here from 2026-08-19, but the overlay derives from the
+    // RESTING trim, so at the press it could only show the window the stroke is
+    // about to replace — it now happens at the sweep's FIRST ACCEPTED TRIM
+    // WRITE (apply_region_drag_motion), where the span on screen is the
+    // stroke's own. THE PRESS WRITES NO TRIM either: a motionless release is
+    // the placement and nothing else, and it leaves no surface behind it.
     // THREE CALLERS (re-derived 2026-08-19): the LIVE former's press half
     // (place_playhead_and_arm_region — the shift press and the touch begin's
     // live arm both route through it), the `h` history view's own shift
@@ -1638,9 +1653,15 @@ struct GuiInputHandler {
     // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep), and
     // the playhead riding the moving end. Caller guards active.
     //
+    // AND IT IS THE OVERLAY'S ONE RAISE since 2026-08-21, inside the
+    // accepted-write branch (show_trim_region_overlay, above): the surface comes
+    // up only once the stroke has authored a region of its own, so what it
+    // shows is never the resting window the stroke is replacing.
+    //
     // THE `h` VIEW IS CARVED OUT OF THE TRIM WRITE HERE, at the one site the
     // three arms share: that view promises the trim window is untouched
-    // throughout, so its sweep carries the playhead and writes nothing.
+    // throughout, so its sweep carries the playhead and writes nothing — and
+    // raises nothing, the raise sitting inside that same branch.
     void apply_region_drag_motion(int mouse_x, int mouse_y);
 
     // THE SWEEP'S ONE END OWNER — every end path calls it (clean release,
@@ -1653,9 +1674,10 @@ struct GuiInputHandler {
     // the bounds. A sweep that wrote nothing — motionless, refused by geometry,
     // or run inside the `h` view — runs none of that tail.
     // IT COLLAPSES THE TRIM REGION OVERLAY UNCONDITIONALLY though, on every one
-    // of those paths (architect 2026-08-20): the arm's raise is scoped to the
-    // stroke, and this is its other bracket. The reasoning and the per-case
-    // reading are at the definition; bare `x` is the recall.
+    // of those paths (architect 2026-08-20): the sweep's raise is scoped to the
+    // stroke — up at its first accepted trim write — and this is its other
+    // bracket, a guarded no-op where the stroke raised nothing. The reasoning
+    // and the per-case reading are at the definition; bare `x` is the recall.
     void commit_region_sweep();
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes

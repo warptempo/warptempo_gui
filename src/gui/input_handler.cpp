@@ -1367,9 +1367,9 @@ void clear_region_highlight(AppState& app, Viewport& viewport) {
 
 void show_trim_region_overlay(AppState& app, Viewport& viewport) {
     // The raise, with the `h` carve-out and the framing omission the
-    // declaration argues. Guarded twice so a call on the already-shown path —
-    // which a sweep armed while bare `x` already stands takes — costs nothing
-    // and damages nothing.
+    // declaration argues. Guarded twice so a call on the already-shown path
+    // costs nothing and damages nothing — which is what lets its one caller sit
+    // on the sweep's per-motion path and re-ask on every accepted trim write.
     if (app.history_mode.active) return;
     if (app.region.shown) return;
     app.region.shown = true;

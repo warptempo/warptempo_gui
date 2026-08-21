@@ -427,18 +427,20 @@ bool send_mpv_command(const std::string& socket_path,
 // the instance this starts must open at the same rate a running one would be
 // sent to, or the very first jump of a session would play at 1.0 and every
 // later one at the audition's rate. `--speed` and `--audio-pitch-correction=no`
-// are the command-line twins of the two properties the IPC path sets, and the
-// varispeed reasoning for turning correction off is at that site.
+// are the command-line twins of two of the three properties the IPC path sets
+// (`--fullscreen` below is the third's), and the varispeed reasoning for
+// turning correction off is at that site.
 //
 // IT OPENS FULLSCREEN, and that is product intent (architect 2026-08-20): the
 // score is a READING SURFACE on both hosts — a page of music in a windowed
 // player on the rig's 1024x600 glass is unreadable, and on the laptop the
 // window one glances at while authoring is the one filling the screen.
 //
-// A REUSED INSTANCE IS NEVER RE-FULLSCREENED, deliberately: `--fullscreen` is a
-// SPAWN option and the IPC path sends nothing of the kind, so if the user
-// un-fullscreens a standing window every later jump respects that. The spawn
-// sets the OPENING state; it does not police it.
+// AND IT STAYS THAT WAY (architect 2026-08-21): `--fullscreen` here and the
+// batch's `fullscreen` property are ONE RULE stated at both entry points, so a
+// window that was manually un-fullscreened is fullscreen again at the next
+// jump. The spawn sets the opening state and the batch re-asserts it, exactly
+// as the rate is re-asserted.
 //
 // AND NOTHING HERE STYLES THE PLAYER — no OSD, subtitle, volume or profile
 // options. mpv reads the user's own ~/.config/mpv, which is where per-user look
@@ -747,16 +749,19 @@ void run_score_video_jump(const AppState& app) {
         static_cast<size_t>(speed_spelled) >= sizeof speed_text)
         return;
 
-    // THREE COMMAND LINES ON ONE CONNECTION, written in a single go: mpv's IPC
+    // FOUR COMMAND LINES ON ONE CONNECTION, written in a single go: mpv's IPC
     // is line-delimited, so this is one write and one round of the bounded
-    // transport rather than three. `loadfile` is the jump itself — it loads the
+    // transport rather than four. `loadfile` is the jump itself — it loads the
     // file, REPLACES whatever is showing and applies the start option in the
     // same act, so a jump within the same video and a jump into a fresh one are
     // one code path (a same-file jump reloads rather than seeks — accepted, mpv
     // being fast at it and the alternative being a second command shape and a
-    // reply to parse). The two PROPERTIES behind it persist in the single
+    // reply to parse). The three PROPERTIES behind it persist in the single
     // instance and are re-sent at every jump anyway, which costs nothing and
-    // means the window can never be left holding a stale rate.
+    // means the window can never be left holding a stale rate — nor left
+    // un-fullscreened, mpv ALWAYS BEING FULLSCREEN for this act (architect
+    // 2026-08-21): a manual toggle in the player never survives the next jump,
+    // the score being a reading surface every time it is looked at.
     const std::string command = "{\"command\":[\"loadfile\",\"" +
                                 json_escape(video_path) +
                                 "\",\"replace\",-1,\"start=" + seek_text +
@@ -764,7 +769,9 @@ void run_score_video_jump(const AppState& app) {
                                 "{\"command\":[\"set_property\",\"speed\"," +
                                 speed_text + "]}\n"
                                 "{\"command\":[\"set_property\","
-                                "\"audio-pitch-correction\",false]}\n";
+                                "\"audio-pitch-correction\",false]}\n"
+                                "{\"command\":[\"set_property\",\"fullscreen\","
+                                "true]}\n";
     // THE TWO DIAGNOSTICS SAY WHAT WAS OBSERVED AND NOTHING MORE. No reply is
     // ever read from mpv, so this side cannot know what mpv made of the line —
     // only whether the line left the process. "The write failed" and "the spawn
