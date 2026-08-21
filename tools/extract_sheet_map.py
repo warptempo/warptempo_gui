@@ -9,6 +9,7 @@ whole; there is no partial map.
 Usage:
     extract_sheet_map.py <video> <workdir> [--window START END|eof]
                                            [--min-page SECONDS]
+                                           [--url LINK]
                                            [--expect-final N]
                                            [--expect-sections N]
 
@@ -21,15 +22,30 @@ END may instead be the literal "eof". Map timestamps stay window-relative and
 the window is recorded in the map header, so the map can be recreated from the
 stable full video without a trimmed copy.
 
-MAP FORMAT. Header lines (window mode only, since only a window has a source
-offset to record):
+MAP FORMAT. Header lines:
 
-    # src <basename of the video>
-    # window <start seconds> <end seconds|eof>
+    # src <basename of the video>       (always)
+    # window <start seconds> <end seconds|eof>   (window mode only)
+    # url <link>                        (--url)
 
-The header spells NORMALIZED SECONDS, trailing-zero-free — `# window 820 1093`
-for `--window 13:40 18:13` — while "eof" is kept literal. Then data lines, one
-per anchor:
+`# src` NAMES THE VIDEO AND IS ALWAYS PRESENT — the GUI opens that basename
+from the map's own folder, so a map without it names no video and is refused.
+The layout it assumes is flat: ONE video file, under its original name and in
+whatever container it came in, sitting directly in the piece's `sheet/` folder
+beside `sheet.map`. (There was a `sheet/src/` subfolder and a trimmed
+`sheet.webm` beside it until 2026-08-20; nothing is trimmed any more, so the
+split had nothing left to separate.)
+
+`# window` appears only in window mode, since only a window has a source offset
+to record; the header spells NORMALIZED SECONDS, trailing-zero-free —
+`# window 820 1093` for `--window 13:40 18:13` — while "eof" is kept literal.
+Map times are WINDOW-RELATIVE, so the GUI seeks `window_start + t` into that one
+video (window 0 when the line is absent).
+
+`# url` is PURE PROVENANCE: where the video came from, recorded verbatim so a
+map outlives the local copy of the rip it was made from. Nothing reads it — not
+this tool, not the GUI — and it is written last so a reader scanning for the
+structural lines meets them first. Then data lines, one per anchor:
 
     <seconds>|<measure>
 
@@ -60,11 +76,20 @@ into section 1 adds nothing after section 2's anchors.
 # the whole chain is validated end to end against the four K.550 movements of
 # the architect's rip:
 #
-#   extract_sheet_map.py <rip> <workdir> --window 0     5:59  --expect-final 299
-#   extract_sheet_map.py <rip> <workdir> --window 6:00 13:37  --expect-final 123
-#   extract_sheet_map.py <rip> <workdir> --window 13:40 18:13 --expect-final 42 \
-#                                                             --expect-sections 2
-#   extract_sheet_map.py <rip> <workdir> --window 18:15 eof   --expect-final 308
+#   URL=https://www.youtube.com/watch?v=BfcXoB9y4rc
+#
+# The rip is one file per piece, kept at `projects/550 - N/sheet/<name>` under
+# its own name beside the `sheet.map` these runs produce; `<workdir>` is the
+# scratch folder the scan and page frames are cached in and is not the piece's.
+#
+#   extract_sheet_map.py <rip> <workdir> --url $URL --window 0     5:59  \
+#                                        --expect-final 299
+#   extract_sheet_map.py <rip> <workdir> --url $URL --window 6:00 13:37  \
+#                                        --expect-final 123
+#   extract_sheet_map.py <rip> <workdir> --url $URL --window 13:40 18:13 \
+#                                        --expect-final 42 --expect-sections 2
+#   extract_sheet_map.py <rip> <workdir> --url $URL --window 18:15 eof   \
+#                                        --expect-final 308
 #
 # THE WINDOWS ARE WHOLE SECONDS (2026-08-20) — 5:59 is 359, 13:40 is 820 — and
 # they are deliberately loose at both ends: a window that opens a fraction early
@@ -356,6 +381,18 @@ def read_options():
         if not math.isfinite(min_page_s) or min_page_s <= 0.0:
             raise OptionError("--min-page must be a positive number of seconds")
 
+    url = None
+    if "--url" in sys.argv:
+        (url,) = option_values("--url", 1)
+        # VALIDATED AS A FIELD, NOT AS A URL. What the header owes is one
+        # unambiguous token on one line, so the checks are exactly non-empty and
+        # whitespace-free — anything else would be this tool deciding what a
+        # link may look like, which is not its business and would date badly.
+        # The value is recorded VERBATIM; nothing here or in the GUI reads it
+        # back.
+        if not url or any(c.isspace() for c in url):
+            raise OptionError("--url takes one link with no whitespace in it")
+
     wstart, wend_arg, wdur = 0.0, None, None
     if "--window" in sys.argv:
         raw_start, raw_end = option_values("--window", 2)
@@ -380,7 +417,8 @@ def read_options():
             # shell — and two spellings of one window share a cache stamp.
             wend_arg = spell_seconds(wend)
             wdur = wend - wstart
-    return expect_final, expect_sections, min_page_s, wstart, wend_arg, wdur
+    return (expect_final, expect_sections, min_page_s, url,
+            wstart, wend_arg, wdur)
 
 def main():
     if len(sys.argv) < 3:
@@ -390,7 +428,7 @@ def main():
         return 1
     video, workdir = sys.argv[1], sys.argv[2]
     try:
-        (expect_final, expect_sections, min_page_s,
+        (expect_final, expect_sections, min_page_s, url,
          wstart, wend_arg, wdur) = read_options()
     except OptionError as err:
         print(f"REFUSE: {err}")
@@ -724,9 +762,21 @@ def main():
     map_path = os.path.join(workdir, "sheet.map")
     tmp_path = map_path + ".tmp"
     with open(tmp_path, "w") as f:
+        # `# src` IS ALWAYS WRITTEN (2026-08-20): the tool knows its input, and
+        # the GUI resolves the video by that basename inside the piece's
+        # `sheet/` folder — so a run that omitted it left a map the GUI could
+        # not play. A windowless run has no `# window` to record and still has a
+        # source name.
+        f.write(f"# src {os.path.basename(video)}\n")
         if wend_arg is not None:
-            f.write(f"# src {os.path.basename(video)}\n")
             f.write(f"# window {spell_seconds(wstart)} {wend_arg}\n")
+        # PROVENANCE LAST, and it stands ALONE when there is no window to
+        # record: a whole-video run writes this line and nothing else above the
+        # anchors. It is verbatim and unread — the GUI skips every header line
+        # it does not know, which is what lets a field like this be added at
+        # all.
+        if url is not None:
+            f.write(f"# url {url}\n")
         f.write(f"0.000|{spell(sects[0], locs[0])}\n")
         tops = {sects[0]: locs[0]}
         for i in range(1, n):

@@ -518,8 +518,8 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
             // name carries spaces, so it is not a token. It is a BASENAME by
             // definition (the tool writes os.path.basename) and it is held to
             // that here — a value carrying a separator or naming a directory
-            // entry would let the header point the act outside sheet/src/,
-            // which the format never means.
+            // entry would let the header point the act outside the piece's own
+            // `sheet/` folder, which the format never means.
             if (line.rfind("# src ", 0) == 0) {
                 map.src = line.substr(6);
                 if (map.src.empty() || map.src == "." || map.src == ".." ||
@@ -545,7 +545,17 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
                 map.window_start = start;
                 continue;
             }
-            continue;  // an unknown header line says nothing to this reader
+            // AN UNKNOWN `#` LINE IS SKIPPED, NOT REFUSED, and that tolerance
+            // is the format's one forward-compatibility guarantee rather than
+            // laziness: the tool may record a field this reader has no use for,
+            // and a map is regenerated far less often than the GUI is rebuilt.
+            // `# url` (2026-08-20) is its first real instance — pure
+            // provenance, written by --url, read by nobody — and it landed
+            // needing no change here, which is the guarantee working. A
+            // STRUCTURAL line is still judged strictly: only lines this reader
+            // CLAIMS are parsed, and a claimed one that is malformed refuses
+            // the whole map.
+            continue;
         }
         const size_t bar = line.find('|');
         if (bar == std::string::npos) return {};
@@ -591,6 +601,13 @@ GuiScoreVideoMap load_score_video_map(const std::string& project_dir) {
         have_previous = true;
     }
     if (map.anchors.empty()) return {};
+    // A MAP WITHOUT `# src` NAMES NO VIDEO and is refused like any other
+    // malformed one (2026-08-20). The tool writes that line on EVERY run — it
+    // always knows its input — so an absent one is a hand-edited or truncated
+    // file rather than an older shape worth tolerating, and refusing here means
+    // `map.ok` carries "there is a video to open" for every reader past this
+    // point. It is the one header line the format requires.
+    if (map.src.empty()) return {};
     map.ok = true;
     return map;
 }
@@ -623,21 +640,26 @@ void run_score_video_jump(const AppState& app) {
     double t = 0.0;
     if (!score_video_time_for(map, pos, t)) return;
 
-    // THE TRIMMED CLIP FIRST, THE FULL RIP BEHIND IT. sheet.webm is the map's
-    // own window already cut, so the map's times are its times. Failing that
-    // the header's `# src` names the untrimmed file the map was extracted from,
-    // where the same moment sits window_start later — which is what lets one
-    // stable rip serve four movements' maps with no trimmed copy of anything.
+    // ONE VIDEO, ONE RULE (architect 2026-08-20): the map's `# src` basename,
+    // opened from the map's OWN FOLDER, seeked to window_start + t. There is no
+    // preference order and no fallback to try — the piece's `sheet/` holds one
+    // video file under its original name beside `sheet.map`, and that is the
+    // whole layout.
+    //
+    // THE TRIMMED/SOURCE SPLIT IS RETIRED WITH THE TRIMMING. A `sheet.webm` cut
+    // to the map's own window was preferred here, with `sheet/src/<name>` behind
+    // it for the untrimmed rip; nothing is trimmed any more, so the two names
+    // had nothing left to distinguish and the second path was a fallback to a
+    // file that no longer exists. WINDOW-RELATIVE TIMES ARE WHY ONE FILE IS
+    // ENOUGH: four movements' maps carry four windows into one stable rip, each
+    // adding its own offset here.
+    //
+    // The seek is window_start + t with window_start 0 when the map carries no
+    // `# window` — not a fallback but the truth for a whole-video map.
     std::error_code       ec;
-    std::filesystem::path video = project / "sheet" / "sheet.webm";
-    double                seek  = t;
-    if (!std::filesystem::exists(video, ec) || ec) {
-        if (map.src.empty()) return;
-        ec.clear();
-        video = project / "sheet" / "src" / map.src;
-        if (!std::filesystem::exists(video, ec) || ec) return;
-        seek = map.window_start + t;
-    }
+    const std::filesystem::path video = project / "sheet" / map.src;
+    const double                seek  = map.window_start + t;
+    if (!std::filesystem::is_regular_file(video, ec) || ec) return;
 
     // THE SEEK IS RE-JUDGED AFTER THE SUM, not trusted from its parts: the
     // domain bound above makes an out-of-domain result unreachable, and this

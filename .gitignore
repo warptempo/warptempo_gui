@@ -5,6 +5,9 @@
 # build
 build*/
 
+# python
+__pycache__/
+
 # ai tools
 .agents/
 .claude/
@@ -26,5 +29,13 @@ projects/*/*.peaks
 projects/*/*.wav
 projects/*/peaks/
 projects/*/renders/
-projects/*/sheet/
+# THE SHEET TREE STAYS LOCAL EXCEPT THE MAP (2026-08-20). The rip, the
+# trimmed clip and the extraction workdir are big, private and
+# regenerable; sheet.map is small, hand-verified and the one thing a
+# checkpoint must carry, so the score jump survives a fresh clone.
+# The pattern ignores the folder's CHILDREN rather than the folder
+# itself: git does not descend into an excluded DIRECTORY, so a
+# `projects/*/sheet/` line would make the negation below unreachable.
+projects/*/sheet/*
+!projects/*/sheet/sheet.map
 projects/*test

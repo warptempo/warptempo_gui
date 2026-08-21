@@ -62,17 +62,28 @@ struct AppState;
 // never services it. The spawn is fire-and-forget and waits on nothing.
 //
 // ------------------------------------------------------------------------
-// THE MAP is <project>/sheet/sheet.map, where <project> is the SOURCE FILE'S
-// OWN PARENT FOLDER — the GitHub recheck's folder law (history_diff.h) read
-// off the filesystem alone, with no git in it. tools/extract_sheet_map.py is
-// its one producer; the whole sheet/ folder is gitignored, local to the host
-// that made it, and the GUI never writes a byte of it.
+// THE FOLDER LAW. <project> is the SOURCE FILE'S OWN PARENT FOLDER — the GitHub
+// recheck's own rule (history_diff.h) read off the filesystem alone, with no git
+// in it — and the piece's score material sits in ONE FLAT FOLDER beside the
+// audio:
 //
-// THE VIDEO is <project>/sheet/sheet.webm when it is there, seeked to the map's
-// own window-relative time; failing that the map header's `# src` names a file
-// under <project>/sheet/src/, seeked to window_start + t, so a map extracted
-// from a slice of one long rip can drive that rip untrimmed. Neither present is
-// a no-op like every other refusal.
+//     <project>/sheet/sheet.map      the map
+//     <project>/sheet/<video>        the video, under its original name
+//
+// THE MAP names the video: its `# src` header carries that basename, the act
+// opens exactly that file from this folder, and a map without the line is
+// refused (the tool writes it on every run). The GUI never writes a byte of
+// either; tools/extract_sheet_map.py is the map's one producer, and the video is
+// whatever the architect downloaded. THE MAP IS THE ONLY PART THAT IS COMMITTED
+// — .gitignore ignores this folder's children and negates `sheet.map` alone, so
+// a fresh clone finds the jump already working while the rip stays local.
+//
+// THE SEEK IS window_start + t, always: map times are window-relative, so four
+// movements' maps address one stable rip by carrying four different windows,
+// and a whole-video map simply carries window 0. THERE IS NO SECOND PATH TO TRY
+// — a `sheet.webm` cut to the window was preferred here with `sheet/src/`
+// behind it until 2026-08-20, and the split retired with the trimming that gave
+// it a reason. A missing video is a no-op like every other refusal.
 
 // One map anchor: a time in the video (SECONDS, relative to the map's window
 // start), the PRINTED measure whose downbeat sits there, and the SECTION that
@@ -93,14 +104,15 @@ struct GuiScoreVideoAnchor {
 // A parsed sheet.map. `ok` false means the act refuses — a missing file and a
 // malformed one are the same answer, deliberately (see the parser's class note
 // in score_video.cpp).
-// THE WHOLE HEADER IS OPTIONAL, and a headerless map is not a defect: the tool
-// writes `# src` / `# window` only for a WINDOWED extraction, a run over a
-// whole video having no source offset to record. An absent `# window` therefore
-// means window_start 0 — which is the truth for such a map, not a fallback —
-// and an absent `# src` simply leaves sheet.webm as the only playable path.
+// `# src` IS REQUIRED and `# window` is not, which follows what each one says:
+// the video's name is the one thing a map cannot do without, while a window is a
+// fact only a SLICE has — a whole-video map carries none, and window_start 0 is
+// then the truth rather than a fallback. `# url` is provenance and is read by
+// nobody. Unknown `#` lines are skipped, the format's forward-compatibility
+// guarantee (stated at the parser).
 struct GuiScoreVideoMap {
-    std::string src;                 // `# src` basename; empty when absent
-    double      window_start = 0.0;  // seconds into the `# src` file
+    std::string src;                 // `# src` basename; never empty when ok
+    double      window_start = 0.0;  // seconds into that video
     std::vector<GuiScoreVideoAnchor> anchors;
     bool        ok = false;
 };

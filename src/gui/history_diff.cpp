@@ -3040,6 +3040,13 @@ GuiHistoryContainment remote_carries(const std::string& repo_root,
 // order (which is what pairs each path with its text). One owner: the act writes
 // them, stages them, commits them and asks `git status` about them, and all four
 // must be talking about the same three files.
+//
+// THE ACT STAGES A FOURTH PATH SINCE 2026-08-20 and this function deliberately
+// does not know about it: `<project>/sheet/sheet.map` is not a SIDECAR — nothing
+// writes it here, it has no text in the now-side, it pairs with no extension,
+// and the pre-flight `git status` probe does not ask about it. It is appended to
+// the ADD and the COMMIT alone, at the act's own site, where its existence
+// check and its scope are stated.
 std::vector<std::string> checkpoint_paths(const std::string& project_directory,
                                           const std::string& base_name) {
     std::vector<std::string> paths;
@@ -3122,9 +3129,11 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // everything else the index holds, so foreign staged work in the repository — a
 // source edit mid-session, anything at all — can never ride along on a
 // checkpoint. The `git add` in front of it exists for one case the pathspec
-// commit cannot cover alone: a sidecar the piece's directory did not previously
+// commit cannot cover alone: a file the piece's directory did not previously
 // carry is UNTRACKED, and a pathspec naming an untracked file is an error rather
-// than an addition.
+// than an addition. That case has TWO instances — a sidecar written into a
+// folder that had none, and, since 2026-08-20, the piece's `sheet/sheet.map` on
+// the checkpoint that first carries it.
 //
 // WHAT REMAINS AFTER A FAILURE. The three files are written first and are NEVER
 // rolled back: a commit that fails leaves them in the working tree — staged, if
@@ -3210,6 +3219,44 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     std::vector<std::string> pathspecs;
     pathspecs.reserve(3);
     for (const std::string& p : paths) pathspecs.push_back(literal_pathspec(p));
+
+    // THE PIECE'S SCORE MAP RIDES THE CHECKPOINT (architect 2026-08-20).
+    // `<project>/sheet/sheet.map` is the one thing under `sheet/` that is
+    // committed — .gitignore ignores that folder's children and negates this one
+    // file — because it is small, hand-verified and unreproducible without the
+    // rip, so a fresh clone must find the score jump already working. The rest of
+    // the tree (the rip, the trimmed clip, the extraction workdir) stays local.
+    //
+    // IT IS SCOPED TO THIS PIECE AND NOTHING WIDER: the path is derived from
+    // `project_directory`, the SOURCE'S OWN parent folder, and it is a
+    // `:(literal)` pathspec like the three sidecars, so a checkpoint still
+    // touches only files inside the folder it is checkpointing. THE WALK'S
+    // `sidecar_glob_pathspecs` IS DELIBERATELY NOT TOUCHED — those three are
+    // MEMBERSHIP ARITHMETIC, the "under projects/, by basename" question the
+    // history walk asks of every commit, and a map is not a sidecar and must not
+    // make a commit eligible for the walk.
+    //
+    // AN ABSENT MAP IS SKIPPED RATHER THAN NAMED, and that is a measured fact
+    // rather than caution: a pathspec matching nothing is an ERROR in BOTH
+    // commands — `git add` exits 128 with "did not match any files", `git commit`
+    // exits 1 with "did not match any file(s) known to git" — so a project with
+    // no map would fail its whole checkpoint on the strength of a file it never
+    // had. Existence is asked once, here, of the working tree; a map that exists
+    // but is UNTRACKED is exactly the case the `add` in front of the commit
+    // already exists for.
+    //
+    // IT JOINS THE ADD AND THE COMMIT AND NOT THE PRE-FLIGHT PROBE, which is the
+    // ruling's own scope and has one consequence worth naming: the Clean arm
+    // still asks only about the three sidecars, so a session whose ONLY change is
+    // a regenerated map reads Clean and reports nothing to commit. The map rides
+    // along whenever the piece itself has something to say, and is committed by
+    // hand otherwise.
+    const std::string map_path = project_directory + "/sheet/sheet.map";
+    std::error_code   map_ec;
+    const bool        have_map = std::filesystem::is_regular_file(
+        std::filesystem::path(repo_root) / map_path, map_ec) && !map_ec;
+    std::vector<std::string> staged = pathspecs;
+    if (have_map) staged.push_back(literal_pathspec(map_path));
 
     auto commit_failed = [](const std::string& why) {
         std::fprintf(stderr, "warptempo_gui: Commit failed: %s\n", why.c_str());
@@ -3321,13 +3368,13 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
     std::string              add_line;
     std::vector<std::string> add_args{"add", "--"};
-    for (const std::string& p : pathspecs) add_args.push_back(p);
+    for (const std::string& p : staged) add_args.push_back(p);
     run_git_mutate(repo_root, add_args,
                    add_line);  // advisory; `add_line` is the diagnostic
 
     std::string              commit_line;
     std::vector<std::string> commit_args{"commit", "-m", title, "--"};
-    for (const std::string& p : pathspecs) commit_args.push_back(p);
+    for (const std::string& p : staged) commit_args.push_back(p);
     if (!run_git_mutate(repo_root, commit_args, commit_line)) {
         std::string why = "git could not commit the checkpoint; the written "
                           "files are still in the working tree";
