@@ -525,18 +525,40 @@ void GuiInputHandler::handle_toggle_trim_region() {
 
 // --- Trim boundary mouse gestures ---------------------------------------
 
+// THE TRIM GESTURES' COLUMN->FRAME LANDING, on the one displayed-grid owner
+// (displayed_grid_position_at_column, warp_frame_map_view.h): trim bounds are
+// AUTHORED data, so this site is inside the determinism ruling that put every
+// column->frame landing on the single-rounding grid — it spelled the banned
+// two-rounding viewport_start + nearbyint(col*q) until 2026-08-22, the last one
+// left after the playhead step, the click placement and both
+// authored_frame_at_column arms.
+//
+// THE COLUMN IS A WAVEFORM COLUMN whatever surface the press came from: `rel` is
+// measured off waveform_area's x and clamped to its width for the 9 px bar's
+// endcaps and bridge exactly as for the waveform overlay's, the bar standing
+// directly over the waveform's own span. So the basis is the WAVEFORM-width
+// painter q — the grid actually drawn, the same input the click placement takes
+// (under the multiple-of-16 effective-width contract it equals the logical spp,
+// but the painted grid is the principled one). `rel` is already a whole column
+// out of an integer mouse_x, so there is no column rounding to do here; the
+// landing's single rounding is the owner's.
+//
+// ACTIVE DOMAIN, NO FORK — the name's promise and the source-domain sibling's
+// contract: consumers that need source frames cross through
+// trim_mouse_x_to_source_frame's inverse map, and the pair drag deliberately
+// keeps its gap in the domain the user sees.
 bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
                                                    int64_t& out_frame) {
     if (audio.total_frames() <= 0) return false;
     const GuiRect area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return false;
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return false;
 
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
-    out_frame = app.viewport_start_sample +
-        static_cast<int64_t>(std::nearbyint(rel * spp));
+    out_frame = static_cast<int64_t>(std::llrint(
+        displayed_grid_position_at_column(app.viewport_start_sample, rel, q)));
     return true;
 }
 

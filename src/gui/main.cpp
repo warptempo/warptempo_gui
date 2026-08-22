@@ -844,7 +844,7 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
 
     // Snap the viewport to a whole-pixel (grid) boundary: every rest viewport is
     // then a true grid point, so the SOURCE-view single-rounding warp-marker commit
-    // (authored_frame_at_column's source branch via source_grid_position_at_column)
+    // (authored_frame_at_column's source branch via displayed_grid_position_at_column)
     // lands EXACTLY on the frame-0 authoring grid, and the waveform rests pixel-
     // aligned. The same painter spp authored_frame_at_column uses, so viewport grid
     // and marker grid are one grid.

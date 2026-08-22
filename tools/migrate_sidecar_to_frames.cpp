@@ -23,7 +23,7 @@
 // GUI's own source-view authoring gestures land on, and match GUI zoom-2
 // authoring EXACTLY (not merely from the file start). The GUI viewport itself
 // is snapped to this grid (clamp_viewport_start / painter_samples_per_pixel),
-// and the source-view commit rounds once (source_grid_position_at_column), so
+// and the source-view commit rounds once (displayed_grid_position_at_column), so
 // under the multiple-of-16 effective-width / standard-rate contract the
 // painter samples-per-pixel equals the logical spp and the recovered-viewport-
 // column basis makes GUI zoom-2 authoring agree with this tool bit-for-bit at

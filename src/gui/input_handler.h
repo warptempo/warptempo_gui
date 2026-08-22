@@ -2592,8 +2592,10 @@ private:
     // mouse_x → active-domain frame: the cursor-column half of
     // trim_mouse_x_to_source_frame, shared with the move-both-bounds drag
     // so the gap is preserved in the domain the user actually sees (active),
-    // not source. Returns false (out untouched) when audio/zoom state is
-    // unusable.
+    // not source. Lands on the one displayed-grid owner like every other
+    // column→frame landing (the basis and the domain rule are at the
+    // definition, input_trim.cpp). Returns false (out untouched) when
+    // audio/zoom state is unusable.
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 

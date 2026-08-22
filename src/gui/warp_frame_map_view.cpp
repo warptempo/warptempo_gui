@@ -224,29 +224,32 @@ int64_t authored_frame_at_column(
     const double spp = painter_samples_per_pixel(app, audio, area);
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
-    const double t_active =
-        static_cast<double>(app.viewport_start_sample) +
-        static_cast<double>(col) * spp;
+    // The column's ACTIVE-DOMAIN time on the single-rounding grid (the
+    // grid-snapped viewport is a true grid point, so the recovered column index
+    // is exact). Both arms below land on it, so a commit is anchored at frame 0
+    // of the domain it was authored in rather than at the current viewport
+    // start.
+    const double g =
+        displayed_grid_position_at_column(app.viewport_start_sample, col, spp);
     if (ctx.domain == GuiDisplayDomain::Source) {
-        // Exact source grid: one rounding via the recovered viewport column
-        // (the grid-snapped viewport is a true grid point), so the stored
-        // frame is the single-rounding grid position nearbyint((m+col)*q)
-        // rather than the two-rounding nearbyint(viewport_start + col*q).
         // snap_authored_frame stays the sole double-to-authored conversion.
-        return snap_authored_frame(
-            source_grid_position_at_column(app.viewport_start_sample, col, spp));
+        return snap_authored_frame(g);
     }
     if (!warp_frame_map.empty()) {
         // Target view: quantize the column's target-domain time to an integer
         // target frame (floored at 0), then inverse-map at full precision; the
         // map is monotone increasing, so the target-domain direction is the
-        // source-domain direction.
-        const double q = (t_active < 0.0)
+        // source-domain direction. That time is the grid position above, so a
+        // phase-reset nudge, drag or sweep commit is viewport-phase-independent
+        // exactly like the source arm's (this arm spelled the two-rounding
+        // viewport_start + nearbyint(col*q) until 2026-08-22 — the source arm
+        // took the single-rounding grid in 2026-07-14 and this one was missed).
+        const double qf = (g < 0.0)
             ? 0.0
-            : static_cast<double>(std::llrint(t_active));
-        return snap_authored_frame(map_target_to_source(q, warp_frame_map));
+            : static_cast<double>(std::llrint(g));
+        return snap_authored_frame(map_target_to_source(qf, warp_frame_map));
     }
-    return snap_authored_frame(t_active);
+    return snap_authored_frame(g);
 }
 
 // The single reader of app.active_audio_view for DOMAIN QUERIES (see

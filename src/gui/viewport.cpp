@@ -311,22 +311,31 @@ void Viewport::clamp_display_state_to_live_domain() {
 
 void Viewport::move_playhead_pixels(int delta_px) {
     if (audio.total_frames() <= 0) return;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
-    // Snap to the grid the renderer draws on: the playhead column is
-    // nearbyint((cursor - viewport_start)/spp). Resolve the current column,
-    // step it by delta_px, then map back to a sample at that column. This
-    // makes one keypress move exactly one pixel even when spp is fractional
-    // (e.g. the 2.4 s zoom), instead of a sub-pixel sample step that can leave
-    // the displayed column unchanged. Finer adjustment is the 1.2 s zoom's job.
-    const double cur_px =
+    const GuiRect area = waveform_area(app);
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return;
+    // Resolve the playhead's CURRENT painted column —
+    // nearbyint((cursor - viewport_start)/q), the painters' own placement — and
+    // land on the ADJACENT grid column's frame through the one column->frame
+    // owner. So one keypress moves exactly one painted pixel even when q is
+    // fractional (a sub-pixel sample step could leave the displayed column
+    // unchanged), AND the landed sample is viewport-phase-independent: it is the
+    // same lattice the click placement and the marker commits land on, so a step
+    // means the same sample whatever pan or zoom preceded it (finer adjustment
+    // is a deeper zoom's job). The spp is the PAINTER-quantized q rather than
+    // the logical one for the same reason the click placement takes it: it is
+    // the grid actually drawn (under the multiple-of-16 width contract the two
+    // agree, but the painted grid is the principled input).
+    // The recovery nearbyint is the column direction and is this walk's own; the
+    // landing is the shared owner's. move_playhead_to still owns the walls, and
+    // a playhead parked off-lattice re-snaps onto it at its first step.
+    const int64_t cur_col = static_cast<int64_t>(std::nearbyint(
         static_cast<double>(app.playhead_cursor_sample - app.viewport_start_sample)
-        / spp;
-    const int64_t cur_col = static_cast<int64_t>(std::nearbyint(cur_px));
+        / q));
     const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
-    const int64_t new_sample = app.viewport_start_sample +
-        static_cast<int64_t>(std::nearbyint(static_cast<double>(target_col) * spp));
-    move_playhead_to(new_sample);
+    move_playhead_to(static_cast<int64_t>(std::llrint(
+        displayed_grid_position_at_column(app.viewport_start_sample,
+                                          target_col, q))));
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper

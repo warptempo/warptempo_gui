@@ -645,23 +645,25 @@ bool point_on_nav_surface(const AppState& app, const GuiAudio& audio,
     return hit_test_flag(app, audio, x, y) < 0;
 }
 
-// Active-domain playhead frame at click column `col`. SOURCE view: the exact
-// source grid (source_grid_position_at_column via painter q), matching marker
-// commits so a drop-at-playhead lands where a drag/nudge would. TARGET view:
-// the domain spp form — the source-frame commit routes through the inverse map,
-// so there is no source-grid claim there.
+// Active-domain playhead frame at click column `col`: the single-rounding
+// display grid (displayed_grid_position_at_column via painter q) in BOTH views,
+// so a click, a 1px step and the marker commits agree on ONE lattice per view
+// and a drop-at-playhead lands where a drag or a nudge would. The target branch
+// used to take the domain-spp form on the reasoning that the source-frame commit
+// routes through the inverse map and so carried no source-grid claim; the
+// target-domain lattice is an authoring lattice in its own right (the
+// phase-reset drop commits the playhead's sample, and authored_frame_at_column's
+// target arm rides this same grid), and an unanchored landing relabels by a
+// frame across a pan or a zoom round trip.
+// The fallback covers degenerate geometry only (no strip width / no zoom), where
+// there is no painted grid to land on.
 int64_t playhead_frame_at_click_column(const AppState& app,
                                        const GuiAudio& audio, int col) {
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
-    if (ctx.domain == GuiDisplayDomain::Source) {
-        const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
-        if (q > 0.0)
-            return static_cast<int64_t>(std::nearbyint(
-                source_grid_position_at_column(app.viewport_start_sample, col, q)));
-    }
-    const double spp = current_samples_per_pixel(app, audio);
-    return app.viewport_start_sample +
-        static_cast<int64_t>(std::nearbyint(static_cast<double>(col) * spp));
+    const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
+    if (q > 0.0)
+        return static_cast<int64_t>(std::llrint(
+            displayed_grid_position_at_column(app.viewport_start_sample, col, q)));
+    return app.viewport_start_sample;
 }
 
 // The active editor's resolved text geometry, valid only while exactly one

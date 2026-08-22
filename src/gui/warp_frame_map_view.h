@@ -182,17 +182,38 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
         static_cast<int64_t>(std::nearbyint(spp * static_cast<double>(w)));
 }
 
-// The exact source-grid position at pixel column `col` for a grid-snapped
-// viewport: recover the viewport's column index m = nearbyint(viewport_start/q)
-// and round once. Returns the double (m+col)*q; a marker commit funnels this
-// through snap_authored_frame, the click-playhead nearbyints it (a view
-// position, not an authored one). Caller supplies q>0 (painter spp). SOURCE
-// view only. m recovery is exact for product-reachable audio lengths: at the
-// deepest numeric zoom q >= ~27.5 frames/px and a source length fits well within
-// the double mantissa, so |viewport_start/q - m| << 0.5; it is NOT claimed exact
-// over the whole int64 range.
-inline double source_grid_position_at_column(int64_t viewport_start,
-                                             int col, double q) {
+// THE ONE COLUMN->FRAME LANDING for a grid-snapped viewport: the exact
+// DISPLAY-DOMAIN grid position at pixel column `col`. Recover the viewport's
+// column index m = nearbyint(viewport_start/q), round ONCE, and return the
+// double (m+col)*q. A marker commit funnels this through snap_authored_frame;
+// the playhead landings llrint/nearbyint it. Caller supplies q>0 (painter spp)
+// and a `viewport_start` in the SAME domain as `q` — the arithmetic is
+// domain-blind, so source view and target view both land through it, each in
+// its own active display domain.
+//
+// SINGLE ROUNDING, AND THE TWO-ROUNDING SIBLING IS BANNED: the form
+// viewport_start + nearbyint(col*q) rounds twice (once into the viewport start,
+// once into the column offset), each with its own independent half-frame error,
+// so its landings are anchored to the CURRENT viewport start rather than to
+// frame 0 — a pan or a zoom round trip back to the same level relabels the same
+// painted column by +/-1 frame. This form is anchored at frame 0 of the
+// displayed domain and is viewport-phase-independent, so a landing means the
+// same sample whatever the camera did on the way there. That matters past
+// display: both drop-at-playhead routes commit the playhead's sample into
+// authored data, so the playhead lattice is an authoring lattice too.
+//
+// The choice is invisible in paint: both forms sit within one frame of the
+// ideal grid point (m+col)*q, and one frame is at most ~1/27.5 px at the
+// deepest numeric zoom — far under the half-pixel paint-rounding threshold — so
+// a landing paints at column `col` either way.
+//
+// m recovery is exact for product-reachable audio lengths: at the deepest
+// numeric zoom q >= ~27.5 frames/px and a source length fits well within the
+// double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
+// is at most 4x the source's under the [25, 400] cent bracket, so the mantissa
+// argument holds there too. It is NOT claimed exact over the whole int64 range.
+inline double displayed_grid_position_at_column(int64_t viewport_start,
+                                                int64_t col, double q) {
     const double m = std::nearbyint(static_cast<double>(viewport_start) / q);
     return (m + static_cast<double>(col)) * q;
 }
@@ -213,9 +234,7 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // playhead_pixel_x / scanner_pixel_x (main.cpp) and the strip drag's fractional
 // anchor_col want the SUB-PIXEL position, not a column, and the flag painter
 // (iterate_visible_flags_impl, render.cpp) keeps its nearbyint in the double
-// pixel domain (its left_x feeds shaped-text placement, never an int). The
-// viewport's own column walk (move_playhead_pixels) also stays: it works in an
-// int64 column domain with the subtraction fused in int64.
+// pixel domain (its left_x feeds shaped-text placement, never an int).
 inline int displayed_column_at(double displayed, double vp_start, double spp) {
     return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
 }
@@ -277,8 +296,9 @@ int painted_column_of_source_frame_on_basis(
     double vp_start, double spp);
 
 // authored_frame_at_column: the authored source-frame value of pixel
-// column `col` under the same coordinate system — active-domain time =
-// viewport start + col * the painters' samples-per-pixel; in the
+// column `col` under the same coordinate system — the active-domain time is
+// displayed_grid_position_at_column above (the single-rounding grid at the
+// painters' samples-per-pixel), in EVERY domain; in the
 // TargetLive domain that time is quantized to an integer target frame
 // (llrint, floored at 0 — the same quantization the target-view nudges
 // have always applied) and inverse-mapped through `warp_frame_map` at full
