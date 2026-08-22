@@ -2754,8 +2754,10 @@ void render_phase_reset_flags(cairo_t* cr,
 // has no then side to restore). The act reconstitutes the sidecar LINE from them
 // and hands it to the frozen parser, so the value travels as text the loader
 // itself judges and no second grammar is written anywhere
-// (GuiInputHandler::run_history_revert). Phase resets carry no token — frame plus
-// the bit IS their whole line — so the field stays empty on that column.
+// (GuiInputHandler::run_history_revert). Phase resets carry no token — their
+// line is frame plus the disable bit plus an optional measure suffix, and the
+// then-side measure rides its own `then_measure` field below rather than this
+// one — so `then_token` stays empty on that column.
 //
 // THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
 // 2026-08-22, deepened the same day it landed: the axis shipped reading each

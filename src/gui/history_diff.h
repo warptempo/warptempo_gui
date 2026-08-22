@@ -271,10 +271,12 @@ struct GuiHistoryPhaseResetEntry {
 };
 
 // A phase reset line present at the same frame on both sides with a different
-// disable prefix. THE COLUMNS ARE SYMMETRIC HERE: the phase reset line's
-// payload is frame PLUS the disable bit, not the frame alone, so `100` ->
-// `#100` is a genuine same-frame change exactly as a warp tempo edit is, and
-// it pairs the same way rather than reading as an unrelated remove and add.
+// disable prefix or a different measure. THE COLUMNS ARE SYMMETRIC HERE: the
+// phase reset line's payload is frame PLUS the disable bit PLUS an optional
+// measure, not the frame alone, so `100` -> `#100` or `100 //12` -> `100
+// //13` is each a genuine same-frame change exactly as a warp tempo edit is,
+// and it pairs the same way rather than reading as an unrelated remove and
+// add.
 struct GuiHistoryPhaseResetChange {
     int64_t frame         = 0;
     bool    then_disabled = false;
