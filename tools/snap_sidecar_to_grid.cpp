@@ -28,9 +28,12 @@
 // anything is read or snapped — rate_has_canonical_lattice carries the whole
 // reasoning, including the short-source boundary the tools cannot detect.
 //
-// STRICT PARSE FIRST, THROUGH THE PRODUCT PARSER. The file must load exactly as
-// the GUI and the CLI would load it; anything else refuses with the parser's own
-// line-tagged diagnostic. That is also what refuses an UN-MIGRATED file cleanly:
+// STRICT PARSE FIRST, THROUGH THE PRODUCT PARSER, OVER THE ONE CAPTURED READ
+// (the parse and the rewrite share a single version of the input — the whole
+// mechanism and what it does and does not close is at CapturedCopy below). The
+// file must load exactly as the GUI and the CLI would load it; anything else
+// refuses with the parser's own line-tagged diagnostic. That is also what
+// refuses an UN-MIGRATED file cleanly:
 // a legacy MM:SS.mmm position is not a canonical frame position and never
 // reaches the snap. The rewrite that follows is TEXTUAL and replaces only each
 // changed line's leading [#]<digits> token — the warp payload, the ` //<measure>`
@@ -70,9 +73,15 @@
 #include "../src/parser/phaseresetmarkers_parse.h"
 #include "../src/parser/warpmarkers_parse.h"
 
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
+#include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
+#include <system_error>
+#include <unistd.h>
 #include <vector>
 
 namespace {
@@ -126,6 +135,110 @@ void report(const std::vector<Snapped>& snapped, size_t total_markers) {
         std::cout << changed << " of " << total_markers
                   << " markers changed\n";
     }
+}
+
+// ONE CAPTURED READ, ONE TRUTH. The snap's two halves — the product parse that
+// yields the positions and the verdict, and the textual rewrite that copies
+// every unchanged byte through — must see the SAME version of the subject, or a
+// run can publish a hybrid: positions computed from one version, payload,
+// measure suffix and terminators copied from another, and the published bytes
+// never validated as a whole by any parse. The product parsers take a PATH and
+// no string overload may be added to them (src/parser is frozen), so the
+// captured bytes are laid down in a private file here and THAT is what the
+// parser reads. The file is created by mkstemp — named and created in one step
+// at mode 0600, so no other process can occupy or read the name — and the
+// destructor unlinks it, which is what carries it off EVERY exit path from
+// main, refusals included.
+//
+// WHAT THIS DOES NOT CLOSE, recorded rather than defended against: a concurrent
+// edit landing between the capture and the backup rename LOSES — that edit ends
+// up in '<path>.bak' and the capture-derived output publishes over it. That is
+// the ordinary lost update of a one-shot single-user tool, and the backup makes
+// it recoverable. The hazard actually closed is the hybrid or unvalidated
+// publish, which the backup does not make recoverable at all: it leaves an
+// active sidecar that is semantically wrong and looks snapped.
+class CapturedCopy {
+public:
+    CapturedCopy() = default;
+    CapturedCopy(const CapturedCopy&)            = delete;
+    CapturedCopy& operator=(const CapturedCopy&) = delete;
+    ~CapturedCopy() {
+        if (!path_.empty()) ::unlink(path_.c_str());
+    }
+
+    // Lay `data` down in a fresh private file. On success `path()` names it; on
+    // failure the file, if it was created at all, is already recorded for the
+    // destructor to remove.
+    std::optional<sidecar_snap::SidecarIoError> create(const std::string& data) {
+        std::error_code ec;
+        const std::filesystem::path dir =
+            std::filesystem::temp_directory_path(ec);
+        if (ec) {
+            return sidecar_snap::SidecarIoError{
+                "Capture", "cannot locate a temporary directory: " +
+                               ec.message()};
+        }
+        // mkstemp replaces the six X's in place, so it needs a writable buffer.
+        // The template carries the program name, and mkstemp's own uniqueness is
+        // what keeps repeat runs — concurrent ones included — off each other's
+        // file.
+        std::string tmpl = (dir / "snap_sidecar_to_grid.XXXXXX").string();
+        std::vector<char> buf(tmpl.begin(), tmpl.end());
+        buf.push_back('\0');
+        const int fd = ::mkstemp(buf.data());
+        if (fd < 0) {
+            return sidecar_snap::SidecarIoError{
+                "Capture", std::string("cannot create a temporary file: ") +
+                               std::strerror(errno)};
+        }
+        // Recorded BEFORE the first way out below, so no failure arm can leak
+        // the file the destructor is meant to remove.
+        path_.assign(buf.data());
+        const char* p    = data.data();
+        size_t      left = data.size();
+        while (left > 0) {
+            const ssize_t n = ::write(fd, p, left);
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                const std::string detail = std::strerror(errno);
+                ::close(fd);
+                return sidecar_snap::SidecarIoError{
+                    "Capture", "cannot write the temporary copy: " + detail};
+            }
+            p += n;
+            left -= static_cast<size_t>(n);
+        }
+        // The close is checked because it is where a deferred write error
+        // surfaces, and a short or torn copy would parse as a different file
+        // than the one the rewrite edits.
+        if (::close(fd) != 0) {
+            return sidecar_snap::SidecarIoError{
+                "Capture", std::string("cannot close the temporary copy: ") +
+                               std::strerror(errno)};
+        }
+        return std::nullopt;
+    }
+
+    const std::string& path() const { return path_; }
+
+private:
+    std::string path_;
+};
+
+// The parser's own diagnostic, respelled for the caller. Two of its arms
+// ("cannot open file: ", "read error in file: ") embed the path they were
+// handed, which here is the private copy — an implementation detail that would
+// read as nonsense beside the subject path the diagnostic line names. Every
+// other arm is line-tagged and passes through untouched.
+std::string subject_spelling(const std::string& detail,
+                             const std::string& temp_path,
+                             const std::string& subject_path) {
+    std::string out = detail;
+    for (size_t at = out.find(temp_path); at != std::string::npos;
+         at = out.find(temp_path, at + subject_path.size())) {
+        out.replace(at, temp_path.size(), subject_path);
+    }
+    return out;
 }
 
 }  // namespace
@@ -196,22 +309,33 @@ int main(int argc, char** argv) {
     std::vector<sidecar_snap::Line> lines =
         sidecar_snap::split_lines(*data);
 
+    // The captured bytes, in a private file the product parser can be pointed
+    // at, so the parse and the rewrite below share ONE version of the input
+    // (the whole reasoning is at CapturedCopy). It lives until main returns.
+    CapturedCopy captured;
+    if (auto err = captured.create(*data)) {
+        diag(err->action, path, err->detail);
+        return 1;
+    }
+
     // The STRICT product parse: the file must load exactly as both binaries
     // would load it. This is also the un-migrated refusal — a legacy timestamp
     // is not a canonical frame position — and the source of the positions the
     // snap works from.
     std::vector<int64_t> positions;
     if (kind == Kind::Warp) {
-        auto markers = parse_warpmarkers_file(path);
+        auto markers = parse_warpmarkers_file(captured.path());
         if (!markers) {
-            diag("Parse", path, markers.error());
+            diag("Parse", path,
+                 subject_spelling(markers.error(), captured.path(), path));
             return 1;
         }
         for (const WarpMarker& m : *markers) positions.push_back(m.time_frame);
     } else {
-        auto resets = parse_phaseresetmarkers_file(path);
+        auto resets = parse_phaseresetmarkers_file(captured.path());
         if (!resets) {
-            diag("Parse", path, resets.error());
+            diag("Parse", path,
+                 subject_spelling(resets.error(), captured.path(), path));
             return 1;
         }
         for (const PhaseResetMarker& m : *resets)
@@ -222,9 +346,9 @@ int main(int argc, char** argv) {
     // is not a marker (a blank line included), so marker i IS line i. The
     // compare is a tripwire on that equivalence, not a recovery path: if it
     // ever fired, the textual rewrite below would be writing positions onto the
-    // wrong lines. It is also the only thing standing between this tool and a
-    // file rewritten between the two reads — the product parsers take a PATH,
-    // so the bytes above and the markers here come from two opens.
+    // wrong lines. Both sides now come from the same captured bytes, so what it
+    // guards is this tool's own internal consistency — split_lines against the
+    // parsers' getline walk — and no longer any cross-open disagreement.
     if (positions.size() != lines.size()) {
         diag("Snap", path,
              "internal line/marker mismatch (" +
