@@ -372,13 +372,16 @@ struct DragState {
     // target_view_warp_frame_map_cached) when cold. The displayed map is
     // frozen FROM THE AIMED PRESS to the release (displayed_basis_frozen, the
     // membership's one owner — the pending press joined 2026-08-22, since the
-    // crossing converts the press's stored press_x) by TWO halves working
+    // crossing converts the press's stored press_x) by THREE gates working
     // together: the
     // freeze gate in maybe_enqueue_waveform_render suppresses any NEW
-    // dispatch, and on_waveform_render_done DROPS a job that was already in
+    // dispatch, on_waveform_render_done DROPS a job that was already in
     // flight (or parked in the supersede slot) at that press instead of
     // publishing
-    // its map — so neither an in-flight nor a fresh render can swap the basis
+    // its map, and the frame paint's promote block (GuiPaintHandler::on_redraw)
+    // DEFERS a pair staged before the press instead of publishing it under the
+    // aim — so neither an in-flight render, nor a fresh one, nor a stage that
+    // beat the press to its frame callback can swap the basis
     // out from under a stationary pointer, before the crossing or after it. The live cache is keyed on the
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
@@ -3641,6 +3644,29 @@ struct AppState {
     // staged CLEAR (empty map, source view) from no-stage.
     std::vector<WarpFrameMapSegment> staged_displayed_target_warp_frame_map;
     bool staged_displayed_valid = false;
+
+    // THE DEFERRED PROMOTE'S REPAIR DAMAGE (2026-08-22, with the promote's own
+    // freeze gate in GuiPaintHandler::on_redraw). A frame that finds a staged
+    // basis while displayed_basis_frozen holds does NOT promote — the staged
+    // pair waits for the gesture to end — and sets this bit. The bit is a
+    // DAMAGE REQUEST, not basis state: the stage sites each queued the full
+    // strip+waveform rect when they staged, and the frames painted INSIDE the
+    // freeze consume that damage while painting the OLD promoted epoch, so
+    // nothing is left to repaint the item-basis surfaces (the trim bar's
+    // bar/endcaps, the flag editor's box) at the epoch the promote finally
+    // publishes — a frame carrying only narrow scanner damage could otherwise
+    // promote and leave those pixels one epoch behind their own hit geometry.
+    // maybe_rebuild_flag_cache (waveform_cache.cpp, the stage owner) is the ONE
+    // consumer: at the first tick with the freeze lifted it clears the bit and
+    // queues that same full rect, which BOTH guarantees a frame happens at all
+    // (a motionless pending's lift can end the freeze with no damage of its
+    // own, and a staged basis may never sit unpromoted with no frame scheduled)
+    // and guarantees that frame repaints every item-basis surface. Because it
+    // only ever asks for a repaint, it needs no clear site: honoring a stale
+    // request costs one full-area frame and nothing else, which is why the
+    // basis clear sites (view toggle, source load, `'` load-in-place) leave it
+    // alone.
+    bool deferred_basis_repaint_due = false;
 
     // (THE PROMOTION COUNTER IS GONE — displayed_map_gen, a monotonic long long
     // bumped once per top-of-frame promotion, deleted 2026-08-02. Its
@@ -8585,8 +8611,9 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // placements (the sweep's endpoints included) and the post-commit
 // land/follow placements — while walls stay integer source frames outside
 // either basis; pointer-hit-testing.md is the AUTHORITATIVE inventory of
-// both sides and of the two-half worker freeze (dispatch + completion drop,
-// gated by displayed_basis_frozen below) that keeps this map from swapping
+// both sides and of the THREE-GATE freeze (worker dispatch + completion drop
+// + the frame paint's staged promote, all gated by displayed_basis_frozen
+// below) that keeps this map from swapping
 // between a gesture's aimed press and its release.
 // Synchronizing by TIME (a delay) was rejected — the true lag varies through
 // zero with worker load and refresh rate, so any constant would invert the skew
@@ -8604,7 +8631,13 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // dispatch AND its publication (maybe_enqueue_waveform_render /
 // on_waveform_render_done, waveform_cache.cpp — both gates route through here
 // and neither restates a member; the WHY of freezing is theirs, the WHO is
-// this predicate's). A state belongs iff it is an ABSOLUTE drag on a PAINTED
+// this predicate's) AND, since later the same day, which frames may PROMOTE a
+// staged displayed basis (GuiPaintHandler::on_redraw's promote block, the
+// THIRD consumer): gating the worker alone left the already-STAGED pair to
+// promote at the first frame after the aimed press, which recreated the very
+// epoch split the completion drop closes, so the promote DEFERS while this
+// holds and the first unfrozen frame publishes it. A state belongs iff it is
+// an ABSOLUTE drag on a PAINTED
 // subject — the marker drag and the trim drags — or the PENDING PRESS that
 // AIMS one (pending_marker_press, pending_trim_drag). THE FREEZE STARTS AT
 // THE AIMED PRESS, not at the 8px crossing: the crossing CONVERTS the press's

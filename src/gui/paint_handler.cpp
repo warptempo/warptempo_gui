@@ -5946,7 +5946,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // rebuild left, once — staged_displayed_valid clears on the first damage rect
     // of the frame, so the remaining rects are no-ops; idle frames with no staged
     // value do nothing. A rebuild always invalidates its item region, so the
-    // committing frame's damage always includes the items. No input dispatches
+    // committing frame's damage always includes the items — TRUE OF EVERY
+    // PROMPT PROMOTE, and repaired rather than assumed for the DEFERRED one
+    // below, whose committing frame is some later frame with damage of its own
+    // (deferred_basis_repaint_due, app_state.h). No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged.
@@ -5957,7 +5960,61 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // displayed_map_gen counter that outlived it as a bare record went too
     // (2026-08-02, write-only). The overlays below simply read the promoted
     // basis. A future subscriber hangs its key here, on this block.
-    if (app.staged_displayed_valid) {
+    //
+    // THE PROMOTE ITSELF IS INSIDE THE DISPLAYED-BASIS FREEZE (2026-08-22, the
+    // THIRD consumer of displayed_basis_frozen — membership at the predicate,
+    // app_state.h, not restated here). THE ORDERING THIS CLOSES: an item
+    // rebuild stages a NEW {map, viewport} pair and queues its damage in one
+    // loop iteration; before the compositor returns the scheduled frame
+    // callback a pointer press arrives and arms pending_marker_press /
+    // pending_trim_drag; the frame callback then runs this block and would
+    // promote the new pair UNDER THE AIM — the press decided its subject and
+    // stored its press_x against the OLD promoted basis, and the 8px crossing
+    // would convert that stored column through the NEW one, which is exactly
+    // the press-to-crossing epoch split the worker's dispatch freeze and
+    // completion drop exist to prevent (they cover a job dispatched or
+    // completing inside the freeze; they cannot reach a pair already staged
+    // before the press). It is reachable: a frame callback and a pointer event
+    // can arrive in one Wayland batch in pointer-before-frame order, so "no
+    // input dispatches mid-paint" does not exclude it.
+    //
+    // SO THE PROMOTE DEFERS, IT DOES NOT DROP — the contrast with the
+    // completion drop is the point. The drop DISCARDS a finished render because
+    // the next unfrozen dispatch re-derives it from the store; the staged pair
+    // here is already-done, still-current work with no producer left to re-run
+    // it, so only its VISIBILITY waits: it sits staged, every frame through the
+    // gesture paints the previously promoted epoch (so paint and hit stay on
+    // the one basis the press was aimed in), and the first frame after the
+    // freeze lifts promotes it normally.
+    //
+    // THE DEFERRAL'S ONE ACCEPTED SEAM: the staged pair's PIXELS are already
+    // published (the plate blit and the flag cache's own surface are the
+    // rebuild's, not this block's), so through the deferral window those two
+    // layers show the newer epoch while the basis-derived surfaces — the live
+    // trim pass, the flag editor's box — and every hit test keep the older one.
+    // The window is at most the ONE stage that beat the press to the frame
+    // callback, it can only open on an UNDRIVEN basis change (a worker publish
+    // or a sync rebuild landing in that sub-frame gap), and it closes at the
+    // gesture's end. That is strictly the drag-freeze reading the completion
+    // drop already established — a gesture works in the epoch it was aimed in —
+    // extended to the staged edge; the alternative, promoting, moves the
+    // gesture's own anchor and produces a wrong first delta.
+    // THE DEFER IS WHOLE-PAIR BY CONSTRUCTION: map and viewport promote in the
+    // one block below, so gating the block defers both or neither — there is no
+    // half-promoted basis for a hit test to read, and every reader (the two
+    // basis accessors in app_state.h) keeps naming the same old pair for the
+    // whole window.
+    if (app.staged_displayed_valid && displayed_basis_frozen(app)) {
+        // The stage site's damage is being consumed by frames that paint the
+        // OLD epoch, so the eventual promote owes the item-basis surfaces a
+        // repaint that no queued rect covers any more. Record it; the stage
+        // owner's tick honors it once the freeze lifts (contract at the field).
+        // Damage cannot be declared from inside a paint pass (the hazard is
+        // stated at GuiPlatform::paint_one_frame's loop), which is the other
+        // half of why the repair is a recorded bit rather than an invalidate
+        // here.
+        app.deferred_basis_repaint_due = true;
+    } else if (app.staged_displayed_valid) {
         app.displayed_target_warp_frame_map =
             std::move(app.staged_displayed_target_warp_frame_map);
         app.staged_displayed_target_warp_frame_map.clear();

@@ -896,6 +896,40 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
 }
 
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
+    // THE DEFERRED PROMOTE'S REPAIR (2026-08-22), the ONE consumer of
+    // deferred_basis_repaint_due — the bit on_redraw sets when it finds a
+    // staged basis while the displayed-basis freeze holds and leaves the pair
+    // staged (the reasoning is that block's; the bit's contract is at its
+    // declaration, app_state.h). Two things are owed once the freeze lifts and
+    // NEITHER is owed by anyone else:
+    //   A FRAME AT ALL. The stage's own damage was consumed by frames painted
+    //   inside the freeze, and a gesture can end with no damage of its own — a
+    //   motionless pending_marker_press lift acts nothing (its act ran at the
+    //   press) — so without this the staged pair could sit unpromoted with no
+    //   frame scheduled and the hit basis would stay an epoch behind the pixels
+    //   indefinitely. invalidate_region schedules the callback when none is
+    //   pending, so asking for the rect IS asking for the frame.
+    //   THE ITEM REGION IN THAT FRAME. The promoting frame is now some later
+    //   frame carrying its own damage, which may be narrow (a scanner advance),
+    //   and a narrow frame that promotes leaves the item-basis surfaces — the
+    //   trim bar's bar and endcaps, the flag editor's box — painted at the old
+    //   epoch with no rect left to repair them. The rect below is the same full
+    //   strip+waveform rect every stage site queues, so the frame that promotes
+    //   (or, if a narrow frame promoted first, the frame right after it)
+    //   repaints all of them on the promoted basis.
+    // HERE rather than at an un-freeze edge because the edges are many (two
+    // drag releases, two pending disarms, the force-end finalizer) and this
+    // function is the STAGE OWNER, run unbidden every tick by on_tick — one
+    // site, no inventory to rot. It sits above the early returns below: those
+    // are "no flags to build" states, not reasons to withhold a repaint that a
+    // gesture has already earned.
+    if (app.deferred_basis_repaint_due && !displayed_basis_frozen(app)) {
+        app.deferred_basis_repaint_due = false;
+        const GuiRect wave_repair = waveform_area(app);
+        gui.invalidate_region(0, 0, app.width,
+                              wave_repair.y + wave_repair.h);
+    }
+
     if (app.loading || audio.total_frames() <= 0) return;
 
     // No live waveform yet → no flags. Until wf_cache.fp_rendered comes up
