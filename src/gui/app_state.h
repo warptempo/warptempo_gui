@@ -3661,11 +3661,23 @@ struct AppState {
     // queues that same full rect, which BOTH guarantees a frame happens at all
     // (a motionless pending's lift can end the freeze with no damage of its
     // own, and a staged basis may never sit unpromoted with no frame scheduled)
-    // and guarantees that frame repaints every item-basis surface. Because it
-    // only ever asks for a repaint, it needs no clear site: honoring a stale
-    // request costs one full-area frame and nothing else, which is why the
-    // basis clear sites (view toggle, source load, `'` load-in-place) leave it
-    // alone.
+    // and guarantees that frame repaints every item-basis surface.
+    // THE BIT IS ALSO A GATE, WHICH IS WHY THE HONOR'S CLEAR IS LOAD-BEARING
+    // (2026-08-22, the same day's verification round). on_redraw's promote
+    // consults it as well as the freeze and DEFERS while it stands, because a
+    // basis may not promote onto pixels the frame did not repaint: the freeze
+    // lifting is not the same instant as the debt being repaid, and in between
+    // an ordinary narrow frame (a playback scanner advance) would otherwise
+    // promote — the block at on_redraw carries that sequence. So the honor
+    // clears the bit AS it queues the rect, making the frame it schedules the
+    // first promote-eligible one; clearing any earlier (at the set, or at an
+    // un-freeze edge) would let frames still painting the old epoch eat the
+    // repair damage and reopen the hole. That gives the bit ONE lifecycle,
+    // set→honored, with no other writer: the basis clear sites (view toggle,
+    // source load, `'` load-in-place) still leave it alone, and honoring a
+    // request whose staged pair those sites already dropped costs one
+    // full-area frame and one deferred promote — both harmless, and the debt is
+    // gone by the next tick either way.
     bool deferred_basis_repaint_due = false;
 
     // (THE PROMOTION COUNTER IS GONE — displayed_map_gen, a monotonic long long
@@ -8613,7 +8625,8 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // either basis; pointer-hit-testing.md is the AUTHORITATIVE inventory of
 // both sides and of the THREE-GATE freeze (worker dispatch + completion drop
 // + the frame paint's staged promote, all gated by displayed_basis_frozen
-// below) that keeps this map from swapping
+// below, the promote additionally by its own outstanding repair debt) that
+// keeps this map from swapping
 // between a gesture's aimed press and its release.
 // Synchronizing by TIME (a delay) was rejected — the true lag varies through
 // zero with worker load and refresh rate, so any constant would invert the skew
@@ -8636,7 +8649,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // THIRD consumer): gating the worker alone left the already-STAGED pair to
 // promote at the first frame after the aimed press, which recreated the very
 // epoch split the completion drop closes, so the promote DEFERS while this
-// holds and the first unfrozen frame publishes it. A state belongs iff it is
+// holds. The promote is the one consumer with a SECOND condition beside this
+// predicate — deferred_basis_repaint_due, the repair the deferral owes — so it
+// publishes not at the first unfrozen frame but at the first unfrozen frame
+// that carries the repaired damage (both conditions at that block). A state
+// belongs iff it is
 // an ABSOLUTE drag on a PAINTED
 // subject — the marker drag and the trim drags — or the PENDING PRESS that
 // AIMS one (pending_marker_press, pending_trim_drag). THE FREEZE STARTS AT

@@ -909,20 +909,39 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   frame scheduled and the hit basis would stay an epoch behind the pixels
     //   indefinitely. invalidate_region schedules the callback when none is
     //   pending, so asking for the rect IS asking for the frame.
-    //   THE ITEM REGION IN THAT FRAME. The promoting frame is now some later
-    //   frame carrying its own damage, which may be narrow (a scanner advance),
-    //   and a narrow frame that promotes leaves the item-basis surfaces — the
+    //   THE ITEM REGION IN THAT FRAME. The promoting frame is some later frame
+    //   carrying its own damage, which may be narrow (a scanner advance), and a
+    //   narrow frame that promoted would leave the item-basis surfaces — the
     //   trim bar's bar and endcaps, the flag editor's box — painted at the old
-    //   epoch with no rect left to repair them. The rect below is the same full
-    //   strip+waveform rect every stage site queues, so the frame that promotes
-    //   (or, if a narrow frame promoted first, the frame right after it)
-    //   repaints all of them on the promoted basis.
+    //   epoch with no rect left to repair them. So the promote gate READS this
+    //   bit too and defers while it stands, and the clear below is what makes
+    //   the frame this honor schedules the FIRST promote-eligible one. The rect
+    //   is the same full strip+waveform rect every stage site queues, and it
+    //   goes into the global damage list and both shm buffers' pending lists
+    //   (invalidate_region), so whatever frame comes next carries it in its
+    //   damage union — an interleaved narrow request coalesces INTO it rather
+    //   than racing it, and the frame that promotes repaints every item-basis
+    //   surface on the promoted basis.
+    // THE CLEAR BELONGS HERE, ON THE UNFROZEN HONOR, AND NOWHERE EARLIER:
+    // clearing while the freeze still held would let the remaining frozen
+    // frames — which paint the OLD epoch — consume the repair damage before any
+    // frame was allowed to promote, and the narrow-promote hole would simply
+    // reopen one window later with no bit left to block it. Clearing at the
+    // honor makes set→honored the bit's WHOLE lifecycle: on_redraw sets it,
+    // this is the one clear, and the frame the clear schedules both promotes
+    // and repaints.
     // HERE rather than at an un-freeze edge because the edges are many (two
     // drag releases, two pending disarms, the force-end finalizer) and this
     // function is the STAGE OWNER, run unbidden every tick by on_tick — one
-    // site, no inventory to rot. It sits above the early returns below: those
-    // are "no flags to build" states, not reasons to withhold a repaint that a
-    // gesture has already earned.
+    // site, no inventory to rot. The tick is a free-running interval timerfd
+    // armed for the process's life, and on_tick reaches this call past every
+    // state (paused, editor-modal, `h` view), so a debt cannot be starved. It
+    // sits above the early returns below: those are "no flags to build" states,
+    // not reasons to withhold a repaint that a gesture has already earned — and
+    // above the rebuild/stage below, so a stage landing in the same call (the
+    // worker-publish path calls this function inline) overwrites the deferred
+    // slot with a NEWER pair only after the debt for the older one is already
+    // scheduled; the one full rect covers whichever pair finally promotes.
     if (app.deferred_basis_repaint_due && !displayed_basis_frozen(app)) {
         app.deferred_basis_repaint_due = false;
         const GuiRect wave_repair = waveform_area(app);

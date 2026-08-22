@@ -5948,8 +5948,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // value do nothing. A rebuild always invalidates its item region, so the
     // committing frame's damage always includes the items — TRUE OF EVERY
     // PROMPT PROMOTE, and repaired rather than assumed for the DEFERRED one
-    // below, whose committing frame is some later frame with damage of its own
-    // (deferred_basis_repaint_due, app_state.h). No input dispatches
+    // below, whose committing frame is some later frame: the deferral records
+    // the owed rect on deferred_basis_repaint_due (app_state.h) and the promote
+    // is BLOCKED until that bit is honored, so the committing frame is by
+    // construction one carrying the full strip+waveform rect. No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged.
@@ -5985,7 +5987,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // it, so only its VISIBILITY waits: it sits staged, every frame through the
     // gesture paints the previously promoted epoch (so paint and hit stay on
     // the one basis the press was aimed in), and the first frame after the
-    // freeze lifts promotes it normally.
+    // freeze lifts AND the repair debt is honored promotes it normally.
     //
     // THE DEFERRAL'S ONE ACCEPTED SEAM: the staged pair's PIXELS are already
     // published (the plate blit and the flag cache's own surface are the
@@ -6004,15 +6006,40 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // half-promoted basis for a hit test to read, and every reader (the two
     // basis accessors in app_state.h) keeps naming the same old pair for the
     // whole window.
-    if (app.staged_displayed_valid && displayed_basis_frozen(app)) {
+    //
+    // AND THE PROMOTE WAITS FOR THE DEBT TOO (2026-08-22, the same day's final
+    // verification round): the deferral OWES a full strip+waveform repaint (the
+    // bit set below), and a basis may not promote onto pixels the frame did not
+    // repaint. So the promote's condition is the freeze AND the outstanding
+    // debt — a standing debt defers exactly like a standing freeze. Without the
+    // second condition the hole reopens the instant the gesture ends: a staged
+    // pair defers under a motionless pending; playback's scanner frames consume
+    // the stage's original full-rect damage out of BOTH shm buffers; the
+    // motionless lift disarms the pending and damages nothing (its act ran at
+    // the press); a frame callback already queued then runs BEFORE the timerfd
+    // tick — the display fd is dispatched ahead of the timer in the run loop —
+    // and, the freeze now being false, that scanner-narrow frame promotes. The
+    // trim bar and the flag editor's box would still show the old epoch while
+    // item_viewport_basis and displayed_or_live_target_map answer on the new
+    // one, so a pointer event later in the SAME Wayland batch aims at a painted
+    // endcap and routes on geometry that is not under it — the epoch split this
+    // family exists to prevent, seeding the next trim drag with the wrong
+    // subject or delta. Deferring instead costs one more frame of the old epoch,
+    // whole and self-consistent, and the tick's honor (waveform_cache.cpp)
+    // clears the debt as it queues the full rect, so the very next frame both
+    // promotes and repaints.
+    if (app.staged_displayed_valid &&
+        (displayed_basis_frozen(app) || app.deferred_basis_repaint_due)) {
         // The stage site's damage is being consumed by frames that paint the
         // OLD epoch, so the eventual promote owes the item-basis surfaces a
         // repaint that no queued rect covers any more. Record it; the stage
-        // owner's tick honors it once the freeze lifts (contract at the field).
-        // Damage cannot be declared from inside a paint pass (the hazard is
-        // stated at GuiPlatform::paint_one_frame's loop), which is the other
-        // half of why the repair is a recorded bit rather than an invalidate
-        // here.
+        // owner's tick honors it once the freeze lifts, and the promote above
+        // waits for that honor (contract at the field). Damage cannot be
+        // declared from inside a paint pass (the hazard is stated at
+        // GuiPlatform::paint_one_frame's loop), which is the other half of why
+        // the repair is a recorded bit rather than an invalidate here. Setting
+        // an already-set bit is the ordinary case on the debt arm and costs
+        // nothing.
         app.deferred_basis_repaint_due = true;
     } else if (app.staged_displayed_valid) {
         app.displayed_target_warp_frame_map =
