@@ -56,3 +56,28 @@ add_executable(snap_sidecar_to_grid
 )
 target_include_directories(snap_sidecar_to_grid
     PRIVATE ${WARPTEMPO_TOOL_INCLUDES})
+
+# --- Compiler Optimizations ---
+# The product's own compilation options for the shared sources, mirrored from
+# the root CMakeLists: compiling the same source TEXT is not the same chain
+# when the floating-point semantics differ.
+#
+# -ffp-contract=off IS THE LOAD-BEARING ONE. The tools' target lattice is
+# defined by nearbyint/llrint half-frame and half-column boundaries taken over
+# the product map arithmetic — `tgt + offset * slope` forward,
+# `src + offset * inverse_slope` back (src/warp_frame_map.h) — and those are
+# exactly the multiply-add expressions a contracting build fuses into an FMA.
+# One ULP either way is enough to fall on the other side of one of those
+# boundaries, which is a whole frame of tool/product disagreement in a file the
+# tool then writes. The product forbids the contraction everywhere (the scope
+# record is docs/engineering/perf_campaign_2026_07.md §15); a tool claiming to
+# reproduce the product's map must forbid it identically.
+#
+# -O3 -march=native keep the codegen class the product's own, and -Wall -Wextra
+# the warning level. Link-time and Wayland-specific machinery stays out: these
+# targets share the product's compilation, not its link.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    foreach(tgt migrate_sidecar_to_frames snap_sidecar_to_grid)
+        target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 -march=native -ffp-contract=off)
+    endforeach()
+endif()

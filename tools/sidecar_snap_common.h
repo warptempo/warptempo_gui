@@ -16,6 +16,17 @@
 // the camera did on the way there. These tools mirror that set at zoom level 2
 // — the working zoom the `c` command parks on.
 //
+// VIEWPORT-INDEPENDENT IS NOT WIDTH-INDEPENDENT FOR FREE; it holds under a
+// stated precondition, enforced by the refusal at rate_has_canonical_lattice
+// below and bounded by the short-source note there. The reachable set is
+// {round(k*q)} for the LOGICAL q only where the painter's own q equals it, and
+// the painter quantizes: painter_samples_per_pixel is nearbyint(q * W) / W
+// over the effective width W (warp_frame_map_view.cpp). The two agree exactly
+// when q * W is whole, which under the multiple-of-16 effective-width floor
+// (waveform_area) reduces to rate divisible by 50 at the working zoom — true
+// of 44.1 kHz, 48 kHz and every other standard rate, but NOT of the product's
+// whole source vocabulary, which accepts any rate at or above 44100.
+//
 //   WARP — the SOURCE view's lattice (the warp column's home view):
 //       q       = sample_rate * 1.25 / 1000    (55.125 frames/px at 44.1 kHz)
 //       landing = nearbyint(nearbyint(s / q) * q)
@@ -77,6 +88,45 @@ inline constexpr double kLatticeMsPerPx = 1.25;
 // rate — so one q serves both lattices.
 inline double lattice_frames_per_px(double sample_rate) {
     return sample_rate * kLatticeMsPerPx / 1000.0;
+}
+
+// THE RATE VOCABULARY THE LATTICES ACTUALLY COVER — the precondition named in
+// the header comment, as a refusal both tools apply before any conversion or
+// snap. The GUI paints at nearbyint(q * W) / W rather than at q, and the
+// effective width always floors to a multiple of 16 px, so the smallest width
+// the painter ever sees carries q * 16 = rate * 1.25 / 1000 * 16 = rate / 50
+// frames. Whole for a rate divisible by 50, and then painter q == logical q at
+// every width the compositor can hand the GUI; fractional otherwise, and the
+// painted grid is width-quantized with no width-free lattice behind it. At
+// 44101 Hz on a 1024 px waveform the painter's q is 55.1259765625 against this
+// header's 55.12625, and by column 107 the tool's landing (frame 5899) is not
+// the frame the product's own painted-column round trip recommits (5898). A
+// tool that authored there would be writing positions the GUI relabels the
+// moment it loads them, so an indivisible rate refuses instead.
+//
+// THE OTHER BOUNDARY IS UNDETECTABLE HERE AND IS RECORDED RATHER THAN GUARDED:
+// a source too SHORT to reach zoom 2 never authors at 1.25 ms/px at all,
+// because clamp_zoom_level (src/gui/main.cpp) clamps the `c` command to that
+// file's own fit-the-window ceiling, leaving the live q at the fit span. The
+// canonical-lattice claim does not extend to such a file. No tool can detect
+// it — the ceiling is a function of the runtime waveform width, which is the
+// one thing a tool cannot know — and the material these tools serve (whole
+// movements, millions of frames) sits many thousands of columns clear of it.
+inline constexpr long kLatticeRateDivisor = 50;
+
+inline bool rate_has_canonical_lattice(long sample_rate) {
+    return sample_rate > 0 && sample_rate % kLatticeRateDivisor == 0;
+}
+
+// The refusal detail for a rate the lattices do not cover, in the tools' own
+// "<action> failed for '<path>': <detail>" shape.
+inline std::string lattice_rate_refusal(long sample_rate) {
+    return "sample rate " + std::to_string(sample_rate) +
+           " is not divisible by " + std::to_string(kLatticeRateDivisor) +
+           ", so the working-zoom grid is width-quantized in the GUI "
+           "(nearbyint(q * width) / width equals the logical q at a "
+           "multiple-of-16 width only when rate/50 is whole) and no width-free "
+           "canonical lattice exists to author against";
 }
 
 // THE WARP LATTICE: the nearest source-view column's frame, anchored at frame 0.
@@ -294,6 +344,12 @@ inline std::expected<double, std::string> read_settings_scale(
 // build_warp_frame_map — so the lattice is the one the GUI target view paints
 // and the CLI renders. The resolver's normalization lines go to stderr as they
 // do everywhere else; they are the product's loudness, not this tool's noise.
+//
+// THE SIBLING ALSO PASSES THE PRODUCT'S LOAD WALL BEFORE ANY MAP IS BUILT FROM
+// IT (the loop below). This is the ONE place either tool touches a warp
+// sibling — both phase reset paths, the snap tool's and the migration tool's,
+// reach it through this function and nowhere else — so the wall is applied
+// once, here, for both.
 inline std::expected<TargetLattice, std::string> build_target_lattice(
     const std::string& warp_path, const std::string& settings_path,
     long sample_rate, int64_t total_frames) {
@@ -307,6 +363,40 @@ inline std::expected<TargetLattice, std::string> build_target_lattice(
         return std::unexpected("cannot read warp sibling '" + warp_path +
                                "': " + markers.error());
     }
+    // THE PRODUCT'S INCLUSIVE [0, total-1] WALL, APPLIED AS THE PRODUCT
+    // APPLIES IT: to EVERY parsed warp marker, DISABLED ONES INCLUDED. The
+    // parser is grammar and ordering only, and the builder below is not the
+    // guard either — resolve_warp_markers_for_render drops disabled markers
+    // before the map is built, so a sibling carrying a disabled marker at
+    // exactly `total` yields a perfectly valid map here while the GUI and the
+    // CLI refuse that whole project at load. Without this loop the target
+    // lattice would be derived from a sidecar set for which no live product
+    // map exists, and a tool would then rewrite its subject against it.
+    //
+    // THE COMPARE IS MIRRORED, NOT CALLED, and its owner is
+    // first_past_eof_wall_defect (src/parser/marker_store_validate.h). That
+    // owner guards the WHOLE sidecar set — both marker columns and both tabs'
+    // trim pairs — and answers with a display timestamp for a product refusal
+    // banner. Calling it here would mean fabricating an empty phase reset
+    // column and two default trim pairs for it to dutifully check, and taking
+    // a timestamp where these tools speak frames and line numbers. What the
+    // owner actually applies is a plain integer compare against the stored
+    // value, which is exactly what stands here — the same spelling the snap
+    // tool's own warp-input wall already carries.
+    //
+    // Marker i is line i+1: the parser refuses every line that is not a
+    // marker, so its walk is one marker per line.
+    for (size_t i = 0; i < markers->size(); ++i) {
+        const int64_t frame = (*markers)[i].time_frame;
+        if (frame > total_frames - 1) {
+            return std::unexpected(
+                "warp sibling '" + warp_path + "' line " +
+                std::to_string(i + 1) + ": " + format_authored_frame(frame) +
+                " is past the end of the source (" +
+                format_authored_frame(total_frames) + " frames)");
+        }
+    }
+
     auto scale = read_settings_scale(settings_path);
     if (!scale) return std::unexpected(scale.error());
 
@@ -419,8 +509,15 @@ inline std::expected<std::string, SidecarIoError> read_file_whole(
 // the original path. This rename IS the tools' recovery contract: the GUI
 // serializers' atomic temp+fsync+rename writer is deliberately NOT imported
 // here (a one-shot rewrite does not need it), and the original bytes surviving
-// under '<path>.bk' is what makes a failed or torn write below recoverable
+// under '<path>.bak' is what makes a failed or torn write below recoverable
 // rather than fatal.
+//
+// THE SUFFIX IS '.bak' BECAUSE THE REPOSITORY ALREADY IGNORES IT: `*.bak` is
+// the third line of the project's .gitignore. A sidecar's subjects live under
+// projects/, which is tracked and whose checkpoint commits the app itself
+// makes, so a backup spelled anything else stands in `git status` as untracked
+// clutter and can ride a checkpoint into history. The ignored spelling keeps
+// the recovery copy on disk and out of the repository at once.
 //
 // An existing backup is a refusal, never an overwrite: it holds an earlier
 // run's input, the exact copy this contract exists to protect. Nothing has been
@@ -428,7 +525,7 @@ inline std::expected<std::string, SidecarIoError> read_file_whole(
 //
 // THE REFUSAL IS THE SYSCALL'S, IN ONE FILESYSTEM OPERATION. There is no
 // preflight existence check, deliberately: POSIX rename REPLACES its
-// destination, so a check-then-rename pair leaves a window in which a .bk
+// destination, so a check-then-rename pair leaves a window in which a .bak
 // appearing after the check — a second invocation on the same file is enough —
 // is silently destroyed, which is exactly the loss the recovery contract exists
 // to prevent. renameat2's RENAME_NOREPLACE makes the "only if the backup does
@@ -448,7 +545,7 @@ inline std::expected<std::string, SidecarIoError> read_file_whole(
 inline std::optional<SidecarIoError> backup_and_write(
     const std::string& path, const std::string& contents,
     const std::string& refusal_action) {
-    const std::string backup_path = path + ".bk";
+    const std::string backup_path = path + ".bak";
     if (::renameat2(AT_FDCWD, path.c_str(), AT_FDCWD, backup_path.c_str(),
                     RENAME_NOREPLACE) != 0) {
         if (errno == EEXIST) {

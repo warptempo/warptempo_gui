@@ -1,15 +1,16 @@
 // snap_sidecar_to_grid — land every authored position in one already-migrated
 // marker sidecar on its canonical lattice, at the original path, keeping the
-// pre-snap bytes as '<original-path>.bk'.
+// pre-snap bytes as '<original-path>.bak'.
 //
 // Authored positions are deterministic against canonical, viewport-independent
 // lattices: the warp column against the source view's zoom-2 column grid, the
 // phase reset column against the zoom-2 TARGET column lattice the live warp map
-// defines. Both lattices, and why a tool can reproduce them at all, are stated
-// once at the head of sidecar_snap_common.h. A file whose positions came from
-// somewhere else — an older migration that rounded rather than snapped, a hand
-// edit — is snapped onto the lattice here, so the GUI's own gestures can reach
-// every position it holds.
+// defines. Both lattices, why a tool can reproduce them at all, and the
+// PRECONDITION that reproduction rests on are stated once at the head of
+// sidecar_snap_common.h. A file whose positions came from somewhere else — an
+// older migration that rounded rather than snapped, a hand edit — is snapped
+// onto the lattice here, so the GUI's own gestures can reach every position it
+// holds.
 //
 // Usage:
 //     snap_sidecar_to_grid [--check] <source.wav> <sidecar>
@@ -21,7 +22,11 @@
 //
 // THE SOURCE WAV IS THE LATTICE'S CLOCK: sample rate and total frames both come
 // from audio_probe, and a probe failure is reported verbatim — the audio owner's
-// diagnostic is the one worth reading.
+// diagnostic is the one worth reading. THE PROBED RATE IS ALSO A GATE: a rate
+// not divisible by 50 has no width-free canonical lattice behind it (the GUI's
+// painted grid is width-quantized there) and refuses on both kinds before
+// anything is read or snapped — rate_has_canonical_lattice carries the whole
+// reasoning, including the short-source boundary the tools cannot detect.
 //
 // STRICT PARSE FIRST, THROUGH THE PRODUCT PARSER. The file must load exactly as
 // the GUI and the CLI would load it; anything else refuses with the parser's own
@@ -50,9 +55,11 @@
 //
 // The write contract is the migration tool's, shared verbatim from
 // sidecar_snap_common.h: convert fully in memory, move the original aside as
-// '<path>.bk' through renameat2 RENAME_NOREPLACE (an existing .bk is a refusal),
-// then write fresh at the original path. A run that changes nothing writes
-// nothing and takes no backup, in either mode.
+// '<path>.bak' through renameat2 RENAME_NOREPLACE (an existing .bak is a
+// refusal), then write fresh at the original path. A run that changes nothing
+// writes nothing and takes no backup, in either mode. The suffix is the one
+// the repository's .gitignore already covers, so a backup taken beside a
+// tracked sidecar never shows up as clutter or rides a checkpoint commit.
 //
 // Build (from the project root):
 //     cmake -B build-tools -S tools && cmake --build build-tools
@@ -168,6 +175,14 @@ int main(int argc, char** argv) {
     const int64_t total_frames = probed->frames;
     if (sample_rate <= 0 || total_frames <= 0) {
         diag("Probe", wav_path, "source has no usable rate or length");
+        return 1;
+    }
+    // BOTH LATTICES ARE THE SAME CLOCK'S, so both kinds take this gate, and it
+    // stands before the file is even read: at a rate the canonical lattice does
+    // not cover there is nothing to snap TO, and a snap run would relabel every
+    // position against a grid the product does not paint.
+    if (!sidecar_snap::rate_has_canonical_lattice(sample_rate)) {
+        diag("Snap", path, sidecar_snap::lattice_rate_refusal(sample_rate));
         return 1;
     }
 
@@ -304,7 +319,7 @@ int main(int argc, char** argv) {
     size_t changed = 0;
     for (const Snapped& s : snapped) changed += s.changed ? 1 : 0;
     // A run that changes nothing writes nothing and takes no backup — in either
-    // mode. The .bk is the recovery copy of bytes that were replaced, and here
+    // mode. The .bak is the recovery copy of bytes that were replaced, and here
     // none were.
     if (changed == 0 || check_only) return 0;
 

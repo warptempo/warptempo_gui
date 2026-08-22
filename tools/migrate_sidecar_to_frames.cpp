@@ -1,6 +1,6 @@
 // migrate_sidecar_to_frames — convert one legacy MM:SS.mmm sidecar to the
 // whole-source-frame authored domain, at the original path, keeping the legacy
-// bytes as '<original-path>.bk'.
+// bytes as '<original-path>.bak'.
 //
 // The authored time domain moved from MM:SS.mmm timestamps to whole source
 // frames; there is no legacy read path in the GUI, parser, or CLI, so old
@@ -25,14 +25,19 @@
 //
 // Migrated WARP positions therefore land on the SAME frame-0 zoom-2 grid the
 // GUI's own source-view authoring gestures land on, and match GUI zoom-2
-// authoring EXACTLY (not merely from the file start). The GUI viewport itself
-// is snapped to this grid (clamp_viewport_start / painter_samples_per_pixel),
-// and the source-view commit rounds once (displayed_grid_position_at_column), so
-// under the multiple-of-16 effective-width / standard-rate contract the
-// painter samples-per-pixel equals the logical spp and the recovered-viewport-
-// column basis makes GUI zoom-2 authoring agree with this tool bit-for-bit at
-// ANY configured width. The tool cannot know the runtime width, so it uses the
-// logical spp: the canonical frame-0 grid the GUI now agrees with. The snap
+// authoring EXACTLY (not merely from the file start) WHERE THE LATTICE'S
+// PRECONDITION HOLDS. The GUI viewport itself is snapped to this grid
+// (clamp_viewport_start / painter_samples_per_pixel), and the source-view
+// commit rounds once (displayed_grid_position_at_column), so under the
+// multiple-of-16 effective-width floor AND a sample rate divisible by 50 — the
+// 44.1 kHz / 48 kHz family and every other standard rate, though not the
+// product's whole accepted rate vocabulary — the painter samples-per-pixel
+// equals the logical spp and the recovered-viewport-column basis makes GUI
+// zoom-2 authoring agree with this tool bit-for-bit at ANY configured width.
+// A rate outside that family REFUSES here (rate_has_canonical_lattice, which
+// also records the short-source boundary no tool can detect). The tool cannot
+// know the runtime width, so it uses the logical spp: the canonical frame-0
+// grid the GUI agrees with under that precondition. The snap
 // still widens the shift from the exact product (up to about half a pixel
 // column, ~28 frames / 0.6 ms at 44.1 kHz), so a render from a migrated file
 // is NOT byte-identical to a pre-migration render of the same authoring, by
@@ -82,14 +87,15 @@
 // re-parsing but is safe against re-running.
 //
 // Recovery: the conversion runs fully in memory, then the ORIGINAL FILE MOVES
-// ASIDE as '<original-path>.bk' and the converted text is written fresh at the
-// original path. That .bk is the whole recovery contract — a failed or torn
+// ASIDE as '<original-path>.bak' and the converted text is written fresh at the
+// original path. That .bak is the whole recovery contract — a failed or torn
 // write leaves the legacy bytes intact beside it — and an already-existing one
-// is a refusal, never an overwrite. The contract and its refusal (why the
+// is a refusal, never an overwrite. The contract, its refusal (why the
 // existence test is renameat2's RENAME_NOREPLACE rather than a check-then-rename
-// pair) are stated once, at sidecar_snap::backup_and_write, which this tool and
-// the snapping tool share. There is no confirmation prompt; the backup is the
-// answer the prompt used to ask for.
+// pair) and why the suffix is the .gitignore'd '.bak' are stated once, at
+// sidecar_snap::backup_and_write, which this tool and the snapping tool share.
+// There is no confirmation prompt; the backup is the answer the prompt used to
+// ask for.
 //
 // THE TIMESTAMP PARSE HELPERS ARE TOOL-LOCAL (architect 2026-07-30), and stay
 // local to this FILE rather than moving to the shared tool header: the legacy
@@ -458,6 +464,21 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // THE RATE VOCABULARY GATE, ON THE <sample_rate> ARGUMENT ITSELF — which is
+    // the authoritative rate for every kind here, the phase reset kind's probe
+    // being required to AGREE with it below. The lattices only exist for a rate
+    // divisible by 50 (rate_has_canonical_lattice carries the whole reasoning),
+    // so a rate outside that family refuses before any conversion.
+    //
+    // ALL THREE KINDS TAKE THE GATE, the .settings kind included even though
+    // its trim values take plain rounding and touch no lattice: a project is
+    // migrated as a set under one rate, and a rate whose marker passes must
+    // refuse is not a rate to half-convert a project under.
+    if (!sidecar_snap::rate_has_canonical_lattice(rate_l)) {
+        diag("Migrate", path, sidecar_snap::lattice_rate_refusal(rate_l));
+        return 1;
+    }
+
     // THE SOURCE WAV BELONGS TO EXACTLY ONE KIND, and an argument that cannot
     // participate is an error rather than decoration: the phase reset column
     // needs it (its lattice is the target one, which needs the warp map and the
@@ -578,7 +599,7 @@ int main(int argc, char** argv) {
     }
     const std::string converted = sidecar_snap::join_lines(out_lines);
 
-    // The legacy bytes move aside as '<path>.bk' and the converted text is
+    // The legacy bytes move aside as '<path>.bak' and the converted text is
     // written fresh at the original path — the recovery contract stated once at
     // sidecar_snap::backup_and_write, including why an existing backup refuses
     // through the rename itself.
