@@ -30,4 +30,5 @@ projects/*/*.wav
 projects/*/peaks/
 projects/*/renders/
 projects/*/score/
+projects/*/wt*
 projects/*test
