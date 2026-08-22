@@ -1690,14 +1690,89 @@ void render_history_diff_flags(
 
             const int bx = static_cast<int>(std::nearbyint(left_x));
 
-            const GuiColor removed_fill =
+            // THE DISABLED AXIS, ONE BIT PER COMMIT SIDE (architect
+            // 2026-08-22). Each half asks its OWN side's disable bit — the
+            // removed half `then_disabled`, the added half `now_disabled` — so a
+            // disable TOGGLE paints one dimmed half beside one full-strength one
+            // and the direction of the toggle reads straight off the flag. Each
+            // bit is meaningful exactly when its half is painted; the guards
+            // below are the half's own `w_* > 0`, so a bit resting at false on a
+            // half that does not exist is never consulted.
+            const bool removed_disabled = f.then_disabled;
+            const bool added_disabled   = f.now_disabled;
+
+            // THE PAIR IS CHOSEN FIRST AND DAMPED SECOND, which is the live
+            // lane's own composition order (resolve_flag_face): the focus swap
+            // picks the bright pair, then the disabled blend runs over the
+            // RESULT, so a focused disabled half lifts exactly as a focused live
+            // one does and still reads switched off. The blend is the live arm's
+            // expression verbatim — the class colour at kMarkerDisabledMix over
+            // kRedesignContentGround, the marker lane's own ground — applied to
+            // this lane's inks. No constant is born here: the derivation is the
+            // one already ruled, reaching a second set of colours.
+            GuiColor removed_fill =
                 focused ? kHistoryRemovedFillSel : kHistoryRemovedFill;
-            const GuiColor removed_edge =
+            GuiColor removed_edge =
                 focused ? kHistoryRemovedEdgeSel : kHistoryRemovedEdge;
-            const GuiColor added_fill =
+            GuiColor added_fill =
                 focused ? kHistoryAddedFillSel : kHistoryAddedFill;
-            const GuiColor added_edge =
+            GuiColor added_edge =
                 focused ? kHistoryAddedEdgeSel : kHistoryAddedEdge;
+            if (removed_disabled) {
+                removed_fill = mix_color(removed_fill, kRedesignContentGround,
+                                         kMarkerDisabledMix);
+                removed_edge = mix_color(removed_edge, kRedesignContentGround,
+                                         kMarkerDisabledMix);
+            }
+            if (added_disabled) {
+                added_fill = mix_color(added_fill, kRedesignContentGround,
+                                       kMarkerDisabledMix);
+                added_edge = mix_color(added_edge, kRedesignContentGround,
+                                       kMarkerDisabledMix);
+            }
+            // THE LABEL DIMS FROM BLACK TOWARD ITS OWN HALF'S DIMMED FILL, the
+            // live lane's disabled-label rule verbatim: a fraction of the ink
+            // over the surface it actually sits on, at the LABEL's own
+            // kMarkerDisabledLabelMix rather than the surfaces' fraction. THE
+            // HALVES ARE INDEPENDENT because this lane paints TWO runs, one
+            // inside each half's own box — so no pair-wide fallback is needed and
+            // a toggle's dimmed half carries a dimmed label beside a
+            // full-strength one.
+            const GuiColor removed_label =
+                removed_disabled
+                    ? mix_color(kMarkerFlagLabel, removed_fill,
+                                kMarkerDisabledLabelMix)
+                    : kMarkerFlagLabel;
+            const GuiColor added_label =
+                added_disabled
+                    ? mix_color(kMarkerFlagLabel, added_fill,
+                                kMarkerDisabledLabelMix)
+                    : kMarkerFlagLabel;
+
+            // THE TWO BORDER COLUMNS DIM BY WHAT EACH BELONGS TO. The box's own
+            // left border stands OUTSIDE the leftmost half's fill and is that
+            // half's face element (the live lane's anatomy, where the border
+            // takes the disabled blend with fill and edge), so it dims with that
+            // half — the removed one on a pair or a removed-only flag, the added
+            // one on an added-only flag. The SEAM divider belongs to NEITHER half
+            // alone: it separates them, so it dims only when BOTH are disabled,
+            // which keeps a toggle's divider at full strength against the
+            // full-strength half it abuts. Both take the same blend the live
+            // border takes — kMarkerFlagBorder at kMarkerDisabledMix over the
+            // lane ground, which moves that near-black UP toward the ground
+            // rather than down (the direction note is at kMarkerFlagBorder).
+            const bool left_half_disabled =
+                (w_removed > 0) ? removed_disabled : added_disabled;
+            const GuiColor box_border =
+                left_half_disabled
+                    ? mix_color(kMarkerFlagBorder, kRedesignContentGround,
+                                kMarkerDisabledMix)
+                    : kMarkerFlagBorder;
+            const GuiColor seam_ink =
+                (removed_disabled && added_disabled)
+                    ? mix_color(kMarkerFlagBorder, kRedesignContentGround,
+                                kMarkerDisabledMix)
+                    : kMarkerFlagBorder;
 
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -1707,12 +1782,13 @@ void render_history_diff_flags(
             // halves carried nothing until 2026-08-20; the column now standing
             // there is a different statement in the same ink (the experiment,
             // at the halves' paint below) and does not make the pair two flags:
-            // one rect, one focus, one revert. Its colour is kMarkerFlagBorder
-            // undamped: the disabled blend is a LIVE-marker face and this lane
-            // paints no live markers, so there is nothing here for a class
-            // ladder to choose between.
-            cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                                 kMarkerFlagBorder.b);
+            // one rect, one focus, one revert. IT TAKES THE DISABLED BLEND WITH
+            // THE HALF IT STANDS AGAINST (architect 2026-08-22, retiring the
+            // undamped reading this column shipped with — that reading said the
+            // disabled blend was a live-marker face and this lane painted none,
+            // and the lane carries the disabled axis now): the pick is at
+            // box_border above.
+            cairo_set_source_rgb(cr, box_border.r, box_border.g, box_border.b);
             cairo_rectangle(cr, bx - border_w, lane.y, border_w, lane.h);
             cairo_fill(cr);
             // The halves, left (removed / red) then right (added / green). Each
@@ -1731,9 +1807,9 @@ void render_history_diff_flags(
             // blue is in the live lane, where the same experiment lands). The
             // mitigation under trial is the same 1px kMarkerFlagBorder column
             // the flag's own left border is — a dark rule between the fields
-            // instead of a hue boundary doing the work alone. UNDAMPED like the
-            // border beside it, and for the same recorded reason: the disabled
-            // blend is a LIVE-marker face and this lane paints none.
+            // instead of a hue boundary doing the work alone. IT DIMS ONLY WHEN
+            // BOTH HALVES DO (2026-08-22, at seam_ink above): the divider
+            // belongs to neither half by itself.
             if (w_removed > 0) {
                 cairo_set_source_rgb(cr, removed_fill.r, removed_fill.g,
                                      removed_fill.b);
@@ -1745,8 +1821,7 @@ void render_history_diff_flags(
                 cairo_fill(cr);
             }
             if (seam_w > 0) {
-                cairo_set_source_rgb(cr, kMarkerFlagBorder.r,
-                                     kMarkerFlagBorder.g, kMarkerFlagBorder.b);
+                cairo_set_source_rgb(cr, seam_ink.r, seam_ink.g, seam_ink.b);
                 cairo_rectangle(cr, bx + w_removed, lane.y, seam_w, lane.h);
                 cairo_fill(cr);
             }
@@ -1766,14 +1841,20 @@ void render_history_diff_flags(
 
             // THE LANE'S INK, not the redesign's: a diff flag wears this
             // lane's whole anatomy, so it wears its black text too (the ruling
-            // and the per-class contrast table are at kMarkerFlagLabel).
-            cairo_set_source_rgb(cr, kMarkerFlagLabel.r, kMarkerFlagLabel.g,
-                                 kMarkerFlagLabel.b);
+            // and the per-class contrast table are at kMarkerFlagLabel). SET PER
+            // HALF since 2026-08-22 rather than once for the box: each half's ink
+            // is its own dimmed-or-not resolution (removed_label / added_label
+            // above), which is what lets a disable toggle show a dimmed label on
+            // one side of the seam and a full one on the other.
             if (w_removed > 0) {
+                cairo_set_source_rgb(cr, removed_label.r, removed_label.g,
+                                     removed_label.b);
                 text_shape::show_shaped_run(
                     cr, run_removed, static_cast<double>(bx + pad_l), baseline);
             }
             if (w_added > 0) {
+                cairo_set_source_rgb(cr, added_label.r, added_label.g,
+                                     added_label.b);
                 text_shape::show_shaped_run(
                     cr, run_added,
                     static_cast<double>(bx + w_removed + seam_w + pad_l),
@@ -1803,13 +1884,30 @@ void render_history_diff_flags(
                 // lane's rule, and here the class is "does the commit still have
                 // this line": a removed or CHANGED entry stems red (deference to
                 // the old, the architect's ruling for the pair), a purely added
-                // one green. Both classes always stem: the no-stem rule belongs
-                // to live DISABLED markers, and a diff flag for a disabled line
-                // is a diff flag like any other.
-                out_stems->push_back(
-                    MarkerStem{i, static_cast<double>(bx),
-                               f.removed ? kHistoryRemovedFill
-                                         : kHistoryAddedFill});
+                // one green. The colour is the UNSELECTED fill and it is never
+                // damped: a stem either paints its class or is absent.
+                //
+                // AND IT READS THE DISABLED AXIS (architect 2026-08-22), on the
+                // SINGLE-half flags alone. A removed-only or added-only flag
+                // whose one side is disabled publishes NO ENTRY AT ALL — the live
+                // lane's rule verbatim, expressed the live lane's way, as an
+                // absent entry rather than a bit the consumer re-decides
+                // (MarkerStem's contract). A CHANGED PAIR ALWAYS KEEPS ITS STEM,
+                // whichever of its halves are disabled: the pair is not a line in
+                // a switched-off state, it is a live EDIT being displayed, and a
+                // disable toggle is precisely the edit whose stem must not
+                // vanish. That is why the test below is on the SINGLE halves and
+                // never on `f.then_disabled && f.now_disabled`.
+                const bool pair = (w_removed > 0 && w_added > 0);
+                const bool single_disabled =
+                    !pair && (w_removed > 0 ? removed_disabled
+                                            : added_disabled);
+                if (!single_disabled) {
+                    out_stems->push_back(
+                        MarkerStem{i, static_cast<double>(bx),
+                                   f.removed ? kHistoryRemovedFill
+                                             : kHistoryAddedFill});
+                }
             }
         });
 

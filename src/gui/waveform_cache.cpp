@@ -778,6 +778,14 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // the REVERT act, which restores exactly that value (the fields' contract is
     // at HistoryDiffFlag, render.h). The label and the value come off the SAME
     // delta entry here, so the flag cannot show one thing and restore another.
+    //
+    // THE TWO DISABLE BITS ARE FILLED PER HALF (architect 2026-08-22, the lane's
+    // disabled axis): `then_disabled` on every flag that has a REMOVED half and
+    // `now_disabled` on every flag that has an ADDED one, each off the same delta
+    // entry its own half's LABEL is composed from — so the `#` in the text and
+    // the dimming of the box behind it can never disagree. A half a flag does not
+    // have leaves its bit at the struct's false, which no painter or act reads:
+    // both are meaningful exactly when their own half's bool is set.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
@@ -787,6 +795,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed_text = history_diff_label("[-]", c.then_disabled, {});
             f.added_text   = history_diff_label("[+]", c.now_disabled, {});
             f.then_disabled = c.then_disabled;
+            f.now_disabled  = c.now_disabled;
             f.then_measure  = c.then_measure;
             out.push_back(std::move(f));
         }
@@ -804,6 +813,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, {});
+            f.now_disabled = e.disabled;
             out.push_back(std::move(f));
         }
     } else {
@@ -818,6 +828,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
                 history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
             f.then_token    = c.then_tempo_token;
             f.then_disabled = c.then_disabled;
+            f.now_disabled  = c.now_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
@@ -835,6 +846,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
+            f.now_disabled = e.disabled;
             out.push_back(std::move(f));
         }
     }

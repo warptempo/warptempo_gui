@@ -630,6 +630,15 @@ inline constexpr GuiColor kMarkerEditorSelectionBand = hex(0xFCFCFC);
 // click on it — and it is the same color swap the live lane's selection is,
 // which is why the crops come in pairs and both pairs are constants.
 //
+// THE DISABLED AXIS RIDES OVER THESE FOUR PAIRS (architect 2026-08-22) with no
+// fifth pair and no constant of its own: a half whose line is disabled in its own
+// side's commit damps the pair the swap above already chose, through the LIVE
+// lane's mix owner at kMarkerDisabledMix over kRedesignContentGround. A recorded
+// DERIVATION rather than a measurement — no crop shows a disabled diff flag, so
+// what these eight values pin down is this mode's LIVE ladder exactly as
+// measured, and the dimmed rendition is the marker lane's own rule reaching a
+// second set of inks.
+//
 // THE RED PAIR IS SAMPLED AFRESH RATHER THAN REUSED, deliberately, even though
 // its values overlap the live red class's: kMarkerFlagFillRed / kMarkerFlagEdgeRed
 // above hold the SELECTED red crop's fill and edge while kMarkerStemRed holds
@@ -692,10 +701,15 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // does, border included, and red takes none on either side. One blend, one
 // ladder: there is no separate disabled brightness rule to drift.
 //
-// THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on both the
-// flag and the measure box. The LABEL took it too until 2026-08-20 and takes
-// its own now (the constant directly below); the surfaces are untouched by that
-// split and every shape a disabled marker paints still damps at exactly 25%.
+// THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on the flag,
+// the measure box AND, since 2026-08-22, the `h` view's DIFF FLAGS, whose halves
+// dim by their own commit side's disable bit through these same expressions over
+// the kHistoryAdded*/kHistoryRemoved* inks (render_history_diff_flags owns that
+// ruling; the derivation is the live lane's, applied to another set of inks, so
+// no constant of its own was born). The LABEL took this fraction too until
+// 2026-08-20 and takes its own now (the constant directly below); the surfaces
+// are untouched by that split and every shape a disabled marker paints still
+// damps at exactly 25%.
 inline constexpr double kMarkerDisabledMix = 0.25;
 
 // THE DISABLED LABEL'S OWN FRACTION (architect 2026-08-20), split off from the
@@ -2469,8 +2483,10 @@ struct FlagLaneRects {
 
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
 // column the stem stands on (the flag box's own LEFT edge — the composite shows
-// the stem under it) and the color its class resolved to. The painter is the
-// only producer; the readers are the per-frame waveform pass
+// the stem under it) and the color its class resolved to. The flag PAINTERS are
+// the only producers — the two live columns', and the `h` view's diff lane,
+// which replaces them wholesale while the mode stands; the readers are the
+// per-frame waveform pass
 // (GuiPaintHandler::paint_marker_stems) and the playhead's white-stem
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
@@ -2480,7 +2496,12 @@ struct FlagLaneRects {
 // at GuiPaintHandler::paint_marker_stems).
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
-// on the entry means the consumer has nothing to re-decide. (The stash was
+// on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
+// DIFF-FLAG PAINTER IS THIS STASH'S OTHER PRODUCER and takes the same rule the
+// same way since 2026-08-22, on its SINGLE-half flags: a removed-only or
+// added-only flag whose one side is disabled publishes nothing, while a CHANGED
+// PAIR always publishes (it is a live edit on display, not a switched-off line —
+// the ruling is at render_history_diff_flags). (The stash was
 // ALSO the pointer's stem hit source for 2026-08-01..12, when the stem was a
 // second click surface of its marker; that surface is deleted — stems are
 // pointer-inert, the seventh glass ruling — so the stash is paint-only again
@@ -2735,6 +2756,16 @@ void render_phase_reset_flags(cairo_t* cr,
 // itself judges and no second grammar is written anywhere
 // (GuiInputHandler::run_history_revert). Phase resets carry no token — frame plus
 // the bit IS their whole line — so the field stays empty on that column.
+//
+// THE TWO DISABLE BITS ARE THE LANE'S DISABLED AXIS (architect 2026-08-22), one
+// per commit SIDE: `then_disabled` is the REMOVED half's and `now_disabled` the
+// ADDED half's, each meaningful exactly when its own half's bool is set. The
+// pairing is deliberate and `then_disabled` was neither renamed nor repurposed
+// to get it — that field now simply has TWO readers where it had one (the revert
+// act reconstitutes the then line from it, AND the painter dims the removed half
+// by it), while the new bit has exactly one, the added half's paint. The paint
+// they drive is the live lane's own disabled treatment applied to this lane's
+// diff inks, per half; the full ruling is at render_history_diff_flags below.
 struct HistoryDiffFlag {
     int64_t     time_frame = 0;
     bool        removed    = false;   // the commit had this line
@@ -2743,6 +2774,7 @@ struct HistoryDiffFlag {
     std::string added_text;
     std::string then_token;
     bool        then_disabled = false;
+    bool        now_disabled  = false;
     // THE PHASE COLUMN'S THEN-SIDE MEASURE, for the revert. The warp column
     // needs no twin: its then side travels as `then_token`, which is
     // rest-of-line and so already carries the measure suffix into the line the
@@ -2756,7 +2788,9 @@ struct HistoryDiffFlag {
 // `marker_index` carrying the INDEX INTO `flags`, out_stems the same), so
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
-// THE ANATOMY IS THE LIVE FLAG'S, one class ladder narrower: the 1px left
+// THE ANATOMY IS THE LIVE FLAG'S, and since 2026-08-22 the class ladder is
+// narrower in its LIVE half alone — there are two diff classes where the live
+// lane has three, but the DISABLED RUNG is shared: the 1px left
 // border outside the fill (kMarkerFlagBorder, class-invariant here as there), a
 // full-lane-height fill, a 1px top edge, and the label on the redesign's sans at
 // the lane baseline IN THE LANE'S OWN BLACK INK (kMarkerFlagLabel, 2026-08-20 —
@@ -2770,6 +2804,26 @@ struct HistoryDiffFlag {
 // still ONE flag: one rect, one focus, one claim. The top edge splits with the halves because it is part of each
 // half's face; it runs horizontally and so is never a divider.
 //
+// THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
+// closing a state-axis gap the view shipped with: a `#` line and a live one
+// painted the same flag, so the delta showed the position and hid the state).
+// A HALF whose line is disabled in ITS OWN side's commit paints through the LIVE
+// LANE'S OWN DERIVATION applied to this lane's inks — no new constant anywhere:
+// fill and top edge at kMarkerDisabledMix over kRedesignContentGround, the label
+// at kMarkerDisabledLabelMix from kMarkerFlagLabel toward its own dimmed fill,
+// exactly the expressions resolve_flag_face runs. THE SELECTION SWAP HAPPENS
+// FIRST AND THE DIM APPLIES OVER IT, as it does live: the focused pair is chosen,
+// then damped, so a focused disabled half lifts like a live focus and still
+// reads switched off.
+//
+// IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes its own bit, so a
+// disable TOGGLE paints one dimmed half beside one full-strength half and the
+// direction of the toggle is readable off the flag itself. The two BORDER
+// COLUMNS follow from what each one belongs to — the box's own left border is the
+// LEFTMOST PAINTED HALF's face element (the live lane's anatomy: border outside
+// fill) and dims with that half, while the SEAM divider belongs to neither half
+// alone and dims only when BOTH are disabled.
+//
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
 // `selected` its OWN multi-selection (ordinals into the same list, 2026-08-05):
 // EITHER swaps that flag to its class's selected pair, both halves of a double
@@ -2777,7 +2831,12 @@ struct HistoryDiffFlag {
 // singleton when the set is empty, and the revert act reads them the same way, so
 // a second brightness would be a distinction nothing acts on. The STEM reads the
 // class alone, never either of them, exactly as the live lane's does — and a
-// CHANGED pair stems RED, deferring to the old.
+// CHANGED pair stems RED, deferring to the old. THE STEM ALSO READS THE DISABLED
+// AXIS NOW (architect 2026-08-22): a SINGLE flag — added-only or removed-only —
+// whose one side is disabled publishes NO STEM AT ALL, the live lane's rule
+// verbatim, while a CHANGED PAIR KEEPS ITS STEM whichever halves are disabled,
+// because the pair as a whole is a live EDIT being displayed rather than a line
+// in a switched-off state.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,
