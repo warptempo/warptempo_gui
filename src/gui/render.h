@@ -2785,10 +2785,18 @@ struct HistoryDiffFlag {
     bool        then_disabled = false;           // verbatim local: the revert's
     bool        then_effective_disabled = false; // the removed half's paint
     bool        now_effective_disabled  = false; // the added half's paint
-    // THE PHASE COLUMN'S THEN-SIDE MEASURE, for the revert. The warp column
-    // needs no twin: its then side travels as `then_token`, which is
-    // rest-of-line and so already carries the measure suffix into the line the
-    // revert reconstitutes. This column has no token to ride on.
+    // THE PHASE COLUMN'S THEN-SIDE MEASURE, FOR THE REVERT AND NOTHING ELSE.
+    // The warp column needs no twin: its then side travels as `then_token`,
+    // which is rest-of-line and so already carries the measure suffix into the
+    // line the revert reconstitutes. This column has no token to ride on.
+    //
+    // THE PAINTED MEASURE IS NOT THIS FIELD (architect 2026-08-22, when the
+    // phase halves began carrying their measure bytes like the warp halves
+    // always have): each half's measure is composed INTO `removed_text` /
+    // `added_text` at the cache fill, through the one spelling owner
+    // history_diff_label, so the painter shapes one string per half and knows
+    // nothing about measures — and an ADDED half's measure, which the revert
+    // never restores, needs no field here at all.
     std::string then_measure;
 };
 
@@ -2813,6 +2821,17 @@ struct HistoryDiffFlag {
 // and the rationale are at the paint site and in marker-ui.md). The pair is
 // still ONE flag: one rect, one focus, one claim. The top edge splits with the halves because it is part of each
 // half's face; it runs horizontally and so is never a divider.
+//
+// EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT — pad + shaped(label) + pad — so
+// the halves of a pair are routinely ASYMMETRIC and the seam, the border and
+// the one hit rect all compose off the two measured widths rather than off any
+// assumed equality. That is proven machinery: a warp pair's two tempo tokens
+// have differed in width since this lane's first day. It is why the phase
+// halves' measure bytes (architect 2026-08-22, appended to each half's label at
+// history_diff_label) need nothing here — a longer half simply measures longer,
+// and THESE LABELS ARE NEVER TRUNCATED (the cull bound follows the commit's own
+// widest text; the reasoning is at the paint site), so a measure is cut exactly
+// as much as the token beside it is, which is not at all.
 //
 // THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
 // closing a state-axis gap the view shipped with: a `#` line and a live one

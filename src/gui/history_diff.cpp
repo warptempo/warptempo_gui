@@ -2571,7 +2571,13 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
             c.frame         = r.frame;
             c.then_disabled = r.disabled;
             c.now_disabled  = a.disabled;
+            // BOTH SIDES' MEASURES TRAVEL (architect 2026-08-22): the then
+            // side for the revert AND the removed half's label, the now side
+            // for the added half's label, so a measure-only edit paints two
+            // different halves instead of two identical ones (the pair's
+            // contract is at GuiHistoryPhaseResetChange).
             c.then_measure  = r.measure;
+            c.now_measure   = a.measure;
             return c;
         });
 

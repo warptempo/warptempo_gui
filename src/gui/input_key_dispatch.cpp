@@ -3017,6 +3017,12 @@ void GuiInputHandler::run_history_revert() {
             // with the rest of the line. Dropping it would make the compare
             // below report every measured marker as changed and then
             // overwrite the measure away.
+            //
+            // THE THEN SIDE IS ALL THIS ACT EVER READS, unchanged by the
+            // 2026-08-22 ruling that made the phase halves PAINT their measure
+            // bytes: a revert restores what the commit had, so the added half's
+            // measure — which now shows in that half's label — is not a thing
+            // to restore and reaches no field here.
             nm.measure    = f.then_measure;
             if (at >= 0) {
                 ++sk;

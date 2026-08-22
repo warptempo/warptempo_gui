@@ -765,11 +765,23 @@ uint64_t hash_selection(const std::set<int>& s,
 // original `[+] <payload>`), which is why the empty-payload case needs no arm of
 // its own any more: a phase reset with its bit clear appends nothing and rests
 // at the bare sign.
+//
+// AND THEN THE MEASURE, IN THE SIDECAR'S OWN SPELLING (architect 2026-08-22):
+// the ` //<measure>` suffix, separator bytes and all, so a phase half reads
+// `[-] //12` beside `[+] //13` and a measure-only edit is legible on the flag
+// itself. The empty case appends nothing at all — no bare ` //` can paint,
+// which is the same rule the writers keep. Only the phase column passes it (the
+// declaration enumerates who does and why the warp column must not).
 std::string history_diff_label(const char* sign, bool disabled,
-                               const std::string& token) {
+                               const std::string& token,
+                               const std::string& measure) {
     std::string out(sign);
     if (disabled) out += '#';
     out += token;
+    if (!measure.empty()) {
+        out += " //";
+        out += measure;
+    }
     return out;
 }
 
@@ -813,14 +825,27 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // half a flag does not
     // have leaves its bits at the struct's false, which no painter or act reads:
     // each is meaningful exactly when its own half's bool is set.
+    //
+    // THE PHASE HALVES CARRY THEIR MEASURE BYTES IN THE LABEL (architect
+    // 2026-08-22): every phase-column fill below — both halves of a changed
+    // pair and both singles — hands its line's own measure to the spelling
+    // owner, which appends the sidecar's ` //<measure>` verbatim, so a
+    // measure-only edit paints two DIFFERENT halves where it used to paint two
+    // identical ones. EVERY MEASURE IS ITS OWN LINE'S: the added half takes the
+    // added entry's, the removed half the removed entry's, and an added-only
+    // flag has no then side to carry (its `then_measure` stays empty, the
+    // revert's field alone). The WARP fills pass none — a warp token is
+    // rest-of-line and already carries the suffix inside it.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
             f.time_frame   = c.frame;
             f.removed      = true;
             f.added        = true;
-            f.removed_text = history_diff_label("[-]", c.then_disabled, {});
-            f.added_text   = history_diff_label("[+]", c.now_disabled, {});
+            f.removed_text =
+                history_diff_label("[-]", c.then_disabled, {}, c.then_measure);
+            f.added_text =
+                history_diff_label("[+]", c.now_disabled, {}, c.now_measure);
             f.then_disabled           = c.then_disabled;
             f.then_effective_disabled = c.then_disabled;
             f.now_effective_disabled  = c.now_disabled;
@@ -831,7 +856,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             HistoryDiffFlag f;
             f.time_frame   = e.frame;
             f.removed      = true;
-            f.removed_text = history_diff_label("[-]", e.disabled, {});
+            f.removed_text =
+                history_diff_label("[-]", e.disabled, {}, e.measure);
             f.then_disabled           = e.disabled;
             f.then_effective_disabled = e.disabled;
             f.then_measure  = e.measure;
@@ -841,7 +867,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             HistoryDiffFlag f;
             f.time_frame = e.frame;
             f.added      = true;
-            f.added_text = history_diff_label("[+]", e.disabled, {});
+            f.added_text =
+                history_diff_label("[+]", e.disabled, {}, e.measure);
             f.now_effective_disabled = e.disabled;
             out.push_back(std::move(f));
         }

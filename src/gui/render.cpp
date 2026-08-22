@@ -1650,8 +1650,11 @@ void render_history_diff_flags(
         // not a marker in any store, so nothing could index it anyway.
         /*drag_overlay=*/nullptr,
         cull_width_px,
-        // NO PER-MARKER WIDENING: this lane paints no measure box, and the
-        // bound above already follows this commit's own longest label.
+        // NO PER-MARKER WIDENING: this lane paints no measure BOX — a measure
+        // that shows here is bytes inside a half's own label (2026-08-22) — and
+        // the bound above already follows this commit's own longest label,
+        // those bytes included, because it counts the two texts as they will be
+        // painted.
         [](int) { return 0.0; },
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
@@ -1881,9 +1884,12 @@ void render_history_diff_flags(
                 r.h = static_cast<double>(lane.h);
                 // NO MEASURE BOX IN THIS MODE, so the boundary is the rect's own
                 // right edge and no point can fall past it: the view paints the
-                // delta's own two-tone flag and nothing else, and a warp token
-                // that happens to carry measure text shows it inline in the
-                // label (accepted).
+                // delta's own two-tone flag and nothing else. MEASURES SHOW
+                // INLINE IN THE LABEL ON BOTH COLUMNS (architect 2026-08-22) —
+                // inside the warp token, which is rest-of-line, and appended as
+                // the same ` //<measure>` suffix on the phase halves — so the
+                // bytes are text this rect already covers and no second surface
+                // is born. The live lane's blue box has no twin here.
                 r.measure_boundary_x = r.x + r.w;
                 out_hit_rects->push_back(r);
             }

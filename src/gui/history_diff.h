@@ -213,8 +213,11 @@ enum class GuiHistoryWalkSource {
 // spelling, never a re-derivation through the typed value and back. That slice
 // is rest-of-line, so a ` //<measure>` suffix RIDES INSIDE the token — which is
 // what carries a measure through the revert's line reconstitution unchanged,
-// and why the h view's warp labels may show measure text inline (accepted; the
-// mode paints no measure boxes).
+// and why the h view's warp labels show measure text inline. THAT INLINE
+// SPELLING IS THE LANE'S RULE ON BOTH COLUMNS SINCE 2026-08-22 rather than this
+// column's accident: the phase halves append the same ` //<measure>` suffix at
+// the label owner (the ruling is at GuiHistoryPhaseResetChange below). Neither
+// column paints a measure BOX in this mode — the bytes ride the label.
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
     std::string tempo_token;
@@ -257,10 +260,13 @@ struct GuiHistoryPhaseResetEntry {
     int64_t     frame    = 0;
     bool        disabled = false;
     // The measure bytes, without the ` //` separator. Empty means the line
-    // carried none. It exists for the REVERT act, which restores the whole
+    // carried none. TWO READERS. The REVERT act, which restores the whole
     // line: the column's compare is the serialized line, so a then side that
     // dropped its measure would report every measured marker as changed and
-    // overwrite the measure away.
+    // overwrite the measure away. And, since 2026-08-22, THE LABEL — a single
+    // flag (added-only or removed-only) paints its entry's measure in the
+    // sidecar's own ` //<measure>` spelling, the same ruling the changed pair
+    // takes (GuiHistoryPhaseResetChange below owns it).
     std::string measure;
 };
 
@@ -273,22 +279,25 @@ struct GuiHistoryPhaseResetChange {
     int64_t frame         = 0;
     bool    then_disabled = false;
     bool    now_disabled  = false;
-    // The then side's measure, for the revert. A RECORDED ASYMMETRY with the
-    // warp change above, which keeps both sides' tokens: the now side's token
-    // is painted there ([+] carries the file's spelling), while this column
-    // paints no token at all, so a `now_measure` would have no reader — the
-    // revert restores the then side and nothing else asks.
+    // BOTH SIDES' MEASURES, symmetrically with the warp change above's token
+    // pair (architect 2026-08-22, ruling the open question the old recorded
+    // asymmetry left standing: THE PHASE HALVES PAINT THEIR MEASURE BYTES,
+    // exactly as the warp halves' rest-of-line tokens have always carried
+    // theirs). Before the ruling a measure-only phase edit (`100 //12` ->
+    // `100 //13`) diffed as a changed pair whose two halves painted
+    // IDENTICALLY — no token, same disable bits, same brightness — so the lane
+    // showed THAT the line changed and not WHAT; now each half's label carries
+    // its own line's ` //<measure>` suffix and the edit reads off the flag.
     //
-    // THE CONSEQUENCE, STATED (2026-08-22): because the line compare includes
-    // the measure while the lane paints none, a MEASURE-ONLY phase-reset edit
-    // (`100 //12` -> `100 //13`) diffs as a changed pair whose two painted
-    // halves are VISUALLY IDENTICAL — no token, same disable bits, same
-    // brightness — so the lane shows THAT the line changed but not WHAT, and
-    // the reader consults the sidecar or the revert. Whether the phase halves
-    // should carry measure bytes inline the way the warp halves' rest-of-line
-    // tokens already do is an OPEN ARCHITECT QUESTION, noted here rather than
-    // resolved.
+    // THE TWO SIDES HAVE DIFFERENT READER COUNTS, and that is the whole
+    // remaining asymmetry: `then_measure` is read TWICE — by the REVERT, which
+    // reconstitutes the whole then line and would otherwise report every
+    // measured marker as changed and overwrite the measure away, and by the
+    // removed half's label — while `now_measure` is read ONCE, by the added
+    // half's label. The revert is untouched by the ruling: it restores the then
+    // side and nothing else, and never consults `now_measure`.
     std::string then_measure;
+    std::string now_measure;
 };
 
 // One commit's whole answer. Every commit that gets one is a walk member, and

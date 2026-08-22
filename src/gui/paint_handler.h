@@ -125,14 +125,30 @@ constexpr const char* kMeasureOffsetEditorPrefix = "Paste measures, offset: ";
 //     reads the bare `[-]` / `[+]`, with the `#` disable spelling as its one
 //     payload when the bit is set (`[+]#`). That is what makes the phase-reset
 //     column's CHANGED pair say anything at all: a same-frame change there IS a
-//     disable toggle, so `[-]#` beside `[+]` is the toggle in the file's own
-//     spelling, where `[-]` beside `[+]` would carry no information;
+//     disable toggle OR a measure edit, so `[-]#` beside `[+]` is the toggle in
+//     the file's own spelling, where `[-]` beside `[+]` would carry no
+//     information;
 //   * the CORNER passes disabled=false and the `scale=` token, the payload arm
 //     alone.
-// ASCII by construction: the signs are literals and every token comes from a
-// sidecar grammar that is ASCII-only.
+//
+// `measure` IS THE PHASE COLUMN'S SUFFIX AND ITS ALONE (architect 2026-08-22,
+// ruling that the phase halves paint their measure bytes like the warp halves
+// always have). Non-empty, it appends the sidecar's own ` //<measure>` — the
+// separator bytes included, because THE LANE'S HONESTY RULE IS VERBATIM BYTES
+// and the warp halves show that same raw suffix INSIDE their rest-of-line
+// tokens; a measureless line appends nothing, so no empty separator can ever
+// paint. It is the one spelling of the suffix on this side of the parser
+// boundary, mirroring the two sidecar writers' (warpmarkers.cpp,
+// phaseresetmarkers.cpp) and the split in marker_measure.h. WHO PASSES IT: the
+// three phase-column fills in rebuild_history_diff_flags and nothing else — the
+// four WARP fills pass none because a warp token is rest-of-line and already
+// carries its own suffix (passing one there would paint it twice), and the
+// corner's `Scale:` segment has no measure at all. Defaulted for those six.
+// ASCII by construction: the signs are literals and every token and measure
+// comes from a sidecar grammar that is ASCII-only.
 std::string history_diff_label(const char* sign, bool disabled,
-                               const std::string& token);
+                               const std::string& token,
+                               const std::string& measure = {});
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //
