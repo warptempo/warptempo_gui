@@ -22,11 +22,15 @@
 //
 //   PHASE RESET — the TARGET view's lattice (the phase reset column's home
 //   view), defined by the live warp map:
-//       T       = map_source_to_target(s, map)
+//       s_int   = nearbyint(s)
+//       T       = nearbyint(map_source_to_target(s_int, map))
 //       k       = nearbyint(T / q)             (same q: ms/px is domain-blind)
 //       Tq      = llrint(k * q), floored at 0
 //       landing = nearbyint(map_target_to_source(Tq, map)), clamped to
 //                 [0, total_frames - 1]
+//   The first two roundings are the PAINTER'S, not tidiness: k must be the
+//   column the product actually paints the position at (the shape is stated
+//   in full at snap_to_target_lattice below).
 //
 // The target lattice needs the LIVE WARP MAP, which is why every tool path that
 // touches the phase reset column needs the source WAV and the sidecar's warp
@@ -94,10 +98,21 @@ struct TargetLattice {
 };
 
 // THE PHASE RESET LATTICE: where a target-view nudge, drop or drag commit would
-// leave a reset whose exact source position is `exact_source` — forward-map to
-// the target domain, take the nearest target-view column, quantize that column's
-// time to a whole target frame (the target arm's own llrint, floored at 0), then
-// inverse-map at full precision and round once into the authored source domain.
+// leave a reset whose exact source position is `exact_source` — take the column
+// the product PAINTS the position at, quantize that column's time to a whole
+// target frame (the target arm's own llrint, floored at 0), then inverse-map at
+// full precision and round once into the authored source domain.
+//
+// THE COLUMN CHOICE IS frame_to_paint_sample's SHAPE EXACTLY (render.cpp), at
+// the frame-0 basis: nearbyint the source frame, forward-map it, nearbyint the
+// MAPPED TARGET FRAME, then nearbyint the fractional column. That middle
+// rounding is the load-bearing one — the painters place a marker from the
+// rounded target frame, so choosing k from the full-precision map output picks
+// the ADJACENT column whenever the mapped target falls within half a frame of a
+// half-column boundary, and the tool would then land the position somewhere the
+// GUI's own painted-column -> authored_frame_at_column round trip never puts it.
+// With the paint shape mirrored, the landing IS the product's own
+// authored_frame_at_column of the column it paints the marker in.
 //
 // PAST-EOF IS A REFUSAL, NOT A CLAMP. All authored positions share the product's
 // inclusive [0, total-1] domain, and a reset outside it is load-fatal in both
@@ -117,7 +132,9 @@ inline std::expected<int64_t, std::string> snap_to_target_lattice(
             format_authored_frame(lattice.total_frames) + " frames)");
     }
     const double q = lattice_frames_per_px(lattice.sample_rate);
-    const double target = map_source_to_target(exact_source, lattice.map);
+    const double source_frame = std::nearbyint(exact_source);
+    const double target =
+        std::nearbyint(map_source_to_target(source_frame, lattice.map));
     const double column_time = std::nearbyint(target / q) * q;
     const double target_frame = (column_time < 0.0)
         ? 0.0
@@ -213,24 +230,31 @@ inline std::string replace_leading_frame_token(const std::string& content,
 // else. DELIBERATELY NOT the whole-file settings loader
 // (warptempo_settings::load): a sidecar being migrated may still hold legacy
 // MM:SS.mmm trim timestamps, and a tool that needs one number has no business
-// refusing a file over keys it does not read. The value still parses strictly —
-// a finite, positive, whole-token double (parse_value_double plus the
-// positivity refusal the product's own scale grammar applies) — because it
-// multiplies every tempo in the map this feeds.
+// refusing a file over keys it does not read.
+//
+// THE ONE FIELD IT DOES READ CARRIES THE PRODUCT'S WHOLE VOCABULARY, because
+// this number defines the lattice every phase reset then lands on: a scale the
+// product would refuse must never build a map and author positions from it.
+// So the KEY MATCH IS BYTE-EXACT — the line begins exactly `scale=`, with no
+// whitespace trimmed off either side, matching the product's byte-exact
+// settings lexer (a product-written file carries no padding) — and the VALUE
+// takes the product scale grammar expression for expression
+// (engine_settings_io.cpp): strict parse, strictly positive, inside
+// [kScaleMin, kScaleMax], and pinned to the writer's ONE canonical spelling, so
+// "1" and "100" refuse where "1.0000" loads.
 inline std::expected<double, std::string> read_settings_scale(
     const std::string& path) {
     std::ifstream f(path);
     if (!f.is_open())
         return std::unexpected("cannot open settings sibling '" + path + "'");
+    static const std::string kKey = "scale=";
     std::string line;
     std::string value;
     int found = 0;
     while (std::getline(f, line)) {
-        const size_t eq = line.find('=');
-        if (eq == std::string::npos) continue;
-        if (trim_ws_copy(line.substr(0, eq)) != "scale") continue;
+        if (line.compare(0, kKey.size(), kKey) != 0) continue;
         ++found;
-        value = trim_ws_copy(line.substr(eq + 1));
+        value = line.substr(kKey.size());
     }
     if (f.bad())
         return std::unexpected("read error in settings sibling '" + path + "'");
@@ -245,9 +269,14 @@ inline std::expected<double, std::string> read_settings_scale(
                                path + "'");
     }
     double v = 0.0;
-    if (!parse_value_double(value, v) || !(v > 0.0)) {
-        return std::unexpected("malformed scale value '" + value +
-                               "' in settings sibling '" + path + "'");
+    if (!parse_value_double(value, v) || !(v > 0.0) ||
+        v < kScaleMin || v > kScaleMax ||
+        format_value_double(v, 4) != value) {
+        return std::unexpected(
+            "scale value '" + value + "' in settings sibling '" + path +
+            "' is not a finite double within [" +
+            format_value_double(kScaleMin, 4) + ", " +
+            format_value_double(kScaleMax, 4) + "] in canonical spelling");
     }
     return v;
 }

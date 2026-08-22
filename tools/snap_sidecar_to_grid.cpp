@@ -37,12 +37,16 @@
 //     never manufacture a coincidence: an exact-frame group collapses at the
 //     render boundary (warp into one synthetic 1.00 owner, phase resets into one
 //     event), which is a musical change no tool may silently cause.
-//   - a phase reset AT OR PAST the source total. Past-EOF is load-fatal in the
-//     product, and the tool must not write what the product refuses; the
-//     landing's own clamp is a different thing (walls win over the grid, so the
-//     last column rests at the wall). The warp column takes the same wall on its
-//     snapped RESULT, since a half-column move at the very end of the source
-//     could otherwise carry a legal position past it.
+//   - a position PAST THE SOURCE TOTAL, on either column. Past-EOF is
+//     load-fatal in the product (first_past_eof_wall_defect), so the tool must
+//     neither write such a position nor launder one that ARRIVED that way back
+//     into range: both columns refuse a stored position past total-1 before
+//     snapping it — the marker parsers are grammar and ordering only, so an
+//     illegal position parses fine and reaches the snap. The warp column then
+//     also refuses a snapped RESULT past the wall, its lattice having no clamp
+//     of its own; the target lattice instead CLAMPS its landing, which is a
+//     different thing (walls win over the grid, so the last column rests at
+//     the wall).
 //
 // The write contract is the migration tool's, shared verbatim from
 // sidecar_snap_common.h: convert fully in memory, move the original aside as
@@ -248,6 +252,23 @@ int main(int argc, char** argv) {
         const double exact = static_cast<double>(before);
         int64_t after = 0;
         if (kind == Kind::Warp) {
+            // PAST-EOF IS A REFUSAL IN BOTH DIRECTIONS, and the INPUT side
+            // comes first. The marker parser is the grammar and ordering
+            // parser only — the product's own EOF verdict is the later
+            // first_past_eof_wall_defect pass — so a position already past
+            // total-1 reaches here parsed but load-fatal, and snapping it
+            // would quietly pull adversarial data back into the legal range
+            // and publish it. The RESULT side below is the different thing:
+            // a legal position whose half-column move at the very end of the
+            // source would carry it past the wall.
+            if (before > total_frames - 1) {
+                diag("Snap", path,
+                     "line " + std::to_string(line_number) + ": " +
+                         format_authored_frame(before) +
+                         " is past the end of the source (" +
+                         format_authored_frame(total_frames) + " frames)");
+                return 1;
+            }
             after = sidecar_snap::snap_to_source_lattice(
                 exact, static_cast<double>(sample_rate));
             if (after > total_frames - 1) {

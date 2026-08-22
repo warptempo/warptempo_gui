@@ -210,8 +210,14 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 // m recovery is exact for product-reachable audio lengths: at the deepest
 // numeric zoom q >= ~27.5 frames/px and a source length fits well within the
 // double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
-// is at most 4x the source's under the [25, 400] cent bracket, so the mantissa
-// argument holds there too. It is NOT claimed exact over the whole int64 range.
+// is at most 16x the source's — build_warp_frame_map divides each source delta
+// by the product of tempo, marker scale and settings scale, and all three
+// floors are legal at once (0.25 * 0.5 * 0.5 = 1/16, value_format.h), so the
+// bracket bound is 16x rather than the tempo bracket's 4x alone. A RIFF source
+// caps under 2^32 bytes, i.e. under ~1.1e9 frames at 16-bit stereo, so even a
+// 16x target total is ~1.7e10 — four orders of magnitude inside the 2^53
+// mantissa, and the argument holds in that domain too. It is NOT claimed exact
+// over the whole int64 range.
 inline double displayed_grid_position_at_column(int64_t viewport_start,
                                                 int64_t col, double q) {
     const double m = std::nearbyint(static_cast<double>(viewport_start) / q);
