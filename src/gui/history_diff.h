@@ -219,6 +219,15 @@ struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
     std::string tempo_token;
     bool        disabled = false;
+    // THE CASCADE VERDICT, RESOLVED WITHIN THIS ENTRY'S OWN SIDE (architect
+    // 2026-08-22). `disabled` above is the line's own local '#' byte — the
+    // revert's and the label text's verbatim truth — while this is the live
+    // lane's effective answer computed over the side's FULL warp set through
+    // the one cascade owner (marker_effectively_disabled,
+    // warp_frame_map_build.h), so a label ref whose definition is disabled in
+    // the same commit reads disabled here exactly as its live marker does.
+    // The PAINT is its reader; nothing reconstitutes a line from it.
+    bool        effective_disabled = false;
 };
 
 // A warp line the two sides both carry at the SAME frame with different text —
@@ -230,10 +239,20 @@ struct GuiHistoryWarpChange {
     std::string now_tempo_token;
     bool        then_disabled = false;
     bool        now_disabled  = false;
+    // The entry's cascade pair carried through the pairing (2026-08-22): each
+    // half's effective verdict within its OWN side's commit, beside the local
+    // pair above — the local bits stay the revert's and the label text's
+    // bytes, these two drive the paint (GuiHistoryWarpEntry's field owns the
+    // full contract).
+    bool        then_effective_disabled = false;
+    bool        now_effective_disabled  = false;
 };
 
 // One phase reset line. The grammar is `[#]<frame position>[ //<measure>]` —
-// the frame, the disable prefix, and the measure suffix.
+// the frame, the disable prefix, and the measure suffix. Phase resets carry
+// no labels or references, so there is no cascade and the local `disabled`
+// bit IS the effective verdict — the warp entry's `effective_disabled` field
+// deliberately has no twin on this column (2026-08-22).
 struct GuiHistoryPhaseResetEntry {
     int64_t     frame    = 0;
     bool        disabled = false;
@@ -259,6 +278,16 @@ struct GuiHistoryPhaseResetChange {
     // is painted there ([+] carries the file's spelling), while this column
     // paints no token at all, so a `now_measure` would have no reader — the
     // revert restores the then side and nothing else asks.
+    //
+    // THE CONSEQUENCE, STATED (2026-08-22): because the line compare includes
+    // the measure while the lane paints none, a MEASURE-ONLY phase-reset edit
+    // (`100 //12` -> `100 //13`) diffs as a changed pair whose two painted
+    // halves are VISUALLY IDENTICAL — no token, same disable bits, same
+    // brightness — so the lane shows THAT the line changed but not WHAT, and
+    // the reader consults the sidecar or the revert. Whether the phase halves
+    // should carry measure bytes inline the way the warp halves' rest-of-line
+    // tokens already do is an OPEN ARCHITECT QUESTION, noted here rather than
+    // resolved.
     std::string then_measure;
 };
 

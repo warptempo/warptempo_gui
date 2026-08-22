@@ -6,6 +6,9 @@
 #include "marker_measure.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
+// marker_effectively_disabled, the one label-cascade owner — a header template
+// over the parser marker shape, so reading it here touches no frozen .cpp.
+#include "warp_frame_map_build.h"
 #include "warpmarkers.h"
 #include "warpmarkers_parse.h"
 
@@ -22,6 +25,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <map>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -816,6 +820,52 @@ bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
     out.tempo_token =
         (pipe == std::string::npos) ? std::string() : line.substr(pipe + 1);
     return true;
+}
+
+// ONE SIDE'S EFFECTIVE-DISABLED VERDICTS, resolved within that side's own
+// commit (architect 2026-08-22, the disabled axis carried one layer deeper: a
+// label ref with no '#' of its own whose DEFINITION is disabled on the same
+// side is effectively disabled there, and until this landed its history flag
+// painted full-strength while the same side's live marker dimmed). The side's
+// marker lines are parsed IN FILE ORDER into parser-domain WarpMarkers — index
+// i of the vector is the i-th marker line — and each index resolves through
+// the ONE cascade owner, marker_effectively_disabled (warp_frame_map_build.h).
+//
+// THE ANSWER IS KEYED BY LINE TEXT because the diff hands the entry loops
+// LINES, not indices — and a first-match by text is EXACT even for
+// byte-identical duplicate lines (coincident stacks are legal): the cascade
+// reads only fields the bytes determine (disabled, label_ref, label_def)
+// against the same side vector, so two identical lines carry identical
+// verdicts by construction, and which duplicate a lookup lands on cannot
+// matter. Empty lines are skipped (split_lines yields one for the trailing
+// newline); a '#'-prefixed line is a DISABLED MARKER in this grammar, not a
+// comment, and a non-marker line cannot occur at all — the then side passed
+// the strict whole-set load and the now side is the writers' own output — so
+// the parse's refusal arm below is defensive, and a line it skipped could
+// strand no lookup: extract_warp_entry refuses the same line the same way, so
+// it produces no entry either.
+std::map<std::string, bool> warp_side_effective_disabled(
+        const std::string& side_text) {
+    const std::vector<std::string> lines = split_lines(side_text);
+    std::vector<WarpMarker>         mv;
+    std::vector<const std::string*> line_of;
+    mv.reserve(lines.size());
+    line_of.reserve(lines.size());
+    for (const std::string& line : lines) {
+        if (line.empty()) continue;
+        auto parsed = warpmarkers_internal::parse_single_canonical_line(
+            line, /*accept_measure=*/true);
+        if (!parsed) continue;
+        mv.push_back(std::move(*parsed));
+        line_of.push_back(&line);
+    }
+    std::map<std::string, bool> out;
+    for (std::size_t i = 0; i < mv.size(); ++i) {
+        // emplace keeps the first verdict for a duplicate line — identical by
+        // the argument above.
+        out.emplace(*line_of[i], marker_effectively_disabled(mv, i));
+    }
+    return out;
 }
 
 // The phase reset column has NO callable per-line entry point — its parser's
@@ -2451,13 +2501,45 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
     // writers' own output, so the extraction's boolean below is the parse's
     // own optional shape, not a leniency arm — there is no unparseable line
     // to drop and no counter for one (both died with the gate, 2026-08-04).
+    //
+    // THE DISABLED AXIS SPLITS INTO TEXT AND FACE HERE (architect 2026-08-22),
+    // the live lane's own split carried into the delta: the DIM the painter
+    // shows is each line's EFFECTIVE verdict resolved within its own side's
+    // FULL warp set (warp_side_effective_disabled above — the cascade, so a
+    // label ref dims when its same-side definition is disabled), while the
+    // TEXT's '#' and the revert's reconstituted line stay the VERBATIM local
+    // byte (`disabled`). Each entry looks its own line up in its OWN side's
+    // map — added lines in the now side's, removed in the then side's. Phase
+    // resets have no cascade, so their local bit IS the effective verdict and
+    // their loops below carry nothing extra (the ruling is at
+    // GuiHistoryPhaseResetEntry).
+    const std::map<std::string, bool> then_warp_effective =
+        warp_side_effective_disabled(then_warp);
+    const std::map<std::string, bool> now_warp_effective =
+        warp_side_effective_disabled(now_warp);
+    const auto effective_of = [](const std::map<std::string, bool>& side,
+                                 const std::string& line, bool local) {
+        // An absent line is unreachable — every diffed line came out of its
+        // side's own text — so the local bit is a defensive floor, never a
+        // second verdict.
+        const auto it = side.find(line);
+        return (it != side.end()) ? it->second : local;
+    };
     for (const std::string& line : warp_diff.added) {
         GuiHistoryWarpEntry e;
-        if (extract_warp_entry(line, e)) d.warp_added.push_back(std::move(e));
+        if (extract_warp_entry(line, e)) {
+            e.effective_disabled =
+                effective_of(now_warp_effective, line, e.disabled);
+            d.warp_added.push_back(std::move(e));
+        }
     }
     for (const std::string& line : warp_diff.removed) {
         GuiHistoryWarpEntry e;
-        if (extract_warp_entry(line, e)) d.warp_removed.push_back(std::move(e));
+        if (extract_warp_entry(line, e)) {
+            e.effective_disabled =
+                effective_of(then_warp_effective, line, e.disabled);
+            d.warp_removed.push_back(std::move(e));
+        }
     }
     for (const std::string& line : phase_reset_diff.added) {
         GuiHistoryPhaseResetEntry e;
@@ -2477,6 +2559,8 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
             c.now_tempo_token  = a.tempo_token;
             c.then_disabled    = r.disabled;
             c.now_disabled     = a.disabled;
+            c.then_effective_disabled = r.effective_disabled;
+            c.now_effective_disabled  = a.effective_disabled;
             return c;
         });
     pair_changes_by_frame(

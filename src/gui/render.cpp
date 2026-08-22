@@ -1690,16 +1690,24 @@ void render_history_diff_flags(
 
             const int bx = static_cast<int>(std::nearbyint(left_x));
 
-            // THE DISABLED AXIS, ONE BIT PER COMMIT SIDE (architect
-            // 2026-08-22). Each half asks its OWN side's disable bit — the
-            // removed half `then_disabled`, the added half `now_disabled` — so a
+            // THE DISABLED AXIS, ONE EFFECTIVE BIT PER COMMIT SIDE (architect
+            // 2026-08-22, the cascade joining the same day the axis landed).
+            // Each half asks its OWN side's EFFECTIVE verdict — the removed
+            // half `then_effective_disabled`, the added half
+            // `now_effective_disabled`, each resolved within its own side's
+            // full warp set at the delta (phase resets have no cascade, so
+            // their local bit filled these verbatim) — so the DIM is the live
+            // lane's truth per commit: a label ref whose same-side definition
+            // is disabled dims here exactly as its live marker does, while the
+            // '#' in the LABEL text stays the line's verbatim local byte (the
+            // text/face split at HistoryDiffFlag). A
             // disable TOGGLE paints one dimmed half beside one full-strength one
             // and the direction of the toggle reads straight off the flag. Each
             // bit is meaningful exactly when its half is painted; the guards
             // below are the half's own `w_* > 0`, so a bit resting at false on a
             // half that does not exist is never consulted.
-            const bool removed_disabled = f.then_disabled;
-            const bool added_disabled   = f.now_disabled;
+            const bool removed_disabled = f.then_effective_disabled;
+            const bool added_disabled   = f.now_effective_disabled;
 
             // THE PAIR IS CHOSEN FIRST AND DAMPED SECOND, which is the live
             // lane's own composition order (resolve_flag_face): the focus swap
@@ -1896,8 +1904,8 @@ void render_history_diff_flags(
                 // whichever of its halves are disabled: the pair is not a line in
                 // a switched-off state, it is a live EDIT being displayed, and a
                 // disable toggle is precisely the edit whose stem must not
-                // vanish. That is why the test below is on the SINGLE halves and
-                // never on `f.then_disabled && f.now_disabled`.
+                // vanish. That is why the test below is on the SINGLE halves
+                // and never on both effective bits at once.
                 const bool pair = (w_removed > 0 && w_added > 0);
                 const bool single_disabled =
                     !pair && (w_removed > 0 ? removed_disabled

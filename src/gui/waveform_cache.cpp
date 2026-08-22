@@ -171,50 +171,59 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
-    // Full dispatch freeze during the DISPLAYED-BASIS DRAGS — TWO since
-    // 2026-08-18, membership RE-DERIVED BY GREP against the gate below rather
-    // than appended to (codex round 20's rule, re-applied): a gesture belongs
-    // here iff it is an ABSOLUTE drag on a PAINTED
-    // subject, reading the displayed basis per motion event, so that publishing
-    // a new one mid-gesture would move that subject out from under a stationary
-    // hand. The marker drag (the flag it grabbed) and the trim drag (the
-    // endcaps, the bar AND — since the region became the trim — the waveform
-    // overlay's own move and bound drags, which hit the span on the plate basis
-    // through the painter's region_columns and convert every motion column back
-    // on that same basis). It was THREE from 2026-08-15 to 2026-08-18, when the
-    // standing region's own editor (`region_edit_drag`) was a member in its own
-    // right; its drags ARE the trim drags now, so the freeze is unchanged and
-    // one name fewer. A gesture was on this gate for its own opposite reason —
-    // the target-view tempo drag — until its 2026-07-29 deletion; see
-    // marker_drag.h. Both
+    // Full dispatch freeze while the displayed basis is frozen — the DISPATCH
+    // HALF of the two-gate freeze whose MEMBERSHIP has ONE owner,
+    // displayed_basis_frozen (app_state.h, beside the basis owners): the
+    // absolute painted-subject drags — marker and trim — PLUS, since
+    // 2026-08-22, the two PENDING presses that aim them, because the freeze
+    // contract's "the one job in flight at the grab" means the AIMED PRESS,
+    // not the 8px crossing (the crossing converts the press's stored press_x,
+    // so the epoch it was aimed in must survive until then — the derivation
+    // is the predicate's). A gesture belongs iff it is an ABSOLUTE drag on a
+    // PAINTED subject, reading the displayed basis per motion event, so that
+    // publishing a new one mid-gesture would move that subject out from under
+    // a stationary hand; the trim membership spans the endcaps, the bar AND —
+    // since the region became the trim — the waveform overlay's own move and
+    // bound drags, which hit the span on the plate basis through the
+    // painter's region_columns and convert every motion column back on that
+    // same basis. (Membership history, kept because each step was a ruling:
+    // TWO active drags from 2026-08-18, THREE from 2026-08-15 while the
+    // standing region's own editor `region_edit_drag` was a member in its own
+    // right — its drags ARE the trim drags now; the target-view tempo drag
+    // was a member for its own opposite reason until its 2026-07-29
+    // deletion, see marker_drag.h.) The actives
     // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
-    // DISPATCHED or PUBLISHED mid-gesture: on_waveform_render_done's
+    // DISPATCHED or PUBLISHED from the aimed press to the release:
+    // on_waveform_render_done's
     // completion-drop gate is the publication half, and this is the dispatch
     // half. Freezing the whole enqueue (not just the warp_frame_map
     // hash the former drag_freeze excluded) closes the
     // drop-rewind-redispatch loop: a
     // job for a viewport-follow / resize fingerprint dispatched just before the
-    // grab used to be dropped, rewound, then re-dispatched every tick because
+    // aimed press used to be dropped, rewound, then re-dispatched every tick
+    // because
     // the vp/area fields still differed — wasted full renders all gesture long.
-    // Nothing that legitimately re-renders can occur mid-drag anyway: keys and
-    // wheels are gesture-gated, the follow chase is paused for any live pointer
-    // gesture (any_pointer_gesture_active, whose members include both of
-    // these), and a compositor resize simply catches
-    // up at the first post-gesture tick. With no mid-drag dispatch the
-    // completion drop fires AT MOST ONCE (the one job in flight at the grab).
-    // THE DELIBERATE NON-MEMBERS, by the same derivation: the strip drag and the
+    // Nothing that legitimately re-renders can occur inside the freeze anyway:
+    // keys and
+    // wheels are gesture-gated (the drag-modal gate and wheel_context both
+    // cover the pendings), the follow chase is paused for any live pointer
+    // gesture (any_pointer_gesture_active, whose members include all of
+    // these), and a compositor resize FORCE-ENDS the gestures and disarms the
+    // pendings (finalize_active_drags) before catching
+    // up at the first post-gesture tick. With no in-freeze dispatch the
+    // completion drop fires AT MOST ONCE (the one job in flight at the aimed
+    // press).
+    // THE DELIBERATE NON-MEMBERS are the predicate's to enumerate; the short
+    // form: the strip drag and the
     // grab-pan drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
     // which drains this worker rather than queuing behind it) and must keep
     // rendering; the OVERVIEW lane's drags act on the whole-song lane rather
     // than on the plate; and THE SWEEP (region_drag) writes the trim from a
     // FIXED anchor to the live pointer, so there is no grabbed subject for a
     // basis swap to slide, only the ordinary one-epoch lag every painted
-    // overlay carries. (The tempo drag was a frozen gesture until 2026-07-29,
-    // when it was deleted — see marker_drag.h. THE REGION EDITOR was a member
-    // from 2026-08-15 until 2026-08-18, when its move and bound drags became
-    // the TRIM drags named just above — the same freeze, one name fewer.)
-    if (app.drag.active || app.trim_drag.active)
+    // overlay carries.
+    if (displayed_basis_frozen(app))
         return;
 
     WaveformRenderInputs in = compute_waveform_render_inputs();
@@ -317,39 +326,50 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 }
 
 void GuiPaintHandler::on_waveform_render_done(bool ok) {
-    // Gesture-discard gate, the PUBLICATION half of the dispatch freeze above
-    // and over the SAME displayed-basis drags — marker and trim (the membership
-    // and its derivation are stated
-    // once at maybe_enqueue_waveform_render; do not re-list them here). Each
-    // freezes the displayed paint
+    // Gesture-discard gate, the PUBLICATION half of the dispatch freeze above,
+    // over the SAME membership through the SAME one owner —
+    // displayed_basis_frozen, app_state.h (do not re-list the members here).
+    // The actives
+    // freeze the displayed paint
     // basis for the whole gesture (the DragState "no per-drag map copy"
     // contract). maybe_enqueue_waveform_render's full dispatch freeze keeps a
-    // NEW map edit from being DISPATCHED mid-gesture, but a job dispatched (or
-    // parked in the supersede slot) BEFORE the drag began would still publish
-    // its map HERE — the displayed basis would jump under a stationary pointer,
-    // and every motion event re-reads it (apply_drag_motion, the trim drags, the
+    // NEW map edit from being DISPATCHED inside the freeze, but a job
+    // dispatched (or
+    // parked in the supersede slot) BEFORE the aimed press would still publish
+    // its map HERE — the displayed basis would jump under a stationary pointer.
+    // For an ACTIVE drag every motion event re-reads it (apply_drag_motion, the
+    // trim drags, the
     // nudges, and the trim drags' own column conversions — the waveform
     // overlay's move drag is the plainest case: nothing moves, and the span
-    // slides). So drop the
+    // slides); for a PENDING press (2026-08-22, the freeze's press-time start)
+    // the crossing that converts the stored press_x would interpret a press
+    // aimed in the OLD painted epoch through the NEWLY published one, and the
+    // first motion's delta would be wrong by the two epochs' difference —
+    // dropping here is what makes the press-time aim survive to the
+    // crossing. So drop the
     // completed job WHOLESALE: no surface swap, no fp_*
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
     // fp_* so the pending fingerprint again describes what is on screen; once the
-    // gesture ends and the dispatch freeze reopens, the next
+    // gesture ends — the release (a pending's motionless lift and its click act
+    // included) or a force-end disarm — and the dispatch freeze reopens, the
+    // next
     // maybe_enqueue_waveform_render compares the current store's desired
     // fingerprint against that (== the displayed plate) and re-renders IFF the
     // plate is stale. Both a committed move (the store hash advanced) and a
     // no-op drag that left an EARLIER pending map edit unpublished (the desired
     // hash still differs from the displayed one) re-detect correctly; a
     // genuinely up-to-date plate stays put. Because the dispatch freeze enqueues
-    // NOTHING mid-gesture, this drop fires AT MOST ONCE — for the single job in
-    // flight at the grab; there is no drop-rewind-redispatch loop to sustain.
-    // The non-members are the dispatch gate's own, for the dispatch gate's own
+    // NOTHING inside the freeze, this drop fires AT MOST ONCE — for the single
+    // job in
+    // flight at the aimed press; there is no drop-rewind-redispatch loop to
+    // sustain.
+    // The non-members are the predicate's own, for the dispatch gate's own
     // reasons. (The TEMPO drag was on this gate too, joining the drop
     // for its own reason — it re-warped synchronously per cent step, so a pre-grab
     // async job publishing here would have painted a stale plate over the
     // step-fresh one — until its 2026-07-29 deletion; see marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active) {
+    if (displayed_basis_frozen(app)) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
         wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;
@@ -779,13 +799,20 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // at HistoryDiffFlag, render.h). The label and the value come off the SAME
     // delta entry here, so the flag cannot show one thing and restore another.
     //
-    // THE TWO DISABLE BITS ARE FILLED PER HALF (architect 2026-08-22, the lane's
-    // disabled axis): `then_disabled` on every flag that has a REMOVED half and
-    // `now_disabled` on every flag that has an ADDED one, each off the same delta
-    // entry its own half's LABEL is composed from — so the `#` in the text and
-    // the dimming of the box behind it can never disagree. A half a flag does not
-    // have leaves its bit at the struct's false, which no painter or act reads:
-    // both are meaningful exactly when their own half's bool is set.
+    // THE DISABLED AXIS IS FILLED PER HALF, TEXT AND FACE APART (architect
+    // 2026-08-22, the cascade deepening the axis the same day it landed): the
+    // LABEL's '#' composes from each side's VERBATIM LOCAL bit and the revert's
+    // `then_disabled` carries that same byte, while the PAINT bits —
+    // `then_effective_disabled` on every flag with a REMOVED half,
+    // `now_effective_disabled` on every flag with an ADDED one — take the
+    // delta's per-side EFFECTIVE verdicts (the cascade resolved within each
+    // side's own commit; on the phase column local IS effective, no cascade
+    // existing there). Text, revert byte and dim all come off the SAME delta
+    // entry, so they can never describe different lines — they simply answer
+    // the line's two different questions, its bytes and its live-lane face. A
+    // half a flag does not
+    // have leaves its bits at the struct's false, which no painter or act reads:
+    // each is meaningful exactly when its own half's bool is set.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
@@ -794,8 +821,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added        = true;
             f.removed_text = history_diff_label("[-]", c.then_disabled, {});
             f.added_text   = history_diff_label("[+]", c.now_disabled, {});
-            f.then_disabled = c.then_disabled;
-            f.now_disabled  = c.now_disabled;
+            f.then_disabled           = c.then_disabled;
+            f.then_effective_disabled = c.then_disabled;
+            f.now_effective_disabled  = c.now_disabled;
             f.then_measure  = c.then_measure;
             out.push_back(std::move(f));
         }
@@ -804,7 +832,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame   = e.frame;
             f.removed      = true;
             f.removed_text = history_diff_label("[-]", e.disabled, {});
-            f.then_disabled = e.disabled;
+            f.then_disabled           = e.disabled;
+            f.then_effective_disabled = e.disabled;
             f.then_measure  = e.measure;
             out.push_back(std::move(f));
         }
@@ -813,7 +842,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, {});
-            f.now_disabled = e.disabled;
+            f.now_effective_disabled = e.disabled;
             out.push_back(std::move(f));
         }
     } else {
@@ -827,8 +856,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added_text =
                 history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
             f.then_token    = c.then_tempo_token;
-            f.then_disabled = c.then_disabled;
-            f.now_disabled  = c.now_disabled;
+            f.then_disabled           = c.then_disabled;
+            f.then_effective_disabled = c.then_effective_disabled;
+            f.now_effective_disabled  = c.now_effective_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
@@ -838,7 +868,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed_text =
                 history_diff_label("[-]", e.disabled, e.tempo_token);
             f.then_token    = e.tempo_token;
-            f.then_disabled = e.disabled;
+            f.then_disabled           = e.disabled;
+            f.then_effective_disabled = e.effective_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_added) {
@@ -846,7 +877,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
-            f.now_disabled = e.disabled;
+            f.now_effective_disabled = e.effective_disabled;
             out.push_back(std::move(f));
         }
     }

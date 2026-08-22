@@ -157,7 +157,12 @@ namespace {
 // round-tripped value can come off the partner by up to a grid span — the
 // [96, 100] sliver that silently broke the ruled drag-onto-partner quick-clear
 // when the two applications were two independent spellings. One expression now,
-// so the invariant cannot fork again. The BRIDGE arm deliberately does not call
+// so the invariant cannot fork again. THE COMMIT ARM RE-CLAMPS ONLY A RELEASE
+// THAT WAS NOT PINNED ON THE PARTNER (2026-08-22): a pre-snap coincident
+// release restores equality outright instead, because the nearest-column snap
+// moves an off-grid coincident value in EITHER direction and this clamp binds
+// only in the toward-the-window one — the analysis is at the commit arm. The
+// BRIDGE arm deliberately does not call
 // this and must not: it moves the pair rigidly by one shared delta, so the gap
 // is invariant and there is no partner wall by ruling (recorded at that arm).
 int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
@@ -880,43 +885,84 @@ void GuiInputHandler::commit_trim_drag() {
                 if (v > wall) v = wall;
                 field = v;
             };
+            // THE COINCIDENCE IS JUDGED BEFORE THE SNAP (architect-ruled
+            // behavior delivered 2026-08-22). update_trim_drag's partner clamp
+            // pins the moving bound exactly ON its partner, and the ruled
+            // drag-onto-partner quick-clear ("if they are set coincident, make
+            // trim 0 to EOF") reads that equality at the commit tail — but the
+            // release column-snap below round-trips the pinned value through
+            // painted_column_of_source_frame / authored_frame_at_column, and an
+            // arbitrary resting partner need not sit on the painted authoring
+            // grid, so the snap can move the bound OFF the partner. The
+            // pre-snap tracked value is the pin's own evidence, so it is read
+            // here, while it still rests. The partner itself is bit-exact
+            // through the snap (the untouched-bound early return above), so
+            // comparing against the resting field is exact.
+            const bool release_pinned_on_partner =
+                !app.trim_drag.both &&
+                ((app.trim_drag.is_begin ? app.trim.begin_frame
+                                         : app.trim.end_frame) ==
+                 (app.trim_drag.is_begin ? app.trim.end_frame
+                                         : app.trim.begin_frame));
             snap_moved_bound(app.trim.begin_frame,
                              app.trim_drag.orig_begin_frame,
                              audio.total_frames() - 1);
             snap_moved_bound(app.trim.end_frame,
                              app.trim_drag.orig_end_frame,
                              audio.total_frames() - 1);
-            // THE PARTNER CLAMP RUNS AGAIN HERE, AFTER THE SNAP — the same
-            // clamp_trim_bound_at_partner owner the motion arm applies — and it
-            // has to: the snap above is what defeats the mid-drag clamp.
-            // update_trim_drag stops the moving bound exactly ON its partner,
-            // but the partner is an ARBITRARY resting frame that need not sit
-            // on the painted authoring grid — so round-tripping the coincident
-            // value through painted_column_of_source_frame /
-            // authored_frame_at_column lands it on its column's own frame,
-            // which is at or BEFORE where it was, and the two bounds come apart
-            // again by up to one grid span. That silently broke the ruled
-            // drag-onto-partner quick-clear: with an end resting at 100 on a
-            // 16-frame grid, a begin dragged onto it committed as [96, 100] — a
-            // sliver auto_clear_crossed_trim's `end <= begin` compare does not
-            // recognise — instead of the full window the architect ruled ("if
-            // they are set coincident, make trim 0 to EOF"). Re-clamping
-            // restores the equality the compare needs.
+            // AFTER THE SNAP, THE SINGLE-BOUND ARM RESTORES WHAT THE SNAP CAN
+            // BREAK, in two ranked steps:
             //
-            // BOTH ARMS, not just the visibly broken one. Only the begin arm
-            // showed the sliver: the snap always pulls a value DOWN, so an END
-            // dragged onto its begin overshot to end < begin and was rescued by
-            // the same crossed compare, clearing by accident rather than by the
-            // stated rule. That is the clamp's own invariant ("the handle can
-            // land exactly ON its partner and never beyond it") being violated
-            // and then covered up, so both arms live in the one owner and
-            // neither depends on the rescue.
+            // A PINNED RELEASE RESTORES EQUALITY OUTRIGHT (2026-08-22). The
+            // snap is nearest-column, so it moves an off-grid coincident value
+            // in EITHER direction — toward the window's inside or away from it
+            // — and only the toward case is caught by the partner re-clamp
+            // below. Worked at working zoom, q = 55.125 (44.1 kHz): a partner
+            // end at 12345 sits at 12345/55.125 = 223.95 → column 224 → grid
+            // frame 12348, so a begin pinned on it snapped PAST it and the
+            // re-clamp pulled it back — equality restored, clear fired. But a
+            // partner end at 12320 sits at 223.49 → column 223 → grid frame
+            // 12293 (nearbyint(223 × 55.125) = nearbyint(12292.875)), so the
+            // pinned begin snapped AWAY to 12293, the begin re-clamp
+            // (`v > partner`) did not bind, and the pair rested [12293, 12320]
+            // — a 27-frame (~0.6 ms) sliver auto_clear_crossed_trim's
+            // `end <= begin` compare does not recognise, which silently
+            // defeated the ruled quick-clear on roughly half the phase space of
+            // an off-grid partner. (The comment that stood here claimed "the
+            // snap always pulls a value DOWN" and that "re-clamping restores
+            // the equality" — both arithmetically false: its own worked
+            // example, an end at 100 on a 16-frame grid committing [96, 100],
+            // is a round-AWAY case the re-clamp never touched.) So a release
+            // whose PRE-SNAP value rested on the partner assigns the partner's
+            // frame back, in both rounding directions: equality-with-partner is
+            // a STRONGER user statement than column membership — the pin is the
+            // user's named act, dragging one handle onto the other, and the
+            // snap's stored-equals-shown purpose has nothing to say about a
+            // value about to reset the pair to the song edges. BOTH ARMS
+            // SYMMETRICALLY: an end pinned on its begin snaps down-and-across
+            // (rescued by the crossed compare, clearing by accident) or
+            // up-and-away (the same sliver, mirrored); the restore makes both
+            // clear BY THE RULE rather than one by rescue and one not at all.
+            // A BOUND PINNED BY THE WALL RATHER THAN BY AIM — an end partner
+            // resting wall-held at EOF-1, the moved begin clamped onto it by
+            // the walls — restores and clears too, deliberately:
+            // pinned-at-partner IS the coincidence whatever pinned it, and
+            // auto_clear_crossed_trim's contract has always been the plain
+            // integer compare over whatever shape the release hands it.
+            //
+            // ELSE THE PARTNER CLAMP RUNS AGAIN — the same
+            // clamp_trim_bound_at_partner owner the motion arm applies —
+            // because the snap can carry a NEAR-partner (not pinned) bound
+            // across it: the clamp's own invariant ("the handle can land
+            // exactly ON its partner and never beyond it") must survive the
+            // snap. A release the re-clamp pulls exactly onto the partner
+            // resets at the tail like any other coincident shape.
             //
             // AFTER THE ABSOLUTE WALL IS SAFE, the same order-independence
             // argument the mid-drag clamp records: the partner is itself
-            // wall-held, so clamping to it only ever pulls the bound INWARD and
-            // can never push it back outside [0, EOF-1] that snap_moved_bound
-            // just enforced.
+            // wall-held, so restoring to it or clamping at it only ever pulls
+            // the bound INWARD and can never push it back outside [0, EOF-1]
+            // that snap_moved_bound just enforced.
             //
             // SINGLE-BOUND ARM ONLY. The bridge drag moves both bounds by one
             // shared delta and has no partner wall by ruling (the gap is
@@ -927,8 +973,13 @@ void GuiInputHandler::commit_trim_drag() {
             if (!app.trim_drag.both) {
                 int64_t& moved = app.trim_drag.is_begin ? app.trim.begin_frame
                                                         : app.trim.end_frame;
-                moved = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
-                                                    moved, app.trim);
+                if (release_pinned_on_partner) {
+                    moved = app.trim_drag.is_begin ? app.trim.end_frame
+                                                   : app.trim.begin_frame;
+                } else {
+                    moved = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
+                                                        moved, app.trim);
+                }
             }
             // The snap is the BOUNDS' alone — there is no playhead pin or
             // sync here. The park at the committed trim start comes after,

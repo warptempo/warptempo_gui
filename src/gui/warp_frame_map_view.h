@@ -241,6 +241,15 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // anchor_col want the SUB-PIXEL position, not a column, and the flag painter
 // (iterate_visible_flags_impl, render.cpp) keeps its nearbyint in the double
 // pixel domain (its left_x feeds shaped-text placement, never an int).
+//
+// THE ONE INT64 SIBLING IS ALSO EXEMPT AND COUNTED (2026-08-22):
+// move_playhead_pixels (viewport.cpp) spells this same recovery expression
+// inline in the INT64 domain — its column walk composes with
+// displayed_grid_position_at_column's int64 col and cannot take this owner's
+// int return — and is recorded at its own site ("the recovery nearbyint is
+// the column direction and is this walk's own"). It is the exempt list's
+// whole int64 class; a second int64 spelling would be the fork this owner
+// exists to prevent.
 inline int displayed_column_at(double displayed, double vp_start, double spp) {
     return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
 }

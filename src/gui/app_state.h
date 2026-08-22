@@ -370,12 +370,16 @@ struct DragState {
     // displayed_or_live_target_map, falling back to the memoized live
     // display map (active_display_context /
     // target_view_warp_frame_map_cached) when cold. The displayed map is
-    // frozen for the drag's lifetime by TWO halves working together: the
-    // drag-freeze gate in maybe_enqueue_waveform_render suppresses any NEW
+    // frozen FROM THE AIMED PRESS to the release (displayed_basis_frozen, the
+    // membership's one owner — the pending press joined 2026-08-22, since the
+    // crossing converts the press's stored press_x) by TWO halves working
+    // together: the
+    // freeze gate in maybe_enqueue_waveform_render suppresses any NEW
     // dispatch, and on_waveform_render_done DROPS a job that was already in
-    // flight (or parked in the supersede slot) at the grab instead of publishing
+    // flight (or parked in the supersede slot) at that press instead of
+    // publishing
     // its map — so neither an in-flight nor a fresh render can swap the basis
-    // out from under a stationary pointer. The live cache is keyed on the
+    // out from under a stationary pointer, before the crossing or after it. The live cache is keyed on the
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
     // frozen-coordinate regime keeps motion in the overlay (no generation
@@ -6176,6 +6180,12 @@ inline int64_t snap_authored_frame(double frame) {
 // clock, a prompt over a live gesture having its release swallowed at the
 // prompt's own gate. It went with the modal, which became a paint-only slot.
 // Nothing ASYNCHRONOUS asks this question now.)
+// THE DISPLAYED-BASIS FREEZE IS NOT A SEVENTH CONSUMER: displayed_basis_frozen
+// (beside the basis owners, below) tests a SUBSET of these members under its
+// own derivation — the absolute painted-subject drags plus the two pendings
+// that aim them — and answers a different question ("the displayed paint basis
+// may not move", not "some pointer gesture is live"). Each states its own
+// membership; neither reads the other.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
@@ -8563,10 +8573,21 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // EVENT-SYNC RULING: hit DECISIONS read the committed frame's map, so hit
 // geometry flips at the exact instant the on-screen items flip — the FRAME
 // COMMIT that blits the flag cache, not the offscreen item rebuild (which
-// only stages) and not the earlier plate publish. Gesture MECHANICS — anchors,
-// walls, motion translation, the release snap, the x-coincidence images — stay
-// on the LIVE map: the display converges to live within the rebuild+commit
-// interval, and once the pick is made everything downstream is uniformly live.
+// only stages) and not the earlier plate publish. GESTURE MECHANICS READ THE
+// SAME DISPLAYED MAP (2026-07-22, the slippery-drag fix, superseding the
+// original mechanics-stay-live rule this contract carried until 2026-08-22):
+// the marker drag's anchors/walls/motion/release column-snap, the trim drags'
+// anchor/motion/clamp/release snap, both nudges' pixel anchoring and the
+// phase-reset overlay's map all convert through this owner per motion event,
+// so the grabbed subject tracks the pointer against WHAT IS PAINTED even
+// where the displayed map lags the live one. The recorded LIVE-BASIS families
+// are the click/land/follow placement family — the column-based playhead
+// placements (the sweep's endpoints included) and the post-commit
+// land/follow placements — while walls stay integer source frames outside
+// either basis; pointer-hit-testing.md is the AUTHORITATIVE inventory of
+// both sides and of the two-half worker freeze (dispatch + completion drop,
+// gated by displayed_basis_frozen below) that keeps this map from swapping
+// between a gesture's aimed press and its release.
 // Synchronizing by TIME (a delay) was rejected — the true lag varies through
 // zero with worker load and refresh rate, so any constant would invert the skew
 // in the common fast-commit case. The remaining seams are ALL accepted:
@@ -8574,9 +8595,41 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // input is always a response to the previously PRESENTED frame; (b) the
 // cold-state fallback (first paint / view toggle / just-after-load, live map
 // until the first committed target frame); (c) the column-based
-// playhead-placement clicks (out of scope by ruling — a far subtler seam).
+// playhead-placement clicks (live-basis by ruling — a far subtler seam).
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
+
+// displayed_basis_frozen: THE DISPLAYED-BASIS FREEZE'S MEMBERSHIP — the ONE
+// owner (2026-08-22) of which pointer states freeze the waveform worker's
+// dispatch AND its publication (maybe_enqueue_waveform_render /
+// on_waveform_render_done, waveform_cache.cpp — both gates route through here
+// and neither restates a member; the WHY of freezing is theirs, the WHO is
+// this predicate's). A state belongs iff it is an ABSOLUTE drag on a PAINTED
+// subject — the marker drag and the trim drags — or the PENDING PRESS that
+// AIMS one (pending_marker_press, pending_trim_drag). THE FREEZE STARTS AT
+// THE AIMED PRESS, not at the 8px crossing: the crossing CONVERTS the press's
+// STORED press_x through the then-current displayed basis (the marker path's
+// begin_drag, the trim path's begin_trim_drag conversion), so the epoch the
+// press was aimed in must survive until the crossing — a worker job already
+// in flight at the press would otherwise publish a new map/viewport under the
+// motionless hand, and the first motion would compute its delta from a press
+// column of the OLD painted epoch against the NEW epoch's geometry (until
+// 2026-08-22 the two gates tested only the active drags, so exactly that
+// pending-window rebase was reachable). THE DELIBERATE NON-MEMBERS: the
+// nav/grab-pan, overview and sweep families stay OUT — live-basis by ruling
+// (pointer-hit-testing.md owns the derivation; the pan renders synchronously,
+// the overview acts on the whole-song lane, the sweep holds no grabbed
+// subject) — and so does pending_click, the trim bar's deferred bound-set
+// click, whose act deliberately re-asks its gates LIVE at the lift. This is a
+// SUBSET of any_pointer_gesture_active under its own derivation, not a
+// consumer of it: that predicate answers "some pointer gesture is live", this
+// one "the displayed paint basis may not move".
+inline bool displayed_basis_frozen(const AppState& app) {
+    return app.drag.active ||
+           app.trim_drag.active ||
+           app.pending_marker_press.active ||
+           app.pending_trim_drag.active;
+}
 
 // item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
 // the viewport span the item PAINTERS and the trim hit test decide against, so

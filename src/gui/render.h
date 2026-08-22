@@ -2757,15 +2757,24 @@ void render_phase_reset_flags(cairo_t* cr,
 // (GuiInputHandler::run_history_revert). Phase resets carry no token — frame plus
 // the bit IS their whole line — so the field stays empty on that column.
 //
-// THE TWO DISABLE BITS ARE THE LANE'S DISABLED AXIS (architect 2026-08-22), one
-// per commit SIDE: `then_disabled` is the REMOVED half's and `now_disabled` the
-// ADDED half's, each meaningful exactly when its own half's bool is set. The
-// pairing is deliberate and `then_disabled` was neither renamed nor repurposed
-// to get it — that field now simply has TWO readers where it had one (the revert
-// act reconstitutes the then line from it, AND the painter dims the removed half
-// by it), while the new bit has exactly one, the added half's paint. The paint
-// they drive is the live lane's own disabled treatment applied to this lane's
-// diff inks, per half; the full ruling is at render_history_diff_flags below.
+// THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
+// 2026-08-22, deepened the same day it landed: the axis shipped reading each
+// line's LOCAL '#' bit, which dropped the label cascade — a label ref with no
+// '#' whose definition is disabled on the same side painted full-strength
+// while its live marker dimmed). The PAINT bits are the two
+// `*_effective_disabled` fields — each half's cascade verdict resolved within
+// its OWN side's commit (GuiHistoryWarpEntry::effective_disabled owns the
+// resolution contract; phase resets have no cascade, so their local bit fills
+// these verbatim) — each meaningful exactly when its own half's bool is set.
+// `then_disabled` stays the VERBATIM LOCAL byte and is back to the revert's
+// field alone: the revert act reconstitutes the then line from it, and the
+// label's '#' text is composed from the delta's local bits at the cache fill —
+// the painter no longer reads it. The former `now_disabled` was the added
+// half's paint bit and had exactly that one reader, so it is RENAMED to say
+// what it now holds rather than kept beside a twin. The paint the effective
+// pair drives is the live lane's own disabled treatment applied to this
+// lane's diff inks, per half; the full ruling is at render_history_diff_flags
+// below.
 struct HistoryDiffFlag {
     int64_t     time_frame = 0;
     bool        removed    = false;   // the commit had this line
@@ -2773,8 +2782,9 @@ struct HistoryDiffFlag {
     std::string removed_text;
     std::string added_text;
     std::string then_token;
-    bool        then_disabled = false;
-    bool        now_disabled  = false;
+    bool        then_disabled = false;           // verbatim local: the revert's
+    bool        then_effective_disabled = false; // the removed half's paint
+    bool        now_effective_disabled  = false; // the added half's paint
     // THE PHASE COLUMN'S THEN-SIDE MEASURE, for the revert. The warp column
     // needs no twin: its then side travels as `then_token`, which is
     // rest-of-line and so already carries the measure suffix into the line the
@@ -2807,7 +2817,10 @@ struct HistoryDiffFlag {
 // THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
 // closing a state-axis gap the view shipped with: a `#` line and a live one
 // painted the same flag, so the delta showed the position and hid the state).
-// A HALF whose line is disabled in ITS OWN side's commit paints through the LIVE
+// A HALF whose line is EFFECTIVELY disabled within ITS OWN side's commit — the
+// local '#' or, same-day deepening, the label cascade resolved over that
+// side's full warp set (the effective pair at HistoryDiffFlag above; the '#'
+// in the TEXT stays the local byte) — paints through the LIVE
 // LANE'S OWN DERIVATION applied to this lane's inks — no new constant anywhere:
 // fill and top edge at kMarkerDisabledMix over kRedesignContentGround, the label
 // at kMarkerDisabledLabelMix from kMarkerFlagLabel toward its own dimmed fill,
@@ -2833,7 +2846,8 @@ struct HistoryDiffFlag {
 // class alone, never either of them, exactly as the live lane's does — and a
 // CHANGED pair stems RED, deferring to the old. THE STEM ALSO READS THE DISABLED
 // AXIS NOW (architect 2026-08-22): a SINGLE flag — added-only or removed-only —
-// whose one side is disabled publishes NO STEM AT ALL, the live lane's rule
+// whose one side is EFFECTIVELY disabled publishes NO STEM AT ALL, the live
+// lane's rule
 // verbatim, while a CHANGED PAIR KEEPS ITS STEM whichever halves are disabled,
 // because the pair as a whole is a live EDIT being displayed rather than a line
 // in a switched-off state.

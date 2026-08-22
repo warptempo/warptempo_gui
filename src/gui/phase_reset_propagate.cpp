@@ -394,9 +394,13 @@ void PhaseResetPropagate::paste_apply() {
             // a plain snap to the whole source frame, deliberately WITHOUT
             // the pixel-column anchoring the nudges / drag commits
             // apply: pasted positions are computed and
-            // view-independent, and quantizing them to whatever viewport
-            // happens to be on screen would leak incidental view state
-            // into authored data. Clamped after the snap to the column's
+            // view-independent, and quantizing them to the on-screen
+            // column grid would leak incidental view state into authored
+            // data — since the 2026-08-22 frame-0 anchoring that grid is
+            // viewport-phase-independent, so what would leak today is the
+            // ZOOM LEVEL and the PAINTER WIDTH (which set the grid's
+            // pitch), no longer the viewport position the original record
+            // named. Clamped after the snap to the column's
             // absolute range — 0 (the universal no-negative-position rule)
             // and the marker EOF wall, total - 1, the single wall both
             // marker columns share; the walls win. The upper clamp is now
@@ -421,24 +425,34 @@ void PhaseResetPropagate::paste_apply() {
         }
     }
 
-    // An undo entry represents a state change, not a gesture. Pasting
-    // onto the copy's own anchor reproduces the destination resets byte-
-    // equal (PhaseResetMarker is exactly time_frame + disabled) — but
-    // only when every placement lands inside the cleared membership
-    // windows above; that self-paste is a no-op that pushes nothing and
-    // touches no dirty/render state. A placement rescaled OUTSIDE the
-    // cleared windows (the lead-in / near-end cases) stacks a duplicate
-    // next to its surviving occupant on self-paste — legal in the store
+    // An undo entry represents a state change, not a gesture. The scan
+    // compares WHOLE ROWS — the standard the undo restore's row-identity
+    // comparators rule ("row identity means the whole struct", undo.cpp),
+    // which this scan is a second reader of: time_frame, disabled AND
+    // measure, because a paste materializes MEASURELESS replacements (the
+    // recorded drop above), so a self-paste onto the copy's own anchor
+    // reproduces the destination resets exactly on (frame, disabled)
+    // while the cleared originals' measures are destroyed — a real state
+    // change that owes its undo entry and its dirty recompute. (The scan
+    // compared only time_frame + disabled until 2026-08-22, resting on a
+    // "PhaseResetMarker is exactly time_frame + disabled" premise that
+    // went stale when the measure field landed 2026-08-19/20: that
+    // self-paste read "unchanged" and silently destroyed the span's
+    // measures with no undo entry.) A self-paste over a span that
+    // carried NO measures is still the designed no-op — every row
+    // reproduces whole — while a placement rescaled OUTSIDE the cleared
+    // windows (the lead-in / near-end cases) stacks a duplicate next to
+    // its surviving occupant — legal in the store
     // (the parser collapses equal-frame enabled resets to one event at
     // render/preview time, one stderr line per collapsed timestamp) — so
-    // the store genuinely changes and the undo entry is a real state
-    // change.
+    // the store genuinely changes there too.
     // Compare before pre_state is moved into the push. The stop message
     // and the always-switch-to-P rule below still run.
     bool store_changed = out.size() != pre_state.size();
     for (size_t i = 0; !store_changed && i < out.size(); ++i) {
         if (out[i].time_frame != pre_state[i].time_frame ||
-            out[i].disabled     != pre_state[i].disabled) {
+            out[i].disabled     != pre_state[i].disabled ||
+            out[i].measure      != pre_state[i].measure) {
             store_changed = true;
         }
     }
