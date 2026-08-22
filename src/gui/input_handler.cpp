@@ -4,7 +4,6 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
-#include "score_video.h"   // run_score_video_jump (the Shift+`/` act)
 #include "settings_io.h"
 #include "text_editor.h"
 #include "warp_frame_map_view.h"
@@ -571,12 +570,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              repointing only made it easier to admit —
     //                              the toggle writes no bound at all). Trim is
     //                              BAND, not content
-    //   - Shift+/                → the score-video jump (2026-08-20): it reads
-    //                              the focused measure and drives an external
-    //                              mpv, authoring nothing — the render chords'
-    //                              own family. BARE `/` (the measure editor)
-    //                              stays blocked, the one key here whose two
-    //                              spellings answer differently
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
@@ -917,59 +910,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and this arm
     // deliberately asks neither the P-view refusal nor
     // active_column_authoring_allowed. Read-only still refuses: a measure IS
-    // serialized content, and read_only_key_blocked admits the SHIFTED `/`
-    // alone, so a locked tab drops this plain press before it reaches here. The
+    // serialized content, and `/` is on no read_only_key_blocked entry, so a
+    // locked tab drops this press before it reaches here. The
     // `h` view drops it at its own allowlist too.
     // NOTHING FOCUSED IS A CONSUMED NO-OP, and the refusal lives HERE rather
     // than in the button's face: the bottom-row button is lit whenever the tab
     // is writable and its click simply does nothing when there is no focus (the
     // 2026-08-15 no-blink ruling — a face that tracked the selection would
     // blink at interaction cadence).
-    // Modifier-strict: only the plain, unmodified press binds; the SHIFTED
-    // press is the score-video act, its own arm below.
+    // Modifier-strict: only the plain, unmodified press binds. (Shift+`/` was
+    // the score-video jump until the 2026-08-21 sunset; the chord is unbound —
+    // strict modifier validation makes it a consumed no-op, no arm anywhere.)
     if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
         if (app.last_selected_marker >= 0) {
             flag_editor.enter_measure_edit(app.active_markers_view,
                                            app.last_selected_marker);
         }
-        return;
-    }
-
-    // SHIFT+`/` IS THE SCORE-VIDEO ACT (architect 2026-08-20), the seat the
-    // measure's own arm reserved on the day the field became a grammar: it
-    // opens or seeks the architect's mpv to the FOCUSED marker's RESOLVED
-    // measure over a single-instance IPC socket. The whole implementation and
-    // its contract are score_video.h's; what belongs here is the ROUTING.
-    //
-    // THE SUBJECT IS THE BARE ARM'S EXACTLY — the focus, repaired first, in the
-    // active column — so the key that edits a measure and the key that jumps to
-    // it are always talking about the same marker. Nothing focused is a
-    // consumed no-op, as is every refusal further in (no measure, an
-    // unresolvable '+' chain, no map, no video, no mpv). THE ACT PAINTS
-    // NOTHING: no store write, no undo entry, no record_gesture, no damage, no
-    // view switch — there is nothing to invalidate because nothing in the GUI
-    // changed.
-    //
-    // READ-ONLY IS LEGAL HERE AND THE PLAIN PRESS IS NOT (architect
-    // 2026-08-20): a score jump READS the authored state and drives another
-    // process with it, which is the family Ctrl+S and both render chords are
-    // already in, while bare `/` opens an editor over serialized content. So
-    // read_only_key_blocked admits this ONE spelling of the key and drops the
-    // other (its is_score_video entry carries the ruling). THE BUTTON PATH
-    // REACHES IT TOO: the Measure button is LIT on a locked tab (architect
-    // 2026-08-20 — a chrome face cannot split, so it keeps the legal half and
-    // lets the gate refuse the other, the Edit menu's own shape), so a
-    // shift-click or a long press gets the jump on a rig with no keyboard.
-    //
-    // The `h` view drops the chord at its own allowlist (it is not on
-    // history_mode_key_blocked's admitted list), so it is a consumed no-op in
-    // there like bare `/` beside it.
-    //
-    // Modifier-strict: shift alone binds.
-    if (key == GuiKeys::Slash && !ctrl && shift && !alt) {
-        selection.repair_last_selected();
-        run_score_video_jump(app);
         return;
     }
 

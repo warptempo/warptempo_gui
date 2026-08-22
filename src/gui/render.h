@@ -1186,8 +1186,8 @@ constexpr int kMinWindowHeightPx = 480;
 inline constexpr int kPlayheadUnitPx = 8;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 34 CONTENT at
-// 100% gui_scale plus a 1px MARGIN-BOTTOM, so the LANE is 35.
+// window edge (the kdenlive menu bar, row 1 of the redesign). 30 CONTENT at
+// 100% gui_scale plus a 1px MARGIN-BOTTOM, so the LANE is 31.
 //
 // THE SAME CSS BOX MODEL rows 3 and 4 take (a stated dimension is CONTENT
 // and what sits outside it is its own term, with the LANE the sum — the lane
@@ -1199,16 +1199,21 @@ inline constexpr int kPlayheadUnitPx = 8;
 // buttons it is indistinguishable from the ground above it, which is correct —
 // a margin shows what is behind the box, and behind row 1 is row 1's ground.
 //
-// 30 -> 34 (architect 2026-08-02, with the view bar): 34 = 1 + 32 + 1 exactly,
-// the bar's 32px buttons inside their own 1px margins. Everything below moves
-// down 5px, automatically, through main.cpp's lane table.
+// 30 -> 34 -> 30. The 2026-08-02 view bar raised the content to 34 = 1 + 32 +
+// 1 so the bar's buttons could keep the icon row's 32px box; the architect
+// took it back to the crop's own 30 on 2026-08-21 — the lane now matches
+// kdenlive's menu bar exactly, that allowance retires, and the view bar's
+// button box DERIVES from the row instead (content minus its two 1px margins,
+// 28 at 100% — the derivation is live at the right-float walk,
+// paint_handler.cpp). Everything below moves up 4px, automatically, through
+// main.cpp's lane table.
 //
 // All three size on gui_scale_factor() like every other lane in the tree (the
 // font axis the pre-redesign lanes used to ride is deleted — see the gui_scale
 // block above). Rounded with std::nearbyint and floored like every other lane
 // metric; the 1px MARGIN's floor is live at gui_scale 50 (it rounds to 0
 // there), the height floors are still far below the scaled heights.
-inline constexpr int kMenuRowHeightPx = 34;
+inline constexpr int kMenuRowHeightPx = 30;
 inline constexpr int kMenuRowMarginPx = 1;
 inline int menu_row_margin_h_px() {
     return scaled_px(kMenuRowMarginPx, 1);

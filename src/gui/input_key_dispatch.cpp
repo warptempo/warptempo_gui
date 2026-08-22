@@ -398,27 +398,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // navigation. Bare-exact, exactly the dispatch arm's own spelling.
     const bool is_add_to_selection =
         (!ctrl && !shift && !alt && key == GuiKeys::K);
-    // THE SCORE-VIDEO JUMP (architect 2026-08-20), and it is the allowlist's
-    // first entry that admits ONE SPELLING OF A KEY WHILE BLOCKING ANOTHER.
-    // Shift+`/` drives the architect's mpv to the focused marker's resolved
-    // measure: it READS the authored state and writes to another process
-    // entirely, which is exactly the family Ctrl+S and the two render chords
-    // are in — a score jump is NAVIGATION, and navigation has never been this
-    // gate's business. BARE `/` STAYS BLOCKED and is not admitted by any entry
-    // here: it opens the measure EDITOR, and a measure is serialized content.
-    // So the two halves of one key part company at this line, which is the
-    // whole reason the entry is shift-exact rather than keyed on GuiKeys::Slash.
-    //
-    // THE FACE FOLLOWED THE LEGAL HALF (architect 2026-08-20, the same day):
-    // the Measure button LEFT the read-only grey set, so it is LIT on a locked
-    // tab and its plain click dispatches bare `/` straight into this gate,
-    // which refuses it exactly as the key does. That is the EDIT MENU's shape —
-    // lit face, the gate answers — and it is what gives the keyboardless rig
-    // the jump, a greyed button having swallowed the shift press with the plain
-    // one. The ruling lives at that button's arm in redesign_button_enabled
-    // (app_state.h); this gate is unchanged by it.
-    const bool is_score_video =
-        (!ctrl && shift && !alt && key == GuiKeys::Slash);
+    // BARE `/` IS BLOCKED and is not admitted by any entry here: it opens the
+    // measure EDITOR, and a measure is serialized content. (Shift+`/` was the
+    // score-video jump's lock-legal admission from 2026-08-20 until the
+    // 2026-08-21 sunset removed the jump whole; the chord is unbound and the
+    // strict-modifier rule makes it a no-op everywhere, so no entry answers it.)
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -440,7 +424,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_x || is_trim_shift_x ||
-             is_add_to_selection || is_score_video);
+             is_add_to_selection);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------
@@ -2450,14 +2434,12 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
             resolved[k] = e.measure_text;
             continue;
         }
-        // THE OFFSET SHIFTS THE PRINTED NUMBER AND NOTHING ELSE (architect
-        // 2026-08-20, with the section qualifier): `2:12` pasted at +5 is
-        // `2:17`, the section riding through in the parsed value and re-spelled
-        // by the one writer without this arithmetic ever naming it. That is the
-        // never-crosses-sections ruling falling out of the shape rather than
-        // being enforced here — there is no term that could move a measure into
-        // a different printed numbering, and the bracket below stays what it
-        // always was, a check on the NUMBER.
+        // THE OFFSET SHIFTS THE MEASURE NUMBER AND NOTHING ELSE: `12` pasted
+        // at +5 is `17`, the fraction riding through in the parsed value and
+        // re-spelled by the one writer. The bracket below is a check on the
+        // NUMBER — an out-of-bracket result refuses the paste whole. (The
+        // retired section qualifier rode through this same shape until the
+        // 2026-08-21 sunset removed it from the grammar.)
         const int64_t shifted = v.whole + offset_measures;
         if (shifted < 1 || shifted > kMeasureMaxWhole) return false;
         v.whole     = shifted;

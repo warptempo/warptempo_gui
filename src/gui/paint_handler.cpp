@@ -206,9 +206,12 @@ GuiColor redesign_row_ground(const AppState& app) {
 // architect states one. The hover pill therefore spans the row's full CONTENT
 // height — the 1px vertical inset that stood here was a misread of the crop
 // (those rows were the title-bar seam, not design). That content height is
-// kMenuRowHeightPx = 34, not the crop's 30, and the lane is one pixel taller
+// kMenuRowHeightPx = 30, the crop's own height again since 2026-08-21 (it
+// stood at 34 from 2026-08-02, an allowance for the right float's 32px
+// buttons that now derive their box from the row instead — render.h carries
+// the succession), and the lane is one pixel taller
 // still: row 1 gained a 1px MARGIN-BOTTOM (kMenuRowMarginPx) which is lane, not
-// button — the pill fills the 34 and stops at the margin strip.
+// button — the pill fills the 30 and stops at the margin strip.
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
@@ -283,8 +286,10 @@ constexpr MenuButtonDef kMenuButtons[] = {
 //
 // MARGINS DO NOT COLLAPSE HERE (a stated fact, like every margin in this
 // redesign): each button carries 1px on all four sides, so two adjacent buttons
-// sit 2px apart and the div is 1 + w + 2 + w + 2 + w + 1 wide. The vertical pair
-// is what sets the row's content height — 34 = 1 + 32 + 1 exactly.
+// sit 2px apart and the div is 1 + w + 2 + w + 2 + w + 1 wide. The vertical
+// pair DERIVES the button box from the row rather than setting the row's
+// height (the 2026-08-21 reversal, render.h): content minus the two margins,
+// 28 at 100% under the crop's own 30 — the walk below spells exactly that.
 //
 // A BUTTON'S OWN BOX is kdenlive's, read straight off the 82px "Logging" crop's
 // scanline: [frame 1][fill 12][text][fill 12][frame 1], so the width is the
@@ -2318,16 +2323,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   THE SINGLE-MARKER VERBS (2026-08-18), the right block's first four — drop
 //   (bare `s`), delete (Delete), disable (Ctrl+D), inherit (Ctrl+N), moved
 //   down from the icon row at the architect's word ("move
-//   drop/delete/disable/toggle inherit to bottom right row"). THEY ARE THE
+//   drop/delete/disable/toggle inherit to bottom right row"). THEY AND THE
+//   MEASURE BESIDE THEM ARE THE
 //   ROW'S ONLY RESTING GREYS ON A LOCKED TAB: their two mode gates — the `h`
 //   view and a locked tab — are the BUTTONS' own and came down with them;
 //   THE MARKER MEASURE (2026-08-19), seated between Toggle inherit and Add to
 //   Selection — bare `/`, minuet-scales' staff and notes, an act with no lamp
 //   (it wore edit-comment's balloon until 2026-08-20). It greys
-//   with the four verbs in the `h` view but NOT on a locked tab (architect
-//   2026-08-20): its SHIFT half is the score-video jump, which the lock allows,
-//   and a face cannot split — the ruling is at its arm in
-//   redesign_button_enabled. It is not home-view gated either (measures are the
+//   with the four verbs in BOTH their modes — the `h` view and a locked tab,
+//   the latter again since the 2026-08-21 sunset removed its score-video
+//   shift half. It is not home-view gated (measures are the
 //   fourth ruled exception);
 //   ADD TO SELECTION (2026-08-18), closing the verb group
 //   at the architect's own placement — bare `k`, the STICKY CTRL, and the
@@ -2519,11 +2524,11 @@ constexpr TransportRowDef kTransportGroup[] = {
 // — it wore edit-comment's speech balloon for the one day the field was a free
 // text comment, and the architect swapped the glyph with the grammar on
 // 2026-08-20). It is an act like the four above it, not a mode, so it wears no
-// lamp — the editor's own open session is its state. TWO THINGS SET IT APART
+// lamp — the editor's own open session is its state. ONE THING SETS IT APART
 // FROM THE FOUR VERBS: it is not home-view gated (measures are the fourth ruled
-// exception, so it works on both columns in both audio views), and the
-// READ-ONLY LOCK LEAVES IT LIT while it greys them, its shift half being the
-// lock-legal score-video jump.
+// exception, so it works on both columns in both audio views). The READ-ONLY
+// LOCK greys it with them, as it did before the score-video jump's one lit day
+// (2026-08-20 to the 2026-08-21 sunset).
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
@@ -5268,6 +5273,14 @@ constexpr double kModalFieldHeightPx  = 31.0;   // includes its two 1px borders
 constexpr double kModalFieldBorderPx  = 1.0;
 constexpr double kModalFieldPadXPx    = 7.0;
 constexpr double kModalLabelGapPx     = 11.0;
+// THE LABEL'S AUTHORED 1px DROP (architect-measured 2026-08-21, looking at the
+// painted row: the dialog label — "Setting:" and its siblings — sat one pixel
+// high). The kClockCellOffsetYPx arrangement exactly: an authored offset, not
+// a derivation, added to the LABEL's baseline alone. The FIELD's ink keeps the
+// shared field-band baseline untouched — the field metrics are ruled correct —
+// so the label and buffer part by this one authored pixel. Rides gui_scale
+// like every authored length here.
+constexpr double kModalLabelOffsetYPx = 1.0;
 constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
 // since the 2026-08-12 relayout dissolved that row (these buttons read row
@@ -5570,12 +5583,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                   field_w - 2 * fbord, field_h - 2 * fbord};
         // ONE BASELINE FOR LABEL AND FIELD INK, solved on the FIELD's band so
         // the buffer sits centred in its own box and the label reads level
-        // with it.
+        // with it — the LABEL then takes its own authored 1px drop
+        // (kModalLabelOffsetYPx, above) off that shared seat; the field's ink
+        // does not.
         const double baseline =
             redesign_baseline(font, static_cast<double>(field_y),
                               static_cast<double>(field_h));
 
-        show_row_text(cr, font, static_cast<double>(cx0), baseline,
+        show_row_text(cr, font, static_cast<double>(cx0),
+                      baseline + scaled_px(kModalLabelOffsetYPx),
                       prefix, kRedesignLabel);
 
         // THE FIELD CHROME — THE BUTTONS' OWN BOX (architect 2026-08-13, at

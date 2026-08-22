@@ -7,7 +7,10 @@
 
 // THE MARKER MEASURE — one grammar, one split, one validator.
 // (architect approval 2026-08-20 — the frozen reopen this header carries; it
-// succeeds the deleted marker_comment.h, written under the 2026-08-19 grant.)
+// succeeds the deleted marker_comment.h, written under the 2026-08-19 grant.
+// THIRD FROZEN REOPEN, architect approval 2026-08-21: the SECTION QUALIFIER
+// retired with the score-video sunset — the retirement record is at the
+// grammar block below.)
 //
 // Every warp and phase-reset marker line may carry a MEASURE REFERENCE,
 // appended to the otherwise whitespace-free canonical line as:
@@ -22,7 +25,7 @@
 // THE FREE-UTF-8 BYTE CLASS IS RETIRED (architect 2026-08-20, one day after
 // it landed on 2026-08-19). The field was free text for exactly one day and
 // was the product's first non-ASCII painted surface; it is now a MEASURE
-// REFERENCE for the score-video jump, so it returns to the ASCII-grammar
+// REFERENCE, so it sits in the ASCII-grammar
 // class that every other structural grammar in the product sits in — one
 // canonical spelling per value, the frame_format.h discipline. The retired
 // class was: 1..99 bytes, well-formed UTF-8, no control byte, no DEL. It has
@@ -31,10 +34,8 @@
 //
 // This header is header-only and shared by both binaries — the frame_format.h
 // precedent — so the split, the grammar and the canonical spelling have
-// exactly one home. THE CONSUMERS, re-derived by grep 2026-08-20 rather than
-// edited in place (COMMENT ONLY, architect approval 2026-08-20 — the same
-// same-day grant the grammar block below carries; no code in this file's
-// consumers changed for it):
+// exactly one home. THE CONSUMERS, re-derived by grep 2026-08-21 at the
+// sunset (the score-video act left the list with its file):
 //   * THE TWO FILE PARSERS — warpmarkers_parse.cpp,
 //     phaseresetmarkers_parse.cpp: split, then validate.
 //   * THE GITHUB RECHECK'S TWO DELTA EXTRACTORS — history_diff.cpp: the same
@@ -44,31 +45,25 @@
 //     text_editor.h takes its character cap from kMaxMarkerMeasureBytes rather
 //     than re-spelling a number.
 //   * THE MEASURE PROPAGATE — input_key_dispatch.cpp: it PARSES each clipboard
-//     measure, shifts the printed number against kMeasureMaxWhole, and
+//     measure, shifts the measure number against kMeasureMaxWhole, and
 //     re-spells through format_marker_measure, which is what keeps one
-//     spelling on disk and rides the section through untouched.
-//   * THE SCORE-VIDEO ACT — score_video.cpp: it parses down a '+' chain for
-//     the resolution walk, and reads kMeasureMaxSection when judging a map
-//     anchor's qualifier, so the map format and this grammar cannot drift.
+//     spelling on disk.
 // None of them mirrors the split, the grammar or the spelling.
 //
 // ------------------------------------------------------------------------
 // THE GRAMMAR — ASCII only, two forms, one canonical spelling per value.
-// (SECOND FROZEN REOPEN, architect approval 2026-08-20: the SECTION QUALIFIER
-// below, landed with the printed-number ruling. Every helper this grant
-// changed records it at its own site.)
 //
-// WHAT A MEASURE NAMES, decided 2026-08-20 and the reason the qualifier exists
-// at all: it is THE NUMBER THE PAGE PRINTS, never a continuous count derived
-// by cross-referencing an edition. A movement whose printed numbering RESTARTS
-// mid-way — the K.550 menuetto's trio going back to 1 — would otherwise have
-// two bars called `12` and no way to say which. The SECTION is that
-// disambiguator: 1 for the movement's opening numbering and +1 at each printed
-// restart IN VIDEO ORDER, which is exactly what the map's own sections are
-// (tools/extract_sheet_map.py emits the same qualifier on its anchors, so a
-// marker's measure and a map line read alike).
+// THE SECTION QUALIFIER IS RETIRED (THIRD FROZEN REOPEN, architect approval
+// 2026-08-21, the score-video sunset). From 2026-08-20 to 2026-08-21 a direct
+// form could carry `<S>:` — `2:12` — to disambiguate a movement whose printed
+// numbering restarts (the K.550 menuetto's trio going back to 1); it existed
+// for the score-video jump's map lookup, which left the product whole. The
+// architect's ruling, recorded here where the section ruling stood: "the
+// context will already be a clue" — a repeat or a restart is disambiguated by
+// where the marker sits, so the number alone serves. `2:12` is now refused
+// like any bad token, and a resolved measure is the plain rational again.
 //
-//   DIRECT   <M>  or  <M> <n>/<d>, either optionally prefixed <S>:
+//   DIRECT   <M>  or  <M> <n>/<d>
 //     M is a decimal integer in [1, kMeasureMaxWhole], no leading zeros, no
 //     sign. The optional fraction follows exactly ONE space: n/d with
 //     1 <= n < d <= kMeasureMaxDenominator, neither carrying leading zeros,
@@ -76,24 +71,12 @@
 //     `12 1/2`. Meaning: measure M, n/d of the way through it. `10` is the
 //     downbeat of measure 10; `12 7/8` is seven eighths through measure 12.
 //
-//     THE SECTION QUALIFIER is `<S>:` immediately before that spelling, with
-//     no space anywhere in it: `2:12`, `2:12 7/8`. S is a decimal integer in
-//     [2, kMeasureMaxSection], no leading zeros. A BARE SPELLING IS SECTION 1
-//     AND IS ITS ONLY SPELLING — `1:12` is REFUSED as non-canonical, the
-//     one-spelling-per-value rule this whole grammar is built on, and `0:` is
-//     refused with it (there is no section 0). Almost every piece has one
-//     section and spells nothing.
-//
 //   OFFSET   +<W>  or  +<n>/<d>  or  +<W> <n>/<d>
 //     No space after the '+'. W obeys the M rules (so `+0` is refused —
 //     offsets are strictly positive), the fraction obeys the fraction rules,
 //     and a sub-measure offset's one spelling is the BARE fraction (`+1/2`,
 //     never `+0 1/2`). Meaning: this marker's measure is its predecessor's
 //     resolved measure plus the offset, in exact rational arithmetic.
-//
-//     AN OFFSET CARRIES NO SECTION AND CANNOT BE GIVEN ONE (`+2:1` is
-//     refused). It is a distance, not a place, and it takes the section of
-//     whatever it is measured from — the never-crosses-sections ruling below.
 //
 // Anything else is refused: at the measure editor's commit by red flash, at
 // load as ADVERSARIAL (load-fatal, first error only, identically in both
@@ -110,11 +93,9 @@
 // ------------------------------------------------------------------------
 // '+' RESOLUTION SEMANTICS — stated once, here, the authoritative site.
 //
-// A RESOLVED MEASURE IS A (SECTION, RATIONAL) PAIR since 2026-08-20 — the
-// printed number plus its fraction, and the section they are printed in. Both
-// halves are needed to name a place in a score whose numbering restarts, and
-// consumers must carry both (score_video.h's act interpolates WITHIN a
-// section's own anchors for exactly this reason).
+// A RESOLVED MEASURE IS A RATIONAL — the measure number plus its fraction.
+// (It was a (section, rational) PAIR from 2026-08-20 to the 2026-08-21
+// sunset, under the retired qualifier above.)
 //
 // A '+' measure resolves against the IMMEDIATE PREDECESSOR marker in the
 // SAME column, and only that one — there is no fallback scan to an earlier
@@ -124,20 +105,10 @@
 // direct measure; a BROKEN LINK — a predecessor carrying no measure, or a
 // predecessor that is itself unresolvable — leaves this marker UNRESOLVED.
 //
-// AN OFFSET NEVER CROSSES A SECTION (architect 2026-08-20). A chain's section
-// is its DIRECT ANCHOR'S, carried forward unchanged through every '+' on top
-// of it: `2:12` followed by `+1` resolves to section 2, measure 13, and there
-// is no arithmetic anywhere that could carry a number out of one section and
-// into the next. That is a RULING about what the field means rather than a
-// limitation — a section is a fresh printed numbering, not a continuation, so
-// "one bar past the end of section 1" is not a place the score has a name for.
-// To address the next section, spell a direct measure in it.
-//
 // AN UNRESOLVED '+' IS STILL VALID. It commits, saves, loads and paints;
-// resolution gates the CONSUMERS alone (the score-video act no-ops silently
-// on an unresolved measure). GRAMMAR IS VALIDITY; RESOLUTION IS NOT — the
-// load-lenient, act-strict reading, so re-ordering markers can never make a
-// file refuse to load.
+// resolution gates the CONSUMERS alone. GRAMMAR IS VALIDITY; RESOLUTION IS
+// NOT — the load-lenient, act-strict reading, so re-ordering markers can
+// never make a file refuse to load.
 //
 // This is a DIFFERENT AXIS from the label cascade: it runs predecessor to
 // successor down the store, never definition to ref (warpmarkers.h states
@@ -148,22 +119,19 @@
 inline constexpr int64_t kMeasureMaxWhole       = 99999;
 inline constexpr int64_t kMeasureMaxDenominator = 99;
 
-// THE SECTION BRACKET (architect approval 2026-08-20, this header's second
-// frozen reopen). The QUALIFIER spells 2..99; section 1 is the bare spelling
-// and has no qualifier at all, so the written domain starts at 2 while the
-// VALUE domain is [1, 99]. Ninety-nine printed restarts in one movement is far
-// past anything a score does — the K.550 menuetto, the case this exists for,
-// has two — and the two-digit cap is what keeps the byte bound tight.
-inline constexpr int64_t kMeasureMinSection = 2;
-inline constexpr int64_t kMeasureMaxSection = 99;
+// (kMeasureMinSection / kMeasureMaxSection stood here from 2026-08-20 to the
+// 2026-08-21 sunset, with the retired section qualifier — architect approval
+// 2026-08-21.)
 
 // Maximum measure length in BYTES, shared by both binaries. The grammar is
 // ASCII, so bytes and characters agree. The longest canonical token is the
-// full qualified direct form `99:99999 98/99` at 14 bytes — 2 + 1 for the
-// qualifier over the 11-byte `99999 98/99` — which overtook the longest OFFSET
-// (`+99999 98/99`, 12) when the qualifier landed 2026-08-20. Nothing longer
-// can be spelled, so this is a tight bound rather than a policy cap.
-inline constexpr size_t kMaxMarkerMeasureBytes = 14;
+// full OFFSET form `+99999 98/99` at 12 bytes — 1 for the sign over the
+// 11-byte `99999 98/99`, which is itself the longest DIRECT form. (The
+// retired section qualifier briefly made a 14-byte `99:99999 98/99` the
+// widest; the cap re-derived down with the 2026-08-21 sunset, architect
+// approval the same day.) Nothing longer can be spelled, so this is a tight
+// bound rather than a policy cap.
+inline constexpr size_t kMaxMarkerMeasureBytes = 12;
 
 // The result of splitting one raw marker line. `prefix` is the canonical
 // line the position/payload parsers see; `measure` is the raw measure bytes
@@ -198,15 +166,10 @@ inline MarkerMeasureSplit split_marker_measure(std::string_view line) {
 // fraction form that only an offset may take; `num` is zero when no fraction
 // is present, and `den` is then 1. Together the fields spell exactly one
 // token, which format_marker_measure below reproduces byte for byte.
-//
-// `section` (2026-08-20, under the grant) is meaningful on DIRECT forms only
-// and rests at 1, which is both the default and the value the bare spelling
-// carries — so a reader that never heard of sections sees exactly the old
-// meaning. It is left at 1 on an offset and MUST NOT be read there: an offset
-// takes its section from what it resolves against, never from itself.
+// (A `section` field rode here from 2026-08-20 to the 2026-08-21 sunset,
+// with the retired qualifier — architect approval 2026-08-21.)
 struct MarkerMeasureValue {
     bool    is_offset = false;
-    int64_t section   = 1;
     int64_t whole     = 0;
     int64_t num       = 0;
     int64_t den       = 1;
@@ -275,6 +238,10 @@ inline bool parse_fraction(std::string_view s, int64_t& num, int64_t& den,
 // readers' voice. This is the grammar's one implementation — the validator,
 // the editor's commit and the measure propagate's offset arithmetic all
 // enter here, so there is no second reading of the token anywhere.
+// (The section-qualifier block that took `<S>:` off the front of a direct
+// form retired with the 2026-08-21 sunset — architect approval 2026-08-21; a
+// `:` anywhere in the token now falls through the number readers and is
+// refused like any other stray byte.)
 inline bool parse_marker_measure(std::string_view text,
                                  MarkerMeasureValue& out,
                                  std::string&        error_out) {
@@ -293,44 +260,6 @@ inline bool parse_marker_measure(std::string_view text,
     if (body.front() == '+') {
         v.is_offset = true;
         body.remove_prefix(1);
-        if (body.empty()) {
-            error_out = "malformed measure reference";
-            return false;
-        }
-    }
-
-    // THE SECTION QUALIFIER (architect approval 2026-08-20), taken off the
-    // FRONT before the forms below see anything, which is what keeps their
-    // arithmetic untouched by the grant: past this block `body` is exactly the
-    // token the grammar has always parsed.
-    //
-    // IT IS DIRECT-ONLY, and the refusal is spelled rather than left to fall
-    // through the number readers: an offset carrying `:` would otherwise fail
-    // with "measure offset must be 1..99999", which names the wrong problem in
-    // a field the editor red-flashes on.
-    const size_t colon = body.find(':');
-    if (colon != std::string_view::npos) {
-        if (v.is_offset) {
-            error_out = "measure offset must not name a section";
-            return false;
-        }
-        int64_t section = 0;
-        if (!marker_measure_detail::parse_canonical_uint(
-                body.substr(0, colon), kMeasureMaxSection, 2, section)) {
-            error_out = "measure section must be " +
-                        std::to_string(kMeasureMinSection) + ".." +
-                        std::to_string(kMeasureMaxSection);
-            return false;
-        }
-        // SECTION 1 HAS ONE SPELLING AND IT IS THE BARE ONE. `1:` parses as a
-        // number perfectly well and is refused HERE, on the canonical-spelling
-        // rule the whole grammar rests on, not on the bracket.
-        if (section < kMeasureMinSection) {
-            error_out = "section 1 is spelled without a qualifier";
-            return false;
-        }
-        v.section = section;
-        body.remove_prefix(colon + 1);
         if (body.empty()) {
             error_out = "malformed measure reference";
             return false;
@@ -386,19 +315,11 @@ inline bool parse_marker_measure(std::string_view text,
 // so a value that round-trips through parse_marker_measure comes back byte
 // for byte. The measure propagate re-spells through here after shifting a
 // direct measure's whole part, which is what keeps ONE spelling on disk.
-//
-// THE SECTION IS EMITTED HERE (2026-08-20, under the grant) and only above 1,
-// the bare spelling being section 1's one canonical form. That single rule is
-// also what makes the PROPAGATE section-safe for free: it shifts `whole` and
-// re-spells, so the section rides through in the struct without the paste ever
-// naming it.
+// (The section emission retired with the qualifier at the 2026-08-21
+// sunset — architect approval 2026-08-21.)
 inline std::string format_marker_measure(const MarkerMeasureValue& v) {
     std::string out;
     if (v.is_offset) out += '+';
-    if (!v.is_offset && v.section >= kMeasureMinSection) {
-        out += std::to_string(v.section);
-        out += ':';
-    }
     if (v.whole > 0) {
         out += std::to_string(v.whole);
         if (v.num > 0) out += ' ';

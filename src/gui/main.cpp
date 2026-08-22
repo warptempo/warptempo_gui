@@ -202,20 +202,22 @@ namespace {
 // (the top block being taller than the bottom row) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
-// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 197 =
-// menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
-// which 162 is the block above the waveform, and the BOTTOM ROW 47 since
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 193 =
+// menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
+// which 162 is the block above the waveform; the MENU LANE is 31 since
+// 2026-08-21, when its content went back to kdenlive's own 30 and everything
+// below row 1 rose 4px in the lane table; the BOTTOM ROW 47 since
 // 2026-08-14, when it took the icon row's 46px content in place of its own 50
 // — every number below is re-derived from that table rather than adjusted):
-//   1920x1080: leftover 836 -> waveform CLAMPED at 500, gap 1 = 93, gap 2 = 243
-//     — 35 menu / 93 blank / 162 block / 500 waveform / 243 blank / 47 row,
+//   1920x1080: leftover 840 -> waveform CLAMPED at 500, gap 1 = 97, gap 2 = 243
+//     — 31 menu / 97 blank / 162 block / 500 waveform / 243 blank / 47 row,
 //     the waveform still spanning y 290..790 about the window's midline 540
 //     (the clamp fixes its height and the midpoint rule its centre, so the
-//     four pixels the bottom row gave back come out of gap 2 and the waveform
-//     does not move).
-//   1024x600 (the Pi): leftover 356 -> waveform UNCLAMPED at 356, both gaps 0
-//     — 35 / 0 / 162 / 356 / 0 / 47. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -75), so the waveform keeps everything
+//     four pixels the menu row gave back go into gap 1 and the centered
+//     block does not move).
+//   1024x600 (the Pi): leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
+//     — 31 / 0 / 162 / 360 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -73), so the waveform keeps everything
 //     and takes the four pixels itself, which is the rule's own floor rather
 //     than a special case.
 //
@@ -971,8 +973,6 @@ int main(int argc, char** argv) {
     //   * THE EXTERNAL AUDIO PLAYERS the `l` ("Listen to renders") command
     //     spawns (spawn_audio_player, input_key_dispatch.cpp) — fire and
     //     forget, nothing waited on, nothing decided from a status.
-    //   * THE SCORE VIDEO's mpv (spawn_mpv, score_video.cpp), the same shape:
-    //     one detached player per socket, launched and let go.
     //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
     //     through two fenced entry points — reads for the diff and the walk,
     //     and the commit act's `add`/`commit`/`push` — and, because this
@@ -996,14 +996,10 @@ int main(int argc, char** argv) {
     // ignored that loop sees the short/failed write it is already written for
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own. A SECOND PRODUCER JOINED IT
-    // 2026-08-20: the score video's IPC write (send_mpv_command,
-    // score_video.cpp) writes one line into a socket a player owns, and a peer
-    // that goes away mid-line is exactly this shape — with the signal ignored
-    // that write returns EPIPE into a path already written for it. THE SPAWNED
-    // PLAYERS DO NOT INHERIT THIS: both launchers reset SIGPIPE to default
-    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp, and
-    // spawn_mpv, score_video.cpp), since an ignored disposition survives exec
+    // no SIGPIPE-dependent behaviour of its own. THE SPAWNED
+    // PLAYERS DO NOT INHERIT THIS: the launcher resets SIGPIPE to default
+    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp),
+    // since an ignored disposition survives exec
     // and would change the child's own semantics.
     std::signal(SIGPIPE, SIG_IGN);
 
