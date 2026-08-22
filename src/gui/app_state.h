@@ -3657,8 +3657,11 @@ struct AppState {
     // publishes — a frame carrying only narrow scanner damage could otherwise
     // promote and leave those pixels one epoch behind their own hit geometry.
     // maybe_rebuild_flag_cache (waveform_cache.cpp, the stage owner) is the ONE
-    // consumer: at the first tick with the freeze lifted it clears the bit and
-    // queues that same full rect, which BOTH guarantees a frame happens at all
+    // consumer: at its first unfrozen INVOCATION — whoever calls it; the
+    // free-running ~8ms tick is the starvation backstop, but on_waveform_
+    // render_done and force_synchronous_waveform_rebuild call it inline and
+    // can honor a standing debt sooner — it clears the bit and queues that
+    // same full rect, which BOTH guarantees a frame happens at all
     // (a motionless pending's lift can end the freeze with no damage of its
     // own, and a staged basis may never sit unpromoted with no frame scheduled)
     // and guarantees that frame repaints every item-basis surface.

@@ -6025,16 +6025,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // endcap and routes on geometry that is not under it — the epoch split this
     // family exists to prevent, seeding the next trim drag with the wrong
     // subject or delta. Deferring instead costs one more frame of the old epoch,
-    // whole and self-consistent, and the tick's honor (waveform_cache.cpp)
-    // clears the debt as it queues the full rect, so the very next frame both
-    // promotes and repaints.
+    // whole and self-consistent, and the stage owner's honor (waveform_cache.cpp,
+    // at its first unfrozen invocation — whoever calls it, the free-running
+    // tick included as the starvation backstop) clears the debt as it queues
+    // the full rect, so the very next frame both promotes and repaints.
     if (app.staged_displayed_valid &&
         (displayed_basis_frozen(app) || app.deferred_basis_repaint_due)) {
         // The stage site's damage is being consumed by frames that paint the
         // OLD epoch, so the eventual promote owes the item-basis surfaces a
         // repaint that no queued rect covers any more. Record it; the stage
-        // owner's tick honors it once the freeze lifts, and the promote above
-        // waits for that honor (contract at the field). Damage cannot be
+        // owner honors it at its first unfrozen invocation once the freeze
+        // lifts (whoever calls it — the free-running tick is the starvation
+        // backstop), and the promote above waits for that honor (contract at
+        // the field). Damage cannot be
         // declared from inside a paint pass (the hazard is stated at
         // GuiPlatform::paint_one_frame's loop), which is the other half of why
         // the repair is a recorded bit rather than an invalidate here. Setting
