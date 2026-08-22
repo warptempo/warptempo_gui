@@ -15,6 +15,8 @@
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
+#include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
+                                  // cycle's playhead-anchored seed)
 #include "warpmarkers.h"
 
 #include <fcntl.h>
@@ -1227,7 +1229,54 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     const int here = app.history_mode.focus;
     int there = -1;
     if (here < 0 || here >= n) {
-        there = forward ? 0 : n - 1;
+        // THE SEED IS THE PLAYHEAD ANCHOR (architect 2026-08-22), not the list's
+        // first index: with no focus standing, a Tab lands the nearest flag
+        // STRICTLY PAST the playhead and a Shift+Tab the nearest strictly before
+        // it. That is the live cycle's own rule verbatim ("the playhead frame is
+        // the sole cycle anchor", stated at Selection::cycle_selection), and the
+        // index seed it replaces was this body's one deviation from the mirror
+        // its landing comment below claims — it teleported a reader who had just
+        // opened the view to the piece's first delta instead of continuing from
+        // where the playhead sits.
+        //
+        // THE COMPARE IS IN THE ACTIVE DISPLAY DOMAIN, both sides: the flags
+        // carry SOURCE frames (they land through land_playhead_on_source_frame),
+        // and playhead_cursor_sample is a domain frame, so each candidate
+        // forward-translates exactly as the live cycle's frame_of does. The mode
+        // switches no audio view, so it stands in whichever of source (identity)
+        // or target (the live map) the tab was in, and this handles both.
+        //
+        // FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves
+        // the list sorted ASCENDING BY time_frame and the source->domain
+        // translation is monotone, so the scan needs no minimum-search. Where
+        // several flags share one frame (a changed/removed/added coincidence,
+        // which the stable sort keeps grouped) the group's first member forward
+        // and its last backward is the stop, and the index step below then walks
+        // the rest of the group — every flag stays Tab-reachable.
+        //
+        // STRICT INEQUALITY IS THE LIVE FAMILY'S OWN, and it means a playhead
+        // parked exactly on an unfocused flag steps PAST it rather than
+        // re-landing where it already stands.
+        const int64_t ph_f = app.playhead_cursor_sample;
+        auto frame_of = [&](int i) -> int64_t {
+            return source_frame_to_active_domain(
+                app, audio,
+                app.history_mode.flags[static_cast<std::size_t>(i)].time_frame);
+        };
+        if (forward) {
+            for (int i = 0; i < n; ++i) {
+                if (frame_of(i) > ph_f) { there = i; break; }
+            }
+        } else {
+            for (int i = n - 1; i >= 0; --i) {
+                if (frame_of(i) < ph_f) { there = i; break; }
+            }
+        }
+        // NO CANDIDATE IS THE CONSUMED NO-OP the whole family already is — the
+        // live cycle's "nothing ahead" return and the no-wrap walls two lines
+        // below in one shape. Forward with the playhead at or past the last
+        // flag, backward at or before the first, and the view rests untouched.
+        if (there < 0) return;
     } else if (forward) {
         if (here + 1 >= n) return;   // last already
         there = here + 1;
@@ -1485,9 +1534,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // ordering is derived here (the hit stash indexes this same list).
     // NO WRAP, mirroring the live cycle: it lands on the nearest stop in the
     // walk direction and does nothing at all with none ahead, so a Tab on the
-    // last flag is a consumed no-op here too. With NO focus standing Tab takes
-    // the FIRST flag and Shift+Tab the LAST, which is the same rule read from
-    // outside the list. An empty list is a consumed no-op, in all three of its
+    // last flag is a consumed no-op here too. With NO focus standing the
+    // PLAYHEAD is the anchor (architect 2026-08-22): Tab takes the nearest flag
+    // strictly past it and Shift+Tab the nearest strictly before it, the live
+    // cycle's own seed, and a playhead with nothing ahead in the walk direction
+    // lands nothing. An empty list is a consumed no-op, in all three of its
     // shapes: an empty delta, an active column whose half of the delta is empty,
     // and the DROPPED-AND-NOT-YET-REBUILT list, whose window every mode edge
     // closed on 2026-08-07 by republishing inside its own press — the rebuild's
