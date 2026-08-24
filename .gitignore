@@ -23,6 +23,11 @@ docs/welcome_back_template.md
 # tools
 tools/build/
 
+# android cross-compiled dep sysroot: reproducible from android/deps/ scripts;
+# kept out of the public repo so no GPL/LGPL binary-distribution obligations
+# attach (fftw is GPL, cairo LGPL/MPL) — architect ruling 2026-08-23
+android/prebuilt/
+
 # projects
 projects/*/*.fingerprint
 projects/*/*.peaks
