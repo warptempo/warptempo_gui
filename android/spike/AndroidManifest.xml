@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M2 spike APK. Throwaway substrate proof: NativeActivity + cairo blit +
+     harfbuzz text + AAudio + the OTG write probe. No product code is involved,
+     and the package name is deliberately NOT the product's, so the spike can be
+     installed and uninstalled without disturbing anything the product later owns.
+
+     hasCode="false" is deliberate and it HOLDS for everything this spike does.
+     Environment.isExternalStorageManager() is a STATIC method on a framework
+     class (android.os.Environment, boot classpath), so plain JNI reaches it from
+     native with no classes.dex at all. The Java sliver the research doc plans for
+     is owed to onActivityResult (SAF) and to immersive mode / clipboard — none of
+     which the spike touches. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.warptempo.spike">
+
+  <!-- The OTG stick is the point of the probe, but a missing one must not make
+       the APK uninstallable, so required="false". -->
+  <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+  <!-- The architecture question research §5.6 leaves open: does All-files access
+       actually permit a plain open()+write() under /storage/XXXX-XXXX ? The toggle
+       is granted by hand in Settings; the spike only reports the live state. -->
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+  <application
+      android:label="Warptempo Spike"
+      android:hasCode="false"
+      android:extractNativeLibs="false"
+      android:allowBackup="false"
+      android:debuggable="true">
+
+    <activity
+        android:name="android.app.NativeActivity"
+        android:exported="true"
+        android:label="Warptempo Spike"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:screenOrientation="landscape"
+        android:resizeableActivity="false"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"
+        android:windowSoftInputMode="adjustNothing">
+
+      <!-- soname without the lib prefix and the .so suffix. -->
+      <meta-data android:name="android.app.lib_name" android:value="warptempo_spike" />
+
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

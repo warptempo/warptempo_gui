@@ -276,3 +276,203 @@ aapt2/zipalign/apksigner pipeline, keystore and `adb` loop are all M2.
   committed or `.gitignore`d is an architect call — the whole tree is
   reproducible from `android/deps/build_all.sh` in about ten minutes. I did not
   touch `.gitignore`.
+
+---
+
+## 9. The M2 spike APK (2026-08-23)
+
+A throwaway APK that proves the whole Android substrate on the real device before
+any product code is ported. **No product source is involved** — nothing under
+`src/`, `tools/`, `docs/`, `projects/` or the root `CMakeLists.txt` was read into
+it or edited. Everything lives under `android/spike/`.
+
+`bash android/spike/build_apk.sh` goes from a clean tree to a signed, aligned,
+verified APK in one command. It wipes `android/spike/build/` first, so a re-run
+means exactly what a first run means.
+
+### 9.1 What it puts on one screen
+
+1. **A cairo test card** — eight labelled colour swatches (RED/GREEN/BLUE/CYAN/
+   MAGENTA/YELLOW/WHITE/GREY, each captioned with the colour it is supposed to
+   be, so an R/B swap is legible rather than inferred), a comb of 1-px rules at
+   gaps 1…6 px plus eight 1-px horizontals (any scaling between backbuffer and
+   panel shows up here long before it shows up in text), and two harfbuzz-shaped
+   lines at a fixed 48 px — one Liberation Sans, one Liberation Mono.
+2. **Live touch echo** — a ring + dot per active finger labelled with its POINTER
+   ID and coordinates, tracked by id (never by index).
+3. **PLAY WAV / STOP WAV** — a tap region running the bundled 3 s 44.1 kHz stereo
+   WAV through AAudio, with the granted stream facts printed live.
+4. **OTG PROBE** — a tap region running the storage probe (§9.5) and printing
+   every result, errno by name.
+5. **A frame counter and fps**, plus the negotiated window format, stride and
+   which copy path the blit took.
+
+### 9.2 File inventory
+
+```
+android/spike/
+  AndroidManifest.xml     NativeActivity, landscape, hasCode="false",
+                          extractNativeLibs="false", MANAGE_EXTERNAL_STORAGE
+  build_apk.sh            clean -> keystore -> assets -> compile -> link ->
+                          aapt2 -> zip -0 -> zipalign -P 16 -> apksigner -> verify
+  src/spike_main.cpp      glue main, lifecycle, ALooper loop, blit+swizzle,
+                          the test card, touch echo, the two tap regions
+  src/spike_text.{h,cpp}  freetype on APK-asset bytes + harfbuzz + cairo-ft
+  src/spike_audio.{h,cpp} AAudio open/callback/error path
+  src/spike_wav.h         the spike's OWN minimal WAV reader (16/24-bit stereo)
+  src/spike_storage.{h,cpp} the OTG write probe + the isExternalStorageManager read
+  src/spike_log.h         logcat macros
+  tools/gen_assets.sh     copies the two Liberation faces, generates the WAV
+  tools/gen_wav.py        deterministic 44.1 kHz stereo 16-bit WAV writer
+  build/                  ALL output, incl. assets/ (gitignored by `build*/`)
+```
+
+The assets land under `build/assets/` deliberately: `.gitignore` already ignores
+`build*/`, so the generated WAV and the copied third-party font binaries stay out
+of the repo with no `.gitignore` edit, on the same reasoning that keeps
+`android/prebuilt/` out.
+
+### 9.3 The keystore
+
+`~/.android/debug.keystore`, created by `build_apk.sh` on first run with the
+private JDK's `keytool` (`~/.local/android/jdk/bin/keytool`): RSA 4096, 20000
+days, the AOSP `android` / `androiddebugkey` / `android` triple, DN
+`CN=Android Debug, O=Android, C=US`. **Back it up.** Android identifies an app by
+(package name, signing certificate); losing this key means uninstall-and-lose-data
+rather than upgrade-in-place. `WT_KEYSTORE` overrides the path.
+
+The spike's package is `com.warptempo.spike`, deliberately NOT the product's
+`com.warptempo.gui`, so the throwaway can be installed and removed without
+disturbing anything the product later owns.
+
+### 9.4 Verification (all device-free, all inside `build_apk.sh`)
+
+- `apksigner verify` passes. It reports **v3 true, v2 false** — that is the
+  default verify running at the APK's own minSdk 30, where only v3 is exercised.
+  The v2 block IS present; the script re-asks at `--min-sdk-version 24` to show
+  it. v1 is absent and correctly so at minSdk 30.
+- `zipalign -c -P 16 -v 4` → `lib/arm64-v8a/libwarptempo_spike.so (OK)` /
+  `Verification successful`.
+- Every LOAD segment `align 2**14`, on the linked `.so`, with no
+  `-Wl,-z,max-page-size` flag anywhere — r29's default, confirmed on an image that
+  pulls in cairo, pixman, harfbuzz and freetype statically.
+- `-Wl,--no-undefined` is passed at link, so a missing symbol is a BUILD failure
+  rather than something deferred to the device loader. `DT_NEEDED` comes out as
+  exactly `libdl libm libaaudio libandroid liblog libc` — nothing that would have
+  to ship beside the app, no `libc++_shared.so` (`-static-libstdc++`).
+- `aapt2 dump badging` / `dump xmltree` confirm: `minSdkVersion 30`,
+  `targetSdkVersion 35`, `android.app.NativeActivity` launchable,
+  `android.app.lib_name = warptempo_spike`, `screenOrientation=0` (landscape),
+  `hasCode=false`, `extractNativeLibs=false`, `resizeableActivity=false`,
+  `uses-permission MANAGE_EXTERNAL_STORAGE`, `usb.host` not required,
+  `native-code: arm64-v8a`.
+- The APK's own listing shows the `.so` and all three assets **STORED**
+  (`-0 ttf -0 wav`, `zip -0` for the library), which is what `-P 16` and
+  `extractNativeLibs="false"` both require.
+
+### 9.5 The choices the spike made, and why
+
+**AAudio: opened UNSPECIFIED, resampled in the app.** The brief allowed either
+requesting 44.1 k or letting the OS resample. The spike does neither: it opens
+with `AAUDIO_UNSPECIFIED` sample rate, reads back what was granted, and linearly
+resamples 44.1 k into that rate itself. Requesting 44.1 k teaches nothing and
+costs the documented 8× round-trip latency; letting the OS resample hides the one
+number M4 actually needs, which is **what rate the device grants**. The screen
+prints granted rate, channels, format, burst, buffer size, deviceId, sharing mode,
+performance mode, `getHardwareSampleRate()` and the live SRC ratio. `SHARED` +
+`PERFORMANCE_MODE_NONE`, never `EXCLUSIVE`/`LOW_LATENCY` (refused on USB). The
+error callback ignores the code entirely and tears down from a **detached** thread,
+per Google's own recipe and the TIMEOUT-instead-of-DISCONNECTED bug. The linear
+interpolator is a placeholder for the M4 shim, not a draft of it.
+
+**Blit: persistent ARGB32 backbuffer + a per-frame swizzle chosen off the format
+actually negotiated.** `setBuffersGeometry(win, 0, 0, WINDOW_FORMAT_RGBA_8888)`,
+then `buf.format` is re-read at every lock: RGBA/RGBX take a NEON `vld4q_u8` R↔B
+swap, a BGRA window would take a plain `memcpy`, and the screen says which
+happened. `buf.stride` is treated as **pixels** (the header says so explicitly).
+The spike repaints everything every frame and passes a NULL dirty rect; the damage
+union with the rect `lock` hands back is the product port's job, not the spike's.
+
+**Text: `CAIRO_ANTIALIAS_GRAY` is pinned.** Subpixel AA is channel-ASYMMETRIC, so
+it would fringe through the R↔B swizzle. Also **two `FT_Face` objects per font
+from one buffer** — cairo sets the face size when it renders and harfbuzz reads
+the face size when it shapes; two faces over the same immutable bytes removes the
+whole class of fight for nothing. The `AAsset`s stay open for the process's life
+because `FT_New_Memory_Face` does not copy.
+
+**Run loop: research §3.4 Model 1, no `AChoreographer`.** The first
+`ALooper_pollOnce` of an iteration waits 8 ms and the rest drain with a 0 timeout,
+so a busy event source can never starve the repaint; `unlockAndPost`'s blocking on
+buffer availability is the real pacer. `ANativeActivity_setWindowFlags(…
+AWINDOW_FLAG_KEEP_SCREEN_ON, 0)` is the whole kiosk stay-awake implementation.
+
+**`android_main` state is a LOCAL, not a global.** `android_main` runs again when
+the activity is destroyed and remade (USB attach is a documented trigger), so a
+second entry gets a fresh state and the first one's cairo surfaces, FT faces and
+AAudio stream are already released. The window is **borrowed and never
+`ANativeWindow_acquire`d**, and is dropped at `APP_CMD_TERM_WINDOW`.
+
+**The OTG probe, and NO JAVA SLIVER.** The probe reads
+`Environment.isExternalStorageManager()`, writes a control file into
+`activity->internalDataPath` (if that fails the probe itself is broken),
+`opendir("/storage")` and lists what is visible, then for every entry whose name
+is an FS-UUID (`XXXX-XXXX`) does `open() + write() + fsync() + close()` of
+`warptempo_spike_probe.txt` and reports the errno of whichever step failed first,
+by name, on screen. **`hasCode="false"` survives:**
+`Environment.isExternalStorageManager` is a *static* method on a *framework* class
+on the boot classpath, so plain JNI (`AttachCurrentThread` → `FindClass` →
+`GetStaticMethodID`) reaches it from a zero-Java APK. The Java sliver the research
+doc plans for is owed to `onActivityResult` (SAF, M6), immersive mode and the
+clipboard — none of which the spike touches. **So no `javac`, no `d8`, no
+`classes.dex`.** The `MANAGE_EXTERNAL_STORAGE` toggle is granted by hand in
+Settings; the spike only reports the live state.
+
+### 9.6 What §1/§3/§4 of the research doc got wrong in practice
+
+1. **`-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__` is mandatory and is mentioned
+   nowhere.** Without it bionic marks every symbol newer than minSdk `strict`, and
+   a strict-unavailable symbol is a hard **build error** that
+   `__builtin_available(android N, *)` **cannot** open — the guard is silently
+   useless. This bit on `AAudioStream_getHardwareSampleRate` (API 34) from a
+   minSdk-30 build. `android/spike/build_apk.sh` passes the define; any later
+   milestone that touches a newer-than-minSdk API needs it too.
+2. **§4.1's `AAudioStream_getDeviceIds` (claimed API 36) DOES NOT EXIST in NDK
+   r29's `AAudio.h`, and neither does `AAudioStreamBuilder_setDeviceIds`.** The
+   §4 epistemic note was right that the summariser fabricated part of that table
+   (`setPartialDataCallback` is indeed absent) but the *corrected* table still
+   carries a row that the headers do not support. What r29 actually introduces at
+   API 36 is the offload family: `setPresentationEndCallback`,
+   `setOffloadDelayPadding`, `getOffloadDelay`, `getOffloadPadding`. Everything
+   else §4 claims **is** confirmed verbatim: `setDeviceId` 26, `setSampleRate` 26,
+   `setUsage` 28, `setContentType` 28, `getHardwareSampleRate` 34, and there is
+   still no native enumeration API at any level.
+3. **§3.7's "patch native_app_glue, its `process_input` causes ANRs" is stale.**
+   The bug is already fixed upstream in r29 — the shipped `process_input` drains
+   with `while (AInputQueue_getEvent(...) >= 0)` and `continue`. There is nothing
+   to patch and no fork to maintain; the spike compiles the stock glue in place.
+4. **§1's `zip` availability.** NOTES §8 recorded `zip` as missing and left it as
+   a pacman call for M2; `/usr/bin/zip` (Info-ZIP 3.0) is in fact present, so no
+   system package was needed and none was installed.
+5. **`apksigner verify`'s scheme report is min-sdk-relative** (§1.7 does not say
+   so). At minSdk 30 it prints v2 = false even when the v2 block is present.
+6. Confirmed and unchanged: `stride` is in PIXELS (`native_window.h` says it in
+   so many words); cairo ARGB32 is B,G,R,A on this target while
+   `WINDOW_FORMAT_RGBA_8888` is R,G,B,A; `zipalign` must run **before**
+   `apksigner`; `aapt2 link` with no `res/` at all still emits a valid binary
+   manifest plus `resources.arsc`; `-0` is required for `-P 16` to mean anything.
+
+### 9.7 Known limits of the spike (deliberate, not defects)
+
+- **The navigation bar will be visible.** `Theme.NoTitleBar.Fullscreen` hides the
+  status bar only, and hiding the nav bar is Java-only (§3.6). Seeing it is itself
+  a useful data point for the immersive-mode decision.
+- Touch **history samples** are not replayed — the echo reads the current position
+  only. The product's sweep and grab-pan will need `AMotionEvent_getHistorical*`;
+  the spike does not, and pretending otherwise would hide the cost.
+- The OTG probe runs **synchronously on the glue thread**. A pathologically slow
+  volume could stall the loop; at spike scale that is a feature (the stall is
+  visible) rather than a risk worth engineering away.
+- Every tap region acts **at the press**. A spike tap can only mean one thing, so
+  there is nothing to defer to a lift.
+- The APK is not byte-reproducible run to run (zip and signature timestamps); the
+  *inputs* are — the WAV generator is deterministic and the fonts are copies.
