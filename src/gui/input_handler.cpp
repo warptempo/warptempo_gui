@@ -2220,6 +2220,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // is a no-op when none is open. Only `t` and the settings-editor
     // `active_audio_view=` commit route here — Ctrl+Tab never changes
     // active_audio_view — so this is the one place either edge is handled.
+    // THE CLOSE IS KIND-AGNOSTIC: it also tears down a live MEASURE editor
+    // (Kind::MeasureText) on T->S, where before 2026-08-24 it survived only
+    // because nothing closed it. Flagged for a ruling and the architect
+    // ruled 2026-08-25: KEEP — "we want symmetry as much as possible", the
+    // same reason as the payload editor's.
     flag_editor.exit_top_flag_edit_no_commit();
 
     // (NOTHING HAPPENS TO ITERATION MODE ON THIS EDGE — the record of a
