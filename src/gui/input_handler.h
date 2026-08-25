@@ -157,7 +157,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // suppressed.
 //
 // HIDING IS SAFE BY CONSTRUCTION: it DISCARDS NOTHING, because the trim persists
-// and bare `x` re-shows an identical overlay. That is what lets the rule below
+// and bare `[` re-shows an identical overlay. That is what lets the rule below
 // be a rule rather than a negotiation — no site has to weigh what a hide costs.
 //
 // ============ THE RULE (architect 2026-08-19, amended 2026-08-20) ============
@@ -238,13 +238,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // A FOURTH CLASS STOOD HERE AND IS RETIRED: BARE ESC, the one route that hid
 // and did nothing else (joined 2026-07-30 as a clear, a hide from 2026-08-18,
 // retired 2026-08-21). The durable show's twin is the durable hide, so a second
-// key aimed at the same surface was a second road; bare `x` is that road now,
+// key aimed at the same surface was a second road; bare `[` is that road now,
 // both ways. Esc's own enumeration lives at its dispatch point in on_key
 // (input_handler.cpp).
 //
 // THE TWO NON-CALLERS WORTH NAMING, because both write the visibility bit
 // themselves rather than through this helper:
-//   * BARE `x` (handle_toggle_trim_region, input_trim.cpp) — the toggle, and
+//   * BARE `[` (handle_toggle_trim_region, input_trim.cpp) — the toggle, and
 //     since 2026-08-21 the ONE MANUAL ROAD onto and off the overlay, its hide
 //     half being the user asking for it outright;
 //   * THE FILE LOAD (file_loader.cpp) — an in-place reset that pairs the hide
@@ -274,7 +274,7 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // rest of the stroke live. A no-op when it already stands, which is what lets
 // its one caller sit on a per-motion path.
 //
-// IT DOES NOT FRAME, which is the one thing that separates it from bare `x`'s
+// IT DOES NOT FRAME, which is the one thing that separates it from bare `[`'s
 // show half (handle_toggle_trim_region, input_trim.cpp — the toggle's raise
 // runs bring_span_into_view because the user asked to LOOK at the window). The
 // caller here is a LIVE POINTER GESTURE, already under the pointer or the
@@ -302,13 +302,13 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // display of the trim window; the big surface exists for GLASS, where that lane
 // is unusable. So the plain endcap/bridge/bare-band press and the two
 // Ctrl / Ctrl+Shift bound-set presses raise nothing at all now, and a laptop
-// press that does want the big surface asks for it with bare `x`.
+// press that does want the big surface asks for it with bare `[`.
 //
 // AND THE ONE RAISE LEFT IS STROKE-SCOPED, which is this owner's counterpart
 // (architect 2026-08-20): commit_region_sweep collapses the overlay
 // unconditionally at every end path, so the overlay stands for exactly as long
 // as the stroke is drawing a region of its own.
-// Bare `x` is the recall, and hiding discards nothing.
+// Bare `[` is the recall, and hiding discards nothing.
 // The waveform overlay's own three presses need no call — they are reachable
 // only through region_manipulation_hit, which answers None while it is hidden.
 //
@@ -316,7 +316,7 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // caller: trim is FROZEN in that view and its sweep writes no trim to derive an
 // overlay from, so a raise in there could only put up a surface no gesture in
 // the view can move.
-// Bare `x` is consumed in the mode besides, so nothing can take it down again.
+// Bare `[` is consumed in the mode besides, so nothing can take it down again.
 // The carve-out is BELT AND BRACES since the raise moved into the write branch
 // — that view's former is excluded from the write itself and so never reaches
 // this owner at all — and it stays, being the owner's own promise rather than
@@ -575,14 +575,14 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // it was claiming for.) Membership RE-DERIVED 2026-08-01 by grepping every
 // `selection.clear_selection()` call site against the live-tab trim-bound writers
 // (app.trim.* / the settings arms' active branch), RE-DERIVED AGAIN 2026-08-18
-// when bare `x`'s set-from-region ACT retired and the sweep replaced it — SIX
+// when the SET-FROM-REGION act retired and the sweep replaced it — SIX
 // call sites, FIVE in input_trim.cpp and ONE in settings_editor.cpp:
 //   * THE SWEEP (write_trim_from_sweep), which deselects at its first accepted
 //     write, idempotently across the gesture's later events — the drag arms'
-//     own arrangement below. (This list's first member was bare `x`'s
-//     set-from-region act, which retired with the free scratch span it
-//     committed; the KEY is live and writes no bound at all now — it toggles
-//     the overlay, at handle_toggle_trim_region.);
+//     own arrangement below. (This list's first member was the SET-FROM-REGION
+//     act, which retired with the free scratch span it committed; the key it
+//     used is the trim region TOGGLE's now and writes no bound at all, at
+//     handle_toggle_trim_region.);
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
@@ -613,7 +613,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // unchanged value all write no bound and so deselect nothing. (The read-only
 // arms of that list — the refused bound set and the refused settings commit —
 // are gone with the 2026-08-07 reclassification of trim as band.)
-// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim MAXIMIZER,
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+[, the dedicated trim MAXIMIZER,
 // which widens the window to the whole song rather than claiming one, so there is
 // no window for a deselect to hand the user (the architect's 2026-07-29
 // exemption, kept verbatim through the 2026-07-30 re-pose). Everything else
@@ -1189,7 +1189,7 @@ struct GuiInputHandler {
     // could not be enumerated and kept enumerated. Two review rounds each found
     // a class the previous derivation had missed, and whole classes had no event
     // to hang a call on at all (a keyboard zoom moving the trim endcaps under a
-    // resting pointer, the zoom and navigation keys, `x`/`Shift+X`, an undo
+    // resting pointer, the zoom and navigation keys, `[`/`Shift+[`, an undo
     // restoring trim, `o`, a gui_scale relayout, every keyboard editor open and
     // close, the dropdown item click). A LOOP BOUNDARY IS AFTER EVERY SETTLE BY
     // DEFINITION, so the "call this after your state has settled" rule that each
@@ -1681,7 +1681,7 @@ struct GuiInputHandler {
     // of those paths (architect 2026-08-20): the sweep's raise is scoped to the
     // stroke — up at its first accepted trim write — and this is its other
     // bracket, a guarded no-op where the stroke raised nothing. The reasoning
-    // and the per-case reading are at the definition; bare `x` is the recall.
+    // and the per-case reading are at the definition; bare `[` is the recall.
     void commit_region_sweep();
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
@@ -2221,6 +2221,22 @@ private:
     // an empty selection (playhead_in_marker_lane false).
     void handle_plain_bare_keys(GuiKey key);
 
+    // THE Home / End JUMP, one body for every route that spells it. Its three
+    // acts are UNCONDITIONAL and deliberately not gated on the jump moving
+    // anything: stop a live audition, clear the marker selection (the marker
+    // lane's exit — the rule is at land_playhead_on_marker, input_pointer.cpp)
+    // and land through Viewport::move_playhead_to, which owns the trim region
+    // overlay's hide. `forward` picks End over Home; `whole_piece` asks the
+    // landing owner for the piece's own ends instead of the trim bounds, which
+    // is what the CTRL forms and the skip buttons' modified arm pass
+    // (playhead_skip_landing_frame, app_state.h, states the two arms).
+    // FOUR CALLERS: the bare Home and End arms and their two CTRL arms. The
+    // `h` history view's own pair is NOT one of them — it clears the MODE's
+    // diff-flag focus where these clear the live selection, so it spells its
+    // own body and shares only the landing owner, which its mode bit already
+    // sends down the whole-piece arm.
+    void run_playhead_end_jump(bool forward, bool whole_piece);
+
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
     // the load prompt, the commit-title editor, the bpm bracket editor, and
     // (architect 2026-07-28) the top-strip flag editor. The modal contract is stated once
@@ -2429,12 +2445,12 @@ private:
     // Returns whether a bound was actually written, which is the release's
     // commit gate.
     //
-    // (SET THE TRIM FROM A FREE SCRATCH SPAN — the act bare `x` used to name —
-    // is RETIRED with the two-step model it completed: setting the region IS
-    // setting the trim now. The KEY ITSELF IS LIVE, repointed onto
-    // the overlay's show/hide toggle, handle_toggle_trim_region, which writes no
-    // bound and is not a member of anything on this page. Shift+X survives
-    // unchanged as the recovery route.)
+    // (SET THE TRIM FROM A FREE SCRATCH SPAN is RETIRED with the two-step model
+    // it completed: setting the region IS setting the trim now. The key it used
+    // was repointed onto the overlay's show/hide toggle,
+    // handle_toggle_trim_region, which writes no bound and is not a member of
+    // anything on this page. The MAXIMIZER survives unchanged as the recovery
+    // route.)
     bool write_trim_from_sweep(int64_t anchor_active, int64_t moving_active);
 
     // (THE MINIMUM TRIM WIDTH FLOOR — kMinTrimSpanFrames, a flat count of
@@ -2447,8 +2463,8 @@ private:
     // floor at a gesture: the render boundary owns whether a window is
     // honorable, and it answers with an untrimmed render, not a refusal.)
 
-    // Shift+X MAXIMIZES the trim to the full window [0, total-1] (architect
-    // 2026-07-25 for the binding, re-posed 2026-07-30 under always-set: the full
+    // Shift+[ MAXIMIZES the trim to the full window [0, total-1] (architect
+    // 2026-07-25 for the act, re-posed 2026-07-30 under always-set: the full
     // window IS the old unset state — it renders untrimmed and plays to the
     // natural end). Read-only admits it (trim is band, the ruling at
     // read_only_key_blocked); the body then delegates WHOLE to
@@ -2457,13 +2473,13 @@ private:
     // region became the trim (2026-08-18) this is the keyboard's way back to the
     // whole song, the pointer's and the finger's being a bound dragged onto its
     // partner.
-    void handle_trim_shift_x();
+    void handle_trim_maximize();
 
-    // BARE `x` SHOWS AND HIDES THE TRIM REGION OVERLAY (architect 2026-08-16
-    // for the act, a TOGGLE and REPOINTED onto this key on 2026-08-18, when the
-    // region became the trim and the set-from-region act `x` had named stopped
-    // existing; Ctrl+Shift+X carried the show act for those two days and is
-    // UNBOUND again, a no-op everywhere under strict modifier validation) —
+    // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY (architect 2026-08-16
+    // for the act, made a TOGGLE on 2026-08-18 when the region became the trim
+    // and the set-from-region act stopped existing; Ctrl+Shift+X carried the
+    // show act for two days before that and is UNBOUND, a no-op everywhere
+    // under strict modifier validation) —
     // the icon row's
     // IconShowRegion button and its keyboard twin. ONE ACT, TWO HALVES over the
     // one visibility bit that is the whole region state: SHOW and BRING THE
@@ -2481,11 +2497,11 @@ private:
 
     // Write the FULL window [0, total-1]. Silent no-op when the window is
     // ALREADY full (the identity guard that replaced the old has-a-bound refusal
-    // gate — an already-maximized Shift+X stops nothing, repaints nothing and
-    // triggers nothing). The caller is handle_trim_shift_x.
+    // gate — an already-maximized Shift+[ stops nothing, repaints nothing and
+    // triggers nothing). The caller is handle_trim_maximize.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the Shift+X maximizer)
+    // Field-reset core shared by handle_trim_clear_both (the Shift+[ maximizer)
     // and the crossed-commit reset below: write the canonical full pair for the
     // loaded source through the one seeding owner, full_trim_window
     // (app_state.h). No invalidation and no trigger — callers own their repaint
@@ -2502,7 +2518,8 @@ private:
     void auto_clear_crossed_trim();
 
     // EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
-    // 2026-08-05, generalizing bare `x`'s own 2026-07-30 land). Reads the COMMITTED
+    // 2026-08-05, generalizing the trim region toggle's own 2026-07-30 land).
+    // Reads the COMMITTED
     // begin out of the store — never a caller's local — so a crossed pair that
     // the commit tail has just RESET to the full window parks the playhead at
     // frame 0, which is that window's start: a reset is a trim write like any
@@ -2525,9 +2542,9 @@ private:
     // (auto_clear_crossed_trim, the waveform + status-chain repaints, the
     // target-render trigger, then the playhead park above), and this member is
     // their one spelling. FOUR
-    // CALLERS (re-derived 2026-08-18, when bare `x`'s set-from-region act
-    // retired and the sweep took its place; the key itself is live and calls
-    // none of this — handle_toggle_trim_region writes no trim)
+    // CALLERS (re-derived 2026-08-18, when the SET-FROM-REGION act retired and
+    // the sweep took its place; the trim region toggle calls none of this —
+    // handle_toggle_trim_region writes no trim)
     // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
@@ -2537,7 +2554,7 @@ private:
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
-    // handle_trim_clear_both (the Shift+X maximizer resets rather than
+    // handle_trim_clear_both (the Shift+[ maximizer resets rather than
     // auto-clears — a non-setter), which calls the park directly instead.
     void commit_trim_mutation();
 
@@ -2944,7 +2961,7 @@ private:
     // carries the ruling, and it is the model's ONE authoritative home.
     // Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
     // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-    // renders and the `x` / Shift+X trim gestures are ADMITTED — a save writes
+    // renders and the `[` / Shift+[ trim gestures are ADMITTED — a save writes
     // the state the tab already holds, a render reads it, and trim is band.
     // One entry is
     // STATE-DEPENDENT: the bare horizontal arrows are admitted as navigation

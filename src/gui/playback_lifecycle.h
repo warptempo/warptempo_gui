@@ -50,7 +50,7 @@ struct GuiPlaybackLifecycle {
     //     out, IS the `c` command (run_center_command) and stops exactly where
     //     `c` does — inside the land onto the focused stop, so only when one
     //     stands. One command, one answer; `0` adds no rule of its own.
-    //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Shift+X, matching every
+    //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Shift+[, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
     //     stop at their own commit point). BOTH views, and the rule is unchanged
     //     by the 2026-08-05 playback ungating — what narrowed is only the

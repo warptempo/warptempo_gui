@@ -564,11 +564,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is the Ctrl+S entry's now, on that entry's
     //                              own reasoning — it publishes what the tab
     //                              already holds)
-    //   - x / Shift+X (no ctrl,  → the trim region overlay's show/hide toggle
-    //     no alt)                  and the maximizer (2026-08-07; `x` SET the
-    //                              trim from a region until 2026-08-18, and the
-    //                              repointing only made it easier to admit —
-    //                              the toggle writes no bound at all). Trim is
+    //   - [ / Shift+[ (no ctrl,  → the trim region overlay's show/hide toggle
+    //     no alt)                  and the maximizer (2026-08-07; the SET act
+    //                              they replaced wrote a bound, and the toggle
+    //                              writes none at all, which only made the
+    //                              admission easier). Trim is
     //                              BAND, not content
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
@@ -705,7 +705,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE TRIM REGION OVERLAY'S ESC HIDE STOOD HERE AND IS RETIRED (joined
     // 2026-07-30 as a clear, a hide from 2026-08-18, retired 2026-08-21). BARE
-    // `x` IS THE ONE MANUAL ROAD ONTO AND OFF THE OVERLAY: the durable show's
+    // `[` IS THE ONE MANUAL ROAD ONTO AND OFF THE OVERLAY: the durable show's
     // twin is the durable hide, so a second key aimed at the same surface was a
     // second road. Only the MANUAL hide goes — the rule's automatic hides (the
     // playhead's movement in the music, a marker touched, the sweep's end) all
@@ -757,7 +757,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       prompt because Ctrl+Q from inside the popup can raise one;
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
-    // (joined 2026-07-30, retired 2026-08-21 — bare `x` is the one manual road
+    // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
     // onto and off the overlay; the retirement is argued at the site it stood at,
     // just above the cancel).
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
@@ -779,7 +779,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
     // playhead_in_marker_lane). NOR IS THE TRIM REGION OVERLAY AN ESC ACT ANY
-    // MORE (2026-08-21): the manual hide is bare `x`'s alone, the twin of its own
+    // MORE (2026-08-21): the manual hide is bare `[`'s alone, the twin of its own
     // durable show, and every remaining hide is the rule's — a playhead moved in
     // the music, a marker touched, a sweep ended (the rule is at
     // clear_region_highlight, input_handler.h).
@@ -1072,12 +1072,40 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         else                        warpops.toggle_disabled();
         return;
     }
+    // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-08-24 —
+    // "ctrl+home/end should force 0/eof playhead move even if trim does not
+    // include the frame"). Frame 0 and the ACTIVE DOMAIN's last frame, whatever
+    // the trim window is, where the bare pair lands on the trim bounds. Same
+    // body, same three unconditional acts (run_playhead_end_jump,
+    // input_key_dispatch.cpp), and the overlay hide is the mover's as always.
+    //
+    // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
+    // arms live in a switch this function reaches only with no modifier held —
+    // a chord has no road into handle_plain_bare_keys by construction. Ctrl is
+    // the only modifier they take: Ctrl+Shift and Ctrl+Alt forms bind nothing
+    // and are consumed no-ops under strict modifier validation, as Shift+Home
+    // and Shift+End already were.
+    //
+    // A TEXT EDITOR NEVER REACHES THIS ARM: Ctrl+Home / Ctrl+End are the
+    // editors' own caret motion (text_editor::classify_key's MotionEditKey arm
+    // admits ctrl and shift on Home / End), and the editor blocks sit at the
+    // top of on_key, far above this dispatch — so an open editor consumes the
+    // chord before the jump can see it.
+    //
+    // The `h` history view claims them too, one arm above this whole dispatch:
+    // in there a jump ALREADY means the piece's ends, so the chord means the
+    // same thing in every state (history_mode_owns_key).
+    if ((key == GuiKeys::Home || key == GuiKeys::End) &&
+        ctrl && !shift && !alt) {
+        run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
+        return;
+    }
     if (key == GuiKeys::Delete && !ctrl && !alt && !shift) {
         // Delete acts on the active marker store. No read-only check here:
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
-        // bound (Shift+X is trim's clear; the sweep and the two drags are its
+        // bound (Shift+[ is trim's clear; the sweep and the two drags are its
         // setters).
         // Deletion authors the active column's store: home view only (the
         // predicate maps W->source, P->target). Off home is a consumed no-op.
@@ -1119,25 +1147,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // BARE `x` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+X MAXIMIZES
+    // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+[ MAXIMIZES
     // the trim to the full window — the two halves of one trim surface: show
     // the window, or throw it away.
     //
-    // `x` WAS REPOINTED, NOT RETIRED (architect 2026-08-18): it SET THE TRIM
-    // FROM A REGION until that day, and setting the region IS setting the trim
-    // now, so the act it named stopped existing and the key fell free — "we can
-    // say the show region is actually `x` now". The show act moved onto it from
-    // Ctrl+Shift+X, which had carried it since 2026-08-16 and is UNBOUND again;
-    // under strict modifier validation that combination is a no-op everywhere,
-    // so nothing consumes it here.
+    // THE FAMILY MOVED HERE WHOLE ON 2026-08-24 (architect): the key pair it
+    // left "is too easy to hit accidentally instead of `c`, and it can mess up
+    // the viewport" — the show half frames the trim span, so a mis-hit for the
+    // neighbouring working-zoom command moved the camera. `[` looks like the
+    // begin-trim endcap, which is the mnemonic he chose, and the shift form
+    // rides the same key so the pair stays one surface. BOTH KEYS IT LEFT ARE
+    // UNBOUND — bare `x` and Shift+X answer nothing anywhere now, exactly as
+    // Ctrl+Shift+X has since 2026-08-18 — and under strict modifier validation
+    // an unbound combination is a consumed no-op everywhere. Only the spelling
+    // moved: the two acts and the button are untouched.
     //
-    // Shift+X is unchanged in meaning (handle_trim_shift_x → the maximizer) and
-    // is the RECOVERY route, trim having no undo. IT HAS TWO POINTER ROUTES
-    // AGAIN since the repointing: a SHIFT-CLICK or a LONG PRESS on the trim
-    // region button reaches it (redesign_button_shift_admits, app_state.h) —
-    // the admission the deleted trim scissors carried, moved to the button that
-    // survived, which is what keeps the whole song reachable from a keyboardless
-    // rig. A bound dragged onto its partner is the third route.
+    // THE SHIFT FORM ARRIVES AS BracketLeft PLUS THE SHIFT BIT, not as a `{`
+    // keysym: key_from_keycode (platform_wayland.cpp) reads LEVEL 0 of the
+    // keymap, so the shifted level is never consulted and the modifier state
+    // arrives separately through GuiInputState. The arms below are therefore
+    // spelled exactly like every other bare / shift-exact pair.
+    //
+    // The maximizer (handle_trim_maximize) is the RECOVERY route, trim having
+    // no undo, and it has TWO POINTER ROUTES besides: a SHIFT-CLICK or a LONG
+    // PRESS on the trim region button reaches it (redesign_button_shift_admits,
+    // app_state.h) — the admission the deleted trim scissors carried, moved to
+    // the button that survived, which is what keeps the whole song reachable
+    // from a keyboardless rig. A bound dragged onto its partner is the third
+    // route.
     //
     // The playhead is an OUTPUT of every trim write, never an input: each parks
     // it at the new trim start (architect 2026-08-05 — the rule and its
@@ -1146,13 +1183,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // an endcap hit, pair via a bridge press) and, since 2026-08-18, the SAME
     // two drags on the waveform overlay plus the SWEEP that writes it in one
     // stroke; trim is outside the selection system, so there is no Delete arm.
-    // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
-    if (!ctrl && !shift && !alt && key == GuiKeys::X) {
+    // The bracket carries no other binding: Ctrl+[ and every alt form are
+    // unbound, and BracketRight is unbound outright.
+    if (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft) {
         handle_toggle_trim_region();
         return;
     }
-    if (!ctrl && shift && !alt && key == GuiKeys::X) {
-        handle_trim_shift_x();
+    if (!ctrl && shift && !alt && key == GuiKeys::BracketLeft) {
+        handle_trim_maximize();
         return;
     }
 

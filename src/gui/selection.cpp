@@ -29,7 +29,7 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
     // overlay is the trim window and this subject is one phase reset's lead-in
     // ring, so the two annotate different things and neither hides the other.
     // (The belt that stood here — "a span rests only beside an empty selection"
-    // — is retired, 2026-08-18: bare `x` shows the overlay and writes no
+    // — is retired, 2026-08-18: bare `[` shows the overlay and writes no
     // selection, so a shown overlay may rest beside any selection. The
     // conclusion never needed it.) The derivation is at the band
     // (paint_handler.cpp) and the shown/hidden model at RegionState.

@@ -234,9 +234,9 @@ struct UndoEntry {
 // into the ACTIVE-domain frames the painter and the hit test both want.
 // (The a_frame / b_frame pair this carried until 2026-08-18 — active-domain
 // endpoints in drag order, normalized at read time — is deleted with the model
-// that needed it: a free scratch span that bare `x` committed to trim. THE ACT
-// went, not the KEY: with setting the region being setting the trim there was
-// nothing left for `x` to commit, so the key was REPOINTED onto this struct's
+// that needed it: a free scratch span the SET-FROM-REGION act committed to
+// trim. THE ACT went, not the KEY: with setting the region being setting the
+// trim there was nothing left to commit, so the key was REPOINTED onto this struct's
 // own show/hide toggle — handle_toggle_trim_region, which owns that record and
 // is the one place to read it. Git holds the deleted model.)
 //
@@ -265,7 +265,7 @@ struct UndoEntry {
 // THE RELEASE ONLY (a per-frame cursor chase would fight the gesture moving the
 // bounds — the rule and its membership are at the head of input_trim.cpp).
 //
-// THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `x` and the icon row's
+// THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `[` and the icon row's
 // IconShowRegion button, one toggle over one act (handle_toggle_trim_region,
 // input_trim.cpp), whose show half also brings the span into view; by THE
 // SWEEP'S FIRST ACCEPTED TRIM WRITE through the one raise owner
@@ -602,7 +602,7 @@ struct UndoHistory {
 // too (architect 2026-08-19: the enforced minimum was distracting and too short
 // to be worth its machinery), so the sweep has no width rule of any kind left —
 // a stroke that collapses onto its own anchor clears the trim to the whole song
-// at the release, and Shift+X is the way back from anything else.
+// at the release, and Shift+[ is the way back from anything else.
 //
 // ESC DOES NOTHING TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a
 // mid-drag Esc is swallowed by the drag-modal gate and the sweep keeps writing
@@ -1783,7 +1783,7 @@ enum class RedesignButton {
     // render-entry group to lead a separator-led group of its own again. The
     // same ruling deleted the TRIM SCISSORS whole ("remove the 'set trim from
     // region' icon"), leaving the Show trim region button alone in the trim group —
-    // and that button INHERITED the scissors' chord (bare `x`) and their shift
+    // and that button INHERITED the scissors' chord and their shift
     // admission hours later, when the region became the trim.
     //
     // NOTHING IN THIS ROW IS EVER HIDDEN (architect 2026-08-14: "no more
@@ -1799,8 +1799,8 @@ enum class RedesignButton {
     Save, Undo, Redo, Render,
     IconS, IconT, IconW, IconP,
     // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 as "Show region",
-    // repointed onto BARE `x` on 2026-08-18 and given its settled name on
-    // 2026-08-19 — the one the enumerator carried throughout): THE TRIM GROUP'S ONE
+    // given its settled name on 2026-08-19 — the one the enumerator carried
+    // throughout): THE TRIM GROUP'S ONE
     // MEMBER, the second VIEWPORT-CLASS act the architect's 2026-08-11 slot was
     // opened for, which took the lead later on 2026-08-16 ("reverse the order
     // of the icons — show region first, then the scissors") and is alone in the
@@ -1811,11 +1811,14 @@ enum class RedesignButton {
     //
     // IT INHERITED THE SCISSORS' CHORD AND THEIR SHIFT ADMISSION, hours after
     // their button was deleted, because the region became the trim the same
-    // day: bare `x` had SET THE TRIM FROM A REGION, setting the region IS
-    // setting the trim now, and the architect gave the free key to the act that
-    // needed a home ("we can say the show region is actually `x` now, and then
-    // we can keep shift+x or long press on the icon as show full song trim").
-    // Ctrl+Shift+X, its chord for those two days, is unbound again.
+    // day: the scissors' key had SET THE TRIM FROM A REGION, setting the region
+    // IS setting the trim now, and the architect gave the free key to the act
+    // that needed a home. THE CHORD IS BARE `[` SINCE 2026-08-24, the whole trim
+    // family having moved onto the bracket — the key it left "is too easy to hit
+    // accidentally instead of `c`, and it can mess up the viewport", the show
+    // half framing the trim span; `[` looks like the begin-trim endcap, which is
+    // the mnemonic. The chords it has left behind (Ctrl+Shift+X, then bare `x`)
+    // are unbound.
     //
     // A TOGGLE WITH A LAMP, where the 2026-08-16 ruling made it deliberately
     // MOMENTARY and stateless. The hole that ruling avoided cannot occur under
@@ -1827,7 +1830,7 @@ enum class RedesignButton {
     // VISIBILITY and the show half ALWAYS FRAMES, so a lit button means the
     // overlay is on screen or one press from being re-shown there.
     //
-    // SHIFT REACHES Shift+X, THE MAXIMIZER (redesign_button_shift_admits), by
+    // SHIFT REACHES Shift+[, THE MAXIMIZER (redesign_button_shift_admits), by
     // shift-click or by a long press at kChromeShiftHoldMs — the admission the
     // scissors carried, for the reason it was written: without it a keyboardless
     // panel could set a trim window and never get back out of it.
@@ -2055,6 +2058,19 @@ enum class RedesignButton {
     // rows in kToolbarChords (input_pointer.cpp), which owns the `repeats`
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
+    //
+    // THE TWO SKIPS ADMIT SHIFT (architect 2026-08-24): a SHIFT-CLICK on either
+    // runs the WHOLE-PIECE jump — frame 0 or the active domain's last frame,
+    // whatever the trim window is — where the plain click keeps landing on the
+    // trim bounds. THEY ARE THE ROSTER'S ONE PAIR WHOSE SHIFT-CLICK AND LONG
+    // PRESS DIFFER, and the asymmetry is the point rather than an oversight:
+    // the act's keyboard spelling is CTRL+Home / CTRL+End, not a shifted
+    // Home / End, so the button's modified press synthesizes the CTRL chord
+    // (redesign_button_ctrl_twin, below, owns that rule) — and the LONG PRESS,
+    // which exists to give a keyboardless panel a held SHIFT, spells shift and
+    // nothing else, so it does not reach a ctrl chord's twin. A held skip gives
+    // the ordinary trim-bound jump exactly as a tap does; the architect wants
+    // the whole-piece jump off glass here.
     TransportSkipBack, TransportPlayStop, TransportSkipForward,
     // THE SINGLE-MARKER VERBS, THE RIGHT BLOCK'S FIRST GROUP since 2026-08-18
     // (architect: "move drop/delete/disable/toggle inherit to bottom right
@@ -2195,13 +2211,13 @@ enum class RedesignButton {
 // split 45 + 2 to 46 + 2.
 // 47 EARLIER THAT DAY, AT THE ROSTER RELAYOUT, and the arithmetic is one loss over
 // three moves: the TRIM SCISSORS were deleted whole (48 − 1, split 46 + 2 to
-// 45 + 2 — the chord table lost its row with the button and bare `x` is
-// untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
+// 45 + 2 — the chord table lost its row with the button and the trim region
+// toggle's own chord is untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
 // the four HISTORY COMPANIONS moved back up to row 4, both CHANGING ROWS rather
 // than leaving the roster, so neither the total nor the split felt them.
 // 48 SINCE 2026-08-16: the SHOW TRIM REGION button joined the trim group in
-// row 4 (Ctrl+Shift+X then, bare `x` since 2026-08-18 — the repointing changed
-// no count), a pure chord addition — 47 + 1, split 46 + 2.
+// row 4 (Ctrl+Shift+X then, bare `x`, and bare `[` since 2026-08-24 — a
+// repointing changes no count), a pure chord addition — 47 + 1, split 46 + 2.
 // 47 SINCE 2026-08-15's SECOND ROW-1 RULING: the NAVIGATION ANCHOR left with its
 // menu, which is the roster's first LOSS of a non-chord entry (48 - 1) and takes
 // the split from 45 + 3 back to 45 + 2.
@@ -3801,10 +3817,10 @@ struct AppState {
     // at no other time — the rule, its two movement owners, its other call
     // sites and everything it
     // deliberately leaves standing are stated once at clear_region_highlight
-    // (input_handler.h). BARE `x` IS THE ONE MANUAL ROAD onto and off it, its
+    // (input_handler.h). BARE `[` IS THE ONE MANUAL ROAD onto and off it, its
     // durable show and its durable hide (bare Esc hid it too until 2026-08-21,
     // when the second road was retired). The hides that stay IN PLACE rather
-    // than going through the helper are `x`'s own and the FILE LOAD's, which
+    // than going through the helper are `[`'s own and the FILE LOAD's, which
     // pairs it with a whole new piece.
     RegionState region;
 
@@ -5690,10 +5706,10 @@ struct AppState {
     // the 9 px bar and, since 2026-08-18, on the waveform OVERLAY that is this
     // same window painted a second time — the ctrl / ctrl+shift bound-set
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
-    // pair in one stroke under no width rule at all; it replaced the bare-`x`
-    // set-from-region arm when the region became the trim, and `x` now shows
-    // and hides the overlay and writes no trim at all), the
-    // Shift+X MAXIMIZER (writes the full window), and the settings editor's
+    // pair in one stroke under no width rule at all; it replaced the
+    // set-from-region arm when the region became the trim, and that key's
+    // successor now shows and hides the overlay and writes no trim at all), the
+    // Shift+[ MAXIMIZER (writes the full window), and the settings editor's
     // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full
     // ruling is at the TrimState store.
@@ -6591,22 +6607,28 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // IT HAS NO FACE READER AND MUST NOT GAIN ONE (architect 2026-08-15). It was
 // hoisted for the bottom row's two SKIP buttons as well — they greyed where the
 // cursor already rested on the landing frame — and that half was ruled back out
-// the same day: bare Home / End are not pure jumps (each also stops a live
+// the same day: a Home / End press is not a pure jump (each also stops a live
 // audition, clears the marker selection and hides the trim region overlay,
 // even when the jump moves nothing), so a greyed skip promised less than its key
 // delivers. The buttons answer a plain `true` now; the full record and the
 // do-not-re-add line are at their case in redesign_button_enabled. This owner
-// survives on the ACT's account alone — three callers, one spelling — which is
-// why the hoist outlived the face it was first asked for. The header stayed
+// survives on the ACT's account alone — ONE reader, the shared jump body
+// run_playhead_end_jump, which every Home / End route funnels through — which
+// is why the hoist outlived the face it was first asked for. The header stayed
 // here rather than moving to viewport.h so that history is stated once beside
 // the predicate that no longer calls it.
 //
-// IT FORKS ON THE `h` VIEW, which is the whole reason it is a function rather
-// than a pair of expressions: in the history view Home / End jump ABSOLUTE — 0
-// and the live domain's last frame — deliberately not the trim bounds
-// (architect 2026-08-05: the view reviews the WHOLE piece, so an End stopping
-// at a trim bound would hide the flags past it), while the live arms take
-// Viewport::trim_range, the navigation range owner. THE RETURNED FRAME IS
+// IT HAS TWO ARMS, which is the whole reason it is a function rather than a
+// pair of expressions. THE TRIM ARM is the ordinary one: bare Home / End land
+// on Viewport::trim_range's own bounds, the navigation range owner. THE
+// WHOLE-PIECE ARM jumps ABSOLUTE — 0 and the live domain's last frame — and has
+// TWO ENTRANTS: the `h` HISTORY VIEW takes it for every jump (architect
+// 2026-08-05: the view reviews the WHOLE piece, so an End stopping at a trim
+// bound would hide the flags past it), and the `whole_piece` parameter asks for
+// it outright, which is what CTRL+HOME / CTRL+END pass (architect 2026-08-24:
+// "ctrl+home/end should force 0/eof playhead move even if trim does not include
+// the frame"). With a full trim window the two arms coincide. THE RETURNED
+// FRAME IS
 // PRE-CLAMPED through clamp_playhead_to_live_domain above. That clamp was first
 // justified by the deleted face compare — an unclamped target could be a
 // landing the resting cursor can never equal, and so a button that never greys
@@ -6615,7 +6637,7 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // occupy. It costs the three act callers nothing, move_playhead_to clamping
 // identically, so the arithmetic they adopted stayed byte-identical.
 int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
-                                    bool forward);
+                                    bool forward, bool whole_piece);
 
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
@@ -7020,8 +7042,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     W/P radios, the zoom four, follow and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (THE TRIM
-//     SCISSORS were on this list, bare `x` being read-only-legal like every
-//     trim gesture, until their button was deleted on 2026-08-18; the KEY is
+//     SCISSORS were on this list, their chord being read-only-legal like every
+//     trim gesture, until their button was deleted on 2026-08-18; the chord is
 //     still admitted and still on this button, which took it over the same
 //     day, and so is its shifted twin.) Greying them would make
 //     the face promise LESS than the key delivers, which is the 2026-08-07 band
@@ -7199,8 +7221,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // (an overlay already fully in view) is a harmless nothing rather than
         // a refusal, the framing owner's first arm simply writing no viewport.
         // The `h` view greys it through the derived partition above, RE-DERIVED
-        // 2026-08-18 against the chord's repointing and unchanged by it: bare
-        // `x` is neither history_mode_owns_key's own vocabulary nor on
+        // 2026-08-18 against the chord's repointing and unchanged by it and by
+        // the 2026-08-24 move: bare
+        // `[` is neither history_mode_owns_key's own vocabulary nor on
         // history_mode_key_blocked's allowlist, so the mode consumes it and the
         // partition finds nothing to keep the face live. Nothing hand-listed —
         // which is also where trim's freeze in that view is expressed for this
@@ -7419,16 +7442,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // else. (Under the swap it reached no pixel, which is why the arms
         // above discuss their RESTING face alone.)
         //
-        // THE TWO SKIPS (bare Home / End) ARE UNTRUTHFUL TOO AND DELIBERATELY
+        // THE TWO SKIPS (bare Home / End, and Ctrl+Home / Ctrl+End on a
+        // shift-click) ARE UNTRUTHFUL TOO AND DELIBERATELY
         // SO (architect 2026-08-15), and they fall through to the same plain
         // `return true`. They had an honest arm for one revision — greying
         // where the playhead already rested on the frame the jump would land
         // on, compared against playhead_skip_landing_frame — and THAT ARM WAS
-        // BUILT ON A FALSE PREMISE: bare Home / End are not pure jumps. Both
-        // also STOP A LIVE AUDITION, CLEAR THE MARKER SELECTION (the marker
-        // lane's exit repair) and HIDE THE TRIM REGION OVERLAY, unconditionally
-        // and even when the jump itself moves nothing (the two live arms and
-        // the `h` arm, input_key_dispatch.cpp). So a greyed skip made the FACE
+        // BUILT ON A FALSE PREMISE: a Home / End press is not a pure jump. Every
+        // form also STOPS A LIVE AUDITION, CLEARS THE MARKER SELECTION (the
+        // marker lane's exit repair) and HIDES THE TRIM REGION OVERLAY,
+        // unconditionally and even when the jump itself moves nothing (the
+        // shared body run_playhead_end_jump and the `h` arm,
+        // input_key_dispatch.cpp). So a greyed skip made the FACE
         // PROMISE LESS THAN THE KEY DELIVERS — with the cursor parked on a trim
         // bound the key still stopped the audition, cleared the selection and
         // hid the overlay while the dead button could do none of it, which
@@ -7442,8 +7467,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // two reintroduces exactly that divergence, and gating the ACT on a
         // no-op jump to make the face true instead would change behaviour,
         // which this predicate never does. playhead_skip_landing_frame SURVIVES
-        // for the ACT's sake alone — three dispatch arms sharing one arithmetic
-        // — and has no face reader by ruling; its own header says so.
+        // for the ACT's sake alone — every jump sharing one arithmetic — and
+        // has no face reader by ruling; its own header says so.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportLeft:
@@ -7682,7 +7707,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconIter:   return a.iteration_mode_enabled;
         // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
         // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
-        // bit bare `x` flips, so the lit face and the surface on screen
+        // bit bare `[` flips, so the lit face and the surface on screen
         // cannot drift. IT IS A TOGGLE AGAIN, where the 2026-08-16 ruling made
         // this button deliberately MOMENTARY and stateless, and the hole that
         // ruling avoided cannot occur under the new model — which is the part
@@ -7907,16 +7932,16 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // THE FIFTH IS THE TRIM REGION TOGGLE, and it is the SAME ADMISSION ON A
 // DIFFERENT BUTTON. The trim scissors carried it from 2026-08-15 until their
 // button was retired on 2026-08-18, and the reason is a hole rather than a
-// preference: the twin is Shift+X the MAXIMIZER (reset the trim to the whole
-// song), and the admission superseded the 2026-08-11 "Shift+X stays
+// preference: the twin is Shift+[ the MAXIMIZER (reset the trim to the whole
+// song), and the admission superseded the 2026-08-11 "the maximizer stays
 // keyboard-only" clause on the glass rig's account — the maximizer had no
 // pointer route at all, so a keyboardless panel could set a trim window and
 // never get back out of it. The scissors' deletion re-opened that hole for
 // hours; the architect closed it the same day by REPOINTING their chord onto
-// the Show trim region button (bare `x`) and moving the admission with it, so a
-// SHIFT-CLICK or a LONG PRESS on that button is Shift+X. The pair is honest
-// here in a way it was not on the scissors: `x` and Shift+X are the two halves
-// of one trim surface — show the window, or throw it away.
+// the Show trim region button and moving the admission with it, so a
+// SHIFT-CLICK or a LONG PRESS on that button is the maximizer. The pair is
+// honest here in a way it was not on the scissors: `[` and Shift+[ are the two
+// halves of one trim surface — show the window, or throw it away.
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -7931,10 +7956,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // something, so "which buttons admit shift" and "which buttons advertise it"
 // are one fact by construction rather than two lists to keep in step — and,
 // since 2026-08-13, THE SHIFT LONG PRESS, whose membership is this same
-// predicate rather than a fourth list: a press held past kChromeShiftHoldMs
-// reaches the twin exactly where a shift press does, which is what gives a
-// keyboardless glass rig the shifted half of each pair (the beat's contract is
-// at that constant, the arm's stamp at AppState::ChromePress::press_ms).
+// predicate MINUS THE CTRL-TWIN PAIR below rather than a fourth list: a press
+// held past kChromeShiftHoldMs reaches the twin exactly where a shift press
+// does, which is what gives a keyboardless glass rig the shifted half of each
+// pair (the beat's contract is at that constant, the arm's stamp at
+// AppState::ChromePress::press_ms).
 // (ICONPASTE LEFT THIS SET ON 2026-08-20 WITH ITS BUTTON. It admitted shift
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
 // as a row of its own — a menu item names its command outright, so the shifted
@@ -7947,8 +7973,41 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer;
+           b == RedesignButton::HistoryNewer ||
+           b == RedesignButton::TransportSkipBack ||
+           b == RedesignButton::TransportSkipForward;
 }
+
+// THE CTRL TWIN — the one place a shift-admitting button's twin is NOT the
+// shifted spelling of its own chord (architect 2026-08-24). The two SKIPS
+// dispatch bare Home / End, and the act their modified press owes is the
+// WHOLE-PIECE jump, whose keyboard spelling is CTRL+Home / CTRL+End: the jump
+// ignores the trim window, which is a different axis from anything shift means
+// elsewhere on the roster. So a SHIFT-CLICK on a skip synthesizes the CTRL
+// chord instead of a shifted one.
+//
+// AND THE LONG PRESS IS EXCLUDED, which is this pair's recorded asymmetry — the
+// one chrome pair whose shift-click and long press differ. The hold is GLASS'S
+// SHIFT (it exists because a keyboardless panel cannot hold a modifier), so it
+// spells shift and nothing else; a CTRL chord's twin is not its to reach, and
+// the architect wants the whole-piece jump off glass here. A held skip button
+// therefore gives the ordinary trim-bound jump, exactly as a tap does.
+//
+// MEMBERSHIP IS A SUBSET OF redesign_button_shift_admits by construction — a
+// twin that no press can reach would be a lie in the tooltip's shift line — and
+// the static_assert below holds the two together. The one reader is the chord
+// build in finish_chrome_press_release (input_pointer.cpp), which uses it twice:
+// once to move the modifier and once to drop the hold.
+inline constexpr bool redesign_button_ctrl_twin(RedesignButton b) {
+    return b == RedesignButton::TransportSkipBack ||
+           b == RedesignButton::TransportSkipForward;
+}
+static_assert(
+    (!redesign_button_ctrl_twin(RedesignButton::TransportSkipBack) ||
+     redesign_button_shift_admits(RedesignButton::TransportSkipBack)) &&
+    (!redesign_button_ctrl_twin(RedesignButton::TransportSkipForward) ||
+     redesign_button_shift_admits(RedesignButton::TransportSkipForward)),
+    "a ctrl-twin button must admit shift, or its twin is unreachable");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -8042,7 +8101,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the enumerator has carried all along, with "trim" added once the
         // overlay became the trim itself; it read "Show region" from
         // 2026-08-16 and "Trim region" for one day in between), TWO LINES: its
-        // twin IS Shift+X the maximizer, so the hint says so and the shift
+        // twin IS Shift+[ the maximizer, so the hint says so and the shift
         // admission and the line are the one fact the static_assert below
         // keeps together. The accelerator is a bare letter and so lowercase,
         // this table's rule. THE TOOLTIP NAMES A CONSTANT ACT WHILE THE LAMP
@@ -8055,7 +8114,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // IconMarkerDisable). The SHIFT LINE is the trim scissors' own words,
         // inherited with their admission.
         case RedesignButton::IconShowRegion:
-            return {"Show trim region (x)", "Press Shift for the whole song."};
+            return {"Show trim region ([)", "Press Shift for the whole song."};
         // THE ZOOM GROUP (2026-08-12), all one-line: the names were aligned
         // with the Navigation dropdown's rows for the two they shared ("Zoom
         // in" / "Zoom out") and are kept verbatim now that the menu is deleted
@@ -8144,16 +8203,20 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
-        // ALL ONE-LINE FORMS — no button on the row admits a shift press. (The
-        // MEASURE carried the row's one two-line form and shift admission from
-        // 2026-08-20 to the 2026-08-21 sunset, for the score-video jump that
-        // left the product whole.) The names are the ratified sentence-case
+        // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when
+        // their shift-click gained the whole-piece jump); every other button
+        // here admits no shift press. (The MEASURE carried a two-line form and
+        // a shift admission from 2026-08-20 to the 2026-08-21 sunset, for the
+        // score-video jump that left the product whole.) The names are the
+        // ratified sentence-case
         // labels, the
         // accelerators the table's own convention (non-letter keys are
         // themselves, and a CHORD keeps its capital and its spelled-out
-        // modifiers).
+        // modifiers). THE SHIFT LINE NAMES THE ACT AND NOT A KEY, this table's
+        // rule for second lines.
         case RedesignButton::TransportSkipBack:
-            return {"Go to start (Home)", nullptr};
+            return {"Go to start (Home)",
+                    "Press Shift to ignore the trim window."};
         // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
         // form — the stateful overload below returns "Stop (Space)" while an
         // audition runs, Render's own pattern (a constant row for the ordinary
@@ -8163,7 +8226,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::TransportPlayStop:
             return {"Play (Space)", nullptr};
         case RedesignButton::TransportSkipForward:
-            return {"Go to end (End)", nullptr};
+            return {"Go to end (End)",
+                    "Press Shift to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
         // plainly in HELP's vocabulary. None admits shift. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
@@ -8405,6 +8469,12 @@ static_assert(
     (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
      nullptr) ==
         redesign_button_shift_admits(RedesignButton::HistoryNewer) &&
+    (redesign_button_tooltip(RedesignButton::TransportSkipBack).line2 !=
+     nullptr) ==
+        redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
+    (redesign_button_tooltip(RedesignButton::TransportSkipForward).line2 !=
+     nullptr) ==
+        redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
     // each side of the equivalence and cannot pass vacuously if the members

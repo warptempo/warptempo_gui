@@ -189,13 +189,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // kIconRowButtons, with the group's leader at
     // redesign_button_opens_icon_group (app_state.h).
     //
-    // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 for the button,
-    // REPOINTED ONTO BARE `x` 2026-08-18, named on 2026-08-19): its chord is bare `x`, which the same day's
-    // ruling emptied and then refilled — `x` had SET THE TRIM FROM A REGION,
-    // and setting the region IS setting the trim now, so the key was free and
-    // the architect gave it to the act it now names ("we can say the show
-    // region is actually `x` now"). Ctrl+Shift+X, its chord from 2026-08-16 to
-    // 2026-08-18, is UNBOUND again and answers nothing anywhere under the
+    // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 for the button, named
+    // on 2026-08-19): its chord is BARE `[` since 2026-08-24, when the architect
+    // moved the whole trim family onto the bracket — the key it left "is too
+    // easy to hit accidentally instead of `c`, and it can mess up the viewport",
+    // this act's show half framing the trim span. `[` looks like the begin-trim
+    // endcap, which is the mnemonic he chose. THE TWO CHORDS IT HAS LEFT BEHIND
+    // — Ctrl+Shift+X (2026-08-16 to 2026-08-18) and bare `x` (2026-08-18 to
+    // 2026-08-24) — are UNBOUND and answer nothing anywhere under the
     // strict-modifier rule.
     //
     // A TOGGLE, click face, not a radio: it reads and flips the overlay's
@@ -204,18 +205,19 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // AND IT ADMITS SHIFT, which is what closes the glass hole the trim
     // scissors left when their button was deleted earlier the same day: its
-    // twin is `Shift+X` the MAXIMIZER, so a SHIFT-CLICK or a LONG PRESS at
+    // twin is `Shift+[` the MAXIMIZER, so a SHIFT-CLICK or a LONG PRESS at
     // kChromeShiftHoldMs resets the trim to the whole song with no keyboard.
     // The scissors carried exactly this admission for exactly this reason; the
     // act moved to the button that survived. The row's own shift bit stays
     // FALSE, the admission and the table bit being mutually exclusive by the
     // shift term's construction (finish_chrome_press_release).
     {RedesignButton::IconShowRegion,
-     GuiKeys::X,   false, false, false, false, true},                               // bare x
+     GuiKeys::BracketLeft,
+     false, false, false, false, true},                                            // bare [
     // (THE TRIM SCISSORS' ROW IS DELETED — 2026-08-18, with its button: the
     // architect's roster relayout retired the "set trim from region" icon
     // whole, and the ACT went with it the same day when the region became the
-    // trim. Its chord `x` did not die with it — it was REPOINTED onto the
+    // trim. Its chord did not die with it — it was REPOINTED onto the
     // button above — and neither did its shift admission, which moved to that
     // button for the reason it was written: without it a keyboardless panel
     // could set a trim window and never get back out of it.)
@@ -392,6 +394,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
     // rather than mirroring it.
+    // THE TWO SKIPS ADMIT SHIFT (architect 2026-08-24) and their twin is a CTRL
+    // chord, not a shifted one: a shift-click dispatches Ctrl+Home / Ctrl+End,
+    // the WHOLE-PIECE jump, through redesign_button_ctrl_twin (app_state.h) —
+    // which also keeps the LONG PRESS out of it, the hold being glass's shift
+    // and not a road to a ctrl chord. The rows below carry the PLAIN chord, as
+    // every row does; the admission and the twin's modifier are both the
+    // roster's, never a column here.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlayStop,
@@ -500,13 +509,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 // against 48 earlier that day, when ADD TO
 // SELECTION arrived on bare `k` (a chord, so the pair moved together), and
 // 45 against 47 before that, when the TRIM SCISSORS left
-// both (they carried a chord, so the pair moved together; bare `x` itself is
-// untouched). The same relayout moved eight buttons BETWEEN ROWS and this
+// both (they carried a chord, so the pair moved together; the trim region
+// toggle's own chord is untouched by that). The same relayout moved eight buttons BETWEEN ROWS and this
 // table did not feel it: it is keyed by id and every reader matches by id or
 // by published rect, so the row order it is kept in is for the reader alone.
-// It was 46 against 48 from 2026-08-16's SHOW TRIM REGION addition (its chord was
-// Ctrl+Shift+X then and is bare `x` since 2026-08-18; a repointing moves no
-// count), and 45 against 47 from
+// It was 46 against 48 from 2026-08-16's SHOW TRIM REGION addition (its chord
+// has been Ctrl+Shift+X, then bare `x`, and is bare `[` since 2026-08-24; a
+// repointing moves no count), and 45 against 47 from
 // 2026-08-15's Navigation deletion; earlier
 // that day it was 45 against 48: the marker walk's three in, the collapsed
 // play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
@@ -944,7 +953,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   — the only anchor here
 //   since 2026-08-08, when NAVIGATION moved to the LIVE column above with its
 //   menu (FILE has never been in this column: it landed live, 2026-08-13).
-//   (THE TRIM SCISSORS were here on bare `x` until their button was deleted on
+//   (THE TRIM SCISSORS were here on their own chord until their button was deleted on
 //   2026-08-18; the key is still consumed in the view and there is simply no
 //   button left to grey.)
 //
@@ -1275,7 +1284,7 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // the overlay it may find standing is the entering tab's own trim, which is
 // exactly what the reader wants to keep seeing. (The "a region rests only beside
 // an EMPTY selection anyway" belt is RETIRED, 2026-08-18: the overlay's
-// visibility is bare `x`'s alone and that key writes no selection, so a shown
+// visibility is bare `[`'s alone and that key writes no selection, so a shown
 // overlay may rest beside any selection. It was never load-bearing here.)
 // Read-only allowed (selection and playhead are navigation). Bounds-safe by
 // construction — the index comes from the scan itself.
@@ -3251,7 +3260,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // cursor was already sitting on it. Unconditional, on all three arms. A
     // re-click of the already-selected marker therefore hides a shown overlay
     // too; that is the ruling and not an accident, and it discards nothing —
-    // the trim stands and a later `x` re-shows the same overlay.
+    // the trim stands and a later `[` re-shows the same overlay.
     clear_region_highlight(app, viewport);
     // THE TWO MODIFIED CLICKS END HERE: neither has a double-click meaning,
     // neither has a drag to become, and their click has just committed whole —
@@ -4553,7 +4562,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // left show_trim_region_overlay's call-site inventory that day,
                 // leaving THE SWEEP its one caller — at the sweep's first
                 // accepted trim write since 2026-08-21 (input_handler.h).
-                // Bare `x` and its Show trim region button still raise the
+                // Bare `[` and its Show trim region button still raise the
                 // overlay on demand, which is how a laptop press gets the big
                 // surface when it wants one.
                 // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
@@ -4890,7 +4899,7 @@ void GuiInputHandler::commit_region_sweep() {
     // at the stroke's first accepted trim write (apply_region_drag_motion) and
     // is put away the moment the span is settled, where it would only be noise
     // over a window the user has just declared.
-    // BARE `x` (and its Show trim region button) IS THE RECALL — hiding
+    // BARE `[` (and its Show trim region button) IS THE RECALL — hiding
     // discards nothing, the trim persisting and re-showing identical.
     //
     // UNCONDITIONAL, at every end path this one owner serves, and each case is
@@ -6191,17 +6200,32 @@ void GuiInputHandler::finish_chrome_press_release(
         // TOOLTIPS DO NOT SHOW THERE, so the surface the hint would have to
         // ride is one the gesture's only user never sees. The beat passes
         // silently, the act shows at the lift, and none is to be built.
+        //
+        // THE CTRL-TWIN PAIR IS THE ONE EXCLUSION (architect 2026-08-24, and
+        // the roster's one asymmetry between a shift-click and a long press):
+        // the two SKIPS admit shift for the WHOLE-PIECE jump, whose keyboard
+        // spelling is Ctrl+Home / Ctrl+End rather than a shifted Home / End.
+        // The hold is GLASS'S SHIFT — it exists because a keyboardless panel
+        // cannot hold a modifier — so it spells shift and nothing else, and a
+        // ctrl chord's twin is not its to reach; the architect wants that jump
+        // off glass here. A held skip therefore gives the ordinary trim-bound
+        // jump exactly as a tap does. The membership is
+        // redesign_button_ctrl_twin (app_state.h), which owns the rule.
+        const bool ctrl_twin = redesign_button_ctrl_twin(tc.id);
         const bool held_to_shift =
-            redesign_button_shift_admits(tc.id) &&
+            redesign_button_shift_admits(tc.id) && !ctrl_twin &&
             monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // CARRIED press-time bit and the hold — well-defined because no row
         // sets both the table bit and the admission (see shift_admits), so this
         // one expression spells both members of each shifted pair however the
-        // user asked for the shifted one.
+        // user asked for the shifted one. ON A CTRL-TWIN BUTTON the asked-for
+        // twin moves to the CTRL field instead, which is the whole of what that
+        // predicate changes here: the plain press is untouched on every row.
         GuiInputState chord{};
-        chord.ctrl  = tc.ctrl;
-        chord.shift = tc.shift || arm.shift || held_to_shift;
+        chord.ctrl  = tc.ctrl || (ctrl_twin && arm.shift);
+        chord.shift = tc.shift ||
+                      ((arm.shift || held_to_shift) && !ctrl_twin);
         chord.alt   = tc.alt;
         on_key(tc.key, chord);
         return;
@@ -7477,7 +7501,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check
     // (2026-08-18) and stayed retired when the minimum width floor went the
     // same way (2026-08-19): a jitter drag dissolves nothing and is widened to
-    // nothing — it commits the sliver it drew, and Shift+X is the way back.)
+    // nothing — it commits the sliver it drew, and Shift+[ is the way back.)
     app.playhead_cursor_sample = far_frame;
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();

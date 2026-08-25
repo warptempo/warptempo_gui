@@ -118,7 +118,8 @@ enum class Icon {
     // cut's planner-picked transform-crop; both are git history now.)
     // THE SHOW TRIM REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
     // group's ONE member since the scissors left on 2026-08-18 — the button
-    // that inherited their chord, bare `x`, hours later: Breeze's
+    // that inherited their chord hours later (bare `x` then, bare `[` since
+    // 2026-08-24): Breeze's
     // TOOL-RECT-SELECTION, the marching-ants
     // rectangle — a dashed box says "a selected span" everywhere, and the
     // button's whole job is to put one on the waveform. Taken at 22 though the
@@ -128,7 +129,7 @@ enum class Icon {
     // four-number derivation rather than a verbatim copy — stated at the table
     // entry, which also records the two stroke attributes it brought (a
     // non-default width and the dash).
-    ToolRectSelection,   // Show trim region (bare `x`)
+    ToolRectSelection,   // Show trim region (bare `[`)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
     // roster commit — the icon row's zoom group after the trim group).
     // Breeze's own magnifier family, one construction four ways: the bare

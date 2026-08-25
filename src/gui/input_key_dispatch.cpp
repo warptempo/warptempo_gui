@@ -271,9 +271,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
          !ctrl && !shift && !alt && !playhead_in_marker_lane());
+    // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and CTRL (the
+    // whole-piece jump, 2026-08-24). Both are pure navigation: they move the
+    // cursor, stop an audition and clear a selection, and write no store at
+    // all, so the ctrl shape is admitted on exactly the reason the bare one
+    // always was. Shift and alt forms bind nothing and stay refused.
     const bool is_home_end =
         ((key == GuiKeys::Home || key == GuiKeys::End) &&
-         !ctrl && !shift && !alt);
+         !shift && !alt);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
          !ctrl && !shift && !alt);
@@ -325,9 +330,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // authoritative enumeration is at its dispatch point in on_key,
     // input_handler.cpp; no count belongs here), and dropping Esc at this gate
     // would break it. THE REGION HIDE WAS THE OTHER ADMISSION UNTIL 2026-08-21
-    // (a locked tab can raise the trim region overlay, bare `x` and its button
+    // (a locked tab can raise the trim region overlay, bare `[` and its button
     // being read-only-legal on the trim band ruling, so Esc had to be able to
-    // put it down again) — with the hide retired, `x` itself is that road both
+    // put it down again) — with the hide retired, `[` itself is that road both
     // ways and is admitted on its own arm.
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
@@ -372,23 +377,27 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
-    // THE TRIM GESTURES (architect 2026-08-07): Shift+X maximizes the trim
-    // window back to the full song, and bare `x` — which SET the trim from a
-    // region until 2026-08-18 and SHOWS AND HIDES THE TRIM REGION OVERLAY since
-    // — is the other half of the same surface. Trim is BAND, not content (the
-    // header), so both are admitted, and their internal behavior is untouched:
-    // Shift+X's identity guard, the setter's deselect, the playhead park and
-    // the trim-mutation playback stop are all the same code taking the same
-    // decisions. The repointing only made `x` EASIER to admit — it now writes
-    // no trim bound at all, only a session visibility bit and then the
-    // viewport, which is strictly less than the write the band ruling was
-    // argued over. (Ctrl+Shift+X carried the show act from 2026-08-16 to
-    // 2026-08-18 and is UNBOUND again; nothing here answers it, the
-    // strict-modifier rule making an unbound combination a no-op everywhere.)
-    const bool is_trim_x =
-        (!ctrl && !shift && !alt && key == GuiKeys::X);
-    const bool is_trim_shift_x =
-        (!ctrl && shift && !alt && key == GuiKeys::X);
+    // THE TRIM GESTURES (architect 2026-08-07): Shift+[ maximizes the trim
+    // window back to the full song, and bare `[` SHOWS AND HIDES THE TRIM
+    // REGION OVERLAY — the other half of the same surface. Trim is BAND, not
+    // content (the header), so both are admitted, and their internal behavior
+    // is untouched: the maximizer's identity guard, the setter's deselect, the
+    // playhead park and the trim-mutation playback stop are all the same code
+    // taking the same decisions. The TOGGLE is the easier of the two to admit —
+    // it writes no trim bound at all, only a session visibility bit and then
+    // the viewport, which is strictly less than the write the band ruling was
+    // argued over, the SET act it replaced on 2026-08-18 having written a
+    // bound. THE PAIR MOVED ONTO THE BRACKET ON 2026-08-24 (the architect's
+    // reason is at the dispatch arms, input_handler.cpp) and the terms below
+    // are named for the ACTS rather than for a key, which is what kept this
+    // move to a spelling change. The keys the pair left — bare `x`, Shift+X —
+    // answer nothing here or anywhere, as Ctrl+Shift+X has not since
+    // 2026-08-18: the strict-modifier rule makes an unbound combination a no-op
+    // everywhere.
+    const bool is_trim_region_toggle =
+        (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft);
+    const bool is_trim_maximize =
+        (!ctrl && shift && !alt && key == GuiKeys::BracketLeft);
     // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
@@ -416,7 +425,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // survives as a backstop for entries that outlive a mid-history lock.
     // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
     // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
-    // see is_trim_x above.
+    // see is_trim_region_toggle above.
     return !(is_o || is_play_pause || is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
@@ -425,7 +434,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
-             is_trim_x || is_trim_shift_x ||
+             is_trim_region_toggle || is_trim_maximize ||
              is_add_to_selection);
 }
 
@@ -498,7 +507,7 @@ void GuiInputHandler::close_history_mode() {
     // class. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR MUTATION
     // CONCERN: it is a view preference about whether the user is looking at the
     // trim, and this view neither touches the trim nor offers a way to raise or
-    // lower the overlay — bare `x` is consumed in the mode and its button greys
+    // lower the overlay — bare `[` is consumed in the mode and its button greys
     // — so an overlay shown before `h` must survive the visit intact or the
     // user gets it back only by pressing a key the mode has taken away. The
     // 2026-08-05 view-local reading it inherited died with the view-local span
@@ -1180,6 +1189,15 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // IsoLeftTab arm — because the live arm binds that one shape too; the mode
     // mirrors what it composes rather than widening it.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
+    // THE OTHER CTRL SHAPE (architect 2026-08-24): CTRL+HOME / CTRL+END, the
+    // WHOLE-PIECE jump. It is claimed here so the chord means the SAME thing in
+    // every state — in this view the bare pair already jumps to the piece's own
+    // ends, so the ctrl form lands on exactly the same frames and the arm below
+    // needs no shape of its own. Claimed rather than left to the allowlist
+    // because that is how the bare pair already answers, both for the key and
+    // for the roster face derived from this predicate.
+    if (mods.ctrl && !mods.shift &&
+        (key == GuiKeys::Home || key == GuiKeys::End)) return true;
     // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stays as a REFUSAL
     // rather than being deleted: every shape below it is BARE (or
     // shift-carrying, on Tab and the walk), so a ctrl press falling past this
@@ -1582,12 +1600,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // BARE HOME / END — THE ABSOLUTE ENDS OF THE SONG, deliberately NOT the trim
-    // bounds the live arms jump to (architect 2026-08-05). The view reviews the
-    // WHOLE piece: a checkpoint's delta is laid out across every authored frame,
-    // trimmed window or not, so an End that stopped at a trim bound would hide
-    // the flags past it. With a full trim window the two answers coincide
+    // HOME / END — THE ABSOLUTE ENDS OF THE SONG, deliberately NOT the trim
+    // bounds the live BARE arms jump to (architect 2026-08-05). The view reviews
+    // the WHOLE piece: a checkpoint's delta is laid out across every authored
+    // frame, trimmed window or not, so an End that stopped at a trim bound would
+    // hide the flags past it. With a full trim window the two answers coincide
     // (trim_window_is_full), so the difference shows only under a set trim.
+    // BOTH SHAPES LAND HERE, bare and CTRL (history_mode_owns_key claims the
+    // ctrl pair since 2026-08-24): outside the view ctrl is what asks for the
+    // piece's ends, and in here that is what a jump already means, so the chord
+    // means one thing in every state and this arm needs no fork.
     if (key == GuiKeys::Home || key == GuiKeys::End) {
         playback_lifecycle.stop_playback_if_playing();
         // THE MODE ANALOG OF THE LIVE ARMS' SELECTION CLEAR: the playhead is
@@ -1603,15 +1625,17 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // timeline runs to in either view, and it is the same total the
         // full-window trim range resolves to. THE ARITHMETIC LIVES AT THE
         // SHARED OWNER since 2026-08-15 (playhead_skip_landing_frame,
-        // viewport.cpp), which forks on this very mode bit — one spelling for
-        // the three arms that jump, and for nothing else: the bottom row's two
-        // SKIP buttons read it for one revision and no longer do (they are lit
-        // unconditionally, the ruling and its reason at their case in
-        // redesign_button_enabled). The owner's clamp is idempotent on a value
-        // move_playhead_to would clamp anyway, so this jump is byte-identical
-        // to the hand-spelled one.
+        // viewport.cpp), whose whole-piece arm this mode bit already selects —
+        // which is why `whole_piece` is passed FALSE here and nothing is
+        // duplicated: one spelling for every jump in the product. The bottom
+        // row's two SKIP buttons read it for one revision and no longer do
+        // (they are lit unconditionally, the ruling and its reason at their
+        // case in redesign_button_enabled). The owner's clamp is idempotent on
+        // a value move_playhead_to would clamp anyway, so this jump is
+        // byte-identical to the hand-spelled one.
         viewport.move_playhead_to(
-            playhead_skip_landing_frame(app, audio, key == GuiKeys::End));
+            playhead_skip_landing_frame(app, audio, key == GuiKeys::End,
+                                        /*whole_piece=*/false));
         return true;
     }
 
@@ -1861,7 +1885,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             HIDE was the other one the admission bought until
 //                             2026-08-21, when it retired: an overlay carried in
 //                             from before `h` now leaves by the rule or by bare
-//                             `x` outside the view.)
+//                             `[` outside the view.)
 //                             IT CANNOT CLOSE THE VIEW, structurally rather than
 //                             by refusal: the toggle is handle_history_mode_key's,
 //                             and that function's whole vocabulary
@@ -3346,8 +3370,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // flap, and this line excluded the view for that.) Ctrl+Tab stays one-shot
     // everywhere, in the view as out of it, a held A/B switch being able only
     // to flap. Every
-    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End,
-    // and Delete is one-shot. No MODIFIED arrow repeats at all: the arrows carry
+    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End in
+    // BOTH of its forms (bare and the 2026-08-24 ctrl whole-piece jump), and
+    // Delete is one-shot. No MODIFIED arrow repeats at all: the arrows carry
     // no modified binding to repeat.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
@@ -5664,6 +5689,50 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 
 // Bare-key (no-modifier) dispatch. See the declaration for the binding list;
 // the caller gates on no modifiers held.
+// THE Home / End JUMP, one body for four arms — bare Home, bare End and their
+// two CTRL forms — so the three unconditional acts are spelled once and the two
+// landings differ only in the flags handed to the arithmetic owner.
+//
+// IT IS A ROUTE OUT OF THE MARKER LANE: the playhead is leaving the focused flag
+// for a spot nothing marks, so the selection must go with it — the lane rule's
+// second clause (a route that empties the selection leaves the playhead where it
+// lands, for the cursor to paint again; the rule itself is stated at
+// land_playhead_on_marker in input_pointer.cpp). UNLIKE the bare Left/Right
+// arms, this clear does real MEMBERSHIP work: those reach their body only with
+// an empty selection (the marker-lane branch in on_key claims them first), so
+// theirs is a focus-only repair, while Home/End reach this with ANY selection.
+// Without it the flag would keep claiming to be the playhead at its own
+// position and the next bare arrow would tow the playhead back onto the marker,
+// silently discarding the jump.
+//
+// THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
+// (playhead_skip_landing_frame, viewport.cpp), whose two arms this body selects
+// between with `whole_piece`: FALSE takes Viewport::trim_range's own bounds (the
+// bare pair), TRUE forces the piece's ends whatever the trim is (the ctrl pair,
+// architect 2026-08-24). Both come back pre-clamped, and the clamp is idempotent
+// on what move_playhead_to would clamp anyway.
+//
+// THE THREE STEPS RUN ON A NO-OP JUMP TOO and are deliberately not gated on it:
+// the audition stop, the lane exit's selection clear and the overlay hide are
+// unconditional, so the key ACTS even when the cursor already rests on the
+// landing frame. The hide is unconditional AT ITS OWNER (move_playhead_to hides
+// before it writes, whatever the write turns out to be — the rule at
+// clear_region_highlight, input_handler.h); the trim it derives from is
+// untouched by any of this.
+// THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY (architect 2026-08-15,
+// taking back the face that did): a grey would promise less than this body
+// delivers, and gating the three steps to make the grey honest would change
+// behaviour. The full record is at the skips' case in redesign_button_enabled.
+void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
+    playback_lifecycle.stop_playback_if_playing();
+    if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+        selection.clear_selection();
+        viewport.invalidate_waveform_area();
+    }
+    viewport.move_playhead_to(
+        playhead_skip_landing_frame(app, audio, forward, whole_piece));
+}
+
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
@@ -5715,59 +5784,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         run_center_command();
         break;
     case GuiKeys::Home:
-        // Trim-bound jump, and a route OUT of the marker lane: the playhead is
-        // leaving the focused flag for a spot nothing marks, so the selection
-        // must go with it — the lane rule's second clause (a route that empties
-        // the selection leaves the playhead where it lands, for the cursor to
-        // paint again; the rule itself is stated at land_playhead_on_marker in
-        // input_pointer.cpp). UNLIKE the bare Left/Right arms above, this clear
-        // does real MEMBERSHIP work: those reach this body only with an empty
-        // selection (the marker-lane branch in on_key claims them first), so
-        // theirs is a focus-only repair, while Home/End reach it with ANY
-        // selection. Without it the flag would keep claiming to be the playhead
-        // at its own position and the next bare arrow would tow the playhead
-        // back onto the marker, silently discarding the jump.
-        //
-        // THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
-        // (playhead_skip_landing_frame, viewport.cpp — Viewport::trim_range's
-        // begin, pre-clamped), which the three arms that jump share so the
-        // bound is spelled once. The clamp is idempotent on what
-        // move_playhead_to would clamp anyway, so nothing about this jump
-        // changed. THE THREE STEPS RUN ON A NO-OP JUMP TOO and are
-        // deliberately not gated on it: the audition stop, the lane exit's
-        // selection clear and the overlay hide are unconditional, so this
-        // key ACTS even when the cursor already rests on the landing frame.
-        // The hide is unconditional AT ITS OWNER (move_playhead_to hides before
-        // it writes, whatever the write turns out to be), so moving it there in
-        // 2026-08-19 changed nothing this paragraph promises.
-        // THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY THERE (architect
-        // 2026-08-15, taking back the face that did): a grey would promise less
-        // than this arm delivers, and gating the three steps to make the grey
-        // honest would change behaviour. The full record is at the skips' case
-        // in redesign_button_enabled.
-        playback_lifecycle.stop_playback_if_playing();
-        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-            selection.clear_selection();
-            viewport.invalidate_waveform_area();
-        }
-        // Navigation jump to the trim-begin bound: the overlay hide is the
-        // MOVEMENT OWNER's, inside move_playhead_to (the rule at
-        // clear_region_highlight, input_handler.h) — unconditional there, which
-        // is what keeps the no-op jump's three acts three, as this arm's own
-        // paragraph above promises. The trim it derives from is untouched.
-        viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
-                                                              false));
+        // The trim-begin jump. The body is shared with End and with the two
+        // CTRL forms (run_playhead_end_jump, above this dispatch).
+        run_playhead_end_jump(/*forward=*/false, /*whole_piece=*/false);
         break;
     case GuiKeys::End:
-        playback_lifecycle.stop_playback_if_playing();
-        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-            selection.clear_selection();
-            viewport.invalidate_waveform_area();
-        }
         // The owner's `forward` arm, which is trim_range's END minus one — the
-        // last frame INSIDE the window (see the Home arm above).
-        viewport.move_playhead_to(playhead_skip_landing_frame(app, audio,
-                                                              true));
+        // last frame INSIDE the window.
+        run_playhead_end_jump(/*forward=*/true, /*whole_piece=*/false);
         break;
     default: break;
     }

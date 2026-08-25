@@ -54,8 +54,8 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // what every other turn-to-other-work route does. (The defect this
     // placement was written for is retired with the span it protected: a
     // source-view region used to survive into the forced target view, where a
-    // later `x` overwrote the freshly loaded-in-place recipe trim with the
-    // stale span.)
+    // later trim-region toggle overwrote the freshly loaded-in-place recipe
+    // trim with the stale span.)
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
     // same line of argument the region hide above makes (codex round 21): the
@@ -569,9 +569,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // therefore a HAND-EDITED pair only — the shape the load boundary otherwise
     // hard-fails (the -1 spelling, font_size, a past-EOF bound). The architect
     // ruled the exception deliberately: a crossed pair is a plausible
-    // slip of the hand in an editable file, and the answer to it is the Shift+X
+    // slip of the hand in an editable file, and the answer to it is the Shift+[
     // full-window reset applied at load rather than a refused source. This is
-    // the ONE crossed-pair recovery, and it is semantically Shift+X — the same
+    // the ONE crossed-pair recovery, and it is semantically Shift+[ — the same
     // full window, through the same full_trim_window formula.
     //
     // Deliberately AFTER the adversarial past-EOF

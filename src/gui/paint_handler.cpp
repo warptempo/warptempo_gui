@@ -712,8 +712,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // plus the group's leader in redesign_button_opens_icon_group
     // (app_state.h) and the roster enum's own order, which the three keep in
     // step. No count, no gap and no width follows a swap.
-    //   bare `x`, the trim region toggle (Ctrl+Shift+X until 2026-08-18). The
-    //   glyph is TOOL-RECT-SELECTION, the marching-ants rectangle — the
+    //   bare `[`, the trim region toggle (bare `x` until 2026-08-24,
+    //   Ctrl+Shift+X until 2026-08-18). The glyph is TOOL-RECT-SELECTION,
+    //   the marching-ants rectangle — the
     //   architect's pick, taken at 22px though he named the 24px path (same
     //   rectangle, and 22 is the set's convention). A TOGGLE with a lamp on the
     //   overlay's visibility, and NO SECOND GLYPH for the hidden half: every
@@ -4059,7 +4060,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // there is nothing for a gate to arbitrate. (The DEAD-CODE argument that
     // stood here first is retired, 2026-08-18: it rested on the overlay only
     // ever resting beside an EMPTY selection, which held while both formers
-    // deselected at press and does not hold now that bare `x` shows the overlay
+    // deselected at press and does not hold now that bare `[` shows the overlay
     // and writes no selection. The conclusion is unchanged, and it never needed
     // that premise.)
     if (app.selected_markers.size() >= 2) return out;
@@ -4625,7 +4626,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // region is no longer a playhead at all (it IS THE TRIM — a ground recolor
     // DERIVED from the trim window every frame, written by the shift waveform
     // sweep, previewed by the lower half's scrub click act, shown and hidden by
-    // bare `x`), so it hides
+    // bare `[`), so it hides
     // nothing and suppresses nothing, and the split half-triangle renderer is
     // deleted outright. The non-empty-selection suppression is
     // gone too: a cursor resting ON the focused marker is simply hidden behind

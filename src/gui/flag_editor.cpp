@@ -192,7 +192,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // THE LAND HIDES THE TRIM REGION OVERLAY: an open moves the playhead onto
     // one marker, so the overlay goes with it — unconditionally, never gated on
     // the land having moved anything, and discarding nothing (the trim stands
-    // and a later `x` re-shows the same overlay). Since 2026-08-19 that is the
+    // and a later `[` re-shows the same overlay). Since 2026-08-19 that is the
     // LAND'S own act rather than a second call here (the rule and its two
     // movement owners are at clear_region_highlight, input_handler.h). This one
     // chokepoint covers every open and retarget (bare Return, the pointer

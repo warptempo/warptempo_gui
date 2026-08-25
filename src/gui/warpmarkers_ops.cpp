@@ -276,7 +276,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // are what the rule replaced. It discards nothing, the trim standing behind
     // the hidden overlay.
     // (The belt that stood here — "a region rests only beside an EMPTY
-    // selection, and Ctrl+N needs a focus" — is retired, 2026-08-18: bare `x`
+    // selection, and Ctrl+N needs a focus" — is retired, 2026-08-18: bare `[`
     // shows the overlay and writes no selection, so a shown overlay may rest
     // beside any selection.)
     // The land sits at THIS caller and not inside collapse_to_focused, because the
@@ -586,7 +586,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // so a step that re-warps the target re-derives it in the new domain on
         // the next frame with nothing to maintain. (The belt that stood here —
         // "a region rests only beside an EMPTY selection, and a tempo step
-        // needs a selection" — is retired, 2026-08-18: bare `x` shows the
+        // needs a selection" — is retired, 2026-08-18: bare `[` shows the
         // overlay and writes no selection.) The #16 trim-highlight re-sync that
         // stood here was deleted 2026-07-29 and the highlight itself
         // 2026-07-30.
@@ -740,7 +740,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         // every frame (trim_overlay_span, app_state.h), so a step that re-warps
         // the target simply re-derives it in the new domain on the next frame.
         // (The old belt — "a region cannot even rest beside this selection
-        // anyway, both formers deselecting at press" — is retired: bare `x`
+        // anyway, both formers deselecting at press" — is retired: bare `[`
         // shows the overlay and writes no selection, so a shown overlay may now
         // rest beside any selection. And the kick's live-domain reclamp no
         // longer clears anything of the region's: it had validated the stored
