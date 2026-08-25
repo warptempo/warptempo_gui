@@ -21,6 +21,43 @@
 // geometry helpers (resolve_inherited_tempo, current_samples_per_pixel,
 // waveform_area, ...) are free functions.
 
+// THE WARP STATUS/VALUE FAMILY'S TARGET-VIEW TAIL (architect 2026-08-24), one
+// statement of a contract FOUR sites share: Ctrl+D (toggle_disabled), Ctrl+N
+// (toggle_inherits), Delete (delete_selected_marker) and the flag editor's
+// payload commit (flag_editor.cpp). They are the home-view binding's FIFTH
+// ruled exception, and the split that admits them is POSITIONAL vs NOT: the
+// binding exists because a PLACEMENT edit in target view mutates the map the
+// view is displayed in, and a status, an existence or a value edit does not
+// move a marker under the pointer that way (the ruling and the whole exception
+// inventory are at active_column_authoring_allowed, app_state.h). So each of
+// the four dispatches in W+TARGET as well as W+source, and each owes the same
+// tail when app.active_audio_view == 'T' — the flag-editor commit adding one
+// term its three siblings do not need, canonical_changed, because it alone can
+// land a change that is NO MAP INPUT (an iter-bracket-only commit; the
+// argument is at that site):
+//   1. viewport.kick_waveform_sync() — the synchronous re-warp, so displayed
+//      == live at the command boundary, leaving no divergence window for the
+//      displayed-basis gestures (phase drags, trim drags) to ride out. These
+//      four JOIN the target-view re-warp inventory, whose one owner is
+//      Viewport::kick_waveform_sync's declaration (viewport.h).
+//   2. The playhead RE-LAND, through Viewport::reseat_playhead_to and NEVER
+//      through a movement owner: the marker's IMAGE moved out from under a
+//      resting cursor and the cursor follows it, which is a TRANSLATION and
+//      not a movement, so the trim region overlay must stand (the rule at
+//      clear_region_highlight, input_handler.h). The three sites that keep a
+//      focus re-land on ITS post-change image; the delete keeps none and
+//      re-lands the playhead's own musical instant instead (its site says how).
+//   3. target_render.trigger(), unchanged and view-independent.
+// SOURCE VIEW NEEDS NOTHING: it is the identity domain, where no image moves
+// at all — exactly the cent step's own split, and the cent step's target-view
+// tail (adjust_tempo_cents, below) argues the re-land in full as the precedent
+// these four take.
+// THE POSITIONAL FAMILY IS NOT HERE and stays home-view-only, refusing
+// silently off home as it always did: the drop (drop_marker /
+// drop_copy_previous_at_playhead), the flag drag (marker_drag.cpp), the bare
+// Left/Right nudge (nudge_selected_markers) and the `m` bpm open, which
+// rewrites tempo through a derivation over a SPAN.
+
 // Index of the nearest marker strictly before `time_frame` that survives
 // into the render, or -1 if none. Uses the same cascade definition as render
 // resolution and hover (effective_disabled: a marker is out if its own
@@ -103,11 +140,16 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // EOF wall — return above, before the insert. So a refused drop reaches
     // neither the insert nor the seat, and hides nothing.
 
-    // No synchronous re-warp: warp markers author in their source home view
-    // only (the home-view binding, architect 2026-07-22), where the source
-    // waveform pixels don't depend on the warp map, so there is no displayed
-    // target plate to re-warp. The target preview still invalidates — a
-    // source-view warp edit changes the rendered target buffer.
+    // No synchronous re-warp, and THIS OP ALONE IS WHAT THAT CLAIM COVERS: a
+    // DROP is a PLACEMENT, which is exactly what the home-view binding gates
+    // (architect 2026-07-22), so it authors in warp's source home view only,
+    // where the source waveform pixels don't depend on the warp map and there
+    // is no displayed target plate to re-warp. Its siblings no longer share
+    // the answer — Ctrl+D, Ctrl+N, Delete and the flag-editor commit are the
+    // status/value family admitted in W+target on 2026-08-24 and each carries
+    // the re-warp tail contracted at the head of this file. The target preview
+    // still invalidates here — a source-view warp edit changes the rendered
+    // target buffer.
     target_render.trigger();
 }
 
@@ -205,6 +247,17 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // "only on real change" shape the sibling group verbs already have.
     if (live_idx.empty()) return;
 
+    // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
+    // OLD map still stands — the subject of this op's target-view re-land (the
+    // family contract at the head of this file). A delete leaves NO FOCUS to
+    // re-land on: the selection clears below, so the cursor itself is what has
+    // to survive the re-warp. active_domain_to_source_frame
+    // (warp_frame_map_view.h) is the product's one inverse for a bare frame —
+    // the identity in source view, the memoized target map's inverse in target
+    // view — so this costs two compares off home and is read unconditionally.
+    const int64_t playhead_source_frame =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+
     // Capture the snapshot before mutating so the undo can restore the pre-delete
     // state.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
@@ -224,9 +277,16 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
-    // No synchronous re-warp: warp authoring lives in the source home view (see
-    // drop_marker), where the source waveform has no map-dependent plate to
-    // re-warp. The view-independent target preview trigger stays.
+    // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
+    // delete reshapes the map from the deleted marker onward, so in W+target
+    // the plate re-warps and the PLAYHEAD re-lands — on its own musical
+    // instant, captured above, because the delete clears the selection and
+    // leaves no focus whose image could be the subject.
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        viewport.reseat_playhead_to(
+            source_frame_to_active_domain(app, audio, playhead_source_frame));
+    }
     target_render.trigger();
 }
 
@@ -343,9 +403,23 @@ void GuiWarpMarkersOps::toggle_inherits() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
-    // No synchronous re-warp: the Ctrl+N pass toggle authors the warp store in
-    // the source home view only (see drop_marker), where the source waveform
-    // has no map-dependent plate to re-warp. The target preview trigger stays.
+    // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
+    // pass/owner conversion changes the tempo that sounds from this marker on,
+    // so in W+target the plate re-warps and the FOCUS re-lands on its
+    // post-toggle image. The focus survives by construction — the collapse
+    // above made it the whole selection — and the pre-mutation land it already
+    // took (land_playhead_on_marker, which HIDES the overlay) is a different
+    // act from this one: that one moved the cursor onto the focus, this one
+    // follows the focus's image as the domain re-derives under it.
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        const auto& mv_post = app.warpmarkers.markers();
+        const int f = app.last_selected_marker;
+        if (f >= 0 && f < static_cast<int>(mv_post.size())) {
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
+                app, audio, mv_post[f].time_frame));
+        }
+    }
     target_render.trigger();
 }
 
@@ -373,11 +447,25 @@ void GuiWarpMarkersOps::toggle_disabled() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
-    // No synchronous re-warp: this is the WARP column's disable toggle, which
-    // authors in the source home view only (see drop_marker), where the source
-    // waveform has no map-dependent plate to re-warp. The target preview trigger
-    // stays. (The phase-reset sibling in phaseresetmarkers_ops.cpp never touched
-    // the warp map and likewise takes no sync.)
+    // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
+    // disabled marker stops shaping its segment (and a disabled label_def
+    // reprices every reference to it, including references EARLIER in the
+    // timeline), so in W+target the plate re-warps and the FOCUS re-lands on
+    // its post-toggle image. The focus is a member of the toggled selection by
+    // the never-parked rule; a selection resting without one simply skips the
+    // re-land, the toggle having nothing to follow.
+    // (The phase-reset sibling in phaseresetmarkers_ops.cpp never touched the
+    // warp map and takes no sync; its column keeps its home-view gate at the
+    // dispatch, nothing having been ruled about it.)
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        const auto& mv_post = app.warpmarkers.markers();
+        const int f = app.last_selected_marker;
+        if (f >= 0 && f < static_cast<int>(mv_post.size())) {
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
+                app, audio, mv_post[f].time_frame));
+        }
+    }
     target_render.trigger();
 }
 

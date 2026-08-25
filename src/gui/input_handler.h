@@ -184,9 +184,15 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // THREE THINGS THE RULE SAYS THAT A LIST COULD NOT:
 //   * A TRANSLATION IS NOT A MOVEMENT. The `t` flip maps the same musical
 //     instant into the other domain — "the closest thing it can do to not moving
-//     it" — and the tempo cent step's target-view re-land does the same for a
-//     marker whose IMAGE moved under a resting cursor. Both take the RESEAT
-//     entry points (reseat_playhead_on_marker, Viewport::reseat_playhead_to).
+//     it" — and every MAP-CHANGE RE-LAND does the same for a marker whose IMAGE
+//     moved under a resting cursor: the tempo cent step's target-view tail, and
+//     since 2026-08-25 the warp status/value family's tails beside it (Ctrl+D,
+//     Ctrl+N, Delete and the flag editor's payload commit, admitted in W+target
+//     as the home-view binding's fifth ruled exception). The delete's subject
+//     is the cursor's own musical instant rather than a focus's image, the
+//     delete leaving no focus, but the reading is the same. All take the RESEAT
+//     entry points (reseat_playhead_on_marker, Viewport::reseat_playhead_to),
+//     whose caller inventory is at the latter's definition (viewport.cpp).
 //   * A RESTORE IS NOT A MOVEMENT. The A/B tabs are two virtual playheads over
 //     one piece and a switch brings the other one forward; it writes the entering
 //     tab's stored cursor direct and never reaches an owner.

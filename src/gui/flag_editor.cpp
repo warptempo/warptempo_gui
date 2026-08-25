@@ -186,9 +186,14 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // a route that hands the lane a new focus. This brings the one
     // set_single_selection caller that had opted out back onto the pointer
     // clicks' adjacency convention (selection then land, on the next line).
-    // Reached only in W + source view — all three open routes gate the marker
-    // view to the WARP column and take active_column_authoring_allowed — so `idx`
-    // resolves against the warp store the helper reads, in the identity domain.
+    // Reached in the WARP column alone — all three open routes gate the marker
+    // view to it — so `idx` resolves against the warp store this helper reads.
+    // BOTH AUDIO VIEWS SINCE 2026-08-24 (the payload editor is the home-view
+    // binding's fifth ruled exception; the inventory is at
+    // active_column_authoring_allowed, app_state.h), so the domain is no
+    // longer the identity one: land_playhead_on_marker translates through the
+    // ACTIVE domain itself (source_frame_to_active_domain at its body), so the
+    // land is right in target view with nothing to add here.
     // THE LAND HIDES THE TRIM REGION OVERLAY: an open moves the playhead onto
     // one marker, so the overlay goes with it — unconditionally, never gated on
     // the land having moved anything, and discarding nothing (the trim stands
@@ -717,16 +722,44 @@ void GuiFlagEditor::commit_top_flag_edit() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
-    // No synchronous re-warp: the flag editor is a warp authoring surface that
-    // exists only in warp's SOURCE home view (the home-view binding, architect
-    // 2026-07-22 — both open routes gate on active_column_authoring_allowed, and
-    // the S->T toggle closes any open editor WITHOUT committing before entering
-    // target view), so a commit can never run with active_audio_view == 'T' and
-    // there is no displayed target plate to re-warp. The former canonical_changed
-    // sync branch was unreachable and is gone; canonical_changed survives as the
-    // undo push's affects_persistence gate above. The trigger keeps its
-    // store_changed gating (it re-derives identity-unchanged for an
+    // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
+    // VALUE surface — tempo, label_def / label_ref, per-marker scale, the
+    // disabled bit, the iter bracket — and never a placement one, so it is a
+    // member of the warp status/value family admitted in W+target, and it owes
+    // that family's contract: the contract is stated once at the head of
+    // warpmarkers_ops.cpp, and the target-view re-warp inventory it joins is
+    // owned by Viewport::kick_waveform_sync's declaration (viewport.h). This
+    // commit is the worked case for the re-land: a renamed label_def reprices
+    // every reference to it, including references EARLIER in the timeline,
+    // whose spans then change duration and shift everything downstream — the
+    // edited marker's own image included — so the FOCUS (which is this
+    // editor's target, single-selected at the open) re-lands on its post-commit
+    // image through reseat_playhead_to, a TRANSLATION that must leave the trim
+    // region overlay standing (the rule at clear_region_highlight,
+    // input_handler.h). SOURCE VIEW NEEDS NOTHING: identity domain, no image
+    // moves.
+    // AND canonical_changed IS THE SECOND TERM, which is where this site
+    // differs from its three siblings: they write nothing BUT map inputs,
+    // while this commit can land an ITER-BRACKET-ONLY change — session-only
+    // fields, excluded from build_warp_frame_map and from the render recipe
+    // alike — which moves no image and would make the kick a wasted
+    // synchronous plate render and the re-land a write of the value the
+    // playhead already holds. canonical_changed is exactly the map-input set
+    // (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
+    // disabled / renamed refs; position is not editable here), so it is the
+    // honest gate and it is the same predicate the pre-2026-08-24 branch used
+    // before that branch went unreachable and was deleted. It keeps its other
+    // job as the undo push's affects_persistence gate above. The trigger keeps
+    // its own store_changed gating (it re-derives identity-unchanged for an
     // iter-bracket-only commit and lands on the reuse rungs).
+    if (app.active_audio_view == 'T' && canonical_changed) {
+        viewport.kick_waveform_sync();
+        const auto& mv_post = app.warpmarkers.markers();
+        if (idx >= 0 && idx < static_cast<int>(mv_post.size())) {
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
+                app, audio, mv_post[idx].time_frame));
+        }
+    }
     target_render.trigger();
 }
 

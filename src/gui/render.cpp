@@ -1992,8 +1992,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const bool measure_kind = (ed.kind == text_editor::Kind::MeasureText);
     if (ed.kind != text_editor::Kind::FlagPayload && !measure_kind) return;
 
-    // The PAYLOAD editor is a WARP-column, source-home surface by its own open
-    // gates. The MEASURE editor is BOTH columns' (measures are the fourth ruled
+    // The PAYLOAD editor is a WARP-COLUMN surface by its own open gates, in
+    // EITHER audio view since 2026-08-24 (the home-view binding's fifth ruled
+    // exception, active_column_authoring_allowed, app_state.h) — which costs
+    // this painter nothing, the column below being resolved on the DISPLAYED
+    // basis and the live map like every other lane item. The MEASURE editor is
+    // BOTH columns' (measures are the fourth ruled
     // exception to the home-view binding), so its store is the ACTIVE column's
     // — the column its open route resolved the index against. A target index
     // the store has since shrunk past is the only failure shape, and it simply

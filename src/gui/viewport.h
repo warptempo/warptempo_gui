@@ -116,15 +116,22 @@ struct Viewport {
     //    load_render_entry_in_place for `'` over a render entry,
     //    load_history_commit_in_place for the `h` view's commit load, and
     //    load_history_local_entry_in_place for that view's LOCAL walk, which
-    //    puts a state of the session's own undo/redo timeline back).
+    //    puts a state of the session's own undo/redo timeline back), and — since
+    //    2026-08-25 — THE WARP STATUS/VALUE FAMILY: Ctrl+D
+    //    (GuiWarpMarkersOps::toggle_disabled), Ctrl+N (toggle_inherits), Delete
+    //    (delete_selected_marker) and the flag editor's payload commit
+    //    (GuiFlagEditor::commit_top_flag_edit), admitted in W+target as the
+    //    home-view binding's FIFTH ruled exception (architect 2026-08-24, the
+    //    split being POSITIONAL vs NOT) with the kick/re-land/trigger tail
+    //    contracted once at the head of warpmarkers_ops.cpp.
     //    Each kicks so
     //    displayed == live at the command boundary, leaving no
     //    divergence window for the displayed-basis gestures (phase / trim drags)
-    //    to ride out. Warp PLACEMENT edits (drop / delete / marker drag / the
-    //    position nudge / Ctrl+N / Ctrl+D / the flag-editor commit) author in
-    //    warp's SOURCE home only (home-view binding, architect 2026-07-22 —
-    //    W+target authors tempo, never position), where the source waveform has no
-    //    map-dependent plate, so they never call this.
+    //    to ride out. Warp PLACEMENT edits are what still never call this — the
+    //    drop, the marker drag and the position nudge — because THEY are what
+    //    the home-view binding gates (architect 2026-07-22: W+target authors
+    //    values, never position), so they author in warp's SOURCE home only,
+    //    where the source waveform has no map-dependent plate.
     //
     // AXIS 2 — the CADENCE. EVERY MAP-EDIT SITE ABOVE IS NOW A DISCRETE ONE-SHOT
     // per command: the one exception was the TEMPO DRAG, which re-warped LIVE per

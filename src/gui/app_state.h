@@ -2108,11 +2108,19 @@ enum class RedesignButton {
     // cardinal arrows and the revert button always-on (the 2026-08-15
     // no-blink ruling). NO LAMP: it is an act, not a mode.
     //
-    // IT IS NOT HOME-VIEW GATED, unlike the four verbs above it: measures are
+    // IT IS NOT HOME-VIEW GATED: measures are
     // the FOURTH ruled exception to the home-view binding (the inventory is at
     // active_column_authoring_allowed), so the button works on both columns in
-    // both audio views. The `h` view greys it through the derived partition,
-    // bare `/` being neither the mode's vocabulary nor on its allowlist.
+    // both audio views. That once set it apart from all four verbs above it;
+    // since 2026-08-24 it is apart from the DROP alone, Delete / Disable /
+    // Toggle inherit having joined the fifth ruled exception in the WARP
+    // column (their phase-reset arms keep the binding, and the drop is
+    // positional and keeps it in both columns). NO FACE MOVED WITH THAT
+    // RULING: every verb on this row already greyed on READ-ONLY alone and
+    // never on the home view, the roster's no-blink policy having kept the
+    // binding out of the faces from the start. The `h` view greys it through
+    // the derived partition, bare `/` being neither the mode's vocabulary nor
+    // on its allowlist.
     //
     // IT ADMITS NO SHIFT AND GREYS UNDER THE READ-ONLY LOCK like its four
     // neighbours: its one chord opens an editor over serialized content, which
@@ -5990,8 +5998,11 @@ struct AppState {
     // 2026-08-07, superseding his 2026-07-23 ruling that entering target view
     // wipes the brackets and exits the mode; the deleted wipe's record is at
     // handle_active_audio_view_toggle, input_handler.cpp, and the sweep
-    // dispatches from either view too). Bracket AUTHORING stays source-only at
-    // the flag editor's own home-view gate. When true, flag_text_iter splices the
+    // dispatches from either view too). BRACKET AUTHORING FOLLOWED THE EDITOR
+    // ON 2026-08-24: it was source-only only because the flag editor was, and
+    // the editor is now the home-view binding's fifth ruled exception
+    // (active_column_authoring_allowed, below), so a bracket is typed in
+    // either view. When true, flag_text_iter splices the
     // inline `+[lo, hi]` bracket into every eligible owning marker's composed
     // label, so the mode is visible directly on the flags (it is a flag-cache
     // fingerprint field for exactly that reason).
@@ -6274,8 +6285,13 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // non-home view a column is display/navigation-only (selection, Tab and the
 // selection-only readout all live — the retired hover popup and lane readouts
 // are recorded at the HoverPopupState deletion note above;
-// every placement/store mutation refuses silently,
-// navigation-class, exactly the read-only-tab convention). The FOUR ruled
+// every placement/store mutation this predicate still gates refuses silently,
+// navigation-class, exactly the read-only-tab convention). WHAT IT GATES IS
+// THE POSITIONAL FAMILY (architect 2026-08-24, with the fifth exception
+// below): the rationale above is about PLACEMENT — an edit that moves a marker
+// inside the very map the view is drawn from — and it says nothing about a
+// status, an existence or a value edit, which were swept into the same blanket
+// refusal without the reason applying to them. The FIVE ruled
 // exceptions live at their sites: (1) the bare UP/DOWN TEMPO CENT STEP in
 // W+target (owner-only there, adjust_tempo_cents — singleton and group), which is
 // the WHOLE tempo surface now and is dispatched without consulting this
@@ -6309,17 +6325,48 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // labels — the ruling is at measure_clipboard.h). The phase column's measure
 // double-click is
 // therefore that column's FIRST pointer authoring gesture, measure-scoped and
-// nothing wider (recorded at the router arm, run_marker_click_act). The list
-// SHRANK to two on 2026-07-29, grew back to three on 2026-08-07 and to four on
-// 2026-08-19: the
+// nothing wider (recorded at the router arm, run_marker_click_act).
+// (5) THE WARP STATUS/VALUE FAMILY IN W+TARGET (architect 2026-08-24, asked as
+// "why are Ctrl+D, Ctrl+N, Delete and the flag editor blocked there?" and
+// ruled "add the ones we can, and omit the ones we must omit"). FOUR MEMBERS,
+// all in the WARP column: Ctrl+D (GuiWarpMarkersOps::toggle_disabled — the
+// warp arm alone; the phase-reset arm's home IS target and keeps this gate),
+// Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
+// arm alone) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
+// routes, bare Return / KpEnter and the flag double-click (its iter-bracket
+// grammar rides it, bracket authoring having been source-only only because the
+// editor was). The argument is the split named above: none of the four moves a
+// marker, so none of them is imprecise-by-construction in the way a placement
+// edit is. What they DO share with the cent step is the RIPPLE — the target
+// map reshapes under the pointer — and they take the cent step's own answer
+// for it, one shape for all four: when app.active_audio_view == 'T' the tail
+// re-warps the plate synchronously (kick_waveform_sync) and RE-LANDS the
+// playhead as a TRANSLATION through Viewport::reseat_playhead_to, never
+// through a movement owner, so the trim region overlay stands. The three that
+// keep a focus re-land on its post-change image; the DELETE keeps none and
+// re-lands the playhead's own musical instant, inverted to a source frame
+// before the write through active_domain_to_source_frame. The contract is
+// stated once at the head of warpmarkers_ops.cpp and the re-warp inventory
+// they join is owned by Viewport::kick_waveform_sync's declaration.
+// WHAT IS OMITTED, and it is the positional family entire: the marker DROP
+// (bare `s` and the empty-lane double-click), the flag DRAG, the bare
+// Left/Right position nudge, and the `m` BPM open — which is omitted for a
+// reason of its own, rewriting tempo through a derivation over a SPAN rather
+// than editing one marker's value. Those four still consult this predicate and
+// still refuse silently off home. Nothing changes in P+source either.
+// The list
+// SHRANK to two on 2026-07-29, grew back to three on 2026-08-07, to four on
+// 2026-08-19 and to five on 2026-08-24: the
 // tempo family's other two flavors — the pointer tempo DRAG and the bare
 // Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
 // head of marker_drag.h), so bare Left/Right in W+target with a selection is now
 // a consumed refusal and W+target has no pointer authoring gesture at all.
 // (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
-// position authoring in target view at all.) The flag DRAG and every other warp
-// mutation stay home-view-only through this predicate.
+// position authoring in target view at all, and exception (5) does not
+// re-open that question — it admits no gesture that moves a marker.) The flag
+// DRAG and the rest of the positional family stay home-view-only through this
+// predicate.
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')
                                             : (app.active_audio_view == 'S');

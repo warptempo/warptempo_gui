@@ -595,22 +595,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Keyboard authoring is HOME-VIEW gated, not view-blind: warp markers
     // author in source view, phase resets in target view, via the one
-    // predicate active_column_authoring_allowed consulted at each
-    // individual handler below (marker drop, status toggle, flag editor open,
-    // etc.) beside the read-only check above — off home a handler still
-    // dispatches here but refuses silently, navigation-class. The TWO ruled
-    // exceptions: (1) the bare UP/DOWN TEMPO CENT STEP in W+target (owner-only
-    // there, singleton and group) — the whole tempo surface since 2026-07-29, when
-    // the family's other two flavors, the pointer tempo drag and the bare
-    // Left/Right tempo-image step, were deleted (marker_drag.h), leaving bare
-    // Left/Right in W+target a consumed refusal at the split below;
-    // (2) the phase-reset propagate paste starts in source
-    // view and lands in target through the `t` toggle chokepoint; and (3) since
-    // 2026-08-07 the ITERATION-BRACKET WIPE in W+target, granted with the ruling
-    // that iteration mode is target-legal (the authoritative inventory and the
-    // argument are at active_column_authoring_allowed, app_state.h). (The
-    // 2026-07-24 "third exception" — a both-views warp POSITION nudge — was
-    // re-ruled away the same day: no warp position authoring in target view.)
+    // predicate active_column_authoring_allowed consulted at the individual
+    // handlers below beside the read-only check above — off home such a
+    // handler still dispatches here but refuses silently, navigation-class.
+    // WHAT IT GATES IS THE POSITIONAL FAMILY (architect 2026-08-24): the
+    // binding's own rationale is that a PLACEMENT edit in target view mutates
+    // the map the view is displayed in, which says nothing about a status, an
+    // existence or a value edit — so the predicate's consumers on this
+    // dispatch are the marker drop and the `m` bpm open (which rewrites tempo
+    // through a derivation over a SPAN), plus the phase-reset column's own
+    // Ctrl+D and Delete arms, whose home is target.
+    // THE RULED EXCEPTIONS ARE ENUMERATED AT ONE SITE,
+    // active_column_authoring_allowed (app_state.h); the members that
+    // dispatch from here are the bare UP/DOWN TEMPO CENT STEP in W+target
+    // (owner-only there, singleton and group — the whole tempo surface since
+    // 2026-07-29, when the pointer tempo drag and the bare Left/Right
+    // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
+    // W+target a consumed refusal at the split below), the phase-reset
+    // propagate paste (it starts in source view and lands in target through
+    // the `t` toggle chokepoint), the iteration-bracket wipe, the marker
+    // MEASURE, and — since 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
+    // Ctrl+N, Delete and the flag editor's Return open, each admitted in
+    // W+target with the cent step's re-land contract in its own tail.
 
     // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
     // phase reset edit handlers so the toggle wins over any future
@@ -890,12 +896,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
         !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        // The flag editor is a warp authoring surface (label/ref/tempo/iter),
-        // so it opens only in warp's home view: off home
-        // (active_column_authoring_allowed false) refuses silently, exactly
-        // like the P-view refusal already encoded in the condition.
-        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P' &&
-            active_column_authoring_allowed(app)) {
+        // THE WARP COLUMN IS THE WHOLE VIEW GATE SINCE 2026-08-24 (architect):
+        // the flag editor edits the marker's PAYLOAD — tempo, label_def /
+        // label_ref, per-marker scale, the disabled bit, the iter bracket —
+        // and never its position, so it is a member of the fifth ruled
+        // exception to the home-view binding and opens in W+target as well as
+        // W+source (the inventory is at active_column_authoring_allowed,
+        // app_state.h; the commit's own tail carries the target-view re-warp
+        // and playhead re-land). P view still refuses — phase resets have no
+        // per-flag editor — and read-only already dropped Return at the
+        // allowlist gate above.
+        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P') {
             flag_editor.enter_top_flag_edit(app.last_selected_marker);
         }
         return;
@@ -1057,19 +1068,30 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // from), so this no-ops in P view. Plain `n` and Shift+N are unbound.
     if (key == GuiKeys::N && ctrl && !alt && !shift) {
         if (app.active_markers_view == 'P') return;
-        // Warp authoring (not a ruled target-view exception): source home only.
-        if (!active_column_authoring_allowed(app)) return;
+        // NO HOME-VIEW GATE SINCE 2026-08-24: a pass/owner conversion is a
+        // VALUE edit rather than a placement, so it joins the fifth ruled
+        // exception (the inventory is at active_column_authoring_allowed,
+        // app_state.h) and dispatches in W+target too. The op's own tail
+        // carries the target-view re-warp and the playhead re-land.
         warpops.toggle_inherits();
         return;
     }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
     if (key == GuiKeys::D && ctrl && !alt && !shift) {
-        // Status toggle authors the active column's store: home view only
-        // (the predicate maps W->source, P->target). Off home is a consumed
-        // no-op.
-        if (!active_column_authoring_allowed(app)) return;
-        if (app.active_markers_view == 'P') phase_resets.toggle_phase_reset_disabled();
-        else                        warpops.toggle_disabled();
+        // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24. The WARP arm
+        // takes NO home-view gate: a disable toggle is a STATUS edit, not a
+        // placement, so it is a member of the fifth ruled exception to the
+        // home-view binding (the inventory is at
+        // active_column_authoring_allowed, app_state.h) and its op's tail
+        // carries the target-view re-warp and playhead re-land. The
+        // PHASE-RESET arm keeps the gate exactly as it was — nothing was ruled
+        // about that column — where the predicate reads "not in source view".
+        if (app.active_markers_view == 'P') {
+            if (!active_column_authoring_allowed(app)) return;
+            phase_resets.toggle_phase_reset_disabled();
+            return;
+        }
+        warpops.toggle_disabled();
         return;
     }
     // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-08-24 —
@@ -1107,10 +1129,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Trim is not part of the selection system, so Delete never acts on a
         // bound (Shift+[ is trim's clear; the sweep and the two drags are its
         // setters).
-        // Deletion authors the active column's store: home view only (the
-        // predicate maps W->source, P->target). Off home is a consumed no-op.
-        if (!active_column_authoring_allowed(app)) return;
+        // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24, the Ctrl+D arm's
+        // twin: deleting a marker is an EXISTENCE edit rather than a
+        // placement, so the WARP arm is a member of the fifth ruled exception
+        // to the home-view binding (the inventory is at
+        // active_column_authoring_allowed, app_state.h) and takes no home-view
+        // gate, its op's tail carrying the target-view re-warp and the
+        // playhead re-land. The PHASE-RESET arm keeps the gate.
         if (app.active_markers_view == 'P') {
+            if (!active_column_authoring_allowed(app)) return;
             phase_resets.delete_selected_phase_reset();
             return;
         }
@@ -2177,15 +2204,23 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // focus for the identical reason (clear_history_mode_focus, app_state.h).
     clear_history_mode_focus(app.history_mode);
 
-    // The warp flag editor is a source-view-only authoring surface (the
-    // home-view binding rule, 2026-07-22). The S -> T toggle would strand a
-    // live one on a now-refusing target surface, so close it WITHOUT
-    // committing (the exact Esc teardown) before the flip proceeds. Guarded
-    // internally on an active editor, so this is a no-op when none is open.
-    // Only `t` and the settings-editor `active_audio_view=` commit route here
-    // into target view — Ctrl+Tab never changes active_audio_view — so this
-    // is the one place the toggle-into-target edge is handled.
-    if (entering_target) flag_editor.exit_top_flag_edit_no_commit();
+    // A LIVE TOP-STRIP EDITOR CLOSES ON EVERY S<->T FLIP, WITHOUT COMMITTING
+    // (the exact Esc teardown), AND THE CLOSE IS SYMMETRIC SINCE 2026-08-24.
+    // It was the S -> T half's alone while the flag editor was a source-only
+    // surface, and the reason was that the flip would strand a live one on a
+    // now-refusing surface. That reason is gone — the payload editor is legal
+    // in both audio views now (the fifth ruled exception to the home-view
+    // binding, active_column_authoring_allowed, app_state.h) — and the
+    // surviving one is symmetric by nature: the flip RE-EXPRESSES the marker
+    // lane in the other domain, and this editor is the flag UNROLLED from its
+    // marker's painted column with the playhead landed there, so a survivor
+    // would have to be re-derived in the new domain. Closing it is simpler
+    // than re-landing it, and it is what the flip already does to everything
+    // else around the caret. Guarded internally on an active editor, so this
+    // is a no-op when none is open. Only `t` and the settings-editor
+    // `active_audio_view=` commit route here — Ctrl+Tab never changes
+    // active_audio_view — so this is the one place either edge is handled.
+    flag_editor.exit_top_flag_edit_no_commit();
 
     // (NOTHING HAPPENS TO ITERATION MODE ON THIS EDGE — the record of a
     // DELETED wipe, kept because the invariant it created was leaned on in
@@ -2201,10 +2236,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // DELTA-RELATIVE (the sweep enumerates base + delta per cell), so it
     // composes with any base-tempo change from either view. So the mode bit
     // and the brackets now PERSIST ACROSS S <-> T IN BOTH DIRECTIONS, and
-    // mode-off-in-target is no longer an invariant anywhere. What did NOT
-    // change: bracket AUTHORING is still source-only — the flag editor's iter
-    // grammar keeps its home-view gate through both open routes, and the
-    // editor teardown one line above still runs. The settings-editor
+    // mode-off-in-target is no longer an invariant anywhere. BRACKET AUTHORING
+    // FOLLOWED ON 2026-08-24: it was source-only only because the flag editor
+    // was, and the editor is legal in both audio views now (the home-view
+    // binding's fifth ruled exception, active_column_authoring_allowed,
+    // app_state.h), so the iter grammar is typed wherever the editor opens.
+    // The editor teardown one line above still runs, symmetric now and for a
+    // different reason. The settings-editor
     // active_audio_view=T commit routes through this same edge and inherits
     // the persistence exactly as it inherited the wipe.)
 

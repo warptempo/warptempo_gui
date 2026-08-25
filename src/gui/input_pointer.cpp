@@ -3315,12 +3315,15 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // architect on the deferred open: "a tad slow compared to the Enter key"):
     // a candidate for the SAME index within the window opens the flag editor,
     // exactly like Enter on the focused marker (the fork above already
-    // single-selected it). THE THREE GATES ARE READ LIVE AT THIS PRESS, which
-    // IS live state: read-only, the P view (phase resets have no per-flag
-    // editor) and the off-home column (active_column_authoring_allowed — the
-    // warp editor is source-view-only) refuse SILENTLY, matching Enter's
-    // allowlist / view refusal, and a refused consume stays a plain second
-    // select that seeds afresh at its release.
+    // single-selected it). THE GATES ARE READ LIVE AT THIS PRESS, which IS
+    // live state: read-only and the P view (phase resets have no per-flag
+    // editor) refuse SILENTLY, matching Enter's allowlist / view refusal, and
+    // a refused consume stays a plain second select that seeds afresh at its
+    // release. THE OFF-HOME COLUMN NO LONGER REFUSES (architect 2026-08-24):
+    // the payload editor edits a marker's VALUES and never its position, so it
+    // is a member of the fifth ruled exception to the home-view binding and
+    // opens in W+target too (the inventory is at
+    // active_column_authoring_allowed, app_state.h).
     // A CONSUMED OPEN ARMS NOTHING AND SEEDS NOTHING: the editor owns input,
     // and the return ahead of the arm below is what makes "nothing arms a
     // marker drag after a consumed open" structural rather than policed.
@@ -3329,11 +3332,13 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // half of the box the FIRST press landed on (MarkerClickSpan), so the two
     // halves of one box open two different editors and a pair straddling the
     // seam opens the one the first click named. The gates differ with them:
-    // the PAYLOAD editor keeps its three (read-only, the P view, the off-home
-    // column), while the MEASURE editor asks read-only ALONE — measures are
-    // the fourth ruled exception to the home-view binding, so the phase
-    // column's measure double-click is that column's FIRST pointer authoring
-    // gesture, measure-scoped and nothing wider.
+    // the PAYLOAD editor keeps read-only and the P view, while the MEASURE
+    // editor asks read-only ALONE — measures are the fourth ruled exception to
+    // the home-view binding, so the phase column's measure double-click is
+    // that column's FIRST pointer authoring gesture, measure-scoped and
+    // nothing wider. Since 2026-08-24 the two no longer differ about the AUDIO
+    // view either: the payload editor is the fifth exception's member and
+    // opens off warp's home as well.
     if (dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
@@ -3342,13 +3347,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         !active_view_state(app).read_only) {
         if (dc_at_press.span == MarkerClickSpan::Measure) {
             // Every open route opens fully SELECTED (open-selected); the seed
-            // is the marker's own comment, which is the whole of what a comment
-            // is — nothing inherits.
+            // is the marker's own measure, which is the whole of what a
+            // measure is — nothing inherits.
             flag_editor.enter_measure_edit(app.active_markers_view, hit);
             return;
         }
-        if (app.active_markers_view != 'P' &&
-            active_column_authoring_allowed(app)) {
+        if (app.active_markers_view != 'P') {
             // Every open route opens fully SELECTED (open-selected), so there
             // is no clicked-glyph caret to seat. A specific caret spot is a
             // click inside the already-open editor (the F2.1 path).

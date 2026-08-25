@@ -5292,8 +5292,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // until then, which pinned the toggle to warp's SOURCE home. The
             // relaxation is about MODE STATE rather than authoring, which is
             // why it is not a home-view-binding exception: the bit selects
-            // what Ctrl+Alt+R means and what the flags show, while bracket
-            // AUTHORING stays source-only at the flag editor's own gate. The
+            // what Ctrl+Alt+R means and what the flags show. (Bracket
+            // AUTHORING was source-only at the flag editor's own gate until
+            // 2026-08-24, when the editor became the binding's FIFTH ruled
+            // exception and the grammar rode into target view with it.) The
             // two views behave IDENTICALLY here in every other respect —
             // read-only in particular, which refuses `i` from either view for
             // the same one reason (the key is not on read_only_key_blocked's
@@ -5349,9 +5351,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // Esc, and Enter's dispatch tail).
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
-        // The bpm editor rewrites tempo through the derivation (not a ruled
-        // target-view exception), so it opens only in warp's home (source)
-        // view; off home is a consumed no-op.
+        // The bpm editor is DELIBERATELY OMITTED from the warp status/value
+        // family admitted in W+target on 2026-08-24 (architect: "add the ones
+        // we can, and omit the ones we must omit"; the inventory is at
+        // active_column_authoring_allowed, app_state.h). Its reason is its
+        // own rather than placement: it rewrites tempo through a DERIVATION
+        // over a SPAN — the selected run's sections and their durations —
+        // rather than editing one marker's value, so it keeps warp's home
+        // (source) view; off home is a consumed no-op.
         if (!active_column_authoring_allowed(app)) return true;
         // Section-based span gate. A non-empty, contiguous run of selected
         // markers; the first owns, and the run covers the sections owned by
